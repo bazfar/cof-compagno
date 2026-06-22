@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=4" />
+  <link rel="stylesheet" href="css/style.css?v=5" />
 </head>
 <body>
   <header>
@@ -17,6 +17,7 @@
       <button data-panneau="creation">Création</button>
       <button data-panneau="fiche">Ma fiche</button>
       <button data-panneau="des">Dés</button>
+      <button data-panneau="carte">Carte</button>
       <button data-panneau="regles">Règles</button>
       <button data-panneau="lore">Lore</button>
     </nav>
@@ -179,6 +180,33 @@
       </div>
     </section>
 
+    <!-- CARTE -->
+    <section class="panneau" id="panneau-carte">
+      <div class="carte">
+        <h2 class="titre-bandeau">Carte — mode MJ</h2>
+        <p style="font-size:0.85rem;color:#6a6278;">Importe une carte, place tes jetons et déplace-les. <strong>Partage ton écran sur Discord</strong> pour que les joueurs voient la scène. Tout est sauvegardé dans ton navigateur.</p>
+        <div class="carte-toolbar">
+          <button class="btn petit" id="btn-import-carte">🗺️ Importer une carte</button>
+          <input type="file" id="input-carte" accept="image/*" hidden />
+          <button class="btn petit secondaire" id="btn-jeton-perso">+ Mes personnages</button>
+          <button class="btn petit secondaire" id="btn-jeton-libre">+ PNJ / monstre</button>
+          <button class="btn petit secondaire" id="btn-grille">▦ Grille</button>
+          <button class="btn petit secondaire" id="btn-fog">🌫️ Brouillard</button>
+          <button class="btn petit secondaire" id="btn-fog-brush">✏️ Révéler</button>
+          <button class="btn petit secondaire" id="btn-fog-clear">Tout révéler</button>
+          <button class="btn petit secondaire" id="btn-fog-fill">Tout couvrir</button>
+          <button class="btn petit danger" id="btn-carte-reset">Réinitialiser</button>
+        </div>
+        <div class="carte-aide" id="carte-aide"></div>
+        <div class="carte-scene" id="carte-scene">
+          <div class="carte-vide" id="carte-vide">Aucune carte importée. Clique « 🗺️ Importer une carte ».</div>
+          <img id="carte-image" alt="carte" />
+          <canvas id="carte-fog"></canvas>
+          <div id="carte-jetons"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- REGLES -->
     <section class="panneau" id="panneau-regles">
       <div class="carte">
@@ -201,8 +229,9 @@
 
   <div id="toast"></div>
 
-  <script src="data/donnees.js?v=4"></script>
-  <script src="js/emblemes.js?v=4"></script>
-  <script src="js/app.js?v=4"></script>
+  <script src="data/donnees.js?v=5"></script>
+  <script src="js/emblemes.js?v=5"></script>
+  <script src="js/carte.js?v=5"></script>
+  <script src="js/app.js?v=5"></script>
 </body>
 </html>

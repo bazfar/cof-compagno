@@ -63,6 +63,7 @@ const App = (() => {
     });
     if (panneau === "fiche") rendreListePersos();
     if (panneau === "regles") rendreRegles();
+    if (panneau === "carte" && window.Carte) window.Carte.onOpen();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
