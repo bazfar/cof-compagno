@@ -11,18 +11,20 @@ const Carte = (() => {
   const PALETTE = ["#c0392b", "#2980b9", "#27ae60", "#8e44ad", "#d35400", "#16a085", "#b8924a", "#7f8c8d"];
 
   // Cartes intégrées (fichiers dans assets/maps/). En ajouter ici au besoin.
+  // groupe : libellé d'optgroup dans le menu déroulant.
   const CARTES_PRESETS = [
-    { key: "monde", label: "🌍 Le Monde", file: "assets/maps/monde.png" },
-    { key: "solvarn", label: "Solvarn — Empire", file: "assets/maps/solvarn.png" },
-    { key: "valdorne", label: "Valdorne — Chevalerie", file: "assets/maps/valdorne.png" },
-    { key: "arveth", label: "Arveth — Le Vacillant", file: "assets/maps/arveth.png" },
-    { key: "mornac", label: "Mornac — Maritime", file: "assets/maps/mornac.png" },
-    { key: "serval", label: "Serval — Montagnard", file: "assets/maps/serval.png" },
-    { key: "liberra", label: "Liberra — République", file: "assets/maps/liberra.png" },
-    { key: "aetharion", label: "Aetharion — Hauts Elfes", file: "assets/maps/aetharion.png" },
-    { key: "aelindra", label: "Aelindra — Elfes Sylvains", file: "assets/maps/aelindra.png" },
-    { key: "mordanel", label: "Mordanel — Elfes Crépuscule", file: "assets/maps/mordanel.png" },
-    { key: "khazrak", label: "Khazrak Dûm — Race Sublimée", file: "assets/maps/khazrak-dum.png" },
+    { key: "monde", groupe: "Monde & régions", label: "🌍 Le Monde", file: "assets/maps/monde.png" },
+    { key: "solvarn", groupe: "Monde & régions", label: "Solvarn — Empire", file: "assets/maps/solvarn.png" },
+    { key: "valdorne", groupe: "Monde & régions", label: "Valdorne — Chevalerie", file: "assets/maps/valdorne.png" },
+    { key: "arveth", groupe: "Monde & régions", label: "Arveth — Le Vacillant", file: "assets/maps/arveth.png" },
+    { key: "mornac", groupe: "Monde & régions", label: "Mornac — Maritime", file: "assets/maps/mornac.png" },
+    { key: "serval", groupe: "Monde & régions", label: "Serval — Montagnard", file: "assets/maps/serval.png" },
+    { key: "liberra", groupe: "Monde & régions", label: "Liberra — République", file: "assets/maps/liberra.png" },
+    { key: "aetharion", groupe: "Monde & régions", label: "Aetharion — Hauts Elfes", file: "assets/maps/aetharion.png" },
+    { key: "aelindra", groupe: "Monde & régions", label: "Aelindra — Elfes Sylvains", file: "assets/maps/aelindra.png" },
+    { key: "mordanel", groupe: "Monde & régions", label: "Mordanel — Elfes Crépuscule", file: "assets/maps/mordanel.png" },
+    { key: "khazrak", groupe: "Monde & régions", label: "Khazrak Dûm — Race Sublimée", file: "assets/maps/khazrak-dum.png" },
+    { key: "valdcourt", groupe: "Lieux & combats", label: "Domaine de Valdcourt (1 case = 1,50 m)", file: "assets/maps/domaine-valdcourt.png" },
   ];
 
   let etat = { image: null, jetons: [], grille: false, fog: false, fogData: null };
@@ -349,11 +351,19 @@ const Carte = (() => {
 
     charger();
 
-    // Remplir le menu déroulant des cartes
+    // Remplir le menu déroulant des cartes, groupé par optgroup
+    const groupes = {};
     CARTES_PRESETS.forEach((p) => {
+      const nomG = p.groupe || "Cartes";
+      if (!groupes[nomG]) {
+        const og = document.createElement("optgroup");
+        og.label = nomG;
+        dom.select.appendChild(og);
+        groupes[nomG] = og;
+      }
       const opt = document.createElement("option");
       opt.value = p.key; opt.textContent = p.label;
-      dom.select.appendChild(opt);
+      groupes[nomG].appendChild(opt);
     });
     dom.select.onchange = () => { if (dom.select.value) chargerPreset(dom.select.value); };
     dom.btnImport.onclick = () => dom.inputCarte.click();
