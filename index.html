@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
+  <link rel="stylesheet" href="css/style.css?v=4" />
+</head>
+<body>
+  <header>
+    <h1>
+      Chroniques Oubliées Fantasy
+      <span class="sous">Compagnon de jeu maison · création, fiches vivantes & dés</span>
+    </h1>
+    <nav class="tabs" id="onglets">
+      <button data-panneau="accueil" class="actif">Accueil</button>
+      <button data-panneau="creation">Création</button>
+      <button data-panneau="fiche">Ma fiche</button>
+      <button data-panneau="des">Dés</button>
+      <button data-panneau="regles">Règles</button>
+      <button data-panneau="lore">Lore</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ACCUEIL -->
+    <section class="panneau actif" id="panneau-accueil">
+      <div class="carte">
+        <h2>Bienvenue, aventurier</h2>
+        <p>Cet outil te permet de créer ton personnage de <strong>Chroniques Oubliées Fantasy</strong> (version maison de ton groupe), de gérer ta fiche en cours de partie et de lancer les dés — tout dans le navigateur, <strong>sans rien installer ni héberger</strong>.</p>
+        <div class="info-box">
+          <strong>Pour jouer en ligne avec tes potes :</strong> chacun ouvre cette page de son côté, crée son perso, et garde Discord ouvert pour la voix. Le MJ peut partager son écran pour la carte et les combats. Tes données sont sauvegardées <strong>dans ton navigateur</strong> (et exportables en fichier à partager).
+        </div>
+        <h3>Comment ça marche</h3>
+        <ul>
+          <li><strong>Création</strong> — choisis ta classe, répartis tes caractéristiques, sélectionne tes capacités (les règles sont appliquées automatiquement).</li>
+          <li><strong>Ma fiche</strong> — ta fiche vivante : PV, modificateurs, capacités, avec des boutons pour lancer les dés liés.</li>
+          <li><strong>Dés</strong> — lanceur complet (tests, attaques, dégâts, avantage/désavantage) avec historique.</li>
+          <li><strong>Règles</strong> — toutes les voies et capacités de chaque classe, y compris ton homebrew (Voie du chaos, etc.).</li>
+          <li><strong>Lore</strong> — l'univers de la campagne.</li>
+        </ul>
+        <div class="barre-actions">
+          <button class="btn or" onclick="App.allerVers('creation')">Créer mon personnage</button>
+          <button class="btn secondaire" onclick="App.allerVers('lore')">Découvrir le monde</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CREATION -->
+    <section class="panneau" id="panneau-creation">
+      <div class="carte">
+        <h2 class="titre-bandeau">1 · Identité & classe</h2>
+        <div class="grille grille-2">
+          <div>
+            <label for="champ-nom">Nom du personnage</label>
+            <input id="champ-nom" type="text" placeholder="Ex. Aldric le Borgne" />
+          </div>
+          <div>
+            <label for="champ-niveau">Niveau</label>
+            <input id="champ-niveau" type="number" min="1" max="20" value="1" />
+          </div>
+        </div>
+        <label style="margin-top:14px;">Classe</label>
+        <div class="grille-classes" id="grille-classes"></div>
+      </div>
+
+      <div class="carte" id="bloc-caracs" style="display:none;">
+        <h2 class="titre-bandeau">2 · Caractéristiques</h2>
+        <p style="font-size:0.85rem;color:#6a6278;">Saisis la <strong>valeur</strong> de chaque caractéristique (1 à 20). Le modificateur est calculé automatiquement, façon d20. <em>Adapte selon la méthode de répartition choisie par ton MJ.</em></p>
+        <div class="grille grille-caracs" id="grille-caracs"></div>
+      </div>
+
+      <div class="carte" id="bloc-voies" style="display:none;">
+        <h2 class="titre-bandeau">3 · Voies & capacités</h2>
+        <div class="aide" id="aide-creation"></div>
+        <div id="zone-voies"></div>
+      </div>
+
+      <div class="carte" id="bloc-finition" style="display:none;">
+        <h2 class="titre-bandeau">4 · Finition</h2>
+        <div class="grille grille-2">
+          <div>
+            <label for="champ-pvmax">PV max <span style="font-weight:400;font-size:0.75rem;">(auto, modifiable)</span></label>
+            <input id="champ-pvmax" type="number" min="1" />
+          </div>
+          <div>
+            <label for="champ-def">DEF <span style="font-weight:400;font-size:0.75rem;">(10 + Mod.DEX + armure)</span></label>
+            <input id="champ-def" type="number" />
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <label>Portrait du personnage <span style="font-weight:400;font-size:0.75rem;">(optionnel)</span></label>
+          <div class="portrait-zone">
+            <div class="portrait-apercu" id="portrait-apercu">—</div>
+            <div>
+              <div class="barre-actions" style="margin-top:0;">
+                <button type="button" class="btn petit secondaire" id="btn-portrait">Choisir une image</button>
+                <button type="button" class="btn petit danger" id="btn-portrait-suppr" style="display:none;">Retirer</button>
+              </div>
+              <input type="file" id="input-portrait" accept="image/*" style="display:none;" />
+              <p style="font-size:0.72rem;color:#8a8296;margin:6px 0 0;">L'image est redimensionnée (max 256px) et stockée avec ta fiche. Sans portrait, l'emblème de la classe est utilisé.</p>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <label for="champ-inventaire">Équipement / inventaire</label>
+          <textarea id="champ-inventaire" placeholder="Armes, armure, objets, or..."></textarea>
+        </div>
+        <div style="margin-top:12px;">
+          <label for="champ-notes">Notes / historique du personnage</label>
+          <textarea id="champ-notes" placeholder="Race, background, objectifs, liens..."></textarea>
+        </div>
+        <div class="barre-actions">
+          <button class="btn or" id="btn-sauver">💾 Enregistrer le personnage</button>
+          <button class="btn secondaire" id="btn-reset">Réinitialiser</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- FICHE -->
+    <section class="panneau" id="panneau-fiche">
+      <div class="carte" id="selecteur-fiche">
+        <h2>Mes personnages</h2>
+        <div class="liste-persos" id="liste-persos"></div>
+        <div class="barre-actions">
+          <button class="btn or" onclick="App.allerVers('creation')">+ Nouveau personnage</button>
+          <button class="btn secondaire" id="btn-importer">📂 Importer (.json)</button>
+          <input type="file" id="input-import" accept=".json" style="display:none;" />
+        </div>
+      </div>
+      <div id="zone-fiche-active"></div>
+    </section>
+
+    <!-- DES -->
+    <section class="panneau" id="panneau-des">
+      <div class="carte">
+        <h2 class="titre-bandeau">Lanceur de dés</h2>
+        <div id="zone-resultat">
+          <div class="label-jet">Lance un dé pour commencer</div>
+          <div class="total">—</div>
+        </div>
+
+        <div class="options-de">
+          <span style="font-weight:600;color:var(--violet-clair);">Mode d20 :</span>
+          <label><input type="radio" name="mode-d20" value="normal" checked /> Normal</label>
+          <label><input type="radio" name="mode-d20" value="avantage" /> Avantage</label>
+          <label><input type="radio" name="mode-d20" value="desavantage" /> Désavantage</label>
+        </div>
+
+        <h3>Dés simples</h3>
+        <div class="des-rapides">
+          <button class="de-btn" data-de="4">d4</button>
+          <button class="de-btn" data-de="6">d6</button>
+          <button class="de-btn" data-de="8">d8</button>
+          <button class="de-btn" data-de="10">d10</button>
+          <button class="de-btn" data-de="12">d12</button>
+          <button class="de-btn" data-de="20">d20</button>
+          <button class="de-btn" data-de="100">d100</button>
+        </div>
+
+        <h3 style="margin-top:18px;">Jet personnalisé</h3>
+        <div class="grille grille-2">
+          <div>
+            <label for="champ-formule">Formule (ex. 2d6+3, 1d20+5)</label>
+            <input id="champ-formule" type="text" placeholder="1d20+3" />
+          </div>
+          <div style="display:flex;align-items:flex-end;">
+            <button class="btn or" id="btn-lancer-formule" style="width:100%;">🎲 Lancer</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="carte">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <h3 style="margin:0;">Historique</h3>
+          <button class="btn petit secondaire" id="btn-vider-histo">Vider</button>
+        </div>
+        <div class="historique" id="historique"></div>
+      </div>
+    </section>
+
+    <!-- REGLES -->
+    <section class="panneau" id="panneau-regles">
+      <div class="carte">
+        <h2 class="titre-bandeau">Règles des classes</h2>
+        <label for="select-regles-classe">Choisir une classe</label>
+        <select id="select-regles-classe"></select>
+      </div>
+      <div id="zone-regles"></div>
+    </section>
+
+    <!-- LORE -->
+    <section class="panneau" id="panneau-lore">
+      <div class="carte" id="zone-lore"></div>
+    </section>
+  </main>
+
+  <footer>
+    Chroniques Oubliées Fantasy — Compagnon de jeu maison · Données sauvegardées localement dans ton navigateur
+  </footer>
+
+  <div id="toast"></div>
+
+  <script src="data/donnees.js?v=4"></script>
+  <script src="js/emblemes.js?v=4"></script>
+  <script src="js/app.js?v=4"></script>
+</body>
+</html>

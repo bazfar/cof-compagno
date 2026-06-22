@@ -1,0 +1,336 @@
+/* ============================================================
+   Chroniques Oubliées Fantasy — Feuille de style
+   Thème parchemin & violet, inspiré des fiches PDF
+   ============================================================ */
+
+:root {
+  --violet: #3d2a52;
+  --violet-clair: #5a3d78;
+  --violet-accent: #7c5aa6;
+  --parchemin: #f3ead3;
+  --parchemin-fonce: #e8dcc0;
+  --encre: #2b2436;
+  --or: #b8924a;
+  --chaos: #8a2f3b;
+  --chaos-bg: #f7e3e0;
+  --succes: #3a7d44;
+  --ombre: rgba(43, 36, 54, 0.18);
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: #1d1526;
+  color: var(--encre);
+  line-height: 1.55;
+}
+
+/* ---------- En-tête ---------- */
+header {
+  background: linear-gradient(160deg, var(--violet) 0%, var(--violet-clair) 100%);
+  color: var(--parchemin);
+  padding: 18px 20px 0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: 0.5px;
+}
+header h1 .sous {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 400;
+  opacity: 0.85;
+  margin-top: 2px;
+  font-style: italic;
+}
+
+/* ---------- Onglets ---------- */
+nav.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 14px;
+}
+nav.tabs button {
+  background: transparent;
+  border: none;
+  color: var(--parchemin);
+  padding: 10px 16px;
+  font-size: 0.92rem;
+  cursor: pointer;
+  border-radius: var(--radius) var(--radius) 0 0;
+  opacity: 0.7;
+  transition: all 0.15s;
+  border-bottom: 3px solid transparent;
+}
+nav.tabs button:hover { opacity: 1; background: rgba(255, 255, 255, 0.08); }
+nav.tabs button.actif {
+  opacity: 1;
+  background: var(--parchemin);
+  color: var(--violet);
+  font-weight: 600;
+  border-bottom-color: var(--or);
+}
+
+/* ---------- Conteneur principal ---------- */
+main {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 22px 16px 60px;
+}
+.panneau { display: none; }
+.panneau.actif { display: block; animation: fade 0.2s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Cartes parchemin ---------- */
+.carte {
+  background: var(--parchemin);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 14px var(--ombre);
+  border: 1px solid var(--parchemin-fonce);
+}
+.carte h2, .carte h3 { color: var(--violet); margin-top: 0; }
+.carte h2.titre-bandeau,
+.titre-bandeau {
+  background: var(--violet);
+  color: var(--parchemin);
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  margin: 0 0 14px;
+  font-size: 1.1rem;
+}
+
+/* ---------- Formulaires ---------- */
+label { font-weight: 600; font-size: 0.85rem; color: var(--violet-clair); display: block; margin-bottom: 4px; }
+input, select, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--parchemin-fonce);
+  border-radius: 6px;
+  background: #fffdf7;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: var(--encre);
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--violet-accent); border-color: var(--violet-accent); }
+textarea { resize: vertical; min-height: 70px; }
+
+.grille { display: grid; gap: 14px; }
+.grille-2 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.grille-caracs { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+
+/* ---------- Boutons ---------- */
+.btn {
+  background: var(--violet-accent);
+  color: #fff;
+  border: none;
+  padding: 9px 16px;
+  border-radius: 7px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: filter 0.15s, transform 0.05s;
+}
+.btn:hover { filter: brightness(1.1); }
+.btn:active { transform: translateY(1px); }
+.btn.secondaire { background: var(--violet); }
+.btn.or { background: var(--or); }
+.btn.danger { background: var(--chaos); }
+.btn.petit { padding: 5px 10px; font-size: 0.8rem; }
+.barre-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+/* ---------- Cartes de classe (sélection) ---------- */
+.grille-classes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.classe-carte {
+  background: #fffdf7;
+  border: 2px solid var(--parchemin-fonce);
+  border-radius: var(--radius);
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.classe-carte:hover { border-color: var(--violet-accent); transform: translateY(-2px); box-shadow: 0 6px 16px var(--ombre); }
+.classe-carte.choisie { border-color: var(--or); background: #fff8e8; }
+.classe-carte .embleme-wrap { text-align: center; margin-bottom: 8px; }
+.embleme { display: block; }
+.classe-carte h3 { margin: 0 0 6px; color: var(--violet); text-align: center; }
+.classe-carte .dv { font-size: 0.8rem; color: var(--violet-accent); font-weight: 600; }
+.classe-carte p { font-size: 0.82rem; margin: 6px 0 0; color: #5a5266; }
+
+/* ---------- Caractéristiques ---------- */
+.carac-bloc {
+  background: #fffdf7;
+  border: 1px solid var(--parchemin-fonce);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+.carac-bloc .code { font-weight: 700; color: var(--violet); font-size: 0.9rem; }
+.carac-bloc .nom { font-size: 0.7rem; color: #8a8296; margin-bottom: 6px; }
+.carac-bloc input { text-align: center; font-size: 1.2rem; font-weight: 700; padding: 4px; }
+.carac-bloc .mod { margin-top: 6px; font-size: 0.85rem; color: var(--violet-accent); font-weight: 600; }
+
+/* ---------- Voies & capacités ---------- */
+.voie {
+  border: 1px solid var(--parchemin-fonce);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.voie-entete {
+  background: var(--violet);
+  color: var(--parchemin);
+  padding: 10px 14px;
+}
+.voie-entete h4 { margin: 0; font-size: 1rem; }
+.voie-entete .desc { font-size: 0.78rem; opacity: 0.85; font-style: italic; margin-top: 3px; }
+.voie.speciale .voie-entete { background: var(--chaos); }
+.badge-chaos {
+  display: inline-block;
+  background: var(--or);
+  color: var(--encre);
+  font-size: 0.65rem;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-weight: 700;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+.rang {
+  display: flex;
+  gap: 10px;
+  padding: 9px 14px;
+  border-top: 1px solid var(--parchemin-fonce);
+  align-items: flex-start;
+}
+.rang:first-child { border-top: none; }
+.rang .num {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--violet-accent);
+  color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.8rem;
+}
+.rang .contenu { flex: 1; }
+.rang .nom-cap { font-weight: 600; color: var(--violet); font-size: 0.9rem; }
+.rang .effet { font-size: 0.85rem; color: #4a4358; }
+.rang.choisi { background: #fff8e8; }
+.rang.verrou { opacity: 0.45; }
+.rang .check { flex-shrink: 0; }
+.rang .check input { width: 20px; height: 20px; cursor: pointer; }
+
+/* ---------- Fiche perso (living sheet) ---------- */
+.entete-fiche {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;
+}
+.entete-fiche .tete-gauche { display: flex; gap: 14px; align-items: center; }
+.avatar { border-radius: 10px; object-fit: cover; border: 2px solid var(--or); display: block; }
+.avatar-embleme { display: inline-flex; }
+.entete-fiche .nom-perso { font-size: 1.6rem; font-weight: 700; color: var(--violet); }
+.entete-fiche .meta { font-size: 0.85rem; color: var(--violet-accent); }
+
+.stats-rapides { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin: 14px 0; }
+.stat-box { background: var(--violet); color: var(--parchemin); border-radius: 8px; padding: 10px; text-align: center; }
+.stat-box .label { font-size: 0.7rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-box .valeur { font-size: 1.5rem; font-weight: 700; }
+
+/* compteur PV */
+.pv-control { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; }
+.pv-control button {
+  width: 24px; height: 24px; border-radius: 50%; border: none; cursor: pointer;
+  background: var(--parchemin); color: var(--violet); font-weight: 700; font-size: 0.9rem; line-height: 1;
+}
+.pv-control input { width: 48px; text-align: center; padding: 3px; font-weight: 700; background: #fffdf7; color: var(--encre); border-radius: 4px; }
+.barre-pv { height: 8px; background: var(--chaos); border-radius: 4px; margin-top: 8px; overflow: hidden; }
+.barre-pv .rempli { height: 100%; background: var(--succes); transition: width 0.2s; }
+
+.cap-fiche { background: #fffdf7; border: 1px solid var(--parchemin-fonce); border-left: 4px solid var(--violet-accent); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; }
+.cap-fiche.chaos { border-left-color: var(--chaos); }
+.cap-fiche .titre-cap { font-weight: 600; color: var(--violet); font-size: 0.92rem; }
+.cap-fiche .voie-source { font-size: 0.7rem; color: #8a8296; }
+.cap-fiche .effet-cap { font-size: 0.85rem; color: #4a4358; margin-top: 3px; }
+
+/* ---------- Lanceur de dés ---------- */
+.des-rapides { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }
+.de-btn {
+  background: var(--violet);
+  color: var(--parchemin);
+  border: none; border-radius: 8px; padding: 14px 8px; cursor: pointer;
+  font-size: 1rem; font-weight: 700; transition: all 0.12s;
+}
+.de-btn:hover { background: var(--violet-accent); transform: translateY(-2px); }
+
+#zone-resultat {
+  background: var(--violet);
+  color: var(--parchemin);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+  margin: 16px 0;
+  min-height: 90px;
+  display: flex; flex-direction: column; justify-content: center;
+}
+#zone-resultat .total { font-size: 3rem; font-weight: 800; line-height: 1; }
+#zone-resultat .detail { font-size: 0.9rem; opacity: 0.85; margin-top: 6px; }
+#zone-resultat .label-jet { font-size: 0.9rem; opacity: 0.7; }
+#zone-resultat.crit .total { color: #ffd86b; }
+#zone-resultat.echec .total { color: #ff9b8a; }
+
+.historique { max-height: 280px; overflow-y: auto; }
+.ligne-histo { display: flex; justify-content: space-between; padding: 6px 10px; border-bottom: 1px solid var(--parchemin-fonce); font-size: 0.85rem; }
+.ligne-histo .res { font-weight: 700; color: var(--violet); }
+.ligne-histo .res.crit { color: var(--or); }
+.ligne-histo .res.echec { color: var(--chaos); }
+
+.options-de { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin: 12px 0; }
+.options-de label { display: flex; align-items: center; gap: 6px; font-weight: 500; }
+.options-de input[type="radio"], .options-de input[type="checkbox"] { width: auto; }
+
+/* ---------- Lore ---------- */
+.lore-section { margin-bottom: 18px; }
+.lore-section h3 { border-bottom: 2px solid var(--or); padding-bottom: 4px; }
+.lore-section .contenu { white-space: pre-wrap; font-size: 0.9rem; color: #3a3348; }
+
+/* ---------- Listes de persos sauvegardés ---------- */
+.liste-persos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.perso-tuile { background: #fffdf7; border: 1px solid var(--parchemin-fonce); border-radius: 8px; padding: 14px; }
+.perso-tuile .tuile-tete { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+.perso-tuile h4 { margin: 0 0 2px; color: var(--violet); }
+.portrait-zone { display: flex; gap: 14px; align-items: center; }
+.portrait-apercu {
+  width: 72px; height: 72px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px dashed var(--parchemin-fonce); border-radius: 10px;
+  overflow: hidden; color: #8a8296; background: #fffdf7;
+}
+.portrait-apercu img { width: 100%; height: 100%; object-fit: cover; }
+.perso-tuile .info { font-size: 0.8rem; color: #8a8296; margin-bottom: 10px; }
+
+.aide { background: var(--chaos-bg); border-left: 4px solid var(--chaos); padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin: 12px 0; }
+.info-box { background: #eef3ec; border-left: 4px solid var(--succes); padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin: 12px 0; }
+.vide { text-align: center; color: #8a8296; padding: 30px; font-style: italic; }
+
+footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; }
+
+/* ---------- Toast ---------- */
+#toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--violet); color: var(--parchemin);
+  padding: 12px 22px; border-radius: 30px; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; font-size: 0.9rem; z-index: 999;
+}
+#toast.visible { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+
+@media (max-width: 600px) {
+  header h1 { font-size: 1.2rem; }
+  #zone-resultat .total { font-size: 2.2rem; }
+}
