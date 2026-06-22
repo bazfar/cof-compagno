@@ -296,6 +296,7 @@ textarea { resize: vertical; min-height: 70px; }
 .options-de input[type="radio"], .options-de input[type="checkbox"] { width: auto; }
 
 /* ---------- Lore ---------- */
+.lore-carte { display: block; width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--parchemin-fonce); margin: 0 0 16px; box-shadow: 0 3px 10px var(--ombre); }
 .lore-section { margin-bottom: 18px; }
 .lore-section h3 { border-bottom: 2px solid var(--or); padding-bottom: 4px; }
 .lore-section .contenu { white-space: pre-wrap; font-size: 0.9rem; color: #3a3348; }

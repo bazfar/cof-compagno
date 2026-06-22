@@ -66,6 +66,16 @@ const Carte = (() => {
     reader.readAsDataURL(file);
   }
 
+  // Charge la carte du monde intégrée (SVG) comme fond
+  function chargerCarteMonde() {
+    if (typeof CARTE_MONDE_DATAURL === "undefined") { toastCarte("Carte du monde indisponible."); return; }
+    etat.image = CARTE_MONDE_DATAURL;
+    etat.fogData = null;
+    sauver();
+    rendreImage(() => { if (etat.fog) remplirFog(); });
+    toastCarte("Carte du monde chargée ✔");
+  }
+
   function rendreImage(apres) {
     if (etat.image) {
       dom.vide.style.display = "none";
@@ -284,6 +294,7 @@ const Carte = (() => {
       jetons: document.getElementById("carte-jetons"),
       vide: document.getElementById("carte-vide"),
       aide: document.getElementById("carte-aide"),
+      btnMonde: document.getElementById("btn-carte-monde"),
       btnImport: document.getElementById("btn-import-carte"),
       inputCarte: document.getElementById("input-carte"),
       btnPersos: document.getElementById("btn-jeton-perso"),
@@ -299,6 +310,7 @@ const Carte = (() => {
 
     charger();
 
+    dom.btnMonde.onclick = chargerCarteMonde;
     dom.btnImport.onclick = () => dom.inputCarte.click();
     dom.inputCarte.onchange = (e) => { if (e.target.files[0]) importerCarte(e.target.files[0]); e.target.value = ""; };
     dom.btnPersos.onclick = ajouterJetonsPersos;

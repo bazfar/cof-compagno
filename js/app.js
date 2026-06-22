@@ -721,6 +721,9 @@ const App = (() => {
   function rendreLore() {
     const zone = document.getElementById("zone-lore");
     let html = `<h2 class="titre-bandeau">${LORE.titre}</h2>`;
+    if (typeof CARTE_MONDE_DATAURL !== "undefined") {
+      html += `<img src="${CARTE_MONDE_DATAURL}" alt="Carte du monde" class="lore-carte" />`;
+    }
     if (LORE.intro) html += `<p style="font-style:italic;color:#6a6278;">${LORE.intro}</p>`;
     LORE.sections.forEach((s) => {
       html += `<div class="lore-section"><h3>${s.titre}</h3><div class="contenu">${echapper(s.contenu)}</div></div>`;
