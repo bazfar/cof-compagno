@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=6" />
+  <link rel="stylesheet" href="css/style.css?v=8" />
 </head>
 <body>
   <header>
@@ -186,8 +186,10 @@
         <h2 class="titre-bandeau">Carte — mode MJ</h2>
         <p style="font-size:0.85rem;color:#6a6278;">Importe une carte, place tes jetons et déplace-les. <strong>Partage ton écran sur Discord</strong> pour que les joueurs voient la scène. Tout est sauvegardé dans ton navigateur.</p>
         <div class="carte-toolbar">
-          <button class="btn petit" id="btn-carte-monde">🌍 Carte du monde</button>
-          <button class="btn petit" id="btn-import-carte">🗺️ Importer une carte</button>
+          <select class="carte-select" id="select-carte-preset" title="Choisir une carte">
+            <option value="">🗺️ Cartes…</option>
+          </select>
+          <button class="btn petit" id="btn-import-carte">📁 Importer la mienne</button>
           <input type="file" id="input-carte" accept="image/*" hidden />
           <button class="btn petit secondaire" id="btn-jeton-perso">+ Mes personnages</button>
           <button class="btn petit secondaire" id="btn-jeton-libre">+ PNJ / monstre</button>
@@ -230,10 +232,10 @@
 
   <div id="toast"></div>
 
-  <script src="data/donnees.js?v=6"></script>
-  <script src="js/emblemes.js?v=6"></script>
-  <script src="js/carte-monde.js?v=6"></script>
-  <script src="js/carte.js?v=6"></script>
-  <script src="js/app.js?v=6"></script>
+  <script src="data/donnees.js?v=8"></script>
+  <script src="js/emblemes.js?v=8"></script>
+  <script src="js/carte-monde.js?v=8"></script>
+  <script src="js/carte.js?v=8"></script>
+  <script src="js/app.js?v=8"></script>
 </body>
 </html>

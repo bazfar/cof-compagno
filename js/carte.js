@@ -10,6 +10,21 @@ const Carte = (() => {
   const STORAGE = "cof_carte";
   const PALETTE = ["#c0392b", "#2980b9", "#27ae60", "#8e44ad", "#d35400", "#16a085", "#b8924a", "#7f8c8d"];
 
+  // Cartes intégrées (fichiers dans assets/maps/). En ajouter ici au besoin.
+  const CARTES_PRESETS = [
+    { key: "monde", label: "🌍 Le Monde", file: "assets/maps/monde.png" },
+    { key: "solvarn", label: "Solvarn — Empire", file: "assets/maps/solvarn.png" },
+    { key: "valdorne", label: "Valdorne — Chevalerie", file: "assets/maps/valdorne.png" },
+    { key: "arveth", label: "Arveth — Le Vacillant", file: "assets/maps/arveth.png" },
+    { key: "mornac", label: "Mornac — Maritime", file: "assets/maps/mornac.png" },
+    { key: "serval", label: "Serval — Montagnard", file: "assets/maps/serval.png" },
+    { key: "liberra", label: "Liberra — République", file: "assets/maps/liberra.png" },
+    { key: "aetharion", label: "Aetharion — Hauts Elfes", file: "assets/maps/aetharion.png" },
+    { key: "aelindra", label: "Aelindra — Elfes Sylvains", file: "assets/maps/aelindra.png" },
+    { key: "mordanel", label: "Mordanel — Elfes Crépuscule", file: "assets/maps/mordanel.png" },
+    { key: "khazrak", label: "Khazrak Dûm — Race Sublimée", file: "assets/maps/khazrak-dum.png" },
+  ];
+
   let etat = { image: null, jetons: [], grille: false, fog: false, fogData: null };
   let pinceauActif = false;
   let compteur = 1;
@@ -66,14 +81,22 @@ const Carte = (() => {
     reader.readAsDataURL(file);
   }
 
-  // Charge la carte du monde intégrée (SVG) comme fond
-  function chargerCarteMonde() {
-    if (typeof CARTE_MONDE_DATAURL === "undefined") { toastCarte("Carte du monde indisponible."); return; }
-    etat.image = CARTE_MONDE_DATAURL;
+  // Charge une carte intégrée (fichier dans assets/maps/) comme fond
+  function chargerPreset(key) {
+    const p = CARTES_PRESETS.find((c) => c.key === key);
+    if (!p) return;
+    etat.image = p.file;
     etat.fogData = null;
     sauver();
     rendreImage(() => { if (etat.fog) remplirFog(); });
-    toastCarte("Carte du monde chargée ✔");
+    toastCarte(p.label + " chargée");
+  }
+
+  // Pour un fichier preset, propose plusieurs extensions (tolérant png/jpg/webp)
+  function candidatsImage(src) {
+    const m = /^(assets\/maps\/.+?)\.(png|jpg|jpeg|webp)$/i.exec(src);
+    if (!m) return [src]; // dataURL importée ou URL autre : un seul essai
+    return [m[1] + ".png", m[1] + ".jpg", m[1] + ".jpeg", m[1] + ".webp"];
   }
 
   function rendreImage(apres) {
@@ -86,13 +109,29 @@ const Carte = (() => {
         if (etat.fogData) restaurerFog();
         if (apres) apres();
       };
-      dom.image.src = etat.image;
+      const essais = candidatsImage(etat.image);
+      dom.image.onerror = () => {
+        if (essais.length) { dom.image.src = essais.shift(); return; }
+        dom.image.style.display = "none";
+        dom.vide.style.display = "flex";
+        dom.vide.textContent = "Carte introuvable. Place le fichier dans assets/maps/ (puis recharge).";
+      };
+      dom.image.src = essais.length ? essais.shift() : etat.image;
     } else {
       dom.vide.style.display = "flex";
+      dom.vide.textContent = "Aucune carte. Choisis « Cartes… » ou importe la tienne.";
       dom.image.style.display = "none";
     }
     rendreJetons();
     dom.scene.classList.toggle("grille", !!etat.grille);
+    syncSelect();
+  }
+
+  // Aligne le menu déroulant sur la carte actuelle
+  function syncSelect() {
+    if (!dom.select) return;
+    const p = CARTES_PRESETS.find((c) => c.file === etat.image);
+    dom.select.value = p ? p.key : "";
   }
 
   /* ---------- Jetons ---------- */
@@ -294,7 +333,7 @@ const Carte = (() => {
       jetons: document.getElementById("carte-jetons"),
       vide: document.getElementById("carte-vide"),
       aide: document.getElementById("carte-aide"),
-      btnMonde: document.getElementById("btn-carte-monde"),
+      select: document.getElementById("select-carte-preset"),
       btnImport: document.getElementById("btn-import-carte"),
       inputCarte: document.getElementById("input-carte"),
       btnPersos: document.getElementById("btn-jeton-perso"),
@@ -310,7 +349,13 @@ const Carte = (() => {
 
     charger();
 
-    dom.btnMonde.onclick = chargerCarteMonde;
+    // Remplir le menu déroulant des cartes
+    CARTES_PRESETS.forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.key; opt.textContent = p.label;
+      dom.select.appendChild(opt);
+    });
+    dom.select.onchange = () => { if (dom.select.value) chargerPreset(dom.select.value); };
     dom.btnImport.onclick = () => dom.inputCarte.click();
     dom.inputCarte.onchange = (e) => { if (e.target.files[0]) importerCarte(e.target.files[0]); e.target.value = ""; };
     dom.btnPersos.onclick = ajouterJetonsPersos;

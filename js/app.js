@@ -721,14 +721,24 @@ const App = (() => {
   function rendreLore() {
     const zone = document.getElementById("zone-lore");
     let html = `<h2 class="titre-bandeau">${LORE.titre}</h2>`;
-    if (typeof CARTE_MONDE_DATAURL !== "undefined") {
-      html += `<img src="${CARTE_MONDE_DATAURL}" alt="Carte du monde" class="lore-carte" />`;
-    }
+    html += `<img id="lore-carte-img" src="assets/maps/monde.png" alt="Carte du monde" class="lore-carte" />`;
     if (LORE.intro) html += `<p style="font-style:italic;color:#6a6278;">${LORE.intro}</p>`;
     LORE.sections.forEach((s) => {
       html += `<div class="lore-section"><h3>${s.titre}</h3><div class="contenu">${echapper(s.contenu)}</div></div>`;
     });
     zone.innerHTML = html;
+    // Repli sur le schéma SVG si l'image PNG n'est pas (encore) présente
+    const im = document.getElementById("lore-carte-img");
+    if (im) {
+      // essaie .png puis .jpg, sinon repli sur le schéma SVG
+      im.onerror = () => {
+        im.onerror = () => {
+          im.onerror = null;
+          if (typeof CARTE_MONDE_DATAURL !== "undefined") im.src = CARTE_MONDE_DATAURL;
+        };
+        im.src = "assets/maps/monde.jpg";
+      };
+    }
   }
 
   /* ============================================================

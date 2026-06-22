@@ -317,7 +317,9 @@ textarea { resize: vertical; min-height: 70px; }
 .perso-tuile .info { font-size: 0.8rem; color: #8a8296; margin-bottom: 10px; }
 
 /* ---------- Carte (mode MJ) ---------- */
-.carte-toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.carte-toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; align-items: center; }
+.carte-select { width: auto; padding: 6px 10px; border-radius: 7px; font-size: 0.85rem; font-weight: 600; background: var(--violet-accent); color: #fff; border: none; cursor: pointer; }
+.carte-select option { background: #fffdf7; color: var(--encre); }
 .carte-toolbar .btn.actif-bouton { background: var(--or); color: var(--encre); }
 .carte-aide { font-size: 0.8rem; color: #6a6278; margin-bottom: 10px; min-height: 1.2em; }
 .carte-scene {
