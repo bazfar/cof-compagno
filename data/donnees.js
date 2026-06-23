@@ -810,6 +810,117 @@ const CLASSES = {
 const ORDRE_CLASSES = ["guerrier", "chevalier", "barde", "chasseur", "moine", "druide", "pretre", "magicien", "enchanteur", "necromancien"];
 
 /* ============================================================
+   VOIES RACIALES (homebrew)
+   Chaque personnage dispose d'une Voie Raciale gratuite, en plus
+   de ses Voies de profil. Ne consomme pas les points de capacité
+   de classe. 1 capacité par rang, rangs acquis dans l'ordre.
+   ============================================================ */
+const RACES = {
+  humain: {
+    race: "humain",
+    nom_affiche: "Humain",
+    voie_nom: "Voie de Sang Mêlé",
+    description: "Adaptabilité, résilience au Chaos latente, ambition divine héritée.",
+    trait_passif: null,
+    variantes: null,
+    rangs: [
+      { rang: 1, nom: "Sang Divin", effet: "+1 à tous les jets de sauvegarde contre la magie et la corruption." },
+      { rang: 2, nom: "Résilience Mortelle", effet: "1x/jour, quand tu tombes à 0 PV, tu restes à 1 PV." },
+      { rang: 3, nom: "Polyvalence", effet: "Tu gagnes un rang supplémentaire dans n'importe quelle Voie de ton profil (hors Voie du Chaos)." },
+      { rang: 4, nom: "Ambition", effet: "+2 à une caractéristique de ton choix (définitif, choisi à ce rang)." },
+      { rang: 5, nom: "Étincelle Divine", effet: "1x/jour, tu réussis automatiquement un test de caractéristique (annonce avant le jet)." },
+    ],
+  },
+
+  elfe: {
+    race: "elfe",
+    nom_affiche: "Elfe",
+    voie_nom: "Voie de l'Enfant de la Sève",
+    description: "Connexion à l'Arbre-Monde, acuité sensorielle, longévité — tronc commun à toutes les nations elfiques.",
+    trait_passif: null,
+    variantes: [
+      { code: "aetharion", nom_affiche: "Aetharion (Haut Elfe)", nom_capacite: "Intuition Magique", effet: "Tu peux identifier un sort ou un objet magique par simple contact (test INT DD 12). +1 aux jets d'attaque magique." },
+      { code: "aelindra", nom_affiche: "Aelindra (Elfe Sylvain)", nom_capacite: "Communion Naturelle", effet: "En milieu naturel, tu ne laisses aucune trace. Tu peux communiquer des émotions simples avec les animaux sauvages." },
+      { code: "mordanel", nom_affiche: "Mordanel (Elfe du Crépuscule)", nom_capacite: "Regard du Témoin", effet: "1x/combat, tu peux désigner une cible : jusqu'à ton prochain tour, tous tes alliés ont +2 aux attaques contre elle." },
+    ],
+    rangs: [
+      { rang: 1, nom: "Sens Affinés", effet: "Vision dans la pénombre jusqu'à 18m. +2 aux tests de Perception." },
+      { rang: 2, nom: "Grâce de la Sève", effet: "+2 en DEX. Tu ne peux pas être surpris si tu n'es pas inconscient." },
+      { rang: 3, nom: "Héritage National", effet: "Capacité différente selon la nation elfique — choisis ta nation pour révéler l'effet." },
+      { rang: 4, nom: "Mémoire des Âges", effet: "1x/session, tu te souviens d'un fait historique ou lié à la magie pertinent (le MJ fournit une information vraie)." },
+      { rang: 5, nom: "Lien à l'Arbre", effet: "1x/jour, tu médites 10 minutes pour regagner 1d6+SAG PV. Inutilisable en armure lourde." },
+    ],
+  },
+
+  nain: {
+    race: "nain",
+    nom_affiche: "Nain",
+    voie_nom: "Voie de la Pierre Vivante",
+    description: "Endurance, ancrage à la terre, magie artisanale intériorisée.",
+    trait_passif: null,
+    variantes: null,
+    rangs: [
+      { rang: 1, nom: "Résistance de Pierre", effet: "+2 PV par niveau (rétroactif à la création). Résistance aux poisons : +4 aux jets de sauvegarde." },
+      { rang: 2, nom: "Vision des Profondeurs", effet: "Vision dans le noir total jusqu'à 18m. Tu sens instinctivement si un tunnel est stable ou sur le point de s'effondrer." },
+      { rang: 3, nom: "Ancrage", effet: "Tant que tu es debout sur de la terre ou de la pierre, tu ne peux pas être repoussé ou renversé contre ta volonté." },
+      { rang: 4, nom: "Savoir des Veines", effet: "+2 aux tests d'INT liés à l'artisanat, la géologie, les mécanismes. Tu estimes la valeur exacte de tout minéral ou objet forgé au regard." },
+      { rang: 5, nom: "Cœur de Montagne", effet: "1x/jour, tu encaisses sans dommage les dégâts d'une seule attaque (annonce après que les dés sont lancés mais avant application)." },
+    ],
+  },
+
+  demi_elfe: {
+    race: "demi_elfe",
+    nom_affiche: "Demi-Elfe",
+    voie_nom: "Voie de l'Entre Deux Mondes",
+    description: "Hériter des deux sangs sans appartenir pleinement à aucun — polyvalence et sensibilité.",
+    trait_passif: "-1 aux jets de Persuasion contre les Hauts Elfes d'Aetharion, qui considèrent le sang mêlé comme une dilution de la Sève.",
+    variantes: null,
+    rangs: [
+      { rang: 1, nom: "Sens Affinés", effet: "Vision dans la pénombre jusqu'à 9m. +1 aux tests de Perception et de Social." },
+      { rang: 2, nom: "Sang Mêlé", effet: "+1 à tous les jets de sauvegarde contre la magie. +1 en DEX ou CHA (choix définitif)." },
+      { rang: 3, nom: "Résonance", effet: "Tu perçois vaguement la présence de magie active dans un rayon de 9m (pas sa nature, juste son existence)." },
+      { rang: 4, nom: "Adaptabilité", effet: "Tu gagnes un rang supplémentaire dans n'importe quelle Voie de ton profil." },
+      { rang: 5, nom: "Double Héritage", effet: "1x/jour, tu peux relancer un test raté de Perception, Social ou INT. Tu gardes le second résultat." },
+    ],
+  },
+
+  demi_orc: {
+    race: "demi_orc",
+    nom_affiche: "Demi-Orc",
+    voie_nom: "Voie de la Rage Cristallisée",
+    description: "Violence émotionnelle héritée des origines orciques, force brute maîtrisée ou subie.",
+    trait_passif: "-1 aux jets de Persuasion contre les personnages de l'Empire de Solvarn et des Royaumes Coalisés. Ces factions de l'Ordre voient le sang orcique avec suspicion.",
+    variantes: null,
+    rangs: [
+      { rang: 1, nom: "Carrure Menaçante", effet: "+2 aux tests d'Intimidation. Les ennemis humanoïdes de taille normale doivent réussir un test de SAG DD 10 pour t'attaquer en premier si une autre cible est disponible." },
+      { rang: 2, nom: "Sang de Guerre", effet: "+1 en FOR ou CON (choix définitif). +2 PV par niveau (rétroactif)." },
+      { rang: 3, nom: "Résistance Instinctive", effet: "Quand tu subis des dégâts qui t'amèneraient en dessous de la moitié de tes PV max, tu réduis ces dégâts de 3." },
+      { rang: 4, nom: "Frénésie Contenue", effet: "1x/combat, tu peux déclencher une rage : +2 aux jets d'attaque et de dégâts pendant 3 tours. À la fin, test CON DD 12 ou tu es Fatigué (-2 à tout) jusqu'au prochain repos." },
+      { rang: 5, nom: "Mémoire de la Guerre", effet: "Les émotions orciques ancestrales te donnent un instinct de combat brut. Tu n'es jamais surpris en combat, et tu ajoutes +1d4 aux dégâts de ta première attaque à chaque combat." },
+    ],
+  },
+
+  demi_gobelin: {
+    race: "demi_gobelin",
+    nom_affiche: "Demi-Gobelin",
+    voie_nom: "Voie de la Ruse des Petits",
+    description: "Ingéniosité, survie par le biais, imprédictibilité héritée des émotions de peur et de ruse cristallisées.",
+    trait_passif: "-1 aux jets de Persuasion contre les personnages de l'Empire de Solvarn et des Royaumes Coalisés. Ces factions de l'Ordre regardent le sang gobelin avec mépris et méfiance.",
+    variantes: null,
+    rangs: [
+      { rang: 1, nom: "Petite Taille", effet: "+2 aux tests de Discrétion. Tu peux te glisser dans des espaces pour une créature de taille Petite sans test." },
+      { rang: 2, nom: "Instinct de Fuite", effet: "Jamais de désavantage en Discrétion ou DEX pour te désengager d'un combat. +1 en DEX." },
+      { rang: 3, nom: "Bricoleur", effet: "Tu peux fabriquer ou désamorcer un piège simple avec des matériaux de récupération (test DEX ou INT DD 10). +2 aux tests liés aux pièges et mécanismes." },
+      { rang: 4, nom: "Cible Difficile", effet: "Les attaques d'opportunité contre toi ont -2. 1x/combat, tu peux te déplacer de 3m sans provoquer d'attaque d'opportunité." },
+      { rang: 5, nom: "Coup Bas", effet: "1x/combat, si tu attaques une cible qui n'a pas encore agi ou qui est engagée avec un allié, tu infliges +2d6 dégâts supplémentaires." },
+    ],
+  },
+};
+
+/* Ordre d'affichage des races */
+const ORDRE_RACES = ["humain", "elfe", "nain", "demi_elfe", "demi_orc", "demi_gobelin"];
+
+/* ============================================================
    LORE DU MONDE
    ============================================================ */
 const LORE = {

@@ -77,8 +77,11 @@ const App = (() => {
       nom: "",
       niveau: 1,
       classe: null,
+      race: null,
+      raceVariante: null, // nation elfique (aetharion / aelindra / mordanel), si race = elfe
       caracs: { FOR: 10, DEX: 10, CON: 10, INT: 10, SAG: 10, CHA: 10 },
       capacites: [], // [{voie, rang}]
+      capacitesRace: [], // [rang] — capacités de la voie raciale (gratuite)
       portrait: null, // data URL (optionnel)
       pvMax: null,
       pvActuel: null,
@@ -118,6 +121,132 @@ const App = (() => {
     rendreVoies();
     recalculerDerives();
     majApercuPortrait();
+  }
+
+  function rendreGrilleRaces() {
+    const grille = document.getElementById("grille-races");
+    grille.innerHTML = "";
+    ORDRE_RACES.forEach((cle) => {
+      const r = RACES[cle];
+      const div = document.createElement("div");
+      div.className = "classe-carte" + (creation.race === cle ? " choisie" : "");
+      div.innerHTML =
+        `<h3>${r.nom_affiche}</h3>` +
+        `<div class="dv">${r.voie_nom}</div>` +
+        `<p>${r.description}</p>`;
+      div.onclick = () => choisirRace(cle);
+      grille.appendChild(div);
+    });
+  }
+
+  function choisirRace(cle) {
+    if (creation.race !== cle) {
+      creation.race = cle;
+      creation.raceVariante = null;
+      creation.capacitesRace = [];
+    }
+    rendreGrilleRaces();
+    document.getElementById("bloc-voie-raciale").style.display = "block";
+    rendreVoieRaciale();
+  }
+
+  /* ---------- Voie raciale (gratuite, séparée des voies de classe) ---------- */
+
+  function rangMaxRace() {
+    return creation.capacitesRace.length ? Math.max(...creation.capacitesRace) : 0;
+  }
+
+  function niveauCreation() {
+    return parseInt(document.getElementById("champ-niveau").value, 10) || 1;
+  }
+
+  // Résout le nom/effet d'un rang de voie raciale, en tenant compte de la variante (nation elfique au rang 3)
+  function texteRangRace(r, rg, variante) {
+    if (r.variantes && rg.rang === 3 && variante) {
+      const v = r.variantes.find((vv) => vv.code === variante);
+      if (v) return { nom: v.nom_capacite, effet: v.effet };
+    }
+    return { nom: rg.nom, effet: rg.effet };
+  }
+
+  function rendreVoieRaciale() {
+    if (!creation.race) return;
+    const r = RACES[creation.race];
+    const niveau = niveauCreation();
+    const rangMax = rangMaxRace();
+
+    const aide = document.getElementById("aide-race");
+    aide.innerHTML =
+      `<strong>Voie raciale gratuite</strong> — ne consomme pas tes points de capacité de classe. ` +
+      `Les rangs s'acquièrent dans l'ordre (impossible de prendre le rang 3 sans 1 et 2), et se débloquent avec le niveau : ` +
+      `au niveau ${niveau}, les rangs 1 à ${Math.min(niveau + 1, 5)} sont accessibles.`;
+
+    const zone = document.getElementById("zone-voie-raciale");
+    zone.innerHTML = "";
+    const divVoie = document.createElement("div");
+    divVoie.className = "voie";
+    let html = `<div class="voie-entete"><h4>${r.voie_nom}</h4><div class="desc">${r.description}</div></div>`;
+
+    if (r.trait_passif) {
+      html += `<div class="aide"><em>Trait racial passif :</em> ${r.trait_passif}</div>`;
+    }
+
+    if (r.variantes) {
+      html += `<div class="aide"><strong>Nation elfique</strong> (détermine l'effet du rang 3 — Héritage National) :</div>`;
+      html += `<div class="options-de">`;
+      r.variantes.forEach((v) => {
+        html += `<label><input type="radio" name="race-variante" value="${v.code}" ${creation.raceVariante === v.code ? "checked" : ""} /> ${v.nom_affiche}</label>`;
+      });
+      html += `</div>`;
+    }
+
+    r.rangs.forEach((rg) => {
+      const choisi = creation.capacitesRace.includes(rg.rang);
+      const verrouOrdre = !choisi && rg.rang > rangMax + 1;
+      const verrouNiveau = !choisi && rg.rang > niveau + 1;
+      const verrou = verrouOrdre || verrouNiveau;
+
+      const { nom, effet } = texteRangRace(r, rg, creation.raceVariante);
+
+      html +=
+        `<div class="rang ${choisi ? "choisi" : ""} ${verrou ? "verrou" : ""}">` +
+        `<div class="num">${rg.rang}</div>` +
+        `<div class="contenu">` +
+        (nom ? `<div class="nom-cap">${nom}</div>` : "") +
+        `<div class="effet">${effet}</div></div>` +
+        `<div class="check"><input type="checkbox" ${choisi ? "checked" : ""} ${verrou ? "disabled" : ""} data-rang="${rg.rang}" /></div>` +
+        `</div>`;
+    });
+    divVoie.innerHTML = html;
+    zone.appendChild(divVoie);
+
+    zone.querySelectorAll('input[name="race-variante"]').forEach((rb) => {
+      rb.onchange = () => { creation.raceVariante = rb.value; rendreVoieRaciale(); };
+    });
+    zone.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+      cb.onchange = () => basculerCapaciteRace(parseInt(cb.dataset.rang, 10));
+    });
+  }
+
+  function basculerCapaciteRace(rang) {
+    const r = RACES[creation.race];
+    if (r.variantes && rang === 3 && !creation.raceVariante) {
+      toast("Choisis d'abord la nation elfique.");
+      rendreVoieRaciale();
+      return;
+    }
+    const idx = creation.capacitesRace.indexOf(rang);
+    if (idx >= 0) {
+      if (creation.capacitesRace.some((x) => x > rang)) {
+        toast("Retire d'abord les rangs supérieurs de la voie raciale.");
+        rendreVoieRaciale();
+        return;
+      }
+      creation.capacitesRace.splice(idx, 1);
+    } else {
+      creation.capacitesRace.push(rang);
+    }
+    rendreVoieRaciale();
   }
 
   /* ---------- Portrait ---------- */
@@ -277,6 +406,7 @@ const App = (() => {
 
   function sauverPersonnage() {
     if (!creation.classe) { toast("Choisis d'abord une classe."); return; }
+    if (!creation.race) { toast("Choisis d'abord une race."); return; }
     const nom = document.getElementById("champ-nom").value.trim();
     if (!nom) { toast("Donne un nom à ton personnage."); return; }
     if (nbRang1() < 2) {
@@ -311,9 +441,11 @@ const App = (() => {
     delete pv.dataset.touche; delete def.dataset.touche; pv.value = ""; def.value = "";
     document.getElementById("bloc-caracs").style.display = "none";
     document.getElementById("bloc-voies").style.display = "none";
+    document.getElementById("bloc-voie-raciale").style.display = "none";
     document.getElementById("bloc-finition").style.display = "none";
     majApercuPortrait();
     rendreGrilleClasses();
+    rendreGrilleRaces();
   }
 
   /* ============================================================
@@ -332,12 +464,13 @@ const App = (() => {
     ids.forEach((id) => {
       const p = persos[id];
       const c = CLASSES[p.classe];
+      const r = p.race ? RACES[p.race] : null;
       const tuile = document.createElement("div");
       tuile.className = "perso-tuile";
       tuile.innerHTML =
         `<div class="tuile-tete">${avatarHtml(p, 48)}<div>` +
         `<h4>${p.nom}</h4>` +
-        `<div class="info">${c ? c.nom_affiche : p.classe} · niveau ${p.niveau} · ${p.pvActuel}/${p.pvMax} PV</div>` +
+        `<div class="info">${c ? c.nom_affiche : p.classe}${r ? " · " + r.nom_affiche : ""} · niveau ${p.niveau} · ${p.pvActuel}/${p.pvMax} PV</div>` +
         `</div></div>` +
         `<div class="barre-actions">` +
         `<button class="btn petit or" data-act="ouvrir" data-id="${id}">Ouvrir</button>` +
@@ -390,6 +523,30 @@ const App = (() => {
       capHtml = `<div class="vide">Aucune capacité sélectionnée.</div>`;
     }
 
+    // Voie raciale (gratuite), affichée séparément des voies de classe
+    const race = p.race ? RACES[p.race] : null;
+    let capRaceHtml = "";
+    if (race) {
+      const liste = (p.capacitesRace || []).slice().sort((a, b) => a - b);
+      if (liste.length) {
+        liste.forEach((rang) => {
+          const rg = race.rangs.find((x) => x.rang === rang);
+          if (!rg) return;
+          const { nom, effet } = texteRangRace(race, rg, p.raceVariante);
+          capRaceHtml +=
+            `<div class="cap-fiche">` +
+            `<div class="titre-cap">${nom || "Rang " + rang}</div>` +
+            `<div class="voie-source">${race.voie_nom} · rang ${rang}</div>` +
+            `<div class="effet-cap">${effet}</div></div>`;
+        });
+      } else {
+        capRaceHtml = `<div class="vide">Aucune capacité raciale sélectionnée.</div>`;
+      }
+      if (race.trait_passif) {
+        capRaceHtml += `<div class="aide" style="margin-top:10px;"><em>Trait racial passif :</em> ${race.trait_passif}</div>`;
+      }
+    }
+
     zone.innerHTML = `
       <div class="carte">
         <div class="entete-fiche">
@@ -397,7 +554,7 @@ const App = (() => {
             ${avatarHtml(p, 76)}
             <div>
               <div class="nom-perso">${p.nom}</div>
-              <div class="meta">${c.nom_affiche} · niveau ${niveau} · Dé de vie ${c.de_de_vie}</div>
+              <div class="meta">${c.nom_affiche}${race ? " · " + race.nom_affiche : ""} · niveau ${niveau} · Dé de vie ${c.de_de_vie}</div>
             </div>
           </div>
           <div class="barre-actions">
@@ -443,6 +600,8 @@ const App = (() => {
         <h3>Capacités</h3>
         ${capHtml}
       </div>
+
+      ${race ? `<div class="carte"><h3>Capacités raciales — ${race.voie_nom}</h3>${capRaceHtml}</div>` : ""}
 
       ${p.inventaire ? `<div class="carte"><h3>Équipement</h3><div style="white-space:pre-wrap;font-size:0.9rem;">${echapper(p.inventaire)}</div></div>` : ""}
       ${p.notes ? `<div class="carte"><h3>Notes</h3><div style="white-space:pre-wrap;font-size:0.9rem;">${echapper(p.notes)}</div></div>` : ""}
@@ -507,6 +666,7 @@ const App = (() => {
     const p = persos[id];
     if (!p) return;
     creation = JSON.parse(JSON.stringify(p)); // copie
+    if (!creation.capacitesRace) creation.capacitesRace = []; // compat fiches créées avant les voies raciales
     allerVers("creation");
     document.getElementById("champ-nom").value = p.nom;
     document.getElementById("champ-niveau").value = p.niveau;
@@ -519,6 +679,11 @@ const App = (() => {
     rendreGrilleClasses();
     rendreCaracs();
     rendreVoies();
+    rendreGrilleRaces();
+    if (creation.race) {
+      document.getElementById("bloc-voie-raciale").style.display = "block";
+      rendreVoieRaciale();
+    }
   }
 
   function supprimerPerso(id) {
@@ -748,6 +913,7 @@ const App = (() => {
   function init() {
     nouvelleCreation();
     rendreGrilleClasses();
+    rendreGrilleRaces();
     rendreHisto();
     rendreLore();
 
@@ -757,7 +923,10 @@ const App = (() => {
     });
 
     // Création
-    document.getElementById("champ-niveau").oninput = recalculerDerives;
+    document.getElementById("champ-niveau").oninput = () => {
+      recalculerDerives();
+      if (creation.race) rendreVoieRaciale();
+    };
     document.getElementById("champ-pvmax").oninput = (e) => { e.target.dataset.touche = "1"; };
     document.getElementById("champ-def").oninput = (e) => { e.target.dataset.touche = "1"; };
     document.getElementById("btn-sauver").onclick = sauverPersonnage;
