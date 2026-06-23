@@ -69,8 +69,18 @@
 
       <div class="carte" id="bloc-caracs" style="display:none;">
         <h2 class="titre-bandeau">2 · Caractéristiques</h2>
-        <p style="font-size:0.85rem;color:#6a6278;">Saisis la <strong>valeur</strong> de chaque caractéristique (1 à 20). Le modificateur est calculé automatiquement, façon d20. <em>Adapte selon la méthode de répartition choisie par ton MJ.</em></p>
+        <p style="font-size:0.85rem;color:#6a6278;">Base 10 partout, <strong>bonus de classe</strong> automatique, et <strong>6 points libres</strong> à répartir (max +3 par caractéristique). Le modificateur est calculé automatiquement, façon d20.</p>
+        <div class="bonus-bar" id="bonus-bar-caracs"></div>
+        <div class="compteur-points" id="pool-caracs"></div>
         <div class="grille grille-caracs" id="grille-caracs"></div>
+        <div class="barre-actions">
+          <button type="button" class="btn petit secondaire" id="btn-reset-libres">Réinitialiser les points libres</button>
+        </div>
+
+        <div class="bloc-pv">
+          <h3>Points de Vie</h3>
+          <div id="zone-pv"></div>
+        </div>
       </div>
 
       <div class="carte" id="bloc-voies" style="display:none;">

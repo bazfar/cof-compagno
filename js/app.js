@@ -80,11 +80,14 @@ const App = (() => {
       race: null,
       raceVariante: null, // nation elfique (aetharion / aelindra / mordanel), si race = elfe
       caracs: { FOR: 10, DEX: 10, CON: 10, INT: 10, SAG: 10, CHA: 10 },
+      caracsLibres: { FOR: 0, DEX: 0, CON: 0, INT: 0, SAG: 0, CHA: 0 }, // points libres répartis (point-buy)
       capacites: [], // [{voie, rang}]
       capacitesRace: [], // [rang] — capacités de la voie raciale (gratuite)
       portrait: null, // data URL (optionnel)
       pvMax: null,
       pvActuel: null,
+      pvHistorique: [], // [{niveau, faces, jet, modCON, total}] — jets de PV par niveau
+      pvNiveauActuel: 1, // dernier niveau dont les PV ont été tirés
       def: null,
       inventaire: "",
       notes: "",
@@ -295,28 +298,187 @@ const App = (() => {
     }
   }
 
+  /* ---------- Caractéristiques (point-buy : base 10 + bonus de classe + points libres) ---------- */
+
+  const CARACS_BASE = 10;
+  const CARACS_LIBRES_TOTAL = 6;
+  const CARACS_LIBRES_MAX_PAR_STAT = 3;
+  const CARACS_MIN = 8;
+  const CARACS_MAX = 18;
+
+  function bonusClasseCarac(code) {
+    const b = creation.classe && CLASS_BONUS_CARACS[creation.classe];
+    if (!b) return 0;
+    if (b.plus2 === code) return 2;
+    if (b.plus1 === code) return 1;
+    return 0;
+  }
+  function libresUtilises() {
+    return CARACS.reduce((s, c) => s + (creation.caracsLibres[c.code] || 0), 0);
+  }
+  function libresRestants() {
+    return Math.max(0, CARACS_LIBRES_TOTAL - libresUtilises());
+  }
+  function peutAugmenterCarac(code) {
+    const val = CARACS_BASE + bonusClasseCarac(code) + (creation.caracsLibres[code] || 0);
+    return libresRestants() > 0 && val < CARACS_MAX && (creation.caracsLibres[code] || 0) < CARACS_LIBRES_MAX_PAR_STAT;
+  }
+  function peutDiminuerCarac(code) {
+    const val = CARACS_BASE + bonusClasseCarac(code) + (creation.caracsLibres[code] || 0);
+    return (creation.caracsLibres[code] || 0) > 0 && val > CARACS_MIN;
+  }
+  function ajusterCaracLibre(code, delta) {
+    if (delta > 0 && !peutAugmenterCarac(code)) return;
+    if (delta < 0 && !peutDiminuerCarac(code)) return;
+    creation.caracsLibres[code] += delta;
+    rendreCaracs();
+    recalculerDerives();
+  }
+  function reinitialiserCaracsLibres() {
+    CARACS.forEach((c) => { creation.caracsLibres[c.code] = 0; });
+    rendreCaracs();
+    recalculerDerives();
+  }
+  function recalcCaracsDepuisPool() {
+    CARACS.forEach((c) => {
+      creation.caracs[c.code] = CARACS_BASE + bonusClasseCarac(c.code) + (creation.caracsLibres[c.code] || 0);
+    });
+  }
+
   function rendreCaracs() {
+    recalcCaracsDepuisPool();
+
+    const bonusBar = document.getElementById("bonus-bar-caracs");
+    if (bonusBar) {
+      const b = creation.classe && CLASS_BONUS_CARACS[creation.classe];
+      bonusBar.innerHTML = b
+        ? `<span class="badge-bonus2">${b.plus2} +2</span><span class="badge-bonus1">${b.plus1} +1</span>`
+        : "";
+    }
+
+    const pool = document.getElementById("pool-caracs");
+    if (pool) {
+      pool.textContent = `Points libres : ${libresRestants()}/${CARACS_LIBRES_TOTAL}`;
+      pool.classList.toggle("epuise", libresRestants() === 0);
+    }
+
     const grille = document.getElementById("grille-caracs");
     grille.innerHTML = "";
     CARACS.forEach((c) => {
+      const bonus = bonusClasseCarac(c.code);
+      const libre = creation.caracsLibres[c.code] || 0;
       const val = creation.caracs[c.code];
+
+      let cls = "carac-bloc";
+      if (bonus > 0) cls += " a-bonus";
+      if (libre > 0) cls += " a-libre";
+
+      let bk = `<span class="bk-base">Base ${CARACS_BASE}</span>`;
+      if (bonus > 0) bk += `<span class="bk-classe"> +${bonus} classe</span>`;
+      if (libre > 0) bk += `<span class="bk-libre"> +${libre} libre</span>`;
+
       const div = document.createElement("div");
-      div.className = "carac-bloc";
+      div.className = cls;
       div.innerHTML =
         `<div class="code">${c.code}</div>` +
         `<div class="nom">${c.nom}</div>` +
-        `<input type="number" min="1" max="20" value="${val}" data-carac="${c.code}" />` +
-        `<div class="mod" id="mod-${c.code}">Mod. ${signe(modCarac(val))}</div>`;
+        `<div class="valeur-ligne">` +
+        `<button type="button" class="carac-btn" data-carac="${c.code}" data-delta="-1" ${!peutDiminuerCarac(c.code) ? "disabled" : ""}>−</button>` +
+        `<div class="valeur">${val}</div>` +
+        `<button type="button" class="carac-btn" data-carac="${c.code}" data-delta="1" ${!peutAugmenterCarac(c.code) ? "disabled" : ""}>+</button>` +
+        `</div>` +
+        `<div class="mod" id="mod-${c.code}">Mod. ${signe(modCarac(val))}</div>` +
+        `<div class="carac-breakdown">${bk}</div>`;
       grille.appendChild(div);
     });
-    grille.querySelectorAll("input[data-carac]").forEach((inp) => {
-      inp.oninput = () => {
-        creation.caracs[inp.dataset.carac] = parseInt(inp.value, 10) || 0;
-        document.getElementById("mod-" + inp.dataset.carac).textContent =
-          "Mod. " + signe(modCarac(inp.value));
-        recalculerDerives();
-      };
+
+    grille.querySelectorAll(".carac-btn").forEach((btn) => {
+      btn.onclick = () => ajusterCaracLibre(btn.dataset.carac, parseInt(btn.dataset.delta, 10));
     });
+
+    const btnResetLibres = document.getElementById("btn-reset-libres");
+    if (btnResetLibres) btnResetLibres.onclick = reinitialiserCaracsLibres;
+
+    rendrePv();
+  }
+
+  /* ---------- Points de Vie (création) : auto au niveau 1, jet de dé pour les niveaux suivants ---------- */
+
+  function deDeVieFaces() {
+    return creation.classe ? maxDeDeVie(CLASSES[creation.classe].de_de_vie) : 6;
+  }
+  function pvBaseNiveau1() {
+    return Math.max(1, deDeVieFaces() + modCarac(creation.caracs.CON));
+  }
+  function pvTotalActuel() {
+    return creation.pvHistorique.reduce((total, j) => total + j.total, pvBaseNiveau1());
+  }
+
+  function rendrePv() {
+    const zone = document.getElementById("zone-pv");
+    if (!zone || !creation.classe) return;
+
+    const faces = deDeVieFaces();
+    const niveauCible = niveauCreation();
+    const peutJeter = creation.pvNiveauActuel < niveauCible;
+
+    let html =
+      `<div class="pv-resume">` +
+      `<div class="pv-case"><div class="label">Dé de vie</div><div class="val">1d${faces}</div></div>` +
+      `<div class="pv-case"><div class="label">PV niveau 1 (auto)</div><div class="val">${pvBaseNiveau1()}</div></div>` +
+      `<div class="pv-case"><div class="label">Niveau atteint</div><div class="val">${creation.pvNiveauActuel}</div></div>` +
+      `<div class="pv-case"><div class="label">PV total</div><div class="val">${pvTotalActuel()}</div></div>` +
+      `</div>`;
+
+    html += `<div class="pv-historique">`;
+    if (!creation.pvHistorique.length) {
+      html += `<div class="pv-vide">Aucun jet de niveau pour l'instant.</div>`;
+    } else {
+      creation.pvHistorique.forEach((j) => {
+        html += `<div class="pv-ligne">Niv.${j.niveau} : jet d${j.faces} → ${j.jet} ${signe(j.modCON)} = ${j.total} PV</div>`;
+      });
+    }
+    html += `</div>`;
+
+    html +=
+      `<div class="barre-actions">` +
+      `<button type="button" class="btn or petit" id="btn-jet-niveau" ${!peutJeter ? "disabled" : ""}>🎲 Jet de niveau</button>` +
+      `<button type="button" class="btn secondaire petit" id="btn-reset-niveaux-pv">↺ Réinitialiser les niveaux</button>` +
+      `</div>`;
+
+    zone.innerHTML = html;
+
+    const btnJet = document.getElementById("btn-jet-niveau");
+    if (btnJet) btnJet.onclick = jetNiveauPv;
+    document.getElementById("btn-reset-niveaux-pv").onclick = reinitialiserNiveauxPv;
+  }
+
+  function jetNiveauPv() {
+    const niveauCible = niveauCreation();
+    if (creation.pvNiveauActuel >= niveauCible) {
+      toast("Augmente le niveau du personnage pour jeter un niveau de plus.");
+      return;
+    }
+    const faces = deDeVieFaces();
+    const modCON = modCarac(creation.caracs.CON);
+    const jet = lancerDe(faces);
+    const total = Math.max(1, jet + modCON);
+    creation.pvNiveauActuel += 1;
+    creation.pvHistorique.push({ niveau: creation.pvNiveauActuel, faces, jet, modCON, total });
+    rendrePv();
+    appliquerPvAuto();
+  }
+
+  function reinitialiserNiveauxPv() {
+    creation.pvHistorique = [];
+    creation.pvNiveauActuel = 1;
+    rendrePv();
+    appliquerPvAuto();
+  }
+
+  function appliquerPvAuto() {
+    const champPv = document.getElementById("champ-pvmax");
+    if (champPv && !champPv.dataset.touche) champPv.value = pvTotalActuel();
   }
 
   // Une capacité est-elle sélectionnée ?
@@ -411,23 +573,13 @@ const App = (() => {
 
   // Calcule PV / DEF suggérés (modifiables ensuite)
   function recalculerDerives() {
-    const c = CLASSES[creation.classe];
-    const modCON = modCarac(creation.caracs.CON);
     const modDEX = modCarac(creation.caracs.DEX);
-    const niveau = parseInt(document.getElementById("champ-niveau").value, 10) || 1;
-    // PV niveau 1 = max dé de vie + modCON ; +1 dé moyen par niveau supplémentaire
-    const dv = maxDeDeVie(c.de_de_vie);
-    let pv = dv + modCON;
-    if (niveau > 1) pv += (niveau - 1) * (Math.ceil(dv / 2) + 1 + modCON);
-    pv = Math.max(1, pv);
-
     const def = 10 + modDEX;
 
-    const champPv = document.getElementById("champ-pvmax");
     const champDef = document.getElementById("champ-def");
     // On ne réécrase que si l'utilisateur n'a pas saisi manuellement
-    if (!champPv.dataset.touche) champPv.value = pv;
     if (!champDef.dataset.touche) champDef.value = def;
+    appliquerPvAuto();
   }
 
   function sauverPersonnage() {
@@ -694,6 +846,16 @@ const App = (() => {
     creation = JSON.parse(JSON.stringify(p)); // copie
     if (!creation.capacitesRace) creation.capacitesRace = []; // compat fiches créées avant les voies raciales
     if (creation.race && !creation.capacitesRace.includes(1)) creation.capacitesRace.unshift(1); // rang 1 toujours acquis
+    if (!creation.caracsLibres) {
+      // compat fiches créées avant le point-buy : on déduit les points libres déjà investis
+      creation.caracsLibres = {};
+      CARACS.forEach((c) => {
+        const ecart = (creation.caracs[c.code] || CARACS_BASE) - CARACS_BASE - bonusClasseCarac(c.code);
+        creation.caracsLibres[c.code] = Math.max(0, Math.min(CARACS_LIBRES_MAX_PAR_STAT, ecart));
+      });
+    }
+    if (!creation.pvHistorique) creation.pvHistorique = []; // compat fiches créées avant le jet de PV par niveau
+    if (typeof creation.pvNiveauActuel !== "number") creation.pvNiveauActuel = creation.niveau || 1;
     allerVers("creation");
     document.getElementById("champ-nom").value = p.nom;
     document.getElementById("champ-niveau").value = p.niveau;
@@ -952,7 +1114,7 @@ const App = (() => {
     // Création
     document.getElementById("champ-niveau").oninput = () => {
       recalculerDerives();
-      if (creation.classe) rendreVoies();
+      if (creation.classe) { rendreVoies(); rendrePv(); }
       if (creation.race) rendreVoieRaciale();
     };
     document.getElementById("champ-pvmax").oninput = (e) => { e.target.dataset.touche = "1"; };

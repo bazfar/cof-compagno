@@ -165,17 +165,49 @@ textarea { resize: vertical; min-height: 70px; }
 .classe-carte p { font-size: 0.82rem; margin: 6px 0 0; color: #5a5266; }
 
 /* ---------- Caractéristiques ---------- */
+.bonus-bar { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; min-height: 26px; }
+.badge-bonus2 { background: var(--violet); color: #fff; font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 10px; }
+.badge-bonus1 { background: var(--parchemin-fonce); color: var(--violet); border: 1px solid var(--violet-accent); font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 10px; }
+
 .carac-bloc {
   background: #fffdf7;
-  border: 1px solid var(--parchemin-fonce);
+  border: 1.5px solid var(--parchemin-fonce);
   border-radius: 8px;
   padding: 10px;
   text-align: center;
 }
+.carac-bloc.a-bonus { border-color: var(--or); }
+.carac-bloc.a-libre { border-color: var(--violet-accent); }
 .carac-bloc .code { font-weight: 700; color: var(--violet); font-size: 0.9rem; }
 .carac-bloc .nom { font-size: 0.7rem; color: #8a8296; margin-bottom: 6px; }
-.carac-bloc input { text-align: center; font-size: 1.2rem; font-weight: 700; padding: 4px; }
-.carac-bloc .mod { margin-top: 6px; font-size: 0.85rem; color: var(--violet-accent); font-weight: 600; }
+.carac-bloc .valeur-ligne { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 6px 0; }
+.carac-btn {
+  width: 26px; height: 26px;
+  border: none; border-radius: 50%;
+  background: var(--violet); color: #fff;
+  font-weight: 700; font-size: 1rem; line-height: 1;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.carac-btn:hover { background: var(--violet-accent); }
+.carac-btn:disabled { background: #cfc7d8; cursor: not-allowed; }
+.carac-bloc .valeur { font-size: 1.3rem; font-weight: 700; color: var(--encre); min-width: 32px; }
+.carac-bloc .mod { margin-top: 2px; font-size: 0.85rem; color: var(--violet-accent); font-weight: 600; }
+.carac-breakdown { font-size: 0.66rem; color: #8a8296; min-height: 14px; margin-top: 4px; }
+.carac-breakdown .bk-classe { color: var(--or); font-weight: 700; }
+.carac-breakdown .bk-libre { color: var(--violet-accent); font-weight: 700; }
+
+/* ---------- Points de Vie (création) ---------- */
+.bloc-pv { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--parchemin-fonce); }
+.bloc-pv h3 { margin: 0 0 8px; color: var(--violet); }
+.pv-resume { display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0; }
+.pv-case { background: #fffdf7; border: 1px solid var(--parchemin-fonce); border-radius: 8px; padding: 8px 14px; text-align: center; min-width: 100px; }
+.pv-case .label { font-size: 0.66rem; color: #8a8296; text-transform: uppercase; letter-spacing: 0.04em; }
+.pv-case .val { font-size: 1.25rem; font-weight: 700; color: var(--violet); }
+.pv-historique { margin: 10px 0; max-height: 180px; overflow-y: auto; border: 1px solid var(--parchemin-fonce); border-radius: 8px; background: #fffdf7; }
+.pv-ligne { font-size: 0.82rem; padding: 6px 10px; border-bottom: 1px solid var(--parchemin-fonce); }
+.pv-ligne:last-child { border-bottom: none; }
+.pv-vide { font-size: 0.8rem; color: #8a8296; font-style: italic; padding: 10px; }
 
 /* ---------- Voies & capacités ---------- */
 .voie {

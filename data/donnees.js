@@ -26,6 +26,21 @@ const CARAC_MAGIE = {
   // guerrier, chasseur & chevalier : pas de magie
 };
 
+/* Bonus de caractéristiques par classe pour la répartition en création
+   (point-buy homebrew) : +2 sur la carac. principale, +1 sur la secondaire. */
+const CLASS_BONUS_CARACS = {
+  guerrier: { plus2: "FOR", plus1: "CON" },
+  chevalier: { plus2: "FOR", plus1: "CHA" },
+  moine: { plus2: "SAG", plus1: "DEX" },
+  pretre: { plus2: "SAG", plus1: "CON" },
+  druide: { plus2: "SAG", plus1: "CON" },
+  magicien: { plus2: "INT", plus1: "CON" },
+  necromancien: { plus2: "INT", plus1: "SAG" },
+  barde: { plus2: "CHA", plus1: "DEX" },
+  enchanteur: { plus2: "CHA", plus1: "INT" },
+  chasseur: { plus2: "DEX", plus1: "CON" },
+};
+
 const CLASSES = {
   guerrier: {
     classe: "guerrier",
