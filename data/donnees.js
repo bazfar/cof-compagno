@@ -26,6 +26,25 @@ const CARAC_MAGIE = {
   // guerrier, chasseur & chevalier : pas de magie
 };
 
+/* Archétype de progression du bonus d'attaque (jet uniquement, pas les dégâts) par classe. */
+const ARCHETYPE_CLASSE = {
+  guerrier: "martial", chevalier: "martial", chasseur: "martial",
+  pretre: "hybride", druide: "hybride", barde: "hybride", moine: "hybride",
+  magicien: "lanceur", necromancien: "lanceur", enchanteur: "lanceur",
+};
+/* Niveaux requis pour gagner +1 au bonus d'attaque selon l'archétype. */
+const DIVISEUR_ATTAQUE = { martial: 1, hybride: 2, lanceur: 3 };
+
+/* Famille de caractéristique associée à chaque classe, utilisée pour le coût
+   d'ouverture des voies hors profil lors d'une montée de niveau. */
+const FAMILLE_CLASSE = {
+  guerrier: "FOR", chevalier: "FOR",
+  chasseur: "DEX",
+  pretre: "SAG", druide: "SAG", moine: "SAG",
+  magicien: "INT", necromancien: "INT",
+  barde: "CHA", enchanteur: "CHA",
+};
+
 /* Bonus de caractéristiques par classe pour la répartition en création
    (point-buy homebrew) : +2 sur la carac. principale, +1 sur la secondaire. */
 const CLASS_BONUS_CARACS = {

@@ -24,6 +24,14 @@ const App = (() => {
   }
   function signe(n) { return (n >= 0 ? "+" + n : "" + n); }
 
+  // Bonus d'attaque (jet uniquement) selon l'archétype de la classe : martial +1/niv,
+  // hybride +1 tous les 2 niv, lanceur +1 tous les 3 niv.
+  function bonusAttaqueProgression(classe, niveau) {
+    const archetype = ARCHETYPE_CLASSE[classe] || "martial";
+    const diviseur = DIVISEUR_ATTAQUE[archetype] || 1;
+    return Math.floor(niveau / diviseur);
+  }
+
   // Génère un id sans Date.now ni Math.random impur — basé sur compteur + contenu
   function genererId(nom) {
     const base = (nom || "perso").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 20);
@@ -156,6 +164,7 @@ const App = (() => {
       caracsLibres: { FOR: 0, DEX: 0, CON: 0, INT: 0, SAG: 0, CHA: 0 }, // points libres répartis (point-buy)
       capacites: [], // [{voie, rang}]
       capacitesRace: [], // [rang] — capacités de la voie raciale (gratuite)
+      voiesHorsProfil: [], // [{classe, voie, cout}] — voies débloquées hors du profil de classe
       portrait: null, // data URL (optionnel)
       pvMax: null,
       pvActuel: null,
@@ -563,57 +572,85 @@ const App = (() => {
     const rangs = creation.capacites.filter((c) => c.voie === voieNom).map((c) => c.rang);
     return rangs.length ? Math.max(...rangs) : 0;
   }
-  // Nb total de rangs de voie de classe pris (chaque rang coché compte pour 1 point)
-  function nbRangsPris() {
-    return creation.capacites.length;
+
+  // Coût en points de capacité d'un rang : rang 1-2 = 1 point, rang 3-5 = 2 points
+  function coutRangVoie(rang) {
+    return rang >= 3 ? 2 : 1;
   }
 
-  const POINTS_VOIE_MAX = 2;
+  // Points de capacité totaux disponibles : 2 au niveau 1, +2 par niveau supplémentaire
+  function pointsVoieTotal() {
+    return 2 * niveauCreation();
+  }
+
+  // Points déjà dépensés : rangs de voie pris + déblocages de voies hors profil
+  function pointsVoieDepenses() {
+    const coutRangs = creation.capacites.reduce((t, c) => t + coutRangVoie(c.rang), 0);
+    const coutDeblocages = (creation.voiesHorsProfil || []).reduce((t, hp) => t + (hp.cout || 0), 0);
+    return coutRangs + coutDeblocages;
+  }
+
+  function pointsVoieRestants() {
+    return Math.max(0, pointsVoieTotal() - pointsVoieDepenses());
+  }
+
+  // Voies disponibles : voies de la classe + voies hors profil débloquées
+  function voiesDisponibles() {
+    const c = CLASSES[creation.classe];
+    const horsProfil = (creation.voiesHorsProfil || [])
+      .map((hp) => {
+        const cls = CLASSES[hp.classe];
+        const voie = cls && cls.voies.find((v) => v.nom === hp.voie);
+        return voie ? Object.assign({}, voie, { horsProfilClasse: hp.classe }) : null;
+      })
+      .filter(Boolean);
+    return c.voies.concat(horsProfil);
+  }
 
   function rendreVoies() {
-    const c = CLASSES[creation.classe];
     const niveau = niveauCreation();
-    const pointsRestants = Math.max(0, POINTS_VOIE_MAX - nbRangsPris());
+    const pointsRestants = pointsVoieRestants();
+    const total = pointsVoieTotal();
 
     const aide = document.getElementById("aide-creation");
     aide.innerHTML =
-      `<strong>Règles :</strong> au niveau 1, tu disposes de <strong>2 points de voie</strong> : ` +
-      `soit 2 capacités de rang 1 dans deux voies différentes, soit 1 rang 1 et le rang 2 d'une même voie. ` +
-      `Les rangs supérieurs s'acquièrent dans l'ordre (pas de rang 3 sans 1 et 2), et les ` +
-      `<strong>rangs 3 à 5 restent verrouillés tant que le personnage est niveau 1</strong>. ` +
+      `<strong>Règles :</strong> tu disposes de <strong>2 points de capacité par niveau</strong> (${total} au total au niveau ${niveau}). ` +
+      `Un rang 1 ou 2 coûte <strong>1 point</strong>, un rang 3, 4 ou 5 coûte <strong>2 points</strong>. ` +
+      `Les rangs s'acquièrent dans l'ordre (pas de rang 3 sans 1 et 2). ` +
       `La <strong>Voie du chaos</strong> est optionnelle — uniquement avec l'accord du MJ.`;
 
     const compteur = document.getElementById("compteur-points-voie");
     if (compteur) {
-      compteur.textContent = `Points de voie : ${pointsRestants}/${POINTS_VOIE_MAX}`;
+      compteur.textContent = `Points de capacité : ${pointsRestants}/${total}`;
       compteur.classList.toggle("epuise", pointsRestants === 0);
     }
 
     const zone = document.getElementById("zone-voies");
     zone.innerHTML = "";
-    c.voies.forEach((voie) => {
+    voiesDisponibles().forEach((voie) => {
       const divVoie = document.createElement("div");
       divVoie.className = "voie" + (voie.speciale ? " speciale" : "");
       let html =
         `<div class="voie-entete"><h4>${voie.nom}` +
         (voie.speciale ? `<span class="badge-chaos">CHAOS — accord MJ</span>` : "") +
+        (voie.horsProfilClasse ? `<span class="badge-chaos">HORS PROFIL — ${CLASSES[voie.horsProfilClasse].nom_affiche}</span>` : "") +
         `</h4><div class="desc">${voie.description}</div></div>`;
 
       voie.rangs.forEach((r) => {
         const choisi = estChoisie(voie.nom, r.rang);
+        const cout = coutRangVoie(r.rang);
         // Verrou : pour cocher le rang N, il faut les rangs 1..N-1 dans cette voie
         const verrouOrdre = !choisi && r.rang > rangMaxVoie(voie.nom) + 1;
-        // Verrou : rangs 3-5 inaccessibles tant que le personnage est niveau 1
-        const verrouNiveau = !choisi && r.rang >= 3 && niveau <= 1;
-        // Verrou : plus de points de voie disponibles pour un nouveau rang (1 ou 2)
-        const verrouPoints = !choisi && pointsRestants <= 0;
-        const verrou = verrouOrdre || verrouNiveau || verrouPoints;
+        // Verrou : plus assez de points de capacité disponibles pour ce rang
+        const verrouPoints = !choisi && cout > pointsRestants;
+        const verrou = verrouOrdre || verrouPoints;
         html +=
           `<div class="rang ${choisi ? "choisi" : ""} ${verrou ? "verrou" : ""}">` +
           `<div class="num">${r.rang}</div>` +
           `<div class="contenu">` +
           (r.nom ? `<div class="nom-cap">${r.nom}</div>` : "") +
           `<div class="effet">${r.effet}</div></div>` +
+          `<div class="cout-rang">${cout} pt${cout > 1 ? "s" : ""}</div>` +
           `<div class="check"><input type="checkbox" ${choisi ? "checked" : ""} ${verrou ? "disabled" : ""} ` +
           `data-voie="${encodeURIComponent(voie.nom)}" data-rang="${r.rang}" /></div>` +
           `</div>`;
@@ -625,6 +662,8 @@ const App = (() => {
     zone.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
       cb.onchange = () => basculerCapacite(decodeURIComponent(cb.dataset.voie), parseInt(cb.dataset.rang, 10));
     });
+
+    rendreVoiesHorsProfil();
   }
 
   function basculerCapacite(voieNom, rang) {
@@ -638,8 +677,72 @@ const App = (() => {
       }
       creation.capacites.splice(idx, 1);
     } else {
+      const cout = coutRangVoie(rang);
+      if (cout > pointsVoieRestants()) {
+        toast("Pas assez de points de capacité.");
+        rendreVoies();
+        return;
+      }
       creation.capacites.push({ voie: voieNom, rang: rang });
     }
+    rendreVoies();
+    recalculerDerives();
+  }
+
+  // Coût d'ouverture d'une voie hors profil : 2 points (même famille de caractéristique), 4 points (famille différente)
+  function coutDeblocageHorsProfil(classeCible) {
+    const familleActuelle = FAMILLE_CLASSE[creation.classe];
+    const familleCible = FAMILLE_CLASSE[classeCible];
+    return familleActuelle && familleActuelle === familleCible ? 2 : 4;
+  }
+
+  function rendreVoiesHorsProfil() {
+    const aide = document.getElementById("aide-horsprofil");
+    const zone = document.getElementById("zone-voies-horsprofil");
+    if (!zone) return;
+
+    if (aide) {
+      aide.innerHTML =
+        `<strong>Voies hors profil :</strong> débloque une voie d'une autre classe en payant son coût d'ouverture ` +
+        `(2 points si même famille de caractéristique, 4 points sinon), puis achète ses rangs normalement.`;
+    }
+
+    const pointsRestants = pointsVoieRestants();
+    const dejaDebloquees = (creation.voiesHorsProfil || []).map((hp) => hp.voie);
+
+    zone.innerHTML = "";
+    Object.keys(CLASSES)
+      .filter((codeClasse) => codeClasse !== creation.classe)
+      .forEach((codeClasse) => {
+        const cls = CLASSES[codeClasse];
+        const cout = coutDeblocageHorsProfil(codeClasse);
+        cls.voies.filter((v) => !v.speciale && !dejaDebloquees.includes(v.nom)).forEach((voie) => {
+          const verrou = cout > pointsRestants;
+          const div = document.createElement("div");
+          div.className = "voie hors-profil-ligne";
+          div.innerHTML =
+            `<div class="voie-entete"><h4>${voie.nom} <span class="badge-chaos">${cls.nom_affiche}</span></h4>` +
+            `<div class="desc">${voie.description}</div></div>` +
+            `<button type="button" class="btn petit ${verrou ? "secondaire" : "or"}" ${verrou ? "disabled" : ""} ` +
+            `data-classe="${codeClasse}" data-voie="${encodeURIComponent(voie.nom)}">Débloquer (coût ${cout} pt${cout > 1 ? "s" : ""})</button>`;
+          zone.appendChild(div);
+        });
+      });
+
+    zone.querySelectorAll("button[data-voie]").forEach((btn) => {
+      btn.onclick = () => debloquerVoieHorsProfil(btn.dataset.classe, decodeURIComponent(btn.dataset.voie));
+    });
+  }
+
+  function debloquerVoieHorsProfil(classeCible, voieNom) {
+    const cout = coutDeblocageHorsProfil(classeCible);
+    if (cout > pointsVoieRestants()) {
+      toast("Pas assez de points de capacité.");
+      return;
+    }
+    if (!creation.voiesHorsProfil) creation.voiesHorsProfil = [];
+    creation.voiesHorsProfil.push({ classe: classeCible, voie: voieNom, cout });
+    toast(`Voie "${voieNom}" débloquée (${cout} pts).`);
     rendreVoies();
     recalculerDerives();
   }
@@ -660,8 +763,8 @@ const App = (() => {
     if (!creation.race) { toast("Choisis d'abord une race."); return; }
     const nom = document.getElementById("champ-nom").value.trim();
     if (!nom) { toast("Donne un nom à ton personnage."); return; }
-    if (nbRangsPris() < 2) {
-      if (!confirm("Tu n'as pas dépensé tes 2 points de voie (règle de création). Enregistrer quand même ?")) return;
+    if (pointsVoieDepenses() < pointsVoieTotal()) {
+      if (!confirm("Tu n'as pas dépensé tous tes points de capacité disponibles. Enregistrer quand même ?")) return;
     }
 
     creation.nom = nom;
@@ -748,11 +851,12 @@ const App = (() => {
     const mods = {};
     CARACS.forEach((cc) => (mods[cc.code] = modCarac(p.caracs[cc.code])));
 
-    // Bonus d'attaque = niveau + mod approprié
-    const attContact = niveau + mods.FOR;
-    const attDistance = niveau + mods.DEX;
+    // Bonus d'attaque (jet uniquement) = bonus de progression selon l'archétype + mod approprié
+    const bonusProgression = bonusAttaqueProgression(p.classe, niveau);
+    const attContact = bonusProgression + mods.FOR;
+    const attDistance = bonusProgression + mods.DEX;
     const caracMag = CARAC_MAGIE[p.classe];
-    const attMagique = caracMag ? niveau + mods[caracMag] : null;
+    const attMagique = caracMag ? bonusProgression + mods[caracMag] : null;
     const init = mods.DEX;
 
     const zone = document.getElementById("zone-fiche-active");
@@ -809,6 +913,7 @@ const App = (() => {
             </div>
           </div>
           <div class="barre-actions">
+            <button class="btn petit or" id="btn-niveau-up">⬆ Monter de niveau</button>
             <button class="btn petit secondaire" id="btn-editer-fiche">✎ Modifier</button>
             <button class="btn petit secondaire" id="btn-exporter-fiche">Exporter</button>
           </div>
@@ -844,7 +949,7 @@ const App = (() => {
           <button class="btn" data-attaque="distance" data-bonus="${attDistance}">🏹 Distance (${signe(attDistance)})</button>
           ${attMagique !== null ? `<button class="btn" data-attaque="magique" data-bonus="${attMagique}">✨ Magique (${signe(attMagique)})</button>` : ""}
         </div>
-        <p style="font-size:0.75rem;color:#8a8296;margin-top:6px;">Bonus d'attaque = niveau + modificateur. Ajuste selon tes voies (ex. +1 Tir ajusté) au moment du jet via l'onglet Dés si besoin.</p>
+        <p style="font-size:0.75rem;color:#8a8296;margin-top:6px;">Bonus d'attaque (jet, pas les dégâts) = bonus de progression (${ARCHETYPE_CLASSE[p.classe] || "martial"}, ${signe(bonusProgression)} au niveau ${niveau}) + modificateur. Ajuste selon tes voies (ex. +1 Tir ajusté) au moment du jet via l'onglet Dés si besoin.</p>
       </div>
 
       <div class="carte">
@@ -880,6 +985,7 @@ const App = (() => {
         allerVers("des");
       };
     });
+    document.getElementById("btn-niveau-up").onclick = () => monterDeNiveau(id);
     document.getElementById("btn-editer-fiche").onclick = () => editerPerso(id);
     document.getElementById("btn-exporter-fiche").onclick = () => exporterPerso(id);
   }
@@ -929,6 +1035,7 @@ const App = (() => {
     }
     if (!creation.pvHistorique) creation.pvHistorique = []; // compat fiches créées avant le jet de PV par niveau
     if (typeof creation.pvNiveauActuel !== "number") creation.pvNiveauActuel = creation.niveau || 1;
+    if (!creation.voiesHorsProfil) creation.voiesHorsProfil = []; // compat fiches créées avant les voies hors profil
     allerVers("creation");
     document.getElementById("champ-nom").value = p.nom;
     document.getElementById("champ-niveau").value = p.niveau;
@@ -946,6 +1053,27 @@ const App = (() => {
       document.getElementById("bloc-voie-raciale").style.display = "block";
       rendreVoieRaciale();
     }
+  }
+
+  // Monte le personnage d'un niveau : ouvre la fiche en édition, incrémente le niveau,
+  // jette les PV du nouveau niveau (dé + Mod.CON, min 1) et rafraîchit voies/points/voies hors profil.
+  function monterDeNiveau(id) {
+    editerPerso(id);
+    const champNiveau = document.getElementById("champ-niveau");
+    const champPv = document.getElementById("champ-pvmax");
+    const pvAvant = pvTotalActuel();
+
+    creation.niveau = (parseInt(champNiveau.value, 10) || 1) + 1;
+    champNiveau.value = creation.niveau;
+
+    jetNiveauPv();
+    champPv.value = pvTotalActuel();
+    const gainPv = pvTotalActuel() - pvAvant;
+
+    rendreVoies();
+
+    toast(`Niveau ${creation.niveau} ! +${gainPv} PV (total ${pvTotalActuel()}). Points de capacité : ${pointsVoieRestants()}/${pointsVoieTotal()}. Pense à enregistrer.`);
+    document.getElementById("bloc-voies").scrollIntoView({ behavior: "smooth" });
   }
 
   function supprimerPerso(id) {

@@ -301,6 +301,28 @@ textarea { resize: vertical; min-height: 70px; }
   margin-bottom: 12px;
 }
 .compteur-points.epuise { background: var(--chaos); }
+.cout-rang {
+  flex-shrink: 0;
+  align-self: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--violet);
+  background: var(--parchemin-fonce);
+  padding: 3px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.hors-profil-ligne {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+}
+.hors-profil-ligne .voie-entete { flex: 1; background: none; color: var(--encre); padding: 0; }
+.hors-profil-ligne .voie-entete h4 { font-size: 0.9rem; color: var(--violet); }
+.hors-profil-ligne .voie-entete .desc { color: #4a4358; opacity: 1; }
 
 /* ---------- Fiche perso (living sheet) ---------- */
 .entete-fiche {
