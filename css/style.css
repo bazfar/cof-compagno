@@ -20,6 +20,27 @@
 
 * { box-sizing: border-box; }
 
+/* ---------- Rôle Joueur / MJ ---------- */
+body.role-joueur [data-role="mj"] { display: none !important; }
+body.role-mj [data-role="joueur"] { display: none !important; }
+
+.role-choix { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 16px; }
+.role-carte {
+  background: #fffdf7;
+  border: 2px solid var(--parchemin-fonce);
+  border-radius: var(--radius);
+  padding: 22px 18px;
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.role-carte:hover { border-color: var(--violet-accent); transform: translateY(-2px); box-shadow: 0 6px 16px var(--ombre); }
+.role-icone { font-size: 2.4rem; margin-bottom: 8px; }
+.role-carte h3 { margin: 0 0 8px; color: var(--violet); }
+.role-carte p { font-size: 0.85rem; color: #5a5266; margin: 0; }
+.role-actuel { font-size: 0.82rem; color: #6a6278; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--parchemin-fonce); }
+
 body {
   margin: 0;
   font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;

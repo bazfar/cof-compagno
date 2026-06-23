@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=9" />
+  <link rel="stylesheet" href="css/style.css?v=10" />
 </head>
 <body>
   <header>
@@ -12,12 +12,13 @@
       Chroniques Oubliées Fantasy
       <span class="sous">Compagnon de jeu maison · création, fiches vivantes & dés</span>
     </h1>
-    <nav class="tabs" id="onglets">
+    <nav class="tabs" id="onglets" style="display:none;">
       <button data-panneau="accueil" class="actif">Accueil</button>
-      <button data-panneau="creation">Création</button>
-      <button data-panneau="fiche">Ma fiche</button>
+      <button data-panneau="creation" data-role="joueur">Création</button>
+      <button data-panneau="fiche" id="onglet-fiche">Ma fiche</button>
       <button data-panneau="des">Dés</button>
       <button data-panneau="carte">Carte</button>
+      <button data-panneau="bestiaire" data-role="mj">Bestiaire</button>
       <button data-panneau="regles">Règles</button>
       <button data-panneau="lore">Lore</button>
     </nav>
@@ -26,24 +27,44 @@
   <main>
     <!-- ACCUEIL -->
     <section class="panneau actif" id="panneau-accueil">
-      <div class="carte">
+      <div class="carte" id="choix-role">
+        <h2>Bienvenue, aventurier</h2>
+        <p>Avant de commencer, dis-nous qui tu es à cette table :</p>
+        <div class="role-choix">
+          <button type="button" class="role-carte" data-role-choix="joueur">
+            <div class="role-icone">🧙</div>
+            <h3>Je suis Joueur</h3>
+            <p>Crée ton personnage, consulte ta fiche, lance les dés, regarde la carte et le lore.</p>
+          </button>
+          <button type="button" class="role-carte" data-role-choix="mj">
+            <div class="role-icone">🛡️</div>
+            <h3>Je suis Maître du Jeu</h3>
+            <p>Retrouve les fiches des aventuriers, gère la carte, le bestiaire et le lore de la campagne.</p>
+          </button>
+        </div>
+      </div>
+
+      <div class="carte" id="accueil-contenu" style="display:none;">
         <h2>Bienvenue, aventurier</h2>
         <p>Cet outil te permet de créer ton personnage de <strong>Chroniques Oubliées Fantasy</strong> (version maison de ton groupe), de gérer ta fiche en cours de partie et de lancer les dés — tout dans le navigateur, <strong>sans rien installer ni héberger</strong>.</p>
         <div class="info-box">
           <strong>Pour jouer en ligne avec tes potes :</strong> chacun ouvre cette page de son côté, crée son perso, et garde Discord ouvert pour la voix. Le MJ peut partager son écran pour la carte et les combats. Tes données sont sauvegardées <strong>dans ton navigateur</strong> (et exportables en fichier à partager).
         </div>
         <h3>Comment ça marche</h3>
-        <ul>
-          <li><strong>Création</strong> — choisis ta classe, répartis tes caractéristiques, sélectionne tes capacités (les règles sont appliquées automatiquement).</li>
-          <li><strong>Ma fiche</strong> — ta fiche vivante : PV, modificateurs, capacités, avec des boutons pour lancer les dés liés.</li>
+        <ul id="liste-comment-ca-marche">
+          <li data-role="joueur"><strong>Création</strong> — choisis ta classe, répartis tes caractéristiques, sélectionne tes capacités (les règles sont appliquées automatiquement).</li>
+          <li><strong id="label-li-fiche">Ma fiche</strong> — ta fiche vivante : PV, modificateurs, capacités, avec des boutons pour lancer les dés liés.</li>
           <li><strong>Dés</strong> — lanceur complet (tests, attaques, dégâts, avantage/désavantage) avec historique.</li>
+          <li><strong>Carte</strong> — <span data-role="joueur">consulte la carte et déplace ton jeton.</span><span data-role="mj">importe tes cartes, place les jetons, gère le brouillard de guerre.</span></li>
+          <li data-role="mj"><strong>Bestiaire</strong> — tes créatures et monstres maison.</li>
           <li><strong>Règles</strong> — toutes les voies et capacités de chaque classe, y compris ton homebrew (Voie du chaos, etc.).</li>
           <li><strong>Lore</strong> — l'univers de la campagne.</li>
         </ul>
         <div class="barre-actions">
-          <button class="btn or" onclick="App.allerVers('creation')">Créer mon personnage</button>
+          <button class="btn or" data-role="joueur" onclick="App.allerVers('creation')">Créer mon personnage</button>
           <button class="btn secondaire" onclick="App.allerVers('lore')">Découvrir le monde</button>
         </div>
+        <p class="role-actuel">Rôle actuel : <strong id="role-actuel-label"></strong> · <button type="button" class="btn petit secondaire" id="btn-changer-role">Changer de rôle</button></p>
       </div>
     </section>
 
@@ -140,10 +161,10 @@
     <!-- FICHE -->
     <section class="panneau" id="panneau-fiche">
       <div class="carte" id="selecteur-fiche">
-        <h2>Mes personnages</h2>
+        <h2 id="titre-fiche">Mes personnages</h2>
         <div class="liste-persos" id="liste-persos"></div>
         <div class="barre-actions">
-          <button class="btn or" onclick="App.allerVers('creation')">+ Nouveau personnage</button>
+          <button class="btn or" data-role="joueur" onclick="App.allerVers('creation')">+ Nouveau personnage</button>
           <button class="btn secondaire" id="btn-importer">📂 Importer (.json)</button>
           <input type="file" id="input-import" accept=".json" style="display:none;" />
         </div>
@@ -202,22 +223,27 @@
     <!-- CARTE -->
     <section class="panneau" id="panneau-carte">
       <div class="carte">
-        <h2 class="titre-bandeau">Carte — mode MJ</h2>
-        <p style="font-size:0.85rem;color:#6a6278;">Importe une carte, place tes jetons et déplace-les. <strong>Partage ton écran sur Discord</strong> pour que les joueurs voient la scène. Tout est sauvegardé dans ton navigateur.</p>
+        <h2 class="titre-bandeau" id="titre-carte">Carte — mode MJ</h2>
+        <p style="font-size:0.85rem;color:#6a6278;" data-role="mj">Importe une carte, place tes jetons et déplace-les. <strong>Partage ton écran sur Discord</strong> pour que les joueurs voient la scène. Tout est sauvegardé dans ton navigateur.</p>
+        <p style="font-size:0.85rem;color:#6a6278;" data-role="joueur">Consulte la carte placée par le MJ et déplace ton propre jeton.</p>
+        <div class="carte-toolbar" data-role="joueur">
+          <label for="select-mon-perso" style="margin:0;">Mon personnage</label>
+          <select id="select-mon-perso"></select>
+        </div>
         <div class="carte-toolbar">
           <select class="carte-select" id="select-carte-preset" title="Choisir une carte">
             <option value="">🗺️ Cartes…</option>
           </select>
-          <button class="btn petit" id="btn-import-carte">📁 Importer la mienne</button>
+          <button class="btn petit" id="btn-import-carte" data-role="mj">📁 Importer la mienne</button>
           <input type="file" id="input-carte" accept="image/*" hidden />
-          <button class="btn petit secondaire" id="btn-jeton-perso">+ Mes personnages</button>
-          <button class="btn petit secondaire" id="btn-jeton-libre">+ PNJ / monstre</button>
-          <button class="btn petit secondaire" id="btn-grille">▦ Grille</button>
-          <button class="btn petit secondaire" id="btn-fog">🌫️ Brouillard</button>
-          <button class="btn petit secondaire" id="btn-fog-brush">✏️ Révéler</button>
-          <button class="btn petit secondaire" id="btn-fog-clear">Tout révéler</button>
-          <button class="btn petit secondaire" id="btn-fog-fill">Tout couvrir</button>
-          <button class="btn petit danger" id="btn-carte-reset">Réinitialiser</button>
+          <button class="btn petit secondaire" id="btn-jeton-perso" data-role="mj">+ Mes personnages</button>
+          <button class="btn petit secondaire" id="btn-jeton-libre" data-role="mj">+ PNJ / monstre</button>
+          <button class="btn petit secondaire" id="btn-grille" data-role="mj">▦ Grille</button>
+          <button class="btn petit secondaire" id="btn-fog" data-role="mj">🌫️ Brouillard</button>
+          <button class="btn petit secondaire" id="btn-fog-brush" data-role="mj">✏️ Révéler</button>
+          <button class="btn petit secondaire" id="btn-fog-clear" data-role="mj">Tout révéler</button>
+          <button class="btn petit secondaire" id="btn-fog-fill" data-role="mj">Tout couvrir</button>
+          <button class="btn petit danger" id="btn-carte-reset" data-role="mj">Réinitialiser</button>
         </div>
         <div class="carte-aide" id="carte-aide"></div>
         <div class="carte-scene" id="carte-scene">
@@ -226,6 +252,14 @@
           <canvas id="carte-fog"></canvas>
           <div id="carte-jetons"></div>
         </div>
+      </div>
+    </section>
+
+    <!-- BESTIAIRE -->
+    <section class="panneau" id="panneau-bestiaire">
+      <div class="carte">
+        <h2 class="titre-bandeau">Bestiaire</h2>
+        <p class="vide">Aucun monstre pour l'instant — reviens plus tard, tu pourras ajouter tes créatures maison ici.</p>
       </div>
     </section>
 
@@ -251,10 +285,10 @@
 
   <div id="toast"></div>
 
-  <script src="data/donnees.js?v=10"></script>
+  <script src="data/donnees.js?v=11"></script>
   <script src="js/emblemes.js?v=9"></script>
   <script src="js/carte-monde.js?v=9"></script>
-  <script src="js/carte.js?v=9"></script>
-  <script src="js/app.js?v=10"></script>
+  <script src="js/carte.js?v=10"></script>
+  <script src="js/app.js?v=11"></script>
 </body>
 </html>

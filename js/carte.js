@@ -30,6 +30,11 @@ const Carte = (() => {
   let etat = { image: null, jetons: [], grille: false, fog: false, fogData: null };
   let pinceauActif = false;
   let compteur = 1;
+  let role = null;       // "joueur" | "mj" | null — gère qui peut déplacer quels jetons
+  let monPersoId = null; // id du personnage du joueur (jeton "pj-<id>" déplaçable en mode joueur)
+
+  function definirRole(r) { role = r; }
+  function definirMonPerso(id) { monPersoId = id; }
   let dom = {};
 
   /* ---------- Persistance ---------- */
@@ -194,11 +199,12 @@ const Carte = (() => {
         : (j.pj && typeof embleme === "function" ? embleme(j.classe, 40) : initiales(j.nom));
       el.innerHTML =
         `<div class="jeton-pion" style="border-color:${j.couleur};${j.portrait || j.pj ? "" : "background:" + j.couleur + ";"}">${interieur}</div>` +
-        `<button class="jeton-suppr" title="Retirer">✕</button>` +
+        (role === "joueur" ? "" : `<button class="jeton-suppr" title="Retirer">✕</button>`) +
         `<div class="jeton-label">${echappe(j.nom)}</div>`;
       dom.jetons.appendChild(el);
-      // suppression
-      el.querySelector(".jeton-suppr").addEventListener("click", (ev) => { ev.stopPropagation(); supprimerJeton(j.id); });
+      // suppression (MJ uniquement)
+      const btnSuppr = el.querySelector(".jeton-suppr");
+      if (btnSuppr) btnSuppr.addEventListener("click", (ev) => { ev.stopPropagation(); supprimerJeton(j.id); });
       // glisser-déposer
       el.querySelector(".jeton-pion").addEventListener("pointerdown", (ev) => demarrerDrag(ev, j, el));
     });
@@ -210,6 +216,7 @@ const Carte = (() => {
   let drag = null;
   function demarrerDrag(ev, j, el) {
     if (pinceauActif) return; // en mode pinceau, on ne déplace pas
+    if (role === "joueur" && j.ref !== "pj-" + monPersoId) return; // joueur : ne déplace que son propre jeton
     ev.preventDefault();
     drag = { j, el };
     el.classList.add("drag");
@@ -397,5 +404,5 @@ const Carte = (() => {
 
   document.addEventListener("DOMContentLoaded", init);
 
-  return { onOpen };
+  return { onOpen, definirRole, definirMonPerso };
 })();

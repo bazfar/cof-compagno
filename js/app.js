@@ -8,10 +8,13 @@ const App = (() => {
 
   const STORAGE_PERSOS = "cof_persos";
   const STORAGE_HISTO = "cof_histo_des";
+  const STORAGE_ROLE = "cof_role";
+  const STORAGE_MON_PERSO = "cof_mon_perso_actif";
 
   // État de création en cours
   let creation = null;       // objet personnage en cours de création
   let ficheActiveId = null;  // id du perso affiché dans "Ma fiche"
+  let role = null;           // "joueur" | "mj" | null (pas encore choisi)
 
   /* ---------- Utilitaires ---------- */
 
@@ -52,6 +55,73 @@ const App = (() => {
     localStorage.setItem(STORAGE_PERSOS, JSON.stringify(obj));
   }
 
+  /* ---------- Rôle Joueur / MJ ---------- */
+
+  function definirRole(r) {
+    role = r;
+    localStorage.setItem(STORAGE_ROLE, r);
+    appliquerRole();
+    allerVers("accueil");
+  }
+
+  function changerDeRole() {
+    role = null;
+    localStorage.removeItem(STORAGE_ROLE);
+    appliquerRole();
+    allerVers("accueil");
+  }
+
+  function appliquerRole() {
+    document.body.classList.toggle("role-joueur", role === "joueur");
+    document.body.classList.toggle("role-mj", role === "mj");
+
+    const nav = document.getElementById("onglets");
+    const choixRole = document.getElementById("choix-role");
+    const accueilContenu = document.getElementById("accueil-contenu");
+
+    if (role) {
+      if (nav) nav.style.display = "";
+      if (choixRole) choixRole.style.display = "none";
+      if (accueilContenu) accueilContenu.style.display = "block";
+
+      const estMj = role === "mj";
+      const labelRole = document.getElementById("role-actuel-label");
+      if (labelRole) labelRole.textContent = estMj ? "Maître du Jeu" : "Joueur";
+      const ongletFiche = document.getElementById("onglet-fiche");
+      if (ongletFiche) ongletFiche.textContent = estMj ? "Aventuriers" : "Ma fiche";
+      const titreFiche = document.getElementById("titre-fiche");
+      if (titreFiche) titreFiche.textContent = estMj ? "Aventuriers" : "Mes personnages";
+      const labelLiFiche = document.getElementById("label-li-fiche");
+      if (labelLiFiche) labelLiFiche.textContent = estMj ? "Aventuriers" : "Ma fiche";
+      const titreCarte = document.getElementById("titre-carte");
+      if (titreCarte) titreCarte.textContent = estMj ? "Carte — mode MJ" : "Carte";
+
+      if (typeof Carte !== "undefined") Carte.definirRole(role);
+    } else {
+      if (nav) nav.style.display = "none";
+      if (choixRole) choixRole.style.display = "block";
+      if (accueilContenu) accueilContenu.style.display = "none";
+    }
+  }
+
+  function rendreSelecteurMonPerso() {
+    const sel = document.getElementById("select-mon-perso");
+    if (!sel) return;
+    const persos = chargerPersos();
+    const ids = Object.keys(persos);
+    sel.innerHTML = ids.length
+      ? ids.map((id) => `<option value="${id}">${persos[id].nom}</option>`).join("")
+      : `<option value="">Aucun personnage</option>`;
+    const sauvegarde = localStorage.getItem(STORAGE_MON_PERSO);
+    const actif = ids.includes(sauvegarde) ? sauvegarde : (ids.includes(ficheActiveId) ? ficheActiveId : ids[0]);
+    if (actif) sel.value = actif;
+    if (typeof Carte !== "undefined") Carte.definirMonPerso(actif || null);
+    sel.onchange = () => {
+      localStorage.setItem(STORAGE_MON_PERSO, sel.value);
+      if (typeof Carte !== "undefined") Carte.definirMonPerso(sel.value);
+    };
+  }
+
   /* ---------- Navigation onglets ---------- */
 
   function allerVers(panneau) {
@@ -63,7 +133,10 @@ const App = (() => {
     });
     if (panneau === "fiche") rendreListePersos();
     if (panneau === "regles") rendreRegles();
-    if (panneau === "carte" && window.Carte) window.Carte.onOpen();
+    if (panneau === "carte" && typeof Carte !== "undefined") {
+      Carte.onOpen();
+      if (role === "joueur") rendreSelecteurMonPerso();
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -1074,13 +1147,22 @@ const App = (() => {
 
   function rendreLore() {
     const zone = document.getElementById("zone-lore");
-    let html = `<h2 class="titre-bandeau">${LORE.titre}</h2>`;
+    let html =
+      `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">` +
+      `<h2 class="titre-bandeau" style="margin:0;flex:1;">${LORE.titre}</h2>` +
+      `<button type="button" class="btn petit secondaire" id="btn-modifier-lore" data-role="mj">✏️ Modifier</button>` +
+      `</div>`;
     html += `<img id="lore-carte-img" src="assets/maps/monde.png" alt="Carte du monde" class="lore-carte" />`;
     if (LORE.intro) html += `<p style="font-style:italic;color:#6a6278;">${LORE.intro}</p>`;
     LORE.sections.forEach((s) => {
       html += `<div class="lore-section"><h3>${s.titre}</h3><div class="contenu">${echapper(s.contenu)}</div></div>`;
     });
     zone.innerHTML = html;
+    const btnModifierLore = document.getElementById("btn-modifier-lore");
+    if (btnModifierLore) {
+      btnModifierLore.onclick = () =>
+        toast("Édition du lore — bientôt disponible, une fois la synchro serveur en place.");
+    }
     // Repli sur le schéma SVG si l'image PNG n'est pas (encore) présente
     const im = document.getElementById("lore-carte-img");
     if (im) {
@@ -1105,6 +1187,15 @@ const App = (() => {
     rendreGrilleRaces();
     rendreHisto();
     rendreLore();
+
+    // Rôle Joueur / MJ
+    role = localStorage.getItem(STORAGE_ROLE);
+    appliquerRole();
+    document.querySelectorAll(".role-carte").forEach((b) => {
+      b.onclick = () => definirRole(b.dataset.roleChoix);
+    });
+    const btnChangerRole = document.getElementById("btn-changer-role");
+    if (btnChangerRole) btnChangerRole.onclick = changerDeRole;
 
     // Onglets
     document.querySelectorAll("nav.tabs button").forEach((b) => {
