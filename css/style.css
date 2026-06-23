@@ -227,6 +227,27 @@ textarea { resize: vertical; min-height: 70px; }
 .rang.verrou { opacity: 0.45; }
 .rang .check { flex-shrink: 0; }
 .rang .check input { width: 20px; height: 20px; cursor: pointer; }
+.badge-auto {
+  display: inline-block;
+  background: var(--violet-accent);
+  color: #fff;
+  font-size: 0.65rem;
+  padding: 4px 9px;
+  border-radius: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.compteur-points {
+  display: inline-block;
+  background: var(--violet);
+  color: var(--parchemin);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.compteur-points.epuise { background: var(--chaos); }
 
 /* ---------- Fiche perso (living sheet) ---------- */
 .entete-fiche {

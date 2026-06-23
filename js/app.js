@@ -143,7 +143,7 @@ const App = (() => {
     if (creation.race !== cle) {
       creation.race = cle;
       creation.raceVariante = null;
-      creation.capacitesRace = [];
+      creation.capacitesRace = [1]; // le rang 1 de la voie raciale est acquis automatiquement
     }
     rendreGrilleRaces();
     document.getElementById("bloc-voie-raciale").style.display = "block";
@@ -178,8 +178,11 @@ const App = (() => {
     const aide = document.getElementById("aide-race");
     aide.innerHTML =
       `<strong>Voie raciale gratuite</strong> — ne consomme pas tes points de capacité de classe. ` +
-      `Les rangs s'acquièrent dans l'ordre (impossible de prendre le rang 3 sans 1 et 2), et se débloquent avec le niveau : ` +
-      `au niveau ${niveau}, les rangs 1 à ${Math.min(niveau + 1, 5)} sont accessibles.`;
+      `Le <strong>rang 1 est acquis automatiquement</strong>. ` +
+      `Les rangs 2 à 5 s'acquièrent dans l'ordre (impossible de prendre le rang 3 sans 2) et restent ` +
+      (niveau <= 1
+        ? `<strong>verrouillés tant que le personnage est niveau 1</strong>.`
+        : `accessibles à partir du niveau 2.`);
 
     const zone = document.getElementById("zone-voie-raciale");
     zone.innerHTML = "";
@@ -201,9 +204,10 @@ const App = (() => {
     }
 
     r.rangs.forEach((rg) => {
-      const choisi = creation.capacitesRace.includes(rg.rang);
+      const auto = rg.rang === 1; // rang 1 : acquis automatiquement, gratuit
+      const choisi = auto || creation.capacitesRace.includes(rg.rang);
       const verrouOrdre = !choisi && rg.rang > rangMax + 1;
-      const verrouNiveau = !choisi && rg.rang > niveau + 1;
+      const verrouNiveau = !choisi && !auto && niveau <= 1;
       const verrou = verrouOrdre || verrouNiveau;
 
       const { nom, effet } = texteRangRace(r, rg, creation.raceVariante);
@@ -214,7 +218,11 @@ const App = (() => {
         `<div class="contenu">` +
         (nom ? `<div class="nom-cap">${nom}</div>` : "") +
         `<div class="effet">${effet}</div></div>` +
-        `<div class="check"><input type="checkbox" ${choisi ? "checked" : ""} ${verrou ? "disabled" : ""} data-rang="${rg.rang}" /></div>` +
+        `<div class="check">` +
+        (auto
+          ? `<span class="badge-auto">Automatique</span>`
+          : `<input type="checkbox" ${choisi ? "checked" : ""} ${verrou ? "disabled" : ""} data-rang="${rg.rang}" />`) +
+        `</div>` +
         `</div>`;
     });
     divVoie.innerHTML = html;
@@ -325,13 +333,25 @@ const App = (() => {
     return creation.capacites.filter((c) => c.rang === 1).length;
   }
 
+  const POINTS_VOIE_MAX = 2;
+
   function rendreVoies() {
     const c = CLASSES[creation.classe];
+    const niveau = niveauCreation();
+    const pointsRestants = Math.max(0, POINTS_VOIE_MAX - nbRang1());
+
     const aide = document.getElementById("aide-creation");
     aide.innerHTML =
       `<strong>Règles :</strong> au niveau 1, tu choisis <strong>2 capacités de rang 1</strong>. ` +
-      `Les rangs supérieurs s'acquièrent dans l'ordre (pas de rang 3 sans 1 et 2). ` +
+      `Les rangs supérieurs s'acquièrent dans l'ordre (pas de rang 3 sans 1 et 2), et les ` +
+      `<strong>rangs 3 à 5 restent verrouillés tant que le personnage est niveau 1</strong>. ` +
       `La <strong>Voie du chaos</strong> est optionnelle — uniquement avec l'accord du MJ.`;
+
+    const compteur = document.getElementById("compteur-points-voie");
+    if (compteur) {
+      compteur.textContent = `Points de voie : ${pointsRestants}/${POINTS_VOIE_MAX}`;
+      compteur.classList.toggle("epuise", pointsRestants === 0);
+    }
 
     const zone = document.getElementById("zone-voies");
     zone.innerHTML = "";
@@ -346,7 +366,12 @@ const App = (() => {
       voie.rangs.forEach((r) => {
         const choisi = estChoisie(voie.nom, r.rang);
         // Verrou : pour cocher le rang N, il faut les rangs 1..N-1 dans cette voie
-        const verrou = !choisi && r.rang > rangMaxVoie(voie.nom) + 1;
+        const verrouOrdre = !choisi && r.rang > rangMaxVoie(voie.nom) + 1;
+        // Verrou : rangs 3-5 inaccessibles tant que le personnage est niveau 1
+        const verrouNiveau = !choisi && r.rang >= 3 && niveau <= 1;
+        // Verrou : plus de points de voie disponibles pour un nouveau rang 1
+        const verrouPoints = !choisi && r.rang === 1 && pointsRestants <= 0;
+        const verrou = verrouOrdre || verrouNiveau || verrouPoints;
         html +=
           `<div class="rang ${choisi ? "choisi" : ""} ${verrou ? "verrou" : ""}">` +
           `<div class="num">${r.rang}</div>` +
@@ -667,6 +692,7 @@ const App = (() => {
     if (!p) return;
     creation = JSON.parse(JSON.stringify(p)); // copie
     if (!creation.capacitesRace) creation.capacitesRace = []; // compat fiches créées avant les voies raciales
+    if (creation.race && !creation.capacitesRace.includes(1)) creation.capacitesRace.unshift(1); // rang 1 toujours acquis
     allerVers("creation");
     document.getElementById("champ-nom").value = p.nom;
     document.getElementById("champ-niveau").value = p.niveau;
@@ -925,6 +951,7 @@ const App = (() => {
     // Création
     document.getElementById("champ-niveau").oninput = () => {
       recalculerDerives();
+      if (creation.classe) rendreVoies();
       if (creation.race) rendreVoieRaciale();
     };
     document.getElementById("champ-pvmax").oninput = (e) => { e.target.dataset.touche = "1"; };
