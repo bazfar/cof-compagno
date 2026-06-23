@@ -328,9 +328,9 @@ const App = (() => {
     const rangs = creation.capacites.filter((c) => c.voie === voieNom).map((c) => c.rang);
     return rangs.length ? Math.max(...rangs) : 0;
   }
-  // Nb de capacités de rang 1 prises
-  function nbRang1() {
-    return creation.capacites.filter((c) => c.rang === 1).length;
+  // Nb total de rangs de voie de classe pris (chaque rang coché compte pour 1 point)
+  function nbRangsPris() {
+    return creation.capacites.length;
   }
 
   const POINTS_VOIE_MAX = 2;
@@ -338,11 +338,12 @@ const App = (() => {
   function rendreVoies() {
     const c = CLASSES[creation.classe];
     const niveau = niveauCreation();
-    const pointsRestants = Math.max(0, POINTS_VOIE_MAX - nbRang1());
+    const pointsRestants = Math.max(0, POINTS_VOIE_MAX - nbRangsPris());
 
     const aide = document.getElementById("aide-creation");
     aide.innerHTML =
-      `<strong>Règles :</strong> au niveau 1, tu choisis <strong>2 capacités de rang 1</strong>. ` +
+      `<strong>Règles :</strong> au niveau 1, tu disposes de <strong>2 points de voie</strong> : ` +
+      `soit 2 capacités de rang 1 dans deux voies différentes, soit 1 rang 1 et le rang 2 d'une même voie. ` +
       `Les rangs supérieurs s'acquièrent dans l'ordre (pas de rang 3 sans 1 et 2), et les ` +
       `<strong>rangs 3 à 5 restent verrouillés tant que le personnage est niveau 1</strong>. ` +
       `La <strong>Voie du chaos</strong> est optionnelle — uniquement avec l'accord du MJ.`;
@@ -369,8 +370,8 @@ const App = (() => {
         const verrouOrdre = !choisi && r.rang > rangMaxVoie(voie.nom) + 1;
         // Verrou : rangs 3-5 inaccessibles tant que le personnage est niveau 1
         const verrouNiveau = !choisi && r.rang >= 3 && niveau <= 1;
-        // Verrou : plus de points de voie disponibles pour un nouveau rang 1
-        const verrouPoints = !choisi && r.rang === 1 && pointsRestants <= 0;
+        // Verrou : plus de points de voie disponibles pour un nouveau rang (1 ou 2)
+        const verrouPoints = !choisi && pointsRestants <= 0;
         const verrou = verrouOrdre || verrouNiveau || verrouPoints;
         html +=
           `<div class="rang ${choisi ? "choisi" : ""} ${verrou ? "verrou" : ""}">` +
@@ -434,8 +435,8 @@ const App = (() => {
     if (!creation.race) { toast("Choisis d'abord une race."); return; }
     const nom = document.getElementById("champ-nom").value.trim();
     if (!nom) { toast("Donne un nom à ton personnage."); return; }
-    if (nbRang1() < 2) {
-      if (!confirm("Tu as moins de 2 capacités de rang 1 (règle de création). Enregistrer quand même ?")) return;
+    if (nbRangsPris() < 2) {
+      if (!confirm("Tu n'as pas dépensé tes 2 points de voie (règle de création). Enregistrer quand même ?")) return;
     }
 
     creation.nom = nom;
