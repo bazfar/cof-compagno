@@ -33,7 +33,7 @@ const Carte = (() => {
   let role = null;       // "joueur" | "mj" | null — gère qui peut déplacer quels jetons
   let monPersoId = null; // id du personnage du joueur (jeton "pj-<id>" déplaçable en mode joueur)
 
-  function definirRole(r) { role = r; }
+  function definirRole(r) { role = r; appliquerAffichageFog(); if (dom.aide) majAide(); }
   function definirMonPerso(id) { monPersoId = id; }
   let dom = {};
 
@@ -113,7 +113,7 @@ const Carte = (() => {
       dom.image.onload = () => {
         dom.fog.width = dom.image.naturalWidth;
         dom.fog.height = dom.image.naturalHeight;
-        if (etat.fogData) restaurerFog();
+        appliquerAffichageFog();
         if (apres) apres();
       };
       const essais = candidatsImage(etat.image);
@@ -252,6 +252,25 @@ const Carte = (() => {
     c.fillRect(0, 0, dom.fog.width, dom.fog.height);
     enregistrerFog();
   }
+  // Comme remplirFog(), mais sans persister : sert uniquement à l'affichage
+  // joueur par défaut, sans écraser le brouillard (ou son absence) côté MJ.
+  function remplirFogAffichage() {
+    const c = ctxFog();
+    c.globalCompositeOperation = "source-over";
+    c.fillStyle = "rgba(8,5,12,0.93)";
+    c.fillRect(0, 0, dom.fog.width, dom.fog.height);
+  }
+  // Le joueur voit toujours la carte sous brouillard (seules les zones que le
+  // MJ a explicitement révélées apparaissent) ; le MJ garde son interrupteur.
+  function appliquerAffichageFog() {
+    if (!dom.fog) return;
+    if (!etat.image) { dom.fog.style.display = "none"; return; }
+    const actif = role === "mj" ? etat.fog : true;
+    dom.fog.style.display = actif ? "block" : "none";
+    if (!actif) { ctxFog().clearRect(0, 0, dom.fog.width, dom.fog.height); return; }
+    if (etat.fogData) restaurerFog();
+    else remplirFogAffichage();
+  }
   function viderFog() {
     ctxFog().clearRect(0, 0, dom.fog.width, dom.fog.height);
     enregistrerFog();
@@ -328,6 +347,10 @@ const Carte = (() => {
   }
 
   function majAide() {
+    if (role === "joueur") {
+      dom.aide.textContent = "🌫️ La carte est sous brouillard de guerre : seules les zones révélées par le MJ sont visibles. Glisse ton jeton avec la souris.";
+      return;
+    }
     if (pinceauActif) dom.aide.textContent = "✏️ Mode révéler : clique-glisse sur la carte pour dissiper le brouillard. Re-clique « Révéler » pour redéplacer les jetons.";
     else if (etat.fog) dom.aide.textContent = "🌫️ Brouillard actif. Active « Révéler » pour dissiper des zones, ou « Tout révéler / couvrir ».";
     else dom.aide.textContent = "Glisse les jetons à la souris. Partage ton écran sur Discord pour montrer la carte à tes joueurs.";
@@ -399,7 +422,10 @@ const Carte = (() => {
 
   // Appelé quand on ouvre l'onglet (re-rendu défensif)
   function onOpen() {
-    if (dom.scene) rendreJetons();
+    if (!dom.scene) return;
+    rendreJetons();
+    appliquerAffichageFog();
+    majAide();
   }
 
   document.addEventListener("DOMContentLoaded", init);
