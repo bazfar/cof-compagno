@@ -1071,6 +1071,7 @@ const App = (() => {
     const gainPv = pvTotalActuel() - pvAvant;
 
     rendreVoies();
+    if (creation.race) rendreVoieRaciale();
 
     toast(`Niveau ${creation.niveau} ! +${gainPv} PV (total ${pvTotalActuel()}). Points de capacité : ${pointsVoieRestants()}/${pointsVoieTotal()}. Pense à enregistrer.`);
     document.getElementById("bloc-voies").scrollIntoView({ behavior: "smooth" });
