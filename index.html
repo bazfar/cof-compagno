@@ -238,6 +238,9 @@
           </select>
           <button class="btn petit" id="btn-import-carte" data-role="mj">📁 Importer la mienne</button>
           <input type="file" id="input-carte" accept="image/*" hidden />
+          <button class="btn petit" id="btn-import-dd2vtt" data-role="mj">🗺 Importer .dd2vtt</button>
+          <input type="file" id="input-dd2vtt" accept=".dd2vtt" hidden />
+          <select class="carte-select" id="select-scene-dd2vtt" style="display:none;" title="Changer de scène"></select>
           <button class="btn petit secondaire" id="btn-jeton-perso" data-role="mj">+ Mes personnages</button>
           <button class="btn petit secondaire" id="btn-jeton-libre" data-role="mj">+ PNJ / monstre</button>
           <button class="btn petit secondaire" id="btn-grille" data-role="mj">▦ Grille</button>
@@ -252,6 +255,7 @@
           <div class="carte-vide" id="carte-vide">Aucune carte importée. Clique « 🗺️ Importer une carte ».</div>
           <img id="carte-image" alt="carte" />
           <canvas id="carte-fog"></canvas>
+          <canvas id="carte-murs"></canvas>
           <div id="carte-jetons"></div>
         </div>
       </div>
