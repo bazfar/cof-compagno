@@ -428,7 +428,689 @@ const Carte = (() => {
     majAide();
   }
 
-  document.addEventListener("DOMContentLoaded", init);
+  /* ============================================================
+     WORLDMAP — Pan/zoom sur cartes statiques
+     ============================================================ */
+  const Worldmap = (() => {
+    let canvas = null, ctx = null;
+    let imgActuelle = null;
+    let pan = { x: 0, y: 0 };
+    let zoom = 1;
+    let drag = false, dragStart = { x: 0, y: 0 }, panStart = { x: 0, y: 0 };
+    const ZOOM_MIN = 0.2, ZOOM_MAX = 8;
+
+    function init() {
+      canvas = document.getElementById('canvas-worldmap');
+      if (!canvas) return;
+      ctx = canvas.getContext('2d');
+
+      // Remplir le sélecteur depuis DONNEES.cartesMonde
+      const sel = document.getElementById('select-carte-preset');
+      if (sel && typeof DONNEES !== 'undefined' && DONNEES.cartesMonde) {
+        // Groupes
+        const groupes = {};
+        for (const carte of DONNEES.cartesMonde) {
+          if (!groupes[carte.categorie]) groupes[carte.categorie] = [];
+          groupes[carte.categorie].push(carte);
+        }
+        for (const [cat, cartes] of Object.entries(groupes)) {
+          const grp = document.createElement('optgroup');
+          grp.label = cat;
+          for (const c of cartes) {
+            const opt = document.createElement('option');
+            opt.value = c.fichier;
+            opt.textContent = c.nom;
+            grp.appendChild(opt);
+          }
+          sel.appendChild(grp);
+        }
+        sel.addEventListener('change', e => {
+          if (e.target.value) charger(e.target.value);
+          else masquer();
+        });
+      }
+
+      // Événements pan/zoom
+      canvas.addEventListener('wheel',       surZoom,    { passive: false });
+      canvas.addEventListener('pointerdown', surDragDeb);
+      canvas.addEventListener('pointermove', surDragMvt);
+      canvas.addEventListener('pointerup',   surDragFin);
+      canvas.addEventListener('pointerleave',surDragFin);
+
+      window.addEventListener('resize', () => { if (imgActuelle) redimensionner(); });
+    }
+
+    function charger(fichier) {
+      const vide = document.getElementById('carte-vide');
+      if (vide) vide.style.display = 'none';
+
+      // Cacher les éléments battlemap
+      const els = ['carte-image','carte-fog','carte-murs','carte-los','dd2vtt-tokens','carte-jetons'];
+      els.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+      // Cacher les contrôles fog worldmap (ancien système)
+      document.querySelectorAll('.worldmap-ctrl').forEach(el => el.style.display = 'none');
+
+      canvas.style.display = 'block';
+
+      const img = new Image();
+      img.onload = () => {
+        imgActuelle = img;
+        redimensionner();
+        centrer();
+        dessiner();
+      };
+      img.onerror = () => {
+        console.error('[Worldmap] Image introuvable :', fichier);
+        if (vide) { vide.textContent = 'Carte introuvable : ' + fichier; vide.style.display = 'flex'; }
+      };
+      img.src = fichier;
+    }
+
+    function masquer() {
+      if (canvas) canvas.style.display = 'none';
+      const vide = document.getElementById('carte-vide');
+      if (vide) vide.style.display = 'flex';
+      imgActuelle = null;
+    }
+
+    function redimensionner() {
+      const scene = document.getElementById('carte-scene');
+      if (!scene || !canvas) return;
+      canvas.width  = scene.clientWidth;
+      canvas.height = scene.clientHeight || 600;
+    }
+
+    function centrer() {
+      if (!imgActuelle || !canvas) return;
+      const scaleW = canvas.width  / imgActuelle.width;
+      const scaleH = canvas.height / imgActuelle.height;
+      zoom = Math.min(scaleW, scaleH) * 0.95;
+      pan.x = (canvas.width  - imgActuelle.width  * zoom) / 2;
+      pan.y = (canvas.height - imgActuelle.height * zoom) / 2;
+    }
+
+    function dessiner() {
+      if (!ctx || !canvas) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#0f0a16';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (!imgActuelle) return;
+      ctx.save();
+      ctx.translate(pan.x, pan.y);
+      ctx.scale(zoom, zoom);
+      ctx.drawImage(imgActuelle, 0, 0);
+      ctx.restore();
+    }
+
+    // ── Zoom molette ─────────────────────────────────────────
+    function surZoom(ev) {
+      if (!imgActuelle) return;
+      ev.preventDefault();
+      const rect   = canvas.getBoundingClientRect();
+      const mouseX = ev.clientX - rect.left;
+      const mouseY = ev.clientY - rect.top;
+      const facteur = ev.deltaY < 0 ? 1.12 : 1 / 1.12;
+      const nvZoom  = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom * facteur));
+      pan.x = mouseX - (mouseX - pan.x) * (nvZoom / zoom);
+      pan.y = mouseY - (mouseY - pan.y) * (nvZoom / zoom);
+      zoom  = nvZoom;
+      dessiner();
+    }
+
+    // ── Pan cliquer-glisser ───────────────────────────────────
+    function surDragDeb(ev) {
+      if (!imgActuelle) return;
+      drag = true;
+      dragStart = { x: ev.clientX, y: ev.clientY };
+      panStart  = { x: pan.x, y: pan.y };
+      canvas.style.cursor = 'grabbing';
+      canvas.setPointerCapture(ev.pointerId);
+    }
+    function surDragMvt(ev) {
+      if (!drag) return;
+      pan.x = panStart.x + (ev.clientX - dragStart.x);
+      pan.y = panStart.y + (ev.clientY - dragStart.y);
+      dessiner();
+    }
+    function surDragFin() {
+      drag = false;
+      if (canvas) canvas.style.cursor = 'grab';
+    }
+
+    return { init, charger, masquer };
+  })();
+
+  /* ============================================================
+     Visibility Polygon (MIT) — traduction JS de l'algo de Jason Davies
+     Source : github.com/byoung/visibility-polygon-js
+     ============================================================ */
+  const VisibilityPolygon = (() => {
+    function compute(position, segments) {
+      const bounded = segments.slice();
+      const [bx, by, bw, bh] = _bounds(bounded);
+      bounded.push([[bx,by],[bx+bw,by]],[[bx+bw,by],[bx+bw,by+bh]],[[bx+bw,by+bh],[bx,by+bh]],[[bx,by+bh],[bx,by]]);
+      const endpoints = [];
+      const angles = [];
+      for (const seg of bounded) {
+        for (const pt of seg) {
+          const angle = Math.atan2(pt[1]-position[1], pt[0]-position[0]);
+          endpoints.push(pt);
+          angles.push(angle, angle-0.0001, angle+0.0001);
+        }
+      }
+      angles.sort((a,b)=>a-b);
+      const polygon = [];
+      let prevAngle = 0;
+      for (let i = 0; i < angles.length; i++) {
+        const angle = angles[i];
+        const dx = Math.cos(angle), dy = Math.sin(angle);
+        const ray = [position, [position[0]+dx, position[1]+dy]];
+        let minSeg = null, minT = Infinity;
+        for (const seg of bounded) {
+          const t = _intersect(ray, seg);
+          if (t !== null && t < minT) { minT = t; minSeg = seg; }
+        }
+        if (minSeg !== null) {
+          const pt = [position[0]+dx*minT, position[1]+dy*minT];
+          if (i === 0 || Math.abs(angle - prevAngle) > 0.0002) polygon.push(pt);
+        }
+        prevAngle = angle;
+      }
+      return polygon;
+    }
+
+    function _intersect(ray, seg) {
+      const [p,q] = ray, [a,b] = seg;
+      const r = [q[0]-p[0], q[1]-p[1]];
+      const s = [b[0]-a[0], b[1]-a[1]];
+      const d = r[0]*s[1] - r[1]*s[0];
+      if (Math.abs(d) < 1e-10) return null;
+      const t = ((a[0]-p[0])*s[1] - (a[1]-p[1])*s[0]) / d;
+      const u = ((a[0]-p[0])*r[1] - (a[1]-p[1])*r[0]) / d;
+      if (t >= 0 && u >= 0 && u <= 1) return t;
+      return null;
+    }
+
+    function _bounds(segs) {
+      let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+      for (const s of segs) for (const p of s) {
+        if(p[0]<minX)minX=p[0]; if(p[1]<minY)minY=p[1];
+        if(p[0]>maxX)maxX=p[0]; if(p[1]>maxY)maxY=p[1];
+      }
+      const pad=1;
+      return [minX-pad, minY-pad, (maxX-minX)+pad*2, (maxY-minY)+pad*2];
+    }
+
+    return { compute };
+  })();
+
+  /* ============================================================
+     DD2VTT — Import Dungeondraft + multi-scènes Option B
+     ============================================================ */
+
+  const DD2VTT = (() => {
+    // Registre des scènes : { [nom]: sceneObj }
+    const scenes = {};
+    let sceneActive = null;
+    let canvasMurs = null;
+    let ctxMurs = null;
+
+    // ── Parser ──────────────────────────────────────────────
+    function parseDD2VTT(data, nom) {
+      const px = data.resolution.pixels_per_grid;
+      const lc = data.resolution.map_size.x;
+      const hc = data.resolution.map_size.y;
+
+      // Polylignes de murs (coordonnées cases → pixels)
+      const polylignes = (data.line_of_sight || []).map(poly =>
+        poly.map(p => ({ x: p.x * px, y: p.y * px }))
+      );
+
+      // Segments aplatis pour LoS (étape 2)
+      const segments = [];
+      for (const poly of polylignes) {
+        for (let i = 0; i < poly.length - 1; i++) {
+          segments.push([[poly[i].x, poly[i].y], [poly[i+1].x, poly[i+1].y]]);
+        }
+      }
+
+      // Portails (portes)
+      const portails = (data.portals || []).map(p => ({
+        position: { x: p.position.x * px, y: p.position.y * px },
+        bounds: p.bounds.map(b => ({ x: b.x * px, y: b.y * px })),
+        ouvert: !p.closed,
+        rotation: p.rotation
+      }));
+
+      return {
+        nom,
+        largeur: lc * px,
+        hauteur: hc * px,
+        px, lc, hc,
+        image: data.image ? (data.image.startsWith('data:') ? data.image : 'data:image/png;base64,' + data.image) : null,
+        imageObj: null,
+        polylignes,
+        segments,
+        portails,
+        tokens: [],
+        brouillard: []
+      };
+    }
+
+    // ── Chargement fichier ───────────────────────────────────
+    function chargerFichier(fichier) {
+      const nom = fichier.name.replace(/\.dd2vtt$/i, '');
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const data = JSON.parse(e.target.result);
+          const scene = parseDD2VTT(data, nom);
+          scenes[nom] = scene;
+          mettreAJourSelect();
+          activerScene(nom);
+          toastCarte('Scène « ' + nom + ' » chargée ✔');
+        } catch (err) {
+          console.error('[DD2VTT]', err);
+          toastCarte('Erreur : fichier .dd2vtt invalide.');
+        }
+      };
+      reader.readAsText(fichier);
+    }
+
+    // ── Sélecteur multi-scènes ───────────────────────────────
+    function mettreAJourSelect() {
+      const sel = document.getElementById('select-scene-dd2vtt');
+      if (!sel) return;
+      sel.innerHTML = '';
+      Object.keys(scenes).forEach(nom => {
+        const opt = document.createElement('option');
+        opt.value = nom; opt.textContent = nom;
+        sel.appendChild(opt);
+      });
+      sel.style.display = Object.keys(scenes).length > 1 ? 'inline-block' : 'none';
+      sel.onchange = () => activerScene(sel.value);
+    }
+
+    // ── Activation d'une scène ───────────────────────────────
+    function activerScene(nom) {
+      if (!scenes[nom]) return;
+      sceneActive = nom;
+      tokensDD = [];
+      tokenSelectionne = null;
+      fogRevele = null;
+      const scene = scenes[nom];
+
+      // Cacher le placeholder image PNG
+      const vide = document.getElementById('carte-vide');
+      if (vide) vide.style.display = 'none';
+
+      // Afficher l'image dd2vtt dans l'img existante
+      const imgEl = document.getElementById('carte-image');
+      if (imgEl && scene.image) {
+        imgEl.onload = () => {
+          activerModeBattlemap();
+          if (canvasMurs) canvasMurs.style.display = 'block';
+          if (canvasLoS)  canvasLoS.style.display  = 'block';
+          const btnTok = document.getElementById('btn-token-dd');
+          if (btnTok) btnTok.style.display = 'inline-block';
+          rendreScene(scene);
+          calculerEtRendreLoS(scene);
+          rendreTokensDD(scene);
+        };
+        imgEl.src = scene.image;
+        imgEl.style.display = 'block';
+      }
+    }
+
+    // ── Rendu ────────────────────────────────────────────────
+    // Canvas murs dimensionné aux pixels d'affichage réels de l'image
+    // pour rester aligné quelle que soit la taille CSS de la zone carte.
+    function rendreScene(scene) {
+      if (!canvasMurs || !ctxMurs) return;
+
+      const imgEl = document.getElementById('carte-image');
+      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
+      const affW  = (rect && rect.width  > 0) ? rect.width  : scene.largeur;
+      const affH  = (rect && rect.height > 0) ? rect.height : scene.hauteur;
+
+      canvasMurs.width  = affW;
+      canvasMurs.height = affH;
+      canvasMurs.style.width  = affW + 'px';
+      canvasMurs.style.height = affH + 'px';
+
+      const sx = affW / scene.largeur;
+      const sy = affH / scene.hauteur;
+
+      ctxMurs.clearRect(0, 0, affW, affH);
+      rendreMurs(scene, sx, sy);
+      rendrePortails(scene, sx, sy);
+    }
+
+    function rendreMurs(scene, sx, sy) {
+      ctxMurs.strokeStyle = 'rgba(220, 80, 0, 0.9)';
+      ctxMurs.lineWidth   = Math.max(1.5, scene.px * sx / 60);
+      ctxMurs.lineCap     = 'round';
+      ctxMurs.lineJoin    = 'round';
+      ctxMurs.shadowColor = '#ff6600';
+      ctxMurs.shadowBlur  = 4;
+
+      for (const poly of scene.polylignes) {
+        if (poly.length < 2) continue;
+        ctxMurs.beginPath();
+        ctxMurs.moveTo(poly[0].x * sx, poly[0].y * sy);
+        for (let i = 1; i < poly.length; i++) {
+          ctxMurs.lineTo(poly[i].x * sx, poly[i].y * sy);
+        }
+        ctxMurs.stroke();
+      }
+      ctxMurs.shadowBlur = 0;
+    }
+
+    function rendrePortails(scene, sx, sy) {
+      for (const p of scene.portails) {
+        const b = p.bounds;
+        if (b.length < 2) continue;
+        ctxMurs.strokeStyle = p.ouvert ? '#44ff88' : '#ffcc00';
+        ctxMurs.lineWidth   = Math.max(2, scene.px * sx / 50);
+        ctxMurs.setLineDash(p.ouvert ? [6, 4] : []);
+        ctxMurs.shadowColor = p.ouvert ? '#44ff88' : '#ffcc00';
+        ctxMurs.shadowBlur  = 6;
+        ctxMurs.beginPath();
+        ctxMurs.moveTo(b[0].x * sx, b[0].y * sy);
+        ctxMurs.lineTo(b[1].x * sx, b[1].y * sy);
+        ctxMurs.stroke();
+        ctxMurs.setLineDash([]);
+        ctxMurs.shadowBlur = 0;
+      }
+    }
+
+    // ── État tokens dd2vtt ───────────────────────────────────
+    // token : { id, nom, cx, cy, couleur, pj }
+    // cx/cy en coordonnées cases (pas pixels)
+    let tokensDD = [];
+    let tokenSelectionne = null;
+    let canvasLoS = null;
+    let ctxLoS = null;
+    let canvasFog2 = null;  // brouillard persistant dd2vtt
+    let ctxFog2 = null;
+    let fogRevele = null;   // ImageData du brouillard persistant
+
+    // ── Calcul taille case affichée ──────────────────────────
+    function tailleCase(scene) {
+      const imgEl = document.getElementById('carte-image');
+      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
+      const affW  = (rect && rect.width > 0) ? rect.width : scene.largeur;
+      return affW / scene.largeur * scene.px;
+    }
+
+    // ── Rendu tokens dd2vtt ──────────────────────────────────
+    function rendreTokensDD(scene) {
+      const conteneur = document.getElementById('dd2vtt-tokens');
+      if (!conteneur) return;
+      conteneur.innerHTML = '';
+
+      const tc = tailleCase(scene);
+      const imgEl = document.getElementById('carte-image');
+      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
+      if (!rect) return;
+      // Aligner le conteneur tokens sur l'image exactement
+      const sceneEl = document.getElementById('carte-scene');
+      const sceneRect = sceneEl ? sceneEl.getBoundingClientRect() : null;
+      if (sceneRect) {
+        conteneur.style.left = (rect.left - sceneRect.left) + 'px';
+        conteneur.style.top  = (rect.top  - sceneRect.top)  + 'px';
+        conteneur.style.width  = rect.width  + 'px';
+        conteneur.style.height = rect.height + 'px';
+      }
+
+      tokensDD.forEach(tok => {
+        const el = document.createElement('div');
+        el.className = 'dd-token' + (tokenSelectionne === tok.id ? ' selectionne' : '');
+        el.dataset.id = tok.id;
+
+        // Position en pixels affichés depuis le coin haut-gauche de l'image
+        const px = tok.cx * tc + tc/2;
+        const py = tok.cy * tc + tc/2;
+        el.style.left   = px + 'px';
+        el.style.top    = py + 'px';
+        el.style.width  = (tc * 0.85) + 'px';
+        el.style.height = (tc * 0.85) + 'px';
+        el.style.borderColor = tok.couleur;
+        el.style.fontSize = Math.max(8, tc * 0.35) + 'px';
+        el.textContent = tok.nom.charAt(0).toUpperCase();
+        el.title = tok.nom;
+
+        // Drag sur grille
+        el.addEventListener('pointerdown', ev => demarrerDragDD(ev, tok, scene));
+        // Sélection pour LoS
+        el.addEventListener('click', ev => {
+          ev.stopPropagation();
+          tokenSelectionne = tokenSelectionne === tok.id ? null : tok.id;
+          rendreTokensDD(scene);
+          calculerEtRendreLoS(scene);
+        });
+
+        conteneur.appendChild(el);
+      });
+    }
+
+    // ── Drag tokens sur grille ───────────────────────────────
+    let dragDD = null;
+    function demarrerDragDD(ev, tok, scene) {
+      ev.preventDefault();
+      dragDD = { tok, scene };
+      window.addEventListener('pointermove', surDragDD);
+      window.addEventListener('pointerup', finDragDD);
+    }
+    function surDragDD(ev) {
+      if (!dragDD) return;
+      const imgEl = document.getElementById('carte-image');
+      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
+      if (!rect) return;
+      const { tok, scene } = dragDD;
+      const tc = tailleCase(scene);
+      const rx = ev.clientX - rect.left;
+      const ry = ev.clientY - rect.top;
+      tok.cx = Math.max(0, Math.min(scene.lc - 1, Math.floor(rx / tc)));
+      tok.cy = Math.max(0, Math.min(scene.hc - 1, Math.floor(ry / tc)));
+      rendreTokensDD(scene);
+      calculerEtRendreLoS(scene);
+    }
+    function finDragDD() {
+      dragDD = null;
+      window.removeEventListener('pointermove', surDragDD);
+      window.removeEventListener('pointerup', finDragDD);
+    }
+
+    // ── Ajouter un token dd2vtt ──────────────────────────────
+    function ajouterTokenDD(scene) {
+      const nom = prompt('Nom du token :', 'Aventurier');
+      if (!nom) return;
+      const couleurs = ['#e74c3c','#3498db','#2ecc71','#9b59b6','#f39c12','#1abc9c'];
+      tokensDD.push({
+        id: 'dd-' + Date.now(),
+        nom: nom.trim(),
+        cx: Math.floor(scene.lc / 2),
+        cy: Math.floor(scene.hc / 2),
+        couleur: couleurs[tokensDD.length % couleurs.length],
+        pj: false
+      });
+      rendreTokensDD(scene);
+      calculerEtRendreLoS(scene);
+    }
+
+    // ── LoS + brouillard ─────────────────────────────────────
+    function calculerEtRendreLoS(scene) {
+      if (!canvasLoS || !ctxLoS) return;
+
+      const imgEl = document.getElementById('carte-image');
+      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
+      if (!rect || rect.width === 0) return;
+      console.log('[LoS] tokens:', tokensDD.length, 'segments:', scene.segments.length, 'rect:', rect.width, rect.height);
+
+      const affW = rect.width;
+      const affH = rect.height;
+      const sx   = affW / scene.largeur;
+      const sy   = affH / scene.hauteur;
+
+      // Redimensionner canvas LoS si besoin
+      if (canvasLoS.width !== affW || canvasLoS.height !== affH) {
+        canvasLoS.width  = affW;
+        canvasLoS.height = affH;
+        canvasLoS.style.width  = affW + 'px';
+        canvasLoS.style.height = affH + 'px';
+      }
+      if (canvasFog2.width !== affW || canvasFog2.height !== affH) {
+        canvasFog2.width  = affW;
+        canvasFog2.height = affH;
+        // Remplir le brouillard initial
+        ctxFog2.fillStyle = 'rgba(0,0,0,0.92)';
+        ctxFog2.fillRect(0, 0, affW, affH);
+      }
+
+      // Segments mis à l'échelle affichage
+      const segsAff = scene.segments.map(seg => [
+        [seg[0][0]*sx, seg[0][1]*sy],
+        [seg[1][0]*sx, seg[1][1]*sy]
+      ]);
+
+      // Calculer l'union des polygones LoS de tous les tokens
+      const tc = tailleCase(scene);
+      ctxLoS.clearRect(0, 0, affW, affH);
+
+      if (tokensDD.length === 0) {
+        // Pas de token : tout noir
+        ctxLoS.fillStyle = 'rgba(0,0,0,0.85)';
+        ctxLoS.fillRect(0, 0, affW, affH);
+        return;
+      }
+
+      // Zone visible = union des polygones de chaque token
+      // 1. Dessiner le brouillard de base (zones non vues)
+      ctxLoS.fillStyle = 'rgba(0,0,0,0.85)';
+      ctxLoS.fillRect(0, 0, affW, affH);
+
+      for (const tok of tokensDD) {
+        const posX = (tok.cx + 0.5) * tc;
+        const posY = (tok.cy + 0.5) * tc;
+
+        let poly;
+        try {
+          poly = VisibilityPolygon.compute([posX, posY], segsAff);
+          console.log('[LoS] token', tok.nom, 'pos:', posX, posY, 'poly points:', poly ? poly.length : 0);
+        } catch(e) { console.error('[LoS] erreur compute:', e); continue; }
+        if (!poly || poly.length < 3) { console.warn('[LoS] polygone invalide'); continue; }
+
+        // Révéler dans le brouillard persistant
+        ctxFog2.globalCompositeOperation = 'destination-out';
+        ctxFog2.beginPath();
+        ctxFog2.moveTo(poly[0][0], poly[0][1]);
+        for (let i = 1; i < poly.length; i++) ctxFog2.lineTo(poly[i][0], poly[i][1]);
+        ctxFog2.closePath();
+        ctxFog2.fill();
+        ctxFog2.globalCompositeOperation = 'source-over';
+
+        // Effacer la zone visible dans le canvas LoS actuel
+        ctxLoS.globalCompositeOperation = 'destination-out';
+        ctxLoS.beginPath();
+        ctxLoS.moveTo(poly[0][0], poly[0][1]);
+        for (let i = 1; i < poly.length; i++) ctxLoS.lineTo(poly[i][0], poly[i][1]);
+        ctxLoS.closePath();
+        ctxLoS.fill();
+        ctxLoS.globalCompositeOperation = 'source-over';
+      }
+
+      // Superposer le brouillard persistant (zones déjà explorées = grisé)
+      // Les zones jamais vues = noir opaque (déjà dans fog2)
+      // On dessine fog2 avec opacité réduite sur les zones explorées
+      ctxLoS.globalAlpha = 0.45;
+      ctxLoS.drawImage(canvasFog2, 0, 0);
+      ctxLoS.globalAlpha = 1.0;
+    }
+
+
+    // ── API publique ─────────────────────────────────────────
+    function init() {
+      canvasMurs = document.getElementById('carte-murs');
+      canvasLoS  = document.getElementById('carte-los');
+      canvasFog2 = document.createElement('canvas'); // offscreen persistant
+
+      if (!canvasMurs) return;
+      ctxMurs = canvasMurs.getContext('2d');
+      ctxLoS  = canvasLoS  ? canvasLoS.getContext('2d')  : null;
+      ctxFog2 = canvasFog2.getContext('2d');
+
+      // Style commun canvas overlay
+      for (const cv of [canvasMurs, canvasLoS]) {
+        if (!cv) continue;
+        cv.style.display = 'none';
+        cv.style.position = 'absolute';
+        cv.style.top  = '0';
+        cv.style.left = '0';
+        cv.style.pointerEvents = 'none';
+      }
+
+      // Clic sur la carte → désélectionner token
+      const scene2 = document.getElementById('carte-scene');
+      if (scene2) scene2.addEventListener('click', () => {
+        if (tokenSelectionne) {
+          tokenSelectionne = null;
+          const sc = scenes[sceneActive];
+          if (sc) { rendreTokensDD(sc); calculerEtRendreLoS(sc); }
+        }
+      });
+
+      const inputDD = document.getElementById('input-dd2vtt');
+      const btnDD   = document.getElementById('btn-import-dd2vtt');
+      if (btnDD && inputDD) {
+        btnDD.onclick = () => inputDD.click();
+        inputDD.onchange = e => {
+          if (e.target.files[0]) chargerFichier(e.target.files[0]);
+          e.target.value = '';
+        };
+      }
+
+      const btnTok = document.getElementById('btn-token-dd');
+      if (btnTok) {
+        btnTok.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const sc = scenes[sceneActive];
+          if (sc) ajouterTokenDD(sc);
+        });
+      }
+    }
+
+    function activerModeBattlemap() {
+      // Cacher les contrôles fog worldmap
+      document.querySelectorAll('.worldmap-ctrl').forEach(el => el.style.display = 'none');
+    }
+
+    function activerModeWorldmap() {
+      // Réafficher les contrôles fog worldmap
+      document.querySelectorAll('.worldmap-ctrl').forEach(el => el.style.display = '');
+      // Cacher les éléments battlemap
+      const btnTok = document.getElementById('btn-token-dd');
+      if (btnTok) btnTok.style.display = 'none';
+      const sel = document.getElementById('select-scene-dd2vtt');
+      if (sel) sel.style.display = 'none';
+      // Cacher canvas battlemap
+      if (canvasMurs) canvasMurs.style.display = 'none';
+      if (canvasLoS)  canvasLoS.style.display  = 'none';
+      const tokensEl = document.getElementById('dd2vtt-tokens');
+      if (tokensEl) tokensEl.innerHTML = '';
+    }
+
+    return { init, scenes: () => scenes, sceneActive: () => sceneActive, ajouterToken: (sc) => ajouterTokenDD(sc) };
+  })();
+
+  /* ============================================================
+     Fin DD2VTT
+     ============================================================ */
+
+  document.addEventListener("DOMContentLoaded", () => { init(); Worldmap.init(); DD2VTT.init(); });
 
   return { onOpen, definirRole, definirMonPerso };
 })();

@@ -233,29 +233,50 @@
           <select id="select-mon-perso"></select>
         </div>
         <div class="carte-toolbar">
-          <select class="carte-select" id="select-carte-preset" title="Choisir une carte">
-            <option value="">🗺️ Cartes…</option>
-          </select>
-          <button class="btn petit" id="btn-import-carte" data-role="mj">📁 Importer la mienne</button>
-          <input type="file" id="input-carte" accept="image/*" hidden />
-          <button class="btn petit" id="btn-import-dd2vtt" data-role="mj">🗺 Importer .dd2vtt</button>
-          <input type="file" id="input-dd2vtt" accept=".dd2vtt" hidden />
-          <select class="carte-select" id="select-scene-dd2vtt" style="display:none;" title="Changer de scène"></select>
-          <button class="btn petit secondaire" id="btn-jeton-perso" data-role="mj">+ Mes personnages</button>
-          <button class="btn petit secondaire" id="btn-jeton-libre" data-role="mj">+ PNJ / monstre</button>
-          <button class="btn petit secondaire" id="btn-grille" data-role="mj">▦ Grille</button>
-          <button class="btn petit secondaire" id="btn-fog" data-role="mj">🌫️ Brouillard</button>
-          <button class="btn petit secondaire" id="btn-fog-brush" data-role="mj">✏️ Révéler</button>
-          <button class="btn petit secondaire" id="btn-fog-clear" data-role="mj">Tout révéler</button>
-          <button class="btn petit secondaire" id="btn-fog-fill" data-role="mj">Tout couvrir</button>
-          <button class="btn petit danger" id="btn-carte-reset" data-role="mj">Réinitialiser</button>
+          <!-- Mode Worldmap -->
+          <div class="mode-groupe" id="groupe-worldmap">
+            <span class="mode-label">🗺 Worldmap</span>
+            <select class="carte-select" id="select-carte-preset" title="Choisir une carte">
+              <option value="">Choisir une carte…</option>
+            </select>
+          </div>
+
+          <!-- Séparateur -->
+          <div class="mode-separateur" data-role="mj">|</div>
+
+          <!-- Mode Battlemap -->
+          <div class="mode-groupe" id="groupe-battlemap" data-role="mj">
+            <span class="mode-label">⚔ Battlemap</span>
+            <button class="btn petit" id="btn-import-dd2vtt">📁 Importer .dd2vtt</button>
+            <input type="file" id="input-dd2vtt" accept=".dd2vtt" hidden />
+            <select class="carte-select" id="select-scene-dd2vtt" style="display:none;" title="Changer de scène"></select>
+            <button class="btn petit secondaire" id="btn-token-dd" style="display:none;">+ Token</button>
+          </div>
+        </div>
+
+        <!-- Contrôles communs MJ -->
+        <div class="carte-toolbar" data-role="mj">
+          <button class="btn petit secondaire" id="btn-jeton-perso" class="worldmap-only">+ Mes personnages</button>
+          <button class="btn petit secondaire" id="btn-jeton-libre" class="worldmap-only">+ PNJ / monstre</button>
+          <button class="btn petit secondaire" id="btn-grille">▦ Grille</button>
+          <!-- Fog worldmap uniquement -->
+          <button class="btn petit secondaire worldmap-ctrl" id="btn-fog">🌫️ Brouillard</button>
+          <button class="btn petit secondaire worldmap-ctrl" id="btn-fog-brush">✏️ Révéler</button>
+          <button class="btn petit secondaire worldmap-ctrl" id="btn-fog-clear">Tout révéler</button>
+          <button class="btn petit secondaire worldmap-ctrl" id="btn-fog-fill">Tout couvrir</button>
+          <button class="btn petit danger" id="btn-carte-reset">Réinitialiser</button>
         </div>
         <div class="carte-aide" id="carte-aide"></div>
         <div class="carte-scene" id="carte-scene">
-          <div class="carte-vide" id="carte-vide">Aucune carte importée. Clique « 🗺️ Importer une carte ».</div>
-          <img id="carte-image" alt="carte" />
+          <div class="carte-vide" id="carte-vide">Choisis une carte dans le menu ou importe un .dd2vtt pour commencer.</div>
+          <!-- Worldmap : canvas pan/zoom -->
+          <canvas id="canvas-worldmap"></canvas>
+          <!-- Battlemap : image + overlays -->
+          <img id="carte-image" alt="carte" style="display:none;" />
           <canvas id="carte-fog"></canvas>
           <canvas id="carte-murs"></canvas>
+          <canvas id="carte-los"></canvas>
+          <div id="dd2vtt-tokens"></div>
           <div id="carte-jetons"></div>
         </div>
       </div>
