@@ -395,17 +395,18 @@ const Carte = (() => {
       opt.value = p.key; opt.textContent = p.label;
       groupes[nomG].appendChild(opt);
     });
-    dom.select.onchange = () => { if (dom.select.value) chargerPreset(dom.select.value); };
-    dom.btnImport.onclick = () => dom.inputCarte.click();
-    dom.inputCarte.onchange = (e) => { if (e.target.files[0]) importerCarte(e.target.files[0]); e.target.value = ""; };
-    dom.btnPersos.onclick = ajouterJetonsPersos;
-    dom.btnLibre.onclick = ajouterJetonLibre;
-    dom.btnGrille.onclick = basculerGrille;
-    dom.btnFog.onclick = basculerFog;
-    dom.btnPinceau.onclick = basculerPinceau;
-    dom.btnFogClear.onclick = () => { viderFog(); };
-    dom.btnFogFill.onclick = () => { remplirFog(); };
-    dom.btnReset.onclick = reset;
+    // Sélecteur géré par Worldmap.init() — ne pas écraser ici
+    // dom.select.onchange = () => { if (dom.select.value) chargerPreset(dom.select.value); };
+    if (dom.btnImport) dom.btnImport.onclick = () => dom.inputCarte && dom.inputCarte.click();
+    if (dom.inputCarte) dom.inputCarte.onchange = (e) => { if (e.target.files[0]) importerCarte(e.target.files[0]); e.target.value = ""; };
+    if (dom.btnPersos) dom.btnPersos.onclick = ajouterJetonsPersos;
+    if (dom.btnLibre) dom.btnLibre.onclick = ajouterJetonLibre;
+    if (dom.btnGrille)   dom.btnGrille.onclick   = basculerGrille;
+    if (dom.btnFog)      dom.btnFog.onclick      = basculerFog;
+    if (dom.btnPinceau)  dom.btnPinceau.onclick  = basculerPinceau;
+    if (dom.btnFogClear) dom.btnFogClear.onclick = () => { viderFog(); };
+    if (dom.btnFogFill)  dom.btnFogFill.onclick  = () => { remplirFog(); };
+    if (dom.btnReset)    dom.btnReset.onclick    = reset;
 
     // peinture du brouillard
     dom.fog.addEventListener("pointerdown", brushDown);
@@ -446,10 +447,12 @@ const Carte = (() => {
 
       // Remplir le sélecteur depuis DONNEES.cartesMonde
       const sel = document.getElementById('select-carte-preset');
-      if (sel && typeof DONNEES !== 'undefined' && DONNEES.cartesMonde) {
-        // Groupes
+      if (sel && typeof CARTES_MONDE !== 'undefined') {
+        // Vider complètement le sélecteur (supprime les entrées de l'ancien système)
+        sel.innerHTML = '<option value="">Choisir une carte…</option>';
+        // Repeupler avec CARTES_MONDE groupé par catégorie
         const groupes = {};
-        for (const carte of DONNEES.cartesMonde) {
+        for (const carte of CARTES_MONDE) {
           if (!groupes[carte.categorie]) groupes[carte.categorie] = [];
           groupes[carte.categorie].push(carte);
         }
@@ -464,9 +467,12 @@ const Carte = (() => {
           }
           sel.appendChild(grp);
         }
+        // Prise de contrôle exclusive du sélecteur
         sel.addEventListener('change', e => {
-          if (e.target.value) charger(e.target.value);
-          else masquer();
+          if (e.target.value) {
+            if (typeof DD2VTT !== 'undefined') DD2VTT.modeWorldmap();
+            charger(e.target.value);
+          } else { masquer(); }
         });
       }
 
@@ -519,8 +525,19 @@ const Carte = (() => {
     function redimensionner() {
       const scene = document.getElementById('carte-scene');
       if (!scene || !canvas) return;
-      canvas.width  = scene.clientWidth;
-      canvas.height = scene.clientHeight || 600;
+      // Forcer une hauteur suffisante basée sur le ratio de l'image
+      const largeur = scene.clientWidth;
+      let hauteur = 600;
+      if (imgActuelle && imgActuelle.width > 0) {
+        hauteur = Math.round(largeur * imgActuelle.height / imgActuelle.width);
+        // Limiter à 85vh
+        const maxH = Math.round(window.innerHeight * 0.85);
+        if (hauteur > maxH) hauteur = maxH;
+      }
+      canvas.width  = largeur;
+      canvas.height = hauteur;
+      // Forcer la hauteur CSS de carte-scene
+      scene.style.height = hauteur + 'px';
     }
 
     function centrer() {
@@ -756,9 +773,15 @@ const Carte = (() => {
           if (canvasLoS)  canvasLoS.style.display  = 'block';
           const btnTok = document.getElementById('btn-token-dd');
           if (btnTok) btnTok.style.display = 'inline-block';
-          rendreScene(scene);
-          calculerEtRendreLoS(scene);
-          rendreTokensDD(scene);
+          let _t = 0;
+          function _go() {
+            const _r = document.getElementById('carte-image').getBoundingClientRect();
+            if (_r.width > 0 && _r.height > 0) {
+              rendreScene(scene);
+              requestAnimationFrame(() => { reinitFog2(scene); calculerEtRendreLoS(scene); rendreTokensDD(scene); });
+            } else if (_t++ < 10) { requestAnimationFrame(_go); }
+          }
+          requestAnimationFrame(_go);
         };
         imgEl.src = scene.image;
         imgEl.style.display = 'block';
@@ -766,20 +789,27 @@ const Carte = (() => {
     }
 
     // ── Rendu ────────────────────────────────────────────────
-    // Canvas murs dimensionné aux pixels d'affichage réels de l'image
-    // pour rester aligné quelle que soit la taille CSS de la zone carte.
     function rendreScene(scene) {
       if (!canvasMurs || !ctxMurs) return;
 
       const imgEl = document.getElementById('carte-image');
       const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
-      const affW  = (rect && rect.width  > 0) ? rect.width  : scene.largeur;
-      const affH  = (rect && rect.height > 0) ? rect.height : scene.hauteur;
+      const affW  = (rect && rect.width  > 0) ? Math.round(rect.width)  : scene.largeur;
+      const affH  = (rect && rect.height > 0) ? Math.round(rect.height) : scene.hauteur;
 
+      // Offset image dans carte-scene
+      const sceneEl = document.getElementById('carte-scene');
+      const sceneRect = sceneEl ? sceneEl.getBoundingClientRect() : null;
+      const offX2 = sceneRect ? Math.round(rect.left - sceneRect.left) : 0;
+      const offY2 = sceneRect ? Math.round(rect.top  - sceneRect.top)  : 0;
+
+      // Canvas murs calé sur l'image exactement
       canvasMurs.width  = affW;
       canvasMurs.height = affH;
       canvasMurs.style.width  = affW + 'px';
       canvasMurs.style.height = affH + 'px';
+      canvasMurs.style.left   = offX2 + 'px';
+      canvasMurs.style.top    = offY2 + 'px';
 
       const sx = affW / scene.largeur;
       const sy = affH / scene.hauteur;
@@ -789,7 +819,7 @@ const Carte = (() => {
       rendrePortails(scene, sx, sy);
     }
 
-    function rendreMurs(scene, sx, sy) {
+    function rendreMurs(scene, sx, sy, offX=0, offY=0) {
       ctxMurs.strokeStyle = 'rgba(220, 80, 0, 0.9)';
       ctxMurs.lineWidth   = Math.max(1.5, scene.px * sx / 60);
       ctxMurs.lineCap     = 'round';
@@ -800,16 +830,16 @@ const Carte = (() => {
       for (const poly of scene.polylignes) {
         if (poly.length < 2) continue;
         ctxMurs.beginPath();
-        ctxMurs.moveTo(poly[0].x * sx, poly[0].y * sy);
+        ctxMurs.moveTo(offX + poly[0].x * sx, offY + poly[0].y * sy);
         for (let i = 1; i < poly.length; i++) {
-          ctxMurs.lineTo(poly[i].x * sx, poly[i].y * sy);
+          ctxMurs.lineTo(offX + poly[i].x * sx, offY + poly[i].y * sy);
         }
         ctxMurs.stroke();
       }
       ctxMurs.shadowBlur = 0;
     }
 
-    function rendrePortails(scene, sx, sy) {
+    function rendrePortails(scene, sx, sy, offX=0, offY=0) {
       for (const p of scene.portails) {
         const b = p.bounds;
         if (b.length < 2) continue;
@@ -819,8 +849,8 @@ const Carte = (() => {
         ctxMurs.shadowColor = p.ouvert ? '#44ff88' : '#ffcc00';
         ctxMurs.shadowBlur  = 6;
         ctxMurs.beginPath();
-        ctxMurs.moveTo(b[0].x * sx, b[0].y * sy);
-        ctxMurs.lineTo(b[1].x * sx, b[1].y * sy);
+        ctxMurs.moveTo(offX + b[0].x * sx, offY + b[0].y * sy);
+        ctxMurs.lineTo(offX + b[1].x * sx, offY + b[1].y * sy);
         ctxMurs.stroke();
         ctxMurs.setLineDash([]);
         ctxMurs.shadowBlur = 0;
@@ -855,23 +885,28 @@ const Carte = (() => {
       const tc = tailleCase(scene);
       const imgEl = document.getElementById('carte-image');
       const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
-      if (!rect) return;
-      // Aligner le conteneur tokens sur l'image exactement
+      if (!rect || rect.width === 0) return;
+
+      // Le conteneur couvre toute la carte-scene (position:absolute 0/0 100%/100%)
+      // Les tokens sont positionnés en % de l'image dans la scene
       const sceneEl = document.getElementById('carte-scene');
       const sceneRect = sceneEl ? sceneEl.getBoundingClientRect() : null;
-      if (sceneRect) {
-        conteneur.style.left = (rect.left - sceneRect.left) + 'px';
-        conteneur.style.top  = (rect.top  - sceneRect.top)  + 'px';
-        conteneur.style.width  = rect.width  + 'px';
-        conteneur.style.height = rect.height + 'px';
-      }
+      const offX = sceneRect ? Math.round(rect.left - sceneRect.left) : 0;
+      const offY = sceneRect ? Math.round(rect.top  - sceneRect.top)  : 0;
+      conteneur.style.position = 'absolute';
+      conteneur.style.left   = offX + 'px';
+      conteneur.style.top    = offY + 'px';
+      conteneur.style.width  = rect.width  + 'px';
+      conteneur.style.height = rect.height + 'px';
+      conteneur.style.pointerEvents = 'none';
 
       tokensDD.forEach(tok => {
         const el = document.createElement('div');
         el.className = 'dd-token' + (tokenSelectionne === tok.id ? ' selectionne' : '');
         el.dataset.id = tok.id;
+        el.style.pointerEvents = 'all';
 
-        // Position en pixels affichés depuis le coin haut-gauche de l'image
+        // Position en pixels depuis le coin haut-gauche de la scene (pas de l'image)
         const px = tok.cx * tc + tc/2;
         const py = tok.cy * tc + tc/2;
         el.style.left   = px + 'px';
@@ -942,6 +977,19 @@ const Carte = (() => {
       calculerEtRendreLoS(scene);
     }
 
+    // ── Init brouillard persistant ───────────────────────────
+    function reinitFog2(scene) {
+      const imgEl = document.getElementById('carte-image');
+      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
+      if (!rect || rect.width === 0) return;
+      if (canvasFog2.width !== Math.round(rect.width) || canvasFog2.height !== Math.round(rect.height)) {
+        canvasFog2.width  = Math.round(rect.width);
+        canvasFog2.height = Math.round(rect.height);
+        ctxFog2.fillStyle = 'rgba(0,0,0,0.92)';
+        ctxFog2.fillRect(0, 0, canvasFog2.width, canvasFog2.height);
+      }
+    }
+
     // ── LoS + brouillard ─────────────────────────────────────
     function calculerEtRendreLoS(scene) {
       if (!canvasLoS || !ctxLoS) return;
@@ -949,51 +997,43 @@ const Carte = (() => {
       const imgEl = document.getElementById('carte-image');
       const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
       if (!rect || rect.width === 0) return;
-      console.log('[LoS] tokens:', tokensDD.length, 'segments:', scene.segments.length, 'rect:', rect.width, rect.height);
 
-      const affW = rect.width;
-      const affH = rect.height;
+      const affW = Math.round(rect.width);
+      const affH = Math.round(rect.height);
       const sx   = affW / scene.largeur;
       const sy   = affH / scene.hauteur;
 
-      // Redimensionner canvas LoS si besoin
-      if (canvasLoS.width !== affW || canvasLoS.height !== affH) {
-        canvasLoS.width  = affW;
-        canvasLoS.height = affH;
-        canvasLoS.style.width  = affW + 'px';
-        canvasLoS.style.height = affH + 'px';
-      }
-      if (canvasFog2.width !== affW || canvasFog2.height !== affH) {
-        canvasFog2.width  = affW;
-        canvasFog2.height = affH;
-        // Remplir le brouillard initial
-        ctxFog2.fillStyle = 'rgba(0,0,0,0.92)';
-        ctxFog2.fillRect(0, 0, affW, affH);
-      }
+      // Offset du canvas par rapport à carte-scene
+      const sceneEl = document.getElementById('carte-scene');
+      const sceneRect = sceneEl ? sceneEl.getBoundingClientRect() : null;
+      const offX = sceneRect ? Math.round(rect.left - sceneRect.left) : 0;
+      const offY = sceneRect ? Math.round(rect.top  - sceneRect.top)  : 0;
 
-      // Segments mis à l'échelle affichage
+      // Redimensionner et repositionner le canvas LoS sur l'image exactement
+      canvasLoS.width  = affW;
+      canvasLoS.height = affH;
+      canvasLoS.style.width  = affW + 'px';
+      canvasLoS.style.height = affH + 'px';
+      canvasLoS.style.left   = offX + 'px';
+      canvasLoS.style.top    = offY + 'px';
+
+      // Segments dans le référentiel du canvas (= référentiel image)
       const segsAff = scene.segments.map(seg => [
         [seg[0][0]*sx, seg[0][1]*sy],
         [seg[1][0]*sx, seg[1][1]*sy]
       ]);
 
-      // Calculer l'union des polygones LoS de tous les tokens
       const tc = tailleCase(scene);
+
+      // Remplir le brouillard opaque
       ctxLoS.clearRect(0, 0, affW, affH);
-
-      if (tokensDD.length === 0) {
-        // Pas de token : tout noir
-        ctxLoS.fillStyle = 'rgba(0,0,0,0.85)';
-        ctxLoS.fillRect(0, 0, affW, affH);
-        return;
-      }
-
-      // Zone visible = union des polygones de chaque token
-      // 1. Dessiner le brouillard de base (zones non vues)
-      ctxLoS.fillStyle = 'rgba(0,0,0,0.85)';
+      ctxLoS.fillStyle = 'rgba(0,0,0,0.92)';
       ctxLoS.fillRect(0, 0, affW, affH);
 
+      if (tokensDD.length === 0) return;
+
       for (const tok of tokensDD) {
+        // Position dans le référentiel du canvas (= référentiel image)
         const posX = (tok.cx + 0.5) * tc;
         const posY = (tok.cy + 0.5) * tc;
 
@@ -1013,7 +1053,7 @@ const Carte = (() => {
         ctxFog2.fill();
         ctxFog2.globalCompositeOperation = 'source-over';
 
-        // Effacer la zone visible dans le canvas LoS actuel
+        // Percer le fog actuel
         ctxLoS.globalCompositeOperation = 'destination-out';
         ctxLoS.beginPath();
         ctxLoS.moveTo(poly[0][0], poly[0][1]);
@@ -1023,9 +1063,7 @@ const Carte = (() => {
         ctxLoS.globalCompositeOperation = 'source-over';
       }
 
-      // Superposer le brouillard persistant (zones déjà explorées = grisé)
-      // Les zones jamais vues = noir opaque (déjà dans fog2)
-      // On dessine fog2 avec opacité réduite sur les zones explorées
+      // Superposer le brouillard persistant (zones explorées = semi-transparent)
       ctxLoS.globalAlpha = 0.45;
       ctxLoS.drawImage(canvasFog2, 0, 0);
       ctxLoS.globalAlpha = 1.0;
@@ -1051,6 +1089,7 @@ const Carte = (() => {
         cv.style.top  = '0';
         cv.style.left = '0';
         cv.style.pointerEvents = 'none';
+        cv.style.zIndex = '5';
       }
 
       // Clic sur la carte → désélectionner token
@@ -1084,7 +1123,8 @@ const Carte = (() => {
     }
 
     function activerModeBattlemap() {
-      // Cacher les contrôles fog worldmap
+      const cwm = document.getElementById('canvas-worldmap');
+      if (cwm) cwm.style.display = 'none';
       document.querySelectorAll('.worldmap-ctrl').forEach(el => el.style.display = 'none');
     }
 
@@ -1103,7 +1143,7 @@ const Carte = (() => {
       if (tokensEl) tokensEl.innerHTML = '';
     }
 
-    return { init, scenes: () => scenes, sceneActive: () => sceneActive, ajouterToken: (sc) => ajouterTokenDD(sc) };
+    return { init, scenes: () => scenes, sceneActive: () => sceneActive, ajouterToken: (sc) => ajouterTokenDD(sc), modeWorldmap: activerModeWorldmap };
   })();
 
   /* ============================================================

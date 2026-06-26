@@ -490,3 +490,43 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
   top: 0; left: 0;
 }
 #canvas-worldmap:active { cursor: grabbing; }
+
+/* ── Overlays battlemap dd2vtt ── */
+#carte-murs,
+#carte-los {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
+  display: none;
+}
+
+#dd2vtt-tokens {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.dd-token {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 2px solid #e74c3c;
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  cursor: grab;
+  pointer-events: all;
+  z-index: 11;
+  transition: box-shadow 0.15s;
+}
+
+.dd-token.selectionne {
+  box-shadow: 0 0 0 3px #fff, 0 0 10px 4px rgba(255,255,255,0.5);
+}
+
+.dd-token:active { cursor: grabbing; }
