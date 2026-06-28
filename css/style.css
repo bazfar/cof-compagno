@@ -465,6 +465,25 @@ textarea { resize: vertical; min-height: 70px; }
 .info-box { background: #eef3ec; border-left: 4px solid var(--succes); padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin: 12px 0; }
 .vide { text-align: center; color: #8a8296; padding: 30px; font-style: italic; }
 
+/* ---------- Bestiaire ---------- */
+.bestiaire-section { color: var(--parchemin); background: var(--violet); padding: 6px 12px; border-radius: 8px; margin: 16px 0 10px; font-size: 1rem; }
+.bestiaire-section .compte { opacity: 0.7; font-weight: 400; font-size: 0.85rem; }
+.bestiaire-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.monstre-carte { background: var(--parchemin); border: 1px solid var(--parchemin-fonce); border-left: 5px solid var(--violet-accent); border-radius: 10px; padding: 12px 14px; box-shadow: 0 3px 10px var(--ombre); }
+.monstre-carte.elite { border-left-color: var(--or); }
+.monstre-carte.boss { border-left-color: var(--chaos); }
+.monstre-tete { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.monstre-emoji { font-size: 2rem; line-height: 1; }
+.monstre-nom { font-weight: 700; color: var(--violet); font-size: 1.05rem; }
+.badge-type { display: inline-block; color: #fff; font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; vertical-align: middle; }
+.badge-base { display: inline-block; font-size: 0.62rem; color: #8a8296; border: 1px solid var(--parchemin-fonce); border-radius: 8px; padding: 1px 6px; vertical-align: middle; }
+.monstre-stats { font-size: 0.8rem; font-weight: 600; color: var(--violet-clair); background: #fffdf7; border-radius: 6px; padding: 4px 8px; margin-bottom: 8px; }
+.monstre-bloc { font-size: 0.82rem; margin-bottom: 6px; }
+.monstre-bloc strong { color: var(--violet); }
+.monstre-bloc ul { margin: 3px 0 0; padding-left: 18px; }
+.monstre-bloc li { margin-bottom: 2px; color: #4a4358; }
+.monstre-desc { font-size: 0.8rem; font-style: italic; color: #6a6278; margin: 6px 0; }
+
 footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; }
 
 /* ---------- Toast ---------- */

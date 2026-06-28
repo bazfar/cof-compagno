@@ -147,6 +147,7 @@ const App = (() => {
       Carte.onOpen();
       if (role === "joueur") rendreSelecteurMonPerso();
     }
+    if (panneau === "bestiaire" && typeof Bestiaire !== "undefined") Bestiaire.onOpen();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 

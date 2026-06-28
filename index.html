@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=15" />
+  <link rel="stylesheet" href="css/style.css?v=16" />
 </head>
 <body>
   <header>
@@ -285,9 +285,21 @@
     <!-- BESTIAIRE -->
     <section class="panneau" id="panneau-bestiaire">
       <div class="carte">
-        <h2 class="titre-bandeau">Bestiaire</h2>
-        <p class="vide">Aucun monstre pour l'instant — reviens plus tard, tu pourras ajouter tes créatures maison ici.</p>
+        <h2 class="titre-bandeau">Bestiaire — mode MJ</h2>
+        <p style="font-size:0.85rem;color:#6a6278;">Les monstres de base + tes créations (élites, boss). Crée des créatures avec leurs PV, attaques et capacités, puis pose-les sur la battlemap.</p>
+        <div class="barre-actions" style="align-items:center;">
+          <button class="btn or" id="btn-nouveau-monstre">+ Créer un monstre</button>
+          <select id="filtre-type-monstre" class="carte-select" style="background:var(--violet);">
+            <option value="tous">Tous les types</option>
+            <option value="normal">Normaux</option>
+            <option value="elite">Élites</option>
+            <option value="boss">Boss</option>
+          </select>
+          <input id="recherche-monstre" type="text" placeholder="Rechercher…" style="max-width:220px;" />
+        </div>
       </div>
+      <div class="carte" id="bestiaire-form" style="display:none;"></div>
+      <div id="bestiaire-liste"></div>
     </section>
 
     <!-- REGLES -->
@@ -313,13 +325,15 @@
   <div id="toast"></div>
 
   <script src="data/donnees.js?v=12"></script>
+  <script src="data/bestiaire.js?v=1"></script>
   <script src="js/emblemes.js?v=9"></script>
   <script src="js/carte-monde.js?v=9"></script>
   <!-- Modèle OOP (Phase 1) : socle additif, n'altère pas l'app existante -->
   <script src="js/entite.js?v=1"></script>
   <script src="js/personnage.js?v=1"></script>
   <script src="js/depot.js?v=2"></script>
+  <script src="js/bestiaire.js?v=2"></script>
   <script src="js/carte.js?v=17"></script>
-  <script src="js/app.js?v=17"></script>
+  <script src="js/app.js?v=18"></script>
 </body>
 </html>
