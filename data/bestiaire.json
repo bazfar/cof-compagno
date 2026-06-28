@@ -1,0 +1,2748 @@
+{
+  "version": "1.0.0",
+  "systeme": "COF Homebrew — Arbre-Monde",
+  "note": "ModeleMonstre conforme à l'architecture OOP cible. jet = formule COF (ex: 1d20+atk vs DEF cible). degats = formule de dés. portee: 'contact' | 'courte (6m)' | 'moyenne (18m)' | 'longue (36m)'. dangerosite: 1-5 (1=débutant, 5=boss). boss: true/false.",
+  "monstres": [
+    {
+      "id": "goblin_eclaireur",
+      "nom": "Gobelin éclaireur",
+      "categorie": "Session 1",
+      "faction": "Tribu Rochedent",
+      "pv": 6,
+      "def": 12,
+      "init": 4,
+      "atk": 2,
+      "dangerosite": 1,
+      "boss": false,
+      "taille": "petite",
+      "attaques": [
+        {
+          "nom": "Dague rouillée",
+          "jet": "1d20+2 vs DEF",
+          "degats": "1d4",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Fronde",
+          "jet": "1d20+3 vs DEF",
+          "degats": "1d4",
+          "portee": "moyenne (18m)",
+          "type": "physique",
+          "effetSpecial": null
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Fuite instinctive",
+          "description": "Si le gobelin est le dernier de son groupe, il tente de fuir (test SAG diff. 10 pour le bloquer). S'il réussit, il alerte le reste de la tribu."
+        },
+        {
+          "nom": "Camouflage de sous-bois",
+          "description": "En forêt, les PJ ont un malus de -2 à leurs tests de Perception pour repérer un éclaireur immobile."
+        }
+      ],
+      "lore": "Sentinelles légères de la tribu Rochedent, les éclaireurs gobelins patrouillent en binôme. Ils évitent le combat frontal mais n'hésitent pas à décrocher pour prévenir leurs congénères. Leur équipement est de mauvaise qualité mais leur connaissance du terrain est redoutable.",
+      "armure": null
+    },
+    {
+      "id": "goblin_garde",
+      "nom": "Gobelin garde",
+      "categorie": "Session 1",
+      "faction": "Tribu Rochedent",
+      "pv": 12,
+      "def": 14,
+      "init": 2,
+      "atk": 3,
+      "dangerosite": 1,
+      "boss": false,
+      "taille": "petite",
+      "attaques": [
+        {
+          "nom": "Couperet",
+          "jet": "1d20+3 vs DEF",
+          "degats": "1d6+1",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Javelot",
+          "jet": "1d20+2 vs DEF",
+          "degats": "1d6",
+          "portee": "courte (6m)",
+          "type": "physique",
+          "effetSpecial": "Une utilisation par combat (stock de 2 javelots)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Formation serrée",
+          "description": "Si deux gardes ou plus sont adjacents, ils gagnent +1 en DEF tant qu'ils restent en contact."
+        }
+      ],
+      "lore": "Plus lourdement équipés que les éclaireurs, les gardes portent un équipement de fortune récupéré sur des voyageurs. Ils défendent les points stratégiques du campement avec une discipline surprenante pour des gobelins.",
+      "armure": {
+        "valeur": 1,
+        "description": "Armure de cuir rapiécée — réduit 1 point de dégâts physiques."
+      }
+    },
+    {
+      "id": "goblin_chef",
+      "nom": "Kratz, chef de la tribu Rochedent",
+      "categorie": "Session 1",
+      "faction": "Tribu Rochedent",
+      "pv": 28,
+      "def": 15,
+      "init": 3,
+      "atk": 5,
+      "dangerosite": 2,
+      "boss": true,
+      "taille": "petite",
+      "attaques": [
+        {
+          "nom": "Sabre récupéré",
+          "jet": "1d20+5 vs DEF",
+          "degats": "1d8+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Filet de chasse",
+          "jet": "1d20+3 vs DEF",
+          "degats": "0",
+          "portee": "courte (6m)",
+          "type": "physique",
+          "effetSpecial": "Si touché : cible entravée (DEF -2, pas de déplacement). Test FOR diff. 12 à chaque tour pour se libérer. Recharge : 3 rounds."
+        },
+        {
+          "nom": "Cri de ralliement",
+          "jet": null,
+          "degats": null,
+          "portee": "zone (9m)",
+          "type": "moral",
+          "effetSpecial": "Utilisable 1 fois par combat. Tous les gobelins dans la zone regagnent 1d4 PV et +1 en ATK jusqu'à la fin du prochain tour de Kratz."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Autorité tribale",
+          "description": "Tant que Kratz est vivant, les gobelins de son groupe ne testent pas le moral. À sa mort, ils effectuent immédiatement un test de moral (SAG diff. 8) ou fuient."
+        },
+        {
+          "nom": "Coup bas",
+          "description": "Si Kratz attaque un PJ qui vient d'être attaqué par un autre gobelin ce tour-ci, il gagne +2 aux dégâts."
+        }
+      ],
+      "lore": "Kratz n'est pas le plus fort de sa tribu, mais le plus rusé. Il a orchestré le rapt du charretier Aldric pour rançonner la ville voisine, une initiative sans précédent pour les Rochedent. Il négocie en broken Common et pourrait être un informateur involontaire sur d'autres menaces dans la région.",
+      "roleNarratif": "Boss de scène. Peut être capturé vivant pour interrogatoire. Connaît l'emplacement d'Aldric.",
+      "armure": {
+        "valeur": 2,
+        "description": "Cottes de mailles de récupération — réduit 2 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "goblin_chaman",
+      "nom": "Gobelin chaman",
+      "categorie": "Session 1",
+      "faction": "Tribu Rochedent",
+      "pv": 8,
+      "def": 11,
+      "init": 3,
+      "atk": 1,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "petite",
+      "attaques": [
+        {
+          "nom": "Bâton noueux",
+          "jet": "1d20+1 vs DEF",
+          "degats": "1d4",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Crachat de Sève noire",
+          "jet": "1d20+3 vs DEF (magique)",
+          "degats": "1d6",
+          "portee": "courte (6m)",
+          "type": "magique (Chaos corrompu)",
+          "effetSpecial": "Si touché : la cible doit réussir un test CON diff. 12 ou subir -1 en ATK jusqu'à la fin du combat (effet cumulable une fois max)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Totem de peur",
+          "description": "Action complète, utilisable 1 fois. Place un totem dans une case adjacente. Pendant 2 rounds, toute créature non-gobeline entrant dans une zone de 3m autour du totem doit réussir un test SAG diff. 11 ou perdre son action le tour suivant."
+        },
+        {
+          "nom": "Sève corrompue",
+          "description": "Le chaman perçoit vaguement les flux de Sève. Il peut sentir la présence de magie active dans un rayon de 15m (hors-combat)."
+        }
+      ],
+      "lore": "Rare gobelin touchant à la Sève corrompue — un éclat du Chaos filtré à travers la terre. Les chamans gobelins sont craints même au sein de leur tribu. Celui-ci a convaincu Kratz que le rapt était 'voulu par les esprits', ce qui est faux : il cherche à tester les défenses humaines pour une puissance extérieure encore inconnue.",
+      "roleNarratif": "Optionnel. Révèle l'implication d'une menace plus grande si capturé et interrogé.",
+      "armure": null
+    },
+    {
+      "id": "loup_des_bois",
+      "nom": "Loup des bois",
+      "categorie": "Bestiaire général — Tier 1",
+      "faction": null,
+      "pv": 14,
+      "def": 13,
+      "init": 5,
+      "atk": 3,
+      "dangerosite": 1,
+      "boss": false,
+      "taille": "moyenne",
+      "attaques": [
+        {
+          "nom": "Morsure",
+          "jet": "1d20+3 vs DEF",
+          "degats": "1d6+1",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Plaquage",
+          "jet": "1d20+3 vs DEF",
+          "degats": "1d4",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Si touché : test FOR diff. 11 ou la cible est renversée (DEF -2 jusqu'à se relever avec une action)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Meute",
+          "description": "Pour chaque loup allié adjacent à la même cible, le loup gagne +1 aux jets d'attaque (max +3)."
+        },
+        {
+          "nom": "Odorat développé",
+          "description": "Ne peut pas être surpris par des créatures qu'il n'a pas sentie. Piste une cible blessée sans test."
+        }
+      ],
+      "lore": "Prédateurs naturels des forêts de l'Arbre-Monde, les loups obéissent à la hiérarchie de la Sève — ils se montrent rarement agressifs envers ceux qui ne perturbent pas l'équilibre. Un loup qui attaque de jour est souvent enragé ou manipulé.",
+      "armure": null
+    },
+    {
+      "id": "sanglier_de_rage",
+      "nom": "Sanglier de rage",
+      "categorie": "Bestiaire général — Tier 1",
+      "faction": null,
+      "pv": 20,
+      "def": 12,
+      "init": 2,
+      "atk": 4,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "grande",
+      "attaques": [
+        {
+          "nom": "Charge",
+          "jet": "1d20+4 vs DEF",
+          "degats": "2d6",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Utilisable seulement si le sanglier se déplace d'au moins 6m en ligne droite avant l'attaque. Si touché : test FOR diff. 13 ou repoussé de 3m et renversé."
+        },
+        {
+          "nom": "Défenses",
+          "jet": "1d20+4 vs DEF",
+          "degats": "1d8+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Rage sanguine",
+          "description": "En dessous de la moitié de ses PV, le sanglier gagne +2 en ATK et ne peut plus battre en retraite. Il attaque jusqu'à la mort."
+        },
+        {
+          "nom": "Peau épaisse",
+          "description": "Réduit tous les dégâts physiques de 1 (min. 1)."
+        }
+      ],
+      "lore": "Les sangliers de l'Arbre-Monde sont imprégnés de Sève brute. Normalement paisibles, ils deviennent incontrôlables si leur territoire est souillé par le Chaos — leur pelage vire alors au noir et leurs yeux rougissent.",
+      "armure": {
+        "valeur": 2,
+        "description": "Peau épaisse et couche de graisse — réduit 2 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "spectre_de_ruine",
+      "nom": "Spectre de ruine",
+      "categorie": "Bestiaire général — Tier 1",
+      "faction": "Échos du Chaos",
+      "pv": 10,
+      "def": 14,
+      "init": 4,
+      "atk": 3,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "moyenne",
+      "attaques": [
+        {
+          "nom": "Toucher glacial",
+          "jet": "1d20+3 vs DEF (magique)",
+          "degats": "1d6",
+          "portee": "contact",
+          "type": "magique (froid)",
+          "effetSpecial": "Si touché : test CON diff. 11 ou -1 en initiative jusqu'à la fin du combat."
+        },
+        {
+          "nom": "Hurlement du vide",
+          "jet": "1d20+3 vs DEF (magique)",
+          "degats": "1d4",
+          "portee": "courte (6m)",
+          "type": "magique (mental)",
+          "effetSpecial": "Recharge : 3 rounds. Test SAG diff. 12 ou la cible perd son action le prochain tour (paralysie de terreur)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Résistance physique",
+          "description": "Les armes non-magiques ne lui infligent que la moitié des dégâts (arrondi à l'inférieur). Les armes en bois de l'Arbre-Monde (traité par un Druide) l'affectent normalement."
+        },
+        {
+          "nom": "Ancrage au lieu",
+          "description": "Le spectre ne peut s'éloigner de plus de 30m de l'endroit où il est mort. Il disparaît si l'ancrage (objet ou lieu maudit) est détruit."
+        }
+      ],
+      "lore": "Les spectres de ruine sont des fragments d'âme coincés dans les zones où le Chaos a touché la Sève. Ce ne sont pas des morts-vivants au sens classique — ils sont l'écho d'une terreur figée dans le bois même du monde. On les trouve dans les ruines pré-Fracture ou près des arbres-cicatrices.",
+      "armure": null
+    },
+    {
+      "id": "racine_eveille",
+      "nom": "Racine éveillée",
+      "categorie": "Bestiaire général — Tier 1",
+      "faction": "Gardiens corrompus de la Sève",
+      "pv": 18,
+      "def": 13,
+      "init": 1,
+      "atk": 4,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "grande",
+      "attaques": [
+        {
+          "nom": "Fouet de racine",
+          "jet": "1d20+4 vs DEF",
+          "degats": "1d8",
+          "portee": "courte (6m)",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Emprise",
+          "jet": "1d20+4 vs DEF",
+          "degats": "1d4",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Si touché : la cible est saisie (ne peut pas se déplacer). Test FOR diff. 13 à chaque tour pour se libérer. La racine peut maintenir et attaquer en même temps."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Ancrage terrestre",
+          "description": "Immunisée aux effets de poussée et renversement. Ne peut pas être déplacée de force."
+        },
+        {
+          "nom": "Régénération de Sève",
+          "description": "Récupère 2 PV au début de chacun de ses tours si elle est en contact avec la terre (pas sur pierre, bois mort ou métal)."
+        },
+        {
+          "nom": "Vulnérabilité au feu",
+          "description": "Subit +2 dégâts par dé de tous les effets de feu."
+        }
+      ],
+      "lore": "Quand la Sève d'un arbre ancien est corrompue par un éclat du Chaos, ses racines développent parfois une conscience rudimentaire et hostile. Ce n'est pas un monstre à proprement parler — c'est un arbre qui souffre et qui attaque tout ce qui approche. Les Druides peuvent tenter de le purifier (test SAG diff. 15, action complète) plutôt que de le tuer.",
+      "armure": {
+        "valeur": 3,
+        "description": "Écorce vivante — réduit 3 points de dégâts physiques. Pas d'effet contre le feu."
+      }
+    },
+    {
+      "id": "orc_pillard",
+      "nom": "Orc pillard",
+      "categorie": "Bestiaire général — Tier 1",
+      "faction": "Tribus orques libres",
+      "pv": 22,
+      "def": 14,
+      "init": 2,
+      "atk": 5,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "grande",
+      "attaques": [
+        {
+          "nom": "Hache de guerre",
+          "jet": "1d20+5 vs DEF",
+          "degats": "1d8+3",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Lancer de hache",
+          "jet": "1d20+3 vs DEF",
+          "degats": "1d8+1",
+          "portee": "courte (6m)",
+          "type": "physique",
+          "effetSpecial": "1 utilisation (récupère la hache si il ne subit pas de dégâts ce tour)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Furie de bataille",
+          "description": "Lorsque l'orc tue un adversaire, il gagne immédiatement un déplacement bonus de 6m et une attaque bonus contre une cible adjacente."
+        },
+        {
+          "nom": "Cristallisé de guerre",
+          "description": "Conformément au lore de l'Arbre-Monde, l'orc est une émotion de guerre cristallisée. Il est immunisé aux effets de peur."
+        }
+      ],
+      "lore": "Les orcs du monde sont les émotions de guerre que les dieux ont chassées de leur panthéon lors de la Fracture — des êtres de pure violence cristallisée en chair. Les pillards sont les individus les moins organisés, souvent mercenaires ou bandits, mais certaines tribus ont développé des codes d'honneur complexes.",
+      "armure": null
+    },
+    {
+      "id": "sylvath_fragment",
+      "nom": "Fragment de Sylvath",
+      "categorie": "Bestiaire général — Tier 2",
+      "faction": "Dieux du Chaos (Enfants de la Sève)",
+      "pv": 35,
+      "def": 16,
+      "init": 4,
+      "atk": 6,
+      "dangerosite": 3,
+      "boss": false,
+      "taille": "grande",
+      "attaques": [
+        {
+          "nom": "Liane de corruption",
+          "jet": "1d20+6 vs DEF (magique)",
+          "degats": "1d10+2",
+          "portee": "courte (6m)",
+          "type": "magique (Chaos végétal)",
+          "effetSpecial": "Si touché : test CON diff. 14 ou la cible est empoisonnée (1d4 dégâts par round, 3 rounds). L'antidote est de la Sève pure appliquée par un Druide ou Prêtre."
+        },
+        {
+          "nom": "Explosion de spores",
+          "jet": "1d20+5 vs DEF (magique, zone 4m)",
+          "degats": "2d6",
+          "portee": "courte (6m)",
+          "type": "magique (Chaos végétal)",
+          "effetSpecial": "Recharge : 4 rounds. Toutes les créatures dans la zone sont affectées. Test CON diff. 13 ou aveuglées pendant 1 round."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Aura de corruption",
+          "description": "Toute créature débutant son tour à 3m ou moins du fragment doit réussir un test CON diff. 12 ou subir 1d4 dégâts magiques (Chaos)."
+        },
+        {
+          "nom": "Régénération chaotique",
+          "description": "Récupère 3 PV au début de son tour. La régénération est bloquée pour le round si la créature a subi des dégâts de feu ou de magie de l'Ordre."
+        },
+        {
+          "nom": "Appel du Dieu blessé",
+          "description": "À sa mort, le fragment libère une onde de Sève corrompue : toutes les créatures à 6m testent leur résistance au Chaos (classe dépendante). Ceux qui échouent gagnent un point de Corruption."
+        }
+      ],
+      "lore": "Sylvath, dieu de la croissance devenu dieu du Chaos après la Fracture, projette des fragments de sa conscience dans le monde sous forme de masses végétales animées. Ces fragments cherchent à corrompre les nœuds de Sève pure — les vieux arbres, les sources, les sanctuaires Druides. Ils ne sont pas vraiment intelligents mais obéissent à une pulsion divine.",
+      "armure": null
+    },
+    {
+      "id": "garde_solvarn",
+      "nom": "Garde impérial de Solvarn",
+      "categorie": "Bestiaire général — Tier 2",
+      "faction": "Empire de Solvarn",
+      "pv": 26,
+      "def": 17,
+      "init": 1,
+      "atk": 5,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "moyenne",
+      "attaques": [
+        {
+          "nom": "Épée longue solaire",
+          "jet": "1d20+5 vs DEF",
+          "degats": "1d8+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "L'arme est bénie par Aethar. Elle inflige +1d4 dégâts supplémentaires contre les créatures du Chaos."
+        },
+        {
+          "nom": "Bouclier-frappe",
+          "jet": "1d20+4 vs DEF",
+          "degats": "1d4+1",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Test FOR diff. 12 ou la cible est repoussée de 1,5m et perd son action de déplacement."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Formation légionnaire",
+          "description": "Si trois gardes ou plus sont adjacents, ils forment un mur de boucliers : DEF +2 pour tous, mais se déplacent à demi-vitesse."
+        },
+        {
+          "nom": "Résistance solaire",
+          "description": "Immunisé aux effets de peur d'origine Chaos. Bonus de +2 aux tests de résistance au Chaos."
+        }
+      ],
+      "lore": "L'Empire de Solvarn entraîne ses légionnaires dès l'enfance dans la doctrine du Soleil Éternel d'Aethar. Ces gardes sont fanatiques mais disciplinés — ils ne tuent pas aveuglément mais n'hésitent pas à arrêter quiconque est suspecté de contact avec la Sève corrompue, elfe ou humain.",
+      "armure": {
+        "valeur": 5,
+        "description": "Armure légionnaire solaire (plates + cotte) — réduit 5 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "golem_de_pierre_naine",
+      "nom": "Golem de pierre (artisanat nain)",
+      "categorie": "Bestiaire général — Tier 2",
+      "faction": "Khazrak Dûm (variante)",
+      "pv": 45,
+      "def": 18,
+      "init": 0,
+      "atk": 6,
+      "dangerosite": 3,
+      "boss": false,
+      "taille": "grande",
+      "attaques": [
+        {
+          "nom": "Poing de granit",
+          "jet": "1d20+6 vs DEF",
+          "degats": "2d8+4",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Si dégâts ≥ 10 en une frappe : test FOR diff. 15 ou la cible est projetée à 3m et renversée."
+        },
+        {
+          "nom": "Piétinement",
+          "jet": "1d20+5 vs DEF",
+          "degats": "2d6",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Cible au sol uniquement. Les dégâts ignorent les armures légères."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Immunité (mental)",
+          "description": "Immunisé à tous les effets mentaux, charmes, peurs et illusions."
+        },
+        {
+          "nom": "Armure naturelle",
+          "description": "Réduit tous les dégâts physiques de 3. Vulnérable aux dégâts de foudre (+2 dégâts par dé)."
+        },
+        {
+          "nom": "Mot d'arrêt",
+          "description": "Chaque golem nain possède un mot de commande gravé en rune. Un personnage qui connaît le mot peut tenter de le désactiver (test INT diff. 16 en action complète)."
+        }
+      ],
+      "lore": "Les nains de Khazrak Dûm sculptent ces gardiens dans la roche-mère de l'Arbre-Monde, animés par un fragment de la Pierre divine de Valdaan. Les golems des Évolutionnistes (qui s'allient aux orques) sont souvent souillés d'échos de Chaos — moins obéissants, plus violents.",
+      "armure": {
+        "valeur": 10,
+        "description": "Corps de granit — réduit 10 points de dégâts physiques. Vulnérable à la foudre (annule la réduction)."
+      }
+    },
+    {
+      "id": "elfe_du_crepuscule_renegat",
+      "nom": "Elfe du Crépuscule renégat",
+      "categorie": "Bestiaire général — Tier 2",
+      "faction": "Mordanel (renégats)",
+      "pv": 20,
+      "def": 15,
+      "init": 5,
+      "atk": 6,
+      "dangerosite": 3,
+      "boss": false,
+      "taille": "moyenne",
+      "attaques": [
+        {
+          "nom": "Lame d'ombre",
+          "jet": "1d20+6 vs DEF",
+          "degats": "1d6+2",
+          "portee": "contact",
+          "type": "physique + magique",
+          "effetSpecial": "En lumière faible ou obscurité : +1d4 dégâts supplémentaires."
+        },
+        {
+          "nom": "Flèche de Sève noire",
+          "jet": "1d20+5 vs DEF (magique)",
+          "degats": "1d8",
+          "portee": "longue (36m)",
+          "type": "magique (Chaos)",
+          "effetSpecial": "Si touché : test SAG diff. 13 ou la cible est désorientée (-2 en ATK et DEF) pendant 1 round."
+        },
+        {
+          "nom": "Pas d'ombre",
+          "jet": null,
+          "degats": null,
+          "portee": "contact",
+          "type": "déplacement",
+          "effetSpecial": "Réaction, 1 fois par round. Quand ciblé par une attaque, l'elfe peut se déplacer de 3m dans une direction — si la nouvelle case est dans l'ombre, l'attaque est annulée (test DEX diff. 12)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Vision nocturne parfaite",
+          "description": "Voit en obscurité totale jusqu'à 18m comme en plein jour. Dans l'ombre, il est considéré en camouflage léger (+2 DEF, -2 aux jets de Perception ennemis)."
+        },
+        {
+          "nom": "Résistance naturelle au Chaos",
+          "description": "Les Elfes du Crépuscule sont préChrono-Fracture. Ils bénéficient d'un bonus de +3 à tous leurs tests de résistance au Chaos, même corrompus."
+        }
+      ],
+      "lore": "Mordanel, nation des Elfes du Crépuscule, est officiellement neutre. Mais certains de ses membres — tentés par le pouvoir de la Sève noire ou mercenaires sans scrupules — opèrent dans les zones grises. Ce ne sont pas des monstres mais des ennemis circonstanciels, souvent récupérables par la diplomatie.",
+      "armure": {
+        "valeur": 1,
+        "description": "Armure d'ombre elfique légère — réduit 1 point de dégâts physiques."
+      }
+    },
+    {
+      "id": "loup_basique",
+      "nom": "Loup",
+      "famille": "loup",
+      "tier": "basique",
+      "categorie": "Bestiaire général — Faune",
+      "pv": 12,
+      "def": 12,
+      "init": 5,
+      "atk": 2,
+      "dangerosite": 1,
+      "boss": false,
+      "taille": "moyenne",
+      "voies": [],
+      "attaques": [
+        {
+          "nom": "Morsure",
+          "jet": "1d20+2 vs DEF",
+          "degats": "1d6",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Meute",
+          "description": "+1 ATK par loup allié adjacent à la même cible (max +3)."
+        }
+      ],
+      "lore": "Prédateur de base des forêts. Attaque rarement seul.",
+      "armure": null
+    },
+    {
+      "id": "loup_veteran",
+      "nom": "Loup vétéran",
+      "famille": "loup",
+      "tier": "veteran",
+      "categorie": "Bestiaire général — Faune",
+      "pv": 20,
+      "def": 13,
+      "init": 6,
+      "atk": 4,
+      "dangerosite": 1,
+      "boss": false,
+      "taille": "moyenne",
+      "voies": [
+        {
+          "voieRef": "chasseur.voie_predateur",
+          "rang": 1,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Pistage",
+              "effet": "Piste une cible blessée sans test. Ne peut pas être surpris par odorat."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Morsure",
+          "jet": "1d20+4 vs DEF",
+          "degats": "1d6+1",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Plaquage",
+          "jet": "1d20+3 vs DEF",
+          "degats": "1d4",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Test FOR diff. 11 ou cible renversée (DEF -2 jusqu'à se relever)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Meute",
+          "description": "+1 ATK par loup allié adjacent à la même cible (max +3)."
+        },
+        {
+          "nom": "Pistage (Voie du Prédateur r.1)",
+          "description": "Piste une cible blessée sans test. Ne peut pas être surpris par odorat."
+        }
+      ],
+      "lore": "Loup alpha ou survivant endurci. Plus méthodique, cible les flancs.",
+      "armure": null
+    },
+    {
+      "id": "loup_elite",
+      "nom": "Loup de Sève",
+      "famille": "loup",
+      "tier": "elite",
+      "categorie": "Bestiaire général — Faune",
+      "pv": 28,
+      "def": 14,
+      "init": 6,
+      "atk": 5,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "moyenne",
+      "voies": [
+        {
+          "voieRef": "chasseur.voie_predateur",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Pistage",
+              "effet": "Piste sans test, immunisé à la surprise par odorat."
+            },
+            {
+              "rang": 2,
+              "nom": "Frappe précise",
+              "effet": "1 fois/combat, attaque avec +4 ATK et ignore 2 points de DEF."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Morsure empoisonnée",
+          "jet": "1d20+5 vs DEF",
+          "degats": "1d6+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Test CON diff. 12 ou -1 DEF pendant 3 rounds (Sève corrompue dans les crocs)."
+        },
+        {
+          "nom": "Plaquage",
+          "jet": "1d20+4 vs DEF",
+          "degats": "1d4+1",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Test FOR diff. 12 ou renversé."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Meute amplifiée",
+          "description": "+2 ATK par loup allié adjacent (max +4). La mort du loup de Sève disperse le reste de la meute (test SAG diff. 10 sinon fuite)."
+        },
+        {
+          "nom": "Frappe précise (Voie du Prédateur r.2)",
+          "description": "1 fois/combat : +4 ATK et ignore 2 points de DEF."
+        },
+        {
+          "nom": "Imprégnation de Sève",
+          "description": "Immunisé aux effets de peur naturels. Son pelage brille faiblement de vert dans l'obscurité."
+        }
+      ],
+      "lore": "Loup dont la Sève de l'Arbre-Monde a amplifié les instincts. Parfois gardien d'un nœud de Sève — tuer l'un d'eux sans raison irrite les Druides locaux.",
+      "armure": {
+        "valeur": 1,
+        "description": "Fourrure dense — réduit 1 point de dégâts physiques."
+      }
+    },
+    {
+      "id": "loup_champion",
+      "nom": "Seigneur des meutes",
+      "famille": "loup",
+      "tier": "champion",
+      "categorie": "Bestiaire général — Faune",
+      "pv": 42,
+      "def": 16,
+      "init": 7,
+      "atk": 7,
+      "dangerosite": 3,
+      "boss": true,
+      "taille": "grande",
+      "voies": [
+        {
+          "voieRef": "chasseur.voie_predateur",
+          "rang": 3,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Pistage",
+              "effet": "Piste sans test, immunisé surprise odorat."
+            },
+            {
+              "rang": 2,
+              "nom": "Frappe précise",
+              "effet": "1 fois/combat : +4 ATK, ignore 2 DEF."
+            },
+            {
+              "rang": 3,
+              "nom": "Mise à mort",
+              "effet": "Si cible sous 25% PV : attaque bonus gratuite en fin de tour."
+            }
+          ]
+        },
+        {
+          "voieRef": "chasseur.voie_nature",
+          "rang": 1,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Communion animale",
+              "effet": "Communique avec les animaux de sa forêt. Convoque 1d4 loups en 2 rounds (1 fois/combat)."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Morsure déchirante",
+          "jet": "1d20+7 vs DEF",
+          "degats": "2d6+3",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Saignement : 1d4 dégâts/round pendant 3 rounds (test CON diff. 13 pour stopper)."
+        },
+        {
+          "nom": "Plaquage brutal",
+          "jet": "1d20+6 vs DEF",
+          "degats": "1d6+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Test FOR diff. 15 ou renversé + désarmé."
+        },
+        {
+          "nom": "Hurlement de commandement",
+          "jet": null,
+          "degats": null,
+          "portee": "zone (18m)",
+          "type": "moral",
+          "effetSpecial": "Action bonus. Toutes les créatures à portée testent SAG diff. 13 ou subissent -2 ATK pendant 2 rounds (peur). Convoque 1d4 loups en 2 rounds (1 fois/combat)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Mise à mort (Voie du Prédateur r.3)",
+          "description": "Attaque bonus gratuite en fin de tour si la cible est sous 25% de ses PV max."
+        },
+        {
+          "nom": "Communion animale (Voie de la Nature r.1)",
+          "description": "Convoque 1d4 loups basiques en 2 rounds, 1 fois/combat."
+        },
+        {
+          "nom": "Régénération sauvage",
+          "description": "Récupère 3 PV au début de son tour si en contact avec la terre naturelle."
+        }
+      ],
+      "lore": "Créature semi-légendaire — à la croisée de l'animal et de l'esprit forestier. Certains Druides affirment qu'il est l'avatar vivant d'un nœud de Sève. Le tuer sans motif légitime peut avoir des conséquences narratives durables.",
+      "armure": {
+        "valeur": 2,
+        "description": "Fourrure épaisse imprégnée de Sève — réduit 2 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "ours_basique",
+      "nom": "Ours des bois",
+      "famille": "ours",
+      "tier": "basique",
+      "categorie": "Bestiaire général — Faune",
+      "pv": 30,
+      "def": 13,
+      "init": 1,
+      "atk": 4,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "grande",
+      "voies": [],
+      "attaques": [
+        {
+          "nom": "Griffes",
+          "jet": "1d20+4 vs DEF",
+          "degats": "1d8+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Morsure",
+          "jet": "1d20+4 vs DEF",
+          "degats": "1d6+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Peau épaisse",
+          "description": "Réduit les dégâts physiques de 2 (min 1)."
+        }
+      ],
+      "lore": "Défensif par nature. N'attaque que si menacé ou si ses petits sont en danger.",
+      "armure": {
+        "valeur": 2,
+        "description": "Fourrure et graisse naturelle — réduit 2 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "ours_veteran",
+      "nom": "Ours des cavernes",
+      "famille": "ours",
+      "tier": "veteran",
+      "categorie": "Bestiaire général — Faune",
+      "pv": 44,
+      "def": 14,
+      "init": 2,
+      "atk": 5,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "grande",
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_puissance",
+          "rang": 1,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Frappe puissante",
+              "effet": "1 fois/round, peut choisir d'infliger +1d6 dégâts mais prend -2 ATK sur ce jet."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Griffes lacérantes",
+          "jet": "1d20+5 vs DEF",
+          "degats": "1d8+3",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Saignement : 1d4/round pendant 2 rounds (test CON diff. 11 pour stopper)."
+        },
+        {
+          "nom": "Étreinte",
+          "jet": "1d20+5 vs DEF",
+          "degats": "1d6+3",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Si touché : cible saisie. Test FOR diff. 14 par tour pour se libérer. L'ours inflige 1d6+3 dégâts automatiques à chaque tour sur une cible saisie."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Peau épaisse",
+          "description": "Réduit les dégâts physiques de 2 (min 1)."
+        },
+        {
+          "nom": "Frappe puissante (Voie de la Puissance r.1)",
+          "description": "1 fois/round : +1d6 dégâts mais -2 ATK sur ce jet."
+        }
+      ],
+      "lore": "Ours des grottes profondes, adapté à un environnement hostile. Plus agressif, marque son territoire avec violence.",
+      "armure": {
+        "valeur": 3,
+        "description": "Fourrure des cavernes très dense — réduit 3 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "ours_elite",
+      "nom": "Ours de guerre (dressé)",
+      "famille": "ours",
+      "tier": "elite",
+      "categorie": "Bestiaire général — Faune / Créatures dressées",
+      "pv": 55,
+      "def": 15,
+      "init": 2,
+      "atk": 6,
+      "dangerosite": 3,
+      "boss": false,
+      "taille": "grande",
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_puissance",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Frappe puissante",
+              "effet": "1 fois/round : +1d6 dégâts, -2 ATK."
+            },
+            {
+              "rang": 2,
+              "nom": "Brise-bouclier",
+              "effet": "1 fois/combat : attaque ignorant totalement la DEF de l'armure (utilise uniquement la DEF de base 10 + bonus DEX)."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Griffes de guerre",
+          "jet": "1d20+6 vs DEF",
+          "degats": "2d6+3",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Étreinte écrasante",
+          "jet": "1d20+6 vs DEF",
+          "degats": "1d8+4",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Si touché : saisi. Test FOR diff. 16. L'ours inflige 1d8+4 dégâts auto par tour. Une cible saisie ne peut pas lancer de sorts."
+        },
+        {
+          "nom": "Charge bélier",
+          "jet": "1d20+5 vs DEF",
+          "degats": "2d8",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Seulement si déplacement en ligne droite ≥ 6m. Test FOR diff. 15 ou repoussé 3m + renversé."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Peau bardée",
+          "description": "Armure de guerre clouée sur l'ours. Réduit les dégâts physiques de 3 (min 1). Vulnérable au feu (+1d4 dégâts)."
+        },
+        {
+          "nom": "Brise-bouclier (Voie de la Puissance r.2)",
+          "description": "1 fois/combat : ignore DEF armure, ne conserve que DEF de base."
+        },
+        {
+          "nom": "Dressage de combat",
+          "description": "Ne teste jamais le moral. Obéit à son maître même mort (continue de combattre jusqu'à 0 PV)."
+        }
+      ],
+      "lore": "Utilisé par certains seigneurs de guerre orques ou des mercenaires de haut rang. Rare dans les Royaumes Coalisés, plus commun dans les zones de conflit frontalières.",
+      "armure": {
+        "valeur": 5,
+        "description": "Armure de guerre clouée sur une fourrure épaisse — réduit 5 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "ours_champion",
+      "nom": "Urskar, l'Éveillé",
+      "famille": "ours",
+      "tier": "champion",
+      "categorie": "Bestiaire général — Faune / Créatures légendaires",
+      "pv": 80,
+      "def": 17,
+      "init": 3,
+      "atk": 8,
+      "dangerosite": 4,
+      "boss": true,
+      "taille": "très grande",
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_puissance",
+          "rang": 3,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Frappe puissante",
+              "effet": "1 fois/round : +1d6 dégâts, -2 ATK."
+            },
+            {
+              "rang": 2,
+              "nom": "Brise-bouclier",
+              "effet": "1 fois/combat : ignore DEF armure."
+            },
+            {
+              "rang": 3,
+              "nom": "Dévastation",
+              "effet": "1 fois/combat : attaque tous les ennemis adjacents en un seul jet (ATK séparé pour chacun)."
+            }
+          ]
+        },
+        {
+          "voieRef": "druide.voie_nature_brute",
+          "rang": 1,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Âme de la forêt",
+              "effet": "Immunisé aux illusions et charmes naturels. Peut communiquer rudimentairement avec les animaux et les Druides."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Griffes dévastatrices",
+          "jet": "1d20+8 vs DEF",
+          "degats": "2d8+5",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Ignore 3 points de DEF (armure naturelle dépassée)."
+        },
+        {
+          "nom": "Morsure broyante",
+          "jet": "1d20+7 vs DEF",
+          "degats": "2d6+5",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Si dégâts ≥ 12 : brise une armure (DEF réduite de 2 de façon permanente pour le combat)."
+        },
+        {
+          "nom": "Dévastation (Voie Puissance r.3)",
+          "jet": "1d20+8 vs DEF",
+          "degats": "2d6+5",
+          "portee": "contact (zone adjacente)",
+          "type": "physique",
+          "effetSpecial": "1 fois/combat. Attaque tous les ennemis adjacents (jet d'ATK séparé pour chacun)."
+        },
+        {
+          "nom": "Rugissement de la Sève",
+          "jet": null,
+          "degats": null,
+          "portee": "zone (12m)",
+          "type": "magique (peur)",
+          "effetSpecial": "Action complète, 1 fois/combat. Test SAG diff. 15 ou fuite pendant 2 rounds. Les Druides et créatures liées à la Sève sont immunisées."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Dévastation (Voie de la Puissance r.3)",
+          "description": "1 fois/combat : frappe tous les ennemis adjacents."
+        },
+        {
+          "nom": "Âme de la forêt (Voie de la Nature r.1)",
+          "description": "Immunisé aux illusions et charmes naturels. Peut communiquer avec animaux et Druides."
+        },
+        {
+          "nom": "Régénération de la Sève",
+          "description": "Récupère 5 PV au début de son tour si en contact avec la terre naturelle."
+        },
+        {
+          "nom": "Présence écrasante",
+          "description": "Toute créature débutant son tour à moins de 3m doit réussir un test SAG diff. 12 ou subir -1 ATK ce tour (peur instinctive)."
+        }
+      ],
+      "lore": "Urskar est un ours dont la conscience a fusionné avec un nœud de Sève ancien lors de la Fracture. Il n'est ni animal ni esprit — quelque chose d'entre-deux. Les Druides d'Aelindra le connaissent et le respectent. L'attaquer sans raison vaut excommunication dans les Royaumes Sylvains.",
+      "armure": {
+        "valeur": 6,
+        "description": "Fourrure de Sève + peau durcie par des décennies — réduit 6 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "orc_basique",
+      "nom": "Orc guerrier",
+      "famille": "orc",
+      "tier": "basique",
+      "categorie": "Bestiaire général — Humanoïdes",
+      "pv": 18,
+      "def": 13,
+      "init": 2,
+      "atk": 4,
+      "dangerosite": 1,
+      "boss": false,
+      "taille": "grande",
+      "voies": [],
+      "attaques": [
+        {
+          "nom": "Hache",
+          "jet": "1d20+4 vs DEF",
+          "degats": "1d8+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Lancer de hache",
+          "jet": "1d20+2 vs DEF",
+          "degats": "1d8",
+          "portee": "courte (6m)",
+          "type": "physique",
+          "effetSpecial": "1 utilisation."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Immunité à la peur",
+          "description": "Les orcs sont des émotions de guerre cristallisées — immunisés à tous les effets de peur."
+        }
+      ],
+      "lore": "Guerrier de base d'une tribu orque. Brutal mais prévisible.",
+      "armure": {
+        "valeur": 2,
+        "description": "Armure de cuir clouté — réduit 2 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "orc_veteran",
+      "nom": "Orc vétéran",
+      "famille": "orc",
+      "tier": "veteran",
+      "categorie": "Bestiaire général — Humanoïdes",
+      "pv": 32,
+      "def": 15,
+      "init": 3,
+      "atk": 6,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "grande",
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_armes",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Maîtrise des armes",
+              "effet": "Relance 1 dé de dégâts par attaque (garde le meilleur)."
+            },
+            {
+              "rang": 2,
+              "nom": "Attaque en puissance",
+              "effet": "Peut sacrifier -2 DEF ce round pour gagner +2 ATK et +2 dégâts sur toutes ses attaques."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Hache de guerre",
+          "jet": "1d20+6 vs DEF",
+          "degats": "1d10+3",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Bouclier-frappe",
+          "jet": "1d20+5 vs DEF",
+          "degats": "1d4+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Test FOR diff. 12 ou repoussé 1,5m."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Immunité à la peur",
+          "description": "Immunisé à tous les effets de peur."
+        },
+        {
+          "nom": "Maîtrise des armes (Voie des Armes r.1)",
+          "description": "Relance 1 dé de dégâts par attaque, conserve le meilleur résultat."
+        },
+        {
+          "nom": "Attaque en puissance (Voie des Armes r.2)",
+          "description": "Sacrifice -2 DEF pour +2 ATK et +2 dégâts ce round."
+        }
+      ],
+      "lore": "Survivant de dizaines de combats. Souvent sous-chef d'un groupe de pillards.",
+      "armure": {
+        "valeur": 3,
+        "description": "Cotte de mailles orque — réduit 3 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "orc_elite",
+      "nom": "Orc berserker",
+      "famille": "orc",
+      "tier": "elite",
+      "categorie": "Bestiaire général — Humanoïdes",
+      "pv": 48,
+      "def": 14,
+      "init": 4,
+      "atk": 7,
+      "dangerosite": 3,
+      "boss": false,
+      "taille": "grande",
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_armes",
+          "rang": 3,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Maîtrise des armes",
+              "effet": "Relance 1 dé de dégâts."
+            },
+            {
+              "rang": 2,
+              "nom": "Attaque en puissance",
+              "effet": "-2 DEF pour +2 ATK et +2 dégâts."
+            },
+            {
+              "rang": 3,
+              "nom": "Double frappe",
+              "effet": "1 fois/round, attaque deux fois en une action (2 jets séparés)."
+            }
+          ]
+        },
+        {
+          "voieRef": "guerrier.voie_chaos",
+          "rang": 1,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Furie de guerre",
+              "effet": "En dessous de 50% PV : +2 ATK, +1d4 dégâts et immunité à la douleur (ignore les malus de blessure). Ne peut plus battre en retraite."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Hache double",
+          "jet": "1d20+7 vs DEF",
+          "degats": "1d12+4",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Double frappe (Voie des Armes r.3)",
+          "jet": "1d20+7 vs DEF (x2)",
+          "degats": "1d12+4 (x2)",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "1 fois/round. Deux jets d'attaque séparés en une action."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Immunité à la peur",
+          "description": "Immunisé à tous les effets de peur."
+        },
+        {
+          "nom": "Double frappe (Voie des Armes r.3)",
+          "description": "1 fois/round : deux attaques en une action."
+        },
+        {
+          "nom": "Furie de guerre (Voie du Chaos r.1)",
+          "description": "Sous 50% PV : +2 ATK, +1d4 dégâts, immunité douleur, ne peut pas fuir."
+        },
+        {
+          "nom": "Cicatrices de combat",
+          "description": "Réduit les dégâts physiques de 1 (peau durcie par les batailles)."
+        }
+      ],
+      "lore": "Les berserkers orques ont laissé la rage de guerre consumé leur raison. Ils frappent jusqu'à la mort — la leur ou celle de l'ennemi. Certains sont liés au Chaos de Khoreth par des rituels tribaux.",
+      "armure": {
+        "valeur": 2,
+        "description": "Aucune armure lourde — peau durcie par le combat réduit 2 points. Mobilité conservée pour la furie."
+      }
+    },
+    {
+      "id": "orc_champion",
+      "nom": "Warchief orque",
+      "famille": "orc",
+      "tier": "champion",
+      "categorie": "Bestiaire général — Humanoïdes",
+      "pv": 70,
+      "def": 17,
+      "init": 4,
+      "atk": 9,
+      "dangerosite": 4,
+      "boss": true,
+      "taille": "très grande",
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_armes",
+          "rang": 4,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Maîtrise des armes",
+              "effet": "Relance 1 dé de dégâts."
+            },
+            {
+              "rang": 2,
+              "nom": "Attaque en puissance",
+              "effet": "-2 DEF pour +2 ATK et +2 dégâts."
+            },
+            {
+              "rang": 3,
+              "nom": "Double frappe",
+              "effet": "1 fois/round : deux attaques en une action."
+            },
+            {
+              "rang": 4,
+              "nom": "Frappe légendaire",
+              "effet": "1 fois/combat : attaque automatiquement réussie (pas de jet), dégâts maximaux."
+            }
+          ]
+        },
+        {
+          "voieRef": "chevalier.voie_commandement",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Présence martiale",
+              "effet": "Alliés à 9m gagnent +1 ATK tant que le chef est debout."
+            },
+            {
+              "rang": 2,
+              "nom": "Cri de guerre",
+              "effet": "1 fois/combat : tous les alliés à 12m font une attaque bonus immédiate."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Masse de guerre runique",
+          "jet": "1d20+9 vs DEF",
+          "degats": "2d8+5",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "L'arme est liée à Khoreth. Contre les Elfes et créatures de la Sève pure : +1d6 dégâts supplémentaires."
+        },
+        {
+          "nom": "Double frappe",
+          "jet": "1d20+9 vs DEF (x2)",
+          "degats": "2d8+5 (x2)",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "1 fois/round."
+        },
+        {
+          "nom": "Frappe légendaire",
+          "jet": "Automatique (pas de jet)",
+          "degats": "16+5 (max)",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "1 fois/combat. Dégâts maximaux garantis."
+        },
+        {
+          "nom": "Cri de guerre (Commandement r.2)",
+          "jet": null,
+          "degats": null,
+          "portee": "zone (12m)",
+          "type": "moral",
+          "effetSpecial": "1 fois/combat. Tous les alliés à portée effectuent une attaque bonus immédiate (hors tour)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Immunité à la peur",
+          "description": "Immunisé à tous les effets de peur."
+        },
+        {
+          "nom": "Frappe légendaire (Voie des Armes r.4)",
+          "description": "1 fois/combat : succès automatique, dégâts maximaux."
+        },
+        {
+          "nom": "Présence martiale (Voie du Commandement r.1)",
+          "description": "Alliés à 9m : +1 ATK tant qu'il est debout."
+        },
+        {
+          "nom": "Cri de guerre (Voie du Commandement r.2)",
+          "description": "1 fois/combat : attaque bonus immédiate pour tous les alliés à 12m."
+        },
+        {
+          "nom": "Aura de Khoreth",
+          "description": "Dans un rayon de 6m, les tests de résistance au Chaos sont à -2 pour les non-orques."
+        }
+      ],
+      "lore": "Le Warchief est l'incarnation vivante de Khoreth, dieu de la guerre né du Chaos après la Fracture. Il ne dirige pas par peur mais par légitimité — c'est lui qui forge l'unité entre les tribus. Sa mort crée un vide de pouvoir dangereux, souvent pire que sa survie.",
+      "armure": {
+        "valeur": 5,
+        "description": "Armure de plaques runiques liée à Khoreth — réduit 5 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "bandit_basique",
+      "nom": "Bandit de grand chemin",
+      "famille": "bandit",
+      "tier": "basique",
+      "categorie": "Bestiaire général — Humanoïdes",
+      "pv": 10,
+      "def": 12,
+      "init": 3,
+      "atk": 2,
+      "dangerosite": 1,
+      "boss": false,
+      "taille": "moyenne",
+      "voies": [],
+      "attaques": [
+        {
+          "nom": "Épée courte",
+          "jet": "1d20+2 vs DEF",
+          "degats": "1d6",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Arc court",
+          "jet": "1d20+2 vs DEF",
+          "degats": "1d6",
+          "portee": "moyenne (18m)",
+          "type": "physique",
+          "effetSpecial": null
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Reddition",
+          "description": "Si le groupe est réduit à moins de 50%, les bandits basiques testent le moral (SAG diff. 8) ou se rendent / fuient."
+        }
+      ],
+      "lore": "Déserteur, paysan ruiné ou aventurier raté. Attaque par nécessité, se rend facilement.",
+      "armure": null
+    },
+    {
+      "id": "bandit_veteran",
+      "nom": "Brigand",
+      "famille": "bandit",
+      "tier": "veteran",
+      "categorie": "Bestiaire général — Humanoïdes",
+      "pv": 20,
+      "def": 14,
+      "init": 4,
+      "atk": 4,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "moyenne",
+      "voies": [
+        {
+          "voieRef": "chasseur.voie_ombre",
+          "rang": 1,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Attaque sournoise",
+              "effet": "Si attaque depuis l'ombre ou en flanquement : +1d6 dégâts."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Épée bâtarde",
+          "jet": "1d20+4 vs DEF",
+          "degats": "1d8+1",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Dague dans le dos",
+          "jet": "1d20+5 vs DEF",
+          "degats": "1d4+1d6",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Requiert flanquement ou cible surprise. Le 1d6 est l'Attaque sournoise."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Attaque sournoise (Voie de l'Ombre r.1)",
+          "description": "En flanquement ou depuis l'obscurité : +1d6 dégâts."
+        },
+        {
+          "nom": "Terrain connu",
+          "description": "En milieu naturel ou urbain familier : +2 en initiative et ne peut pas être surpris."
+        }
+      ],
+      "lore": "Criminel expérimenté. Choisit ses cibles et se bat intelligemment — fuit si le rapport de force tourne.",
+      "armure": {
+        "valeur": 1,
+        "description": "Cuir tanné — réduit 1 point de dégâts physiques."
+      }
+    },
+    {
+      "id": "bandit_elite",
+      "nom": "Chef de bande",
+      "famille": "bandit",
+      "tier": "elite",
+      "categorie": "Bestiaire général — Humanoïdes",
+      "pv": 34,
+      "def": 16,
+      "init": 5,
+      "atk": 6,
+      "dangerosite": 3,
+      "boss": false,
+      "taille": "moyenne",
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_armes",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Maîtrise des armes",
+              "effet": "Relance 1 dé de dégâts."
+            },
+            {
+              "rang": 2,
+              "nom": "Attaque en puissance",
+              "effet": "-2 DEF pour +2 ATK et +2 dégâts."
+            }
+          ]
+        },
+        {
+          "voieRef": "chasseur.voie_ombre",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Attaque sournoise",
+              "effet": "+1d6 dégâts en flanquement / ombre."
+            },
+            {
+              "rang": 2,
+              "nom": "Désengagement",
+              "effet": "Peut se déplacer sans provoquer d'attaque d'opportunité 1 fois/round."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Sabre de capitaine",
+          "jet": "1d20+6 vs DEF",
+          "degats": "1d8+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Pistolet d'arçon",
+          "jet": "1d20+5 vs DEF",
+          "degats": "1d10",
+          "portee": "courte (6m)",
+          "type": "physique",
+          "effetSpecial": "1 utilisation/combat. Ignoré par les armures légères."
+        },
+        {
+          "nom": "Attaque sournoise",
+          "jet": "1d20+7 vs DEF",
+          "degats": "1d8+2+2d6",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Requiert flanquement. Les 2d6 viennent du rang 1 + rang 2 de la Voie de l'Ombre."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Maîtrise des armes (Voie des Armes r.1)",
+          "description": "Relance 1 dé de dégâts, conserve le meilleur."
+        },
+        {
+          "nom": "Attaque en puissance (Voie des Armes r.2)",
+          "description": "-2 DEF pour +2 ATK et +2 dégâts ce round."
+        },
+        {
+          "nom": "Attaque sournoise (Voie de l'Ombre r.1)",
+          "description": "+1d6 dégâts en flanquement ou obscurité."
+        },
+        {
+          "nom": "Désengagement (Voie de l'Ombre r.2)",
+          "description": "1 fois/round : déplacement sans attaque d'opportunité."
+        },
+        {
+          "nom": "Autorité de bande",
+          "description": "Tant qu'il est vivant, ses bandits ne testent pas le moral. Sa mort déclenche un test immédiat (SAG diff. 10)."
+        }
+      ],
+      "lore": "Ancien soldat, mercenaire ou noble déchu. Dirige sa bande avec un mélange de charisme et de brutalité. Peut être un contact, un rival ou un employeur selon le contexte.",
+      "armure": {
+        "valeur": 2,
+        "description": "Cotte de mailles légère — réduit 2 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "bandit_champion",
+      "nom": "Le Fléau — seigneur hors-la-loi",
+      "famille": "bandit",
+      "tier": "champion",
+      "categorie": "Bestiaire général — Humanoïdes",
+      "pv": 55,
+      "def": 17,
+      "init": 6,
+      "atk": 8,
+      "dangerosite": 4,
+      "boss": true,
+      "taille": "moyenne",
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_armes",
+          "rang": 3,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Maîtrise des armes",
+              "effet": "Relance 1 dé de dégâts."
+            },
+            {
+              "rang": 2,
+              "nom": "Attaque en puissance",
+              "effet": "-2 DEF pour +2 ATK et +2 dégâts."
+            },
+            {
+              "rang": 3,
+              "nom": "Double frappe",
+              "effet": "1 fois/round : deux attaques en une action."
+            }
+          ]
+        },
+        {
+          "voieRef": "chevalier.voie_duel",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Défi",
+              "effet": "Désigne un adversaire : +2 ATK et +2 DEF contre lui uniquement jusqu'à la fin du combat."
+            },
+            {
+              "rang": 2,
+              "nom": "Riposte",
+              "effet": "Réaction, 1 fois/round : si une attaque le rate, effectue une attaque de contact gratuite."
+            }
+          ]
+        },
+        {
+          "voieRef": "chasseur.voie_ombre",
+          "rang": 1,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Attaque sournoise",
+              "effet": "+1d6 dégâts en flanquement."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Épée longue enchantée +1",
+          "jet": "1d20+8 vs DEF",
+          "degats": "1d8+4",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Le +1 vaut +1 dégât fixe (système d'enchantement COF)."
+        },
+        {
+          "nom": "Double frappe",
+          "jet": "1d20+8 vs DEF (x2)",
+          "degats": "1d8+4 (x2)",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "1 fois/round."
+        },
+        {
+          "nom": "Riposte (Voie du Duel r.2)",
+          "jet": "1d20+8 vs DEF",
+          "degats": "1d8+4",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Réaction si une attaque rate le Fléau. Gratuite, hors tour."
+        },
+        {
+          "nom": "Pistolets jumelés",
+          "jet": "1d20+6 vs DEF (x2)",
+          "degats": "1d10 (x2)",
+          "portee": "courte (6m)",
+          "type": "physique",
+          "effetSpecial": "2 utilisations/combat. Les deux tirs comptent comme une action."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Double frappe (Voie des Armes r.3)",
+          "description": "1 fois/round : deux attaques en une action."
+        },
+        {
+          "nom": "Défi (Voie du Duel r.1)",
+          "description": "+2 ATK et +2 DEF contre une cible désignée jusqu'à fin de combat."
+        },
+        {
+          "nom": "Riposte (Voie du Duel r.2)",
+          "description": "Si une attaque le rate : attaque de contact gratuite en réaction."
+        },
+        {
+          "nom": "Attaque sournoise (Voie de l'Ombre r.1)",
+          "description": "+1d6 dégâts en flanquement."
+        },
+        {
+          "nom": "Réputation sinistre",
+          "description": "À l'ouverture du combat, tous les ennemis testent SAG diff. 11 ou subissent -1 ATK au premier round (intimidation)."
+        }
+      ],
+      "lore": "Le Fléau opère dans les angles morts des trois grandes factions humaines. Trop utile pour être arrêté (il transporte des informations pour qui paie), trop dangereux pour être ignoré. Son vrai nom est inconnu. Potentiellement un allié de circonstance.",
+      "armure": {
+        "valeur": 3,
+        "description": "Armure composite (cuir + plaques) — réduit 3 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "garde_basique",
+      "nom": "Garde de ville",
+      "famille": "garde",
+      "tier": "basique",
+      "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
+      "pv": 14,
+      "def": 14,
+      "init": 1,
+      "atk": 3,
+      "dangerosite": 1,
+      "boss": false,
+      "taille": "moyenne",
+      "voies": [],
+      "attaques": [
+        {
+          "nom": "Épée courte",
+          "jet": "1d20+3 vs DEF",
+          "degats": "1d6+1",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Arbalète légère",
+          "jet": "1d20+2 vs DEF",
+          "degats": "1d8",
+          "portee": "moyenne (18m)",
+          "type": "physique",
+          "effetSpecial": "Recharge : 1 round."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Formation de base",
+          "description": "2 gardes ou plus côte à côte : +1 DEF pour chacun."
+        }
+      ],
+      "lore": "Garde de milice locale. Applique la loi sans zèle particulier. Se bat pour son salaire, pas par conviction.",
+      "armure": {
+        "valeur": 3,
+        "description": "Cotte de mailles standard — réduit 3 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "garde_veteran",
+      "nom": "Garde vétéran",
+      "famille": "garde",
+      "tier": "veteran",
+      "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
+      "pv": 26,
+      "def": 16,
+      "init": 2,
+      "atk": 5,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "moyenne",
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_defense",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Parade",
+              "effet": "Réaction 1 fois/round : annule une attaque physique (jet DEX diff. 12)."
+            },
+            {
+              "rang": 2,
+              "nom": "Contre-attaque",
+              "effet": "Si la Parade réussit : attaque de contact gratuite en réaction."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Épée longue",
+          "jet": "1d20+5 vs DEF",
+          "degats": "1d8+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Bouclier-frappe",
+          "jet": "1d20+4 vs DEF",
+          "degats": "1d4+1",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Test FOR diff. 11 ou repoussé 1,5m."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Parade (Voie de la Défense r.1)",
+          "description": "Réaction 1 fois/round : test DEX diff. 12 pour annuler une attaque physique."
+        },
+        {
+          "nom": "Contre-attaque (Voie de la Défense r.2)",
+          "description": "Si Parade réussit : attaque de contact gratuite."
+        },
+        {
+          "nom": "Formation disciplinée",
+          "description": "3 gardes vétérans ou plus adjacents : DEF +2 pour tous, immunité à la peur."
+        }
+      ],
+      "lore": "10 ans de service minimum. Connaît son métier, respecte la chaîne de commandement. Peut être corrompu ou intègre selon la faction.",
+      "armure": {
+        "valeur": 4,
+        "description": "Demi-armure de plates — réduit 4 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "garde_elite",
+      "nom": "Capitaine de garde",
+      "famille": "garde",
+      "tier": "elite",
+      "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
+      "pv": 40,
+      "def": 18,
+      "init": 3,
+      "atk": 7,
+      "dangerosite": 3,
+      "boss": false,
+      "taille": "moyenne",
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_defense",
+          "rang": 3,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Parade",
+              "effet": "Réaction : test DEX diff. 12 pour annuler une attaque physique."
+            },
+            {
+              "rang": 2,
+              "nom": "Contre-attaque",
+              "effet": "Si Parade réussit : attaque gratuite."
+            },
+            {
+              "rang": 3,
+              "nom": "Forteresse",
+              "effet": "1 fois/combat : pendant 2 rounds, DEF +4 et toute attaque ratée de 3 ou moins est automatiquement contrée."
+            }
+          ]
+        },
+        {
+          "voieRef": "chevalier.voie_commandement",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Présence martiale",
+              "effet": "Alliés à 9m : +1 ATK tant que le capitaine est debout."
+            },
+            {
+              "rang": 2,
+              "nom": "Cri de ralliement",
+              "effet": "1 fois/combat : alliés à 12m regagnent 1d6 PV et ignorent leur prochain test de moral."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Épée longue de maître",
+          "jet": "1d20+7 vs DEF",
+          "degats": "1d8+3",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Bouclier héraldique",
+          "jet": "1d20+6 vs DEF",
+          "degats": "1d6+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Test FOR diff. 14 ou renversé. L'emblème de faction sur le bouclier peut intimider (test SAG diff. 10 ou -1 ATK)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Forteresse (Voie de la Défense r.3)",
+          "description": "1 fois/combat, 2 rounds : DEF +4, toute attaque ratée de 3 ou moins est contrée automatiquement."
+        },
+        {
+          "nom": "Présence martiale (Voie du Commandement r.1)",
+          "description": "Alliés à 9m : +1 ATK tant qu'il est debout."
+        },
+        {
+          "nom": "Cri de ralliement (Voie du Commandement r.2)",
+          "description": "1 fois/combat : alliés à 12m regagnent 1d6 PV et ignorent leur prochain test de moral."
+        }
+      ],
+      "lore": "Commande une garnison entière. Présent dans les villes importantes des Royaumes Coalisés ou de l'Empire de Solvarn. Combat uniquement si nécessaire — il préfère la résolution diplomatique ou déléguer.",
+      "armure": {
+        "valeur": 6,
+        "description": "Armure de plates complète — réduit 6 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "garde_champion",
+      "nom": "Maréchal de la Couronne",
+      "famille": "garde",
+      "tier": "champion",
+      "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
+      "pv": 65,
+      "def": 20,
+      "init": 3,
+      "atk": 9,
+      "dangerosite": 4,
+      "boss": true,
+      "taille": "moyenne",
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_defense",
+          "rang": 4,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Parade",
+              "effet": "Réaction : annule une attaque physique."
+            },
+            {
+              "rang": 2,
+              "nom": "Contre-attaque",
+              "effet": "Si Parade réussit : attaque gratuite."
+            },
+            {
+              "rang": 3,
+              "nom": "Forteresse",
+              "effet": "1 fois/combat, 2 rounds : DEF +4, attaques manquées de 3 ou moins contrées."
+            },
+            {
+              "rang": 4,
+              "nom": "Rempart vivant",
+              "effet": "Peut intercepter toute attaque ciblant un allié adjacent (prend les dégâts à sa place). 2 fois/round."
+            }
+          ]
+        },
+        {
+          "voieRef": "chevalier.voie_commandement",
+          "rang": 3,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Présence martiale",
+              "effet": "+1 ATK aux alliés à 9m."
+            },
+            {
+              "rang": 2,
+              "nom": "Cri de ralliement",
+              "effet": "Alliés à 12m : 1d6 PV + ignorent prochain test de moral."
+            },
+            {
+              "rang": 3,
+              "nom": "Stratège de champ",
+              "effet": "1 fois/combat : réorganise l'ordre d'initiative (lui et tous ses alliés agissent en premier ce round)."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Épée de la Couronne (enchantée +2)",
+          "jet": "1d20+9 vs DEF",
+          "degats": "1d8+5",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "+2 dégâts fixes (enchantement). Contre les créatures du Chaos : +1d6 dégâts supplémentaires."
+        },
+        {
+          "nom": "Rempart vivant (Voie Défense r.4)",
+          "jet": "Automatique",
+          "degats": "— (dégâts redirigés)",
+          "portee": "contact (allié adjacent)",
+          "type": "protection",
+          "effetSpecial": "2 fois/round : intercepte une attaque ciblant un allié, prend les dégâts à sa place."
+        },
+        {
+          "nom": "Stratège de champ (Voie Commandement r.3)",
+          "jet": null,
+          "degats": null,
+          "portee": "zone (combat entier)",
+          "type": "tactique",
+          "effetSpecial": "1 fois/combat : lui et tous ses alliés agissent en premier ce round, quel que soit l'ordre d'initiative."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Rempart vivant (Voie de la Défense r.4)",
+          "description": "2 fois/round : intercepte une attaque ciblant un allié adjacent, prend les dégâts à sa place."
+        },
+        {
+          "nom": "Forteresse (Voie de la Défense r.3)",
+          "description": "1 fois/combat, 2 rounds : DEF +4, attaques ratées de 3 ou moins contrées."
+        },
+        {
+          "nom": "Stratège de champ (Voie du Commandement r.3)",
+          "description": "1 fois/combat : lui et alliés agissent en premier ce round."
+        },
+        {
+          "nom": "Présence martiale (Voie du Commandement r.1)",
+          "description": "Alliés à 9m : +1 ATK tant qu'il est debout."
+        },
+        {
+          "nom": "Aura de légitimité",
+          "description": "Sa présence seule force un test CHA diff. 13 pour tout ennemi voulant l'attaquer en premier (hésitation devant l'autorité). Immunisé à l'intimidation."
+        }
+      ],
+      "lore": "Le Maréchal représente la loi absolue d'un royaume. Dans les Royaumes Coalisés, il répond directement au conseil des rois. Dans l'Empire de Solvarn, il est aussi prêtre d'Aethar. Combattre un Maréchal, c'est combattre une institution — les conséquences politiques durent des années.",
+      "armure": {
+        "valeur": 8,
+        "description": "Armure de plates de maître, bénie d'Aethar — réduit 8 points de dégâts physiques."
+      }
+    },
+    {
+      "id": "garde_lancier_basique",
+      "nom": "Garde lancier",
+      "famille": "garde_lancier",
+      "tier": "basique",
+      "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
+      "pv": 14,
+      "def": 13,
+      "init": 1,
+      "atk": 3,
+      "dangerosite": 1,
+      "boss": false,
+      "taille": "moyenne",
+      "armure": {
+        "valeur": 3,
+        "description": "Cotte de mailles standard — réduit 3 points de dégâts physiques."
+      },
+      "voies": [],
+      "attaques": [
+        {
+          "nom": "Lance",
+          "jet": "1d20+3 vs DEF",
+          "degats": "1d8+1",
+          "portee": "contact +1 case (3m)",
+          "type": "physique",
+          "effetSpecial": "Peut attaquer une cible distante d'1 case supplémentaire. Si la cible charge vers lui, +1d4 dégâts supplémentaires (arme d'arrêt)."
+        },
+        {
+          "nom": "Dague de ceinture",
+          "jet": "1d20+1 vs DEF",
+          "degats": "1d4",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Repli : utilisée si la cible est au contact direct et que la lance ne peut pas être maniée."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Portée allongée",
+          "description": "La lance permet d'attaquer une cible jusqu'à 3m (1 case supplémentaire). Ne peut PAS attaquer une cible au contact direct sans action de repli (dague)."
+        },
+        {
+          "nom": "Arme d'arrêt",
+          "description": "Si un ennemi charge vers ce garde, la lance inflige +1d4 dégâts supplémentaires."
+        },
+        {
+          "nom": "Formation de base",
+          "description": "2 lanciers ou plus côte à côte : +1 DEF pour chacun."
+        }
+      ],
+      "lore": "Les gardes lanciers forment la première ligne défensive des villes. Leur lance maintient les assaillants à distance et désorganise les charges ennemies."
+    },
+    {
+      "id": "garde_lancier_veteran",
+      "nom": "Garde lancier vétéran",
+      "famille": "garde_lancier",
+      "tier": "veteran",
+      "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
+      "pv": 24,
+      "def": 15,
+      "init": 2,
+      "atk": 5,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "moyenne",
+      "armure": {
+        "valeur": 4,
+        "description": "Demi-armure de plates — réduit 4 points de dégâts physiques."
+      },
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_defense",
+          "rang": 1,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Parade",
+              "effet": "Réaction 1 fois/round : test DEX diff. 12 pour annuler une attaque physique."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Lance de guerre",
+          "jet": "1d20+5 vs DEF",
+          "degats": "1d8+2",
+          "portee": "contact +1 case (3m)",
+          "type": "physique",
+          "effetSpecial": "Portée allongée. Si cible charge : +1d4 dégâts. Si 2 lanciers ciblent la même créature : elle doit tester FOR diff. 12 ou être repoussée de 1,5m."
+        },
+        {
+          "nom": "Frappe de hampe",
+          "jet": "1d20+4 vs DEF",
+          "degats": "1d4+1",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Utilise l'extrémité de la lance au contact. Test FOR diff. 11 ou cible déséquilibrée (-1 DEF ce round)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Portée allongée",
+          "description": "Attaque jusqu'à 3m. Ne peut attaquer au contact direct qu'avec la hampe (frappe de hampe)."
+        },
+        {
+          "nom": "Arme d'arrêt",
+          "description": "Charge ennemie : +1d4 dégâts supplémentaires."
+        },
+        {
+          "nom": "Mur de lances",
+          "description": "Si 3 lanciers vétérans ou plus sont en ligne : toute créature voulant les charger doit tester FOR diff. 13 ou stopper et perdre son action de déplacement."
+        },
+        {
+          "nom": "Parade (Voie de la Défense r.1)",
+          "description": "Réaction 1 fois/round : test DEX diff. 12 pour annuler une attaque physique."
+        }
+      ],
+      "lore": "Le vétéran maîtrise la discipline de la ligne. Il ne recule jamais — il sait que la cohésion de la formation vaut plus que sa survie individuelle."
+    },
+    {
+      "id": "garde_lancier_elite",
+      "nom": "Lancier d'élite",
+      "famille": "garde_lancier",
+      "tier": "elite",
+      "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
+      "pv": 38,
+      "def": 17,
+      "init": 3,
+      "atk": 7,
+      "dangerosite": 3,
+      "boss": false,
+      "taille": "moyenne",
+      "armure": {
+        "valeur": 6,
+        "description": "Armure de plates complète — réduit 6 points de dégâts physiques."
+      },
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_defense",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Parade",
+              "effet": "Réaction : annule une attaque physique (DEX diff. 12)."
+            },
+            {
+              "rang": 2,
+              "nom": "Contre-attaque",
+              "effet": "Si Parade réussit : attaque de contact gratuite."
+            }
+          ]
+        },
+        {
+          "voieRef": "chevalier.voie_commandement",
+          "rang": 1,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Présence martiale",
+              "effet": "Alliés à 9m : +1 ATK tant qu'il est debout."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Lance longue renforcée",
+          "jet": "1d20+7 vs DEF",
+          "degats": "1d10+3",
+          "portee": "contact +1 case (3m)",
+          "type": "physique",
+          "effetSpecial": "Portée allongée. Charge ennemie : +1d6 dégâts. Peut cibler 2 créatures en ligne derrière l'autre (jet d'ATK séparé pour la seconde à -2)."
+        },
+        {
+          "nom": "Frappe de hampe lourde",
+          "jet": "1d20+6 vs DEF",
+          "degats": "1d6+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Test FOR diff. 13 ou renversé."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Portée allongée + Percée",
+          "description": "Peut attaquer jusqu'à 3m. Peut aussi cibler 2 créatures alignées (second jet à -2 ATK)."
+        },
+        {
+          "nom": "Arme d'arrêt renforcée",
+          "description": "Charge ennemie : +1d6 dégâts (au lieu de +1d4)."
+        },
+        {
+          "nom": "Parade (Voie de la Défense r.1)",
+          "description": "Réaction : annule une attaque physique."
+        },
+        {
+          "nom": "Contre-attaque (Voie de la Défense r.2)",
+          "description": "Si Parade réussit : attaque gratuite."
+        },
+        {
+          "nom": "Présence martiale (Voie du Commandement r.1)",
+          "description": "Alliés à 9m : +1 ATK tant qu'il est debout."
+        }
+      ],
+      "lore": "Les lanciers d'élite sont formés à percer les formations denses et à arrêter les créatures de grande taille. On les déploie face aux cavaleries et aux monstres."
+    },
+    {
+      "id": "garde_lancier_champion",
+      "nom": "Primus — maître des lignes",
+      "famille": "garde_lancier",
+      "tier": "champion",
+      "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
+      "pv": 60,
+      "def": 19,
+      "init": 3,
+      "atk": 9,
+      "dangerosite": 4,
+      "boss": true,
+      "taille": "moyenne",
+      "armure": {
+        "valeur": 8,
+        "description": "Armure de plates de maître — réduit 8 points de dégâts physiques."
+      },
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_defense",
+          "rang": 3,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Parade",
+              "effet": "Réaction : annule une attaque physique."
+            },
+            {
+              "rang": 2,
+              "nom": "Contre-attaque",
+              "effet": "Si Parade réussit : attaque gratuite."
+            },
+            {
+              "rang": 3,
+              "nom": "Forteresse",
+              "effet": "1 fois/combat, 2 rounds : DEF +4, attaques ratées de 3 ou moins contrées."
+            }
+          ]
+        },
+        {
+          "voieRef": "chevalier.voie_commandement",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Présence martiale",
+              "effet": "+1 ATK aux alliés à 9m."
+            },
+            {
+              "rang": 2,
+              "nom": "Cri de guerre",
+              "effet": "1 fois/combat : tous les alliés à 12m effectuent une attaque bonus immédiate."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Lance de primus (enchantée +1)",
+          "jet": "1d20+9 vs DEF",
+          "degats": "1d10+4",
+          "portee": "contact +1 case (3m)",
+          "type": "physique",
+          "effetSpecial": "Portée allongée. Charge : +1d8 dégâts. Percée : cible jusqu'à 2 créatures alignées (second jet à -1 ATK). +1 dégât fixe (enchantement)."
+        },
+        {
+          "nom": "Balayage de hampe",
+          "jet": "1d20+8 vs DEF",
+          "degats": "1d6+3",
+          "portee": "contact (arc frontal)",
+          "type": "physique",
+          "effetSpecial": "1 fois/round. Frappe toutes les créatures dans l'arc frontal (3m, 180°). Jet d'ATK séparé pour chacune."
+        },
+        {
+          "nom": "Cri de guerre (Commandement r.2)",
+          "jet": null,
+          "degats": null,
+          "portee": "zone (12m)",
+          "type": "tactique",
+          "effetSpecial": "1 fois/combat : tous les alliés à portée effectuent une attaque bonus immédiate."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Portée allongée + Percée",
+          "description": "Attaque jusqu'à 3m. Peut cibler 2 créatures alignées (second jet à -1 ATK)."
+        },
+        {
+          "nom": "Arme d'arrêt légendaire",
+          "description": "Charge ennemie : +1d8 dégâts. Si les dégâts totaux dépassent 15 en une frappe d'arrêt : la cible est renversée automatiquement."
+        },
+        {
+          "nom": "Forteresse (Voie de la Défense r.3)",
+          "description": "1 fois/combat, 2 rounds : DEF +4, attaques ratées de 3 ou moins contrées."
+        },
+        {
+          "nom": "Présence martiale (Voie du Commandement r.1)",
+          "description": "Alliés à 9m : +1 ATK tant qu'il est debout."
+        },
+        {
+          "nom": "Cri de guerre (Voie du Commandement r.2)",
+          "description": "1 fois/combat : attaque bonus immédiate pour tous les alliés à 12m."
+        },
+        {
+          "nom": "Balayage de hampe",
+          "description": "1 fois/round : frappe tous les ennemis dans l'arc frontal (180°, 3m)."
+        }
+      ],
+      "lore": "Le Primus est le commandant de terrain absolu d'une légion. Il n'est jamais loin du premier rang — sa lance est une extension de sa volonté autant qu'une arme. Affronter un Primus en formation, c'est se battre contre toute une institution militaire."
+    },
+    {
+      "id": "bandit_lancier_basique",
+      "nom": "Pillard à la pique",
+      "famille": "bandit_lancier",
+      "tier": "basique",
+      "categorie": "Bestiaire général — Humanoïdes",
+      "pv": 10,
+      "def": 11,
+      "init": 3,
+      "atk": 2,
+      "dangerosite": 1,
+      "boss": false,
+      "taille": "moyenne",
+      "armure": null,
+      "voies": [],
+      "attaques": [
+        {
+          "nom": "Pique improvisée",
+          "jet": "1d20+2 vs DEF",
+          "degats": "1d8",
+          "portee": "contact +1 case (3m)",
+          "type": "physique",
+          "effetSpecial": "Portée allongée. Maladroit au contact direct : -2 ATK si la cible est à moins d'1 case."
+        },
+        {
+          "nom": "Couteau",
+          "jet": "1d20+1 vs DEF",
+          "degats": "1d4",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Repli d'urgence si désarmé ou au contact direct."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Portée allongée",
+          "description": "Attaque jusqu'à 3m. Maladroit si cible au contact (-2 ATK)."
+        },
+        {
+          "nom": "Tir groupé",
+          "description": "Si 2 pillards ou plus ciblent la même créature avec leurs piques : +1 dégât chacun."
+        }
+      ],
+      "lore": "Paysan enrôlé de force ou opportuniste armé d'un outil agricole. Se bat en groupe, fuit seul."
+    },
+    {
+      "id": "bandit_lancier_veteran",
+      "nom": "Rôdeur à la lance",
+      "famille": "bandit_lancier",
+      "tier": "veteran",
+      "categorie": "Bestiaire général — Humanoïdes",
+      "pv": 19,
+      "def": 13,
+      "init": 4,
+      "atk": 4,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "moyenne",
+      "armure": {
+        "valeur": 1,
+        "description": "Cuir tanné et rembourrage — réduit 1 point de dégâts physiques."
+      },
+      "voies": [
+        {
+          "voieRef": "chasseur.voie_predateur",
+          "rang": 1,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Pistage",
+              "effet": "Piste une cible sans test. Ne peut pas être surpris en milieu naturel."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Lance de chasse",
+          "jet": "1d20+4 vs DEF",
+          "degats": "1d8+1",
+          "portee": "contact +1 case (3m)",
+          "type": "physique",
+          "effetSpecial": "Portée allongée. Peut lancer la lance (portée courte 6m, 1d8+1, 1 utilisation — récupérable)."
+        },
+        {
+          "nom": "Lance jetée",
+          "jet": "1d20+3 vs DEF",
+          "degats": "1d8+1",
+          "portee": "courte (6m)",
+          "type": "physique",
+          "effetSpecial": "1 utilisation/combat (récupérable si pas de combat à portée). Après lancer, combat au couteau."
+        },
+        {
+          "nom": "Couteau de chasse",
+          "jet": "1d20+3 vs DEF",
+          "degats": "1d4+1",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Portée allongée",
+          "description": "Attaque jusqu'à 3m. Peut aussi lancer la lance (portée courte, 1 fois)."
+        },
+        {
+          "nom": "Pistage (Voie du Prédateur r.1)",
+          "description": "Piste sans test. Immunisé à la surprise en milieu naturel."
+        },
+        {
+          "nom": "Embuscade",
+          "description": "Si attaque depuis une position cachée : +1d4 dégâts sur le premier coup."
+        }
+      ],
+      "lore": "Ancien chasseur ou déserteur de milice. Utilise la lance comme un outil de chasse autant que comme une arme. Préfère tendre des embuscades à combattre en ligne ouverte."
+    },
+    {
+      "id": "bandit_lancier_elite",
+      "nom": "Capitaine des piquiers",
+      "famille": "bandit_lancier",
+      "tier": "elite",
+      "categorie": "Bestiaire général — Humanoïdes",
+      "pv": 32,
+      "def": 15,
+      "init": 5,
+      "atk": 6,
+      "dangerosite": 3,
+      "boss": false,
+      "taille": "moyenne",
+      "armure": {
+        "valeur": 3,
+        "description": "Cotte de mailles légère volée — réduit 3 points de dégâts physiques."
+      },
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_armes",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Maîtrise des armes",
+              "effet": "Relance 1 dé de dégâts, conserve le meilleur."
+            },
+            {
+              "rang": 2,
+              "nom": "Attaque en puissance",
+              "effet": "-2 DEF pour +2 ATK et +2 dégâts."
+            }
+          ]
+        },
+        {
+          "voieRef": "chasseur.voie_predateur",
+          "rang": 1,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Pistage",
+              "effet": "Piste sans test. Immunisé à la surprise en milieu naturel."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Fauchard de bande",
+          "jet": "1d20+6 vs DEF",
+          "degats": "1d10+2",
+          "portee": "contact +1 case (3m)",
+          "type": "physique",
+          "effetSpecial": "Portée allongée. Charge : +1d6 dégâts. Peut effectuer une feinte (test CHA diff. 11 : cible perd sa DEF de bouclier ce round)."
+        },
+        {
+          "nom": "Balayage bas",
+          "jet": "1d20+5 vs DEF",
+          "degats": "1d6+1",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Test DEX diff. 12 ou cible renversée. Utilisable 1 fois/combat."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Portée allongée",
+          "description": "Attaque jusqu'à 3m avec le fauchard."
+        },
+        {
+          "nom": "Maîtrise des armes (Voie des Armes r.1)",
+          "description": "Relance 1 dé de dégâts."
+        },
+        {
+          "nom": "Attaque en puissance (Voie des Armes r.2)",
+          "description": "-2 DEF pour +2 ATK et +2 dégâts."
+        },
+        {
+          "nom": "Pistage (Voie du Prédateur r.1)",
+          "description": "Piste sans test, immunisé surprise en milieu naturel."
+        },
+        {
+          "nom": "Discipline de bande",
+          "description": "Ses piquiers ne testent pas le moral tant qu'il est vivant. Sa mort déclenche un test SAG diff. 9."
+        }
+      ],
+      "lore": "Mercenaire reconverti en hors-la-loi. Commande un groupe de piquiers avec une discipline militaire que les autorités locales sous-estiment toujours."
+    },
+    {
+      "id": "bandit_lancier_champion",
+      "nom": "La Pointe — commandant hors-la-loi",
+      "famille": "bandit_lancier",
+      "tier": "champion",
+      "categorie": "Bestiaire général — Humanoïdes",
+      "pv": 50,
+      "def": 16,
+      "init": 6,
+      "atk": 8,
+      "dangerosite": 4,
+      "boss": true,
+      "taille": "moyenne",
+      "armure": {
+        "valeur": 4,
+        "description": "Armure composite assemblée pièce à pièce — réduit 4 points de dégâts physiques."
+      },
+      "voies": [
+        {
+          "voieRef": "guerrier.voie_armes",
+          "rang": 3,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Maîtrise des armes",
+              "effet": "Relance 1 dé de dégâts."
+            },
+            {
+              "rang": 2,
+              "nom": "Attaque en puissance",
+              "effet": "-2 DEF pour +2 ATK et +2 dégâts."
+            },
+            {
+              "rang": 3,
+              "nom": "Double frappe",
+              "effet": "1 fois/round : deux attaques en une action."
+            }
+          ]
+        },
+        {
+          "voieRef": "chevalier.voie_duel",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Défi",
+              "effet": "+2 ATK et +2 DEF contre une cible désignée."
+            },
+            {
+              "rang": 2,
+              "nom": "Riposte",
+              "effet": "Réaction : si une attaque rate, attaque gratuite."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Hallebarde de guerre",
+          "jet": "1d20+8 vs DEF",
+          "degats": "1d12+3",
+          "portee": "contact +1 case (3m)",
+          "type": "physique",
+          "effetSpecial": "Portée allongée. Charge : +1d8 dégâts. Tranchant : si dégâts totaux ≥ 12, saignement (1d4/round, 3 rounds, CON diff. 12 pour stopper)."
+        },
+        {
+          "nom": "Double frappe (Voie des Armes r.3)",
+          "jet": "1d20+8 vs DEF (x2)",
+          "degats": "1d12+3 (x2)",
+          "portee": "contact +1 case (3m)",
+          "type": "physique",
+          "effetSpecial": "1 fois/round. Peut cibler deux créatures différentes si dans la portée."
+        },
+        {
+          "nom": "Riposte (Voie du Duel r.2)",
+          "jet": "1d20+8 vs DEF",
+          "degats": "1d12+3",
+          "portee": "contact +1 case",
+          "type": "physique",
+          "effetSpecial": "Réaction si attaque rate La Pointe. Gratuite, hors tour."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Portée allongée",
+          "description": "Attaque jusqu'à 3m. La double frappe peut cibler deux créatures différentes dans cette portée."
+        },
+        {
+          "nom": "Double frappe (Voie des Armes r.3)",
+          "description": "1 fois/round : deux attaques en une action, cibles différentes possibles."
+        },
+        {
+          "nom": "Défi (Voie du Duel r.1)",
+          "description": "+2 ATK et +2 DEF contre une cible désignée jusqu'à fin de combat."
+        },
+        {
+          "nom": "Riposte (Voie du Duel r.2)",
+          "description": "Si une attaque rate : attaque de contact gratuite en réaction."
+        },
+        {
+          "nom": "Zone de contrôle",
+          "description": "Toute créature entrant dans les 3m de La Pointe provoque une attaque d'opportunité gratuite (hallebarde, portée allongée utilisée)."
+        }
+      ],
+      "lore": "La Pointe commande une compagnie de piquiers hors-la-loi avec une précision chirurgicale. Ancien officier disgracié, il a retourné sa formation militaire contre les institutions qui l'ont trahi. Potentiellement recruté comme mercenaire par les PJ si les circonstances s'y prêtent."
+    }
+  ],
+  "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide."
+}

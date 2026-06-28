@@ -12,15 +12,74 @@ const Bestiaire = (() => {
   let recherche = "";
   let editionId = null; // id du monstre custom en cours d'édition (null = création)
   let formPortrait = null; // image du monstre en cours d'édition (data URL)
+  let baseMonstres = []; // bestiaire de base (chargé depuis data/bestiaire.json)
+  let baseChargee = false;
 
   /* ---------- Données ---------- */
   function chargerCustom() {
     try { return depot.charger() || {}; } catch (e) { return {}; }
   }
   function tous() {
-    const base = (typeof BESTIAIRE_BASE !== "undefined" ? BESTIAIRE_BASE : []).map((m) => Object.assign({ base: true }, m));
+    const base = baseMonstres.map((m) => Object.assign({ base: true }, m));
     const custom = Object.values(chargerCustom()).map((m) => Object.assign({ base: false }, m));
     return base.concat(custom);
+  }
+
+  /* ---------- Chargement du bestiaire de base (format thomas) ---------- */
+  function typeDepuis(m) {
+    if (m.boss) return "boss";
+    if ((m.dangerosite || 1) >= 3) return "elite";
+    return "normal";
+  }
+  function emojiPour(m) {
+    const n = (m.nom + " " + (m.famille || "") + " " + (m.id || "")).toLowerCase();
+    if (/loup/.test(n)) return "🐺";
+    if (/ours|urskar/.test(n)) return "🐻";
+    if (/orc|warchief|berserker/.test(n)) return "🪓";
+    if (/gobelin|goblin|kratz/.test(n)) return "👺";
+    if (/golem/.test(n)) return "🗿";
+    if (/elfe/.test(n)) return "🧝";
+    if (/garde|solvarn|legion|imperial/.test(n)) return "🛡️";
+    if (/spectre|fantome|ombre|revenant/.test(n)) return "👻";
+    if (/sanglier/.test(n)) return "🐗";
+    if (/racine|sylvath|seve|plante|sylv/.test(n)) return "🌿";
+    if (/bandit|brigand|voleur/.test(n)) return "🗡️";
+    if (/araign/.test(n)) return "🕷️";
+    if (/demon|diable|chaos/.test(n)) return "👹";
+    if (/squelette|zombie|mort|liche|necro/.test(n)) return "💀";
+    return m.boss ? "👑" : (typeDepuis(m) === "elite" ? "⭐" : "🦴");
+  }
+  // Convertit un monstre du format thomas vers le modèle d'affichage
+  function normaliser(m) {
+    const attaques = (m.attaques || []).map((a) => {
+      let s = a.nom;
+      if (a.degats && a.degats !== "0" && a.degats !== "null" && a.degats != null) s += " — " + a.degats;
+      if (a.portee && a.portee !== "contact") s += " (" + a.portee + ")";
+      if (a.effetSpecial) s += " · " + a.effetSpecial;
+      return s;
+    });
+    const caps = (m.capacitesSpeciales || []).map((c) => c.nom + (c.description ? " : " + c.description : ""));
+    if (m.armure && m.armure.valeur) caps.unshift("Armure : " + (m.armure.description || ("réduit " + m.armure.valeur + " dégâts")));
+    let desc = m.lore || "";
+    if (m.roleNarratif) desc += (desc ? "\n\n" : "") + "Rôle MJ : " + m.roleNarratif;
+    return {
+      id: m.id, nom: m.nom, emoji: emojiPour(m), type: typeDepuis(m),
+      pv: m.pv, def: m.def, init: m.init, attaque: m.atk,
+      attaques, capacites: caps, description: desc,
+      dangerosite: m.dangerosite, boss: m.boss,
+      tags: [m.faction, m.famille, m.tier].filter(Boolean),
+    };
+  }
+  async function chargerBase() {
+    if (baseChargee) return;
+    try {
+      const resp = await fetch("data/bestiaire.json", { cache: "no-store" });
+      const data = await resp.json();
+      baseMonstres = (data.monstres || []).map(normaliser);
+    } catch (e) {
+      baseMonstres = (typeof BESTIAIRE_BASE !== "undefined" ? BESTIAIRE_BASE : []);
+    }
+    baseChargee = true;
   }
   function genId(nom) {
     const slug = (nom || "monstre").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 18);
@@ -80,7 +139,8 @@ const Bestiaire = (() => {
   }
 
   function carteMonstre(m) {
-    const stats = `PV ${m.pv} · DEF ${m.def} · Init ${m.init >= 0 ? "+" + m.init : m.init} · Att ${m.attaque >= 0 ? "+" + m.attaque : m.attaque}`;
+    const stats = `PV ${m.pv} · DEF ${m.def} · Init ${m.init >= 0 ? "+" + m.init : m.init} · Att ${m.attaque >= 0 ? "+" + m.attaque : m.attaque}` +
+      (m.dangerosite ? ` · Danger ${m.dangerosite}/5` : "");
     const attaques = (m.attaques || []).map((a) => `<li>${ech(a)}</li>`).join("");
     const capacites = (m.capacites || []).map((c) => `<li>${ech(c)}</li>`).join("");
     const actions = m.base
@@ -260,7 +320,14 @@ const Bestiaire = (() => {
     if (filtre) filtre.onchange = () => { filtreType = filtre.value; render(); };
     if (rech) rech.oninput = () => { recherche = rech.value; render(); };
   }
-  function onOpen() { render(); }
+  async function onOpen() {
+    if (!baseChargee) {
+      const liste = document.getElementById("bestiaire-liste");
+      if (liste) liste.innerHTML = `<div class="vide">Chargement du bestiaire…</div>`;
+      await chargerBase();
+    }
+    render();
+  }
 
   document.addEventListener("DOMContentLoaded", init);
   return { onOpen };
