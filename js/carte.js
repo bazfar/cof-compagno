@@ -208,6 +208,8 @@ const Carte = (() => {
       // glisser-déposer
       el.querySelector(".jeton-pion").addEventListener("pointerdown", (ev) => demarrerDrag(ev, j, el));
     });
+    // Rafraîchit aussi les jetons dessinés sur la worldmap (canvas pan/zoom)
+    if (typeof Worldmap !== "undefined" && Worldmap.redessiner) Worldmap.redessiner();
   }
 
   function echappe(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
@@ -438,6 +440,7 @@ const Carte = (() => {
     let pan = { x: 0, y: 0 };
     let zoom = 1;
     let drag = false, dragStart = { x: 0, y: 0 }, panStart = { x: 0, y: 0 };
+    let jetonDrag = -1; // index du jeton en cours de déplacement (-1 = aucun)
     const ZOOM_MIN = 0.2, ZOOM_MAX = 8;
 
     function init() {
@@ -483,7 +486,7 @@ const Carte = (() => {
       canvas.addEventListener('pointerup',   surDragFin);
       canvas.addEventListener('pointerleave',surDragFin);
 
-      window.addEventListener('resize', () => { if (imgActuelle) redimensionner(); });
+      window.addEventListener('resize', () => { if (imgActuelle) { redimensionner(); centrer(); dessiner(); } });
     }
 
     function charger(fichier) {
@@ -563,6 +566,46 @@ const Carte = (() => {
       ctx.scale(zoom, zoom);
       ctx.drawImage(imgActuelle, 0, 0);
       ctx.restore();
+      dessinerJetons();
+    }
+
+    // Position écran d'un jeton (sa position est stockée en % de l'image
+    // → il suit automatiquement le pan/zoom). Taille constante à l'écran.
+    const R_JETON = 18;
+    function posJetonEcran(j) {
+      return {
+        x: pan.x + (j.x / 100) * imgActuelle.width  * zoom,
+        y: pan.y + (j.y / 100) * imgActuelle.height * zoom,
+      };
+    }
+    function jetonSousCurseur(mx, my) {
+      for (let i = etat.jetons.length - 1; i >= 0; i--) {
+        const p = posJetonEcran(etat.jetons[i]);
+        if (Math.hypot(mx - p.x, my - p.y) <= R_JETON) return i;
+      }
+      return -1;
+    }
+    function dessinerJetons() {
+      if (!imgActuelle || !etat.jetons.length) return;
+      for (const j of etat.jetons) {
+        const p = posJetonEcran(j);
+        // pastille
+        ctx.beginPath(); ctx.arc(p.x, p.y, R_JETON, 0, Math.PI * 2);
+        ctx.fillStyle = j.couleur || '#7c5aa6'; ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = j.pj ? '#b8924a' : '#1d1526'; ctx.stroke();
+        // initiales
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = 'bold 13px "Segoe UI", Arial, sans-serif';
+        ctx.fillText(initiales(j.nom), p.x, p.y);
+        // étiquette
+        const label = j.nom || '';
+        ctx.font = '11px "Segoe UI", Arial, sans-serif';
+        const w = ctx.measureText(label).width + 8;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(p.x - w / 2, p.y + R_JETON + 2, w, 15);
+        ctx.fillStyle = '#fff'; ctx.textBaseline = 'top';
+        ctx.fillText(label, p.x, p.y + R_JETON + 4);
+      }
     }
 
     // ── Zoom molette ─────────────────────────────────────────
@@ -583,6 +626,16 @@ const Carte = (() => {
     // ── Pan cliquer-glisser ───────────────────────────────────
     function surDragDeb(ev) {
       if (!imgActuelle) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+      // priorité au déplacement d'un jeton si on clique dessus
+      const idx = jetonSousCurseur(mx, my);
+      if (idx >= 0) {
+        jetonDrag = idx;
+        canvas.style.cursor = 'grabbing';
+        canvas.setPointerCapture(ev.pointerId);
+        return;
+      }
       drag = true;
       dragStart = { x: ev.clientX, y: ev.clientY };
       panStart  = { x: pan.x, y: pan.y };
@@ -590,17 +643,27 @@ const Carte = (() => {
       canvas.setPointerCapture(ev.pointerId);
     }
     function surDragMvt(ev) {
+      if (jetonDrag >= 0) {
+        const rect = canvas.getBoundingClientRect();
+        const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+        const j = etat.jetons[jetonDrag];
+        j.x = Math.max(0, Math.min(100, ((mx - pan.x) / zoom) / imgActuelle.width  * 100));
+        j.y = Math.max(0, Math.min(100, ((my - pan.y) / zoom) / imgActuelle.height * 100));
+        dessiner();
+        return;
+      }
       if (!drag) return;
       pan.x = panStart.x + (ev.clientX - dragStart.x);
       pan.y = panStart.y + (ev.clientY - dragStart.y);
       dessiner();
     }
     function surDragFin() {
+      if (jetonDrag >= 0) { jetonDrag = -1; sauver(); } // sauvegarde la position
       drag = false;
       if (canvas) canvas.style.cursor = 'grab';
     }
 
-    return { init, charger, masquer };
+    return { init, charger, masquer, redessiner: dessiner };
   })();
 
   /* ============================================================
