@@ -1019,4 +1019,13 @@ const CARTES_MONDE = [
   { nom: 'Serval',                fichier: 'assets/maps/serval.png',             categorie: 'Nations' },
   { nom: 'Khazrak Dûm',           fichier: 'assets/maps/khazrak-dum.png',        categorie: 'Nations' },
   { nom: 'Domaine de Valdcourt',  fichier: 'assets/maps/domaine-valdcourt.png',  categorie: 'Régions' },
+  { nom: 'Bosquet des Guérisseurs',    fichier: 'assets/maps/bosquet-des-guerisseurs.png', categorie: 'Lieux & combats' },
+  { nom: "Clairière de l'Arbre-Monde", fichier: 'assets/maps/clairiere-arbre-monde.png',   categorie: 'Lieux & combats' },
+  { nom: 'Col des Marteaux',           fichier: 'assets/maps/col-des-marteaux.png',         categorie: 'Lieux & combats' },
+  { nom: 'Forges Khazrak',             fichier: 'assets/maps/forges-khazrak.png',           categorie: 'Lieux & combats' },
+  { nom: 'Fortin du Soleil Rouge',     fichier: 'assets/maps/fortin-du-soleil-rouge.png',   categorie: 'Lieux & combats' },
+  { nom: 'Marches de Libris',          fichier: 'assets/maps/marches-de-libris.png',        categorie: 'Lieux & combats' },
+  { nom: 'Port des Corsaires',         fichier: 'assets/maps/port-des-corsaires.png',       categorie: 'Lieux & combats' },
+  { nom: "Ruines d'Arvenfall (Est)",   fichier: 'assets/maps/ruines-arvenfall-est.png',     categorie: 'Lieux & combats' },
+  { nom: 'Nécropole des Témoins',      fichier: 'assets/maps/necropole-des-temoins.png',    categorie: 'Lieux & combats' },
 ];
