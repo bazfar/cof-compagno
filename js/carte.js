@@ -562,7 +562,7 @@ const Carte = (() => {
       if (!imgActuelle || !canvas) return;
       const scaleW = canvas.width  / imgActuelle.width;
       const scaleH = canvas.height / imgActuelle.height;
-      zoom = Math.min(scaleW, scaleH) * 0.92; // léger retrait (~8%) pour ne pas être trop gros
+      zoom = Math.min(scaleW, scaleH); // la carte remplit son cadre
       pan.x = (canvas.width  - imgActuelle.width  * zoom) / 2;
       pan.y = (canvas.height - imgActuelle.height * zoom) / 2;
     }
