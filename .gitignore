@@ -11,3 +11,6 @@ desktop.ini
 # Fichiers temporaires draw.io (desktop)
 .$*
 *.bkp
+
+# Config locale Claude Code (aperçu, etc.) — propre à chaque poste
+.claude/
