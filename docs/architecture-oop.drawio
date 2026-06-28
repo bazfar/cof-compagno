@@ -1,0 +1,163 @@
+<mxfile host="Electron">
+  <diagram name="Architecture OOP cible - COF Compagnon" id="oop-cof-2">
+    <mxGraphModel dx="1603" dy="936" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2300" pageHeight="820" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="titre" parent="1" style="text;html=1;align=left;fontSize=16;fontStyle=1;" value="Architecture OOP cible (scalable : sessions multijoueur + combat partage) - COF Compagnon" vertex="1">
+          <mxGeometry height="28" width="1200" x="160" as="geometry" />
+        </mxCell>
+        <mxCell id="legende" parent="1" style="text;html=1;align=left;fontSize=11;fontStyle=2;" value="Bleu = Entites combat  |  Vert = Donnees/Modeles  |  Rose = Session (etat partage)  |  Orange = Cartes  |  Gris = Persistance  |  Violet = App/UI        (triangle creux = heritage ; pointille+triangle = implemente ; losange = agregation ; pointille = dependance)" vertex="1">
+          <mxGeometry height="20" width="1700" x="40" y="42" as="geometry" />
+        </mxCell>
+        <mxCell id="depot" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f5f5f5;strokeColor=#666666;" value="&lt;b&gt;Depot&lt;/b&gt; «interface»&lt;hr&gt;+ charger(id)&lt;br&gt;+ sauver(obj)&lt;br&gt;+ supprimer(id)&lt;br&gt;+ ecouter(cb)  // temps reel" vertex="1">
+          <mxGeometry height="120" width="260" x="40" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="depotlocal" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f5f5f5;strokeColor=#666666;" value="&lt;b&gt;DepotLocal&lt;/b&gt; ▷ Depot&lt;hr&gt;localStorage&lt;br&gt;mono-poste, hors-ligne&lt;br&gt;(actuel)" vertex="1">
+          <mxGeometry height="86" width="260" x="40" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="depotdistant" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f5f5f5;strokeColor=#666666;dashed=1;" value="&lt;b&gt;DepotDistant&lt;/b&gt; ▷ Depot&lt;hr&gt;Firebase / API&lt;br&gt;multijoueur, temps reel&lt;br&gt;-- a brancher plus tard --" vertex="1">
+          <mxGeometry height="100" width="260" x="40" y="335" as="geometry" />
+        </mxCell>
+        <mxCell id="entite" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;Entite&lt;/b&gt; «abstraite»&lt;hr&gt;# nom&lt;div&gt;# atk&lt;br&gt;# pvMax / pvActuel&lt;br&gt;# def&lt;hr&gt;+ subirDegats(n)&lt;br&gt;+ soigner(n)&lt;br&gt;+ estVivant() : bool&lt;/div&gt;" vertex="1">
+          <mxGeometry height="150" width="270" x="20" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="perso" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;Personnage&lt;/b&gt; → Entite&lt;hr&gt;- classe, race, niveau&lt;br&gt;- caracs, capacites[]&lt;br&gt;- portrait, inventaire&lt;hr&gt;+ calculerPV() / calculerDEF()&lt;br&gt;+ bonusAttaque(type)&lt;br&gt;+ monterNiveau()&lt;br&gt;+ versJSON() / depuisJSON()" vertex="1">
+          <mxGeometry height="200" width="280" x="330" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="monstre" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;Monstre&lt;/b&gt; → Entite&lt;hr&gt;- modele : ModeleMonstre&lt;br&gt;- pvActuel (instance en combat)&lt;div&gt;&lt;hr&gt;+ depuisModele(m)&lt;br&gt;+ attaquer(cible)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="140" width="280" x="320" y="650" as="geometry" />
+        </mxCell>
+        <mxCell id="classe" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;Classe&lt;/b&gt; «modele»&lt;hr&gt;- deDeVie, archetype&lt;br&gt;- attaque, caracMagie&lt;br&gt;- voies : Voie[]&lt;hr&gt;+ voiesOuvertes()" vertex="1">
+          <mxGeometry height="140" width="250" x="620" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="voie" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;Voie&lt;/b&gt;&lt;hr&gt;- nom, speciale&lt;br&gt;- rangs : Capacite[]" vertex="1">
+          <mxGeometry height="80" width="250" x="670" y="255" as="geometry" />
+        </mxCell>
+        <mxCell id="cap" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;Capacite&lt;/b&gt;&lt;hr&gt;- rang, nom, effet" vertex="1">
+          <mxGeometry height="64" width="250" x="690" y="396" as="geometry" />
+        </mxCell>
+        <mxCell id="race" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;Race&lt;/b&gt; «modele»&lt;hr&gt;- bonusCaracs, variantes&lt;br&gt;- voieRaciale : Voie&lt;hr&gt;+ appliquerBonus(perso)" vertex="1">
+          <mxGeometry height="104" width="250" x="690" y="504" as="geometry" />
+        </mxCell>
+        <mxCell id="modelemonstre" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;ModeleMonstre&lt;/b&gt; «modele · bestiaire»&lt;hr&gt;- nom, pv, def&lt;br&gt;- attaques[], dangerosite&lt;br&gt;- (boss = pv eleves)" vertex="1">
+          <mxGeometry height="110" width="250" x="680" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="session" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe0f0;strokeColor=#c060a0;" value="&lt;b&gt;Session&lt;/b&gt; (partie)&lt;hr&gt;- id, nom&lt;br&gt;- mj : Joueur&lt;br&gt;- joueurs : Joueur[]&lt;br&gt;- combattants : Entite[]  (PJ + Monstres)&lt;br&gt;- carteActive : Carte&lt;br&gt;- fogParJoueur : Map&lt;hr&gt;+ appliquerDegats(source, cible, n)&lt;br&gt;+ rejoindre(joueur)&lt;br&gt;+ tourSuivant()" vertex="1">
+          <mxGeometry height="240" width="290" x="960" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="joueur" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe0f0;strokeColor=#c060a0;" value="&lt;b&gt;Joueur&lt;/b&gt;&lt;hr&gt;- id, nom&lt;br&gt;- role : Role&lt;br&gt;- persoActif : Personnage" vertex="1">
+          <mxGeometry height="100" width="250" x="960" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="des" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f5f5f5;strokeColor=#666666;" value="&lt;b&gt;LanceurDes&lt;/b&gt; «service»&lt;hr&gt;- historique : Jet[]&lt;hr&gt;+ de(faces) / test(...) / formule(...)" vertex="1">
+          <mxGeometry height="100" width="250" x="1010" y="590" as="geometry" />
+        </mxCell>
+        <mxCell id="carte" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;Carte&lt;/b&gt; «abstraite»&lt;hr&gt;# id, nom, type&lt;br&gt;# image (assets/maps/...)&lt;hr&gt;+ importer() / chargerImage()" vertex="1">
+          <mxGeometry height="110" width="270" x="1410" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="cartenav" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;CarteNavigable&lt;/b&gt; → Carte&lt;hr&gt;monde / regions · pan/zoom&lt;br&gt;- PAS de jetons&lt;br&gt;- zones : Zone[]&lt;hr&gt;+ ouvrirZone(z)" vertex="1">
+          <mxGeometry height="140" width="260" x="1300" y="212" as="geometry" />
+        </mxCell>
+        <mxCell id="cartecombat" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;CarteCombat&lt;/b&gt; → Carte  (battlemap)&lt;hr&gt;- jetons[], grille, echelle (1c=1,50m)&lt;br&gt;- murs[], lumieres[]  (dd2vtt)&lt;br&gt;- fogParJoueur  (vue propre a chaque joueur)&lt;hr&gt;+ importDd2vtt(file)&lt;br&gt;+ ligneDeVue(perso)  // ray-casting&lt;br&gt;+ deplacer / snap / mesurerDistance" vertex="1">
+          <mxGeometry height="200" width="320" x="1600" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="zone" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;Zone&lt;/b&gt; (cliquable)&lt;hr&gt;- forme, libelle&lt;br&gt;- cible : Carte&lt;hr&gt;+ auClic() → ouvrir(cible)" vertex="1">
+          <mxGeometry height="104" width="260" x="1260" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="jeton" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;Jeton&lt;/b&gt;&lt;hr&gt;- id, x, y, couleur, portrait&lt;br&gt;- ref → Entite (PJ ou Monstre)" vertex="1">
+          <mxGeometry height="86" width="320" x="1600" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="app" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;App&lt;/b&gt; «orchestrateur»&lt;hr&gt;- session : Session&lt;br&gt;- depot : Depot&lt;br&gt;- des : LanceurDes&lt;hr&gt;+ allerVers(panneau)&lt;br&gt;+ ouvrirCarte(carte)" vertex="1">
+          <mxGeometry height="170" width="270" x="2000" y="28" as="geometry" />
+        </mxCell>
+        <mxCell id="role" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;Role&lt;/b&gt; «enum»&lt;hr&gt;JOUEUR&lt;br&gt;MJ" vertex="1">
+          <mxGeometry height="90" width="180" x="2000" y="262" as="geometry" />
+        </mxCell>
+        <mxCell id="vues" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;Vues (UI)&lt;/b&gt;&lt;hr&gt;Creation · Fiche · Des&lt;br&gt;Carte · Bestiaire&lt;br&gt;Regles · Lore&lt;hr&gt;+ rendre()" vertex="1">
+          <mxGeometry height="150" width="270" x="2010" y="428" as="geometry" />
+        </mxCell>
+        <mxCell id="i1" edge="1" parent="1" source="depotlocal" style="endArrow=block;endFill=0;dashed=1;html=1;" target="depot">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="i2" edge="1" parent="1" source="depotdistant" style="endArrow=block;endFill=0;dashed=1;html=1;" target="depot">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="perso" style="endArrow=block;endFill=0;html=1;" target="entite">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="monstre" style="endArrow=block;endFill=0;html=1;" target="entite">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="monstre" style="endArrow=open;dashed=1;html=1;" target="modelemonstre" value="depuisModele">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="perso" style="endArrow=open;html=1;" target="classe" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="perso" style="endArrow=open;html=1;" target="race" value="0..1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="classe" style="endArrow=none;startArrow=diamondThin;startFill=0;html=1;" target="voie" value="*">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="voie" style="endArrow=none;startArrow=diamondThin;startFill=0;html=1;" target="cap" value="*">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="race" style="endArrow=open;html=1;" target="voie" value="raciale">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="session" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" target="perso" value="combattants * (PJ + monstres)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="session" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" target="monstre" value="*">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="session" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" target="joueur" value="joueurs *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="session" style="endArrow=open;html=1;" target="carte" value="carteActive">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" edge="1" parent="1" source="joueur" style="endArrow=open;html=1;" target="perso" value="persoActif">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" edge="1" parent="1" source="cartenav" style="endArrow=block;endFill=0;html=1;" target="carte">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" edge="1" parent="1" source="cartecombat" style="endArrow=block;endFill=0;html=1;" target="carte">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" edge="1" parent="1" source="cartenav" style="endArrow=none;startArrow=diamondThin;startFill=0;html=1;" target="zone" value="zones *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e17" edge="1" parent="1" source="zone" style="endArrow=open;dashed=1;html=1;" target="carte" value="cible">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18" edge="1" parent="1" source="cartecombat" style="endArrow=none;startArrow=diamondThin;startFill=0;html=1;" target="jeton" value="jetons *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e19" edge="1" parent="1" source="jeton" style="endArrow=open;dashed=1;html=1;" target="entite" value="ref">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e20" edge="1" parent="1" source="app" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" target="session" value="partie courante">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e21" edge="1" parent="1" source="app" style="endArrow=open;dashed=1;html=1;" target="depot" value="via interface">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e22" edge="1" parent="1" source="app" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" target="des">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e23" edge="1" parent="1" source="joueur" style="endArrow=open;html=1;" target="role">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e24" edge="1" parent="1" source="vues" style="endArrow=open;dashed=1;html=1;" target="app" value="utilise">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e25" edge="1" parent="1" source="session" style="endArrow=open;dashed=1;html=1;" target="depot" value="persiste via">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
