@@ -1013,8 +1013,9 @@ const Carte = (() => {
         el.style.height = (tc * 0.85) + 'px';
         el.style.borderColor = tok.couleur;
         el.style.fontSize = Math.max(8, tc * 0.35) + 'px';
-        el.textContent = tok.nom.charAt(0).toUpperCase();
         el.title = tok.nom;
+        el.innerHTML = '<span class="dd-token-initiale">' + tok.nom.charAt(0).toUpperCase() + '</span>'
+          + '<button class="dd-token-suppr" title="Retirer ' + tok.nom + '">✕</button>';
 
         // Drag sur grille
         el.addEventListener('pointerdown', ev => demarrerDragDD(ev, tok, scene));
@@ -1024,6 +1025,11 @@ const Carte = (() => {
           tokenSelectionne = tokenSelectionne === tok.id ? null : tok.id;
           rendreTokensDD(scene);
           calculerEtRendreLoS(scene);
+        });
+        // Suppression
+        el.querySelector('.dd-token-suppr').addEventListener('click', ev => {
+          ev.stopPropagation();
+          supprimerTokenDD(tok.id, scene);
         });
 
         conteneur.appendChild(el);
@@ -1093,6 +1099,13 @@ const Carte = (() => {
       rendreTokensDD(scene);
       calculerEtRendreLoS(scene);
       return true;
+    }
+
+    function supprimerTokenDD(id, scene) {
+      tokensDD = tokensDD.filter(t => t.id !== id);
+      if (tokenSelectionne === id) tokenSelectionne = null;
+      const sc = scene || (sceneActive && scenes[sceneActive]);
+      if (sc) { rendreTokensDD(sc); calculerEtRendreLoS(sc); }
     }
 
     // ── Init brouillard persistant ───────────────────────────

@@ -595,6 +595,31 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 
 .dd-token:active { cursor: grabbing; }
 
+.dd-token-initiale {
+  pointer-events: none;
+}
+
+.dd-token-suppr {
+  display: none;
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #c0392b;
+  color: #fff;
+  border: none;
+  font-size: 9px;
+  line-height: 16px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+  pointer-events: all;
+  z-index: 12;
+}
+.dd-token:hover .dd-token-suppr { display: block; }
+
 /* ============================================================
    Modal générique
    ============================================================ */
