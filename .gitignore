@@ -7,3 +7,7 @@ desktop.ini
 .vscode/
 .idea/
 *.swp
+
+# Fichiers temporaires draw.io (desktop)
+.$*
+*.bkp
