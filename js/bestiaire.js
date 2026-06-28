@@ -11,6 +11,7 @@ const Bestiaire = (() => {
   let filtreType = "tous";
   let recherche = "";
   let editionId = null; // id du monstre custom en cours d'édition (null = création)
+  let formPortrait = null; // image du monstre en cours d'édition (data URL)
 
   /* ---------- Données ---------- */
   function chargerCustom() {
@@ -89,7 +90,7 @@ const Bestiaire = (() => {
     return `
       <div class="monstre-carte ${m.type}">
         <div class="monstre-tete">
-          <span class="monstre-emoji">${m.emoji || "🦴"}</span>
+          ${m.portrait ? `<img class="monstre-portrait" src="${m.portrait}" alt="" />` : `<span class="monstre-emoji">${m.emoji || "🦴"}</span>`}
           <div><div class="monstre-nom">${ech(m.nom)}</div>${badgeType(m.type)}${m.base ? ' <span class="badge-base">de base</span>' : ""}</div>
         </div>
         <div class="monstre-stats">${stats}</div>
@@ -124,6 +125,18 @@ const Bestiaire = (() => {
         <div><label>Initiative</label><input id="mf-init" type="number" value="${v(m ? m.init : 10)}" /></div>
         <div><label>Bonus d'attaque</label><input id="mf-attaque" type="number" value="${v(m ? m.attaque : 3)}" /></div>
       </div>
+      <div class="portrait-zone" style="margin-top:10px;">
+        <div class="portrait-apercu" id="mf-portrait-apercu">—</div>
+        <div>
+          <label>Image du monstre <span style="font-weight:400;font-size:0.75rem;">(optionnel)</span></label>
+          <div class="barre-actions" style="margin-top:0;">
+            <button type="button" class="btn petit secondaire" id="mf-portrait-btn">Choisir une image</button>
+            <button type="button" class="btn petit danger" id="mf-portrait-suppr" style="display:none;">Retirer</button>
+          </div>
+          <input type="file" id="mf-portrait-input" accept="image/*" style="display:none;" />
+          <p style="font-size:0.72rem;color:#8a8296;margin:6px 0 0;">Redimensionnée (max 256px). Sans image, l'emoji est utilisé.</p>
+        </div>
+      </div>
       <div style="margin-top:10px;"><label>Attaques (une par ligne)</label>
         <textarea id="mf-attaques" placeholder="Hache lourde — 1d8+2">${ech(lignes(m ? m.attaques : []))}</textarea></div>
       <div style="margin-top:10px;"><label>Capacités spéciales (une par ligne)</label>
@@ -137,9 +150,45 @@ const Bestiaire = (() => {
     form.style.display = "block";
     if (m) document.getElementById("mf-type").value = m.type;
 
+    // Image du monstre (upload)
+    formPortrait = m ? (m.portrait || null) : null;
+    majApercuPortrait();
+    document.getElementById("mf-portrait-btn").onclick = () => document.getElementById("mf-portrait-input").click();
+    document.getElementById("mf-portrait-input").onchange = (e) => { if (e.target.files[0]) chargerPortrait(e.target.files[0]); e.target.value = ""; };
+    document.getElementById("mf-portrait-suppr").onclick = () => { formPortrait = null; majApercuPortrait(); };
+
     document.getElementById("mf-save").onclick = sauver;
     document.getElementById("mf-cancel").onclick = fermerForm;
     form.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function majApercuPortrait() {
+    const ap = document.getElementById("mf-portrait-apercu");
+    const suppr = document.getElementById("mf-portrait-suppr");
+    if (!ap) return;
+    if (formPortrait) { ap.innerHTML = `<img src="${formPortrait}" alt="" />`; if (suppr) suppr.style.display = ""; }
+    else { ap.innerHTML = "—"; if (suppr) suppr.style.display = "none"; }
+  }
+
+  function chargerPortrait(file) {
+    if (!file.type.startsWith("image/")) { toast("Choisis un fichier image."); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 256; let w = img.width, h = img.height;
+        if (w > h && w > max) { h = Math.round((h * max) / w); w = max; }
+        else if (h > max) { w = Math.round((w * max) / h); h = max; }
+        const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+        cv.getContext("2d").drawImage(img, 0, 0, w, h);
+        formPortrait = cv.toDataURL("image/jpeg", 0.82);
+        majApercuPortrait();
+        toast("Image ajoutée ✔");
+      };
+      img.onerror = () => toast("Image illisible.");
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
   }
 
   function fermerForm() {
@@ -167,6 +216,7 @@ const Bestiaire = (() => {
       attaques: lignesDepuis("mf-attaques"),
       capacites: lignesDepuis("mf-capacites"),
       description: document.getElementById("mf-description").value.trim(),
+      portrait: formPortrait || null,
     };
     const cust = chargerCustom();
     cust[m.id] = m;

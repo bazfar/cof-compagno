@@ -474,6 +474,7 @@ textarea { resize: vertical; min-height: 70px; }
 .monstre-carte.boss { border-left-color: var(--chaos); }
 .monstre-tete { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .monstre-emoji { font-size: 2rem; line-height: 1; }
+.monstre-portrait { width: 52px; height: 52px; border-radius: 8px; object-fit: cover; border: 2px solid var(--or); flex-shrink: 0; }
 .monstre-nom { font-weight: 700; color: var(--violet); font-size: 1.05rem; }
 .badge-type { display: inline-block; color: #fff; font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; vertical-align: middle; }
 .badge-base { display: inline-block; font-size: 0.62rem; color: #8a8296; border: 1px solid var(--parchemin-fonce); border-radius: 8px; padding: 1px 6px; vertical-align: middle; }
