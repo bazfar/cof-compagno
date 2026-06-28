@@ -1382,6 +1382,17 @@ const App = (() => {
       b.onclick = () => allerVers(b.dataset.panneau);
     });
 
+    // Bouton + Monstre battlemap
+    const btnMonstreBattle = document.getElementById("btn-monstre-battlemap");
+    if (btnMonstreBattle) btnMonstreBattle.onclick = ouvrirModalMonstre;
+    const btnFermerModal = document.getElementById("btn-fermer-modal-monstre");
+    if (btnFermerModal) btnFermerModal.onclick = fermerModalMonstre;
+    const rechercheModal = document.getElementById("modal-monstre-recherche");
+    if (rechercheModal) rechercheModal.oninput = () => _peuplerListeMonstres(rechercheModal.value);
+    document.getElementById("modal-monstre").addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) fermerModalMonstre();
+    });
+
     // Dropdown Carte
     const triggerCarte = document.getElementById("trigger-carte");
     const menuCarte = document.getElementById("menu-carte");
@@ -1474,6 +1485,59 @@ const App = (() => {
     // Label du trigger nav
     const trigger = document.getElementById("trigger-carte");
     if (trigger) trigger.textContent = (isWorld ? "🗺 Worldmap" : "⚔ Battlemap") + " ▾";
+  }
+
+  /* ============================================================
+     MODAL MONSTRE — sélecteur pour battlemap
+     ============================================================ */
+
+  function ouvrirModalMonstre() {
+    const modal = document.getElementById("modal-monstre");
+    const input = document.getElementById("modal-monstre-recherche");
+    if (!modal) return;
+    input.value = "";
+    _peuplerListeMonstres("");
+    modal.style.display = "flex";
+    input.focus();
+  }
+
+  function fermerModalMonstre() {
+    const modal = document.getElementById("modal-monstre");
+    if (modal) modal.style.display = "none";
+  }
+
+  function _peuplerListeMonstres(filtre) {
+    const liste = document.getElementById("modal-monstre-liste");
+    if (!liste || typeof BESTIAIRE === "undefined") return;
+    const q = (filtre || "").toLowerCase().trim();
+    const monstres = q
+      ? BESTIAIRE.filter(m => m.nom.toLowerCase().includes(q) || (m.famille && m.famille.toLowerCase().includes(q)))
+      : BESTIAIRE;
+
+    if (!monstres.length) {
+      liste.innerHTML = '<p class="vide" style="padding:12px;">Aucun résultat.</p>';
+      return;
+    }
+
+    liste.innerHTML = monstres.map(m => {
+      const etoiles = "★".repeat(Math.min(m.dangerosite || 0, 5));
+      const badge = m.boss ? ' <span class="badge-boss">BOSS</span>' : "";
+      const tier = m.tier ? ' <span class="badge-tier">' + echapper(m.tier) + "</span>" : "";
+      return '<button class="modal-monstre-item" data-monstre-id="' + echapper(m.id) + '">'
+        + '<span class="mmi-nom">' + echapper(m.nom) + badge + tier + '</span>'
+        + '<span class="mmi-info">' + etoiles + (m.famille ? " · " + echapper(m.famille) : "") + "</span>"
+        + "</button>";
+    }).join("");
+
+    liste.querySelectorAll(".modal-monstre-item").forEach(btn => {
+      btn.onclick = () => {
+        const m = typeof BESTIAIRE_INDEX !== "undefined" ? BESTIAIRE_INDEX[btn.dataset.monstreId] : null;
+        if (m && typeof Carte !== "undefined") {
+          Carte.ajouterMonstre(m);
+          fermerModalMonstre();
+        }
+      };
+    });
   }
 
   /* ============================================================

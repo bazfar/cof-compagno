@@ -254,6 +254,7 @@
             <input type="file" id="input-dd2vtt" accept=".dd2vtt" hidden />
             <select class="carte-select" id="select-scene-dd2vtt" style="display:none;" title="Changer de scène"></select>
             <button class="btn petit secondaire" id="btn-token-dd" style="display:none;">+ Token</button>
+            <button class="btn petit secondaire" id="btn-monstre-battlemap">🐉 + Monstre</button>
           </div>
         </div>
 
@@ -329,6 +330,18 @@
   </footer>
 
   <div id="toast"></div>
+
+  <!-- Modal sélection monstre pour battlemap -->
+  <div id="modal-monstre" class="modal-overlay" style="display:none;">
+    <div class="modal-boite">
+      <div class="modal-entete">
+        <h3>Ajouter un monstre sur la battlemap</h3>
+        <button class="modal-fermer" id="btn-fermer-modal-monstre">✕</button>
+      </div>
+      <input type="text" id="modal-monstre-recherche" placeholder="Rechercher un monstre…" autocomplete="off" />
+      <div id="modal-monstre-liste"></div>
+    </div>
+  </div>
 
   <script src="data/donnees.js?v=12"></script>
   <script src="data/bestiaire.js?v=1"></script>

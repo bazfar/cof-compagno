@@ -189,6 +189,26 @@ const Carte = (() => {
     sauver(); rendreJetons();
   }
 
+  function ajouterMonstre(monstre) {
+    if (!monstre) return;
+    const couleurs = { 1: "#27ae60", 2: "#2980b9", 3: "#d35400", 4: "#c0392b", 5: "#7d1a24" };
+    const couleur = monstre.boss ? "#8e44ad" : (couleurs[monstre.dangerosite] || "#7f8c8d");
+    const label = monstre.tier ? monstre.nom + " [" + monstre.tier + "]" : monstre.nom;
+    if (typeof DD2VTT !== "undefined" && DD2VTT.estActive && DD2VTT.estActive()) {
+      DD2VTT.ajouterTokenData({ nom: label, couleur: couleur, pj: false });
+      toastCarte("Token « " + monstre.nom + " » ajouté.");
+      return;
+    }
+    // Worldmap fallback
+    const i = etat.jetons.length;
+    etat.jetons.push({
+      id: nouvelId(), nom: label, couleur: couleur,
+      pj: false, portrait: null, x: 50, y: 50,
+    });
+    sauver(); rendreJetons();
+    toastCarte("Jeton « " + monstre.nom + " » ajouté.");
+  }
+
   function supprimerJeton(id) {
     etat.jetons = etat.jetons.filter((j) => j.id !== id);
     sauver(); rendreJetons();
@@ -1250,5 +1270,5 @@ const Carte = (() => {
 
   document.addEventListener("DOMContentLoaded", () => { init(); Worldmap.init(); DD2VTT.init(); });
 
-  return { onOpen, definirRole, definirMonPerso };
+  return { onOpen, definirRole, definirMonPerso, ajouterMonstre };
 })();

@@ -596,6 +596,91 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .dd-token:active { cursor: grabbing; }
 
 /* ============================================================
+   Modal générique
+   ============================================================ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-boite {
+  background: var(--parchemin);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--parchemin-fonce);
+}
+
+.modal-entete h3 { margin: 0; font-size: 1rem; color: var(--violet); }
+
+.modal-fermer {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: #8a8296;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.modal-fermer:hover { background: var(--parchemin-fonce); color: var(--encre); }
+
+.modal-boite input[type="text"] {
+  margin: 10px 18px 6px;
+  padding: 8px 12px;
+  border: 1.5px solid var(--parchemin-fonce);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #fffdf7;
+  color: var(--encre);
+}
+
+#modal-monstre-liste {
+  overflow-y: auto;
+  flex: 1;
+  padding: 4px 8px 12px;
+}
+
+.modal-monstre-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 12px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  text-align: left;
+  color: var(--encre);
+  transition: background 0.1s;
+  gap: 8px;
+}
+.modal-monstre-item:hover { background: var(--parchemin-fonce); }
+.mmi-nom { font-weight: 600; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.mmi-info { color: var(--or); font-size: 0.8rem; white-space: nowrap; flex-shrink: 0; }
+
+/* ============================================================
    Bestiaire
    ============================================================ */
 
