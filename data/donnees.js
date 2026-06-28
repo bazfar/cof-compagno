@@ -1004,29 +1004,19 @@ const LORE = {
     },
   ],
 };
-// ── À ajouter à la fin de data/donnees.js ──────────────────
-// Cartes monde disponibles dans assets/maps/
-// Pour ajouter une carte : ajouter une entrée dans le tableau correspondant
 
-DONNEES.cartesMonde = [
-  // ── Monde ──────────────────────────────────────────────
-  { nom: 'Arbre-Monde',         fichier: 'assets/maps/monde.png',            categorie: 'Monde' },
-
-  // ── Nations elfiques ────────────────────────────────────
-  { nom: 'Aetharion',           fichier: 'assets/maps/aetharion.png',        categorie: 'Nations' },
-  { nom: 'Aelindra',            fichier: 'assets/maps/aelindra.png',         categorie: 'Nations' },
-  { nom: 'Mordanel',            fichier: 'assets/maps/mordanel.png',         categorie: 'Nations' },
-
-  // ── Factions humaines ───────────────────────────────────
-  { nom: 'Empire de Solvarn',   fichier: 'assets/maps/solvarn.png',          categorie: 'Nations' },
-  { nom: 'République de Liberra',fichier: 'assets/maps/liberra.png',         categorie: 'Nations' },
-  { nom: 'Arveth',              fichier: 'assets/maps/arveth.png',           categorie: 'Nations' },
-  { nom: 'Mornac',              fichier: 'assets/maps/mornac.png',           categorie: 'Nations' },
-  { nom: 'Serval',              fichier: 'assets/maps/serval.png',           categorie: 'Nations' },
-
-  // ── Nains ───────────────────────────────────────────────
-  { nom: 'Khazrak Dûm',         fichier: 'assets/maps/khazrak-dum.png',      categorie: 'Nations' },
-
-  // ── Lieux & régions ─────────────────────────────────────
-  { nom: 'Domaine de Valdcourt', fichier: 'assets/maps/domaine-valdcourt.png', categorie: 'Régions' },
+/* ── Cartes monde disponibles dans assets/maps/ ────────────
+   Pour ajouter une carte : ajouter une entrée ici + l'image dans assets/maps/ */
+const CARTES_MONDE = [
+  { nom: 'Arbre-Monde',           fichier: 'assets/maps/monde.png',              categorie: 'Monde' },
+  { nom: 'Aetharion',             fichier: 'assets/maps/aetharion.png',          categorie: 'Nations' },
+  { nom: 'Aelindra',              fichier: 'assets/maps/aelindra.png',           categorie: 'Nations' },
+  { nom: 'Mordanel',              fichier: 'assets/maps/mordanel.png',           categorie: 'Nations' },
+  { nom: 'Empire de Solvarn',     fichier: 'assets/maps/solvarn.png',            categorie: 'Nations' },
+  { nom: 'République de Liberra', fichier: 'assets/maps/liberra.png',            categorie: 'Nations' },
+  { nom: 'Arveth',                fichier: 'assets/maps/arveth.png',             categorie: 'Nations' },
+  { nom: 'Mornac',                fichier: 'assets/maps/mornac.png',             categorie: 'Nations' },
+  { nom: 'Serval',                fichier: 'assets/maps/serval.png',             categorie: 'Nations' },
+  { nom: 'Khazrak Dûm',           fichier: 'assets/maps/khazrak-dum.png',        categorie: 'Nations' },
+  { nom: 'Domaine de Valdcourt',  fichier: 'assets/maps/domaine-valdcourt.png',  categorie: 'Régions' },
 ];
