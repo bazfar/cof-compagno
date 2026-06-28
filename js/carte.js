@@ -525,26 +525,29 @@ const Carte = (() => {
     function redimensionner() {
       const scene = document.getElementById('carte-scene');
       if (!scene || !canvas) return;
-      // Forcer une hauteur suffisante basée sur le ratio de l'image
+      // On ajuste le canvas À LA TAILLE de la carte (pas de grandes marges) :
+      // on remplit la largeur dispo, et si ça dépasse la hauteur max, on réduit
+      // la largeur pour que la carte occupe toute la hauteur disponible.
       const largeur = scene.clientWidth;
-      let hauteur = 600;
+      const maxH = Math.round(window.innerHeight * 0.92);
+      let w = largeur, h = 600;
       if (imgActuelle && imgActuelle.width > 0) {
-        hauteur = Math.round(largeur * imgActuelle.height / imgActuelle.width);
-        // Limiter à 85vh
-        const maxH = Math.round(window.innerHeight * 0.85);
-        if (hauteur > maxH) hauteur = maxH;
+        const ratio = imgActuelle.height / imgActuelle.width;
+        h = Math.round(w * ratio);
+        if (h > maxH) { h = maxH; w = Math.round(h / ratio); } // portrait/carré : on remplit la hauteur
       }
-      canvas.width  = largeur;
-      canvas.height = hauteur;
-      // Forcer la hauteur CSS de carte-scene
-      scene.style.height = hauteur + 'px';
+      canvas.width  = w;
+      canvas.height = h;
+      canvas.style.width  = w + 'px';   // taille réelle affichée (canvas centré via CSS)
+      canvas.style.height = h + 'px';
+      scene.style.height  = h + 'px';
     }
 
     function centrer() {
       if (!imgActuelle || !canvas) return;
       const scaleW = canvas.width  / imgActuelle.width;
       const scaleH = canvas.height / imgActuelle.height;
-      zoom = Math.min(scaleW, scaleH) * 0.95;
+      zoom = Math.min(scaleW, scaleH); // le canvas épouse déjà la carte → on remplit
       pan.x = (canvas.width  - imgActuelle.width  * zoom) / 2;
       pan.y = (canvas.height - imgActuelle.height * zoom) / 2;
     }
