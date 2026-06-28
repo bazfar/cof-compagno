@@ -142,7 +142,8 @@ const App = (() => {
     document.querySelectorAll(".panneau").forEach((p) => {
       p.classList.toggle("actif", p.id === "panneau-" + panneau);
     });
-    if (panneau === "fiche") rendreListePersos();
+    if (panneau === "fiche") { rendreListePersos(); _mettreAJourLootFiche(); }
+    if (panneau === "loot" && typeof Loot !== "undefined") Loot.rendreCatalogue();
     if (panneau === "regles") rendreRegles();
     if (panneau === "bestiaire") rendreBestiaire();
     if (panneau === "carte" && typeof Carte !== "undefined") {
@@ -1454,6 +1455,21 @@ const App = (() => {
     };
 
     rendreListePersos();
+
+    // Loot — fermeture modals
+    const btnFermerLoot = document.getElementById("btn-fermer-modal-loot");
+    if (btnFermerLoot && typeof Loot !== "undefined") btnFermerLoot.onclick = Loot.fermerModalLoot;
+    const btnAnnulerLoot = document.getElementById("btn-annuler-modal-loot");
+    if (btnAnnulerLoot && typeof Loot !== "undefined") btnAnnulerLoot.onclick = Loot.fermerModalLoot;
+    const modalLoot = document.getElementById("modal-loot");
+    if (modalLoot) modalLoot.addEventListener("click", (e) => { if (e.target === e.currentTarget && typeof Loot !== "undefined") Loot.fermerModalLoot(); });
+
+    // Loot — polling 4s pour notifications joueur
+    if (typeof Loot !== "undefined") {
+      setInterval(() => {
+        if (role === "joueur" && ficheActiveId) _mettreAJourLootFiche();
+      }, 4000);
+    }
   }
 
   /* ============================================================
@@ -1638,6 +1654,34 @@ const App = (() => {
       ${atqHtml}
       ${capHtml}
     </div>`;
+  }
+
+  /* ============================================================
+     LOOT — notification joueur + inventaire
+     ============================================================ */
+
+  function _mettreAJourLootFiche() {
+    if (typeof Loot === "undefined") return;
+    const persoId = ficheActiveId;
+    if (!persoId) return;
+
+    // Notification vote actif (réutilise la div dans panneau-fiche)
+    const notifEl = document.getElementById("loot-notif-fiche");
+    if (notifEl) {
+      // Loot.rendreNotificationVote attend un id="loot-notif-joueur" —
+      // on redirige temporairement en swappant l'id
+      notifEl.id = "loot-notif-joueur";
+      Loot.rendreNotificationVote(persoId);
+      notifEl.id = "loot-notif-fiche";
+    }
+
+    // Inventaire
+    const blocInv = document.getElementById("bloc-inventaire");
+    const persos = JSON.parse(localStorage.getItem("cof_persos") || "{}");
+    const p = persos[persoId];
+    const aItems = p && Array.isArray(p.equipement) && p.equipement.length > 0;
+    if (blocInv) blocInv.style.display = aItems ? "" : "none";
+    Loot.rendreInventaire(persoId);
   }
 
   document.addEventListener("DOMContentLoaded", init);

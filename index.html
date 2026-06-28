@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=14" />
+  <link rel="stylesheet" href="css/style.css?v=15" />
 </head>
 <body>
   <header>
@@ -25,6 +25,7 @@
         </div>
       </div>
       <button data-panneau="bestiaire" data-role="mj">Bestiaire</button>
+      <button data-panneau="loot" data-role="mj">Loot</button>
       <button data-panneau="regles">Règles</button>
       <button data-panneau="lore">Lore</button>
     </nav>
@@ -178,6 +179,14 @@
         </div>
       </div>
       <div id="zone-fiche-active"></div>
+
+      <!-- Notification vote loot joueur (polling) -->
+      <div id="loot-notif-fiche" style="display:none;" class="carte loot-notif-card" data-role="joueur"></div>
+      <!-- Inventaire joueur -->
+      <div class="carte" data-role="joueur" id="bloc-inventaire" style="display:none;">
+        <h3 class="titre-bandeau" style="font-size:1rem;">🎒 Inventaire loot</h3>
+        <div id="loot-inventaire-joueur"></div>
+      </div>
     </section>
 
     <!-- DES -->
@@ -309,6 +318,32 @@
       <div id="bestiaire-grille"></div>
     </section>
 
+    <!-- LOOT -->
+    <section class="panneau" id="panneau-loot" data-role="mj">
+      <!-- Vue MJ : catalogue + vote en cours + historique -->
+      <div class="carte" data-role="mj">
+        <h2 class="titre-bandeau">🎁 Loot & Trésor</h2>
+        <div class="loot-filtres">
+          <select id="loot-filtre-type"><option value="">Tous les types</option></select>
+          <input type="text" id="loot-recherche" placeholder="Rechercher un item…" autocomplete="off" />
+        </div>
+        <div id="loot-catalogue"></div>
+      </div>
+
+      <div class="carte" data-role="mj">
+        <h3 class="titre-bandeau" style="font-size:1rem;">⚖ Vote en cours</h3>
+        <div id="loot-vote-encours"></div>
+      </div>
+
+      <div class="carte" data-role="mj">
+        <h3 class="titre-bandeau" style="font-size:1rem;">📜 Historique des loots</h3>
+        <div id="loot-historique"></div>
+      </div>
+
+      <!-- Notification vote joueur (visible en mode joueur aussi via fiche) -->
+      <div id="loot-notif-joueur" style="display:none;" class="carte loot-notif-card" data-role="joueur"></div>
+    </section>
+
     <!-- REGLES -->
     <section class="panneau" id="panneau-regles">
       <div class="carte">
@@ -331,6 +366,25 @@
 
   <div id="toast"></div>
 
+  <!-- Modal lancement vote loot (MJ) -->
+  <div id="modal-loot" class="modal-overlay" style="display:none;">
+    <div class="modal-boite">
+      <div class="modal-entete">
+        <h3>Mettre un item en jeu</h3>
+        <button class="modal-fermer" id="btn-fermer-modal-loot">✕</button>
+      </div>
+      <div class="loot-modal-item-preview">
+        <div class="loot-item-nom-modal" id="modal-loot-item-nom"></div>
+        <div class="loot-item-stats-modal" id="modal-loot-item-stats"></div>
+        <div class="loot-item-desc-modal" id="modal-loot-item-desc"></div>
+      </div>
+      <div class="loot-modal-actions">
+        <button class="btn or" id="btn-lancer-vote">🎲 Lancer le vote</button>
+        <button class="btn secondaire" id="btn-annuler-modal-loot">Annuler</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal sélection monstre pour battlemap -->
   <div id="modal-monstre" class="modal-overlay" style="display:none;">
     <div class="modal-boite">
@@ -345,6 +399,7 @@
 
   <script src="data/donnees.js?v=12"></script>
   <script src="data/bestiaire.js?v=1"></script>
+  <script src="data/loot.js?v=1"></script>
   <script src="js/emblemes.js?v=9"></script>
   <script src="js/carte-monde.js?v=9"></script>
   <!-- Modèle OOP (Phase 1) : socle additif, n'altère pas l'app existante -->
@@ -352,6 +407,7 @@
   <script src="js/personnage.js?v=1"></script>
   <script src="js/depot.js?v=2"></script>
   <script src="js/carte.js?v=17"></script>
+  <script src="js/loot.js?v=1"></script>
   <script src="js/app.js?v=16"></script>
 </body>
 </html>

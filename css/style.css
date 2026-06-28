@@ -861,3 +861,71 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 
 .dang-4 { color: #c07000; }
 .dang-5 { color: var(--chaos); }
+
+/* ============================================================
+   LOOT
+   ============================================================ */
+
+/* Filtres catalogue */
+.loot-filtres { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.loot-filtres select, .loot-filtres input { flex: 1; min-width: 160px; }
+
+/* Item catalogue */
+#loot-catalogue { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.loot-item { background: var(--parchemin); border: 1px solid var(--parchemin-fonce); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.loot-item-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.loot-item-nom { font-family: "Cinzel", serif; font-weight: 700; color: var(--violet); font-size: 0.9rem; flex: 1; }
+.loot-item-stats { font-size: 0.78rem; color: var(--violet-clair); font-style: italic; }
+.loot-item-desc { font-size: 0.78rem; color: #5a5268; flex: 1; }
+.loot-item .btn-mettre-en-jeu { align-self: flex-start; margin-top: 4px; }
+
+/* Badges type */
+.loot-badge { font-size: 0.62rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; white-space: nowrap; }
+.loot-badge-arme      { background: #e8d8b0; color: #6a4a10; }
+.loot-badge-armure    { background: #d8e4f0; color: #1a3a60; }
+.loot-badge-bouclier  { background: #d8ecd8; color: #1a4a1a; }
+.loot-badge-accessoire{ background: #ead8f0; color: #4a1a60; }
+.loot-badge-consommable{ background: #f0e8d0; color: #6a4010; }
+.loot-badge-magic     { background: var(--or); color: #fff; }
+
+/* Vote en cours (MJ) */
+.vote-item-titre { font-family: "Cinzel", serif; font-weight: 700; color: var(--violet); margin-bottom: 8px; font-size: 0.95rem; }
+.vote-lignes { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.vote-ligne { font-size: 0.85rem; color: var(--encre); display: flex; align-items: center; gap: 6px; }
+.badge-besoin { background: #c8e8c8; color: #1a4a1a; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+.badge-greed  { background: #e8dcc8; color: #5a3a10; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+.badge-attente{ background: var(--parchemin-fonce); color: #7a6a88; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; }
+.vote-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Historique loot */
+.histo-ligne { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; padding: 4px 0; border-bottom: 1px solid var(--parchemin-fonce); }
+.histo-item { font-weight: 700; color: var(--violet); }
+.histo-heure { color: #9a8aaa; margin-left: auto; font-size: 0.75rem; }
+
+/* Modal loot MJ */
+.loot-modal-item-preview { background: var(--parchemin); border: 1px solid var(--parchemin-fonce); border-radius: var(--radius); padding: 12px; margin: 12px 0; }
+.loot-item-nom-modal { font-family: "Cinzel", serif; font-weight: 700; color: var(--violet); font-size: 1.05rem; margin-bottom: 4px; }
+.loot-item-stats-modal { font-size: 0.8rem; color: var(--violet-clair); font-style: italic; margin-bottom: 4px; }
+.loot-item-desc-modal { font-size: 0.8rem; color: #5a5268; }
+.loot-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+/* Notification vote joueur */
+.loot-notif-card { border: 2px solid var(--or) !important; background: #fffcf2 !important; }
+.loot-notif-entete { font-family: "Cinzel", serif; font-weight: 700; color: var(--or); font-size: 1rem; margin-bottom: 8px; }
+.loot-notif-item { display: flex; flex-direction: column; gap: 3px; margin-bottom: 12px; font-size: 0.85rem; }
+.loot-notif-item strong { color: var(--violet); font-size: 1rem; }
+.loot-notif-stats { color: var(--violet-clair); font-style: italic; }
+.loot-notif-item em { color: #6a6278; }
+.loot-notif-btns { display: flex; gap: 10px; }
+.loot-notif-vote-ok { background: #e8f0e8; color: #1a4a1a; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; }
+
+/* Inventaire joueur */
+#loot-inventaire-joueur { display: flex; flex-direction: column; gap: 10px; }
+.inv-item { background: var(--parchemin); border: 1px solid var(--parchemin-fonce); border-radius: var(--radius); padding: 10px; }
+.inv-item-equipe { border-color: var(--or); background: #fffcf0; }
+.inv-item-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.inv-item-nom { font-weight: 700; color: var(--violet); font-size: 0.88rem; flex: 1; }
+.inv-badge-equipe { background: var(--or); color: #fff; font-size: 0.62rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
+.inv-item-stats { font-size: 0.78rem; color: var(--violet-clair); font-style: italic; margin-bottom: 3px; }
+.inv-item-desc { font-size: 0.76rem; color: #6a6278; margin-bottom: 6px; }
+.inv-actions { display: flex; gap: 8px; flex-wrap: wrap; }

@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0",
+  "items": [
+    { "id": "dague",           "nom": "Dague",              "type": "arme",       "porte": false, "description": "Arme légère de contact ou de lancer. Discrète et rapide.",         "degats": "1d4",  "portee": "contact",        "typedegats": "physique", "enchantement": 0, "deuxMains": false },
+    { "id": "epee_courte",     "nom": "Épée courte",        "type": "arme",       "porte": false, "description": "Lame polyvalente, idéale pour les combattants agiles.",             "degats": "1d6",  "portee": "contact",        "typedegats": "physique", "enchantement": 0, "deuxMains": false },
+    { "id": "epee_longue",     "nom": "Épée longue",        "type": "arme",       "porte": false, "description": "Arme emblématique du guerrier. Bon équilibre dégâts/maniabilité.", "degats": "1d8",  "portee": "contact",        "typedegats": "physique", "enchantement": 0, "deuxMains": false },
+    { "id": "hache_guerre",    "nom": "Hache de guerre",    "type": "arme",       "porte": false, "description": "Lame large dévastatrice. Difficile à manier mais redoutable.",     "degats": "1d8",  "portee": "contact",        "typedegats": "physique", "enchantement": 0, "deuxMains": false },
+    { "id": "arc_court",       "nom": "Arc court",          "type": "arme",       "porte": false, "description": "Arme à distance compacte, facile à transporter en forêt.",         "degats": "1d6",  "portee": "longue (36m)",   "typedegats": "physique", "enchantement": 0, "deuxMains": true  },
+    { "id": "arc_long",        "nom": "Arc long",           "type": "arme",       "porte": false, "description": "Portée maximale, nécessite de la puissance et de l'entraînement.", "degats": "1d8",  "portee": "longue (36m)",   "typedegats": "physique", "enchantement": 0, "deuxMains": true  },
+    { "id": "lance",           "nom": "Lance",              "type": "arme",       "porte": false, "description": "Arme d'hast polyvalente, efficace contre les charges.",            "degats": "1d8",  "portee": "contact +1 case","typedegats": "physique", "enchantement": 0, "deuxMains": false },
+    { "id": "masse",           "nom": "Masse",              "type": "arme",       "porte": false, "description": "Contondant, efficace contre les armures légères.",                 "degats": "1d6",  "portee": "contact",        "typedegats": "physique", "enchantement": 0, "deuxMains": false },
+    { "id": "marteau_guerre",  "nom": "Marteau de guerre",  "type": "arme",       "porte": false, "description": "Lourd et dévastateur. Favori des nains de Khazrak Dûm.",           "degats": "1d8",  "portee": "contact",        "typedegats": "physique", "enchantement": 0, "deuxMains": false },
+    { "id": "rapiere",         "nom": "Rapière",            "type": "arme",       "porte": false, "description": "Lame fine et précise. Idéale pour les duellistes et roublards.",   "degats": "1d6",  "portee": "contact",        "typedegats": "physique", "enchantement": 0, "deuxMains": false },
+    { "id": "arbalete",        "nom": "Arbalète légère",    "type": "arme",       "porte": false, "description": "Puissante, mais lente à recharger (1 round entre chaque tir).",   "degats": "1d8",  "portee": "moyenne (18m)",  "typedegats": "physique", "enchantement": 0, "deuxMains": true  },
+    { "id": "epee_longue_p1",  "nom": "Épée longue +1",     "type": "arme",       "porte": false, "description": "Lame finement enchantée par un forgeron de Solvarn. Brille faiblement dans l'obscurité.", "degats": "1d8", "portee": "contact", "typedegats": "physique", "enchantement": 1, "deuxMains": false },
+    { "id": "dague_p2",        "nom": "Dague +2",           "type": "arme",       "porte": false, "description": "Dague en acier de Sève. Tranchante comme jamais, ignore 1 point d'armure.", "degats": "1d4", "portee": "contact", "typedegats": "physique", "enchantement": 2, "deuxMains": false },
+    { "id": "arc_court_p1",    "nom": "Arc court +1",       "type": "arme",       "porte": false, "description": "Arc en bois de l'Arbre-Monde. Les flèches semblent guidées.",      "degats": "1d6",  "portee": "longue (36m)",   "typedegats": "physique", "enchantement": 1, "deuxMains": true  },
+
+    { "id": "armure_cuir",     "nom": "Armure de cuir",     "type": "armure",     "porte": false, "description": "Protection légère, n'entrave pas les mouvements.",                 "valeurArmure": 2, "malusDEX": 0 },
+    { "id": "armure_cloute",   "nom": "Cuir clouté",        "type": "armure",     "porte": false, "description": "Cuir renforcé de clous métalliques. Bon compromis légèreté/protection.", "valeurArmure": 3, "malusDEX": 0 },
+    { "id": "cotte_mailles",   "nom": "Cotte de mailles",   "type": "armure",     "porte": false, "description": "Anneaux entrelacés. Protection solide contre les lames.",          "valeurArmure": 4, "malusDEX": 1 },
+    { "id": "demi_plaques",    "nom": "Demi-plaques",        "type": "armure",     "porte": false, "description": "Plaques couvrant le torse et les épaules. Équipement de vétéran.", "valeurArmure": 5, "malusDEX": 2 },
+    { "id": "plaques_comp",    "nom": "Plaques complètes",   "type": "armure",     "porte": false, "description": "Armure intégrale de plates. Lourde mais quasi-impénétrable.",      "valeurArmure": 6, "malusDEX": 3 },
+    { "id": "armure_ombre",    "nom": "Armure d'ombre",      "type": "armure",     "porte": false, "description": "Cuir elfique traité à la Sève. Légère comme une feuille, solide comme l'acier.", "valeurArmure": 3, "malusDEX": 0 },
+    { "id": "cotte_runique",   "nom": "Cotte runique",       "type": "armure",     "porte": false, "description": "Mailles gravées de runes naines. Résiste aux dégâts magiques.",   "valeurArmure": 5, "malusDEX": 1 },
+
+    { "id": "rondache",        "nom": "Rondache en bois",   "type": "bouclier",   "porte": false, "description": "Bouclier léger en bois cerclé de fer. Facile à manier.",           "bonusDEF": 1 },
+    { "id": "bouclier_acier",  "nom": "Bouclier en acier",  "type": "bouclier",   "porte": false, "description": "Protection solide. Standard de l'infanterie des Royaumes Coalisés.", "bonusDEF": 2 },
+    { "id": "targe_elfique",   "nom": "Targe elfique",      "type": "bouclier",   "porte": false, "description": "Bouclier en bois de l'Arbre-Monde. Léger et magiquement résistant.", "bonusDEF": 2 },
+
+    { "id": "potion_soin",     "nom": "Potion de soin",     "type": "consommable","porte": false, "description": "Régénère 1d6 PV immédiatement. Goût amer de Sève.",                "quantite": 1 },
+    { "id": "potion_soin_sup", "nom": "Potion de soin améliorée","type": "consommable","porte": false,"description": "Régénère 2d6 PV. Préparée par un Druide de rang 3+.",          "quantite": 1 },
+    { "id": "huile_sainte",    "nom": "Huile sainte",       "type": "consommable","porte": false, "description": "Appliquée sur une arme : inflige +1d4 dégâts aux créatures du Chaos pendant 1 combat.", "quantite": 1 },
+    { "id": "antidote",        "nom": "Antidote",           "type": "consommable","porte": false, "description": "Neutralise immédiatement tout poison actif. Amère et efficace.",   "quantite": 1 },
+    { "id": "parchemin_sort",  "nom": "Parchemin de sort",  "type": "consommable","porte": false, "description": "Sort à usage unique. Le lanceur peut l'utiliser même sans classe magique (test INT diff. 14).", "quantite": 1 },
+
+    { "id": "amulette_prot",   "nom": "Amulette de protection","type": "accessoire","porte": false,"description": "+1 à tous les jets de résistance (Chaos, poison, mental).",      "effet": "+1 jets de résistance" },
+    { "id": "anneau_force",    "nom": "Anneau de force",    "type": "accessoire", "porte": false, "description": "+1 en FOR. Fabriqué à Khazrak Dûm pour les guerriers d'élite.",   "effet": "+1 FOR" },
+    { "id": "bottes_legeres",  "nom": "Bottes légères",     "type": "accessoire", "porte": false, "description": "+1 en initiative. Semelles enchantées qui absorbent les bruits de pas.", "effet": "+1 initiative" }
+  ]
+}
