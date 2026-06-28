@@ -286,8 +286,23 @@
     <section class="panneau" id="panneau-bestiaire">
       <div class="carte">
         <h2 class="titre-bandeau">Bestiaire</h2>
-        <p class="vide">Aucun monstre pour l'instant — reviens plus tard, tu pourras ajouter tes créatures maison ici.</p>
+        <div class="bestiaire-filtres">
+          <select id="filtre-famille">
+            <option value="">Toutes les familles</option>
+          </select>
+          <div class="filtre-dangerosite" id="filtre-dangerosite">
+            <span>Dangérosité :</span>
+            <button class="btn-dang actif" data-dang="">Tous</button>
+            <button class="btn-dang" data-dang="1">★</button>
+            <button class="btn-dang" data-dang="2">★★</button>
+            <button class="btn-dang" data-dang="3">★★★</button>
+            <button class="btn-dang" data-dang="4">★★★★</button>
+            <button class="btn-dang" data-dang="5">★★★★★</button>
+          </div>
+          <span id="bestiaire-compteur" class="bestiaire-compteur"></span>
+        </div>
       </div>
+      <div id="bestiaire-grille"></div>
     </section>
 
     <!-- REGLES -->
@@ -313,6 +328,7 @@
   <div id="toast"></div>
 
   <script src="data/donnees.js?v=12"></script>
+  <script src="data/bestiaire.js?v=1"></script>
   <script src="js/emblemes.js?v=9"></script>
   <script src="js/carte-monde.js?v=9"></script>
   <!-- Modèle OOP (Phase 1) : socle additif, n'altère pas l'app existante -->
