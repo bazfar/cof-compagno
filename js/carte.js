@@ -149,6 +149,13 @@ const Carte = (() => {
     try { persos = JSON.parse(localStorage.getItem("cof_persos")) || {}; } catch (x) {}
     const ids = Object.keys(persos);
     if (!ids.length) { toastCarte("Aucun personnage enregistré."); return; }
+    // Si une battlemap .dd2vtt est active, on pose les persos comme tokens de combat
+    if (typeof DD2VTT !== "undefined" && DD2VTT.estActive && DD2VTT.estActive()) {
+      let n = 0;
+      ids.forEach((pid) => { if (DD2VTT.ajouterTokenData({ nom: persos[pid].nom, couleur: "#b8924a", pj: true })) n++; });
+      toastCarte(n + " perso(s) sur la battlemap.");
+      return;
+    }
     let ajout = 0, i = etat.jetons.length;
     ids.forEach((pid) => {
       const ref = "pj-" + pid;
@@ -169,6 +176,11 @@ const Carte = (() => {
   function ajouterJetonLibre() {
     const nom = prompt("Nom du jeton (PNJ / monstre) :", "Gobelin");
     if (nom === null) return;
+    // Battlemap .dd2vtt active -> token de combat
+    if (typeof DD2VTT !== "undefined" && DD2VTT.estActive && DD2VTT.estActive()) {
+      DD2VTT.ajouterTokenData({ nom: nom.trim() || "Jeton", pj: false });
+      return;
+    }
     const i = etat.jetons.length;
     etat.jetons.push({
       id: nouvelId(), nom: nom.trim() || "Jeton", couleur: PALETTE[i % PALETTE.length],
@@ -1043,6 +1055,26 @@ const Carte = (() => {
       calculerEtRendreLoS(scene);
     }
 
+    // Ajout programmatique d'un token (depuis "+ Mes personnages / + PNJ")
+    function estActive() { return !!sceneActive && !!scenes[sceneActive]; }
+    function ajouterTokenData(d) {
+      if (!estActive()) return false;
+      const scene = scenes[sceneActive];
+      const couleurs = ['#e74c3c','#3498db','#2ecc71','#9b59b6','#f39c12','#1abc9c'];
+      const n = tokensDD.length;
+      tokensDD.push({
+        id: 'dd-' + Date.now() + '-' + n,
+        nom: (d && d.nom) ? d.nom : 'Jeton',
+        cx: Math.max(0, Math.min(scene.lc - 1, Math.floor(scene.lc / 2) + (n % 4))),
+        cy: Math.max(0, Math.min(scene.hc - 1, Math.floor(scene.hc / 2) + Math.floor(n / 4))),
+        couleur: (d && d.couleur) ? d.couleur : couleurs[n % couleurs.length],
+        pj: !!(d && d.pj)
+      });
+      rendreTokensDD(scene);
+      calculerEtRendreLoS(scene);
+      return true;
+    }
+
     // ── Init brouillard persistant ───────────────────────────
     function reinitFog2(scene) {
       const imgEl = document.getElementById('carte-image');
@@ -1209,7 +1241,7 @@ const Carte = (() => {
       if (tokensEl) tokensEl.innerHTML = '';
     }
 
-    return { init, scenes: () => scenes, sceneActive: () => sceneActive, ajouterToken: (sc) => ajouterTokenDD(sc), modeWorldmap: activerModeWorldmap };
+    return { init, scenes: () => scenes, sceneActive: () => sceneActive, ajouterToken: (sc) => ajouterTokenDD(sc), modeWorldmap: activerModeWorldmap, estActive, ajouterTokenData };
   })();
 
   /* ============================================================
