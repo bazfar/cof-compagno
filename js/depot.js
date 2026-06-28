@@ -54,6 +54,10 @@ class DepotLocal extends Depot {
     delete o[id];
     this._ecrire(o);
   }
+  // Remplace tout le store d'un coup (utile quand on manipule la map {id: obj})
+  remplacerTout(map) {
+    return this._ecrire(map || {});
+  }
   // Synchronisation entre onglets du même navigateur (gratuit, déjà multi-vue).
   ecouter(callback) {
     const handler = (e) => { if (e.key === this.cle) callback(this.charger()); };

@@ -18,9 +18,9 @@ const App = (() => {
 
   /* ---------- Utilitaires ---------- */
 
-  // Modificateur de caractéristique façon d20 : (val - 10) / 2 arrondi à l'inférieur
+  // Modificateur de caractéristique façon d20 — délègue au modèle Entité
   function modCarac(valeur) {
-    return Math.floor((Number(valeur) - 10) / 2);
+    return Entite.modCarac(valeur);
   }
   function signe(n) { return (n >= 0 ? "+" + n : "" + n); }
 
@@ -55,12 +55,14 @@ const App = (() => {
 
   /* ---------- Persistance ---------- */
 
+  // Persistance des persos derrière l'interface Depot (localStorage aujourd'hui,
+  // backend distant possible plus tard sans toucher l'app).
+  const depotPersos = new DepotLocal(STORAGE_PERSOS);
   function chargerPersos() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_PERSOS)) || {}; }
-    catch (e) { return {}; }
+    return depotPersos.charger(); // map { id: perso }
   }
   function sauverPersos(obj) {
-    localStorage.setItem(STORAGE_PERSOS, JSON.stringify(obj));
+    depotPersos.remplacerTout(obj);
   }
 
   /* ---------- Rôle Joueur / MJ ---------- */
@@ -848,15 +850,14 @@ const App = (() => {
     ficheActiveId = id;
     const c = CLASSES[p.classe];
     const niveau = p.niveau;
+    const perso = Personnage.depuisJSON(p); // modèle OOP : règles centralisées
     const mods = {};
-    CARACS.forEach((cc) => (mods[cc.code] = modCarac(p.caracs[cc.code])));
+    CARACS.forEach((cc) => (mods[cc.code] = perso.mod(cc.code)));
 
-    // Bonus d'attaque (jet uniquement) = bonus de progression selon l'archétype + mod approprié
-    const bonusProgression = bonusAttaqueProgression(p.classe, niveau);
-    const attContact = bonusProgression + mods.FOR;
-    const attDistance = bonusProgression + mods.DEX;
-    const caracMag = CARAC_MAGIE[p.classe];
-    const attMagique = caracMag ? bonusProgression + mods[caracMag] : null;
+    // Bonus d'attaque (jet uniquement) via le modèle Personnage
+    const attContact = perso.bonusAttaque("contact");
+    const attDistance = perso.bonusAttaque("distance");
+    const attMagique = perso.bonusAttaque("magique");
     const init = mods.DEX;
 
     const zone = document.getElementById("zone-fiche-active");
@@ -949,7 +950,7 @@ const App = (() => {
           <button class="btn" data-attaque="distance" data-bonus="${attDistance}">🏹 Distance (${signe(attDistance)})</button>
           ${attMagique !== null ? `<button class="btn" data-attaque="magique" data-bonus="${attMagique}">✨ Magique (${signe(attMagique)})</button>` : ""}
         </div>
-        <p style="font-size:0.75rem;color:#8a8296;margin-top:6px;">Bonus d'attaque (jet, pas les dégâts) = bonus de progression (${ARCHETYPE_CLASSE[p.classe] || "martial"}, ${signe(bonusProgression)} au niveau ${niveau}) + modificateur. Ajuste selon tes voies (ex. +1 Tir ajusté) au moment du jet via l'onglet Dés si besoin.</p>
+        <p style="font-size:0.75rem;color:#8a8296;margin-top:6px;">Bonus d'attaque (jet, pas les dégâts) = bonus de progression (${ARCHETYPE_CLASSE[p.classe] || "martial"}, ${signe(perso.bonusProgression())} au niveau ${niveau}) + modificateur. Ajuste selon tes voies (ex. +1 Tir ajusté) au moment du jet via l'onglet Dés si besoin.</p>
       </div>
 
       <div class="carte">
