@@ -180,6 +180,7 @@ textarea { resize: vertical; min-height: 70px; }
 .classe-carte:hover { border-color: var(--violet-accent); transform: translateY(-2px); box-shadow: 0 6px 16px var(--ombre); }
 .classe-carte.choisie { border-color: var(--or); background: #fff8e8; }
 .classe-carte .embleme-wrap { text-align: center; margin-bottom: 8px; }
+.classe-carte .portrait-fig { margin: 0 auto 8px; border-radius: 8px; border: 1px solid var(--parchemin-fonce); background-color: #fbf7ec; }
 .embleme { display: block; }
 .classe-carte h3 { margin: 0 0 6px; color: var(--violet); text-align: center; }
 .classe-carte .dv { font-size: 0.8rem; color: var(--violet-accent); font-weight: 600; }

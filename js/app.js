@@ -178,6 +178,49 @@ const App = (() => {
     };
   }
 
+  /* ---------- Portraits : sprites découpés dans les planches d'illustration ---------- */
+  const SRC_COMBATTANTS = "assets/portraits/src-combattants.webp";
+  const SRC_MYSTIQUES   = "assets/portraits/src-mystiques.webp";
+  const SRC_RACES       = "assets/portraits/src-races.webp";
+  // [planche, colonne] — ordre des planches identique à ORDRE_CLASSES
+  const PORTRAIT_CLASSE = {
+    guerrier: [SRC_COMBATTANTS, 0], chevalier: [SRC_COMBATTANTS, 1], barde: [SRC_COMBATTANTS, 2],
+    chasseur: [SRC_COMBATTANTS, 3], moine: [SRC_COMBATTANTS, 4],
+    druide: [SRC_MYSTIQUES, 0], pretre: [SRC_MYSTIQUES, 1], magicien: [SRC_MYSTIQUES, 2],
+    enchanteur: [SRC_MYSTIQUES, 3], necromancien: [SRC_MYSTIQUES, 4],
+  };
+  // [colonne, ligne] dans la grille 3x2 de la planche races
+  const PORTRAIT_RACE = {
+    humain: [0, 0], elfe: [1, 0], nain: [2, 0],
+    demi_elfe: [0, 1], demi_orc: [1, 1], demi_gobelin: [2, 1],
+  };
+
+  // Construit le style CSS pour afficher un sous-rectangle (sx,sy,sw,sh) d'une image
+  function styleSprite(src, SW, SH, sx, sy, sw, sh, boxW) {
+    const sc = boxW / sw;
+    return (
+      `width:${boxW}px;height:${Math.round(sh * sc)}px;` +
+      `background-image:url('${src}');` +
+      `background-size:${Math.round(SW * sc)}px ${Math.round(SH * sc)}px;` +
+      `background-position:-${Math.round(sx * sc)}px -${Math.round(sy * sc)}px;` +
+      `background-repeat:no-repeat;`
+    );
+  }
+  function spriteClasse(cle) {
+    const cfg = PORTRAIT_CLASSE[cle];
+    if (!cfg) return null;
+    const SW = 1448, SH = 1086, colW = SW / 5;
+    return styleSprite(cfg[0], SW, SH, cfg[1] * colW, 140, colW, 720, 120);
+  }
+  function spriteRace(cle) {
+    const cfg = PORTRAIT_RACE[cle];
+    if (!cfg) return null;
+    const SW = 1448, SH = 1086, colW = SW / 3, sw = 300, sh = 250;
+    const sx = cfg[0] * colW + (colW - sw) / 2;
+    const sy = cfg[1] === 0 ? 175 : 565; // sous le nom écrit sur la planche
+    return styleSprite(SRC_RACES, SW, SH, sx, sy, sw, sh, 130);
+  }
+
   function rendreGrilleClasses() {
     const grille = document.getElementById("grille-classes");
     grille.innerHTML = "";
@@ -185,8 +228,10 @@ const App = (() => {
       const c = CLASSES[cle];
       const div = document.createElement("div");
       div.className = "classe-carte" + (creation.classe === cle ? " choisie" : "");
+      const sp = spriteClasse(cle);
+      const visuel = sp ? `<div class="portrait-fig" style="${sp}"></div>` : `<div class="embleme-wrap">${embleme(cle, 72)}</div>`;
       div.innerHTML =
-        `<div class="embleme-wrap">${embleme(cle, 72)}</div>` +
+        visuel +
         `<h3>${c.nom_affiche}</h3>` +
         `<div class="dv">Dé de vie : ${c.de_de_vie}</div>` +
         `<p>${c.voies.length} voies · ${c.attaque.magique ? "Lanceur (" + c.attaque.magique + ")" : c.attaque.distance ? "Tireur" : "Combattant"}</p>`;
@@ -217,7 +262,9 @@ const App = (() => {
       const r = RACES[cle];
       const div = document.createElement("div");
       div.className = "classe-carte" + (creation.race === cle ? " choisie" : "");
+      const sp = spriteRace(cle);
       div.innerHTML =
+        (sp ? `<div class="portrait-fig" style="${sp}"></div>` : "") +
         `<h3>${r.nom_affiche}</h3>` +
         `<div class="dv">${r.voie_nom}</div>` +
         `<p>${r.description}</p>`;
