@@ -17,7 +17,13 @@
       <button data-panneau="creation" data-role="joueur">Création</button>
       <button data-panneau="fiche" id="onglet-fiche">Ma fiche</button>
       <button data-panneau="des">Dés</button>
-      <button data-panneau="carte">Carte</button>
+      <div class="tab-dropdown" id="tab-dropdown-carte">
+        <button class="tab-dropdown-trigger" id="trigger-carte" data-panneau="carte">Carte ▾</button>
+        <div class="tab-dropdown-menu" id="menu-carte">
+          <button class="tab-dropdown-item" data-carte-mode="worldmap">🗺 Worldmap</button>
+          <button class="tab-dropdown-item" data-carte-mode="battlemap" data-role="mj">⚔ Battlemap</button>
+        </div>
+      </div>
       <button data-panneau="bestiaire" data-role="mj">Bestiaire</button>
       <button data-panneau="regles">Règles</button>
       <button data-panneau="lore">Lore</button>
@@ -241,11 +247,8 @@
             </select>
           </div>
 
-          <!-- Séparateur -->
-          <div class="mode-separateur" data-role="mj">|</div>
-
           <!-- Mode Battlemap -->
-          <div class="mode-groupe" id="groupe-battlemap" data-role="mj">
+          <div class="mode-groupe" id="groupe-battlemap" data-role="mj" style="display:none;">
             <span class="mode-label">⚔ Battlemap</span>
             <button class="btn petit" id="btn-import-dd2vtt">📁 Importer .dd2vtt</button>
             <input type="file" id="input-dd2vtt" accept=".dd2vtt" hidden />

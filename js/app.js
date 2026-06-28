@@ -15,6 +15,7 @@ const App = (() => {
   let creation = null;       // objet personnage en cours de création
   let ficheActiveId = null;  // id du perso affiché dans "Ma fiche"
   let role = null;           // "joueur" | "mj" | null (pas encore choisi)
+  let carteMode = "worldmap"; // "worldmap" | "battlemap"
 
   /* ---------- Utilitaires ---------- */
 
@@ -147,6 +148,7 @@ const App = (() => {
     if (panneau === "carte" && typeof Carte !== "undefined") {
       Carte.onOpen();
       if (role === "joueur") rendreSelecteurMonPerso();
+      _appliquerCarteMode();
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -1376,9 +1378,32 @@ const App = (() => {
     if (btnChangerRole) btnChangerRole.onclick = changerDeRole;
 
     // Onglets
-    document.querySelectorAll("nav.tabs button").forEach((b) => {
+    document.querySelectorAll("nav.tabs button[data-panneau]").forEach((b) => {
       b.onclick = () => allerVers(b.dataset.panneau);
     });
+
+    // Dropdown Carte
+    const triggerCarte = document.getElementById("trigger-carte");
+    const menuCarte = document.getElementById("menu-carte");
+    if (triggerCarte && menuCarte) {
+      triggerCarte.onclick = (e) => {
+        e.stopPropagation();
+        // Pour le joueur, un seul item visible : aller directement
+        const visibles = menuCarte.querySelectorAll(".tab-dropdown-item:not([style*='display: none'])");
+        const mjItems = menuCarte.querySelectorAll("[data-role='mj']");
+        const mjHidden = role !== "mj";
+        if (mjHidden) { allerVersCarteMode("worldmap"); return; }
+        menuCarte.classList.toggle("ouvert");
+      };
+      menuCarte.querySelectorAll(".tab-dropdown-item").forEach((item) => {
+        item.onclick = (e) => {
+          e.stopPropagation();
+          allerVersCarteMode(item.dataset.carteMode);
+          menuCarte.classList.remove("ouvert");
+        };
+      });
+      document.addEventListener("click", () => menuCarte.classList.remove("ouvert"));
+    }
 
     // Création
     document.getElementById("champ-niveau").oninput = () => {
@@ -1418,6 +1443,37 @@ const App = (() => {
     };
 
     rendreListePersos();
+  }
+
+  /* ============================================================
+     CARTE — sous-modes Worldmap / Battlemap
+     ============================================================ */
+
+  function allerVersCarteMode(mode) {
+    carteMode = mode;
+    allerVers("carte");
+  }
+
+  function _appliquerCarteMode() {
+    const isWorld = carteMode === "worldmap";
+
+    // Groupes de mode dans la toolbar
+    const worldGroup = document.getElementById("groupe-worldmap");
+    const battleGroup = document.getElementById("groupe-battlemap");
+    if (worldGroup) worldGroup.style.display = isWorld ? "" : "none";
+    if (battleGroup) battleGroup.style.display = isWorld ? "none" : "";
+
+    // Contrôles fog / jetons worldmap-only
+    document.querySelectorAll(".worldmap-ctrl").forEach(el => { el.style.display = isWorld ? "" : "none"; });
+    document.querySelectorAll(".worldmap-only").forEach(el => { el.style.display = isWorld ? "" : "none"; });
+
+    // Titre du panneau
+    const titre = document.getElementById("titre-carte");
+    if (titre) titre.textContent = "Carte — " + (isWorld ? "Worldmap" : "Battlemap");
+
+    // Label du trigger nav
+    const trigger = document.getElementById("trigger-carte");
+    if (trigger) trigger.textContent = (isWorld ? "🗺 Worldmap" : "⚔ Battlemap") + " ▾";
   }
 
   /* ============================================================
