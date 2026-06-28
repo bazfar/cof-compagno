@@ -489,6 +489,14 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 }
 #canvas-worldmap:active { cursor: grabbing; }
 
+/* La vue Carte sort du cadre 1000px et profite de toute la largeur de l'écran */
+#panneau-carte.actif {
+  width: 96vw;
+  max-width: 1700px;
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+
 /* ── Overlays battlemap dd2vtt ── */
 #carte-murs,
 #carte-los {
