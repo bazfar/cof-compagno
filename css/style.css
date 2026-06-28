@@ -98,6 +98,63 @@ nav.tabs button.actif {
   border-bottom-color: var(--or);
 }
 
+/* ---------- Dropdown nav (Carte) ---------- */
+.tab-dropdown {
+  position: relative;
+}
+
+.tab-dropdown-trigger {
+  background: transparent;
+  border: none;
+  color: var(--parchemin);
+  padding: 10px 16px;
+  font-size: 0.92rem;
+  cursor: pointer;
+  border-radius: var(--radius) var(--radius) 0 0;
+  opacity: 0.7;
+  transition: all 0.15s;
+  border-bottom: 3px solid transparent;
+}
+.tab-dropdown-trigger:hover { opacity: 1; background: rgba(255, 255, 255, 0.08); }
+.tab-dropdown-trigger.actif {
+  opacity: 1;
+  background: var(--parchemin);
+  color: var(--violet);
+  font-weight: 600;
+  border-bottom-color: var(--or);
+}
+
+.tab-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: var(--violet);
+  border: 1px solid var(--violet-accent);
+  border-radius: 0 var(--radius) var(--radius) var(--radius);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  z-index: 100;
+  min-width: 160px;
+  overflow: hidden;
+}
+.tab-dropdown-menu.ouvert { display: block; }
+
+.tab-dropdown-item {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--parchemin);
+  padding: 10px 16px;
+  font-size: 0.88rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.tab-dropdown-item:last-child { border-bottom: none; }
+.tab-dropdown-item:hover { background: rgba(255,255,255,0.12); }
+
 /* ---------- Conteneur principal ---------- */
 main {
   max-width: 1000px;
@@ -537,3 +594,160 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 }
 
 .dd-token:active { cursor: grabbing; }
+
+/* ============================================================
+   Bestiaire
+   ============================================================ */
+
+.bestiaire-filtres {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.bestiaire-filtres select {
+  padding: 6px 10px;
+  border: 1.5px solid var(--parchemin-fonce);
+  border-radius: var(--radius);
+  background: #fffdf7;
+  color: var(--encre);
+  font-size: 0.88rem;
+}
+
+.filtre-dangerosite {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filtre-dangerosite span {
+  font-size: 0.82rem;
+  color: #6a6278;
+}
+
+.btn-dang {
+  background: none;
+  border: 1.5px solid var(--parchemin-fonce);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.78rem;
+  color: var(--or);
+  cursor: pointer;
+  transition: all 0.12s;
+  letter-spacing: 1px;
+}
+
+.btn-dang:hover { border-color: var(--or); background: #fdf5e8; }
+.btn-dang.actif { border-color: var(--or); background: var(--or); color: #fff; }
+
+.bestiaire-compteur {
+  margin-left: auto;
+  font-size: 0.82rem;
+  color: #8a8296;
+}
+
+#bestiaire-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+  padding: 0 16px 16px;
+}
+
+.carte-monstre {
+  padding: 14px 16px;
+}
+
+.monstre-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.monstre-nom {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--violet);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.monstre-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.monstre-sous {
+  font-size: 0.78rem;
+  color: #7a7090;
+  margin-bottom: 8px;
+  font-style: italic;
+}
+
+.monstre-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+  padding: 8px 10px;
+  background: var(--parchemin);
+  border-radius: 6px;
+  font-size: 0.82rem;
+}
+
+.monstre-stats span { white-space: nowrap; }
+
+.monstre-section {
+  margin-top: 8px;
+  font-size: 0.82rem;
+}
+
+.monstre-section ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.monstre-section li { margin-bottom: 2px; }
+
+.badge-boss {
+  background: var(--chaos);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.badge-tier {
+  background: var(--violet-accent);
+  color: #fff;
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.badge-taille {
+  background: var(--parchemin-fonce);
+  color: var(--encre);
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.badge-dang {
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+  color: var(--or);
+}
+
+.dang-4 { color: #c07000; }
+.dang-5 { color: var(--chaos); }

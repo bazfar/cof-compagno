@@ -15,6 +15,7 @@ const App = (() => {
   let creation = null;       // objet personnage en cours de création
   let ficheActiveId = null;  // id du perso affiché dans "Ma fiche"
   let role = null;           // "joueur" | "mj" | null (pas encore choisi)
+  let carteMode = "worldmap"; // "worldmap" | "battlemap"
 
   /* ---------- Utilitaires ---------- */
 
@@ -143,9 +144,11 @@ const App = (() => {
     });
     if (panneau === "fiche") rendreListePersos();
     if (panneau === "regles") rendreRegles();
+    if (panneau === "bestiaire") rendreBestiaire();
     if (panneau === "carte" && typeof Carte !== "undefined") {
       Carte.onOpen();
       if (role === "joueur") rendreSelecteurMonPerso();
+      _appliquerCarteMode();
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -1337,9 +1340,32 @@ const App = (() => {
     if (btnChangerRole) btnChangerRole.onclick = changerDeRole;
 
     // Onglets
-    document.querySelectorAll("nav.tabs button").forEach((b) => {
+    document.querySelectorAll("nav.tabs button[data-panneau]").forEach((b) => {
       b.onclick = () => allerVers(b.dataset.panneau);
     });
+
+    // Dropdown Carte
+    const triggerCarte = document.getElementById("trigger-carte");
+    const menuCarte = document.getElementById("menu-carte");
+    if (triggerCarte && menuCarte) {
+      triggerCarte.onclick = (e) => {
+        e.stopPropagation();
+        // Pour le joueur, un seul item visible : aller directement
+        const visibles = menuCarte.querySelectorAll(".tab-dropdown-item:not([style*='display: none'])");
+        const mjItems = menuCarte.querySelectorAll("[data-role='mj']");
+        const mjHidden = role !== "mj";
+        if (mjHidden) { allerVersCarteMode("worldmap"); return; }
+        menuCarte.classList.toggle("ouvert");
+      };
+      menuCarte.querySelectorAll(".tab-dropdown-item").forEach((item) => {
+        item.onclick = (e) => {
+          e.stopPropagation();
+          allerVersCarteMode(item.dataset.carteMode);
+          menuCarte.classList.remove("ouvert");
+        };
+      });
+      document.addEventListener("click", () => menuCarte.classList.remove("ouvert"));
+    }
 
     // Création
     document.getElementById("champ-niveau").oninput = () => {
@@ -1379,6 +1405,137 @@ const App = (() => {
     };
 
     rendreListePersos();
+  }
+
+  /* ============================================================
+     CARTE — sous-modes Worldmap / Battlemap
+     ============================================================ */
+
+  function allerVersCarteMode(mode) {
+    carteMode = mode;
+    allerVers("carte");
+  }
+
+  function _appliquerCarteMode() {
+    const isWorld = carteMode === "worldmap";
+
+    // Groupes de mode dans la toolbar
+    const worldGroup = document.getElementById("groupe-worldmap");
+    const battleGroup = document.getElementById("groupe-battlemap");
+    if (worldGroup) worldGroup.style.display = isWorld ? "" : "none";
+    if (battleGroup) battleGroup.style.display = isWorld ? "none" : "";
+
+    // Contrôles fog / jetons worldmap-only
+    document.querySelectorAll(".worldmap-ctrl").forEach(el => { el.style.display = isWorld ? "" : "none"; });
+    document.querySelectorAll(".worldmap-only").forEach(el => { el.style.display = isWorld ? "" : "none"; });
+
+    // Titre du panneau
+    const titre = document.getElementById("titre-carte");
+    if (titre) titre.textContent = "Carte — " + (isWorld ? "Worldmap" : "Battlemap");
+
+    // Label du trigger nav
+    const trigger = document.getElementById("trigger-carte");
+    if (trigger) trigger.textContent = (isWorld ? "🗺 Worldmap" : "⚔ Battlemap") + " ▾";
+  }
+
+  /* ============================================================
+     BESTIAIRE
+     ============================================================ */
+
+  let _bestFamille = "";
+  let _bestDang = "";
+
+  function rendreBestiaire() {
+    if (typeof BESTIAIRE === "undefined") return;
+
+    // Peupler le filtre famille (une seule fois)
+    const selFam = document.getElementById("filtre-famille");
+    if (selFam && selFam.options.length === 1) {
+      const familles = [...new Set(BESTIAIRE.map(m => m.famille).filter(Boolean))].sort();
+      familles.forEach(f => {
+        const o = document.createElement("option");
+        o.value = f;
+        o.textContent = f.charAt(0).toUpperCase() + f.slice(1);
+        selFam.appendChild(o);
+      });
+      selFam.value = _bestFamille;
+      selFam.onchange = () => { _bestFamille = selFam.value; _afficherMonstres(); };
+    }
+
+    // Filtres dangérosité
+    document.querySelectorAll(".btn-dang").forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll(".btn-dang").forEach(b => b.classList.remove("actif"));
+        btn.classList.add("actif");
+        _bestDang = btn.dataset.dang;
+        _afficherMonstres();
+      };
+    });
+
+    _afficherMonstres();
+  }
+
+  function _afficherMonstres() {
+    const grille = document.getElementById("bestiaire-grille");
+    const compteur = document.getElementById("bestiaire-compteur");
+    if (!grille) return;
+
+    const monstres = BESTIAIRE.filter(m => {
+      if (_bestFamille && m.famille !== _bestFamille) return false;
+      if (_bestDang && String(m.dangerosite) !== _bestDang) return false;
+      return true;
+    });
+
+    if (compteur) compteur.textContent = `${monstres.length} monstre${monstres.length !== 1 ? "s" : ""}`;
+
+    if (!monstres.length) {
+      grille.innerHTML = '<p class="vide" style="padding:20px;">Aucun monstre ne correspond aux filtres.</p>';
+      return;
+    }
+
+    grille.innerHTML = monstres.map(m => _carteMonstreHTML(m)).join("");
+  }
+
+  function _etoiles(n) {
+    return "★".repeat(Math.min(n, 5)) + "☆".repeat(Math.max(0, 5 - n));
+  }
+
+  function _carteMonstreHTML(m) {
+    const boss = m.boss ? '<span class="badge-boss">BOSS</span>' : "";
+    const tier = m.tier ? `<span class="badge-tier">${echapper(m.tier)}</span>` : "";
+    const taille = m.taille ? `<span class="badge-taille">${echapper(m.taille)}</span>` : "";
+    const dang = `<span class="badge-dang dang-${m.dangerosite}" title="Dangérosité">${_etoiles(m.dangerosite || 0)}</span>`;
+
+    const statsHtml = `<div class="monstre-stats">
+      <span title="Points de Vie"><strong>PV</strong> ${m.pv ?? "—"}</span>
+      <span title="Défense"><strong>DEF</strong> ${m.def ?? "—"}</span>
+      <span title="Initiative"><strong>INIT</strong> ${m.init >= 0 ? "+" : ""}${m.init ?? "—"}</span>
+      <span title="Attaque"><strong>ATK</strong> ${m.atk >= 0 ? "+" : ""}${m.atk ?? "—"}</span>
+      <span title="XP"><strong>XP</strong> ${m.xp ?? "—"}</span>
+    </div>`;
+
+    const atqHtml = m.attaques && m.attaques.length
+      ? `<div class="monstre-section"><strong>Attaques</strong><ul>${m.attaques.map(a =>
+          `<li><em>${echapper(a.nom)}</em> — ${echapper(a.degats)}${a.portee ? ` (${echapper(a.portee)})` : ""}${a.note ? ` · ${echapper(a.note)}` : ""}</li>`
+        ).join("")}</ul></div>`
+      : "";
+
+    const capHtml = m.capacitesSpeciales && m.capacitesSpeciales.length
+      ? `<div class="monstre-section"><strong>Capacités spéciales</strong><ul>${m.capacitesSpeciales.map(c =>
+          `<li><em>${echapper(c.nom)}</em>${c.description ? ` — ${echapper(c.description)}` : ""}</li>`
+        ).join("")}</ul></div>`
+      : "";
+
+    return `<div class="carte carte-monstre">
+      <div class="monstre-header">
+        <div class="monstre-nom">${echapper(m.nom)} ${boss}${tier}</div>
+        <div class="monstre-meta">${dang} ${taille}</div>
+      </div>
+      ${m.categorie || m.faction ? `<div class="monstre-sous">${[m.categorie, m.faction].filter(Boolean).map(echapper).join(" · ")}</div>` : ""}
+      ${statsHtml}
+      ${atqHtml}
+      ${capHtml}
+    </div>`;
   }
 
   document.addEventListener("DOMContentLoaded", init);
