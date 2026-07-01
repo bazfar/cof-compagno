@@ -791,11 +791,8 @@ const Carte = (() => {
     let canvasMurs = null;
     let ctxMurs = null;
 
-    // État ouvert/fermé des portails (portes + fenêtres, indiscernables côté Dungeondraft),
-    // persisté derrière l'interface Depot pour pouvoir brancher un vrai backend plus tard
-    // sans toucher à cette logique (cf. js/depot.js). Aujourd'hui : DepotLocal
-    // (localStorage + sync entre onglets du même navigateur via l'event "storage").
-    const depotPortails = (typeof DepotLocal !== 'undefined') ? new DepotLocal('cof_dd2vtt_portails') : null;
+    // État ouvert/fermé des portails (portes + fenêtres, indiscernables côté
+    // Dungeondraft), synchronisé via battlemap:{key}:portails (SyncStore).
 
     // ── Parser ──────────────────────────────────────────────
     // key   : identifiant stable (clé de synchro) — nom de fichier pour un
@@ -828,8 +825,8 @@ const Carte = (() => {
       }));
 
       // Ré-applique un état ouvert/fermé sauvegardé pour cette scène (même ordre de portails)
-      if (depotPortails) {
-        const sauve = depotPortails.charger(key);
+      if (typeof SyncStore !== 'undefined') {
+        const sauve = SyncStore.get('battlemap:' + key + ':portails');
         if (Array.isArray(sauve)) {
           portails.forEach((p, i) => { if (typeof sauve[i] === 'boolean') p.ouvert = sauve[i]; });
         }
@@ -953,6 +950,17 @@ const Carte = (() => {
           calculerEtRendreLoS(scene);
         });
       }
+      // Idem pour l'état des portails : un autre client (n'importe quel rôle)
+      // a basculé une porte/fenêtre → on répercute et on recalcule la LoS.
+      if (_desabonnerPortails) { _desabonnerPortails(); _desabonnerPortails = null; }
+      if (typeof SyncStore !== 'undefined') {
+        _desabonnerPortails = SyncStore.subscribe('battlemap:' + nom + ':portails', (etats) => {
+          if (!Array.isArray(etats)) return;
+          scene.portails.forEach((p, i) => { if (typeof etats[i] === 'boolean') p.ouvert = etats[i]; });
+          rendreScene(scene);
+          calculerEtRendreLoS(scene);
+        });
+      }
 
       // Cacher le placeholder image PNG
       const vide = document.getElementById('carte-vide');
@@ -1062,8 +1070,8 @@ const Carte = (() => {
     }
 
     function _sauverEtatPortails(scene) {
-      if (!depotPortails) return;
-      depotPortails.sauver(scene.portails.map(p => p.ouvert), scene.nom);
+      if (typeof SyncStore === 'undefined') return;
+      SyncStore.set('battlemap:' + scene.nom + ':portails', scene.portails.map(p => p.ouvert));
     }
 
     // Clic n'importe où sur la carte-scene : si assez proche d'un portail
@@ -1105,6 +1113,7 @@ const Carte = (() => {
     let tokensDD = [];
     let tokenSelectionne = null;
     let _desabonnerTokens = null;
+    let _desabonnerPortails = null;
     function _syncTokens(scene) {
       if (typeof SyncStore !== 'undefined') SyncStore.set('battlemap:' + scene.nom + ':tokens', tokensDD);
     }
@@ -1369,9 +1378,13 @@ const Carte = (() => {
       ctxLoS.globalAlpha = 1.0;
       ctxLoS.globalCompositeOperation = 'source-over';
 
-      if (tokensDD.length === 0) return;
+      // Seuls les tokens joueurs dissipent le brouillard (LoS individuelle) ;
+      // les monstres restent rendus visuellement (rendreTokensDD) mais ne
+      // génèrent aucune vision.
+      const tokensVision = tokensDD.filter(t => t.pj);
+      if (tokensVision.length === 0) return;
 
-      for (const tok of tokensDD) {
+      for (const tok of tokensVision) {
         // Position dans le référentiel du canvas (= référentiel image)
         const posX = (tok.cx + 0.5) * tc;
         const posY = (tok.cy + 0.5) * tc;
@@ -1439,19 +1452,6 @@ const Carte = (() => {
           if (sc) { rendreTokensDD(sc); calculerEtRendreLoS(sc); }
         }
       });
-
-      // Sync entre onglets du même navigateur : un autre onglet a basculé une
-      // porte/fenêtre → on répercute l'état si c'est la scène affichée ici.
-      if (depotPortails) {
-        depotPortails.ecouter((magasin) => {
-          const sc = scenes[sceneActive];
-          if (!sc || !magasin || !Array.isArray(magasin[sc.nom])) return;
-          const etats = magasin[sc.nom];
-          sc.portails.forEach((p, i) => { if (typeof etats[i] === 'boolean') p.ouvert = etats[i]; });
-          rendreScene(sc);
-          calculerEtRendreLoS(sc);
-        });
-      }
 
       // Sync scène active : le MJ choisit une scène → tous les clients la
       // chargent automatiquement au prochain poll (ou immédiatement si même
