@@ -702,13 +702,20 @@ const Carte = (() => {
       if (!imgActuelle) return;
       const rect = canvas.getBoundingClientRect();
       const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
-      // priorité au déplacement d'un jeton si on clique dessus
+      // priorité au déplacement d'un jeton si on clique dessus — mais un
+      // joueur ne peut déplacer QUE son propre jeton (ref === "pj-"+monPersoId),
+      // comme sur la battlemap. Sur le jeton de quelqu'un d'autre, on retombe
+      // sur le pan de la carte plutôt que de bloquer silencieusement.
       const idx = jetonSousCurseur(mx, my);
       if (idx >= 0) {
-        jetonDrag = idx;
-        canvas.style.cursor = 'grabbing';
-        canvas.setPointerCapture(ev.pointerId);
-        return;
+        const j = etat.jetons[idx];
+        const autorise = role !== 'joueur' || j.ref === 'pj-' + monPersoId;
+        if (autorise) {
+          jetonDrag = idx;
+          canvas.style.cursor = 'grabbing';
+          canvas.setPointerCapture(ev.pointerId);
+          return;
+        }
       }
       drag = true;
       dragStart = { x: ev.clientX, y: ev.clientY };
@@ -928,6 +935,25 @@ const Carte = (() => {
       if (typeof SyncStore !== 'undefined') SyncStore.set('battlemap:scene-active', nom);
     }
 
+    // Fetches de scènes catalogue en cours, indexées par key. Évite que
+    // chargerCatalogue() (au démarrage) et _suivreSceneDistante() (dès que
+    // scene-active arrive) ne tirent chacun le même fichier — potentiellement
+    // volumineux (export Dungeondraft brut) — en double sur le réseau,
+    // doublant le temps avant que la scène (et ses tokens) n'apparaissent.
+    const _fetchesEnCours = {};
+    function _chargerEntreeCatalogue(entree) {
+      if (!_fetchesEnCours[entree.key]) {
+        _fetchesEnCours[entree.key] = fetch(entree.file)
+          .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+          .then(data => {
+            scenes[entree.key] = parseDD2VTT(data, entree.key, entree.label);
+            mettreAJourSelect();
+          })
+          .finally(() => { delete _fetchesEnCours[entree.key]; });
+      }
+      return _fetchesEnCours[entree.key];
+    }
+
     // Applique une scène choisie par le MJ (reçue via sync) : l'active si déjà
     // connue localement (catalogue déjà chargé), sinon tente de la récupérer
     // dans le catalogue. Une scène importée manuellement par le MJ (absente du
@@ -941,13 +967,8 @@ const Carte = (() => {
         toastCarte('Le MJ a chargé une scène importée manuellement, non disponible pour toi.');
         return;
       }
-      fetch(entree.file)
-        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-        .then(data => {
-          scenes[entree.key] = parseDD2VTT(data, entree.key, entree.label);
-          mettreAJourSelect();
-          activerScene(entree.key);
-        })
+      _chargerEntreeCatalogue(entree)
+        .then(() => activerScene(entree.key))
         .catch(err => console.warn('[DD2VTT] échec chargement scène distante :', entree.file, err));
     }
 
@@ -957,12 +978,7 @@ const Carte = (() => {
     function chargerCatalogue() {
       if (typeof CARTES_BATTLEMAP === 'undefined') return;
       CARTES_BATTLEMAP.forEach(entree => {
-        fetch(entree.file)
-          .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-          .then(data => {
-            scenes[entree.key] = parseDD2VTT(data, entree.key, entree.label);
-            mettreAJourSelect();
-          })
+        _chargerEntreeCatalogue(entree)
           .catch(err => console.warn('[DD2VTT] catalogue introuvable :', entree.file, err));
       });
     }
@@ -1170,15 +1186,24 @@ const Carte = (() => {
     }
 
     // ── Rendu tokens dd2vtt ──────────────────────────────────
-    function rendreTokensDD(scene) {
+    // Peut être appelé (ex. depuis un abonnement SyncStore) avant que l'image
+    // ait fini son layout (rect encore 0x0) — notamment juste après un
+    // rechargement de page, quand une mise à jour distante arrive pendant que
+    // la scène (potentiellement lourde) est encore en train de se charger.
+    // Sans retry, le conteneur restait vidé (innerHTML = '') sans jamais être
+    // repeuplé, tant qu'aucune autre mise à jour ne redéclenchait un rendu.
+    function rendreTokensDD(scene, _tentative) {
       const conteneur = document.getElementById('dd2vtt-tokens');
       if (!conteneur) return;
-      conteneur.innerHTML = '';
 
-      const tc = tailleCase(scene);
       const imgEl = document.getElementById('carte-image');
       const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
-      if (!rect || rect.width === 0) return;
+      if (!rect || rect.width === 0) {
+        if ((_tentative || 0) < 20) requestAnimationFrame(() => rendreTokensDD(scene, (_tentative || 0) + 1));
+        return;
+      }
+      conteneur.innerHTML = '';
+      const tc = tailleCase(scene);
 
       // Le conteneur couvre toute la carte-scene (position:absolute 0/0 100%/100%)
       // Les tokens sont positionnés en % de l'image dans la scene
