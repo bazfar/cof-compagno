@@ -152,7 +152,7 @@ const Carte = (() => {
     // Si une battlemap .dd2vtt est active, on pose les persos comme tokens de combat
     if (typeof DD2VTT !== "undefined" && DD2VTT.estActive && DD2VTT.estActive()) {
       let n = 0;
-      ids.forEach((pid) => { if (DD2VTT.ajouterTokenData({ nom: persos[pid].nom, couleur: "#b8924a", pj: true })) n++; });
+      ids.forEach((pid) => { if (DD2VTT.ajouterTokenData({ nom: persos[pid].nom, couleur: "#b8924a", pj: true, ref: "pj-" + pid })) n++; });
       toastCarte(n + " perso(s) sur la battlemap.");
       return;
     }
@@ -187,6 +187,22 @@ const Carte = (() => {
       pj: false, portrait: null, x: 50, y: 50,
     });
     sauver(); rendreJetons();
+  }
+
+  // Joueur : pose son propre token sur la battlemap active (bouton dédié,
+  // visible uniquement en mode battlemap côté joueur). La permission et la
+  // règle de doublon sont vérifiées côté DD2VTT.ajouterTokenData.
+  function ajouterMonPersoBattlemap() {
+    if (!monPersoId) { toastCarte("Choisis d'abord ton personnage."); return; }
+    if (typeof DD2VTT === "undefined" || !DD2VTT.estActive || !DD2VTT.estActive()) {
+      toastCarte("Aucune scène de combat active.");
+      return;
+    }
+    let persos = {};
+    try { persos = JSON.parse(localStorage.getItem("cof_persos")) || {}; } catch (x) {}
+    const p = persos[monPersoId];
+    if (!p) { toastCarte("Personnage introuvable."); return; }
+    DD2VTT.ajouterTokenData({ nom: p.nom, couleur: "#b8924a", pj: true, ref: "pj-" + monPersoId });
   }
 
   function ajouterMonstre(monstre) {
@@ -410,6 +426,7 @@ const Carte = (() => {
       btnFogClear: document.getElementById("btn-fog-clear"),
       btnFogFill: document.getElementById("btn-fog-fill"),
       btnReset: document.getElementById("btn-carte-reset"),
+      btnMonTokenBattlemap: document.getElementById("btn-mon-token-battlemap"),
     };
     if (!dom.scene) return;
 
@@ -441,6 +458,7 @@ const Carte = (() => {
     if (dom.btnFogClear) dom.btnFogClear.onclick = () => { viderFog(); };
     if (dom.btnFogFill)  dom.btnFogFill.onclick  = () => { remplirFog(); };
     if (dom.btnReset)    dom.btnReset.onclick    = reset;
+    if (dom.btnMonTokenBattlemap) dom.btnMonTokenBattlemap.onclick = ajouterMonPersoBattlemap;
 
     // peinture du brouillard
     dom.fog.addEventListener("pointerdown", brushDown);
@@ -918,10 +936,23 @@ const Carte = (() => {
     function activerScene(nom) {
       if (!scenes[nom]) return;
       sceneActive = nom;
-      tokensDD = [];
+      // Coupe l'abonnement tokens de la scène précédente avant de s'abonner
+      // à celle-ci (une seule scène active à la fois).
+      if (_desabonnerTokens) { _desabonnerTokens(); _desabonnerTokens = null; }
+      const tokensSync = (typeof SyncStore !== 'undefined') ? SyncStore.get('battlemap:' + nom + ':tokens') : null;
+      tokensDD = Array.isArray(tokensSync) ? tokensSync : [];
       tokenSelectionne = null;
       fogRevele = null;
       const scene = scenes[nom];
+      if (typeof SyncStore !== 'undefined') {
+        _desabonnerTokens = SyncStore.subscribe('battlemap:' + nom + ':tokens', (distant) => {
+          if (!Array.isArray(distant)) return;
+          tokensDD = distant;
+          tokenSelectionne = null;
+          rendreTokensDD(scene);
+          calculerEtRendreLoS(scene);
+        });
+      }
 
       // Cacher le placeholder image PNG
       const vide = document.getElementById('carte-vide');
@@ -1067,10 +1098,16 @@ const Carte = (() => {
     }
 
     // ── État tokens dd2vtt ───────────────────────────────────
-    // token : { id, nom, cx, cy, couleur, pj }
+    // token : { id, nom, cx, cy, couleur, pj, ref }
+    // ref : "pj-"+persoId pour un token joueur (sert au contrôle d'accès et
+    // à la règle de doublon), absent/null pour un monstre.
     // cx/cy en coordonnées cases (pas pixels)
     let tokensDD = [];
     let tokenSelectionne = null;
+    let _desabonnerTokens = null;
+    function _syncTokens(scene) {
+      if (typeof SyncStore !== 'undefined') SyncStore.set('battlemap:' + scene.nom + ':tokens', tokensDD);
+    }
     let canvasLoS = null;
     let ctxLoS = null;
     let canvasFog2 = null;  // brouillard persistant dd2vtt
@@ -1126,7 +1163,7 @@ const Carte = (() => {
         el.style.fontSize = Math.max(8, tc * 0.35) + 'px';
         el.title = tok.nom;
         el.innerHTML = '<span class="dd-token-initiale">' + tok.nom.charAt(0).toUpperCase() + '</span>'
-          + '<button class="dd-token-suppr" title="Retirer ' + tok.nom + '">✕</button>';
+          + (role === 'mj' ? '<button class="dd-token-suppr" title="Retirer ' + tok.nom + '">✕</button>' : '');
 
         // Drag sur grille
         el.addEventListener('pointerdown', ev => demarrerDragDD(ev, tok, scene));
@@ -1137,8 +1174,9 @@ const Carte = (() => {
           rendreTokensDD(scene);
           calculerEtRendreLoS(scene);
         });
-        // Suppression
-        el.querySelector('.dd-token-suppr').addEventListener('click', ev => {
+        // Suppression (MJ uniquement — bouton absent du DOM sinon)
+        const btnSuppr = el.querySelector('.dd-token-suppr');
+        if (btnSuppr) btnSuppr.addEventListener('click', ev => {
           ev.stopPropagation();
           supprimerTokenDD(tok.id, scene);
         });
@@ -1148,8 +1186,12 @@ const Carte = (() => {
     }
 
     // ── Drag tokens sur grille ───────────────────────────────
+    // Joueur : ne peut déplacer que son propre token (ref === "pj-"+monPersoId).
+    // MJ : peut déplacer n'importe quel token. Porte demarrerDrag() (jetons
+    // historiques) sur les tokens dd2vtt.
     let dragDD = null;
     function demarrerDragDD(ev, tok, scene) {
+      if (role === 'joueur' && tok.ref !== 'pj-' + monPersoId) return;
       ev.preventDefault();
       dragDD = { tok, scene };
       window.addEventListener('pointermove', surDragDD);
@@ -1170,12 +1212,15 @@ const Carte = (() => {
       calculerEtRendreLoS(scene);
     }
     function finDragDD() {
+      if (dragDD) { _syncTokens(dragDD.scene); }
       dragDD = null;
       window.removeEventListener('pointermove', surDragDD);
       window.removeEventListener('pointerup', finDragDD);
     }
 
     // ── Ajouter un token dd2vtt ──────────────────────────────
+    // Générique (nom libre, pas de ref) : MJ uniquement — bouton "+ Token"
+    // situé dans #groupe-battlemap (data-role="mj").
     function ajouterTokenDD(scene) {
       const nom = prompt('Nom du token :', 'Aventurier');
       if (!nom) return;
@@ -1190,12 +1235,27 @@ const Carte = (() => {
       });
       rendreTokensDD(scene);
       calculerEtRendreLoS(scene);
+      _syncTokens(scene);
     }
 
-    // Ajout programmatique d'un token (depuis "+ Mes personnages / + PNJ")
+    // Ajout programmatique d'un token (depuis "+ Mes personnages / + Monstre / + Mon perso").
+    // Gatekeeper unique des permissions et de la règle de doublon, vérifiée
+    // sur tokensDD (état synchronisé, donc visible par tous) :
+    //  - MJ : peut ajouter n'importe quel token (pj ou monstre).
+    //  - Joueur : ne peut ajouter QUE son propre token (pj: true, ref = le sien).
+    //  - Doublon (même ref) refusé pour tout le monde, peu importe qui a
+    //    tenté d'ajouter en premier — symétrique.
     function estActive() { return !!sceneActive && !!scenes[sceneActive]; }
     function ajouterTokenData(d) {
       if (!estActive()) return false;
+      if (role === 'joueur' && (!d || !d.pj || d.ref !== 'pj-' + monPersoId)) {
+        toastCarte("Tu ne peux ajouter que ton propre personnage.");
+        return false;
+      }
+      if (d && d.ref && tokensDD.some(t => t.ref === d.ref)) {
+        toastCarte("Ce personnage est déjà sur la carte.");
+        return false;
+      }
       const scene = scenes[sceneActive];
       const couleurs = ['#e74c3c','#3498db','#2ecc71','#9b59b6','#f39c12','#1abc9c'];
       const n = tokensDD.length;
@@ -1205,18 +1265,23 @@ const Carte = (() => {
         cx: Math.max(0, Math.min(scene.lc - 1, Math.floor(scene.lc / 2) + (n % 4))),
         cy: Math.max(0, Math.min(scene.hc - 1, Math.floor(scene.hc / 2) + Math.floor(n / 4))),
         couleur: (d && d.couleur) ? d.couleur : couleurs[n % couleurs.length],
-        pj: !!(d && d.pj)
+        pj: !!(d && d.pj),
+        ref: (d && d.ref) ? d.ref : null
       });
       rendreTokensDD(scene);
       calculerEtRendreLoS(scene);
+      _syncTokens(scene);
       return true;
     }
 
+    // Suppression : MJ uniquement (le bouton ✕ n'existe même pas dans le DOM
+    // côté joueur, cf. rendreTokensDD — garde ici en défense supplémentaire).
     function supprimerTokenDD(id, scene) {
+      if (role === 'joueur') return;
       tokensDD = tokensDD.filter(t => t.id !== id);
       if (tokenSelectionne === id) tokenSelectionne = null;
       const sc = scene || (sceneActive && scenes[sceneActive]);
-      if (sc) { rendreTokensDD(sc); calculerEtRendreLoS(sc); }
+      if (sc) { rendreTokensDD(sc); calculerEtRendreLoS(sc); _syncTokens(sc); }
     }
 
     // ── Init brouillard persistant ───────────────────────────
