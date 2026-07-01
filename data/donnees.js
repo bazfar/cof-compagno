@@ -1039,5 +1039,5 @@ const CARTES_MONDE = [
    label : nom affiché dans le sélecteur de scène
    file  : chemin du fichier .dd2vtt */
 const CARTES_BATTLEMAP = [
-  // { key: 'donjon-1', label: 'Donjon — Salle du trône', file: 'assets/battlemaps/donjon-1.dd2vtt' },
+  { key: 'test_tavern', label: 'Taverne (test)', file: 'assets/battlemaps/test_tavern.dd2vtt' },
 ];
