@@ -98,7 +98,7 @@ class DepotDistant extends Depot {
   }
 
   _demarrer() {
-    this._collection().onSnapshot(
+    this._desabonnerFirestore = this._collection().onSnapshot(
       (snap) => {
         const o = {};
         snap.forEach((doc) => { o[doc.id] = doc.data(); });
@@ -108,6 +108,13 @@ class DepotDistant extends Depot {
       },
       (err) => console.error(`DepotDistant(${this.cle}) — erreur de synchro :`, err)
     );
+  }
+  // Coupe l'abonnement Firestore. À appeler quand l'instance est jetable
+  // (ex. un dépôt créé par scène de combat, détruit au changement de scène) —
+  // par opposition à une instance partagée comme window.DepotPersos, qui
+  // vit pour toute la session et n'a jamais besoin d'être arrêtée.
+  arreter() {
+    if (this._desabonnerFirestore) { this._desabonnerFirestore(); this._desabonnerFirestore = null; }
   }
 
   // charger() sans id → copie du cache (les appelants mutent parfois

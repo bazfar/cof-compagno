@@ -870,7 +870,8 @@ const Carte = (() => {
     let ctxMurs = null;
 
     // État ouvert/fermé des portails (portes + fenêtres, indiscernables côté
-    // Dungeondraft), synchronisé via battlemap:{key}:portails (SyncStore).
+    // Dungeondraft), synchronisé via un DepotDistant par scène (_depotPortails,
+    // un document Firestore par portail — voir activerScene).
 
     // ── Parser ──────────────────────────────────────────────
     // key   : identifiant stable (clé de synchro) — nom de fichier pour un
@@ -894,21 +895,20 @@ const Carte = (() => {
         }
       }
 
-      // Portails (portes ET fenêtres — Dungeondraft ne les distingue pas dans l'export)
-      const portails = (data.portals || []).map(p => ({
+      // Portails (portes ET fenêtres — Dungeondraft ne les distingue pas dans
+      // l'export). id stable (ordre d'export, constant pour un même fichier)
+      // : sert de clé de document Firestore pour synchroniser chaque portail
+      // individuellement (cf. _depotPortails dans activerScene). L'état
+      // ouvert/fermé sauvegardé est réappliqué de façon asynchrone une fois
+      // le dépôt de la scène abonné (voir activerScene) — pas ici, où aucun
+      // dépôt n'existe encore pour cette scène.
+      const portails = (data.portals || []).map((p, i) => ({
+        id: 'p' + i,
         position: { x: p.position.x * px, y: p.position.y * px },
         bounds: p.bounds.map(b => ({ x: b.x * px, y: b.y * px })),
         ouvert: !p.closed,
         rotation: p.rotation
       }));
-
-      // Ré-applique un état ouvert/fermé sauvegardé pour cette scène (même ordre de portails)
-      if (typeof SyncStore !== 'undefined') {
-        const sauve = SyncStore.get('battlemap:' + key + ':portails');
-        if (Array.isArray(sauve)) {
-          portails.forEach((p, i) => { if (typeof sauve[i] === 'boolean') p.ouvert = sauve[i]; });
-        }
-      }
 
       return {
         nom: key,
@@ -1023,34 +1023,38 @@ const Carte = (() => {
     function activerScene(nom) {
       if (!scenes[nom]) return;
       sceneActive = nom;
-      // Coupe l'abonnement tokens de la scène précédente avant de s'abonner
-      // à celle-ci (une seule scène active à la fois).
-      if (_desabonnerTokens) { _desabonnerTokens(); _desabonnerTokens = null; }
-      const tokensSync = (typeof SyncStore !== 'undefined') ? SyncStore.get('battlemap:' + nom + ':tokens') : null;
-      tokensDD = Array.isArray(tokensSync) ? tokensSync : [];
+      const scene = scenes[nom];
+
+      // Un dépôt (Firestore, un document par token/portail) par scène active,
+      // détruit et recréé au changement de scène — voir DepotDistant.arreter().
+      // Un document par élément plutôt qu'un tableau entier synchronisé
+      // d'un coup : deux clients qui modifient des tokens/portails différents
+      // au même instant n'entrent plus en collision (écritures sur des
+      // documents distincts), contrairement à un tableau réécrit en entier
+      // où le second à écrire écrase le premier.
+      if (_depotTokens) _depotTokens.arreter();
+      _depotTokens = new DepotDistant('battlemap_' + nom + '_tokens');
+      tokensDD = _depotTokens.liste();
       tokenSelectionne = null;
       fogRevele = null;
-      const scene = scenes[nom];
-      if (typeof SyncStore !== 'undefined') {
-        _desabonnerTokens = SyncStore.subscribe('battlemap:' + nom + ':tokens', (distant) => {
-          if (!Array.isArray(distant)) return;
-          tokensDD = distant;
-          tokenSelectionne = null;
-          rendreTokensDD(scene);
-          calculerEtRendreLoS(scene);
-        });
-      }
+      _desabonnerTokens = _depotTokens.ecouter((cache) => {
+        tokensDD = Object.keys(cache).map(k => cache[k]);
+        tokenSelectionne = null;
+        rendreTokensDD(scene);
+        calculerEtRendreLoS(scene);
+      });
+
       // Idem pour l'état des portails : un autre client (n'importe quel rôle)
       // a basculé une porte/fenêtre → on répercute et on recalcule la LoS.
-      if (_desabonnerPortails) { _desabonnerPortails(); _desabonnerPortails = null; }
-      if (typeof SyncStore !== 'undefined') {
-        _desabonnerPortails = SyncStore.subscribe('battlemap:' + nom + ':portails', (etats) => {
-          if (!Array.isArray(etats)) return;
-          scene.portails.forEach((p, i) => { if (typeof etats[i] === 'boolean') p.ouvert = etats[i]; });
-          rendreScene(scene);
-          calculerEtRendreLoS(scene);
+      if (_depotPortails) _depotPortails.arreter();
+      _depotPortails = new DepotDistant('battlemap_' + nom + '_portails');
+      _desabonnerPortails = _depotPortails.ecouter((cache) => {
+        scene.portails.forEach(p => {
+          if (cache[p.id] && typeof cache[p.id].ouvert === 'boolean') p.ouvert = cache[p.id].ouvert;
         });
-      }
+        rendreScene(scene);
+        calculerEtRendreLoS(scene);
+      });
 
       // Cacher le placeholder image PNG
       const vide = document.getElementById('carte-vide');
@@ -1159,9 +1163,8 @@ const Carte = (() => {
       return Math.hypot(px - cx, py - cy);
     }
 
-    function _sauverEtatPortails(scene) {
-      if (typeof SyncStore === 'undefined') return;
-      SyncStore.set('battlemap:' + scene.nom + ':portails', scene.portails.map(p => p.ouvert));
+    function _sauverEtatPortail(p) {
+      if (_depotPortails) _depotPortails.sauver({ ouvert: p.ouvert }, p.id);
     }
 
     // Clic n'importe où sur la carte-scene : si assez proche d'un portail
@@ -1188,7 +1191,7 @@ const Carte = (() => {
       if (!meilleur) return false;
 
       meilleur.ouvert = !meilleur.ouvert;
-      _sauverEtatPortails(scene);
+      _sauverEtatPortail(meilleur);
       rendreScene(scene);
       calculerEtRendreLoS(scene);
       toastCarte(meilleur.ouvert ? 'Portail ouvert' : 'Portail fermé');
@@ -1202,10 +1205,18 @@ const Carte = (() => {
     // cx/cy en coordonnées cases (pas pixels)
     let tokensDD = [];
     let tokenSelectionne = null;
+    let _depotTokens = null;
+    let _depotPortails = null;
     let _desabonnerTokens = null;
     let _desabonnerPortails = null;
-    function _syncTokens(scene) {
-      if (typeof SyncStore !== 'undefined') SyncStore.set('battlemap:' + scene.nom + ':tokens', tokensDD);
+    // Sauvegarde granulaire : un document par token (id = tok.id), pas un
+    // tableau entier — deux clients qui modifient des tokens différents au
+    // même instant écrivent sur des documents distincts, sans collision.
+    function _sauverToken(tok) {
+      if (_depotTokens) _depotTokens.sauver(tok, tok.id);
+    }
+    function _supprimerTokenSync(id) {
+      if (_depotTokens) _depotTokens.supprimer(id);
     }
     let canvasLoS = null;
     let ctxLoS = null;
@@ -1320,7 +1331,7 @@ const Carte = (() => {
       calculerEtRendreLoS(scene);
     }
     function finDragDD() {
-      if (dragDD) { _syncTokens(dragDD.scene); }
+      if (dragDD) { _sauverToken(dragDD.tok); }
       dragDD = null;
       window.removeEventListener('pointermove', surDragDD);
       window.removeEventListener('pointerup', finDragDD);
@@ -1333,17 +1344,18 @@ const Carte = (() => {
       const nom = prompt('Nom du token :', 'Aventurier');
       if (!nom) return;
       const couleurs = ['#e74c3c','#3498db','#2ecc71','#9b59b6','#f39c12','#1abc9c'];
-      tokensDD.push({
+      const nouveauToken = {
         id: 'dd-' + Date.now(),
         nom: nom.trim(),
         cx: Math.floor(scene.lc / 2),
         cy: Math.floor(scene.hc / 2),
         couleur: couleurs[tokensDD.length % couleurs.length],
         pj: false
-      });
+      };
+      tokensDD.push(nouveauToken);
       rendreTokensDD(scene);
       calculerEtRendreLoS(scene);
-      _syncTokens(scene);
+      _sauverToken(nouveauToken);
     }
 
     // Ajout programmatique d'un token (depuis "+ Mes personnages / + Monstre / + Mon perso").
@@ -1367,7 +1379,7 @@ const Carte = (() => {
       const scene = scenes[sceneActive];
       const couleurs = ['#e74c3c','#3498db','#2ecc71','#9b59b6','#f39c12','#1abc9c'];
       const n = tokensDD.length;
-      tokensDD.push({
+      const nouveauToken = {
         id: 'dd-' + Date.now() + '-' + n,
         nom: (d && d.nom) ? d.nom : 'Jeton',
         cx: Math.max(0, Math.min(scene.lc - 1, Math.floor(scene.lc / 2) + (n % 4))),
@@ -1375,10 +1387,11 @@ const Carte = (() => {
         couleur: (d && d.couleur) ? d.couleur : couleurs[n % couleurs.length],
         pj: !!(d && d.pj),
         ref: (d && d.ref) ? d.ref : null
-      });
+      };
+      tokensDD.push(nouveauToken);
       rendreTokensDD(scene);
       calculerEtRendreLoS(scene);
-      _syncTokens(scene);
+      _sauverToken(nouveauToken);
       return true;
     }
 
@@ -1389,7 +1402,8 @@ const Carte = (() => {
       tokensDD = tokensDD.filter(t => t.id !== id);
       if (tokenSelectionne === id) tokenSelectionne = null;
       const sc = scene || (sceneActive && scenes[sceneActive]);
-      if (sc) { rendreTokensDD(sc); calculerEtRendreLoS(sc); _syncTokens(sc); }
+      if (sc) { rendreTokensDD(sc); calculerEtRendreLoS(sc); }
+      _supprimerTokenSync(id);
     }
 
     // ── Init brouillard persistant ───────────────────────────
