@@ -44,7 +44,8 @@
         }
       ],
       "lore": "Sentinelles légères de la tribu Rochedent, les éclaireurs gobelins patrouillent en binôme. Ils évitent le combat frontal mais n'hésitent pas à décrocher pour prévenir leurs congénères. Leur équipement est de mauvaise qualité mais leur connaissance du terrain est redoutable.",
-      "armure": null
+      "armure": null,
+      "emoji": "👺"
     },
     {
       "id": "goblin_garde",
@@ -86,7 +87,8 @@
       "armure": {
         "valeur": 1,
         "description": "Armure de cuir rapiécée — réduit 1 point de dégâts physiques."
-      }
+      },
+      "emoji": "👺"
     },
     {
       "id": "goblin_chef",
@@ -141,7 +143,8 @@
       "armure": {
         "valeur": 2,
         "description": "Cottes de mailles de récupération — réduit 2 points de dégâts physiques."
-      }
+      },
+      "emoji": "👺"
     },
     {
       "id": "goblin_chaman",
@@ -185,7 +188,8 @@
       ],
       "lore": "Rare gobelin touchant à la Sève corrompue — un éclat du Chaos filtré à travers la terre. Les chamans gobelins sont craints même au sein de leur tribu. Celui-ci a convaincu Kratz que le rapt était 'voulu par les esprits', ce qui est faux : il cherche à tester les défenses humaines pour une puissance extérieure encore inconnue.",
       "roleNarratif": "Optionnel. Révèle l'implication d'une menace plus grande si capturé et interrogé.",
-      "armure": null
+      "armure": null,
+      "emoji": "👺"
     },
     {
       "id": "loup_des_bois",
@@ -228,7 +232,8 @@
         }
       ],
       "lore": "Prédateurs naturels des forêts de l'Arbre-Monde, les loups obéissent à la hiérarchie de la Sève — ils se montrent rarement agressifs envers ceux qui ne perturbent pas l'équilibre. Un loup qui attaque de jour est souvent enragé ou manipulé.",
-      "armure": null
+      "armure": null,
+      "emoji": "🐺"
     },
     {
       "id": "sanglier_de_rage",
@@ -274,7 +279,8 @@
       "armure": {
         "valeur": 2,
         "description": "Peau épaisse et couche de graisse — réduit 2 points de dégâts physiques."
-      }
+      },
+      "emoji": "🐗"
     },
     {
       "id": "spectre_de_ruine",
@@ -317,7 +323,8 @@
         }
       ],
       "lore": "Les spectres de ruine sont des fragments d'âme coincés dans les zones où le Chaos a touché la Sève. Ce ne sont pas des morts-vivants au sens classique — ils sont l'écho d'une terreur figée dans le bois même du monde. On les trouve dans les ruines pré-Fracture ou près des arbres-cicatrices.",
-      "armure": null
+      "armure": null,
+      "emoji": "👻"
     },
     {
       "id": "racine_eveille",
@@ -367,7 +374,8 @@
       "armure": {
         "valeur": 3,
         "description": "Écorce vivante — réduit 3 points de dégâts physiques. Pas d'effet contre le feu."
-      }
+      },
+      "emoji": "🌳"
     },
     {
       "id": "orc_pillard",
@@ -410,7 +418,8 @@
         }
       ],
       "lore": "Les orcs du monde sont les émotions de guerre que les dieux ont chassées de leur panthéon lors de la Fracture — des êtres de pure violence cristallisée en chair. Les pillards sont les individus les moins organisés, souvent mercenaires ou bandits, mais certaines tribus ont développé des codes d'honneur complexes.",
-      "armure": null
+      "armure": null,
+      "emoji": "🪓"
     },
     {
       "id": "sylvath_fragment",
@@ -457,7 +466,8 @@
         }
       ],
       "lore": "Sylvath, dieu de la croissance devenu dieu du Chaos après la Fracture, projette des fragments de sa conscience dans le monde sous forme de masses végétales animées. Ces fragments cherchent à corrompre les nœuds de Sève pure — les vieux arbres, les sources, les sanctuaires Druides. Ils ne sont pas vraiment intelligents mais obéissent à une pulsion divine.",
-      "armure": null
+      "armure": null,
+      "emoji": "🌿"
     },
     {
       "id": "garde_solvarn",
@@ -503,7 +513,8 @@
       "armure": {
         "valeur": 5,
         "description": "Armure légionnaire solaire (plates + cotte) — réduit 5 points de dégâts physiques."
-      }
+      },
+      "emoji": "🛡️"
     },
     {
       "id": "golem_de_pierre_naine",
@@ -553,7 +564,8 @@
       "armure": {
         "valeur": 10,
         "description": "Corps de granit — réduit 10 points de dégâts physiques. Vulnérable à la foudre (annule la réduction)."
-      }
+      },
+      "emoji": "🗿"
     },
     {
       "id": "elfe_du_crepuscule_renegat",
@@ -607,7 +619,8 @@
       "armure": {
         "valeur": 1,
         "description": "Armure d'ombre elfique légère — réduit 1 point de dégâts physiques."
-      }
+      },
+      "emoji": "🧝"
     },
     {
       "id": "loup_basique",
@@ -640,7 +653,8 @@
         }
       ],
       "lore": "Prédateur de base des forêts. Attaque rarement seul.",
-      "armure": null
+      "armure": null,
+      "emoji": "🐺"
     },
     {
       "id": "loup_veteran",
@@ -697,7 +711,8 @@
         }
       ],
       "lore": "Loup alpha ou survivant endurci. Plus méthodique, cible les flancs.",
-      "armure": null
+      "armure": null,
+      "emoji": "🐺"
     },
     {
       "id": "loup_elite",
@@ -766,7 +781,8 @@
       "armure": {
         "valeur": 1,
         "description": "Fourrure dense — réduit 1 point de dégâts physiques."
-      }
+      },
+      "emoji": "🐺"
     },
     {
       "id": "loup_champion",
@@ -859,7 +875,8 @@
       "armure": {
         "valeur": 2,
         "description": "Fourrure épaisse imprégnée de Sève — réduit 2 points de dégâts physiques."
-      }
+      },
+      "emoji": "🐺"
     },
     {
       "id": "ours_basique",
@@ -903,7 +920,8 @@
       "armure": {
         "valeur": 2,
         "description": "Fourrure et graisse naturelle — réduit 2 points de dégâts physiques."
-      }
+      },
+      "emoji": "🐻"
     },
     {
       "id": "ours_veteran",
@@ -963,7 +981,8 @@
       "armure": {
         "valeur": 3,
         "description": "Fourrure des cavernes très dense — réduit 3 points de dégâts physiques."
-      }
+      },
+      "emoji": "🐻"
     },
     {
       "id": "ours_elite",
@@ -1040,7 +1059,8 @@
       "armure": {
         "valeur": 5,
         "description": "Armure de guerre clouée sur une fourrure épaisse — réduit 5 points de dégâts physiques."
-      }
+      },
+      "emoji": "🐻"
     },
     {
       "id": "ours_champion",
@@ -1145,7 +1165,8 @@
       "armure": {
         "valeur": 6,
         "description": "Fourrure de Sève + peau durcie par des décennies — réduit 6 points de dégâts physiques."
-      }
+      },
+      "emoji": "🐻"
     },
     {
       "id": "orc_basique",
@@ -1189,7 +1210,8 @@
       "armure": {
         "valeur": 2,
         "description": "Armure de cuir clouté — réduit 2 points de dégâts physiques."
-      }
+      },
+      "emoji": "🪓"
     },
     {
       "id": "orc_veteran",
@@ -1258,7 +1280,8 @@
       "armure": {
         "valeur": 3,
         "description": "Cotte de mailles orque — réduit 3 points de dégâts physiques."
-      }
+      },
+      "emoji": "🪓"
     },
     {
       "id": "orc_elite",
@@ -1347,7 +1370,8 @@
       "armure": {
         "valeur": 2,
         "description": "Aucune armure lourde — peau durcie par le combat réduit 2 points. Mobilité conservée pour la furie."
-      }
+      },
+      "emoji": "🪓"
     },
     {
       "id": "orc_champion",
@@ -1466,7 +1490,8 @@
       "armure": {
         "valeur": 5,
         "description": "Armure de plaques runiques liée à Khoreth — réduit 5 points de dégâts physiques."
-      }
+      },
+      "emoji": "🪓"
     },
     {
       "id": "bandit_basique",
@@ -1507,7 +1532,8 @@
         }
       ],
       "lore": "Déserteur, paysan ruiné ou aventurier raté. Attaque par nécessité, se rend facilement.",
-      "armure": null
+      "armure": null,
+      "emoji": "🗡️"
     },
     {
       "id": "bandit_veteran",
@@ -1567,7 +1593,8 @@
       "armure": {
         "valeur": 1,
         "description": "Cuir tanné — réduit 1 point de dégâts physiques."
-      }
+      },
+      "emoji": "🗡️"
     },
     {
       "id": "bandit_elite",
@@ -1668,7 +1695,8 @@
       "armure": {
         "valeur": 2,
         "description": "Cotte de mailles légère — réduit 2 points de dégâts physiques."
-      }
+      },
+      "emoji": "🗡️"
     },
     {
       "id": "bandit_champion",
@@ -1793,7 +1821,8 @@
       "armure": {
         "valeur": 3,
         "description": "Armure composite (cuir + plaques) — réduit 3 points de dégâts physiques."
-      }
+      },
+      "emoji": "🗡️"
     },
     {
       "id": "garde_basique",
@@ -1837,7 +1866,8 @@
       "armure": {
         "valeur": 3,
         "description": "Cotte de mailles standard — réduit 3 points de dégâts physiques."
-      }
+      },
+      "emoji": "🛡️"
     },
     {
       "id": "garde_veteran",
@@ -1906,7 +1936,8 @@
       "armure": {
         "valeur": 4,
         "description": "Demi-armure de plates — réduit 4 points de dégâts physiques."
-      }
+      },
+      "emoji": "🛡️"
     },
     {
       "id": "garde_elite",
@@ -1996,7 +2027,8 @@
       "armure": {
         "valeur": 6,
         "description": "Armure de plates complète — réduit 6 points de dégâts physiques."
-      }
+      },
+      "emoji": "🛡️"
     },
     {
       "id": "garde_champion",
@@ -2112,7 +2144,8 @@
       "armure": {
         "valeur": 8,
         "description": "Armure de plates de maître, bénie d'Aethar — réduit 8 points de dégâts physiques."
-      }
+      },
+      "emoji": "🛡️"
     },
     {
       "id": "garde_lancier_basique",
@@ -2164,7 +2197,8 @@
           "description": "2 lanciers ou plus côte à côte : +1 DEF pour chacun."
         }
       ],
-      "lore": "Les gardes lanciers forment la première ligne défensive des villes. Leur lance maintient les assaillants à distance et désorganise les charges ennemies."
+      "lore": "Les gardes lanciers forment la première ligne défensive des villes. Leur lance maintient les assaillants à distance et désorganise les charges ennemies.",
+      "emoji": "🛡️🔱"
     },
     {
       "id": "garde_lancier_veteran",
@@ -2232,7 +2266,8 @@
           "description": "Réaction 1 fois/round : test DEX diff. 12 pour annuler une attaque physique."
         }
       ],
-      "lore": "Le vétéran maîtrise la discipline de la ligne. Il ne recule jamais — il sait que la cohésion de la formation vaut plus que sa survie individuelle."
+      "lore": "Le vétéran maîtrise la discipline de la ligne. Il ne recule jamais — il sait que la cohésion de la formation vaut plus que sa survie individuelle.",
+      "emoji": "🛡️🔱"
     },
     {
       "id": "garde_lancier_elite",
@@ -2320,7 +2355,8 @@
           "description": "Alliés à 9m : +1 ATK tant qu'il est debout."
         }
       ],
-      "lore": "Les lanciers d'élite sont formés à percer les formations denses et à arrêter les créatures de grande taille. On les déploie face aux cavaleries et aux monstres."
+      "lore": "Les lanciers d'élite sont formés à percer les formations denses et à arrêter les créatures de grande taille. On les déploie face aux cavaleries et aux monstres.",
+      "emoji": "🛡️🔱"
     },
     {
       "id": "garde_lancier_champion",
@@ -2430,7 +2466,8 @@
           "description": "1 fois/round : frappe tous les ennemis dans l'arc frontal (180°, 3m)."
         }
       ],
-      "lore": "Le Primus est le commandant de terrain absolu d'une légion. Il n'est jamais loin du premier rang — sa lance est une extension de sa volonté autant qu'une arme. Affronter un Primus en formation, c'est se battre contre toute une institution militaire."
+      "lore": "Le Primus est le commandant de terrain absolu d'une légion. Il n'est jamais loin du premier rang — sa lance est une extension de sa volonté autant qu'une arme. Affronter un Primus en formation, c'est se battre contre toute une institution militaire.",
+      "emoji": "🛡️🔱"
     },
     {
       "id": "bandit_lancier_basique",
@@ -2475,7 +2512,8 @@
           "description": "Si 2 pillards ou plus ciblent la même créature avec leurs piques : +1 dégât chacun."
         }
       ],
-      "lore": "Paysan enrôlé de force ou opportuniste armé d'un outil agricole. Se bat en groupe, fuit seul."
+      "lore": "Paysan enrôlé de force ou opportuniste armé d'un outil agricole. Se bat en groupe, fuit seul.",
+      "emoji": "🗡️🔱"
     },
     {
       "id": "bandit_lancier_veteran",
@@ -2547,7 +2585,8 @@
           "description": "Si attaque depuis une position cachée : +1d4 dégâts sur le premier coup."
         }
       ],
-      "lore": "Ancien chasseur ou déserteur de milice. Utilise la lance comme un outil de chasse autant que comme une arme. Préfère tendre des embuscades à combattre en ligne ouverte."
+      "lore": "Ancien chasseur ou déserteur de milice. Utilise la lance comme un outil de chasse autant que comme une arme. Préfère tendre des embuscades à combattre en ligne ouverte.",
+      "emoji": "🗡️🔱"
     },
     {
       "id": "bandit_lancier_elite",
@@ -2635,7 +2674,8 @@
           "description": "Ses piquiers ne testent pas le moral tant qu'il est vivant. Sa mort déclenche un test SAG diff. 9."
         }
       ],
-      "lore": "Mercenaire reconverti en hors-la-loi. Commande un groupe de piquiers avec une discipline militaire que les autorités locales sous-estiment toujours."
+      "lore": "Mercenaire reconverti en hors-la-loi. Commande un groupe de piquiers avec une discipline militaire que les autorités locales sous-estiment toujours.",
+      "emoji": "🗡️🔱"
     },
     {
       "id": "bandit_lancier_champion",
@@ -2741,7 +2781,8 @@
           "description": "Toute créature entrant dans les 3m de La Pointe provoque une attaque d'opportunité gratuite (hallebarde, portée allongée utilisée)."
         }
       ],
-      "lore": "La Pointe commande une compagnie de piquiers hors-la-loi avec une précision chirurgicale. Ancien officier disgracié, il a retourné sa formation militaire contre les institutions qui l'ont trahi. Potentiellement recruté comme mercenaire par les PJ si les circonstances s'y prêtent."
+      "lore": "La Pointe commande une compagnie de piquiers hors-la-loi avec une précision chirurgicale. Ancien officier disgracié, il a retourné sa formation militaire contre les institutions qui l'ont trahi. Potentiellement recruté comme mercenaire par les PJ si les circonstances s'y prêtent.",
+      "emoji": "🗡️🔱"
     }
   ],
   "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide."
