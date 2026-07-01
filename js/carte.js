@@ -780,7 +780,10 @@ const Carte = (() => {
     const depotPortails = (typeof DepotLocal !== 'undefined') ? new DepotLocal('cof_dd2vtt_portails') : null;
 
     // ── Parser ──────────────────────────────────────────────
-    function parseDD2VTT(data, nom) {
+    // key   : identifiant stable (clé de synchro) — nom de fichier pour un
+    //         import manuel, ou la "key" du catalogue pour une scène commitée
+    // label : nom affiché dans le sélecteur (par défaut = key)
+    function parseDD2VTT(data, key, label) {
       const px = data.resolution.pixels_per_grid;
       const lc = data.resolution.map_size.x;
       const hc = data.resolution.map_size.y;
@@ -808,14 +811,15 @@ const Carte = (() => {
 
       // Ré-applique un état ouvert/fermé sauvegardé pour cette scène (même ordre de portails)
       if (depotPortails) {
-        const sauve = depotPortails.charger(nom);
+        const sauve = depotPortails.charger(key);
         if (Array.isArray(sauve)) {
           portails.forEach((p, i) => { if (typeof sauve[i] === 'boolean') p.ouvert = sauve[i]; });
         }
       }
 
       return {
-        nom,
+        nom: key,
+        label: label || key,
         largeur: lc * px,
         hauteur: hc * px,
         px, lc, hc,
@@ -853,14 +857,32 @@ const Carte = (() => {
     function mettreAJourSelect() {
       const sel = document.getElementById('select-scene-dd2vtt');
       if (!sel) return;
+      const valeurActuelle = sel.value;
       sel.innerHTML = '';
       Object.keys(scenes).forEach(nom => {
         const opt = document.createElement('option');
-        opt.value = nom; opt.textContent = nom;
+        opt.value = nom; opt.textContent = scenes[nom].label || nom;
         sel.appendChild(opt);
       });
       sel.style.display = Object.keys(scenes).length > 1 ? 'inline-block' : 'none';
+      if (scenes[valeurActuelle]) sel.value = valeurActuelle; // conserve la sélection après ajout catalogue
       sel.onchange = () => activerScene(sel.value);
+    }
+
+    // ── Catalogue statique (assets/battlemaps/, cf. data/donnees.js) ────
+    // Chargé au démarrage en plus de l'import manuel (chargerFichier), qui
+    // reste disponible pour du one-shot MJ non committé.
+    function chargerCatalogue() {
+      if (typeof CARTES_BATTLEMAP === 'undefined') return;
+      CARTES_BATTLEMAP.forEach(entree => {
+        fetch(entree.file)
+          .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+          .then(data => {
+            scenes[entree.key] = parseDD2VTT(data, entree.key, entree.label);
+            mettreAJourSelect();
+          })
+          .catch(err => console.warn('[DD2VTT] catalogue introuvable :', entree.file, err));
+      });
     }
 
     // ── Activation d'une scène ───────────────────────────────
@@ -1355,6 +1377,8 @@ const Carte = (() => {
           if (sc) ajouterTokenDD(sc);
         });
       }
+
+      chargerCatalogue();
     }
 
     function activerModeBattlemap() {

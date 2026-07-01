@@ -1029,3 +1029,15 @@ const CARTES_MONDE = [
   { nom: "Ruines d'Arvenfall (Est)",   fichier: 'assets/maps/ruines-arvenfall-est.png',     categorie: 'Lieux & combats' },
   { nom: 'Nécropole des Témoins',      fichier: 'assets/maps/necropole-des-temoins.png',    categorie: 'Lieux & combats' },
 ];
+
+/* ── Battlemaps (scènes de combat .dd2vtt) disponibles dans assets/battlemaps/ ──
+   Pour ajouter une scène : exporte-la depuis Dungeondraft en .dd2vtt, dépose le
+   fichier dans assets/battlemaps/, puis ajoute une entrée ici.
+   key   : identifiant stable, sert de clé de synchro MJ ↔ joueurs (ne pas le
+           changer une fois utilisé en session, sous peine de perdre les
+           tokens/portes déjà synchronisés pour cette scène)
+   label : nom affiché dans le sélecteur de scène
+   file  : chemin du fichier .dd2vtt */
+const CARTES_BATTLEMAP = [
+  // { key: 'donjon-1', label: 'Donjon — Salle du trône', file: 'assets/battlemaps/donjon-1.dd2vtt' },
+];
