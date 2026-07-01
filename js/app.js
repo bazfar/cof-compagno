@@ -1711,6 +1711,7 @@ const App = (() => {
 
   document.addEventListener("DOMContentLoaded", init);
 
-  // API publique (utilisée par les onclick inline)
-  return { allerVers };
+  // API publique (utilisée par les onclick inline, et par carte.js pour
+  // forcer la navigation d'un joueur quand le MJ choisit une carte)
+  return { allerVers, allerVersCarteMode };
 })();

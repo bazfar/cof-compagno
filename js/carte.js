@@ -77,6 +77,13 @@ const Carte = (() => {
       if (!battlemapActif) {
         if (etat.image) Worldmap.charger(etat.image);
         else Worldmap.masquer();
+        // Le MJ choisit une carte → force l'affichage chez les joueurs (bascule
+        // leur onglet actif sur Carte/Worldmap), comme un partage d'écran.
+        // Pas si une battlemap est en cours sur ce client : on n'interrompt
+        // pas un combat pour montrer un changement de carte du monde.
+        if (etat.image && role === 'joueur' && typeof App !== 'undefined' && App.allerVersCarteMode) {
+          App.allerVersCarteMode('worldmap');
+        }
       }
       syncSelect();
     } else {
@@ -342,12 +349,14 @@ const Carte = (() => {
     c.fillStyle = "rgba(8,5,12,0.93)";
     c.fillRect(0, 0, dom.fog.width, dom.fog.height);
   }
-  // Le joueur voit toujours la carte sous brouillard (seules les zones que le
-  // MJ a explicitement révélées apparaissent) ; le MJ garde son interrupteur.
+  // La worldmap est une vue d'ensemble (voyage/navigation), jamais de
+  // brouillard de guerre côté joueur — le brouillard de guerre "à la case
+  // près" reste l'affaire de la battlemap (LoS individuelle par token).
+  // Le MJ garde son interrupteur pour son propre affichage.
   function appliquerAffichageFog() {
     if (!dom.fog) return;
     if (!etat.image) { dom.fog.style.display = "none"; return; }
-    const actif = role === "mj" ? etat.fog : true;
+    const actif = role === "mj" && etat.fog;
     dom.fog.style.display = actif ? "block" : "none";
     if (!actif) { ctxFog().clearRect(0, 0, dom.fog.width, dom.fog.height); return; }
     if (etat.fogData) restaurerFog();
@@ -430,7 +439,7 @@ const Carte = (() => {
 
   function majAide() {
     if (role === "joueur") {
-      dom.aide.textContent = "🌫️ La carte est sous brouillard de guerre : seules les zones révélées par le MJ sont visibles. Glisse ton jeton avec la souris.";
+      dom.aide.textContent = "Consulte la carte choisie par le MJ et glisse ton jeton avec la souris.";
       return;
     }
     if (pinceauActif) dom.aide.textContent = "✏️ Mode révéler : clique-glisse sur la carte pour dissiper le brouillard. Re-clique « Révéler » pour redéplacer les jetons.";
@@ -1024,6 +1033,14 @@ const Carte = (() => {
       if (!scenes[nom]) return;
       sceneActive = nom;
       const scene = scenes[nom];
+
+      // Le MJ active une scène → force l'affichage chez les joueurs (bascule
+      // leur onglet actif sur Carte/Battlemap), comme un partage d'écran.
+      // Appelé aussi quand c'est le MJ lui-même qui active la scène
+      // localement, mais le garde de rôle rend ce cas inoffensif (il y est déjà).
+      if (role === 'joueur' && typeof App !== 'undefined' && App.allerVersCarteMode) {
+        App.allerVersCarteMode('battlemap');
+      }
 
       // Un dépôt (Firestore, un document par token/portail) par scène active,
       // détruit et recréé au changement de scène — voir DepotDistant.arreter().
