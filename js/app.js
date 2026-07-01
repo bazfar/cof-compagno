@@ -1459,6 +1459,17 @@ const App = (() => {
 
     rendreListePersos();
 
+    // Personnages : re-rendu en temps réel quand un autre client modifie une
+    // fiche (PV, capacités, niveau...) — sauverPersos() persistait déjà
+    // correctement vers Firestore, mais rien ne rafraîchissait une fiche
+    // déjà ouverte ailleurs tant que l'utilisateur ne renaviguait pas dessus.
+    window.DepotPersos.ecouter(() => {
+      const panneauFiche = document.getElementById("panneau-fiche");
+      if (!panneauFiche || !panneauFiche.classList.contains("actif")) return;
+      rendreListePersos();
+      if (ficheActiveId && chargerPersos()[ficheActiveId]) afficherFiche(ficheActiveId);
+    });
+
     // Journal de dés partagé : re-rendu dès qu'un autre client lance un dé.
     SyncStore.subscribe(STORAGE_HISTO, () => rendreHisto());
 
