@@ -1400,11 +1400,6 @@ const App = (() => {
     if (triggerCarte && menuCarte) {
       triggerCarte.onclick = (e) => {
         e.stopPropagation();
-        // Pour le joueur, un seul item visible : aller directement
-        const visibles = menuCarte.querySelectorAll(".tab-dropdown-item:not([style*='display: none'])");
-        const mjItems = menuCarte.querySelectorAll("[data-role='mj']");
-        const mjHidden = role !== "mj";
-        if (mjHidden) { allerVersCarteMode("worldmap"); return; }
         menuCarte.classList.toggle("ouvert");
       };
       menuCarte.querySelectorAll(".tab-dropdown-item").forEach((item) => {
@@ -1493,6 +1488,7 @@ const App = (() => {
     // Contrôles fog / jetons worldmap-only
     document.querySelectorAll(".worldmap-ctrl").forEach(el => { el.style.display = isWorld ? "" : "none"; });
     document.querySelectorAll(".worldmap-only").forEach(el => { el.style.display = isWorld ? "" : "none"; });
+    document.querySelectorAll(".battlemap-only").forEach(el => { el.style.display = isWorld ? "none" : ""; });
 
     // Titre du panneau
     const titre = document.getElementById("titre-carte");

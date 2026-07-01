@@ -21,7 +21,7 @@
         <button class="tab-dropdown-trigger" id="trigger-carte" data-panneau="carte">Carte ▾</button>
         <div class="tab-dropdown-menu" id="menu-carte">
           <button class="tab-dropdown-item" data-carte-mode="worldmap">🗺 Worldmap</button>
-          <button class="tab-dropdown-item" data-carte-mode="battlemap" data-role="mj">⚔ Battlemap</button>
+          <button class="tab-dropdown-item" data-carte-mode="battlemap">⚔ Battlemap</button>
         </div>
       </div>
       <button data-panneau="bestiaire" data-role="mj">Bestiaire</button>
@@ -242,7 +242,8 @@
       <div class="carte">
         <h2 class="titre-bandeau" id="titre-carte">Carte — mode MJ</h2>
         <p style="font-size:0.85rem;color:#6a6278;" data-role="mj">Importe une carte, place tes jetons et déplace-les. <strong>Partage ton écran sur Discord</strong> pour que les joueurs voient la scène. Tout est sauvegardé dans ton navigateur.</p>
-        <p style="font-size:0.85rem;color:#6a6278;" data-role="joueur">Consulte la carte placée par le MJ et déplace ton propre jeton. La carte reste sous brouillard de guerre tant que le MJ n'a pas révélé une zone.</p>
+        <p style="font-size:0.85rem;color:#6a6278;" data-role="joueur" class="worldmap-only">Consulte la carte placée par le MJ et déplace ton propre jeton. La carte reste sous brouillard de guerre tant que le MJ n'a pas révélé une zone.</p>
+        <p style="font-size:0.85rem;color:#6a6278;" data-role="joueur" class="battlemap-only">Le MJ contrôle la scène active. Déplace uniquement ton propre jeton — clique sur une porte ou une fenêtre pour l'ouvrir ou la fermer.</p>
         <div class="carte-toolbar" data-role="joueur">
           <label for="select-mon-perso" style="margin:0;">Mon personnage</label>
           <select id="select-mon-perso"></select>

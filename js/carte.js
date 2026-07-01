@@ -844,6 +844,7 @@ const Carte = (() => {
           scenes[nom] = scene;
           mettreAJourSelect();
           activerScene(nom);
+          _publierSceneActive(nom);
           toastCarte('Scène « ' + nom + ' » chargée ✔');
         } catch (err) {
           console.error('[DD2VTT]', err);
@@ -866,7 +867,35 @@ const Carte = (() => {
       });
       sel.style.display = Object.keys(scenes).length > 1 ? 'inline-block' : 'none';
       if (scenes[valeurActuelle]) sel.value = valeurActuelle; // conserve la sélection après ajout catalogue
-      sel.onchange = () => activerScene(sel.value);
+      sel.onchange = () => { activerScene(sel.value); _publierSceneActive(sel.value); };
+    }
+
+    // ── Synchro scène active (MJ → joueurs) ──────────────────
+    function _publierSceneActive(nom) {
+      if (typeof SyncStore !== 'undefined') SyncStore.set('battlemap:scene-active', nom);
+    }
+
+    // Applique une scène choisie par le MJ (reçue via sync) : l'active si déjà
+    // connue localement (catalogue déjà chargé), sinon tente de la récupérer
+    // dans le catalogue. Une scène importée manuellement par le MJ (absente du
+    // catalogue) ne peut pas être suivie : on ne synchronise jamais l'image.
+    function _suivreSceneDistante(nomDistant) {
+      if (!nomDistant || nomDistant === sceneActive) return;
+      if (scenes[nomDistant]) { activerScene(nomDistant); return; }
+      const entree = (typeof CARTES_BATTLEMAP !== 'undefined')
+        ? CARTES_BATTLEMAP.find(c => c.key === nomDistant) : null;
+      if (!entree) {
+        toastCarte('Le MJ a chargé une scène importée manuellement, non disponible pour toi.');
+        return;
+      }
+      fetch(entree.file)
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(data => {
+          scenes[entree.key] = parseDD2VTT(data, entree.key, entree.label);
+          mettreAJourSelect();
+          activerScene(entree.key);
+        })
+        .catch(err => console.warn('[DD2VTT] échec chargement scène distante :', entree.file, err));
     }
 
     // ── Catalogue statique (assets/battlemaps/, cf. data/donnees.js) ────
@@ -1356,6 +1385,15 @@ const Carte = (() => {
           sc.portails.forEach((p, i) => { if (typeof etats[i] === 'boolean') p.ouvert = etats[i]; });
           rendreScene(sc);
           calculerEtRendreLoS(sc);
+        });
+      }
+
+      // Sync scène active : le MJ choisit une scène → tous les clients la
+      // chargent automatiquement au prochain poll (ou immédiatement si même
+      // navigateur, via l'event "storage").
+      if (typeof SyncStore !== 'undefined') {
+        SyncStore.subscribe('battlemap:scene-active', (nomDistant) => {
+          _suivreSceneDistante(nomDistant);
         });
       }
 
