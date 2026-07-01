@@ -1173,11 +1173,13 @@ const Carte = (() => {
       const imgEl = document.getElementById('carte-image');
       const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
       if (!rect || rect.width === 0) return;
+      // canvasFog2 marque en NOIR OPAQUE les zones déjà explorées (transparent =
+      // jamais vu). Redimensionner un canvas le vide déjà en transparent, donc rien
+      // à dessiner ici : le (re)dimensionnement suffit à repartir d'un brouillard
+      // "rien d'exploré".
       if (canvasFog2.width !== Math.round(rect.width) || canvasFog2.height !== Math.round(rect.height)) {
         canvasFog2.width  = Math.round(rect.width);
         canvasFog2.height = Math.round(rect.height);
-        ctxFog2.fillStyle = 'rgba(0,0,0,0.92)';
-        ctxFog2.fillRect(0, 0, canvasFog2.width, canvasFog2.height);
       }
     }
 
@@ -1234,10 +1236,22 @@ const Carte = (() => {
 
       const tc = tailleCase(scene);
 
-      // Remplir le brouillard opaque
+      // Remplir le brouillard opaque (zone jamais vue = totalement cachée)
       ctxLoS.clearRect(0, 0, affW, affH);
       ctxLoS.fillStyle = 'rgba(0,0,0,0.92)';
       ctxLoS.fillRect(0, 0, affW, affH);
+
+      // Alléger le brouillard sur tout ce qui a déjà été exploré (canvasFog2 =
+      // marque opaque là où déjà vu). Passe faite AVANT les trous de vision
+      // courante ci-dessous, pour qu'ils puissent ensuite passer par-dessus en
+      // clair total — sinon un "trou" transparent dessiné en source-over sur un
+      // fond déjà opaque ne fait rien (c'était le bug : la zone déjà explorée
+      // mais plus visible retombait à l'opacité max au lieu de rester grisée).
+      ctxLoS.globalCompositeOperation = 'destination-out';
+      ctxLoS.globalAlpha = 0.5; // 0.92 * (1 - 0.5) ≈ 0.46 → brouillard semi-transparent
+      ctxLoS.drawImage(canvasFog2, 0, 0);
+      ctxLoS.globalAlpha = 1.0;
+      ctxLoS.globalCompositeOperation = 'source-over';
 
       if (tokensDD.length === 0) return;
 
@@ -1253,16 +1267,18 @@ const Carte = (() => {
         } catch(e) { console.error('[LoS] erreur compute:', e); continue; }
         if (!poly || poly.length < 3) { console.warn('[LoS] polygone invalide'); continue; }
 
-        // Révéler dans le brouillard persistant
-        ctxFog2.globalCompositeOperation = 'destination-out';
+        // Marquer la zone comme explorée pour toujours (marque opaque, union
+        // naturelle des passages successifs)
+        ctxFog2.globalCompositeOperation = 'source-over';
+        ctxFog2.fillStyle = '#000';
         ctxFog2.beginPath();
         ctxFog2.moveTo(poly[0][0], poly[0][1]);
         for (let i = 1; i < poly.length; i++) ctxFog2.lineTo(poly[i][0], poly[i][1]);
         ctxFog2.closePath();
         ctxFog2.fill();
-        ctxFog2.globalCompositeOperation = 'source-over';
 
-        // Percer le fog actuel
+        // Percer le fog actuel en clair total (vision EN TEMPS RÉEL) : passe
+        // après l'atténuation "déjà exploré" pour la remplacer totalement ici.
         ctxLoS.globalCompositeOperation = 'destination-out';
         ctxLoS.beginPath();
         ctxLoS.moveTo(poly[0][0], poly[0][1]);
@@ -1271,11 +1287,6 @@ const Carte = (() => {
         ctxLoS.fill();
         ctxLoS.globalCompositeOperation = 'source-over';
       }
-
-      // Superposer le brouillard persistant (zones explorées = semi-transparent)
-      ctxLoS.globalAlpha = 0.45;
-      ctxLoS.drawImage(canvasFog2, 0, 0);
-      ctxLoS.globalAlpha = 1.0;
     }
 
 
