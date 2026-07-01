@@ -56,9 +56,10 @@ const App = (() => {
 
   /* ---------- Persistance ---------- */
 
-  // Persistance des persos derrière l'interface Depot (localStorage aujourd'hui,
-  // backend distant possible plus tard sans toucher l'app).
-  const depotPersos = new DepotLocal(STORAGE_PERSOS);
+  // Persistance des persos derrière l'interface Depot — Firestore (multijoueur
+  // temps réel). DepotLocal reste disponible dans depot.js si besoin de revenir
+  // à du localStorage pur (mono-poste, hors-ligne).
+  const depotPersos = new DepotDistant(STORAGE_PERSOS);
   function chargerPersos() {
     return depotPersos.charger(); // map { id: perso }
   }

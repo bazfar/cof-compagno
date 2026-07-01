@@ -2,77 +2,53 @@
    SyncStore — couche de synchro légère pour la battlemap.
    Interface volontairement minimale : get(cle) / set(cle, valeur) /
    subscribe(cle, callback, intervalleMs).
-   Implémentation aujourd'hui : localStorage, avec écriture optimiste
-   locale immédiate + confirmation/merge au prochain poll (4s par défaut).
-   Le jour de l'hébergement : remplacer le corps de get/set/subscribe par
-   des appels Firebase Realtime Database (mêmes clés de chaîne → chemins),
-   SANS toucher au code appelant (carte.js n'écrit jamais dans localStorage
-   directement pour ces données).
-   Dernier écrit gagne, pas de fusion complexe.
+
+   Implémentation : Firebase Firestore, temps réel (onSnapshot).
+   Chaque clé (ex. "battlemap:scene-active") devient un document dans
+   sessions/{SESSION_ID}/sync/{cle}. carte.js n'a pas besoin de changer :
+   même interface qu'avant, juste remplacée en dessous.
+
+   get() reste synchrone via un cache local tenu à jour par les abonnements
+   Firestore actifs (voir subscribe). set() écrit en optimiste (cache local
+   immédiat) puis pousse vers Firestore en tâche de fond.
+
+   intervalleMs est conservé dans la signature pour compat mais ignoré :
+   Firestore pousse les mises à jour en temps réel, plus besoin de polling.
    ============================================================ */
 
 const SyncStore = (() => {
   "use strict";
 
-  const PREFIXE = "cof_sync:";
-  const INTERVALLE_DEFAUT = 4000;
+  const _cache = {};
 
-  function _lire(cle) {
-    try {
-      const brut = localStorage.getItem(PREFIXE + cle);
-      return brut == null ? null : JSON.parse(brut);
-    } catch (e) { return null; }
+  function _doc(cle) {
+    return window.FirebaseDB
+      .collection("sessions").doc(window.SESSION_ID)
+      .collection("sync").doc(cle);
   }
 
-  function get(cle) { return _lire(cle); }
+  function get(cle) {
+    return Object.prototype.hasOwnProperty.call(_cache, cle) ? _cache[cle] : null;
+  }
 
-  // Écrit immédiatement (optimiste). Ne notifie pas les abonnés de cet onglet :
-  // l'appelant a déjà mis à jour son propre état local avant/pendant l'appel.
-  // Les autres onglets/clients sont notifiés via l'event "storage" (immédiat,
-  // même navigateur) et via le poll (fallback, et seul mécanisme une fois
-  // porté sur un vrai backend distant).
   function set(cle, valeur) {
-    try {
-      localStorage.setItem(PREFIXE + cle, JSON.stringify(valeur));
-      return true;
-    } catch (e) {
-      return false;
-    }
+    _cache[cle] = valeur; // optimiste, dispo immédiatement pour l'appelant local
+    _doc(cle).set({ valeur: valeur })
+      .catch((e) => console.error(`SyncStore.set(${cle}) échoué :`, e));
+    return true;
   }
 
-  // Abonnement à une clé : callback(valeur) appelé à chaque changement détecté
-  // (autre onglet du même navigateur, ou même onglet après un poll qui détecte
-  // un écart). Retourne une fonction de désabonnement.
-  function subscribe(cle, callback, intervalleMs) {
-    const intervalle = intervalleMs || INTERVALLE_DEFAUT;
-    let dernierBrut = localStorage.getItem(PREFIXE + cle);
-
-    function _notifier(brut) {
-      dernierBrut = brut;
-      let valeur = null;
-      try { valeur = brut == null ? null : JSON.parse(brut); } catch (e) {}
-      callback(valeur);
-    }
-
-    // Sync immédiate entre onglets du même navigateur.
-    const surStorage = (e) => {
-      if (e.key !== PREFIXE + cle) return;
-      _notifier(e.newValue);
-    };
-    window.addEventListener("storage", surStorage);
-
-    // Poll de confirmation/fallback — c'est ce mécanisme qui, seul, portera
-    // la synchro une fois SyncStore branché sur un backend distant (l'event
-    // "storage" ne traverse pas les navigateurs).
-    const timerId = setInterval(() => {
-      const brut = localStorage.getItem(PREFIXE + cle);
-      if (brut !== dernierBrut) _notifier(brut);
-    }, intervalle);
-
-    return () => {
-      clearInterval(timerId);
-      window.removeEventListener("storage", surStorage);
-    };
+  // Abonnement temps réel. Retourne une fonction de désabonnement, comme
+  // avant (Firestore onSnapshot renvoie directement cette fonction).
+  function subscribe(cle, callback /*, intervalleMs (ignoré) */) {
+    return _doc(cle).onSnapshot(
+      (snap) => {
+        const valeur = snap.exists ? snap.data().valeur : null;
+        _cache[cle] = valeur;
+        callback(valeur);
+      },
+      (err) => console.error(`SyncStore.subscribe(${cle}) erreur :`, err)
+    );
   }
 
   return { get, set, subscribe };

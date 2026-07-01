@@ -1,0 +1,19 @@
+rules_version = '2';
+
+// Règles Firestore — cof-compagno
+//
+// Portée volontairement large : une table privée entre le MJ et ses joueurs,
+// pas d'authentification (accès via lien connu uniquement). Quiconque a
+// l'URL de l'appli peut lire/écrire les données de la session.
+// Ne jamais partager le lien de l'appli publiquement.
+//
+// Si un jour plusieurs tables distinctes doivent cohabiter sans se voir,
+// ajouter une authentification (ex. anonyme) et vérifier ici l'appartenance
+// du joueur à la session plutôt que d'ouvrir tout /sessions/**.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /sessions/{sessionId}/{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
