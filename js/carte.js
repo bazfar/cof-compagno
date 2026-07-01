@@ -1,13 +1,19 @@
 /* ============================================================
-   Carte (mode MJ) — Option A : local + partage d'écran Discord
-   Import d'image, jetons déplaçables, grille, brouillard de guerre.
-   État sauvegardé localement (localStorage).
+   Carte (mode MJ) — Worldmap : import d'image, jetons déplaçables,
+   grille, brouillard de guerre.
+   État synchronisé via SyncStore (Firestore, multijoueur temps réel).
    ============================================================ */
 
 const Carte = (() => {
   "use strict";
 
-  const STORAGE = "cof_carte";
+  // Via SyncStore (Firestore, multijoueur temps réel). Le brouillard peint
+  // (fogData, un PNG en dataURL) est gardé dans un document séparé de l'état
+  // léger (image/jetons/grille) : Firestore limite un document à 1 Mio, et un
+  // fogData trop lourd ne doit pas empêcher la synchro des jetons.
+  const STORAGE = "worldmap:etat";
+  const STORAGE_FOG = "worldmap:fog-data";
+  const LIMITE_FOG = 900000; // marge sous la limite Firestore (1 Mio/document)
   const PALETTE = ["#c0392b", "#2980b9", "#27ae60", "#8e44ad", "#d35400", "#16a085", "#b8924a", "#7f8c8d"];
 
   // Cartes intégrées (fichiers dans assets/maps/). En ajouter ici au besoin.
@@ -39,21 +45,35 @@ const Carte = (() => {
 
   /* ---------- Persistance ---------- */
   function charger() {
-    try { const e = JSON.parse(localStorage.getItem(STORAGE)); if (e) etat = e; } catch (x) {}
+    const e = SyncStore.get(STORAGE);
+    if (e) etat = Object.assign({ image: null, jetons: [], grille: false, fog: false }, e);
+    etat.fogData = SyncStore.get(STORAGE_FOG) || null;
   }
   function sauver() {
-    try {
-      localStorage.setItem(STORAGE, JSON.stringify(etat));
-    } catch (x) {
-      // quota dépassé : on sauve sans le brouillard (souvent le plus lourd)
-      try {
-        const copie = Object.assign({}, etat, { fogData: null });
-        localStorage.setItem(STORAGE, JSON.stringify(copie));
-        toastCarte("Brouillard non sauvegardé (mémoire pleine), le reste est conservé.");
-      } catch (y) {
-        toastCarte("Mémoire pleine : carte non sauvegardée.");
-      }
+    SyncStore.set(STORAGE, { image: etat.image, jetons: etat.jetons, grille: etat.grille, fog: etat.fog });
+    sauverFog();
+  }
+  function sauverFog() {
+    if (!etat.fogData) { SyncStore.set(STORAGE_FOG, null); return; }
+    if (etat.fogData.length > LIMITE_FOG) {
+      toastCarte("Brouillard trop volumineux pour être synchronisé, gardé sur cet appareil seulement.");
+      return;
     }
+    SyncStore.set(STORAGE_FOG, etat.fogData);
+  }
+  // Applique un état reçu d'un autre client (MJ change de carte, révèle du
+  // brouillard...). Distingue "que faut-il redessiner" pour éviter de
+  // recharger l'image à chaque petit changement.
+  function _appliquerEtatDistant(distant) {
+    if (!distant) return;
+    const imageAChange = distant.image !== etat.image;
+    etat = Object.assign({}, etat, distant, { fogData: etat.fogData });
+    if (imageAChange) rendreImage(() => appliquerAffichageFog());
+    else { rendreJetons(); dom.scene.classList.toggle("grille", !!etat.grille); syncSelect(); appliquerAffichageFog(); }
+  }
+  function _appliquerFogDistant(fogData) {
+    etat.fogData = fogData || null;
+    appliquerAffichageFog();
   }
   function toastCarte(msg) {
     const t = document.getElementById("toast");
@@ -145,8 +165,7 @@ const Carte = (() => {
   function nouvelId() { let id; do { id = "j" + compteur++; } while (etat.jetons.some((j) => j.id === id)); return id; }
 
   function ajouterJetonsPersos() {
-    let persos = {};
-    try { persos = JSON.parse(localStorage.getItem("cof_persos")) || {}; } catch (x) {}
+    const persos = (typeof window.DepotPersos !== "undefined") ? window.DepotPersos.charger() : {};
     const ids = Object.keys(persos);
     if (!ids.length) { toastCarte("Aucun personnage enregistré."); return; }
     // Si une battlemap .dd2vtt est active, on pose les persos comme tokens de combat
@@ -198,8 +217,7 @@ const Carte = (() => {
       toastCarte("Aucune scène de combat active.");
       return;
     }
-    let persos = {};
-    try { persos = JSON.parse(localStorage.getItem("cof_persos")) || {}; } catch (x) {}
+    const persos = (typeof window.DepotPersos !== "undefined") ? window.DepotPersos.charger() : {};
     const p = persos[monPersoId];
     if (!p) { toastCarte("Personnage introuvable."); return; }
     DD2VTT.ajouterTokenData({ nom: p.nom, couleur: "#b8924a", pj: true, ref: "pj-" + monPersoId });
@@ -430,6 +448,12 @@ const Carte = (() => {
     };
     if (!dom.scene) return;
 
+    // Abonnements temps réel AVANT charger() : SyncStore.get() lit un cache
+    // qui n'est peuplé qu'une fois un abonnement actif sur la clé (sinon
+    // premier chargement à froid = valeurs par défaut, rattrapées dès que
+    // le premier callback ci-dessous arrive).
+    SyncStore.subscribe(STORAGE, _appliquerEtatDistant);
+    SyncStore.subscribe(STORAGE_FOG, _appliquerFogDistant);
     charger();
 
     // Remplir le menu déroulant des cartes, groupé par optgroup

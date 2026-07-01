@@ -7,7 +7,7 @@ const App = (() => {
   "use strict";
 
   const STORAGE_PERSOS = "cof_persos";
-  const STORAGE_HISTO = "cof_histo_des";
+  const STORAGE_HISTO = "des:histo"; // via SyncStore (Firestore) : journal partagé, tout le monde voit les jets de tout le monde
   const STORAGE_ROLE = "cof_role";
   const STORAGE_MON_PERSO = "cof_mon_perso_actif";
 
@@ -57,9 +57,9 @@ const App = (() => {
   /* ---------- Persistance ---------- */
 
   // Persistance des persos derrière l'interface Depot — Firestore (multijoueur
-  // temps réel). DepotLocal reste disponible dans depot.js si besoin de revenir
-  // à du localStorage pur (mono-poste, hors-ligne).
-  const depotPersos = new DepotDistant(STORAGE_PERSOS);
+  // temps réel). Instance partagée avec carte.js et loot.js (window.DepotPersos,
+  // défini dans depot.js) : un seul abonnement Firestore pour toute l'app.
+  const depotPersos = window.DepotPersos;
   function chargerPersos() {
     return depotPersos.charger(); // map { id: perso }
   }
@@ -1251,15 +1251,22 @@ const App = (() => {
       `<div class="detail">${detail}</div>`;
   }
 
-  function chargerHisto() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_HISTO)) || []; }
-    catch (e) { return []; }
+  // Nom affiché pour attribuer un jet dans le journal partagé : le perso
+  // actuellement ouvert dans "Ma fiche" si dispo, sinon le rôle.
+  function nomLanceur() {
+    if (ficheActiveId) {
+      const p = chargerPersos()[ficheActiveId];
+      if (p && p.nom) return p.nom;
+    }
+    return role === "mj" ? "MJ" : "Joueur";
   }
+
+  function chargerHisto() { return SyncStore.get(STORAGE_HISTO) || []; }
   function ajouterHisto(label, total, crit, echec) {
     const h = chargerHisto();
-    h.unshift({ label, total, crit, echec });
+    h.unshift({ label, total, crit, echec, auteur: nomLanceur(), horodatage: Date.now() });
     if (h.length > 40) h.pop();
-    localStorage.setItem(STORAGE_HISTO, JSON.stringify(h));
+    SyncStore.set(STORAGE_HISTO, h);
     rendreHisto();
   }
   function rendreHisto() {
@@ -1267,11 +1274,11 @@ const App = (() => {
     const zone = document.getElementById("historique");
     if (!h.length) { zone.innerHTML = `<div class="vide">Aucun lancer pour l'instant.</div>`; return; }
     zone.innerHTML = h.map((x) =>
-      `<div class="ligne-histo"><span>${echapper(x.label)}</span>` +
+      `<div class="ligne-histo"><span>${x.auteur ? `<strong>${echapper(x.auteur)}</strong> — ` : ""}${echapper(x.label)}</span>` +
       `<span class="res ${x.crit ? "crit" : x.echec ? "echec" : ""}">${x.total}</span></div>`).join("");
   }
   function viderHisto() {
-    localStorage.removeItem(STORAGE_HISTO);
+    SyncStore.set(STORAGE_HISTO, []);
     rendreHisto();
   }
 
@@ -1451,6 +1458,9 @@ const App = (() => {
     };
 
     rendreListePersos();
+
+    // Journal de dés partagé : re-rendu dès qu'un autre client lance un dé.
+    SyncStore.subscribe(STORAGE_HISTO, () => rendreHisto());
 
     // Loot — fermeture modals
     const btnFermerLoot = document.getElementById("btn-fermer-modal-loot");
@@ -1681,7 +1691,7 @@ const App = (() => {
 
     // Inventaire
     const blocInv = document.getElementById("bloc-inventaire");
-    const persos = JSON.parse(localStorage.getItem("cof_persos") || "{}");
+    const persos = chargerPersos();
     const p = persos[persoId];
     const aItems = p && Array.isArray(p.equipement) && p.equipement.length > 0;
     if (blocInv) blocInv.style.display = aItems ? "" : "none";

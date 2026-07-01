@@ -6,20 +6,21 @@
 const Loot = (() => {
   "use strict";
 
-  const KEY_VOTE  = "cof_loot_vote";
-  const KEY_HISTO = "cof_loot_histo";
-  const KEY_PERSOS = "cof_persos";
+  const KEY_VOTE  = "loot:vote";
+  const KEY_HISTO = "loot:histo";
 
-  /* ── Helpers stockage ─────────────────────────────────────── */
-  function lireVote()   { try { return JSON.parse(localStorage.getItem(KEY_VOTE))  || null; } catch(e) { return null; } }
-  function sauverVote(v){ localStorage.setItem(KEY_VOTE, JSON.stringify(v)); }
-  function effacerVote(){ localStorage.removeItem(KEY_VOTE); }
+  /* ── Helpers stockage — via SyncStore (Firestore, multijoueur temps réel) ── */
+  function lireVote()   { return SyncStore.get(KEY_VOTE) || null; }
+  function sauverVote(v){ SyncStore.set(KEY_VOTE, v); }
+  function effacerVote(){ SyncStore.set(KEY_VOTE, null); }
 
-  function lireHisto()  { try { return JSON.parse(localStorage.getItem(KEY_HISTO)) || []; } catch(e) { return []; } }
-  function sauverHisto(h){ localStorage.setItem(KEY_HISTO, JSON.stringify(h.slice(-20))); }
+  function lireHisto()  { return SyncStore.get(KEY_HISTO) || []; }
+  function sauverHisto(h){ SyncStore.set(KEY_HISTO, h.slice(-20)); }
 
-  function lirePersos() { try { return JSON.parse(localStorage.getItem(KEY_PERSOS)) || {}; } catch(e) { return {}; } }
-  function sauverPersos(p){ localStorage.setItem(KEY_PERSOS, JSON.stringify(p)); }
+  // Fiches des personnages : instance partagée avec app.js/carte.js
+  // (window.DepotPersos, cf. depot.js) — un seul cache/abonnement Firestore.
+  function lirePersos() { return window.DepotPersos.charger(); }
+  function sauverPersos(p){ window.DepotPersos.remplacerTout(p); }
 
   function persoNom(id) { const p = lirePersos(); return p[id] ? p[id].nom : "Inconnu"; }
 

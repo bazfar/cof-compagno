@@ -110,9 +110,11 @@ class DepotDistant extends Depot {
     );
   }
 
-  // charger() sans id → tout le cache ; avec id → un seul élément
+  // charger() sans id → copie du cache (les appelants mutent parfois
+  // l'objet retourné avant de rappeler sauver/remplacerTout — une copie
+  // évite de corrompre le cache interne en cas d'oubli) ; avec id → l'élément
   charger(id) {
-    return id == null ? this._cache : this._cache[id];
+    return id == null ? Object.assign({}, this._cache) : this._cache[id];
   }
   liste() {
     return Object.keys(this._cache).map((k) => this._cache[k]);
@@ -157,4 +159,11 @@ if (typeof window !== "undefined") {
   window.Depot = Depot;
   window.DepotLocal = DepotLocal;
   window.DepotDistant = DepotDistant;
+  // Instance partagée pour les personnages (cof_persos) : app.js, carte.js
+  // et loot.js s'appuient tous les trois sur les fiches des joueurs (ajout
+  // de tokens, inventaire loot...). Une seule instance = un seul abonnement
+  // Firestore, et surtout un seul cache cohérent entre les trois modules
+  // (au lieu de chacun relire localStorage directement, qui ne reflète
+  // jamais les persos créés sur un autre appareil).
+  window.DepotPersos = new DepotDistant("cof_persos");
 }
