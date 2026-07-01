@@ -14,6 +14,7 @@
   --chaos: #8a2f3b;
   --chaos-bg: #f7e3e0;
   --succes: #3a7d44;
+  --tier-veteran: #a5703a;
   --ombre: rgba(43, 36, 54, 0.18);
   --radius: 10px;
 }
@@ -827,6 +828,13 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 
 .monstre-section li { margin-bottom: 2px; }
 
+.monstre-lore {
+  font-style: italic;
+  color: #7a7090;
+  padding-top: 8px;
+  border-top: 1px dashed var(--parchemin-fonce);
+}
+
 .badge-boss {
   background: var(--chaos);
   color: #fff;
@@ -841,8 +849,20 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
   background: var(--violet-accent);
   color: #fff;
   font-size: 0.65rem;
+  font-weight: 700;
   padding: 1px 5px;
   border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
+.badge-tier-basique { background: var(--succes); }
+.badge-tier-veteran { background: var(--tier-veteran); }
+.badge-tier-elite { background: var(--or); }
+.badge-tier-champion { background: var(--chaos); }
+
+.monstre-emoji {
+  font-size: 1.15rem;
+  line-height: 1;
 }
 
 .badge-taille {

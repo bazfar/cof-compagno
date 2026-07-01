@@ -773,6 +773,12 @@ const Carte = (() => {
     let canvasMurs = null;
     let ctxMurs = null;
 
+    // État ouvert/fermé des portails (portes + fenêtres, indiscernables côté Dungeondraft),
+    // persisté derrière l'interface Depot pour pouvoir brancher un vrai backend plus tard
+    // sans toucher à cette logique (cf. js/depot.js). Aujourd'hui : DepotLocal
+    // (localStorage + sync entre onglets du même navigateur via l'event "storage").
+    const depotPortails = (typeof DepotLocal !== 'undefined') ? new DepotLocal('cof_dd2vtt_portails') : null;
+
     // ── Parser ──────────────────────────────────────────────
     function parseDD2VTT(data, nom) {
       const px = data.resolution.pixels_per_grid;
@@ -792,13 +798,21 @@ const Carte = (() => {
         }
       }
 
-      // Portails (portes)
+      // Portails (portes ET fenêtres — Dungeondraft ne les distingue pas dans l'export)
       const portails = (data.portals || []).map(p => ({
         position: { x: p.position.x * px, y: p.position.y * px },
         bounds: p.bounds.map(b => ({ x: b.x * px, y: b.y * px })),
         ouvert: !p.closed,
         rotation: p.rotation
       }));
+
+      // Ré-applique un état ouvert/fermé sauvegardé pour cette scène (même ordre de portails)
+      if (depotPortails) {
+        const sauve = depotPortails.charger(nom);
+        if (Array.isArray(sauve)) {
+          portails.forEach((p, i) => { if (typeof sauve[i] === 'boolean') p.ouvert = sauve[i]; });
+        }
+      }
 
       return {
         nom,
@@ -953,6 +967,52 @@ const Carte = (() => {
         ctxMurs.setLineDash([]);
         ctxMurs.shadowBlur = 0;
       }
+    }
+
+    // ── Interaction portails (clic = bascule ouvert/fermé) ───
+    function _distancePointSegment(px, py, ax, ay, bx, by) {
+      const dx = bx - ax, dy = by - ay;
+      const lenSq = dx * dx + dy * dy;
+      let t = lenSq > 0 ? ((px - ax) * dx + (py - ay) * dy) / lenSq : 0;
+      t = Math.max(0, Math.min(1, t));
+      const cx = ax + t * dx, cy = ay + t * dy;
+      return Math.hypot(px - cx, py - cy);
+    }
+
+    function _sauverEtatPortails(scene) {
+      if (!depotPortails) return;
+      depotPortails.sauver(scene.portails.map(p => p.ouvert), scene.nom);
+    }
+
+    // Clic n'importe où sur la carte-scene : si assez proche d'un portail
+    // (porte ou fenêtre), bascule son état. Accessible à tout joueur, sans
+    // restriction de rôle ni de proximité du token.
+    function _basculerPortailAuClic(ev, scene) {
+      const imgEl = document.getElementById('carte-image');
+      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
+      if (!rect || rect.width === 0 || !scene.portails.length) return false;
+
+      const affW = rect.width, affH = rect.height;
+      const sx = affW / scene.largeur, sy = affH / scene.hauteur;
+      const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+      if (mx < 0 || my < 0 || mx > affW || my > affH) return false;
+
+      const seuil = Math.max(8, tailleCase(scene) * 0.35);
+      let meilleur = null, meilleureDist = Infinity;
+      for (const p of scene.portails) {
+        const b = p.bounds;
+        if (!b || b.length < 2) continue;
+        const d = _distancePointSegment(mx, my, b[0].x * sx, b[0].y * sy, b[1].x * sx, b[1].y * sy);
+        if (d < seuil && d < meilleureDist) { meilleur = p; meilleureDist = d; }
+      }
+      if (!meilleur) return false;
+
+      meilleur.ouvert = !meilleur.ouvert;
+      _sauverEtatPortails(scene);
+      rendreScene(scene);
+      calculerEtRendreLoS(scene);
+      toastCarte(meilleur.ouvert ? 'Portail ouvert' : 'Portail fermé');
+      return true;
     }
 
     // ── État tokens dd2vtt ───────────────────────────────────
@@ -1113,12 +1173,34 @@ const Carte = (() => {
       const imgEl = document.getElementById('carte-image');
       const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
       if (!rect || rect.width === 0) return;
+      // canvasFog2 marque en NOIR OPAQUE les zones déjà explorées (transparent =
+      // jamais vu). Redimensionner un canvas le vide déjà en transparent, donc rien
+      // à dessiner ici : le (re)dimensionnement suffit à repartir d'un brouillard
+      // "rien d'exploré".
       if (canvasFog2.width !== Math.round(rect.width) || canvasFog2.height !== Math.round(rect.height)) {
         canvasFog2.width  = Math.round(rect.width);
         canvasFog2.height = Math.round(rect.height);
-        ctxFog2.fillStyle = 'rgba(0,0,0,0.92)';
-        ctxFog2.fillRect(0, 0, canvasFog2.width, canvasFog2.height);
       }
+    }
+
+    // ── Segments bloquants (murs + portails fermés) ──────────
+    // Un portail (porte ou fenêtre — Dungeondraft ne les distingue pas) ouvert
+    // ne génère aucun segment : le rayon de vision passe à travers l'embrasure.
+    // Fermé, son "bounds" (les 2 points de l'ouverture dans le mur) devient un
+    // segment bloquant au même titre qu'un mur. Le blocage est donc symétrique
+    // par construction : ça sert aussi bien un token dedans que dehors.
+    function _segmentsBloquants(scene, sx, sy) {
+      const segs = scene.segments.map(seg => [
+        [seg[0][0] * sx, seg[0][1] * sy],
+        [seg[1][0] * sx, seg[1][1] * sy]
+      ]);
+      for (const p of scene.portails) {
+        if (p.ouvert) continue;
+        const b = p.bounds;
+        if (!b || b.length < 2) continue;
+        segs.push([[b[0].x * sx, b[0].y * sy], [b[1].x * sx, b[1].y * sy]]);
+      }
+      return segs;
     }
 
     // ── LoS + brouillard ─────────────────────────────────────
@@ -1148,18 +1230,28 @@ const Carte = (() => {
       canvasLoS.style.left   = offX + 'px';
       canvasLoS.style.top    = offY + 'px';
 
-      // Segments dans le référentiel du canvas (= référentiel image)
-      const segsAff = scene.segments.map(seg => [
-        [seg[0][0]*sx, seg[0][1]*sy],
-        [seg[1][0]*sx, seg[1][1]*sy]
-      ]);
+      // Segments bloquants dans le référentiel du canvas (= référentiel image) :
+      // murs + portails fermés (porte ou fenêtre — un portail ouvert ne bloque rien).
+      const segsAff = _segmentsBloquants(scene, sx, sy);
 
       const tc = tailleCase(scene);
 
-      // Remplir le brouillard opaque
+      // Remplir le brouillard opaque (zone jamais vue = totalement cachée)
       ctxLoS.clearRect(0, 0, affW, affH);
       ctxLoS.fillStyle = 'rgba(0,0,0,0.92)';
       ctxLoS.fillRect(0, 0, affW, affH);
+
+      // Alléger le brouillard sur tout ce qui a déjà été exploré (canvasFog2 =
+      // marque opaque là où déjà vu). Passe faite AVANT les trous de vision
+      // courante ci-dessous, pour qu'ils puissent ensuite passer par-dessus en
+      // clair total — sinon un "trou" transparent dessiné en source-over sur un
+      // fond déjà opaque ne fait rien (c'était le bug : la zone déjà explorée
+      // mais plus visible retombait à l'opacité max au lieu de rester grisée).
+      ctxLoS.globalCompositeOperation = 'destination-out';
+      ctxLoS.globalAlpha = 0.5; // 0.92 * (1 - 0.5) ≈ 0.46 → brouillard semi-transparent
+      ctxLoS.drawImage(canvasFog2, 0, 0);
+      ctxLoS.globalAlpha = 1.0;
+      ctxLoS.globalCompositeOperation = 'source-over';
 
       if (tokensDD.length === 0) return;
 
@@ -1175,16 +1267,18 @@ const Carte = (() => {
         } catch(e) { console.error('[LoS] erreur compute:', e); continue; }
         if (!poly || poly.length < 3) { console.warn('[LoS] polygone invalide'); continue; }
 
-        // Révéler dans le brouillard persistant
-        ctxFog2.globalCompositeOperation = 'destination-out';
+        // Marquer la zone comme explorée pour toujours (marque opaque, union
+        // naturelle des passages successifs)
+        ctxFog2.globalCompositeOperation = 'source-over';
+        ctxFog2.fillStyle = '#000';
         ctxFog2.beginPath();
         ctxFog2.moveTo(poly[0][0], poly[0][1]);
         for (let i = 1; i < poly.length; i++) ctxFog2.lineTo(poly[i][0], poly[i][1]);
         ctxFog2.closePath();
         ctxFog2.fill();
-        ctxFog2.globalCompositeOperation = 'source-over';
 
-        // Percer le fog actuel
+        // Percer le fog actuel en clair total (vision EN TEMPS RÉEL) : passe
+        // après l'atténuation "déjà exploré" pour la remplacer totalement ici.
         ctxLoS.globalCompositeOperation = 'destination-out';
         ctxLoS.beginPath();
         ctxLoS.moveTo(poly[0][0], poly[0][1]);
@@ -1193,11 +1287,6 @@ const Carte = (() => {
         ctxLoS.fill();
         ctxLoS.globalCompositeOperation = 'source-over';
       }
-
-      // Superposer le brouillard persistant (zones explorées = semi-transparent)
-      ctxLoS.globalAlpha = 0.45;
-      ctxLoS.drawImage(canvasFog2, 0, 0);
-      ctxLoS.globalAlpha = 1.0;
     }
 
 
@@ -1223,15 +1312,30 @@ const Carte = (() => {
         cv.style.zIndex = '5';
       }
 
-      // Clic sur la carte → désélectionner token
+      // Clic sur la carte → bascule un portail proche (porte/fenêtre, accessible à
+      // tous les joueurs, pas de check de rôle), sinon désélectionne le token actif.
       const scene2 = document.getElementById('carte-scene');
-      if (scene2) scene2.addEventListener('click', () => {
+      if (scene2) scene2.addEventListener('click', (ev) => {
+        const sc = scenes[sceneActive];
+        if (sc && _basculerPortailAuClic(ev, sc)) return;
         if (tokenSelectionne) {
           tokenSelectionne = null;
-          const sc = scenes[sceneActive];
           if (sc) { rendreTokensDD(sc); calculerEtRendreLoS(sc); }
         }
       });
+
+      // Sync entre onglets du même navigateur : un autre onglet a basculé une
+      // porte/fenêtre → on répercute l'état si c'est la scène affichée ici.
+      if (depotPortails) {
+        depotPortails.ecouter((magasin) => {
+          const sc = scenes[sceneActive];
+          if (!sc || !magasin || !Array.isArray(magasin[sc.nom])) return;
+          const etats = magasin[sc.nom];
+          sc.portails.forEach((p, i) => { if (typeof etats[i] === 'boolean') p.ouvert = etats[i]; });
+          rendreScene(sc);
+          calculerEtRendreLoS(sc);
+        });
+      }
 
       const inputDD = document.getElementById('input-dd2vtt');
       const btnDD   = document.getElementById('btn-import-dd2vtt');

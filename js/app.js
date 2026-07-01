@@ -1537,10 +1537,11 @@ const App = (() => {
 
     liste.innerHTML = monstres.map(m => {
       const etoiles = "★".repeat(Math.min(m.dangerosite || 0, 5));
+      const emoji = m.emoji ? echapper(m.emoji) + " " : "";
       const badge = m.boss ? ' <span class="badge-boss">BOSS</span>' : "";
-      const tier = m.tier ? ' <span class="badge-tier">' + echapper(m.tier) + "</span>" : "";
+      const tier = m.tier ? ' <span class="badge-tier badge-tier-' + echapper(m.tier) + '">' + echapper(TIER_LABELS[m.tier] || m.tier) + "</span>" : "";
       return '<button class="modal-monstre-item" data-monstre-id="' + echapper(m.id) + '">'
-        + '<span class="mmi-nom">' + echapper(m.nom) + badge + tier + '</span>'
+        + '<span class="mmi-nom">' + emoji + echapper(m.nom) + badge + tier + '</span>'
         + '<span class="mmi-info">' + etoiles + (m.famille ? " · " + echapper(m.famille) : "") + "</span>"
         + "</button>";
     }).join("");
@@ -1618,9 +1619,12 @@ const App = (() => {
     return "★".repeat(Math.min(n, 5)) + "☆".repeat(Math.max(0, 5 - n));
   }
 
+  const TIER_LABELS = { basique: "Basique", veteran: "Vétéran", elite: "Élite", champion: "Champion" };
+
   function _carteMonstreHTML(m) {
+    const emoji = m.emoji ? `<span class="monstre-emoji">${m.emoji}</span>` : "";
     const boss = m.boss ? '<span class="badge-boss">BOSS</span>' : "";
-    const tier = m.tier ? `<span class="badge-tier">${echapper(m.tier)}</span>` : "";
+    const tier = m.tier ? `<span class="badge-tier badge-tier-${echapper(m.tier)}">${echapper(TIER_LABELS[m.tier] || m.tier)}</span>` : "";
     const taille = m.taille ? `<span class="badge-taille">${echapper(m.taille)}</span>` : "";
     const dang = `<span class="badge-dang dang-${m.dangerosite}" title="Dangérosité">${_etoiles(m.dangerosite || 0)}</span>`;
 
@@ -1629,12 +1633,12 @@ const App = (() => {
       <span title="Défense"><strong>DEF</strong> ${m.def ?? "—"}</span>
       <span title="Initiative"><strong>INIT</strong> ${m.init >= 0 ? "+" : ""}${m.init ?? "—"}</span>
       <span title="Attaque"><strong>ATK</strong> ${m.atk >= 0 ? "+" : ""}${m.atk ?? "—"}</span>
-      <span title="XP"><strong>XP</strong> ${m.xp ?? "—"}</span>
+      ${m.armure ? `<span title="${echapper(m.armure.description || "")}"><strong>Armure</strong> ${m.armure.valeur ?? "—"}</span>` : ""}
     </div>`;
 
     const atqHtml = m.attaques && m.attaques.length
       ? `<div class="monstre-section"><strong>Attaques</strong><ul>${m.attaques.map(a =>
-          `<li><em>${echapper(a.nom)}</em> — ${echapper(a.degats)}${a.portee ? ` (${echapper(a.portee)})` : ""}${a.note ? ` · ${echapper(a.note)}` : ""}</li>`
+          `<li><em>${echapper(a.nom)}</em> — ${echapper(a.jet)} · Dégâts ${echapper(a.degats)}${a.portee ? ` (${echapper(a.portee)})` : ""}${a.effetSpecial ? ` · ${echapper(a.effetSpecial)}` : ""}</li>`
         ).join("")}</ul></div>`
       : "";
 
@@ -1644,15 +1648,18 @@ const App = (() => {
         ).join("")}</ul></div>`
       : "";
 
+    const loreHtml = m.lore ? `<div class="monstre-section monstre-lore">${echapper(m.lore)}</div>` : "";
+
     return `<div class="carte carte-monstre">
       <div class="monstre-header">
-        <div class="monstre-nom">${echapper(m.nom)} ${boss}${tier}</div>
+        <div class="monstre-nom">${emoji} ${echapper(m.nom)} ${boss}${tier}</div>
         <div class="monstre-meta">${dang} ${taille}</div>
       </div>
       ${m.categorie || m.faction ? `<div class="monstre-sous">${[m.categorie, m.faction].filter(Boolean).map(echapper).join(" · ")}</div>` : ""}
       ${statsHtml}
       ${atqHtml}
       ${capHtml}
+      ${loreHtml}
     </div>`;
   }
 
