@@ -1455,11 +1455,14 @@ const Carte = (() => {
 
       // Sync scène active : le MJ choisit une scène → tous les clients la
       // chargent automatiquement au prochain poll (ou immédiatement si même
-      // navigateur, via l'event "storage").
+      // navigateur, via l'event "storage"). subscribe() ne notifie que sur un
+      // changement : on applique aussi la valeur déjà en place tout de suite,
+      // pour un client qui rejoint/recharge après le choix du MJ.
       if (typeof SyncStore !== 'undefined') {
         SyncStore.subscribe('battlemap:scene-active', (nomDistant) => {
           _suivreSceneDistante(nomDistant);
         });
+        _suivreSceneDistante(SyncStore.get('battlemap:scene-active'));
       }
 
       const inputDD = document.getElementById('input-dd2vtt');
