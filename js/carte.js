@@ -721,9 +721,16 @@ const Carte = (() => {
      Source : github.com/byoung/visibility-polygon-js
      ============================================================ */
   const VisibilityPolygon = (() => {
-    function compute(position, segments) {
+    // bounds optionnel [x,y,largeur,hauteur] : rectangle englobant dans lequel
+    // les rayons non bloqués doivent se terminer (typiquement l'étendue de la
+    // scène/du canvas). Sans lui, le rectangle est dérivé des segments (et de
+    // la position, pour rester valide) — mais un token situé en zone ouverte,
+    // hors de toute portion couverte par des murs, se retrouve alors coincé
+    // dans un rectangle à peine plus grand que lui-même (padding de 1 unité)
+    // au lieu de voir jusqu'au bord réel de la carte.
+    function compute(position, segments, bounds) {
       const bounded = segments.slice();
-      const [bx, by, bw, bh] = _bounds(bounded);
+      const [bx, by, bw, bh] = bounds || _bounds(bounded, position);
       bounded.push([[bx,by],[bx+bw,by]],[[bx+bw,by],[bx+bw,by+bh]],[[bx+bw,by+bh],[bx,by+bh]],[[bx,by+bh],[bx,by]]);
       const endpoints = [];
       const angles = [];
@@ -767,11 +774,15 @@ const Carte = (() => {
       return null;
     }
 
-    function _bounds(segs) {
+    function _bounds(segs, position) {
       let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
       for (const s of segs) for (const p of s) {
         if(p[0]<minX)minX=p[0]; if(p[1]<minY)minY=p[1];
         if(p[0]>maxX)maxX=p[0]; if(p[1]>maxY)maxY=p[1];
+      }
+      if (position) {
+        if(position[0]<minX)minX=position[0]; if(position[1]<minY)minY=position[1];
+        if(position[0]>maxX)maxX=position[0]; if(position[1]>maxY)maxY=position[1];
       }
       const pad=1;
       return [minX-pad, minY-pad, (maxX-minX)+pad*2, (maxY-minY)+pad*2];
@@ -880,7 +891,10 @@ const Carte = (() => {
         opt.value = nom; opt.textContent = scenes[nom].label || nom;
         sel.appendChild(opt);
       });
-      sel.style.display = Object.keys(scenes).length > 1 ? 'inline-block' : 'none';
+      // Visible dès qu'il y a au moins une scène (catalogue ou import manuel) :
+      // avec une seule entrée, c'est le seul moyen pour le MJ de l'activer
+      // (le catalogue ne s'auto-active pas au chargement).
+      sel.style.display = Object.keys(scenes).length >= 1 ? 'inline-block' : 'none';
       if (scenes[valeurActuelle]) sel.value = valeurActuelle; // conserve la sélection après ajout catalogue
       sel.onchange = () => { activerScene(sel.value); _publierSceneActive(sel.value); };
     }
@@ -1391,7 +1405,7 @@ const Carte = (() => {
 
         let poly;
         try {
-          poly = VisibilityPolygon.compute([posX, posY], segsAff);
+          poly = VisibilityPolygon.compute([posX, posY], segsAff, [0, 0, affW, affH]);
           console.log('[LoS] token', tok.nom, 'pos:', posX, posY, 'poly points:', poly ? poly.length : 0);
         } catch(e) { console.error('[LoS] erreur compute:', e); continue; }
         if (!poly || poly.length < 3) { console.warn('[LoS] polygone invalide'); continue; }
