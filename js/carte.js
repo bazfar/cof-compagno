@@ -68,8 +68,20 @@ const Carte = (() => {
     if (!distant) return;
     const imageAChange = distant.image !== etat.image;
     etat = Object.assign({}, etat, distant, { fogData: etat.fogData });
-    if (imageAChange) rendreImage(() => appliquerAffichageFog());
-    else { rendreJetons(); dom.scene.classList.toggle("grille", !!etat.grille); syncSelect(); appliquerAffichageFog(); }
+    if (imageAChange) {
+      // Le rendu réel de la worldmap passe par le canvas pan/zoom
+      // (Worldmap.charger), pas par le vieux #carte-image — qui est
+      // d'ailleurs partagé avec la battlemap dd2vtt. Ne vole pas
+      // l'affichage à une scène de combat en cours sur CE client.
+      const battlemapActif = typeof DD2VTT !== 'undefined' && DD2VTT.estActive && DD2VTT.estActive();
+      if (!battlemapActif) {
+        if (etat.image) Worldmap.charger(etat.image);
+        else Worldmap.masquer();
+      }
+      syncSelect();
+    } else {
+      rendreJetons(); dom.scene.classList.toggle("grille", !!etat.grille); syncSelect(); appliquerAffichageFog();
+    }
   }
   function _appliquerFogDistant(fogData) {
     etat.fogData = fogData || null;
@@ -154,11 +166,13 @@ const Carte = (() => {
     syncSelect();
   }
 
-  // Aligne le menu déroulant sur la carte actuelle
+  // Aligne le menu déroulant sur la carte actuelle. Le sélecteur visible est
+  // repeuplé par Worldmap.init() depuis CARTES_MONDE, avec le chemin du
+  // fichier directement comme value — pas besoin de chercher une "key" dans
+  // CARTES_PRESETS (l'ancienne liste, plus utilisée par ce sélecteur).
   function syncSelect() {
     if (!dom.select) return;
-    const p = CARTES_PRESETS.find((c) => c.file === etat.image);
-    dom.select.value = p ? p.key : "";
+    dom.select.value = etat.image || "";
   }
 
   /* ---------- Jetons ---------- */
@@ -497,12 +511,17 @@ const Carte = (() => {
     majAide();
   }
 
-  // Appelé quand on ouvre l'onglet (re-rendu défensif)
+  // Appelé quand on ouvre l'onglet (re-rendu défensif). Réapplique aussi le
+  // dimensionnement du canvas worldmap : une mise à jour distante (MJ change
+  // de carte) a pu charger l'image pendant que cet onglet était invisible
+  // (display:none → conteneur à 0×0), laissant le canvas mal dimensionné
+  // jusqu'à ce que quelque chose le redimensionne explicitement.
   function onOpen() {
     if (!dom.scene) return;
     rendreJetons();
     appliquerAffichageFog();
     majAide();
+    if (typeof Worldmap !== 'undefined' && Worldmap.actualiser) Worldmap.actualiser();
   }
 
   /* ============================================================
@@ -544,12 +563,19 @@ const Carte = (() => {
           }
           sel.appendChild(grp);
         }
-        // Prise de contrôle exclusive du sélecteur
+        // Prise de contrôle exclusive du sélecteur. Persiste le choix du MJ
+        // via SyncStore pour que tous les clients suivent automatiquement
+        // la carte du monde active (comme la scène active en battlemap).
         sel.addEventListener('change', e => {
           if (e.target.value) {
             if (typeof DD2VTT !== 'undefined') DD2VTT.modeWorldmap();
             charger(e.target.value);
-          } else { masquer(); }
+            etat.image = e.target.value;
+          } else {
+            masquer();
+            etat.image = null;
+          }
+          sauver();
         });
       }
 
@@ -744,7 +770,17 @@ const Carte = (() => {
       if (canvas) canvas.style.cursor = 'grab';
     }
 
-    return { init, charger, masquer, redessiner: dessiner };
+    // Redimensionne/recentre/redessine sur la taille actuelle du conteneur.
+    // Utile quand l'image a été chargée (via une mise à jour distante) pendant
+    // que cet onglet était invisible : le conteneur faisait alors 0×0.
+    function actualiser() {
+      if (!imgActuelle) return;
+      redimensionner();
+      centrer();
+      dessiner();
+    }
+
+    return { init, charger, masquer, redessiner: dessiner, actualiser };
   })();
 
   /* ============================================================
