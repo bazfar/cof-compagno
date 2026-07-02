@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "items": [
     { "id": "dague",           "nom": "Dague",              "type": "arme",       "porte": false, "description": "Arme légère de contact ou de lancer. Discrète et rapide.",         "degats": "1d4",  "portee": "contact",        "typedegats": "physique", "enchantement": 0, "deuxMains": false },
     { "id": "epee_courte",     "nom": "Épée courte",        "type": "arme",       "porte": false, "description": "Lame polyvalente, idéale pour les combattants agiles.",             "degats": "1d6",  "portee": "contact",        "typedegats": "physique", "enchantement": 0, "deuxMains": false },
@@ -15,6 +15,16 @@
     { "id": "epee_longue_p1",  "nom": "Épée longue +1",     "type": "arme",       "porte": false, "description": "Lame finement enchantée par un forgeron de Solvarn. Brille faiblement dans l'obscurité.", "degats": "1d8", "portee": "contact", "typedegats": "physique", "enchantement": 1, "deuxMains": false },
     { "id": "dague_p2",        "nom": "Dague +2",           "type": "arme",       "porte": false, "description": "Dague en acier de Sève. Tranchante comme jamais, ignore 1 point d'armure.", "degats": "1d4", "portee": "contact", "typedegats": "physique", "enchantement": 2, "deuxMains": false },
     { "id": "arc_court_p1",    "nom": "Arc court +1",       "type": "arme",       "porte": false, "description": "Arc en bois de l'Arbre-Monde. Les flèches semblent guidées.",      "degats": "1d6",  "portee": "longue (36m)",   "typedegats": "physique", "enchantement": 1, "deuxMains": true  },
+    { "id": "cimeterre",       "nom": "Cimeterre",          "type": "arme",       "porte": false, "description": "Lame courbe des caravaniers du sud de l'Empire. Rapide et tranchante.", "degats": "1d6", "portee": "contact", "typedegats": "physique", "enchantement": 0, "deuxMains": false },
+    { "id": "hallebarde",      "nom": "Hallebarde",         "type": "arme",       "porte": false, "description": "Arme d'hast lourde combinant lame et pointe. Redoutable contre les montures.", "degats": "1d10", "portee": "contact +1 case", "typedegats": "physique", "enchantement": 0, "deuxMains": true },
+    { "id": "fleau_armes",     "nom": "Fléau d'armes",      "type": "arme",       "porte": false, "description": "Boulet hérissé de pointes relié par une chaîne. Imprévisible et brutal.", "degats": "1d8", "portee": "contact", "typedegats": "physique", "enchantement": 0, "deuxMains": false },
+    { "id": "francisque",      "nom": "Francisque",         "type": "arme",       "porte": false, "description": "Petite hache de jet naine, aussi efficace au corps à corps.",        "degats": "1d6",  "portee": "courte (9m) ou contact", "typedegats": "physique", "enchantement": 0, "deuxMains": false },
+    { "id": "poignards_jumeaux","nom": "Poignards jumeaux", "type": "arme",       "porte": false, "description": "Paire de dagues assorties, une dans chaque main. Frappes rapides et discrètes.", "degats": "1d4", "portee": "contact", "typedegats": "physique", "enchantement": 0, "deuxMains": false },
+    { "id": "pique",           "nom": "Pique",              "type": "arme",       "porte": false, "description": "Arme d'hast très longue, formation de mur de piques des Royaumes Coalisés.", "degats": "1d10", "portee": "contact +1 case", "typedegats": "physique", "enchantement": 0, "deuxMains": true },
+    { "id": "epee_batarde",    "nom": "Épée bâtarde",       "type": "arme",       "porte": false, "description": "Lame longue à garde allongée, maniable à une ou deux mains.",       "degats": "1d10", "portee": "contact",        "typedegats": "physique", "enchantement": 0, "deuxMains": true },
+    { "id": "arbalete_lourde", "nom": "Arbalète lourde",    "type": "arme",       "porte": false, "description": "Puissance dévastatrice, mais 2 rounds nécessaires pour recharger.", "degats": "1d10", "portee": "moyenne (18m)",  "typedegats": "physique", "enchantement": 0, "deuxMains": true },
+    { "id": "arc_aelindra_p1", "nom": "Arc composite d'Aelindra +1", "type": "arme", "porte": false, "description": "Arc elfique en bois vivant tressé, fabriqué à Aelindra. Les flèches trouvent leur cible.", "degats": "1d8", "portee": "longue (36m)", "typedegats": "physique", "enchantement": 1, "deuxMains": true },
+    { "id": "hache_naine_p1",  "nom": "Hache de guerre naine +1", "type": "arme",  "porte": false, "description": "Forgée dans les profondeurs de Khazrak Dûm. Le tranchant ne s'émousse jamais.", "degats": "1d8", "portee": "contact", "typedegats": "physique", "enchantement": 1, "deuxMains": false },
 
     { "id": "armure_cuir",     "nom": "Armure de cuir",     "type": "armure",     "porte": false, "description": "Protection légère, n'entrave pas les mouvements.",                 "valeurArmure": 2, "malusDEX": 0 },
     { "id": "armure_cloute",   "nom": "Cuir clouté",        "type": "armure",     "porte": false, "description": "Cuir renforcé de clous métalliques. Bon compromis légèreté/protection.", "valeurArmure": 3, "malusDEX": 0 },
@@ -23,19 +33,40 @@
     { "id": "plaques_comp",    "nom": "Plaques complètes",   "type": "armure",     "porte": false, "description": "Armure intégrale de plates. Lourde mais quasi-impénétrable.",      "valeurArmure": 6, "malusDEX": 3 },
     { "id": "armure_ombre",    "nom": "Armure d'ombre",      "type": "armure",     "porte": false, "description": "Cuir elfique traité à la Sève. Légère comme une feuille, solide comme l'acier.", "valeurArmure": 3, "malusDEX": 0 },
     { "id": "cotte_runique",   "nom": "Cotte runique",       "type": "armure",     "porte": false, "description": "Mailles gravées de runes naines. Résiste aux dégâts magiques.",   "valeurArmure": 5, "malusDEX": 1 },
+    { "id": "armure_ecailles", "nom": "Armure d'écailles",   "type": "armure",     "porte": false, "description": "Plaques de corne superposées, souples et résistantes aux tranchants.", "valeurArmure": 3, "malusDEX": 0 },
+    { "id": "brigandine",      "nom": "Brigandine",          "type": "armure",     "porte": false, "description": "Toile renforcée de plaquettes métalliques rivetées à l'intérieur.", "valeurArmure": 4, "malusDEX": 1 },
+    { "id": "robe_mage",       "nom": "Robe de mage tissée de Sève", "type": "armure", "porte": false, "description": "Tissu léger imprégné de Sève. Protège sans entraver la magie.",     "valeurArmure": 1, "malusDEX": 0 },
+    { "id": "manteau_voyageur","nom": "Manteau de voyageur renforcé", "type": "armure", "porte": false, "description": "Cuir épais doublé, pensé pour les longues routes autant que le combat.", "valeurArmure": 1, "malusDEX": 0 },
+    { "id": "armure_garde_solvarn", "nom": "Armure de la Garde de Solvarn", "type": "armure", "porte": false, "description": "Harnois standard de l'infanterie impériale, frappé de l'aigle de Solvarn.", "valeurArmure": 5, "malusDEX": 2 },
+    { "id": "armure_druidique","nom": "Armure druidique d'écorce vivante", "type": "armure", "porte": false, "description": "Écorce liée par la Sève, se resserre naturellement autour du porteur.", "valeurArmure": 3, "malusDEX": 0 },
 
     { "id": "rondache",        "nom": "Rondache en bois",   "type": "bouclier",   "porte": false, "description": "Bouclier léger en bois cerclé de fer. Facile à manier.",           "bonusDEF": 1 },
     { "id": "bouclier_acier",  "nom": "Bouclier en acier",  "type": "bouclier",   "porte": false, "description": "Protection solide. Standard de l'infanterie des Royaumes Coalisés.", "bonusDEF": 2 },
     { "id": "targe_elfique",   "nom": "Targe elfique",      "type": "bouclier",   "porte": false, "description": "Bouclier en bois de l'Arbre-Monde. Léger et magiquement résistant.", "bonusDEF": 2 },
+    { "id": "bouclier_tour",   "nom": "Bouclier tour",      "type": "bouclier",   "porte": false, "description": "Pavois massif couvrant tout le corps. Encombrant mais quasi imparable.", "bonusDEF": 3 },
+    { "id": "bouclier_rond_nain", "nom": "Bouclier rond nain", "type": "bouclier", "porte": false, "description": "Acier épais forgé à Khazrak Dûm, bordé de runes protectrices.",     "bonusDEF": 2 },
+    { "id": "bouclier_seve",   "nom": "Bouclier de la Sève","type": "bouclier",   "porte": false, "description": "Bois vivant qui se referme sur les entailles entre deux combats.",  "bonusDEF": 3 },
 
     { "id": "potion_soin",     "nom": "Potion de soin",     "type": "consommable","porte": false, "description": "Régénère 1d6 PV immédiatement. Goût amer de Sève.",                "quantite": 1 },
     { "id": "potion_soin_sup", "nom": "Potion de soin améliorée","type": "consommable","porte": false,"description": "Régénère 2d6 PV. Préparée par un Druide de rang 3+.",          "quantite": 1 },
     { "id": "huile_sainte",    "nom": "Huile sainte",       "type": "consommable","porte": false, "description": "Appliquée sur une arme : inflige +1d4 dégâts aux créatures du Chaos pendant 1 combat.", "quantite": 1 },
     { "id": "antidote",        "nom": "Antidote",           "type": "consommable","porte": false, "description": "Neutralise immédiatement tout poison actif. Amère et efficace.",   "quantite": 1 },
     { "id": "parchemin_sort",  "nom": "Parchemin de sort",  "type": "consommable","porte": false, "description": "Sort à usage unique. Le lanceur peut l'utiliser même sans classe magique (test INT diff. 14).", "quantite": 1 },
+    { "id": "elixir_force",    "nom": "Élixir de force",    "type": "consommable","porte": false, "description": "Confère +2 FOR pendant 1 combat. Effet brutal mais bref.",         "quantite": 1 },
+    { "id": "fumigene",        "nom": "Fumigène tactique",  "type": "consommable","porte": false, "description": "Crée un nuage de fumée dense sur 3 cases de rayon, bloquant la vue pendant 2 rounds.", "quantite": 1 },
+    { "id": "corde_enchantee", "nom": "Corde enchantée",    "type": "consommable","porte": false, "description": "20m de corde qui se love et se déroule seule sur commande verbale.",  "quantite": 1 },
+    { "id": "torche_eternelle","nom": "Torche éternelle",   "type": "consommable","porte": false, "description": "Ne s'éteint jamais et ne consume aucun combustible. Éclaire 6 cases.", "quantite": 1 },
+    { "id": "bombe_alchimique","nom": "Bombe alchimique",   "type": "consommable","porte": false, "description": "Explose au contact : 1d8 dégâts de feu en zone (1 case de rayon).", "quantite": 1 },
+    { "id": "elixir_vision_nocturne", "nom": "Élixir de vision nocturne", "type": "consommable", "porte": false, "description": "Offre une vision dans le noir total pendant 1 scène complète.", "quantite": 1 },
 
     { "id": "amulette_prot",   "nom": "Amulette de protection","type": "accessoire","porte": false,"description": "+1 à tous les jets de résistance (Chaos, poison, mental).",      "effet": "+1 jets de résistance" },
     { "id": "anneau_force",    "nom": "Anneau de force",    "type": "accessoire", "porte": false, "description": "+1 en FOR. Fabriqué à Khazrak Dûm pour les guerriers d'élite.",   "effet": "+1 FOR" },
-    { "id": "bottes_legeres",  "nom": "Bottes légères",     "type": "accessoire", "porte": false, "description": "+1 en initiative. Semelles enchantées qui absorbent les bruits de pas.", "effet": "+1 initiative" }
+    { "id": "bottes_legeres",  "nom": "Bottes légères",     "type": "accessoire", "porte": false, "description": "+1 en initiative. Semelles enchantées qui absorbent les bruits de pas.", "effet": "+1 initiative" },
+    { "id": "cape_camouflage", "nom": "Cape de camouflage", "type": "accessoire", "porte": false, "description": "Tissu changeant qui se fond dans le décor environnant.",           "effet": "+1 discrétion" },
+    { "id": "medaillon_seve",  "nom": "Médaillon de la Sève","type": "accessoire", "porte": false, "description": "Goutte de Sève cristallisée, portée par les initiés des Enfants de la Sève.", "effet": "+1 SAG" },
+    { "id": "ceinture_force",  "nom": "Ceinture de force",  "type": "accessoire", "porte": false, "description": "Cuir clouté qui raffermit la constitution du porteur.",             "effet": "+1 CON" },
+    { "id": "boucle_aelindra", "nom": "Boucle d'oreille d'Aelindra", "type": "accessoire", "porte": false, "description": "Bijou elfique délicat, gravé du sceau d'Aelindra.",              "effet": "+1 CHA" },
+    { "id": "lentilles_nocturnes", "nom": "Lentilles de vision nocturne", "type": "accessoire", "porte": false, "description": "Fines lentilles enchantées qui percent l'obscurité.",              "effet": "Vision dans le noir (6 cases)" },
+    { "id": "gantelets_renforces", "nom": "Gantelets renforcés", "type": "accessoire", "porte": false, "description": "Métal renforcé aux articulations, alourdit chaque coup porté.",     "effet": "+1 dégâts armes de contact" }
   ]
 }
