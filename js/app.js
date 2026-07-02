@@ -18,6 +18,17 @@ const App = (() => {
   let role = null;           // "joueur" | "mj" | null (pas encore choisi)
   let carteMode = "worldmap"; // "worldmap" | "battlemap"
 
+  // Overlay de jet de dé partagée (voir _verifierNouveauJetPourOverlay) :
+  // horodatage du dernier jet déjà montré, pour ne jamais rejouer une
+  // overlay pour un jet déjà vu (écriture optimiste + confirmation Firestore
+  // déclenchent chacune le callback subscribe pour la même entrée).
+  let dernierHorodatageAffiche = null;
+  // true dès que la toute première synchro de l'historique est reçue :
+  // permet de distinguer "je rejoins la session, voici l'historique déjà
+  // là" (pas d'overlay) de "un nouveau jet vient d'être ajouté" (overlay).
+  let histoOverlayInitialise = false;
+  let overlayJetTimer = null;
+
   /* ---------- Utilitaires ---------- */
 
   // Modificateur de caractéristique façon d20 — délègue au modèle Entité
@@ -1357,6 +1368,47 @@ const App = (() => {
     rendreHisto();
   }
 
+  // Remplit et affiche l'overlay de jet de dé (visible sur n'importe quel
+  // onglet). entree suit le même format que les entrées de des:histo.
+  function afficherOverlayJet(entree) {
+    const overlay = document.getElementById("overlay-jet");
+    if (!overlay || !entree) return;
+    document.getElementById("overlay-jet-auteur").textContent = entree.auteur || "";
+    document.getElementById("overlay-jet-label").textContent = entree.label;
+    document.getElementById("overlay-jet-total").textContent = entree.total;
+    document.getElementById("overlay-jet-badge").textContent =
+      entree.crit ? "CRITIQUE ! 🎉" : entree.echec ? "Échec critique 💀" : "";
+    overlay.classList.remove("cache", "crit", "echec");
+    if (entree.crit) overlay.classList.add("crit");
+    else if (entree.echec) overlay.classList.add("echec");
+    overlay.classList.add("visible");
+
+    if (overlayJetTimer) clearTimeout(overlayJetTimer);
+    overlayJetTimer = setTimeout(() => {
+      overlay.classList.remove("visible");
+      overlayJetTimer = null;
+    }, 5000);
+  }
+
+  // Appelé à chaque synchro de l'historique partagé (voir subscribe plus
+  // bas) : déclenche l'overlay uniquement pour un jet réellement nouveau.
+  function _verifierNouveauJetPourOverlay() {
+    const h = chargerHisto();
+    if (!histoOverlayInitialise) {
+      // Première synchro (chargement de page, ou joueur qui rejoint en
+      // cours de session) : on mémorise juste le dernier jet déjà connu,
+      // sans faire apparaître l'overlay pour de l'historique déjà ancien.
+      dernierHorodatageAffiche = h.length ? h[0].horodatage : 0;
+      histoOverlayInitialise = true;
+      return;
+    }
+    if (!h.length) return; // viderHisto() : tableau vidé, pas d'overlay
+    const plusRecent = h[0]; // ajouterHisto fait unshift : h[0] = le plus récent
+    if (dernierHorodatageAffiche !== null && plusRecent.horodatage <= dernierHorodatageAffiche) return;
+    dernierHorodatageAffiche = plusRecent.horodatage;
+    afficherOverlayJet(plusRecent);
+  }
+
   /* ============================================================
      RÈGLES (référence)
      ============================================================ */
@@ -1546,7 +1598,7 @@ const App = (() => {
     });
 
     // Journal de dés partagé : re-rendu dès qu'un autre client lance un dé.
-    SyncStore.subscribe(STORAGE_HISTO, () => rendreHisto());
+    SyncStore.subscribe(STORAGE_HISTO, () => { rendreHisto(); _verifierNouveauJetPourOverlay(); });
 
     // Loot — fermeture modals
     const btnFermerLoot = document.getElementById("btn-fermer-modal-loot");

@@ -550,6 +550,49 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 }
 #toast.visible { opacity: 1; transform: translateX(-50%) translateY(-6px); }
 
+/* ---------- Overlay de jet de dé (visible sur tous les onglets) ---------- */
+.overlay-jet {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  z-index: 1000; pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+}
+.overlay-jet.cache { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+.overlay-jet.visible { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.overlay-jet-boite {
+  background: var(--parchemin);
+  border: 5px solid var(--or);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px var(--ombre);
+  padding: 22px 34px;
+  min-width: 220px;
+  text-align: center;
+}
+.overlay-jet-auteur {
+  font-size: 0.75rem; color: var(--violet-accent);
+  text-transform: uppercase; letter-spacing: 0.6px;
+  margin-bottom: 4px;
+}
+.overlay-jet-label {
+  font-family: 'Cinzel', serif; font-weight: 700;
+  color: var(--violet); font-size: 1.1rem; margin-bottom: 12px;
+}
+.overlay-jet-d20 {
+  width: 90px; height: 90px; margin: 0 auto 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--violet);
+  clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
+}
+.overlay-jet-d20 span { color: var(--parchemin); font-size: 2rem; font-weight: 800; line-height: 1; }
+.overlay-jet-badge { font-size: 0.85rem; font-weight: 700; min-height: 1.1em; color: var(--encre); }
+.overlay-jet.crit .overlay-jet-boite { border-color: var(--succes); }
+.overlay-jet.crit .overlay-jet-d20 { background: var(--succes); }
+.overlay-jet.crit .overlay-jet-badge { color: var(--succes); }
+.overlay-jet.echec .overlay-jet-boite { border-color: var(--chaos); }
+.overlay-jet.echec .overlay-jet-d20 { background: var(--chaos); }
+.overlay-jet.echec .overlay-jet-badge { color: var(--chaos); }
+
 @media (max-width: 600px) {
   header h1 { font-size: 1.2rem; }
   #zone-resultat .total { font-size: 2.2rem; }

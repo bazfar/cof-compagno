@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=16" />
+  <link rel="stylesheet" href="css/style.css?v=17" />
 </head>
 <body>
   <header>
@@ -372,6 +372,18 @@
 
   <div id="toast"></div>
 
+  <!-- Overlay de jet de dé, visible par tous les joueurs quel que soit l'onglet actif -->
+  <div id="overlay-jet" class="overlay-jet cache">
+    <div class="overlay-jet-boite">
+      <div class="overlay-jet-auteur" id="overlay-jet-auteur"></div>
+      <div class="overlay-jet-label" id="overlay-jet-label"></div>
+      <div class="overlay-jet-d20" id="overlay-jet-d20">
+        <span id="overlay-jet-total"></span>
+      </div>
+      <div class="overlay-jet-badge" id="overlay-jet-badge"></div>
+    </div>
+  </div>
+
   <!-- Modal lancement vote loot (MJ) -->
   <div id="modal-loot" class="modal-overlay" style="display:none;">
     <div class="modal-boite">
@@ -419,6 +431,6 @@
   <script src="js/sync.js?v=2"></script>
   <script src="js/carte.js?v=36"></script>
   <script src="js/loot.js?v=2"></script>
-  <script src="js/app.js?v=20"></script>
+  <script src="js/app.js?v=21"></script>
 </body>
 </html>
