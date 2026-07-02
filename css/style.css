@@ -477,6 +477,22 @@ textarea { resize: vertical; min-height: 70px; }
 .carte-select option { background: #fffdf7; color: var(--encre); }
 .carte-toolbar .btn.actif-bouton { background: var(--or); color: var(--encre); }
 .carte-aide { font-size: 0.8rem; color: #6a6278; margin-bottom: 10px; min-height: 1.2em; }
+
+/* En battlemap, la fiche du joueur reste affichée à gauche, en tête ; la
+   carte occupe le reste de la largeur à droite. */
+.battlemap-layout { display: flex; gap: 16px; align-items: flex-start; }
+.battlemap-layout .carte-scene { flex: 1 1 auto; min-width: 0; }
+.battlemap-fiche-sidebar {
+  flex: 0 0 300px; width: 300px;
+  position: sticky; top: 12px;
+  max-height: calc(100vh - 24px); overflow-y: auto;
+}
+.battlemap-fiche-sidebar .carte { margin-bottom: 12px; }
+.battlemap-fiche-sidebar .nom-perso { font-size: 1.15rem; }
+@media (max-width: 900px) {
+  .battlemap-layout { flex-direction: column; }
+  .battlemap-fiche-sidebar { width: 100%; position: static; max-height: none; }
+}
 .carte-scene {
   position: relative; width: 100%; min-height: 220px;
   background: #0f0a16; border-radius: 8px; overflow: hidden;

@@ -282,17 +282,21 @@
           <button class="btn petit danger" id="btn-carte-reset">Réinitialiser</button>
         </div>
         <div class="carte-aide" id="carte-aide"></div>
-        <div class="carte-scene" id="carte-scene">
-          <div class="carte-vide" id="carte-vide">Choisis une carte dans le menu ou importe un .dd2vtt pour commencer.</div>
-          <!-- Worldmap : canvas pan/zoom -->
-          <canvas id="canvas-worldmap"></canvas>
-          <!-- Battlemap : image + overlays -->
-          <img id="carte-image" alt="carte" style="display:none;" />
-          <canvas id="carte-fog"></canvas>
-          <canvas id="carte-murs"></canvas>
-          <canvas id="carte-los"></canvas>
-          <div id="dd2vtt-tokens"></div>
-          <div id="carte-jetons"></div>
+        <div class="battlemap-layout" id="battlemap-layout">
+          <!-- Fiche du joueur, visible en continu à côté de la battlemap -->
+          <aside class="battlemap-fiche-sidebar battlemap-only" id="battlemap-fiche-sidebar" data-role="joueur"></aside>
+          <div class="carte-scene" id="carte-scene">
+            <div class="carte-vide" id="carte-vide">Choisis une carte dans le menu ou importe un .dd2vtt pour commencer.</div>
+            <!-- Worldmap : canvas pan/zoom -->
+            <canvas id="canvas-worldmap"></canvas>
+            <!-- Battlemap : image + overlays -->
+            <img id="carte-image" alt="carte" style="display:none;" />
+            <canvas id="carte-fog"></canvas>
+            <canvas id="carte-murs"></canvas>
+            <canvas id="carte-los"></canvas>
+            <div id="dd2vtt-tokens"></div>
+            <div id="carte-jetons"></div>
+          </div>
         </div>
       </div>
     </section>

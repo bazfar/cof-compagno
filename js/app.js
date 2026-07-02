@@ -14,6 +14,7 @@ const App = (() => {
   // État de création en cours
   let creation = null;       // objet personnage en cours de création
   let ficheActiveId = null;  // id du perso affiché dans "Ma fiche"
+  let ficheSidebarActiveId = null;  // id du perso affiché dans la mini-fiche battlemap (sidebar)
   let role = null;           // "joueur" | "mj" | null (pas encore choisi)
   let carteMode = "worldmap"; // "worldmap" | "battlemap"
 
@@ -128,10 +129,66 @@ const App = (() => {
     const actif = ids.includes(sauvegarde) ? sauvegarde : (ids.includes(ficheActiveId) ? ficheActiveId : ids[0]);
     if (actif) sel.value = actif;
     if (typeof Carte !== "undefined") Carte.definirMonPerso(actif || null);
+    rendreFicheSidebarBattlemap(actif || null);
     sel.onchange = () => {
       localStorage.setItem(STORAGE_MON_PERSO, sel.value);
       if (typeof Carte !== "undefined") Carte.definirMonPerso(sel.value);
+      rendreFicheSidebarBattlemap(sel.value || null);
     };
+  }
+
+  // Mini-fiche affichée en permanence à gauche de la battlemap (joueur
+  // uniquement) : suit le personnage sélectionné dans "Mon personnage",
+  // le même que celui dont le jeton est posé sur la scène.
+  function rendreFicheSidebarBattlemap(id) {
+    const sidebar = document.getElementById("battlemap-fiche-sidebar");
+    if (!sidebar) return;
+    ficheSidebarActiveId = id || null;
+    const persos = chargerPersos();
+    const p = id && persos[id];
+    if (!p) {
+      sidebar.innerHTML = `<div class="carte"><p class="aide">Choisis ton personnage dans « Mon personnage » ci-dessus pour afficher sa fiche ici.</p></div>`;
+      return;
+    }
+    const c = CLASSES[p.classe];
+    const perso = Personnage.depuisJSON(p);
+    const mods = {};
+    CARACS.forEach((cc) => (mods[cc.code] = perso.mod(cc.code)));
+    const init = mods.DEX;
+
+    sidebar.innerHTML = `
+      <div class="carte">
+        <div class="entete-fiche">
+          <div class="tete-gauche">
+            ${avatarHtml(p, 56)}
+            <div>
+              <div class="nom-perso">${p.nom}</div>
+              <div class="meta">${c.nom_affiche} · niveau ${p.niveau}</div>
+            </div>
+          </div>
+        </div>
+        <div class="stats-rapides">
+          <div class="stat-box">
+            <div class="label">Points de vie</div>
+            <div class="pv-control">
+              <button id="bm-pv-moins">−</button>
+              <input type="number" id="bm-pv-actuel" value="${p.pvActuel}" />
+              <span style="font-weight:700;">/ ${p.pvMax}</span>
+              <button id="bm-pv-plus">+</button>
+            </div>
+            <div class="barre-pv"><div class="rempli" id="bm-barre-pv-rempli"></div></div>
+          </div>
+          <div class="stat-box"><div class="label">DEF</div><div class="valeur">${p.def}</div></div>
+          <div class="stat-box"><div class="label">Init.</div><div class="valeur">${signe(init)}</div></div>
+        </div>
+        <button class="btn petit secondaire" id="bm-voir-fiche-complete" style="width:100%;margin-top:6px;">Voir la fiche complète</button>
+      </div>
+    `;
+    majBarrePvSidebar(p);
+    document.getElementById("bm-pv-plus").onclick = () => ajusterPv(id, +1);
+    document.getElementById("bm-pv-moins").onclick = () => ajusterPv(id, -1);
+    document.getElementById("bm-pv-actuel").onchange = (e) => definirPv(id, parseInt(e.target.value, 10));
+    document.getElementById("bm-voir-fiche-complete").onclick = () => { allerVers("fiche"); afficherFiche(id); };
   }
 
   /* ---------- Navigation onglets ---------- */
@@ -1054,21 +1111,39 @@ const App = (() => {
     const el = document.getElementById("barre-pv-rempli");
     if (el) el.style.width = pct + "%";
   }
+  function majBarrePvSidebar(p) {
+    const pct = Math.max(0, Math.min(100, (p.pvActuel / p.pvMax) * 100));
+    const el = document.getElementById("bm-barre-pv-rempli");
+    if (el) el.style.width = pct + "%";
+  }
+  // Répercute les PV à jour sur toutes les vues actuellement montées pour ce
+  // personnage (la fiche complète et/ou la mini-fiche battlemap), sans
+  // supposer qu'une seule des deux est présente dans le DOM.
+  function _syncPvAffichages(id, p) {
+    if (ficheActiveId === id) {
+      const el = document.getElementById("pv-actuel");
+      if (el) el.value = p.pvActuel;
+      majBarrePv(p);
+    }
+    if (ficheSidebarActiveId === id) {
+      const el = document.getElementById("bm-pv-actuel");
+      if (el) el.value = p.pvActuel;
+      majBarrePvSidebar(p);
+    }
+  }
   function ajusterPv(id, delta) {
     const persos = chargerPersos();
     const p = persos[id];
     p.pvActuel = Math.max(0, p.pvActuel + delta);
     sauverPersos(persos);
-    document.getElementById("pv-actuel").value = p.pvActuel;
-    majBarrePv(p);
+    _syncPvAffichages(id, p);
   }
   function definirPv(id, val) {
     const persos = chargerPersos();
     const p = persos[id];
     p.pvActuel = isNaN(val) ? p.pvActuel : Math.max(0, val);
     sauverPersos(persos);
-    document.getElementById("pv-actuel").value = p.pvActuel;
-    majBarrePv(p);
+    _syncPvAffichages(id, p);
   }
 
   function editerPerso(id) {
@@ -1519,6 +1594,11 @@ const App = (() => {
     // Label du trigger nav
     const trigger = document.getElementById("trigger-carte");
     if (trigger) trigger.textContent = (isWorld ? "🗺 Worldmap" : "⚔ Battlemap") + " ▾";
+
+    // La sidebar fiche (battlemap-only) vient de changer la largeur dispo
+    // pour la scène : on relaisse le temps au reflow puis on redéclenche le
+    // redimensionnement (géré aujourd'hui via l'événement resize existant).
+    requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
   }
 
   /* ============================================================
