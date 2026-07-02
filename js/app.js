@@ -1052,16 +1052,15 @@ const App = (() => {
         <div>${listeHtml}</div>
         <button class="btn petit secondaire" id="btn-ajouter-item" style="width:100%;margin-top:10px;">+ Ajouter un objet</button>
         <div class="form-ajout-item" id="form-ajout-item" style="display:none;">
-          <input type="text" id="nouvel-item-nom" placeholder="Nom de l'objet" />
-          <select id="nouvel-item-type">
-            <option value="divers">Divers (or, quête...)</option>
-            <option value="arme">Arme</option>
-            <option value="armure">Armure</option>
-            <option value="bouclier">Bouclier</option>
-            <option value="accessoire">Accessoire</option>
-            <option value="consommable">Consommable</option>
+          <select id="nouvel-item-catalogue">
+            <option value="">— Choisir un objet —</option>
+            ${optionsCatalogueLoot()}
+            <option value="__divers__">Objet divers (or, quête...)</option>
           </select>
-          <input type="text" id="nouvel-item-desc" placeholder="Description (optionnel)" />
+          <div id="nouvel-item-divers-champs" style="display:none;flex-direction:column;gap:6px;">
+            <input type="text" id="nouvel-item-nom" placeholder="Nom de l'objet" />
+            <input type="text" id="nouvel-item-desc" placeholder="Description (optionnel)" />
+          </div>
           <button class="btn petit or" id="btn-confirmer-ajout-item">Ajouter</button>
         </div>
       </div>`;
@@ -1140,22 +1139,32 @@ const App = (() => {
     toast(`« ${item.nom} » retiré, renvoyé dans l'inventaire.`);
   }
 
-  function ajouterItemManuel(persoId, nom, type, description) {
-    if (!nom || !nom.trim()) { toast("Donne un nom à l'objet."); return; }
+  function ajouterItemInventaire(persoId, item) {
     const persos = chargerPersos();
     const p = persos[persoId];
     if (!p) return;
     const perso = Personnage.depuisJSON(p);
-    perso.inventaireListe.push({
-      id: "manuel-" + Date.now(),
-      nom: nom.trim(),
-      type: type || "divers",
-      description: (description || "").trim(),
-    });
+    perso.inventaireListe.push(item);
     persos[persoId] = perso.versJSON();
     sauverPersos(persos);
     afficherFiche(persoId);
-    toast(`« ${nom.trim()} » ajouté à l'inventaire.`);
+    toast(`« ${item.nom} » ajouté à l'inventaire.`);
+  }
+
+  // <option>/<optgroup> du catalogue loot (data/loot.js), groupés par type,
+  // pour le sélecteur "+ Ajouter un objet" du bloc Inventaire.
+  const LABELS_TYPE_LOOT = { arme: "Armes", armure: "Armures", bouclier: "Boucliers", accessoire: "Accessoires", consommable: "Consommables" };
+  function optionsCatalogueLoot() {
+    if (typeof LOOT_CATALOGUE === "undefined") return "";
+    const groupes = {};
+    LOOT_CATALOGUE.forEach((it) => { (groupes[it.type] = groupes[it.type] || []).push(it); });
+    return Object.keys(LABELS_TYPE_LOOT).filter((t) => groupes[t]).map((t) => {
+      const options = groupes[t].map((it) => {
+        const badge = badgeEffetItem(it);
+        return `<option value="${it.id}">${echapper(it.nom)}${badge ? " — " + echapper(badge) : ""}</option>`;
+      }).join("");
+      return `<optgroup label="${LABELS_TYPE_LOOT[t]}">${options}</optgroup>`;
+    }).join("");
   }
 
   function jeterItem(persoId, idx) {
@@ -1358,20 +1367,35 @@ const App = (() => {
     zone.querySelectorAll(".btn-jeter-item").forEach((el) => {
       el.onclick = () => jeterItem(id, parseInt(el.dataset.idx, 10));
     });
-    // Inventaire — formulaire d'ajout manuel
+    // Inventaire — formulaire d'ajout, lié au catalogue loot (+ option "divers")
     const btnAjouterItem = document.getElementById("btn-ajouter-item");
     const formAjouterItem = document.getElementById("form-ajout-item");
     if (btnAjouterItem && formAjouterItem) {
       btnAjouterItem.onclick = () => {
         formAjouterItem.style.display = formAjouterItem.style.display === "none" ? "flex" : "none";
       };
+      const selectCatalogue = document.getElementById("nouvel-item-catalogue");
+      const diversChamps = document.getElementById("nouvel-item-divers-champs");
+      selectCatalogue.onchange = () => {
+        diversChamps.style.display = selectCatalogue.value === "__divers__" ? "flex" : "none";
+      };
       document.getElementById("btn-confirmer-ajout-item").onclick = () => {
-        ajouterItemManuel(
-          id,
-          document.getElementById("nouvel-item-nom").value,
-          document.getElementById("nouvel-item-type").value,
-          document.getElementById("nouvel-item-desc").value
-        );
+        const choix = selectCatalogue.value;
+        if (!choix) { toast("Choisis un objet dans la liste."); return; }
+        if (choix === "__divers__") {
+          const nom = document.getElementById("nouvel-item-nom").value.trim();
+          if (!nom) { toast("Donne un nom à l'objet."); return; }
+          ajouterItemInventaire(id, {
+            id: "manuel-" + Date.now(),
+            nom,
+            type: "divers",
+            description: document.getElementById("nouvel-item-desc").value.trim(),
+          });
+        } else {
+          const catalogueItem = (typeof LOOT_CATALOGUE !== "undefined") ? LOOT_CATALOGUE.find((it) => it.id === choix) : null;
+          if (!catalogueItem) { toast("Objet introuvable dans le catalogue."); return; }
+          ajouterItemInventaire(id, Object.assign({}, catalogueItem, { itemRef: catalogueItem.id }));
+        }
       };
     }
   }
@@ -1608,15 +1632,17 @@ const App = (() => {
     else { de = d1; detailDes = `d20 → ${de}`; }
     const total = de + bonus;
     const crit = (de === 20), echec = (de === 1);
-    afficherResultat(label, total, `${detailDes} ${signe(bonus)}`, crit, echec);
-    ajouterHisto(label + " " + signe(bonus), total, crit, echec);
+    const detail = `${detailDes} ${signe(bonus)}`;
+    afficherResultat(label, total, detail, crit, echec);
+    ajouterHisto(label + " " + signe(bonus), total, crit, echec, detail);
   }
 
   function lancerDeSimple(faces) {
     const v = lancerDe(faces);
     const crit = (faces === 20 && v === 20), echec = (faces === 20 && v === 1);
-    afficherResultat(`d${faces}`, v, `1d${faces}`, crit, echec);
-    ajouterHisto(`d${faces}`, v, crit, echec);
+    const detail = `1d${faces}`;
+    afficherResultat(`d${faces}`, v, detail, crit, echec);
+    ajouterHisto(`d${faces}`, v, crit, echec, detail);
   }
 
   // Parse une formule type "2d6+3" ou "1d20-1" ou "3d8"
@@ -1635,8 +1661,9 @@ const App = (() => {
     const total = somme + bonus;
     let crit = false, echec = false;
     if (nb === 1 && faces === 20) { crit = (jets[0] === 20); echec = (jets[0] === 1); }
-    afficherResultat(formule, total, `[${jets.join(", ")}] ${bonus ? signe(bonus) : ""}`, crit, echec);
-    ajouterHisto(formule, total, crit, echec);
+    const detail = `[${jets.join(", ")}] ${bonus ? signe(bonus) : ""}`;
+    afficherResultat(formule, total, detail, crit, echec);
+    ajouterHisto(formule, total, crit, echec, detail);
   }
 
   function afficherResultat(label, total, detail, crit, echec) {
@@ -1659,9 +1686,9 @@ const App = (() => {
   }
 
   function chargerHisto() { return SyncStore.get(STORAGE_HISTO) || []; }
-  function ajouterHisto(label, total, crit, echec) {
+  function ajouterHisto(label, total, crit, echec, detail) {
     const h = chargerHisto();
-    h.unshift({ label, total, crit, echec, auteur: nomLanceur(), horodatage: Date.now() });
+    h.unshift({ label, total, crit, echec, detail: detail || "", auteur: nomLanceur(), horodatage: Date.now() });
     if (h.length > 40) h.pop();
     SyncStore.set(STORAGE_HISTO, h);
     rendreHisto();
@@ -1687,6 +1714,7 @@ const App = (() => {
     document.getElementById("overlay-jet-auteur").textContent = entree.auteur || "";
     document.getElementById("overlay-jet-label").textContent = entree.label;
     document.getElementById("overlay-jet-total").textContent = entree.total;
+    document.getElementById("overlay-jet-detail").textContent = entree.detail || "";
     document.getElementById("overlay-jet-badge").textContent =
       entree.crit ? "CRITIQUE ! 🎉" : entree.echec ? "Échec critique 💀" : "";
     overlay.classList.remove("cache", "crit", "echec");

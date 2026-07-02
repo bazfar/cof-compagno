@@ -601,6 +601,7 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
   clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
 }
 .overlay-jet-d20 span { color: var(--parchemin); font-size: 2rem; font-weight: 800; line-height: 1; }
+.overlay-jet-detail { font-size: 0.8rem; color: var(--violet-clair); margin-bottom: 6px; min-height: 1.1em; }
 .overlay-jet-badge { font-size: 0.85rem; font-weight: 700; min-height: 1.1em; color: var(--encre); }
 .overlay-jet.crit .overlay-jet-boite { border-color: var(--succes); }
 .overlay-jet.crit .overlay-jet-d20 { background: var(--succes); }
