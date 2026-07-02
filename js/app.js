@@ -189,7 +189,7 @@ const App = (() => {
             </div>
             <div class="barre-pv"><div class="rempli" id="bm-barre-pv-rempli"></div></div>
           </div>
-          <div class="stat-box"><div class="label">DEF</div><div class="valeur">${p.def}</div></div>
+          <div class="stat-box"><div class="label">DEF</div><div class="valeur">${perso.calculerDEF()}</div></div>
           <div class="stat-box"><div class="label">Init.</div><div class="valeur">${signe(init)}</div></div>
         </div>
         <button class="btn petit secondaire" id="bm-voir-fiche-complete" style="width:100%;margin-top:6px;">Voir la fiche complète</button>
@@ -246,7 +246,8 @@ const App = (() => {
       pvHistorique: [], // [{niveau, faces, jet, modCON, total}] — jets de PV par niveau
       pvNiveauActuel: 1, // dernier niveau dont les PV ont été tirés
       def: null,
-      inventaire: "",
+      equipement: (typeof SLOTS_EQUIPEMENT !== "undefined") ? Object.fromEntries(SLOTS_EQUIPEMENT.map((s) => [s, null])) : {},
+      inventaireListe: [],
       notes: "",
     };
   }
@@ -893,7 +894,6 @@ const App = (() => {
     creation.niveau = parseInt(document.getElementById("champ-niveau").value, 10) || 1;
     creation.pvMax = parseInt(document.getElementById("champ-pvmax").value, 10) || 1;
     creation.def = parseInt(document.getElementById("champ-def").value, 10) || 10;
-    creation.inventaire = document.getElementById("champ-inventaire").value;
     creation.notes = document.getElementById("champ-notes").value;
     if (creation.pvActuel === null || creation.pvActuel > creation.pvMax) creation.pvActuel = creation.pvMax;
 
@@ -911,7 +911,6 @@ const App = (() => {
     nouvelleCreation();
     document.getElementById("champ-nom").value = "";
     document.getElementById("champ-niveau").value = 1;
-    document.getElementById("champ-inventaire").value = "";
     document.getElementById("champ-notes").value = "";
     const pv = document.getElementById("champ-pvmax"), def = document.getElementById("champ-def");
     delete pv.dataset.touche; delete def.dataset.touche; pv.value = ""; def.value = "";
@@ -971,6 +970,204 @@ const App = (() => {
     const m = /(\d*)d(\d+)([+-]\d+)?/i.exec(texte);
     if (!m) return null;
     return `${m[1] || "1"}d${m[2]}${m[3] || ""}`;
+  }
+
+  /* ============================================================
+     ÉQUIPEMENT / INVENTAIRE — colonne droite de la fiche
+     ============================================================ */
+
+  const LABELS_SLOT = {
+    tete: "Tête", torse: "Torse", jambe: "Jambes", botte: "Bottes",
+    avant_bras: "Avant-bras", main_droite: "Main droite", main_gauche: "Main gauche",
+    collier: "Collier", bague: "Bague",
+  };
+
+  // Résumé chiffré de l'effet d'un item, pour les badges de slot/inventaire.
+  function badgeEffetItem(it) {
+    if (!it) return "";
+    if (it.type === "arme") return [it.degats, it.typedegats, it.enchantement ? "+" + it.enchantement : ""].filter(Boolean).join(" ");
+    if (it.type === "armure") return it.valeurArmure ? `+${it.valeurArmure} armure` : "";
+    if (it.type === "bouclier") return it.bonusDEF ? `+${it.bonusDEF} DEF` : "";
+    if (it.type === "accessoire") return it.effet || "";
+    return "";
+  }
+
+  function rendreBlocEquipement(perso) {
+    const casesHtml = SLOTS_EQUIPEMENT.map((slot) => {
+      const it = perso.equipement[slot];
+      if (it) {
+        const badge = badgeEffetItem(it);
+        return `<div class="slot-case occupe" data-slot="${slot}">
+          <div class="slot-label">${LABELS_SLOT[slot]}</div>
+          <div class="slot-item-nom">${echapper(it.nom)}</div>
+          <div class="slot-item-effet">${echapper(badge)}</div>
+          <button class="btn petit danger btn-desequiper" data-slot="${slot}">Retirer</button>
+        </div>`;
+      }
+      return `<div class="slot-case" data-slot="${slot}">
+        <div class="slot-label">${LABELS_SLOT[slot]}</div>
+        <div style="flex:1;"></div>
+        <button class="btn petit secondaire btn-ouvrir-equiper" data-slot="${slot}">+ Équiper</button>
+      </div>`;
+    }).join("");
+
+    return `
+      <div class="carte">
+        <h3 class="titre-bandeau" style="font-size:1rem;">🛡️ Équipement</h3>
+        <div class="slots-equipement">${casesHtml}</div>
+        <div class="recap-equipement">
+          <div>DEF totale : <strong>${perso.calculerDEF()}</strong> (dont +${perso.bonusDefEquipement()} équipement)</div>
+          <div>Réduction de dégâts : <strong>${perso.reductionDegats()}</strong></div>
+        </div>
+        <div class="selecteur-slot" id="selecteur-slot-equip" style="display:none;"></div>
+      </div>`;
+  }
+
+  function rendreBlocInventaire(perso) {
+    const items = perso.inventaireListe || [];
+    const listeHtml = items.length
+      ? items.map((it, idx) => {
+          const equipable = Personnage.slotsPourType(it).length > 0;
+          const badge = badgeEffetItem(it);
+          return `<div class="inv-item">
+            <div class="inv-item-header">
+              <span class="inv-item-nom">${echapper(it.nom)}</span>
+              ${it.type ? `<span class="loot-badge loot-badge-${it.type}">${echapper(it.type)}</span>` : ""}
+            </div>
+            ${badge ? `<div class="inv-item-stats">${echapper(badge)}</div>` : ""}
+            ${it.description ? `<div class="inv-item-desc">${echapper(it.description)}</div>` : ""}
+            <div class="inv-actions">
+              ${equipable ? `<button class="btn petit or btn-equiper-depuis-inv" data-idx="${idx}">Équiper</button>` : ""}
+              <button class="btn petit danger btn-jeter-item" data-idx="${idx}">Jeter</button>
+            </div>
+          </div>`;
+        }).join("")
+      : `<div class="vide">Inventaire vide.</div>`;
+
+    return `
+      <div class="carte">
+        <h3 class="titre-bandeau" style="font-size:1rem;">🎒 Inventaire</h3>
+        <div>${listeHtml}</div>
+        <button class="btn petit secondaire" id="btn-ajouter-item" style="width:100%;margin-top:10px;">+ Ajouter un objet</button>
+        <div class="form-ajout-item" id="form-ajout-item" style="display:none;">
+          <input type="text" id="nouvel-item-nom" placeholder="Nom de l'objet" />
+          <select id="nouvel-item-type">
+            <option value="divers">Divers (or, quête...)</option>
+            <option value="arme">Arme</option>
+            <option value="armure">Armure</option>
+            <option value="bouclier">Bouclier</option>
+            <option value="accessoire">Accessoire</option>
+            <option value="consommable">Consommable</option>
+          </select>
+          <input type="text" id="nouvel-item-desc" placeholder="Description (optionnel)" />
+          <button class="btn petit or" id="btn-confirmer-ajout-item">Ajouter</button>
+        </div>
+      </div>`;
+  }
+
+  // Ouvre, dans le bloc Équipement, un sélecteur des items de l'inventaire
+  // compatibles avec `slot` (déclenché par "+ Équiper" sur un slot vide).
+  function ouvrirSelecteurEquip(persoId, slot) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const perso = Personnage.depuisJSON(p);
+    const zone = document.getElementById("selecteur-slot-equip");
+    if (!zone) return;
+    const compatibles = perso.inventaireListe
+      .map((it, idx) => ({ it, idx }))
+      .filter(({ it }) => Personnage.slotsPourType(it).includes(slot));
+    if (!compatibles.length) {
+      zone.innerHTML = `<div class="aide">Aucun objet compatible dans l'inventaire pour « ${LABELS_SLOT[slot]} ».</div>`;
+      zone.style.display = "block";
+      return;
+    }
+    zone.innerHTML =
+      `<select id="select-item-a-equiper">` +
+      compatibles.map(({ it, idx }) => {
+        const badge = badgeEffetItem(it);
+        return `<option value="${idx}">${echapper(it.nom)}${badge ? " — " + echapper(badge) : ""}</option>`;
+      }).join("") +
+      `</select>` +
+      `<button class="btn petit or" id="btn-confirmer-equip">Équiper dans « ${LABELS_SLOT[slot]} »</button>`;
+    zone.style.display = "block";
+    document.getElementById("btn-confirmer-equip").onclick = () => {
+      const idx = parseInt(document.getElementById("select-item-a-equiper").value, 10);
+      equiperItem(persoId, idx, slot);
+    };
+  }
+
+  // Équipe l'item d'index `idx` de l'inventaire. slotPref force un
+  // emplacement précis (choisi via le sélecteur du bloc Équipement) ; sans
+  // préférence, on prend le premier emplacement libre compatible (ou, à
+  // défaut, le premier emplacement compatible — l'ancien item en repart en
+  // inventaire).
+  function equiperItem(persoId, idx, slotPref) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const perso = Personnage.depuisJSON(p);
+    const item = perso.inventaireListe[idx];
+    if (!item) return;
+    const slotsPossibles = Personnage.slotsPourType(item);
+    if (!slotsPossibles.length) { toast("Cet objet ne peut pas être équipé."); return; }
+    const slot = slotPref && slotsPossibles.includes(slotPref)
+      ? slotPref
+      : (slotsPossibles.find((s) => !perso.equipement[s]) || slotsPossibles[0]);
+    const ancien = perso.equiper(slot, item);
+    if (ancien === undefined) { toast("Cet objet ne peut pas être équipé dans cet emplacement."); return; }
+    perso.inventaireListe.splice(idx, 1);
+    if (ancien) perso.inventaireListe.push(ancien);
+    persos[persoId] = perso.versJSON();
+    sauverPersos(persos);
+    afficherFiche(persoId);
+    toast(`« ${item.nom} » équipé (${LABELS_SLOT[slot]}).`);
+  }
+
+  function desequiperItem(persoId, slot) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const perso = Personnage.depuisJSON(p);
+    const item = perso.deséquiper(slot);
+    if (!item) return;
+    perso.inventaireListe.push(item);
+    persos[persoId] = perso.versJSON();
+    sauverPersos(persos);
+    afficherFiche(persoId);
+    toast(`« ${item.nom} » retiré, renvoyé dans l'inventaire.`);
+  }
+
+  function ajouterItemManuel(persoId, nom, type, description) {
+    if (!nom || !nom.trim()) { toast("Donne un nom à l'objet."); return; }
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const perso = Personnage.depuisJSON(p);
+    perso.inventaireListe.push({
+      id: "manuel-" + Date.now(),
+      nom: nom.trim(),
+      type: type || "divers",
+      description: (description || "").trim(),
+    });
+    persos[persoId] = perso.versJSON();
+    sauverPersos(persos);
+    afficherFiche(persoId);
+    toast(`« ${nom.trim()} » ajouté à l'inventaire.`);
+  }
+
+  function jeterItem(persoId, idx) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const perso = Personnage.depuisJSON(p);
+    const item = perso.inventaireListe[idx];
+    if (!item) return;
+    if (!confirm(`Jeter « ${item.nom} » ?`)) return;
+    perso.inventaireListe.splice(idx, 1);
+    persos[persoId] = perso.versJSON();
+    sauverPersos(persos);
+    afficherFiche(persoId);
   }
 
   function afficherFiche(id) {
@@ -1040,64 +1237,72 @@ const App = (() => {
     }
 
     zone.innerHTML = `
-      <div class="carte">
-        <div class="entete-fiche">
-          <div class="tete-gauche">
-            ${avatarHtml(p, 76)}
-            <div>
-              <div class="nom-perso">${p.nom}</div>
-              <div class="meta">${c.nom_affiche}${race ? " · " + race.nom_affiche : ""} · niveau ${niveau} · Dé de vie ${c.de_de_vie}</div>
+      <div class="fiche-layout">
+        <div class="fiche-col-gauche">
+          <div class="carte">
+            <div class="entete-fiche">
+              <div class="tete-gauche">
+                ${avatarHtml(p, 76)}
+                <div>
+                  <div class="nom-perso">${p.nom}</div>
+                  <div class="meta">${c.nom_affiche}${race ? " · " + race.nom_affiche : ""} · niveau ${niveau} · Dé de vie ${c.de_de_vie}</div>
+                </div>
+              </div>
+              <div class="barre-actions">
+                <button class="btn petit or" id="btn-niveau-up">⬆ Monter de niveau</button>
+                <button class="btn petit secondaire" id="btn-editer-fiche">✎ Modifier</button>
+                <button class="btn petit secondaire" id="btn-exporter-fiche">Exporter</button>
+              </div>
             </div>
-          </div>
-          <div class="barre-actions">
-            <button class="btn petit or" id="btn-niveau-up">⬆ Monter de niveau</button>
-            <button class="btn petit secondaire" id="btn-editer-fiche">✎ Modifier</button>
-            <button class="btn petit secondaire" id="btn-exporter-fiche">Exporter</button>
-          </div>
-        </div>
 
-        <div class="stats-rapides">
-          <div class="stat-box">
-            <div class="label">Points de vie</div>
-            <div class="pv-control">
-              <button id="pv-moins">−</button>
-              <input type="number" id="pv-actuel" value="${p.pvActuel}" />
-              <span style="font-weight:700;">/ ${p.pvMax}</span>
-              <button id="pv-plus">+</button>
+            <div class="stats-rapides">
+              <div class="stat-box">
+                <div class="label">Points de vie</div>
+                <div class="pv-control">
+                  <button id="pv-moins">−</button>
+                  <input type="number" id="pv-actuel" value="${p.pvActuel}" />
+                  <span style="font-weight:700;">/ ${p.pvMax}</span>
+                  <button id="pv-plus">+</button>
+                </div>
+                <div class="barre-pv"><div class="rempli" id="barre-pv-rempli"></div></div>
+              </div>
+              <div class="stat-box"><div class="label">DEF</div><div class="valeur">${perso.calculerDEF()}</div></div>
+              <div class="stat-box"><div class="label">Initiative</div><div class="valeur">${signe(init)}</div></div>
             </div>
-            <div class="barre-pv"><div class="rempli" id="barre-pv-rempli"></div></div>
+
+            <div class="stats-rapides">
+              ${CARACS.map((cc) =>
+                `<div class="stat-box" style="cursor:pointer;" data-test="${cc.code}" title="Lancer un test de ${cc.nom}">
+                  <div class="label">${cc.code}</div>
+                  <div class="valeur">${signe(mods[cc.code])}</div>
+                  <div style="font-size:0.65rem;opacity:0.7;">val. ${p.caracs[cc.code]} · 🎲 test</div>
+                </div>`).join("")}
+            </div>
+
+            <h3>Attaques rapides</h3>
+            <div class="barre-actions">
+              <button class="btn" data-attaque="contact" data-bonus="${attContact}">⚔️ Contact (${signe(attContact)})</button>
+              <button class="btn" data-attaque="distance" data-bonus="${attDistance}">🏹 Distance (${signe(attDistance)})</button>
+              ${attMagique !== null ? `<button class="btn" data-attaque="magique" data-bonus="${attMagique}">✨ Magique (${signe(attMagique)})</button>` : ""}
+            </div>
+            <p style="font-size:0.75rem;color:#8a8296;margin-top:6px;">Bonus d'attaque (jet, pas les dégâts) = bonus de progression (${ARCHETYPE_CLASSE[p.classe] || "martial"}, ${signe(perso.bonusProgression())} au niveau ${niveau}) + modificateur. Ajuste selon tes voies (ex. +1 Tir ajusté) au moment du jet via l'onglet Dés si besoin.</p>
           </div>
-          <div class="stat-box"><div class="label">DEF</div><div class="valeur">${p.def}</div></div>
-          <div class="stat-box"><div class="label">Initiative</div><div class="valeur">${signe(init)}</div></div>
+
+          <div class="carte">
+            <h3>Capacités</h3>
+            ${capHtml}
+          </div>
+
+          ${race ? `<div class="carte"><h3>Capacités raciales — ${race.voie_nom}</h3>${capRaceHtml}</div>` : ""}
+
+          ${p.notes ? `<div class="carte"><h3>Notes</h3><div style="white-space:pre-wrap;font-size:0.9rem;">${echapper(p.notes)}</div></div>` : ""}
         </div>
 
-        <div class="stats-rapides">
-          ${CARACS.map((cc) =>
-            `<div class="stat-box" style="cursor:pointer;" data-test="${cc.code}" title="Lancer un test de ${cc.nom}">
-              <div class="label">${cc.code}</div>
-              <div class="valeur">${signe(mods[cc.code])}</div>
-              <div style="font-size:0.65rem;opacity:0.7;">val. ${p.caracs[cc.code]} · 🎲 test</div>
-            </div>`).join("")}
+        <div class="fiche-col-droite">
+          ${rendreBlocEquipement(perso)}
+          ${rendreBlocInventaire(perso)}
         </div>
-
-        <h3>Attaques rapides</h3>
-        <div class="barre-actions">
-          <button class="btn" data-attaque="contact" data-bonus="${attContact}">⚔️ Contact (${signe(attContact)})</button>
-          <button class="btn" data-attaque="distance" data-bonus="${attDistance}">🏹 Distance (${signe(attDistance)})</button>
-          ${attMagique !== null ? `<button class="btn" data-attaque="magique" data-bonus="${attMagique}">✨ Magique (${signe(attMagique)})</button>` : ""}
-        </div>
-        <p style="font-size:0.75rem;color:#8a8296;margin-top:6px;">Bonus d'attaque (jet, pas les dégâts) = bonus de progression (${ARCHETYPE_CLASSE[p.classe] || "martial"}, ${signe(perso.bonusProgression())} au niveau ${niveau}) + modificateur. Ajuste selon tes voies (ex. +1 Tir ajusté) au moment du jet via l'onglet Dés si besoin.</p>
       </div>
-
-      <div class="carte">
-        <h3>Capacités</h3>
-        ${capHtml}
-      </div>
-
-      ${race ? `<div class="carte"><h3>Capacités raciales — ${race.voie_nom}</h3>${capRaceHtml}</div>` : ""}
-
-      ${p.inventaire ? `<div class="carte"><h3>Équipement</h3><div style="white-space:pre-wrap;font-size:0.9rem;">${echapper(p.inventaire)}</div></div>` : ""}
-      ${p.notes ? `<div class="carte"><h3>Notes</h3><div style="white-space:pre-wrap;font-size:0.9rem;">${echapper(p.notes)}</div></div>` : ""}
     `;
 
     majBarrePv(p);
@@ -1132,6 +1337,39 @@ const App = (() => {
     document.getElementById("btn-niveau-up").onclick = () => monterDeNiveau(id);
     document.getElementById("btn-editer-fiche").onclick = () => editerPerso(id);
     document.getElementById("btn-exporter-fiche").onclick = () => exporterPerso(id);
+
+    // Équipement — retirer un item équipé
+    zone.querySelectorAll(".btn-desequiper").forEach((el) => {
+      el.onclick = () => desequiperItem(id, el.dataset.slot);
+    });
+    // Équipement — ouvrir le sélecteur d'un slot vide
+    zone.querySelectorAll(".btn-ouvrir-equiper").forEach((el) => {
+      el.onclick = () => ouvrirSelecteurEquip(id, el.dataset.slot);
+    });
+    // Inventaire — équiper directement (choisit l'emplacement automatiquement)
+    zone.querySelectorAll(".btn-equiper-depuis-inv").forEach((el) => {
+      el.onclick = () => equiperItem(id, parseInt(el.dataset.idx, 10));
+    });
+    // Inventaire — jeter un objet
+    zone.querySelectorAll(".btn-jeter-item").forEach((el) => {
+      el.onclick = () => jeterItem(id, parseInt(el.dataset.idx, 10));
+    });
+    // Inventaire — formulaire d'ajout manuel
+    const btnAjouterItem = document.getElementById("btn-ajouter-item");
+    const formAjouterItem = document.getElementById("form-ajout-item");
+    if (btnAjouterItem && formAjouterItem) {
+      btnAjouterItem.onclick = () => {
+        formAjouterItem.style.display = formAjouterItem.style.display === "none" ? "flex" : "none";
+      };
+      document.getElementById("btn-confirmer-ajout-item").onclick = () => {
+        ajouterItemManuel(
+          id,
+          document.getElementById("nouvel-item-nom").value,
+          document.getElementById("nouvel-item-type").value,
+          document.getElementById("nouvel-item-desc").value
+        );
+      };
+    }
   }
 
   function echapper(s) {
@@ -1198,10 +1436,11 @@ const App = (() => {
     if (!creation.pvHistorique) creation.pvHistorique = []; // compat fiches créées avant le jet de PV par niveau
     if (typeof creation.pvNiveauActuel !== "number") creation.pvNiveauActuel = creation.niveau || 1;
     if (!creation.voiesHorsProfil) creation.voiesHorsProfil = []; // compat fiches créées avant les voies hors profil
+    if (!creation.equipement) creation.equipement = Object.fromEntries(SLOTS_EQUIPEMENT.map((s) => [s, null])); // compat fiches créées avant les slots d'équipement
+    if (!creation.inventaireListe) creation.inventaireListe = [];
     allerVers("creation");
     document.getElementById("champ-nom").value = p.nom;
     document.getElementById("champ-niveau").value = p.niveau;
-    document.getElementById("champ-inventaire").value = p.inventaire || "";
     document.getElementById("champ-notes").value = p.notes || "";
     const champPv = document.getElementById("champ-pvmax"), champDef = document.getElementById("champ-def");
     champPv.value = p.pvMax; champPv.dataset.touche = "1";
@@ -1837,7 +2076,7 @@ const App = (() => {
   }
 
   /* ============================================================
-     LOOT — notification joueur + inventaire
+     LOOT — notification joueur (gains distribués par le MJ)
      ============================================================ */
 
   function _mettreAJourLootFiche() {
@@ -1854,14 +2093,9 @@ const App = (() => {
       Loot.rendreNotificationVote(persoId);
       notifEl.id = "loot-notif-fiche";
     }
-
-    // Inventaire
-    const blocInv = document.getElementById("bloc-inventaire");
-    const persos = chargerPersos();
-    const p = persos[persoId];
-    const aItems = p && Array.isArray(p.equipement) && p.equipement.length > 0;
-    if (blocInv) blocInv.style.display = aItems ? "" : "none";
-    Loot.rendreInventaire(persoId);
+    // Les objets gagnés atterrissent dans inventaireListe et s'affichent
+    // via le bloc Inventaire de la fiche (afficherFiche) — rien d'autre à
+    // faire ici.
   }
 
   document.addEventListener("DOMContentLoaded", init);

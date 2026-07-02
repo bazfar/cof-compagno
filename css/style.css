@@ -177,6 +177,7 @@ main {
 }
 .carte h2, .carte h3 { color: var(--violet); margin-top: 0; }
 .carte h2.titre-bandeau,
+.carte h3.titre-bandeau,
 .titre-bandeau {
   background: var(--violet);
   color: var(--parchemin);
@@ -1005,13 +1006,38 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .loot-notif-btns { display: flex; gap: 10px; }
 .loot-notif-vote-ok { background: #e8f0e8; color: #1a4a1a; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; }
 
-/* Inventaire joueur */
-#loot-inventaire-joueur { display: flex; flex-direction: column; gap: 10px; }
-.inv-item { background: var(--parchemin); border: 1px solid var(--parchemin-fonce); border-radius: var(--radius); padding: 10px; }
-.inv-item-equipe { border-color: var(--or); background: #fffcf0; }
+/* Inventaire joueur (fiche personnage) */
+.inv-item { background: var(--parchemin); border: 1px solid var(--parchemin-fonce); border-radius: var(--radius); padding: 10px; margin-bottom: 8px; }
 .inv-item-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
 .inv-item-nom { font-weight: 700; color: var(--violet); font-size: 0.88rem; flex: 1; }
-.inv-badge-equipe { background: var(--or); color: #fff; font-size: 0.62rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
 .inv-item-stats { font-size: 0.78rem; color: var(--violet-clair); font-style: italic; margin-bottom: 3px; }
 .inv-item-desc { font-size: 0.76rem; color: #6a6278; margin-bottom: 6px; }
 .inv-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- Fiche personnage — layout 2 colonnes (équipement/inventaire) ---------- */
+.fiche-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
+.fiche-col-droite { position: sticky; top: 16px; }
+.fiche-col-droite .carte { margin-bottom: 16px; }
+@media (max-width: 900px) {
+  .fiche-layout { grid-template-columns: 1fr; }
+  .fiche-col-droite { position: static; }
+}
+
+.slots-equipement { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.slot-case {
+  background: #fffdf7; border: 1px solid var(--parchemin-fonce); border-radius: 6px;
+  padding: 8px; text-align: center; min-height: 84px;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 4px;
+}
+.slot-case.occupe { border-color: var(--or); background: #fffcf0; }
+.slot-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.5px; color: #8a8296; }
+.slot-item-nom { font-size: 0.78rem; font-weight: 700; color: var(--violet); line-height: 1.2; }
+.slot-item-effet { font-size: 0.68rem; color: var(--violet-clair); }
+.slot-case .btn { width: 100%; }
+
+.recap-equipement { margin-top: 12px; font-size: 0.85rem; background: var(--violet); color: var(--parchemin); border-radius: 6px; padding: 8px 10px; }
+.recap-equipement div { margin: 2px 0; }
+
+.selecteur-slot select { width: 100%; margin-bottom: 6px; }
+
+.form-ajout-item { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--parchemin-fonce); }

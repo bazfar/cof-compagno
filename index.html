@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=18" />
+  <link rel="stylesheet" href="css/style.css?v=19" />
 </head>
 <body>
   <header>
@@ -153,10 +153,6 @@
           </div>
         </div>
         <div style="margin-top:12px;">
-          <label for="champ-inventaire">Équipement / inventaire</label>
-          <textarea id="champ-inventaire" placeholder="Armes, armure, objets, or..."></textarea>
-        </div>
-        <div style="margin-top:12px;">
           <label for="champ-notes">Notes / historique du personnage</label>
           <textarea id="champ-notes" placeholder="Race, background, objectifs, liens..."></textarea>
         </div>
@@ -182,11 +178,6 @@
 
       <!-- Notification vote loot joueur (polling) -->
       <div id="loot-notif-fiche" style="display:none;" class="carte loot-notif-card" data-role="joueur"></div>
-      <!-- Inventaire joueur -->
-      <div class="carte" data-role="joueur" id="bloc-inventaire" style="display:none;">
-        <h3 class="titre-bandeau" style="font-size:1rem;">🎒 Inventaire loot</h3>
-        <div id="loot-inventaire-joueur"></div>
-      </div>
     </section>
 
     <!-- DES -->
@@ -422,7 +413,7 @@
   <script src="js/carte-monde.js?v=9"></script>
   <!-- Modèle OOP (Phase 1) : socle additif, n'altère pas l'app existante -->
   <script src="js/entite.js?v=1"></script>
-  <script src="js/personnage.js?v=1"></script>
+  <script src="js/personnage.js?v=2"></script>
   <!-- Firebase (SDK compat : garde une syntaxe classique, pas de modules/build tool) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -430,7 +421,7 @@
   <script src="js/depot.js?v=5"></script>
   <script src="js/sync.js?v=2"></script>
   <script src="js/carte.js?v=36"></script>
-  <script src="js/loot.js?v=2"></script>
-  <script src="js/app.js?v=22"></script>
+  <script src="js/loot.js?v=3"></script>
+  <script src="js/app.js?v=23"></script>
 </body>
 </html>

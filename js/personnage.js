@@ -9,6 +9,17 @@
    CLASSES, CARAC_MAGIE, ARCHETYPE_CLASSE, DIVISEUR_ATTAQUE.
    ============================================================ */
 
+// 9 emplacements d'équipement fixes. Seul ce qui est placé ici compte pour
+// les stats de combat (DEF, réduction de dégâts, dégâts d'arme) — le reste
+// vit dans inventaireListe, un simple sac sans effet mécanique.
+const SLOTS_EQUIPEMENT = ["tete", "torse", "jambe", "botte", "avant_bras", "main_droite", "main_gauche", "collier", "bague"];
+
+function equipementVide() {
+  const e = {};
+  SLOTS_EQUIPEMENT.forEach((s) => (e[s] = null));
+  return e;
+}
+
 class Personnage extends Entite {
   constructor(data = {}) {
     const d = Object.assign(
@@ -30,7 +41,8 @@ class Personnage extends Entite {
         pvHistorique: [],
         pvNiveauActuel: 1,
         def: 10,
-        inventaire: "",
+        equipement: equipementVide(),
+        inventaireListe: [],
         notes: "",
       },
       data
@@ -51,8 +63,21 @@ class Personnage extends Entite {
     this.portrait = d.portrait;
     this.pvHistorique = d.pvHistorique;
     this.pvNiveauActuel = d.pvNiveauActuel;
-    this.inventaire = d.inventaire;
+    this.equipement = d.equipement;
+    this.inventaireListe = d.inventaireListe;
     this.notes = d.notes;
+
+    // Migration douce : l'ancien champ libre `inventaire` (string) devient un
+    // item texte libre dans inventaireListe, pour ne rien perdre à la casse
+    // des fiches créées avant l'introduction des slots d'équipement.
+    if (typeof d.inventaire === "string" && d.inventaire.trim()) {
+      this.inventaireListe = (this.inventaireListe || []).concat([{
+        id: "migre-inventaire-texte",
+        nom: "Ancien inventaire (texte libre)",
+        type: "divers",
+        description: d.inventaire.trim(),
+      }]);
+    }
   }
 
   /* ----- Caractéristiques ----- */
@@ -81,7 +106,92 @@ class Personnage extends Entite {
 
   /* ----- Défense ----- */
   calculerDEF() {
-    return 10 + this.mod("DEX");
+    return 10 + this.mod("DEX") + this.bonusDefEquipement();
+  }
+
+  /* ----- Équipement (slots) -----
+     Seuls les items placés dans un slot comptent pour les stats de combat.
+     inventaireListe (simple sac) n'a aucun effet mécanique. */
+
+  // Emplacements compatibles avec le type d'un item (ou son slot explicite
+  // si le catalogue le précise un jour, ex. une armure de jambes future).
+  static slotsPourType(item) {
+    if (!item) return [];
+    if (item.slot) return [item.slot];
+    switch (item.type) {
+      case "arme": return ["main_droite", "main_gauche"];
+      case "bouclier": return ["main_gauche"];
+      case "armure": return ["torse"];
+      case "accessoire": return ["collier", "bague", "avant_bras"];
+      default: return []; // consommable, divers... jamais équipable
+    }
+  }
+
+  // Équipe item dans slot. Renvoie l'ancien occupant du slot (item ou null
+  // s'il était vide), à remettre dans l'inventaire côté appelant — ou
+  // `undefined` si la combinaison item/slot est invalide (rien n'est changé).
+  equiper(slot, item) {
+    if (!item || !this.equipement || !(slot in this.equipement)) return undefined;
+    if (!Personnage.slotsPourType(item).includes(slot)) return undefined;
+
+    if (item.type === "arme" && item.deuxMains) {
+      // Occupe main_droite ET main_gauche à la fois : les deux doivent être
+      // libres (ou déjà occupés par ce même item, en cas de ré-équipement).
+      const droite = this.equipement.main_droite;
+      const gauche = this.equipement.main_gauche;
+      if ((droite && droite !== item) || (gauche && gauche !== item)) return undefined;
+      const ancien = droite || gauche || null;
+      this.equipement.main_droite = item;
+      this.equipement.main_gauche = item;
+      return ancien;
+    }
+
+    if (item.type === "bouclier") {
+      const occupant = this.equipement.main_droite || this.equipement.main_gauche;
+      if (occupant && occupant.type === "arme" && occupant.deuxMains) return undefined;
+    }
+
+    const ancien = this.equipement[slot];
+    this.equipement[slot] = item;
+    return ancien;
+  }
+
+  // Libère slot, renvoie l'item retiré (ou null si le slot était déjà vide).
+  deséquiper(slot) {
+    if (!this.equipement || !(slot in this.equipement)) return null;
+    const item = this.equipement[slot];
+    if (!item) return null;
+    if (item.type === "arme" && item.deuxMains) {
+      this.equipement.main_droite = null;
+      this.equipement.main_gauche = null;
+    } else {
+      this.equipement[slot] = null;
+    }
+    return item;
+  }
+
+  // Objets équipés uniques (une arme à deux mains occupe 2 slots mais ne
+  // doit compter qu'une fois dans les sommes ci-dessous).
+  _itemsEquipesUniques() {
+    const vus = new Set();
+    const items = [];
+    Object.values(this.equipement || {}).forEach((it) => {
+      if (!it || vus.has(it)) return;
+      vus.add(it);
+      items.push(it);
+    });
+    return items;
+  }
+  reductionDegats() {
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.valeurArmure || 0), 0);
+  }
+  bonusDefEquipement() {
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDEF || 0), 0);
+  }
+  // "main_droite" | "main_gauche" -> l'arme qui y est équipée, ou null.
+  armeEquipee(main) {
+    const it = this.equipement && this.equipement[main];
+    return it && it.type === "arme" ? it : null;
   }
 
   /* ----- Attaque ----- */
@@ -148,7 +258,8 @@ class Personnage extends Entite {
       pvHistorique: this.pvHistorique,
       pvNiveauActuel: this.pvNiveauActuel,
       def: this.def,
-      inventaire: this.inventaire,
+      equipement: this.equipement,
+      inventaireListe: this.inventaireListe,
       notes: this.notes,
     };
   }
@@ -157,4 +268,7 @@ class Personnage extends Entite {
   }
 }
 
-if (typeof window !== "undefined") window.Personnage = Personnage;
+if (typeof window !== "undefined") {
+  window.Personnage = Personnage;
+  window.SLOTS_EQUIPEMENT = SLOTS_EQUIPEMENT;
+}

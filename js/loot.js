@@ -169,12 +169,13 @@ const Loot = (() => {
     const gagnantId = resoudreVote(vote.votes);
     if (!gagnantId) { toast("Aucun joueur n'a voté."); return; }
 
-    // Ajouter l'item à l'inventaire du gagnant
+    // Ajouter l'item à l'inventaire du gagnant (pas équipé automatiquement —
+    // le joueur l'équipe ensuite lui-même depuis le bloc Inventaire de sa fiche).
     const persos = lirePersos();
     if (persos[gagnantId]) {
-      if (!Array.isArray(persos[gagnantId].equipement)) persos[gagnantId].equipement = [];
-      const item = Object.assign({}, vote.item, { porte: false, itemRef: vote.item.id });
-      persos[gagnantId].equipement.push(item);
+      if (!Array.isArray(persos[gagnantId].inventaireListe)) persos[gagnantId].inventaireListe = [];
+      const item = Object.assign({}, vote.item, { itemRef: vote.item.id });
+      persos[gagnantId].inventaireListe.push(item);
       sauverPersos(persos);
     }
 
@@ -258,73 +259,16 @@ const Loot = (() => {
     toast(type === "besoin" ? "❤ Besoin déclaré !" : "🎲 Greed lancé : " + vote.votes[persoId].jet);
   }
 
-  /* ── Inventaire joueur ────────────────────────────────────── */
-  function rendreInventaire(persoId) {
-    const zone = document.getElementById("loot-inventaire-joueur");
-    if (!zone) return;
-    const persos = lirePersos();
-    const perso = persos[persoId];
-    if (!perso) { zone.innerHTML = ""; return; }
-    if (!Array.isArray(perso.equipement) || !perso.equipement.length) {
-      zone.innerHTML = '<p class="vide">Inventaire vide.</p>'; return;
-    }
-    zone.innerHTML = perso.equipement.map((it, idx) => _itemInventaireHTML(it, idx, persoId)).join("");
-    zone.querySelectorAll(".btn-toggle-equip").forEach(btn => {
-      btn.onclick = () => _toggleEquip(persoId, parseInt(btn.dataset.idx));
-    });
-    zone.querySelectorAll(".btn-drop-item").forEach(btn => {
-      btn.onclick = () => {
-        if (!confirm("Jeter « " + perso.equipement[parseInt(btn.dataset.idx)].nom + " » ?")) return;
-        _dropItem(persoId, parseInt(btn.dataset.idx));
-      };
-    });
-  }
-
-  function _itemInventaireHTML(it, idx, persoId) {
-    const stats = _statsItem(it);
-    const enchant = it.enchantement ? ` <span class="loot-badge loot-badge-magic">+${it.enchantement}</span>` : "";
-    return `<div class="inv-item${it.porte ? " inv-item-equipe" : ""}">
-      <div class="inv-item-header">
-        <span class="inv-item-nom">${echapper(it.nom)}${enchant}</span>
-        <span class="loot-badge loot-badge-${it.type}">${it.type}</span>
-        ${it.porte ? '<span class="inv-badge-equipe">Équipé</span>' : ""}
-      </div>
-      ${stats ? `<div class="inv-item-stats">${stats}</div>` : ""}
-      <div class="inv-item-desc">${echapper(it.description)}</div>
-      <div class="inv-actions">
-        <button class="btn petit ${it.porte ? "secondaire" : "or"} btn-toggle-equip" data-idx="${idx}">${it.porte ? "Déséquiper" : "Équiper"}</button>
-        <button class="btn petit danger btn-drop-item" data-idx="${idx}">Jeter</button>
-      </div>
-    </div>`;
-  }
-
-  function _toggleEquip(persoId, idx) {
-    const persos = lirePersos();
-    const perso = persos[persoId];
-    if (!perso || !perso.equipement[idx]) return;
-    perso.equipement[idx].porte = !perso.equipement[idx].porte;
-    sauverPersos(persos);
-    rendreInventaire(persoId);
-  }
-
-  function _dropItem(persoId, idx) {
-    const persos = lirePersos();
-    const perso = persos[persoId];
-    if (!perso) return;
-    perso.equipement.splice(idx, 1);
-    sauverPersos(persos);
-    rendreInventaire(persoId);
-  }
+  // NB : l'inventaire/équipement du joueur n'est plus rendu ici — le bloc
+  // Inventaire de la fiche (app.js, colonne droite) est désormais l'unique
+  // source de vérité (voir Personnage.equiper/deséquiper).
 
   /* ── Polling (vérification vote actif toutes les 4s) ─────── */
   let _persoIdActif = null;
   function demarrerPolling(persoId) {
     _persoIdActif = persoId;
     setInterval(() => {
-      if (_persoIdActif) {
-        rendreNotificationVote(_persoIdActif);
-        rendreInventaire(_persoIdActif);
-      }
+      if (_persoIdActif) rendreNotificationVote(_persoIdActif);
     }, 4000);
   }
 
@@ -342,7 +286,6 @@ const Loot = (() => {
   return {
     rendreCatalogue,
     rendreNotificationVote,
-    rendreInventaire,
     demarrerPolling,
     ouvrirModalVote,
     fermerModalLoot,
