@@ -188,6 +188,7 @@ const App = (() => {
               <button id="bm-pv-plus">+</button>
             </div>
             <div class="barre-pv"><div class="rempli" id="bm-barre-pv-rempli"></div></div>
+            ${blocDegatsSubisHtml("bm-")}
           </div>
           <div class="stat-box"><div class="label">DEF</div><div class="valeur">${perso.calculerDEF()}</div></div>
           <div class="stat-box"><div class="label">Init.</div><div class="valeur">${signe(init)}</div></div>
@@ -200,6 +201,7 @@ const App = (() => {
     document.getElementById("bm-pv-moins").onclick = () => ajusterPv(id, -1);
     document.getElementById("bm-pv-actuel").onchange = (e) => definirPv(id, parseInt(e.target.value, 10));
     document.getElementById("bm-voir-fiche-complete").onclick = () => { allerVers("fiche"); afficherFiche(id); };
+    wireDegatsSubis(id, "bm-");
   }
 
   /* ---------- Navigation onglets ---------- */
@@ -1265,6 +1267,7 @@ const App = (() => {
                   <button id="pv-plus">+</button>
                 </div>
                 <div class="barre-pv"><div class="rempli" id="barre-pv-rempli"></div></div>
+                ${blocDegatsSubisHtml("")}
               </div>
               <div class="stat-box"><div class="label">DEF</div><div class="valeur">${perso.calculerDEF()}</div></div>
               <div class="stat-box"><div class="label">Initiative</div><div class="valeur">${signe(init)}</div></div>
@@ -1311,6 +1314,7 @@ const App = (() => {
     document.getElementById("pv-plus").onclick = () => ajusterPv(id, +1);
     document.getElementById("pv-moins").onclick = () => ajusterPv(id, -1);
     document.getElementById("pv-actuel").onchange = (e) => definirPv(id, parseInt(e.target.value, 10));
+    wireDegatsSubis(id, "");
     // Tests de carac
     zone.querySelectorAll("[data-test]").forEach((el) => {
       el.onclick = () => {
@@ -1416,6 +1420,51 @@ const App = (() => {
     p.pvActuel = isNaN(val) ? p.pvActuel : Math.max(0, Math.min(p.pvMax, val));
     sauverPersos(persos);
     _syncPvAffichages(id, p);
+  }
+
+  // Applique un jet de dégâts subis : retranche la réduction de dégâts de
+  // l'équipement (armure) avant de décompter les PV, contrairement à
+  // ajusterPv/definirPv qui manipulent les PV bruts sans passer par
+  // l'équipement (undo d'un soin, correction manuelle...).
+  function subirDegats(id, degatsBruts) {
+    degatsBruts = parseInt(degatsBruts, 10);
+    if (isNaN(degatsBruts) || degatsBruts < 0) { toast("Entre un nombre de dégâts valide."); return; }
+    const persos = chargerPersos();
+    const p = persos[id];
+    if (!p) return;
+    const perso = Personnage.depuisJSON(p);
+    const reduction = perso.reductionDegats();
+    const degatsNets = Math.max(0, degatsBruts - reduction);
+    p.pvActuel = Math.max(0, p.pvActuel - degatsNets);
+    sauverPersos(persos);
+    _syncPvAffichages(id, p);
+    toast(reduction > 0
+      ? `🛡 ${degatsBruts} dégâts subis → ${degatsNets} après réduction d'armure (−${reduction}).`
+      : `${degatsNets} dégâts subis.`);
+  }
+
+  // HTML + câblage du petit formulaire "Subir des dégâts", réutilisé par la
+  // fiche complète et la mini-fiche battlemap (prefixe distingue les ids).
+  function blocDegatsSubisHtml(prefixe) {
+    return `
+      <button class="btn petit secondaire btn-toggle-degats" id="${prefixe}btn-toggle-degats" style="width:100%;">🛡 Subir des dégâts</button>
+      <div class="degats-subis" id="${prefixe}degats-subis-form" style="display:none;">
+        <input type="number" id="${prefixe}champ-degats-bruts" placeholder="Dégâts bruts" min="0" />
+        <button class="btn petit or" id="${prefixe}btn-appliquer-degats">Appliquer</button>
+      </div>`;
+  }
+  function wireDegatsSubis(id, prefixe) {
+    const btnToggle = document.getElementById(`${prefixe}btn-toggle-degats`);
+    const form = document.getElementById(`${prefixe}degats-subis-form`);
+    const champ = document.getElementById(`${prefixe}champ-degats-bruts`);
+    if (!btnToggle || !form || !champ) return;
+    btnToggle.onclick = () => {
+      form.style.display = form.style.display === "none" ? "flex" : "none";
+      if (form.style.display === "flex") champ.focus();
+    };
+    const appliquer = () => { subirDegats(id, champ.value); champ.value = ""; };
+    document.getElementById(`${prefixe}btn-appliquer-degats`).onclick = appliquer;
+    champ.addEventListener("keydown", (e) => { if (e.key === "Enter") appliquer(); });
   }
 
   function editerPerso(id) {
