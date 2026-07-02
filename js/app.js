@@ -1134,14 +1134,14 @@ const App = (() => {
   function ajusterPv(id, delta) {
     const persos = chargerPersos();
     const p = persos[id];
-    p.pvActuel = Math.max(0, p.pvActuel + delta);
+    p.pvActuel = Math.max(0, Math.min(p.pvMax, p.pvActuel + delta));
     sauverPersos(persos);
     _syncPvAffichages(id, p);
   }
   function definirPv(id, val) {
     const persos = chargerPersos();
     const p = persos[id];
-    p.pvActuel = isNaN(val) ? p.pvActuel : Math.max(0, val);
+    p.pvActuel = isNaN(val) ? p.pvActuel : Math.max(0, Math.min(p.pvMax, val));
     sauverPersos(persos);
     _syncPvAffichages(id, p);
   }
