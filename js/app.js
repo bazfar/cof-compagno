@@ -963,6 +963,16 @@ const App = (() => {
     });
   }
 
+  // Détecte une notation de dé (ex. "1d6", "2d4+2") dans le texte d'effet
+  // d'une capacité, pour proposer un raccourci de lancer directement sur
+  // la fiche. Renvoie null si aucun dé n'est mentionné dans le texte.
+  function extraireDeCapacite(texte) {
+    if (!texte) return null;
+    const m = /(\d*)d(\d+)([+-]\d+)?/i.exec(texte);
+    if (!m) return null;
+    return `${m[1] || "1"}d${m[2]}${m[3] || ""}`;
+  }
+
   function afficherFiche(id) {
     const persos = chargerPersos();
     const p = persos[id];
@@ -989,9 +999,12 @@ const App = (() => {
         const voie = c.voies.find((v) => v.nom === cap.voie);
         const rang = voie && voie.rangs.find((r) => r.rang === cap.rang);
         if (!rang) return;
+        const de = extraireDeCapacite(rang.effet);
         capHtml +=
           `<div class="cap-fiche ${voie.speciale ? "chaos" : ""}">` +
-          `<div class="titre-cap">${rang.nom || "Rang " + cap.rang}</div>` +
+          `<div class="titre-cap">${rang.nom || "Rang " + cap.rang}` +
+          (de ? `<button class="btn-de-cap" data-formule-cap="${de}" title="Lancer ${de} (dégâts de cette capacité)">🎲</button>` : "") +
+          `</div>` +
           `<div class="voie-source">${cap.voie} · rang ${cap.rang}</div>` +
           `<div class="effet-cap">${rang.effet}</div></div>`;
       });
@@ -1009,9 +1022,12 @@ const App = (() => {
           const rg = race.rangs.find((x) => x.rang === rang);
           if (!rg) return;
           const { nom, effet } = texteRangRace(race, rg, p.raceVariante);
+          const de = extraireDeCapacite(effet);
           capRaceHtml +=
             `<div class="cap-fiche">` +
-            `<div class="titre-cap">${nom || "Rang " + rang}</div>` +
+            `<div class="titre-cap">${nom || "Rang " + rang}` +
+            (de ? `<button class="btn-de-cap" data-formule-cap="${de}" title="Lancer ${de} (dégâts de cette capacité)">🎲</button>` : "") +
+            `</div>` +
             `<div class="voie-source">${race.voie_nom} · rang ${rang}</div>` +
             `<div class="effet-cap">${effet}</div></div>`;
         });
@@ -1103,6 +1119,13 @@ const App = (() => {
       el.onclick = () => {
         const bonus = parseInt(el.dataset.bonus, 10);
         lancerTest(`Attaque ${el.dataset.attaque}`, bonus);
+        allerVers("des");
+      };
+    });
+    // Dé de dégâts d'une capacité (icône 🎲 à côté du titre)
+    zone.querySelectorAll("[data-formule-cap]").forEach((el) => {
+      el.onclick = () => {
+        lancerFormule(el.dataset.formuleCap);
         allerVers("des");
       };
     });
