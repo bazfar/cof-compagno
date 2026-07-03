@@ -2295,12 +2295,30 @@ const App = (() => {
     const modalLoot = document.getElementById("modal-loot");
     if (modalLoot) modalLoot.addEventListener("click", (e) => { if (e.target === e.currentTarget && typeof Loot !== "undefined") Loot.fermerModalLoot(); });
 
-    // Loot — polling 4s pour notifications joueur
+    // Loot — polling 4s pour notifications joueur (filet de secours, cf.
+    // l'abonnement temps réel ci-dessous qui couvre le cas courant).
     if (typeof Loot !== "undefined") {
       setInterval(() => {
         if (role === "joueur" && ficheActiveId) _mettreAJourLootFiche();
       }, 4000);
     }
+
+    // Loot — notification temps réel d'un vote lancé/modifié par le MJ.
+    // Sans ça, un joueur qui n'a pas "Ma fiche" ouverte au moment où le MJ
+    // lance le vote (typiquement : encore sur la Carte/le Combat juste après
+    // le combat) ne voyait jamais l'option de vote avant jusqu'à 4s plus tard
+    // ET seulement s'il finissait par ouvrir sa fiche — cf. STORAGE_MON_PERSO,
+    // seule source fiable de "quel perso est le mien" hors de la fiche.
+    SyncStore.subscribe("loot:vote", (vote) => {
+      if (typeof Loot === "undefined" || role !== "joueur") return;
+      _mettreAJourLootFiche();
+      const monId = localStorage.getItem(STORAGE_MON_PERSO) || ficheActiveId;
+      if (!vote || vote.statut !== "vote_en_cours" || !monId) return;
+      const monVote = vote.votes[monId];
+      if (!monVote || monVote.type !== null) return;
+      const surMaFiche = ficheActiveId === monId && document.getElementById("panneau-fiche")?.classList.contains("actif");
+      if (!surMaFiche) toast("🎁 Nouveau loot à voter ! Va sur « Ma fiche ».");
+    });
   }
 
   /* ============================================================
