@@ -99,29 +99,64 @@ const Loot = (() => {
   }
 
   /* ── Modal vote MJ ────────────────────────────────────────── */
+  let _itemBase = null;
+  let _rareteChoisie = "commun";
+
   function ouvrirModalVote(item) {
     if (!item) return;
     const modal = document.getElementById("modal-loot");
     if (!modal) return;
 
+    _itemBase = item;
+    _rareteChoisie = "commun";
+
     const persos = lirePersos();
     const ids = Object.keys(persos);
 
-    document.getElementById("modal-loot-item-nom").textContent = item.nom;
-    document.getElementById("modal-loot-item-stats").textContent = _statsItem(item);
-    document.getElementById("modal-loot-item-desc").textContent = item.description;
+    _rendreApercuModalLoot();
+    _rendreSelecteurRarete();
 
     const btnLancer = document.getElementById("btn-lancer-vote");
     btnLancer.onclick = () => {
-      const vote = { item, votes: {}, statut: "vote_en_cours", gagnant: null, ts: Date.now() };
+      const itemFinal = (typeof Raretes !== "undefined")
+        ? Raretes.appliquer(_itemBase, _rareteChoisie)
+        : _itemBase;
+      const vote = { item: itemFinal, votes: {}, statut: "vote_en_cours", gagnant: null, ts: Date.now() };
       ids.forEach(id => { vote.votes[id] = { type: null, jet: null }; });
       sauverVote(vote);
       modal.style.display = "none";
       rendreCatalogue();
-      toast("Vote lancé pour « " + item.nom + " » !");
+      toast("Vote lancé pour « " + itemFinal.nom + " » !");
     };
 
     modal.style.display = "flex";
+  }
+
+  // Ré-affiche nom/stats/desc du modal selon l'item de base + la rareté choisie.
+  function _rendreApercuModalLoot() {
+    if (!_itemBase) return;
+    const item = (typeof Raretes !== "undefined")
+      ? Raretes.appliquer(_itemBase, _rareteChoisie)
+      : _itemBase;
+    const nomEl = document.getElementById("modal-loot-item-nom");
+    nomEl.textContent = item.nom;
+    nomEl.style.color = item.rareteCouleur || "";
+    document.getElementById("modal-loot-item-stats").textContent = _statsItem(item);
+    document.getElementById("modal-loot-item-desc").textContent = item.description;
+  }
+
+  function _rendreSelecteurRarete() {
+    const zone = document.getElementById("modal-loot-rarete");
+    if (!zone || typeof RARETES === "undefined") return;
+    zone.innerHTML = RARETES.map(r => `<button type="button" class="chip-rarete${r.id === _rareteChoisie ? " actif" : ""}"
+      data-rarete="${r.id}" style="--couleur-rarete:${r.couleur};">${echapper(r.nom)}</button>`).join("");
+    zone.querySelectorAll(".chip-rarete").forEach(btn => {
+      btn.onclick = () => {
+        _rareteChoisie = btn.dataset.rarete;
+        _rendreSelecteurRarete();
+        _rendreApercuModalLoot();
+      };
+    });
   }
 
   function fermerModalLoot() {
