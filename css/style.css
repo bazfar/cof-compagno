@@ -1084,6 +1084,9 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .chip-variante:hover { border-color: var(--or); }
 .chip-variante.actif { border-style: solid; border-color: var(--or); background: #fdf5e8; color: var(--encre); }
 
+.loot-modal-destinataire { margin: 0 0 10px; }
+.loot-modal-destinataire label { margin-bottom: 4px; }
+
 /* Notification vote joueur */
 .loot-notif-card { border: 2px solid var(--or) !important; background: #fffcf2 !important; }
 .loot-notif-entete { font-family: "Cinzel", serif; font-weight: 700; color: var(--or); font-size: 1rem; margin-bottom: 8px; }
