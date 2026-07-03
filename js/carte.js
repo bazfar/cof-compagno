@@ -363,6 +363,29 @@ const Carte = (() => {
     return (nom || "?").trim().split(/\s+/).map((m) => m[0]).slice(0, 2).join("").toUpperCase();
   }
 
+  // Résout {pvActuel, pvMax} pour la barre de PV au-dessus d'un jeton/token :
+  // - monstre : pvMax/pvActuel déjà portés par le jeton lui-même (cf. ajouterMonstre)
+  // - PJ : le jeton ne stocke pas ses PV, résolus depuis la fiche vivante (seule
+  //   source de vérité, cf. rendreJetons/rendreTokensDD qui font déjà pareil pour le portrait)
+  // - jeton libre (PNJ sans PV suivis) : pas de barre (retourne null)
+  function _infosPv(j, personasPJ) {
+    if (j.pj && j.ref) {
+      const perso = personasPJ[j.ref.replace(/^pj-/, "")];
+      if (!perso || typeof perso.pvMax !== "number") return null;
+      return { pvActuel: perso.pvActuel ?? perso.pvMax, pvMax: perso.pvMax };
+    }
+    if (typeof j.pvMax !== "number") return null;
+    return { pvActuel: j.pvActuel ?? j.pvMax, pvMax: j.pvMax };
+  }
+  // Palier de couleur (CSS) selon le % de PV restant, cohérent entre les 3 rendus.
+  function _classePv(pvActuel, pvMax) {
+    if (!pvMax) return "";
+    const pct = pvActuel / pvMax;
+    if (pct <= 0.25) return "critique";
+    if (pct <= 0.5) return "faible";
+    return "";
+  }
+
   function rendreJetons() {
     dom.jetons.innerHTML = "";
     // Jetons posés avant l'ajout des tokens race/genre : on complète depuis la fiche
@@ -383,8 +406,13 @@ const Carte = (() => {
         : jetonToken
         ? `<img src="${jetonToken}" alt="" onerror="this.outerHTML=embleme('${classePourEmbleme}',40)" />`
         : (j.pj && typeof embleme === "function" ? embleme(classePourEmbleme, 40) : initiales(j.nom));
+      const infosPv = _infosPv(j, personasPJ);
+      const barreHp = infosPv
+        ? `<div class="jeton-hp"><div class="rempli ${_classePv(infosPv.pvActuel, infosPv.pvMax)}" style="width:${Math.max(0, Math.min(100, (infosPv.pvActuel / infosPv.pvMax) * 100))}%"></div></div>`
+        : "";
       el.innerHTML =
         `<div class="jeton-pion" style="border-color:${j.couleur};${j.portrait || j.pj ? "" : "background:" + j.couleur + ";"}">${interieur}</div>` +
+        barreHp +
         (role === "joueur" ? "" : `<button class="jeton-suppr" title="Retirer">✕</button>`) +
         `<div class="jeton-label">${echappe(j.nom)}</div>`;
       dom.jetons.appendChild(el);
@@ -577,6 +605,17 @@ const Carte = (() => {
     SyncStore.subscribe(STORAGE, _appliquerEtatDistant);
     SyncStore.subscribe(STORAGE_FOG, _appliquerFogDistant);
     charger();
+
+    // Barre de PV des jetons/tokens PJ : les PV ne vivent pas sur le jeton mais
+    // sur la fiche (cf. _infosPv), donc un changement ailleurs (fiche complète,
+    // mini-fiche battlemap, autre appareil via Firestore) doit redessiner la
+    // carte pour rester à jour sans avoir à changer d'onglet.
+    if (typeof window.DepotPersos !== "undefined") {
+      window.DepotPersos.ecouter(() => {
+        rendreJetons();
+        if (typeof DD2VTT !== "undefined" && DD2VTT.actualiserTokens) DD2VTT.actualiserTokens();
+      });
+    }
 
     // Remplir le menu déroulant des cartes, groupé par optgroup
     const groupes = {};
@@ -857,6 +896,19 @@ const Carte = (() => {
         }
         ctx.lineWidth = 3; ctx.strokeStyle = j.pj ? '#b8924a' : '#1d1526'; ctx.stroke();
         ctx.restore();
+
+        // barre de PV au-dessus du jeton (monstre, ou PJ résolu depuis sa fiche)
+        const infosPv = _infosPv(j, personasPJ);
+        if (infosPv) {
+          const bw = R_JETON * 2, bh = 4;
+          const bx = p.x - bw / 2, by = p.y - R_JETON - bh - 4;
+          const pct = infosPv.pvMax ? Math.max(0, Math.min(1, infosPv.pvActuel / infosPv.pvMax)) : 0;
+          const classePv = _classePv(infosPv.pvActuel, infosPv.pvMax);
+          ctx.fillStyle = 'rgba(0,0,0,0.6)';
+          ctx.fillRect(bx, by, bw, bh);
+          ctx.fillStyle = classePv === 'critique' ? '#8a2f3b' : classePv === 'faible' ? '#d38b1f' : '#3a7d44';
+          ctx.fillRect(bx, by, bw * pct, bh);
+        }
 
         // étiquette
         const label = j.nom || '';
@@ -1489,7 +1541,11 @@ const Carte = (() => {
         const contenuTok = tokImg
           ? '<img class="dd-token-img" src="' + tokImg + '" alt="" data-initiale="' + tok.nom.charAt(0).toUpperCase() + '" onerror="ddTokenFallback(this)" />'
           : '<span class="dd-token-initiale">' + tok.nom.charAt(0).toUpperCase() + '</span>';
-        el.innerHTML = contenuTok
+        const infosPv = _infosPv(tok, personasPJ2);
+        const barreHp = infosPv
+          ? '<div class="dd-token-hp"><div class="rempli ' + _classePv(infosPv.pvActuel, infosPv.pvMax) + '" style="width:' + Math.max(0, Math.min(100, (infosPv.pvActuel / infosPv.pvMax) * 100)) + '%"></div></div>'
+          : '';
+        el.innerHTML = contenuTok + barreHp
           + (role === 'mj' ? '<button class="dd-token-suppr" title="Retirer ' + tok.nom + '">✕</button>' : '');
 
         // Drag sur grille
@@ -1881,11 +1937,18 @@ const Carte = (() => {
       if (tokensEl) tokensEl.innerHTML = '';
     }
 
+    // Rafraîchit les tokens de la scène active (ex. PV d'un PJ modifiés depuis
+    // sa fiche, ailleurs que sur la carte) — no-op si aucune scène affichée.
+    function actualiserTokens() {
+      const sc = scenes[sceneActive];
+      if (sc) rendreTokensDD(sc);
+    }
+
     return {
       init, scenes: () => scenes, sceneActive: () => sceneActive,
       ajouterToken: (sc) => ajouterTokenDD(sc), modeWorldmap: activerModeWorldmap, estActive, ajouterTokenData,
       tokensMonstres, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
-      supprimerToken: supprimerTokenDD, onChange,
+      supprimerToken: supprimerTokenDD, onChange, actualiserTokens,
     };
   })();
   // Un changement de token dd2vtt (ajout/dégâts/suppression, local ou distant

@@ -564,6 +564,13 @@ textarea { resize: vertical; min-height: 70px; }
 }
 .jeton.drag .jeton-pion { cursor: grabbing; }
 .jeton-pion img, .jeton-pion svg { width: 100%; height: 100%; object-fit: cover; }
+.jeton-hp {
+  width: 46px; height: 5px; margin: 3px auto 0; background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(0, 0, 0, 0.35); border-radius: 3px; overflow: hidden;
+}
+.jeton-hp .rempli { height: 100%; background: var(--succes); transition: width 0.2s, background 0.2s; }
+.jeton-hp .rempli.faible { background: #d38b1f; }
+.jeton-hp .rempli.critique { background: var(--chaos); }
 .jeton-label {
   display: inline-block; font-size: 0.7rem; color: #fff; background: rgba(0, 0, 0, 0.65);
   padding: 1px 6px; border-radius: 6px; margin-top: 3px; max-width: 96px;
@@ -735,6 +742,23 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
   pointer-events: all;
   z-index: 12;
 }
+.dd-token-hp {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 85%;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  border-radius: 3px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 12;
+}
+.dd-token-hp .rempli { height: 100%; background: var(--succes); transition: width 0.2s, background 0.2s; }
+.dd-token-hp .rempli.faible { background: #d38b1f; }
+.dd-token-hp .rempli.critique { background: var(--chaos); }
 .dd-token:hover .dd-token-suppr { display: block; }
 
 /* ============================================================
