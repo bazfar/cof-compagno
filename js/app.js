@@ -235,6 +235,7 @@ const App = (() => {
       nom: "",
       niveau: 1,
       classe: null,
+      genre: "homme", // "homme" | "femme" — détermine le portrait de race affiché
       race: null,
       raceVariante: null, // nation elfique (aetharion / aelindra / mordanel), si race = elfe
       caracs: { FOR: 10, DEX: 10, CON: 10, INT: 10, SAG: 10, CHA: 10 },
@@ -259,7 +260,21 @@ const App = (() => {
     return `<img class="portrait-fig" src="assets/portraits/classes/${cle}.png" alt="" loading="lazy" onerror="this.style.display='none'" />`;
   }
   function portraitRace(cle) {
-    return `<img class="portrait-fig" src="assets/portraits/races/${cle}.png" alt="" loading="lazy" onerror="this.style.display='none'" />`;
+    return `<img class="portrait-fig" src="assets/portraits/races/${cle}-${creation.genre}.png" alt="" loading="lazy" onerror="this.style.display='none'" />`;
+  }
+
+  function rendreChoixGenre() {
+    document.querySelectorAll("#choix-genre .btn-genre").forEach((b) => {
+      b.classList.toggle("choisi", b.dataset.genre === creation.genre);
+    });
+  }
+
+  function choisirGenre(g) {
+    if (creation.genre !== g) {
+      creation.genre = g;
+      rendreChoixGenre();
+      rendreGrilleRaces();
+    }
   }
 
   function rendreGrilleClasses() {
@@ -884,6 +899,7 @@ const App = (() => {
     document.getElementById("bloc-finition").style.display = "none";
     majApercuPortrait();
     rendreGrilleClasses();
+    rendreChoixGenre();
     rendreGrilleRaces();
   }
 
@@ -1473,6 +1489,7 @@ const App = (() => {
     if (!creation.voiesHorsProfil) creation.voiesHorsProfil = []; // compat fiches créées avant les voies hors profil
     if (!creation.equipement) creation.equipement = Object.fromEntries(SLOTS_EQUIPEMENT.map((s) => [s, null])); // compat fiches créées avant les slots d'équipement
     if (!creation.inventaireListe) creation.inventaireListe = [];
+    if (!creation.genre) creation.genre = "homme"; // compat fiches créées avant le choix du genre
     allerVers("creation");
     document.getElementById("champ-nom").value = p.nom;
     document.getElementById("champ-niveau").value = p.niveau;
@@ -1484,6 +1501,7 @@ const App = (() => {
     rendreGrilleClasses();
     rendreCaracs();
     rendreVoies();
+    rendreChoixGenre();
     rendreGrilleRaces();
     if (creation.race) {
       document.getElementById("bloc-voie-raciale").style.display = "block";
@@ -1801,9 +1819,14 @@ const App = (() => {
   function init() {
     nouvelleCreation();
     rendreGrilleClasses();
+    rendreChoixGenre();
     rendreGrilleRaces();
     rendreHisto();
     rendreLore();
+
+    document.querySelectorAll("#choix-genre .btn-genre").forEach((b) => {
+      b.onclick = () => choisirGenre(b.dataset.genre);
+    });
 
     // Rôle Joueur / MJ
     role = localStorage.getItem(STORAGE_ROLE);

@@ -226,6 +226,22 @@ textarea { resize: vertical; min-height: 70px; }
 .btn.petit { padding: 5px 10px; font-size: 0.8rem; }
 .barre-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 
+/* ---------- Choix du genre (portraits de race) ---------- */
+.choix-genre { display: flex; gap: 8px; }
+.btn-genre {
+  background: #fffdf7;
+  color: var(--violet);
+  border: 2px solid var(--parchemin-fonce);
+  padding: 8px 20px;
+  border-radius: 7px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-genre:hover { border-color: var(--violet-accent); }
+.btn-genre.choisi { border-color: var(--or); background: #fff8e8; }
+
 /* ---------- Cartes de classe (sélection) ---------- */
 .grille-classes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 .classe-carte {
