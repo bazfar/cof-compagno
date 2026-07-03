@@ -274,6 +274,7 @@ const App = (() => {
       creation.genre = g;
       rendreChoixGenre();
       rendreGrilleRaces();
+      majApercuPortrait();
     }
   }
 
@@ -335,6 +336,7 @@ const App = (() => {
     rendreGrilleRaces();
     document.getElementById("bloc-voie-raciale").style.display = "block";
     rendreVoieRaciale();
+    majApercuPortrait();
   }
 
   /* ---------- Voie raciale (gratuite, séparée des voies de classe) ---------- */
@@ -416,7 +418,7 @@ const App = (() => {
     zone.appendChild(divVoie);
 
     zone.querySelectorAll('input[name="race-variante"]').forEach((rb) => {
-      rb.onchange = () => { creation.raceVariante = rb.value; rendreVoieRaciale(); };
+      rb.onchange = () => { creation.raceVariante = rb.value; rendreVoieRaciale(); majApercuPortrait(); };
     });
     zone.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
       cb.onchange = () => basculerCapaciteRace(parseInt(cb.dataset.rang, 10));
@@ -476,9 +478,14 @@ const App = (() => {
     if (creation.portrait) {
       ap.innerHTML = `<img src="${creation.portrait}" alt="portrait" />`;
       if (suppr) suppr.style.display = "";
+      return;
+    }
+    if (suppr) suppr.style.display = "none";
+    const token = cheminTokenPersonnage(creation);
+    if (token) {
+      ap.innerHTML = `<img src="${token}" alt="" onerror="this.outerHTML=embleme('${creation.classe}',70)" />`;
     } else {
       ap.innerHTML = creation.classe ? embleme(creation.classe, 70) : "—";
-      if (suppr) suppr.style.display = "none";
     }
   }
 

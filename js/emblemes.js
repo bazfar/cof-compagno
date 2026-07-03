@@ -106,11 +106,42 @@ function embleme(classe, taille) {
   );
 }
 
-/* Avatar d'un personnage : portrait uploadé si présent, sinon emblème de classe. */
+/* Chemin du portrait "token" (race + genre + classe), ou null si l'un des trois manque. */
+function cheminTokenPersonnage(p) {
+  if (!p || !p.classe || !p.race) return null;
+  const genre = p.genre === "femme" ? "femme" : "homme";
+  const race = (p.race === "elfe" && p.raceVariante) ? `elfe-${p.raceVariante}` : p.race;
+  return `assets/portraits/tokens/${race}-${genre}-${p.classe}.png`;
+}
+
+/* Remplace une <img> de token en erreur par l'emblème SVG de la classe. */
+function avatarFallback(img, classe, taille) {
+  const span = document.createElement("span");
+  span.className = "avatar-embleme";
+  span.style.width = taille + "px";
+  span.style.height = taille + "px";
+  span.innerHTML = embleme(classe, taille);
+  img.replaceWith(span);
+}
+
+/* Remplace une <img> de jeton battlemap en erreur par son initiale (span.dd-token-initiale). */
+function ddTokenFallback(img) {
+  const span = document.createElement("span");
+  span.className = "dd-token-initiale";
+  span.textContent = img.dataset.initiale || "?";
+  img.replaceWith(span);
+}
+
+/* Avatar d'un personnage : portrait uploadé si présent, sinon token race+genre+classe,
+   sinon emblème générique de classe. */
 function avatarHtml(p, taille) {
   taille = taille || 64;
   if (p && p.portrait) {
     return `<img class="avatar" style="width:${taille}px;height:${taille}px;" src="${p.portrait}" alt="portrait" />`;
+  }
+  const token = cheminTokenPersonnage(p);
+  if (token) {
+    return `<img class="avatar" style="width:${taille}px;height:${taille}px;object-fit:cover;" src="${token}" alt="" onerror="avatarFallback(this,'${p.classe}',${taille})" />`;
   }
   return `<span class="avatar-embleme" style="width:${taille}px;height:${taille}px;">${embleme(p ? p.classe : null, taille)}</span>`;
 }

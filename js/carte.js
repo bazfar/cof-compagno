@@ -192,7 +192,13 @@ const Carte = (() => {
     // Si une battlemap .dd2vtt est active, on pose les persos comme tokens de combat
     if (typeof DD2VTT !== "undefined" && DD2VTT.estActive && DD2VTT.estActive()) {
       let n = 0;
-      ids.forEach((pid) => { if (DD2VTT.ajouterTokenData({ nom: persos[pid].nom, couleur: "#b8924a", pj: true, ref: "pj-" + pid })) n++; });
+      ids.forEach((pid) => {
+        const p = persos[pid];
+        if (DD2VTT.ajouterTokenData({
+          nom: p.nom, couleur: "#b8924a", pj: true, ref: "pj-" + pid,
+          classe: p.classe, race: p.race, raceVariante: p.raceVariante, genre: p.genre,
+        })) n++;
+      });
       toastCarte(n + " perso(s) sur la battlemap.");
       return;
     }
@@ -204,6 +210,7 @@ const Carte = (() => {
       etat.jetons.push({
         id: nouvelId(), ref: ref, nom: p.nom, couleur: "#b8924a", pj: true,
         portrait: p.portrait || null, classe: p.classe,
+        race: p.race, raceVariante: p.raceVariante, genre: p.genre,
         x: 15 + ((i % 6) * 12), y: 15 + (Math.floor(i / 6) * 14),
       });
       i++; ajout++;
@@ -241,7 +248,10 @@ const Carte = (() => {
     const persos = (typeof window.DepotPersos !== "undefined") ? window.DepotPersos.charger() : {};
     const p = persos[monPersoId];
     if (!p) { toastCarte("Personnage introuvable."); return; }
-    DD2VTT.ajouterTokenData({ nom: p.nom, couleur: "#b8924a", pj: true, ref: "pj-" + monPersoId });
+    DD2VTT.ajouterTokenData({
+      nom: p.nom, couleur: "#b8924a", pj: true, ref: "pj-" + monPersoId,
+      classe: p.classe, race: p.race, raceVariante: p.raceVariante, genre: p.genre,
+    });
   }
 
   function ajouterMonstre(monstre) {
@@ -281,8 +291,11 @@ const Carte = (() => {
       el.style.left = j.x + "%";
       el.style.top = j.y + "%";
       el.dataset.id = j.id;
+      const jetonToken = j.pj && typeof cheminTokenPersonnage === "function" ? cheminTokenPersonnage(j) : null;
       const interieur = j.portrait
         ? `<img src="${j.portrait}" alt="" />`
+        : jetonToken
+        ? `<img src="${jetonToken}" alt="" onerror="this.outerHTML=embleme('${j.classe}',40)" />`
         : (j.pj && typeof embleme === "function" ? embleme(j.classe, 40) : initiales(j.nom));
       el.innerHTML =
         `<div class="jeton-pion" style="border-color:${j.couleur};${j.portrait || j.pj ? "" : "background:" + j.couleur + ";"}">${interieur}</div>` +
@@ -1298,7 +1311,11 @@ const Carte = (() => {
         el.style.borderColor = tok.couleur;
         el.style.fontSize = Math.max(8, tc * 0.35) + 'px';
         el.title = tok.nom;
-        el.innerHTML = '<span class="dd-token-initiale">' + tok.nom.charAt(0).toUpperCase() + '</span>'
+        const tokImg = (tok.pj && typeof cheminTokenPersonnage === 'function') ? cheminTokenPersonnage(tok) : null;
+        const contenuTok = tokImg
+          ? '<img class="dd-token-img" src="' + tokImg + '" alt="" data-initiale="' + tok.nom.charAt(0).toUpperCase() + '" onerror="ddTokenFallback(this)" />'
+          : '<span class="dd-token-initiale">' + tok.nom.charAt(0).toUpperCase() + '</span>';
+        el.innerHTML = contenuTok
           + (role === 'mj' ? '<button class="dd-token-suppr" title="Retirer ' + tok.nom + '">✕</button>' : '');
 
         // Drag sur grille
@@ -1403,7 +1420,11 @@ const Carte = (() => {
         cy: Math.max(0, Math.min(scene.hc - 1, Math.floor(scene.hc / 2) + Math.floor(n / 4))),
         couleur: (d && d.couleur) ? d.couleur : couleurs[n % couleurs.length],
         pj: !!(d && d.pj),
-        ref: (d && d.ref) ? d.ref : null
+        ref: (d && d.ref) ? d.ref : null,
+        classe: (d && d.classe) || null,
+        race: (d && d.race) || null,
+        raceVariante: (d && d.raceVariante) || null,
+        genre: (d && d.genre) || null,
       };
       tokensDD.push(nouveauToken);
       rendreTokensDD(scene);
