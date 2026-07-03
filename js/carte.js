@@ -196,7 +196,7 @@ const Carte = (() => {
         const p = persos[pid];
         if (DD2VTT.ajouterTokenData({
           nom: p.nom, couleur: "#b8924a", pj: true, ref: "pj-" + pid,
-          classe: p.classe, race: p.race, raceVariante: p.raceVariante, genre: p.genre,
+          classe: p.classe || null, race: p.race || null, raceVariante: p.raceVariante || null, genre: p.genre || null,
         })) n++;
       });
       toastCarte(n + " perso(s) sur la battlemap.");
@@ -209,8 +209,8 @@ const Carte = (() => {
       const p = persos[pid];
       etat.jetons.push({
         id: nouvelId(), ref: ref, nom: p.nom, couleur: "#b8924a", pj: true,
-        portrait: p.portrait || null, classe: p.classe,
-        race: p.race, raceVariante: p.raceVariante, genre: p.genre,
+        portrait: p.portrait || null, classe: p.classe || null,
+        race: p.race || null, raceVariante: p.raceVariante || null, genre: p.genre || null,
         x: 15 + ((i % 6) * 12), y: 15 + (Math.floor(i / 6) * 14),
       });
       i++; ajout++;
@@ -250,7 +250,7 @@ const Carte = (() => {
     if (!p) { toastCarte("Personnage introuvable."); return; }
     DD2VTT.ajouterTokenData({
       nom: p.nom, couleur: "#b8924a", pj: true, ref: "pj-" + monPersoId,
-      classe: p.classe, race: p.race, raceVariante: p.raceVariante, genre: p.genre,
+      classe: p.classe || null, race: p.race || null, raceVariante: p.raceVariante || null, genre: p.genre || null,
     });
   }
 
