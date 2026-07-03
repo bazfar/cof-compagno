@@ -1426,6 +1426,67 @@ const Carte = (() => {
       return Math.hypot(px - cx, py - cy);
     }
 
+    // Intersection de deux segments [a,b] et [c,d] (bornée aux deux segments,
+    // contrairement à VisibilityPolygon._intersect qui traite [a,b] comme un
+    // rayon infini) — sert à bloquer un déplacement de token qui traverserait
+    // un mur ou une porte fermée. Renvoie le point d'intersection, ou null.
+    function _pointIntersectionSegments(a, b, c, d) {
+      const r = [b[0] - a[0], b[1] - a[1]];
+      const s = [d[0] - c[0], d[1] - c[1]];
+      const denom = r[0] * s[1] - r[1] * s[0];
+      if (Math.abs(denom) < 1e-10) return null; // parallèles (ou colinéaires, ignoré)
+      const qp = [c[0] - a[0], c[1] - a[1]];
+      const t = (qp[0] * s[1] - qp[1] * s[0]) / denom;
+      const u = (qp[0] * r[1] - qp[1] * r[0]) / denom;
+      if (t <= 1e-6 || t >= 1 - 1e-6 || u < -1e-6 || u > 1 + 1e-6) return null;
+      return [a[0] + t * r[0], a[1] + t * r[1]];
+    }
+
+    // Portail le plus proche d'un point (crossing d'un mur), dans une limite
+    // de distance. Un portail Dungeondraft est souvent centré sur la limite
+    // entre deux cases plutôt que sur le centre d'une case (sa largeur — la
+    // taille réelle du battant — est en général un peu inférieure à une case
+    // entière) : un déplacement centre-de-case à centre-de-case ne retombe
+    // donc presque jamais EXACTEMENT dans ses bounds. On associe plutôt la
+    // porte la plus proche du point de traversée du mur, tant qu'elle reste
+    // à moins d'une case de distance (au-delà, ce n'est plus "la même porte").
+    function _portailProche(scene, pt, tolerance) {
+      let meilleur = null, meilleureDist = tolerance;
+      for (const p of scene.portails) {
+        const b = p.bounds;
+        if (!b || b.length < 2) continue;
+        const d = _distancePointSegment(pt[0], pt[1], b[0].x, b[0].y, b[1].x, b[1].y);
+        if (d <= meilleureDist) { meilleur = p; meilleureDist = d; }
+      }
+      return meilleur;
+    }
+
+    // Un déplacement de token (cases -> pixels natifs de la scène, cx/cy *
+    // scene.px comme le reste du parsing dd2vtt) est bloqué s'il traverse un
+    // mur sans porte ouverte à proximité, ou une porte/fenêtre fermée —
+    // ouverte, elle laisse passer comme pour la LoS (cf. _segmentsBloquants).
+    // Empêche un token d'entrer dans un bâtiment "à travers le mur" au lieu
+    // de passer par une porte.
+    function _deplacementBloque(scene, cx0, cy0, cx1, cy1) {
+      const px = scene.px;
+      const p0 = [(cx0 + 0.5) * px, (cy0 + 0.5) * px];
+      const p1 = [(cx1 + 0.5) * px, (cy1 + 0.5) * px];
+      for (const seg of scene.segments) {
+        const pt = _pointIntersectionSegments(p0, p1, seg[0], seg[1]);
+        if (!pt) continue;
+        const portail = _portailProche(scene, pt, px);
+        if (portail && portail.ouvert) continue; // porte ouverte juste là : on passe
+        return true; // mur plein, ou porte fermée à proximité
+      }
+      for (const p of scene.portails) {
+        if (p.ouvert) continue;
+        const b = p.bounds;
+        if (!b || b.length < 2) continue;
+        if (_pointIntersectionSegments(p0, p1, [b[0].x, b[0].y], [b[1].x, b[1].y])) return true;
+      }
+      return false;
+    }
+
     function _sauverEtatPortail(p) {
       if (_depotPortails) _depotPortails.sauver({ ouvert: p.ouvert }, p.id);
     }
@@ -1598,8 +1659,14 @@ const Carte = (() => {
       const tc = tailleCase(scene);
       const rx = ev.clientX - rect.left;
       const ry = ev.clientY - rect.top;
-      tok.cx = Math.max(0, Math.min(scene.lc - 1, Math.floor(rx / tc)));
-      tok.cy = Math.max(0, Math.min(scene.hc - 1, Math.floor(ry / tc)));
+      const nx = Math.max(0, Math.min(scene.lc - 1, Math.floor(rx / tc)));
+      const ny = Math.max(0, Math.min(scene.hc - 1, Math.floor(ry / tc)));
+      if (nx === tok.cx && ny === tok.cy) return;
+      // Mur ou porte fermée sur la trajectoire directe : on bloque le
+      // déplacement plutôt que de laisser le token traverser (il ne bougera
+      // que quand la souris repassera par un chemin dégagé, ex. la porte).
+      if (_deplacementBloque(scene, tok.cx, tok.cy, nx, ny)) return;
+      tok.cx = nx; tok.cy = ny;
       rendreTokensDD(scene);
       calculerEtRendreLoS(scene);
     }
