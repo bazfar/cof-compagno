@@ -90,7 +90,11 @@ const Loot = (() => {
   }
 
   function _statsItem(it) {
-    if (it.type === "arme")       return `${it.degats} · ${it.portee}${it.deuxMains ? " · 2 mains" : ""}`;
+    if (it.type === "arme") {
+      const bonus = it.bonusDegatsTotal !== undefined ? it.bonusDegatsTotal : (it.enchantement || 0);
+      const degats = bonus > 0 ? `${bonus}+${it.degats}` : it.degats;
+      return `${degats} · ${it.portee}${it.deuxMains ? " · 2 mains" : ""}`;
+    }
     if (it.type === "armure")     return `Réduction ${it.valeurArmure}${it.malusDEX ? ` · Malus DEX -${it.malusDEX}` : ""}`;
     if (it.type === "bouclier")   return `+${it.bonusDEF} DEF`;
     if (it.type === "accessoire") return it.effet;
@@ -101,6 +105,7 @@ const Loot = (() => {
   /* ── Modal vote MJ ────────────────────────────────────────── */
   let _itemBase = null;
   let _rareteChoisie = "commun";
+  let _varianteChoisie = null;
 
   function ouvrirModalVote(item) {
     if (!item) return;
@@ -109,40 +114,56 @@ const Loot = (() => {
 
     _itemBase = item;
     _rareteChoisie = "commun";
+    const variantes = (typeof Raretes !== "undefined") ? Raretes.variantesDisponibles(item.id) : [];
+    _varianteChoisie = variantes.length ? variantes[0].id : null;
 
     const persos = lirePersos();
     const ids = Object.keys(persos);
 
     _rendreApercuModalLoot();
     _rendreSelecteurRarete();
+    _rendreSelecteurVariante();
 
     const btnLancer = document.getElementById("btn-lancer-vote");
     btnLancer.onclick = () => {
       const itemFinal = (typeof Raretes !== "undefined")
-        ? Raretes.appliquer(_itemBase, _rareteChoisie)
+        ? Raretes.appliquer(_itemBase, _rareteChoisie, _varianteChoisie)
         : _itemBase;
       const vote = { item: itemFinal, votes: {}, statut: "vote_en_cours", gagnant: null, ts: Date.now() };
       ids.forEach(id => { vote.votes[id] = { type: null, jet: null }; });
       sauverVote(vote);
       modal.style.display = "none";
       rendreCatalogue();
-      toast("Vote lancé pour « " + itemFinal.nom + " » !");
+      toast("Vote lancé pour « " + itemFinal.nom + " » (" + itemFinal.rareteNom + ") !");
     };
 
     modal.style.display = "flex";
   }
 
-  // Ré-affiche nom/stats/desc du modal selon l'item de base + la rareté choisie.
+  // Ré-affiche nom/stats/desc/effet du modal selon l'item de base + la rareté
+  // et la variante choisies.
   function _rendreApercuModalLoot() {
     if (!_itemBase) return;
     const item = (typeof Raretes !== "undefined")
-      ? Raretes.appliquer(_itemBase, _rareteChoisie)
+      ? Raretes.appliquer(_itemBase, _rareteChoisie, _varianteChoisie)
       : _itemBase;
+
     const nomEl = document.getElementById("modal-loot-item-nom");
     nomEl.textContent = item.nom;
     nomEl.style.color = item.rareteCouleur || "";
     document.getElementById("modal-loot-item-stats").textContent = _statsItem(item);
     document.getElementById("modal-loot-item-desc").textContent = item.description;
+
+    const effetEl = document.getElementById("modal-loot-item-effet");
+    if (effetEl) {
+      if (item.effetRarete) {
+        effetEl.textContent = "✨ " + item.effetRarete;
+        effetEl.style.color = item.rareteCouleur || "";
+        effetEl.style.display = "block";
+      } else {
+        effetEl.style.display = "none";
+      }
+    }
   }
 
   function _rendreSelecteurRarete() {
@@ -154,6 +175,29 @@ const Loot = (() => {
       btn.onclick = () => {
         _rareteChoisie = btn.dataset.rarete;
         _rendreSelecteurRarete();
+        _rendreSelecteurVariante();
+        _rendreApercuModalLoot();
+      };
+    });
+  }
+
+  // Sélecteur de variante d'effet — visible seulement à partir de "rare",
+  // et seulement si l'item propose des variantes (cf. EFFETS_PAR_ITEM).
+  function _rendreSelecteurVariante() {
+    const zone = document.getElementById("modal-loot-variante");
+    if (!zone) return;
+    const auMoinsRare = _rareteChoisie === "rare" || _rareteChoisie === "legendaire";
+    const variantes = (typeof Raretes !== "undefined" && _itemBase) ? Raretes.variantesDisponibles(_itemBase.id) : [];
+
+    if (!auMoinsRare || !variantes.length) { zone.style.display = "none"; zone.innerHTML = ""; return; }
+
+    zone.style.display = "flex";
+    zone.innerHTML = variantes.map(v => `<button type="button" class="chip-variante${v.id === _varianteChoisie ? " actif" : ""}"
+      data-variante="${v.id}">${echapper(v.nom)}</button>`).join("");
+    zone.querySelectorAll(".chip-variante").forEach(btn => {
+      btn.onclick = () => {
+        _varianteChoisie = btn.dataset.variante;
+        _rendreSelecteurVariante();
         _rendreApercuModalLoot();
       };
     });

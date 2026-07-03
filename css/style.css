@@ -1045,6 +1045,8 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .loot-item-desc-modal { font-size: 0.8rem; color: #5a5268; }
 .loot-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
+.loot-item-effet-modal { font-size: 0.85rem; font-style: italic; margin-top: 6px; font-weight: 600; }
+
 .loot-modal-rarete { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
 .chip-rarete {
   --couleur-rarete: #9c9c9c;
@@ -1060,6 +1062,21 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 }
 .chip-rarete:hover { background: color-mix(in srgb, var(--couleur-rarete) 15%, transparent); }
 .chip-rarete.actif { background: var(--couleur-rarete); color: #fff; }
+
+.loot-modal-variante { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; }
+.chip-variante {
+  background: none;
+  border: 1.5px dashed var(--parchemin-fonce);
+  color: var(--violet);
+  border-radius: 14px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-style: italic;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.chip-variante:hover { border-color: var(--or); }
+.chip-variante.actif { border-style: solid; border-color: var(--or); background: #fdf5e8; color: var(--encre); }
 
 /* Notification vote joueur */
 .loot-notif-card { border: 2px solid var(--or) !important; background: #fffcf2 !important; }
