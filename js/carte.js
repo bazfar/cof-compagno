@@ -1344,8 +1344,17 @@ const Carte = (() => {
 
       const imgEl = document.getElementById('carte-image');
       const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
-      const affW  = (rect && rect.width  > 0) ? Math.round(rect.width)  : scene.largeur;
-      const affH  = (rect && rect.height > 0) ? Math.round(rect.height) : scene.hauteur;
+      // Pas de layout dispo (image cachée, ex. onglet Worldmap actif) : on
+      // n'a rien de fiable à dessiner. Sans ce garde-fou, on retombait sur
+      // scene.largeur/hauteur — les dimensions RAW de la scène en pixels
+      // (cases × résolution Dungeondraft, souvent des milliers de px) au
+      // lieu de la taille CSS affichée — ce qui redimensionnait le canvas
+      // des murs à une échelle totalement fausse, un décalage qui persistait
+      // au retour sur l'onglet Battlemap (activerModeBattlemap ne rappelle
+      // pas rendreScene).
+      if (!rect || rect.width === 0) return;
+      const affW = Math.round(rect.width);
+      const affH = Math.round(rect.height);
 
       // Offset image dans carte-scene
       const sceneEl = document.getElementById('carte-scene');
@@ -1932,11 +1941,19 @@ const Carte = (() => {
         if (imgEl) imgEl.style.display = 'block';
         if (canvasMurs) canvasMurs.style.display = 'block';
         if (canvasLoS)  canvasLoS.style.display  = 'block';
+        // Worldmap.charger() masque aussi #dd2vtt-tokens (cf. la liste `els`
+        // dans Worldmap.charger) pour laisser la place au canvas pan/zoom —
+        // sans ce réaffichage, les tokens dd2vtt restaient générés (présents
+        // dans le DOM, correctement positionnés) mais invisibles pour
+        // toujours après un aller-retour par l'onglet Worldmap.
+        const tokensEl = document.getElementById('dd2vtt-tokens');
+        if (tokensEl) tokensEl.style.display = 'block';
         const btnTok = document.getElementById('btn-token-dd');
         if (btnTok) btnTok.style.display = 'inline-block';
         const sel = document.getElementById('select-scene-dd2vtt');
         if (sel) sel.style.display = '';
         const scene = scenes[sceneActive];
+        rendreScene(scene);
         rendreTokensDD(scene);
         calculerEtRendreLoS(scene);
       }
