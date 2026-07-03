@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=25" />
+  <link rel="stylesheet" href="css/style.css?v=26" />
 </head>
 <body>
   <header>
@@ -24,6 +24,7 @@
           <button class="tab-dropdown-item" data-carte-mode="battlemap">⚔ Battlemap</button>
         </div>
       </div>
+      <button data-panneau="table-combat" data-role="mj">⚔ Combat</button>
       <button data-panneau="bestiaire" data-role="mj">Bestiaire</button>
       <button data-panneau="loot" data-role="mj">Loot</button>
       <button data-panneau="regles">Règles</button>
@@ -321,6 +322,15 @@
       </div>
     </section>
 
+    <!-- TABLE DE COMBAT (MJ) -->
+    <section class="panneau" id="panneau-table-combat" data-role="mj">
+      <div class="carte">
+        <h2 class="titre-bandeau">⚔ Table de combat</h2>
+        <p style="font-size:0.85rem;color:#6a6278;">Les monstres ajoutés via <strong>+ Monstre</strong> sur la carte apparaissent ici automatiquement. Retirer un monstre ici le retire aussi de la carte, et inversement.</p>
+      </div>
+      <div id="zone-table-combat"></div>
+    </section>
+
     <!-- BESTIAIRE -->
     <section class="panneau" id="panneau-bestiaire">
       <div class="carte">
@@ -452,9 +462,9 @@
   <script src="js/firebase-config.js?v=1"></script>
   <script src="js/depot.js?v=5"></script>
   <script src="js/sync.js?v=2"></script>
-  <script src="js/carte.js?v=39"></script>
+  <script src="js/carte.js?v=40"></script>
   <script src="js/raretes.js?v=1"></script>
   <script src="js/loot.js?v=4"></script>
-  <script src="js/app.js?v=29"></script>
+  <script src="js/app.js?v=30"></script>
 </body>
 </html>

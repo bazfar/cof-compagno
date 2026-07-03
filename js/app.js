@@ -221,6 +221,7 @@ const App = (() => {
     if (panneau === "loot" && typeof Loot !== "undefined") Loot.rendreCatalogue();
     if (panneau === "regles") rendreRegles();
     if (panneau === "bestiaire") rendreBestiaire();
+    if (panneau === "table-combat") rendreTableCombat();
     if (panneau === "carte" && typeof Carte !== "undefined") {
       Carte.onOpen();
       if (role === "joueur") rendreSelecteurMonPerso();
@@ -1714,6 +1715,13 @@ const App = (() => {
       </div>`;
   }
   function wireDegatsSubis(id, prefixe) {
+    wireDegatsSubisGenerique(prefixe, (val) => subirDegats(id, val));
+  }
+
+  // Câblage générique du petit formulaire "Subir des dégâts" (toggle + input +
+  // bouton + Entrée) : `appliquer(valeurBrute)` porte la logique propre à
+  // l'appelant (joueur via subirDegats, monstre de la table de combat, etc.).
+  function wireDegatsSubisGenerique(prefixe, appliquer) {
     const btnToggle = document.getElementById(`${prefixe}btn-toggle-degats`);
     const form = document.getElementById(`${prefixe}degats-subis-form`);
     const champ = document.getElementById(`${prefixe}champ-degats-bruts`);
@@ -1722,9 +1730,9 @@ const App = (() => {
       form.style.display = form.style.display === "none" ? "flex" : "none";
       if (form.style.display === "flex") champ.focus();
     };
-    const appliquer = () => { subirDegats(id, champ.value); champ.value = ""; };
-    document.getElementById(`${prefixe}btn-appliquer-degats`).onclick = appliquer;
-    champ.addEventListener("keydown", (e) => { if (e.key === "Enter") appliquer(); });
+    const appliquerEtVider = () => { appliquer(champ.value); champ.value = ""; };
+    document.getElementById(`${prefixe}btn-appliquer-degats`).onclick = appliquerEtVider;
+    champ.addEventListener("keydown", (e) => { if (e.key === "Enter") appliquerEtVider(); });
   }
 
   function editerPerso(id) {
@@ -2120,6 +2128,14 @@ const App = (() => {
       b.onclick = () => allerVers(b.dataset.panneau);
     });
 
+    // Table de combat : se rafraîchit dès qu'un monstre est ajouté/blessé/
+    // retiré, y compris depuis la carte (jeton ✕) ou un autre client (sync).
+    if (typeof Carte !== "undefined" && Carte.onMonstresChange) {
+      Carte.onMonstresChange(() => {
+        if (document.querySelector(".panneau.actif")?.id === "panneau-table-combat") rendreTableCombat();
+      });
+    }
+
     // Bouton + Monstre battlemap
     const btnMonstreBattle = document.getElementById("btn-monstre-battlemap");
     if (btnMonstreBattle) btnMonstreBattle.onclick = ouvrirModalMonstre;
@@ -2305,6 +2321,86 @@ const App = (() => {
           Carte.ajouterMonstre(m);
           fermerModalMonstre();
         }
+      };
+    });
+  }
+
+  /* ============================================================
+     TABLE DE COMBAT (MJ) — monstres posés sur la carte via "+ Monstre"
+     ============================================================ */
+
+  // Applique des dégâts bruts à un monstre de la table de combat (réduits par
+  // son armure, comme subirDegats côté fiche joueur), puis rafraîchit la table.
+  function subirDegatsMonstre(id, degatsBruts) {
+    degatsBruts = parseInt(degatsBruts, 10);
+    if (isNaN(degatsBruts) || degatsBruts < 0) { toast("Entre un nombre de dégâts valide."); return; }
+    const info = Carte.appliquerDegatsCombat(id, degatsBruts);
+    if (!info) return;
+    toast(info.reduction > 0
+      ? `🛡 ${degatsBruts} dégâts subis par ${info.nom} → ${info.degatsNets} après réduction d'armure (−${info.reduction}).`
+      : `${info.degatsNets} dégâts subis par ${info.nom}.`);
+    rendreTableCombat();
+  }
+
+  function rendreTableCombat() {
+    const zone = document.getElementById("zone-table-combat");
+    if (!zone || typeof Carte === "undefined") return;
+    const monstres = Carte.listeMonstresCombat();
+
+    if (!monstres.length) {
+      zone.innerHTML = '<div class="carte"><p class="vide">Aucun monstre en combat pour l\'instant — ajoute-en un via « + Monstre » sur la carte.</p></div>';
+      return;
+    }
+
+    zone.innerHTML = `<div class="grille-table-combat">${monstres.map((m) => {
+      const prefixe = `cm-${m.id}-`;
+      const pvMax = m.pvMax || 0;
+      const pvActuel = m.pvActuel ?? pvMax;
+      const morEnCombat = pvActuel <= 0;
+      const etoiles = m.dangerosite ? "★".repeat(Math.min(m.dangerosite, 5)) : "";
+      const badgeBoss = m.boss ? ' <span class="badge-boss">BOSS</span>' : "";
+      return `
+        <div class="combat-monstre${morEnCombat ? " hors-combat" : ""}" data-id="${m.id}">
+          <div class="cm-entete">
+            <div class="cm-nom">${echapper(m.nom)}${badgeBoss}</div>
+            <button class="btn petit danger" data-suppr-monstre="${m.id}">✕</button>
+          </div>
+          <div class="cm-stats">
+            ${m.def !== null && m.def !== undefined ? `<span>DEF ${m.def}</span>` : ""}
+            <span>Armure ${m.armure || 0}</span>
+            ${etoiles ? `<span>${etoiles}</span>` : ""}
+          </div>
+          <div class="pv-control">
+            <button data-pv-moins="${m.id}">−</button>
+            <input type="number" value="${pvActuel}" data-pv-input="${m.id}" />
+            <span style="font-weight:700;">/ ${pvMax}</span>
+            <button data-pv-plus="${m.id}">+</button>
+          </div>
+          <div class="barre-pv"><div class="rempli" style="width:${pvMax ? Math.max(0, Math.min(100, (pvActuel / pvMax) * 100)) : 0}%;"></div></div>
+          ${blocDegatsSubisHtml(prefixe)}
+          ${morEnCombat ? '<div class="badge-mort">💀 Hors combat</div>' : ""}
+        </div>`;
+    }).join("")}</div>`;
+
+    monstres.forEach((m) => {
+      wireDegatsSubisGenerique(`cm-${m.id}-`, (val) => subirDegatsMonstre(m.id, val));
+    });
+    zone.querySelectorAll("[data-pv-moins]").forEach((btn) => {
+      btn.onclick = () => { Carte.ajusterPvCombat(btn.dataset.pvMoins, -1); rendreTableCombat(); };
+    });
+    zone.querySelectorAll("[data-pv-plus]").forEach((btn) => {
+      btn.onclick = () => { Carte.ajusterPvCombat(btn.dataset.pvPlus, +1); rendreTableCombat(); };
+    });
+    zone.querySelectorAll("[data-pv-input]").forEach((input) => {
+      input.onchange = () => { Carte.definirPvCombat(input.dataset.pvInput, parseInt(input.value, 10)); rendreTableCombat(); };
+    });
+    zone.querySelectorAll("[data-suppr-monstre]").forEach((btn) => {
+      btn.onclick = () => {
+        const id = btn.dataset.supprMonstre;
+        const m = monstres.find((mm) => mm.id === id);
+        if (!confirm(`Retirer « ${m ? m.nom : "ce monstre"} » de la carte et de la table de combat ?`)) return;
+        Carte.supprimerMonstreCombat(id);
+        rendreTableCombat();
       };
     });
   }

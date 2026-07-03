@@ -259,24 +259,104 @@ const Carte = (() => {
     const couleurs = { 1: "#27ae60", 2: "#2980b9", 3: "#d35400", 4: "#c0392b", 5: "#7d1a24" };
     const couleur = monstre.boss ? "#8e44ad" : (couleurs[monstre.dangerosite] || "#7f8c8d");
     const label = monstre.tier ? monstre.nom + " [" + monstre.tier + "]" : monstre.nom;
+    // Stats de combat (table de combat MJ) : PV/DEF/armure viennent du bestiaire,
+    // repris tels quels (armure.valeur -> réduction de dégâts, comme les PJ).
+    const donneesCombat = {
+      monstreId: monstre.id,
+      pvMax: (typeof monstre.pv === "number") ? monstre.pv : 1,
+      pvActuel: (typeof monstre.pv === "number") ? monstre.pv : 1,
+      def: (typeof monstre.def === "number") ? monstre.def : null,
+      armure: (monstre.armure && monstre.armure.valeur) || 0,
+      dangerosite: monstre.dangerosite || null,
+      boss: !!monstre.boss,
+    };
     if (typeof DD2VTT !== "undefined" && DD2VTT.estActive && DD2VTT.estActive()) {
-      DD2VTT.ajouterTokenData({ nom: label, couleur: couleur, pj: false });
+      DD2VTT.ajouterTokenData(Object.assign({ nom: label, couleur: couleur, pj: false }, donneesCombat));
       toastCarte("Token « " + monstre.nom + " » ajouté.");
       return;
     }
     // Worldmap fallback
     const i = etat.jetons.length;
-    etat.jetons.push({
+    etat.jetons.push(Object.assign({
       id: nouvelId(), nom: label, couleur: couleur,
       pj: false, portrait: null, x: 50, y: 50,
-    });
+    }, donneesCombat));
     sauver(); rendreJetons();
     toastCarte("Jeton « " + monstre.nom + " » ajouté.");
+    _notifierChangementMonstres();
   }
 
   function supprimerJeton(id) {
     etat.jetons = etat.jetons.filter((j) => j.id !== id);
     sauver(); rendreJetons();
+    _notifierChangementMonstres();
+  }
+
+  /* ---------- Table de combat (MJ) : monstres du bestiaire, battlemap ou worldmap ----------
+     Source de vérité unique : les tokens eux-mêmes (tokensDD côté battlemap,
+     etat.jetons côté worldmap). Pas de liste séparée à maintenir en synchro —
+     ajouter/retirer un jeton sur la carte suffit à le faire apparaître/disparaître
+     ici, et vice versa. */
+
+  let _onChangementMonstres = null;
+  function onMonstresChange(cb) { _onChangementMonstres = cb; }
+  function _notifierChangementMonstres() { if (_onChangementMonstres) _onChangementMonstres(); }
+
+  function _combatEnBattlemap() {
+    return typeof DD2VTT !== "undefined" && DD2VTT.estActive && DD2VTT.estActive();
+  }
+
+  function listeMonstresCombat() {
+    if (_combatEnBattlemap()) return DD2VTT.tokensMonstres();
+    return etat.jetons.filter((j) => !j.pj && j.monstreId);
+  }
+
+  function appliquerDegatsCombat(id, degatsBruts) {
+    if (_combatEnBattlemap() && DD2VTT.tokensMonstres().some((t) => t.id === id)) {
+      return DD2VTT.appliquerDegats(id, degatsBruts);
+    }
+    const tok = etat.jetons.find((j) => j.id === id);
+    if (!tok) return null;
+    const reduction = tok.armure || 0;
+    const degatsNets = Math.max(0, degatsBruts - reduction);
+    tok.pvActuel = Math.max(0, (tok.pvActuel ?? tok.pvMax ?? 0) - degatsNets);
+    sauver(); rendreJetons();
+    _notifierChangementMonstres();
+    return { nom: tok.nom, reduction, degatsNets, pvActuel: tok.pvActuel };
+  }
+
+  function definirPvCombat(id, val) {
+    if (_combatEnBattlemap() && DD2VTT.tokensMonstres().some((t) => t.id === id)) {
+      DD2VTT.definirPv(id, val);
+      return;
+    }
+    const tok = etat.jetons.find((j) => j.id === id);
+    if (!tok) return;
+    tok.pvActuel = isNaN(val) ? tok.pvActuel : Math.max(0, Math.min(tok.pvMax || 0, val));
+    sauver(); rendreJetons();
+    _notifierChangementMonstres();
+  }
+
+  function ajusterPvCombat(id, delta) {
+    if (_combatEnBattlemap() && DD2VTT.tokensMonstres().some((t) => t.id === id)) {
+      DD2VTT.ajusterPv(id, delta);
+      return;
+    }
+    const tok = etat.jetons.find((j) => j.id === id);
+    if (!tok) return;
+    tok.pvActuel = Math.max(0, Math.min(tok.pvMax || 0, (tok.pvActuel || 0) + delta));
+    sauver(); rendreJetons();
+    _notifierChangementMonstres();
+  }
+
+  // Retire le monstre à la fois de la table de combat et de la carte (même
+  // suppression que le bouton ✕ du jeton/token) — quel que soit le mode actif.
+  function supprimerMonstreCombat(id) {
+    if (_combatEnBattlemap() && DD2VTT.tokensMonstres().some((t) => t.id === id)) {
+      DD2VTT.supprimerToken(id);
+      return;
+    }
+    supprimerJeton(id);
   }
 
   function initiales(nom) {
@@ -1163,6 +1243,7 @@ const Carte = (() => {
         tokenSelectionne = null;
         rendreTokensDD(scene);
         calculerEtRendreLoS(scene);
+        _onChangeMonstres && _onChangeMonstres();
       });
 
       // Idem pour l'état des portails : un autre client (n'importe quel rôle)
@@ -1518,12 +1599,59 @@ const Carte = (() => {
         race: (d && d.race) || null,
         raceVariante: (d && d.raceVariante) || null,
         genre: (d && d.genre) || null,
+        // Table de combat (monstres du bestiaire uniquement, cf. Carte.ajouterMonstre) :
+        monstreId: (d && d.monstreId) || null,
+        pvMax: (d && typeof d.pvMax === 'number') ? d.pvMax : null,
+        pvActuel: (d && typeof d.pvActuel === 'number') ? d.pvActuel : null,
+        def: (d && typeof d.def === 'number') ? d.def : null,
+        armure: (d && typeof d.armure === 'number') ? d.armure : 0,
+        dangerosite: (d && d.dangerosite) || null,
+        boss: !!(d && d.boss),
       };
       tokensDD.push(nouveauToken);
       rendreTokensDD(scene);
       calculerEtRendreLoS(scene);
       _sauverToken(nouveauToken);
+      _onChangeMonstres && _onChangeMonstres();
       return true;
+    }
+
+    // ── Table de combat : monstres du bestiaire posés sur cette scène ────
+    let _onChangeMonstres = null;
+    function onChange(cb) { _onChangeMonstres = cb; }
+
+    function tokensMonstres() {
+      return tokensDD.filter(t => !t.pj && t.monstreId);
+    }
+
+    // Applique des dégâts bruts à un token monstre, réduits par son armure
+    // (comme Personnage.reductionDegats côté fiche joueur). Renvoie le détail
+    // pour le toast de l'appelant, ou null si le token n'existe pas/plus.
+    function appliquerDegatsToken(id, degatsBruts) {
+      const tok = tokensDD.find(t => t.id === id);
+      if (!tok) return null;
+      const reduction = tok.armure || 0;
+      const degatsNets = Math.max(0, degatsBruts - reduction);
+      tok.pvActuel = Math.max(0, (tok.pvActuel ?? tok.pvMax ?? 0) - degatsNets);
+      _sauverToken(tok);
+      _onChangeMonstres && _onChangeMonstres();
+      return { nom: tok.nom, reduction, degatsNets, pvActuel: tok.pvActuel };
+    }
+
+    function definirPvToken(id, val) {
+      const tok = tokensDD.find(t => t.id === id);
+      if (!tok) return;
+      tok.pvActuel = isNaN(val) ? tok.pvActuel : Math.max(0, Math.min(tok.pvMax || 0, val));
+      _sauverToken(tok);
+      _onChangeMonstres && _onChangeMonstres();
+    }
+
+    function ajusterPvToken(id, delta) {
+      const tok = tokensDD.find(t => t.id === id);
+      if (!tok) return;
+      tok.pvActuel = Math.max(0, Math.min(tok.pvMax || 0, (tok.pvActuel || 0) + delta));
+      _sauverToken(tok);
+      _onChangeMonstres && _onChangeMonstres();
     }
 
     // Suppression : MJ uniquement (le bouton ✕ n'existe même pas dans le DOM
@@ -1535,6 +1663,7 @@ const Carte = (() => {
       const sc = scene || (sceneActive && scenes[sceneActive]);
       if (sc) { rendreTokensDD(sc); calculerEtRendreLoS(sc); }
       _supprimerTokenSync(id);
+      _onChangeMonstres && _onChangeMonstres();
     }
 
     // ── Init brouillard persistant ───────────────────────────
@@ -1752,8 +1881,16 @@ const Carte = (() => {
       if (tokensEl) tokensEl.innerHTML = '';
     }
 
-    return { init, scenes: () => scenes, sceneActive: () => sceneActive, ajouterToken: (sc) => ajouterTokenDD(sc), modeWorldmap: activerModeWorldmap, estActive, ajouterTokenData };
+    return {
+      init, scenes: () => scenes, sceneActive: () => sceneActive,
+      ajouterToken: (sc) => ajouterTokenDD(sc), modeWorldmap: activerModeWorldmap, estActive, ajouterTokenData,
+      tokensMonstres, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
+      supprimerToken: supprimerTokenDD, onChange,
+    };
   })();
+  // Un changement de token dd2vtt (ajout/dégâts/suppression, local ou distant
+  // via Firestore) doit aussi rafraîchir la table de combat si elle est ouverte.
+  DD2VTT.onChange(() => _notifierChangementMonstres());
 
   /* ============================================================
      Fin DD2VTT
@@ -1761,5 +1898,9 @@ const Carte = (() => {
 
   document.addEventListener("DOMContentLoaded", () => { init(); Worldmap.init(); DD2VTT.init(); });
 
-  return { onOpen, definirRole, definirMonPerso, ajouterMonstre };
+  return {
+    onOpen, definirRole, definirMonPerso, ajouterMonstre,
+    listeMonstresCombat, appliquerDegatsCombat, definirPvCombat, ajusterPvCombat,
+    supprimerMonstreCombat, onMonstresChange,
+  };
 })();
