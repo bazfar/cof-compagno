@@ -1768,7 +1768,10 @@ const App = (() => {
 
           ${race ? `<div class="carte"><h3>Capacités raciales — ${race.voie_nom}</h3>${capRaceHtml}</div>` : ""}
 
-          ${p.notes ? `<div class="carte"><h3>Notes</h3><div style="white-space:pre-wrap;font-size:0.9rem;">${echapper(p.notes)}</div></div>` : ""}
+          <div class="carte">
+            <h3>Notes</h3>
+            <textarea id="fiche-notes" rows="5" style="width:100%;resize:vertical;font-family:inherit;font-size:0.9rem;" placeholder="Notes libres (idées, quêtes en cours, objectifs...)">${echapper(p.notes || "")}</textarea>
+          </div>
         </div>
 
         <div class="fiche-col-droite">
@@ -1784,6 +1787,7 @@ const App = (() => {
     document.getElementById("pv-plus").onclick = () => ajusterPv(id, +1);
     document.getElementById("pv-moins").onclick = () => ajusterPv(id, -1);
     document.getElementById("pv-actuel").onchange = (e) => definirPv(id, parseInt(e.target.value, 10));
+    document.getElementById("fiche-notes").onchange = (e) => definirNotes(id, e.target.value);
     wireDegatsSubis(id, "");
     // Tests de carac
     zone.querySelectorAll("[data-test]").forEach((el) => {
@@ -1917,6 +1921,15 @@ const App = (() => {
     p.pvActuel = isNaN(val) ? p.pvActuel : Math.max(0, Math.min(p.pvMax, val));
     sauverPersos(persos);
     _syncPvAffichages(id, p);
+  }
+
+  // Notes libres de la fiche vivante (idées, quêtes en cours...) — éditables
+  // directement sur la fiche, pas seulement à la création du personnage.
+  function definirNotes(id, val) {
+    const persos = chargerPersos();
+    const p = persos[id];
+    p.notes = val;
+    sauverPersos(persos);
   }
 
   // Applique un jet de dégâts subis : retranche la réduction de dégâts de
@@ -2407,8 +2420,6 @@ const App = (() => {
       if (creation.classe) { rendreVoies(); rendrePv(); }
       if (creation.race) rendreVoieRaciale();
     };
-    document.getElementById("champ-pvmax").oninput = (e) => { e.target.dataset.touche = "1"; };
-    document.getElementById("champ-def").oninput = (e) => { e.target.dataset.touche = "1"; };
     document.getElementById("btn-sauver").onclick = sauverPersonnage;
     document.getElementById("btn-reset").onclick = reinitialiserCreation;
 
