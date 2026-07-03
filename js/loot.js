@@ -73,6 +73,9 @@ const Loot = (() => {
     zone.querySelectorAll(".btn-mettre-en-jeu").forEach(btn => {
       btn.onclick = () => ouvrirModalVote(catalogue.find(i => i.id === btn.dataset.id));
     });
+    zone.querySelectorAll(".btn-donner-loot").forEach(btn => {
+      btn.onclick = () => ouvrirModalDon(catalogue.find(i => i.id === btn.dataset.id));
+    });
   }
 
   function _lootItemHTML(it) {
@@ -85,7 +88,10 @@ const Loot = (() => {
       </div>
       ${stats ? `<div class="loot-item-stats">${stats}</div>` : ""}
       <div class="loot-item-desc">${echapper(it.description)}</div>
-      <button class="btn petit or btn-mettre-en-jeu" data-id="${it.id}">⚔ Mettre en jeu</button>
+      <div class="barre-actions" style="margin-top:8px;">
+        <button class="btn petit or btn-mettre-en-jeu" data-id="${it.id}">⚔ Mettre en jeu</button>
+        <button class="btn petit secondaire btn-donner-loot" data-id="${it.id}">🎁 Donner à</button>
+      </div>
     </div>`;
   }
 
@@ -102,12 +108,18 @@ const Loot = (() => {
     return "";
   }
 
-  /* ── Modal vote MJ ────────────────────────────────────────── */
+  /* ── Modal vote MJ / don direct ────────────────────────────── */
   let _itemBase = null;
   let _rareteChoisie = "commun";
   let _varianteChoisie = null;
+  let _modeModal = "vote"; // "vote" | "don"
 
-  function ouvrirModalVote(item) {
+  function ouvrirModalVote(item) { _ouvrirModal(item, "vote"); }
+  // Donne l'item directement dans l'inventaire d'un personnage choisi, sans
+  // passer par le vote besoin/greed — même sélection de rareté/variante.
+  function ouvrirModalDon(item) { _ouvrirModal(item, "don"); }
+
+  function _ouvrirModal(item, mode) {
     if (!item) return;
     const modal = document.getElementById("modal-loot");
     if (!modal) return;
@@ -116,26 +128,64 @@ const Loot = (() => {
     _rareteChoisie = "commun";
     const variantes = (typeof Raretes !== "undefined") ? Raretes.variantesDisponibles(item.id) : [];
     _varianteChoisie = variantes.length ? variantes[0].id : null;
+    _modeModal = mode;
 
     const persos = lirePersos();
     const ids = Object.keys(persos);
+
+    const titreEl = document.getElementById("modal-loot-titre");
+    if (titreEl) titreEl.textContent = mode === "don" ? "Donner un item" : "Mettre un item en jeu";
+    const btnLancer = document.getElementById("btn-lancer-vote");
+    const btnDonner = document.getElementById("btn-donner-direct");
+    if (btnLancer) btnLancer.style.display = mode === "vote" ? "" : "none";
+    if (btnDonner) btnDonner.style.display = mode === "don" ? "" : "none";
+
+    const zoneDest = document.getElementById("modal-loot-destinataire");
+    if (zoneDest) {
+      zoneDest.style.display = mode === "don" ? "block" : "none";
+      if (mode === "don") {
+        const sel = document.getElementById("select-don-destinataire");
+        sel.innerHTML = ids.length
+          ? ids.map(id => `<option value="${id}">${echapper(persos[id].nom)}</option>`).join("")
+          : `<option value="">— Aucun personnage —</option>`;
+      }
+    }
 
     _rendreApercuModalLoot();
     _rendreSelecteurRarete();
     _rendreSelecteurVariante();
 
-    const btnLancer = document.getElementById("btn-lancer-vote");
-    btnLancer.onclick = () => {
-      const itemFinal = (typeof Raretes !== "undefined")
-        ? Raretes.appliquer(_itemBase, _rareteChoisie, _varianteChoisie)
-        : _itemBase;
-      const vote = { item: itemFinal, votes: {}, statut: "vote_en_cours", gagnant: null, ts: Date.now() };
-      ids.forEach(id => { vote.votes[id] = { type: null, jet: null }; });
-      sauverVote(vote);
-      modal.style.display = "none";
-      rendreCatalogue();
-      toast("Vote lancé pour « " + itemFinal.nom + " » (" + itemFinal.rareteNom + ") !");
-    };
+    if (btnLancer) {
+      btnLancer.onclick = () => {
+        const itemFinal = (typeof Raretes !== "undefined")
+          ? Raretes.appliquer(_itemBase, _rareteChoisie, _varianteChoisie)
+          : _itemBase;
+        const vote = { item: itemFinal, votes: {}, statut: "vote_en_cours", gagnant: null, ts: Date.now() };
+        ids.forEach(id => { vote.votes[id] = { type: null, jet: null }; });
+        sauverVote(vote);
+        modal.style.display = "none";
+        rendreCatalogue();
+        toast("Vote lancé pour « " + itemFinal.nom + " » (" + itemFinal.rareteNom + ") !");
+      };
+    }
+    if (btnDonner) {
+      btnDonner.onclick = () => {
+        const destId = document.getElementById("select-don-destinataire").value;
+        if (!destId) { toast("Choisis un destinataire."); return; }
+        const persosActuels = lirePersos();
+        const dest = persosActuels[destId];
+        if (!dest) return;
+        const itemFinal = (typeof Raretes !== "undefined")
+          ? Raretes.appliquer(_itemBase, _rareteChoisie, _varianteChoisie)
+          : _itemBase;
+        if (!Array.isArray(dest.inventaireListe)) dest.inventaireListe = [];
+        dest.inventaireListe.push(Object.assign({}, itemFinal, { itemRef: itemFinal.id }));
+        sauverPersos(persosActuels);
+        modal.style.display = "none";
+        rendreCatalogue();
+        toast("« " + itemFinal.nom + " » (" + itemFinal.rareteNom + ") donné à " + dest.nom + " !");
+      };
+    }
 
     modal.style.display = "flex";
   }
@@ -372,6 +422,7 @@ const Loot = (() => {
     rendreNotificationVote,
     demarrerPolling,
     ouvrirModalVote,
+    ouvrirModalDon,
     fermerModalLoot,
     resoudreVote,
   };

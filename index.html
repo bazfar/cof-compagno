@@ -419,7 +419,7 @@
   <div id="modal-loot" class="modal-overlay" style="display:none;">
     <div class="modal-boite">
       <div class="modal-entete">
-        <h3>Mettre un item en jeu</h3>
+        <h3 id="modal-loot-titre">Mettre un item en jeu</h3>
         <button class="modal-fermer" id="btn-fermer-modal-loot">✕</button>
       </div>
       <div class="loot-modal-item-preview">
@@ -433,8 +433,13 @@
       </div>
       <div class="loot-modal-rarete" id="modal-loot-rarete"></div>
       <div class="loot-modal-variante" id="modal-loot-variante" style="display:none;"></div>
+      <div class="loot-modal-destinataire" id="modal-loot-destinataire" style="display:none;">
+        <label for="select-don-destinataire">Donner à</label>
+        <select id="select-don-destinataire"></select>
+      </div>
       <div class="loot-modal-actions">
         <button class="btn or" id="btn-lancer-vote">🎲 Lancer le vote</button>
+        <button class="btn or" id="btn-donner-direct" style="display:none;">🎁 Donner</button>
         <button class="btn secondaire" id="btn-annuler-modal-loot">Annuler</button>
       </div>
     </div>
@@ -469,7 +474,7 @@
   <script src="js/sync.js?v=2"></script>
   <script src="js/carte.js?v=41"></script>
   <script src="js/raretes.js?v=2"></script>
-  <script src="js/loot.js?v=6"></script>
-  <script src="js/app.js?v=30"></script>
+  <script src="js/loot.js?v=7"></script>
+  <script src="js/app.js?v=31"></script>
 </body>
 </html>

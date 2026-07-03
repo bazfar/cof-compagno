@@ -1088,7 +1088,11 @@ const App = (() => {
       </div>`;
   }
 
-  function rendreBlocInventaire(perso) {
+  // `persoId` : id réel du personnage (fiche déjà sauvegardée) — falsy pendant
+  // la création (le brouillard `creation` n'a pas encore d'id, et il n'y a pas
+  // encore de "l'autre joueur à qui donner" pertinent avant sauvegarde). Le
+  // bouton "Donner" n'apparaît donc que sur une fiche réelle.
+  function rendreBlocInventaire(perso, persoId) {
     const items = perso.inventaireListe || [];
     const listeHtml = items.length
       ? items.map((it, idx) => {
@@ -1103,6 +1107,7 @@ const App = (() => {
             ${it.description ? `<div class="inv-item-desc">${echapper(it.description)}</div>` : ""}
             <div class="inv-actions">
               ${equipable ? `<button class="btn petit or btn-equiper-depuis-inv" data-idx="${idx}">Équiper</button>` : ""}
+              ${persoId ? `<button class="btn petit secondaire btn-donner-item" data-idx="${idx}">🎁 Donner</button>` : ""}
               <button class="btn petit danger btn-jeter-item" data-idx="${idx}">Jeter</button>
             </div>
           </div>`;
@@ -1126,6 +1131,7 @@ const App = (() => {
           </div>
           <button class="btn petit or" id="btn-confirmer-ajout-item">Ajouter</button>
         </div>
+        ${persoId ? `<div class="selecteur-slot" id="selecteur-don-item" style="display:none;"></div>` : ""}
       </div>`;
   }
 
@@ -1418,6 +1424,50 @@ const App = (() => {
     afficherFiche(persoId);
   }
 
+  // Ouvre, dans le bloc Inventaire, un sélecteur des autres personnages à qui
+  // donner l'item d'index `idx` (échange entre joueurs, sans passer par le
+  // système de vote loot).
+  function ouvrirSelecteurDon(persoId, idx) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const item = p.inventaireListe[idx];
+    if (!item) return;
+    const zone = document.getElementById("selecteur-don-item");
+    if (!zone) return;
+    const autres = Object.keys(persos).filter((pid) => pid !== persoId);
+    if (!autres.length) {
+      zone.innerHTML = `<div class="aide">Aucun autre personnage à qui donner un objet.</div>`;
+      zone.style.display = "block";
+      return;
+    }
+    zone.innerHTML =
+      `<select id="select-destinataire-don">` +
+      autres.map((pid) => `<option value="${pid}">${echapper(persos[pid].nom)}</option>`).join("") +
+      `</select>` +
+      `<button class="btn petit or" id="btn-confirmer-don">Donner « ${echapper(item.nom)} »</button>`;
+    zone.style.display = "block";
+    document.getElementById("btn-confirmer-don").onclick = () => {
+      const destId = document.getElementById("select-destinataire-don").value;
+      donnerItem(persoId, idx, destId);
+    };
+  }
+
+  function donnerItem(persoId, idx, destId) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    const dest = persos[destId];
+    if (!p || !dest) return;
+    const item = p.inventaireListe[idx];
+    if (!item) return;
+    p.inventaireListe.splice(idx, 1);
+    if (!Array.isArray(dest.inventaireListe)) dest.inventaireListe = [];
+    dest.inventaireListe.push(item);
+    sauverPersos(persos);
+    afficherFiche(persoId);
+    toast(`« ${item.nom} » donné à ${dest.nom}.`);
+  }
+
   function afficherFiche(id) {
     const persos = chargerPersos();
     const p = persos[id];
@@ -1549,7 +1599,7 @@ const App = (() => {
 
         <div class="fiche-col-droite">
           ${rendreBlocEquipement(perso)}
-          ${rendreBlocInventaire(perso)}
+          ${rendreBlocInventaire(perso, id)}
         </div>
       </div>
     `;
@@ -1603,6 +1653,10 @@ const App = (() => {
     // Inventaire — jeter un objet
     zone.querySelectorAll(".btn-jeter-item").forEach((el) => {
       el.onclick = () => jeterItem(id, parseInt(el.dataset.idx, 10));
+    });
+    // Inventaire — donner l'objet à un autre personnage (échange entre joueurs)
+    zone.querySelectorAll(".btn-donner-item").forEach((el) => {
+      el.onclick = () => ouvrirSelecteurDon(id, parseInt(el.dataset.idx, 10));
     });
     // Inventaire — formulaire d'ajout, lié au catalogue loot (+ option "divers")
     const btnAjouterItem = document.getElementById("btn-ajouter-item");
