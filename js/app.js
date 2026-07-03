@@ -1112,6 +1112,7 @@ const App = (() => {
       ? items.map((it, idx) => {
           const equipable = Personnage.slotsPourType(it).length > 0;
           const badge = badgeEffetItem(it);
+          const soin = formuleSoinItem(it);
           return `<div class="inv-item">
             <div class="inv-item-header">
               <span class="inv-item-nom" style="color:${it.rareteCouleur || ""}">${echapper(it.nom)}</span>${badgeRareteHtml(it)}
@@ -1122,6 +1123,8 @@ const App = (() => {
             ${it.description ? `<div class="inv-item-desc">${echapper(it.description)}</div>` : ""}
             <div class="inv-actions">
               ${equipable ? `<button class="btn petit or btn-equiper-depuis-inv" data-idx="${idx}">Équiper</button>` : ""}
+              ${soin && persoId ? `<button class="btn petit or btn-utiliser-item" data-idx="${idx}">🧪 Utiliser</button>` : ""}
+              ${soin && persoId ? `<button class="btn petit secondaire btn-soigner-allie" data-idx="${idx}">❤ Soigner un allié</button>` : ""}
               ${persoId ? `<button class="btn petit secondaire btn-donner-item" data-idx="${idx}">🎁 Donner</button>` : ""}
               <button class="btn petit danger btn-jeter-item" data-idx="${idx}">Jeter</button>
             </div>
@@ -1147,6 +1150,7 @@ const App = (() => {
           <button class="btn petit or" id="btn-confirmer-ajout-item">Ajouter</button>
         </div>
         ${persoId ? `<div class="selecteur-slot" id="selecteur-don-item" style="display:none;"></div>` : ""}
+        ${persoId ? `<div class="selecteur-slot" id="selecteur-soin-item" style="display:none;"></div>` : ""}
       </div>`;
   }
 
@@ -1483,6 +1487,144 @@ const App = (() => {
     toast(`« ${item.nom} » donné à ${dest.nom}.`);
   }
 
+  /* ---------- Consommables : usage direct (soin) et administration à un allié ----------
+     Un consommable ne propose ces boutons que s'il soigne réellement (formule de
+     dé + mention de PV dans sa description) — sinon huile sainte, antidote,
+     corde... se retrouveraient avec un bouton "Utiliser" qui ne fait rien. */
+  function formuleSoinItem(it) {
+    if (!it || it.type !== "consommable" || !it.description || !/PV/i.test(it.description)) return null;
+    return extraireDeCapacite(it.description);
+  }
+
+  // Réduit la quantité d'un consommable utilisé, retire l'entrée si elle tombe à 0.
+  function _consommerUnite(perso, idx) {
+    const it = perso.inventaireListe[idx];
+    if (!it) return;
+    const q = (it.quantite || 1) - 1;
+    if (q > 0) it.quantite = q;
+    else perso.inventaireListe.splice(idx, 1);
+  }
+
+  // Tire une formule "XdY(+Z)" et l'annonce dans l'historique partagé (donc
+  // dans l'overlay de jet, visible sur tous les écrans) — même tirage que
+  // lancerFormule, mais sans passer par la zone de résultat de l'onglet Dés :
+  // ce jet accompagne un soin, pas une consultation libre du lanceur.
+  function _tirerEtAnnoncer(formule, label) {
+    const m = /^(\d*)d(\d+)([+-]\d+)?$/.exec((formule || "").trim().toLowerCase().replace(/\s/g, ""));
+    if (!m) return null;
+    const nb = parseInt(m[1] || "1", 10);
+    const faces = parseInt(m[2], 10);
+    const bonus = parseInt(m[3] || "0", 10);
+    const jets = [];
+    let somme = 0;
+    for (let i = 0; i < nb; i++) { const v = lancerDe(faces); jets.push(v); somme += v; }
+    const total = somme + bonus;
+    const detail = `[${jets.join(", ")}]${bonus ? " " + signe(bonus) : ""}`;
+    ajouterHisto(label, total, false, false, detail);
+    return total;
+  }
+
+  // Soin direct (symétrique de subirDegats) : clamp via ajusterPv, toast dédié.
+  function soigner(id, montant, source) {
+    if (!montant) return;
+    const persos = chargerPersos();
+    const p = persos[id];
+    if (!p) return;
+    const avant = p.pvActuel;
+    p.pvActuel = Math.max(0, Math.min(p.pvMax, p.pvActuel + montant));
+    sauverPersos(persos);
+    _syncPvAffichages(id, p);
+    const gain = p.pvActuel - avant;
+    toast(`❤ ${p.nom} récupère ${gain} PV${source ? " (" + source + ")" : ""}.`);
+  }
+
+  // Bouton "Utiliser" : le personnage consomme lui-même l'objet, soin immédiat
+  // sans jet de caractéristique (boire sa propre potion ne demande pas de test).
+  function utiliserConsommable(persoId, idx) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const item = p.inventaireListe[idx];
+    if (!item) return;
+    const formule = formuleSoinItem(item);
+    if (!formule) { toast("Cet objet ne soigne pas directement."); return; }
+    const total = _tirerEtAnnoncer(formule, `${p.nom} utilise ${item.nom}`);
+    if (total === null) return;
+    _consommerUnite(p, idx);
+    sauverPersos(persos);
+    afficherFiche(persoId);
+    soigner(persoId, total, item.nom);
+  }
+
+  // Ouvre le sélecteur d'allié à qui administrer le consommable — même modèle
+  // que ouvrirSelecteurDon, conteneur séparé pour ne pas entrer en collision
+  // si les deux sélecteurs (don / soin) sont ouverts sur des objets différents.
+  function ouvrirSelecteurSoin(persoId, idx) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const item = p.inventaireListe[idx];
+    if (!item) return;
+    const zone = document.getElementById("selecteur-soin-item");
+    if (!zone) return;
+    const autres = Object.keys(persos).filter((pid) => pid !== persoId);
+    if (!autres.length) {
+      zone.innerHTML = `<div class="aide">Aucun allié à qui administrer cet objet.</div>`;
+      zone.style.display = "block";
+      return;
+    }
+    zone.innerHTML =
+      `<select id="select-destinataire-soin">` +
+      autres.map((pid) => `<option value="${pid}">${echapper(persos[pid].nom)}</option>`).join("") +
+      `</select>` +
+      `<button class="btn petit or" id="btn-confirmer-soin">Administrer « ${echapper(item.nom)} »</button>`;
+    zone.style.display = "block";
+    document.getElementById("btn-confirmer-soin").onclick = () => {
+      const destId = document.getElementById("select-destinataire-soin").value;
+      soignerAllie(persoId, idx, destId);
+    };
+  }
+
+  // Administrer un soin à un allié demande un test de FOR (diff. 12, celle du
+  // soigneur) avant de tirer le dé de soin — représente la difficulté à faire
+  // boire/appliquer correctement l'objet à quelqu'un d'autre, contrairement à
+  // l'utiliser sur soi-même. L'objet est consommé dans tous les cas (réussite
+  // ou échec), seul le soin est conditionnel.
+  function soignerAllie(persoId, idx, destId) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    const dest = persos[destId];
+    if (!p || !dest) return;
+    const item = p.inventaireListe[idx];
+    if (!item) return;
+    const formule = formuleSoinItem(item);
+    if (!formule) { toast("Cet objet ne soigne pas directement."); return; }
+
+    const modFor = Personnage.depuisJSON(p).mod("FOR");
+    const d20 = lancerDe(20);
+    const totalTest = d20 + modFor;
+    const reussite = totalTest >= 12;
+    ajouterHisto(`${p.nom} administre ${item.nom} à ${dest.nom} — Test de FOR`, totalTest,
+      d20 === 20, d20 === 1, `d20 [${d20}] ${signe(modFor)}`);
+
+    _consommerUnite(p, idx);
+    sauverPersos(persos);
+    afficherFiche(persoId);
+    const zone = document.getElementById("selecteur-soin-item");
+    if (zone) zone.style.display = "none";
+
+    if (!reussite) {
+      toast(`Échec (${totalTest} < 12) : « ${item.nom} » gaspillé sur ${dest.nom}.`);
+      return;
+    }
+    // Laisse le temps de lire l'overlay du test de FOR avant que le jet de
+    // soin ne le remplace (un seul overlay/timer partagé, cf. afficherOverlayJet).
+    setTimeout(() => {
+      const total = _tirerEtAnnoncer(formule, `${dest.nom} est soigné par ${p.nom}`);
+      if (total !== null) soigner(destId, total, item.nom);
+    }, 1800);
+  }
+
   function afficherFiche(id) {
     const persos = chargerPersos();
     const p = persos[id];
@@ -1672,6 +1814,14 @@ const App = (() => {
     // Inventaire — donner l'objet à un autre personnage (échange entre joueurs)
     zone.querySelectorAll(".btn-donner-item").forEach((el) => {
       el.onclick = () => ouvrirSelecteurDon(id, parseInt(el.dataset.idx, 10));
+    });
+    // Inventaire — consommer un objet de soin sur soi-même
+    zone.querySelectorAll(".btn-utiliser-item").forEach((el) => {
+      el.onclick = () => utiliserConsommable(id, parseInt(el.dataset.idx, 10));
+    });
+    // Inventaire — administrer un objet de soin à un allié (test de FOR)
+    zone.querySelectorAll(".btn-soigner-allie").forEach((el) => {
+      el.onclick = () => ouvrirSelecteurSoin(id, parseInt(el.dataset.idx, 10));
     });
     // Inventaire — formulaire d'ajout, lié au catalogue loot (+ option "divers")
     const btnAjouterItem = document.getElementById("btn-ajouter-item");
