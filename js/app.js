@@ -374,6 +374,8 @@ const App = (() => {
     if (creation.classe !== cle) {
       creation.classe = cle;
       creation.capacites = []; // on remet à zéro les capacités si on change de classe
+      appliquerEquipementDepart(cle); // équipe le kit de départ (uniquement à la création, pas en édition)
+      rendreEquipInventaireCreation();
     }
     rendreGrilleClasses();
     document.getElementById("bloc-caracs").style.display = "block";
@@ -953,6 +955,11 @@ const App = (() => {
     creation.notes = document.getElementById("champ-notes").value;
     if (creation.pvActuel === null || creation.pvActuel > creation.pvMax) creation.pvActuel = creation.pvMax;
 
+    // `_kitDepart` n'est qu'un marqueur interne à la session de création (pour
+    // savoir quoi retirer si le joueur change de classe) — on ne le persiste pas.
+    Object.values(creation.equipement || {}).forEach((it) => { if (it) delete it._kitDepart; });
+    (creation.inventaireListe || []).forEach((it) => { if (it) delete it._kitDepart; });
+
     const persos = chargerPersos();
     if (!creation.id) creation.id = genererId(nom);
     persos[creation.id] = creation;
@@ -1119,6 +1126,49 @@ const App = (() => {
           <button class="btn petit or" id="btn-confirmer-ajout-item">Ajouter</button>
         </div>
       </div>`;
+  }
+
+  /* ---------- Équipement de départ (kit automatique au choix de la classe) ----------
+     N'est appelé que depuis choisirClasse() lors d'un vrai changement de classe
+     pendant la création initiale (jamais depuis editerPerso(), qui appelle
+     choisirClasse() avec la classe déjà en place — voir le garde-fou
+     `creation.classe !== cle` dans choisirClasse). Retire d'abord le kit de la
+     classe précédemment sélectionnée dans cette session, pour ne jamais
+     accumuler les kits si le joueur change d'avis plusieurs fois. */
+  function appliquerEquipementDepart(cle) {
+    // Retire le kit précédent des slots qu'il peut occuper (tête/jambes/bottes/
+    // avant-bras/collier/bague ne sont jamais touchés : rien n'y est placé ici).
+    creation.equipement.main_droite = null;
+    creation.equipement.main_gauche = null;
+    creation.equipement.torse = null;
+    // Retire les consommables du kit précédent (marqués _kitDepart), en
+    // laissant intacts les objets ajoutés manuellement par le joueur.
+    creation.inventaireListe = (creation.inventaireListe || []).filter((it) => !it._kitDepart);
+
+    const kit = (typeof EQUIPEMENT_DEPART !== "undefined") ? EQUIPEMENT_DEPART[cle] : null;
+    if (!kit || typeof LOOT_CATALOGUE === "undefined") return;
+    const depuisCatalogue = (id) => LOOT_CATALOGUE.find((it) => it.id === id);
+
+    if (kit.arme) {
+      const arme = depuisCatalogue(kit.arme);
+      if (arme) {
+        const copie = Object.assign({}, arme, { _kitDepart: true });
+        creation.equipement.main_droite = copie;
+        if (arme.deuxMains) creation.equipement.main_gauche = copie; // même instance dans les 2 mains, comme Personnage.equiper()
+      }
+    }
+    if (kit.bouclier && !creation.equipement.main_gauche) {
+      const bouclier = depuisCatalogue(kit.bouclier);
+      if (bouclier) creation.equipement.main_gauche = Object.assign({}, bouclier, { _kitDepart: true });
+    }
+    if (kit.armure) {
+      const armure = depuisCatalogue(kit.armure);
+      if (armure) creation.equipement.torse = Object.assign({}, armure, { _kitDepart: true });
+    }
+    (kit.consommables || []).forEach((id) => {
+      const item = depuisCatalogue(id);
+      if (item) creation.inventaireListe.push(Object.assign({}, item, { _kitDepart: true }));
+    });
   }
 
   /* ---------- Équipement / Inventaire pendant la création (avant sauvegarde, pas encore de persoId) ----------
