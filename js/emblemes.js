@@ -110,11 +110,14 @@ function embleme(classe, taille) {
 // pour forcer les navigateurs à recharger les images (même nom de fichier).
 const TOKENS_VERSION = 2;
 
-/* Chemin du portrait "token" (race + genre + classe), ou null si l'un des trois manque. */
+/* Chemin du portrait "token" (race + genre + classe), ou null si l'un des trois manque.
+   Pour un elfe, la nation (Aetharion/Aelindra/Mordanel) n'est choisie qu'au rang 3 de la
+   voie raciale — avant ça, on affiche quand même un token (repli visuel sur Aetharion)
+   plutot que de laisser un elfe sans image tant que la nation n'est pas fixee. */
 function cheminTokenPersonnage(p) {
   if (!p || !p.classe || !p.race) return null;
   const genre = p.genre === "femme" ? "femme" : "homme";
-  const race = (p.race === "elfe" && p.raceVariante) ? `elfe-${p.raceVariante}` : p.race;
+  const race = (p.race === "elfe") ? `elfe-${p.raceVariante || "aetharion"}` : p.race;
   return `assets/portraits/tokens/${race}-${genre}-${p.classe}.png?v=${TOKENS_VERSION}`;
 }
 
