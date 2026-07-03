@@ -700,40 +700,105 @@ const Carte = (() => {
     // Position écran d'un jeton (sa position est stockée en % de l'image
     // → il suit automatiquement le pan/zoom). Taille constante à l'écran.
     const R_JETON = 18;
+    const R_SUPPR = 8; // rayon du bouton de suppression au survol
+    let hoverIdx = -1; // jeton actuellement survolé (-1 = aucun)
+
+    // Cache d'images (portrait uploadé ou token race+genre+classe) : un chargement
+    // par src, on redessine une fois l'image prête (le premier rendu retombe sur
+    // les initiales le temps que ça charge).
+    const _imgCache = {};
+    function _image(src) {
+      let entry = _imgCache[src];
+      if (!entry) {
+        entry = { img: new Image(), ready: false, echec: false };
+        entry.img.onload = () => { entry.ready = true; dessiner(); };
+        entry.img.onerror = () => { entry.echec = true; };
+        entry.img.src = src;
+        _imgCache[src] = entry;
+      }
+      return entry;
+    }
     function posJetonEcran(j) {
       return {
         x: pan.x + (j.x / 100) * imgActuelle.width  * zoom,
         y: pan.y + (j.y / 100) * imgActuelle.height * zoom,
       };
     }
+    // Zone "survolée" = pastille du jeton OU son bouton de suppression (qui
+    // déborde légèrement du rayon principal) — sinon bouger le curseur du
+    // centre du jeton vers la croix fait perdre le survol juste avant le clic.
     function jetonSousCurseur(mx, my) {
       for (let i = etat.jetons.length - 1; i >= 0; i--) {
-        const p = posJetonEcran(etat.jetons[i]);
+        const j = etat.jetons[i];
+        const p = posJetonEcran(j);
         if (Math.hypot(mx - p.x, my - p.y) <= R_JETON) return i;
+        const sp = posSuppr(j);
+        if (sp && Math.hypot(mx - sp.x, my - sp.y) <= R_SUPPR + 3) return i;
       }
       return -1;
     }
+    // Position du bouton "✕" (survol, en haut à droite de la pastille), ou null
+    // si ce jeton n'a pas de bouton (rôle joueur : suppression MJ uniquement).
+    function posSuppr(j) {
+      if (role === 'joueur') return null;
+      const p = posJetonEcran(j);
+      return { x: p.x + R_JETON * 0.75, y: p.y - R_JETON * 0.75 };
+    }
     function dessinerJetons() {
       if (!imgActuelle || !etat.jetons.length) return;
-      for (const j of etat.jetons) {
+      const personasPJ = (typeof window.DepotPersos !== 'undefined') ? window.DepotPersos.charger() : {};
+      etat.jetons.forEach((j, i) => {
         const p = posJetonEcran(j);
-        // pastille
-        ctx.beginPath(); ctx.arc(p.x, p.y, R_JETON, 0, Math.PI * 2);
+        // pastille (fond couleur, servira de secours si pas de portrait/token)
+        ctx.save();
+        ctx.beginPath(); ctx.arc(p.x, p.y, R_JETON, 0, Math.PI * 2); ctx.closePath();
         ctx.fillStyle = j.couleur || '#7c5aa6'; ctx.fill();
+
+        // portrait uploadé, sinon token race+genre+classe (fiche vivante en priorité,
+        // au cas où le jeton ait été pose avant l'ajout de ces infos), sinon initiales
+        const perso = j.pj && j.ref ? personasPJ[j.ref.replace(/^pj-/, '')] : null;
+        const infosToken = perso || j;
+        const src = j.portrait || (j.pj && typeof cheminTokenPersonnage === 'function' ? cheminTokenPersonnage(infosToken) : null);
+        let dessine = false;
+        if (src) {
+          const entry = _image(src);
+          if (entry.ready && !entry.echec) {
+            ctx.save();
+            ctx.clip();
+            ctx.drawImage(entry.img, p.x - R_JETON, p.y - R_JETON, R_JETON * 2, R_JETON * 2);
+            ctx.restore();
+            dessine = true;
+          }
+        }
+        if (!dessine) {
+          ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.font = 'bold 13px "Segoe UI", Arial, sans-serif';
+          ctx.fillText(initiales(j.nom), p.x, p.y);
+        }
         ctx.lineWidth = 3; ctx.strokeStyle = j.pj ? '#b8924a' : '#1d1526'; ctx.stroke();
-        // initiales
-        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.font = 'bold 13px "Segoe UI", Arial, sans-serif';
-        ctx.fillText(initiales(j.nom), p.x, p.y);
+        ctx.restore();
+
         // étiquette
         const label = j.nom || '';
         ctx.font = '11px "Segoe UI", Arial, sans-serif';
         const w = ctx.measureText(label).width + 8;
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.fillRect(p.x - w / 2, p.y + R_JETON + 2, w, 15);
-        ctx.fillStyle = '#fff'; ctx.textBaseline = 'top';
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
         ctx.fillText(label, p.x, p.y + R_JETON + 4);
-      }
+
+        // bouton de suppression, uniquement sur le jeton survolé
+        if (i === hoverIdx) {
+          const sp = posSuppr(j);
+          if (sp) {
+            ctx.beginPath(); ctx.arc(sp.x, sp.y, R_SUPPR, 0, Math.PI * 2);
+            ctx.fillStyle = '#c0392b'; ctx.fill();
+            ctx.strokeStyle = '#1d1526'; ctx.lineWidth = 1.5; ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('✕', sp.x, sp.y + 0.5);
+          }
+        }
+      });
     }
 
     // ── Zoom molette ─────────────────────────────────────────
@@ -756,6 +821,17 @@ const Carte = (() => {
       if (!imgActuelle) return;
       const rect = canvas.getBoundingClientRect();
       const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+      // priorité au bouton de suppression du jeton survolé (avant tout drag)
+      if (hoverIdx >= 0 && hoverIdx < etat.jetons.length) {
+        const jh = etat.jetons[hoverIdx];
+        const sp = posSuppr(jh);
+        if (sp && Math.hypot(mx - sp.x, my - sp.y) <= R_SUPPR + 3) {
+          supprimerJeton(jh.id);
+          hoverIdx = -1;
+          dessiner();
+          return;
+        }
+      }
       // priorité au déplacement d'un jeton si on clique dessus — mais un
       // joueur ne peut déplacer QUE son propre jeton (ref === "pj-"+monPersoId),
       // comme sur la battlemap. Sur le jeton de quelqu'un d'autre, on retombe
@@ -787,10 +863,19 @@ const Carte = (() => {
         dessiner();
         return;
       }
-      if (!drag) return;
-      pan.x = panStart.x + (ev.clientX - dragStart.x);
-      pan.y = panStart.y + (ev.clientY - dragStart.y);
-      dessiner();
+      if (drag) {
+        pan.x = panStart.x + (ev.clientX - dragStart.x);
+        pan.y = panStart.y + (ev.clientY - dragStart.y);
+        dessiner();
+        return;
+      }
+      // Ni pan ni déplacement de jeton en cours : suit le survol pour afficher
+      // le bouton de suppression sur le jeton pointé.
+      if (!imgActuelle) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+      const idx = jetonSousCurseur(mx, my);
+      if (idx !== hoverIdx) { hoverIdx = idx; dessiner(); }
     }
     function surDragFin() {
       if (jetonDrag >= 0) { jetonDrag = -1; sauver(); } // sauvegarde la position
