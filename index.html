@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=24" />
+  <link rel="stylesheet" href="css/style.css?v=25" />
 </head>
 <body>
   <header>
@@ -78,7 +78,7 @@
     <!-- CREATION -->
     <section class="panneau" id="panneau-creation">
       <div class="carte">
-        <h2 class="titre-bandeau">1 · Identité & classe</h2>
+        <h2 class="titre-bandeau">1 · Identité, genre, race & classe</h2>
         <div class="grille grille-2">
           <div>
             <label for="champ-nom">Nom du personnage</label>
@@ -89,8 +89,6 @@
             <input id="champ-niveau" type="number" min="1" max="20" value="1" />
           </div>
         </div>
-        <label style="margin-top:14px;">Classe</label>
-        <div class="grille-classes" id="grille-classes"></div>
         <label style="margin-top:14px;">Genre</label>
         <div class="choix-genre" id="choix-genre">
           <button type="button" class="btn-genre" data-genre="homme">Homme</button>
@@ -98,6 +96,8 @@
         </div>
         <label style="margin-top:14px;">Race</label>
         <div class="grille-classes" id="grille-races"></div>
+        <label style="margin-top:14px;">Classe</label>
+        <div class="grille-classes" id="grille-classes"></div>
       </div>
 
       <div class="carte" id="bloc-caracs" style="display:none;">
@@ -428,6 +428,6 @@
   <script src="js/sync.js?v=2"></script>
   <script src="js/carte.js?v=38"></script>
   <script src="js/loot.js?v=3"></script>
-  <script src="js/app.js?v=28"></script>
+  <script src="js/app.js?v=29"></script>
 </body>
 </html>

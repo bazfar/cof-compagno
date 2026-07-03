@@ -256,8 +256,11 @@ const App = (() => {
   }
 
   /* ---------- Portraits : images individuelles dans assets/portraits/ ---------- */
+  // Portrait de classe genre (assets/portraits/<classe>-<genre>.png) ; repli sur
+  // l'ancienne planche unisexe (assets/portraits/classes/<classe>.png) si le
+  // fichier genre manque (ex. necromancien-femme.png pas encore fourni).
   function portraitClasse(cle) {
-    return `<img class="portrait-fig" src="assets/portraits/classes/${cle}.png" alt="" loading="lazy" onerror="this.style.display='none'" />`;
+    return `<img class="portrait-fig" src="assets/portraits/${cle}-${creation.genre}.png" alt="" loading="lazy" onerror="this.onerror=null;this.src='assets/portraits/classes/${cle}.png';" />`;
   }
   function portraitRace(cle) {
     return `<img class="portrait-fig" src="assets/portraits/races/${cle}-${creation.genre}.png" alt="" loading="lazy" onerror="this.style.display='none'" />`;
@@ -274,6 +277,7 @@ const App = (() => {
       creation.genre = g;
       rendreChoixGenre();
       rendreGrilleRaces();
+      rendreGrilleClasses();
       majApercuPortrait();
     }
   }
