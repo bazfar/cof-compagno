@@ -1048,13 +1048,26 @@ const App = (() => {
   };
 
   // Résumé chiffré de l'effet d'un item, pour les badges de slot/inventaire.
+  // bonusDegatsTotal (posé par Raretes.appliquer) prime sur enchantement seul,
+  // sinon le bonus de rareté d'une arme donnée par le MJ n'apparaissait jamais.
   function badgeEffetItem(it) {
     if (!it) return "";
-    if (it.type === "arme") return [it.degats, it.typedegats, it.enchantement ? "+" + it.enchantement : ""].filter(Boolean).join(" ");
+    if (it.type === "arme") {
+      const bonus = it.bonusDegatsTotal !== undefined ? it.bonusDegatsTotal : (it.enchantement || 0);
+      return [it.degats, it.typedegats, bonus ? "+" + bonus : ""].filter(Boolean).join(" ");
+    }
     if (it.type === "armure") return it.valeurArmure ? `+${it.valeurArmure} armure` : "";
     if (it.type === "bouclier") return it.bonusDEF ? `+${it.bonusDEF} DEF` : "";
     if (it.type === "accessoire") return it.effet || "";
     return "";
+  }
+
+  // Badge de rareté (même modèle visuel que le modal loot) affiché à côté du
+  // nom dans l'inventaire/l'équipement — absent si l'item n'a jamais été
+  // passé par Raretes.appliquer (kit de départ, ajout manuel "divers"...).
+  function badgeRareteHtml(it) {
+    if (!it || !it.rareteNom) return "";
+    return ` <span class="badge-rarete" style="background:${it.rareteCouleur || ""}">${echapper(it.rareteNom)}</span>`;
   }
 
   function rendreBlocEquipement(perso) {
@@ -1064,7 +1077,8 @@ const App = (() => {
         const badge = badgeEffetItem(it);
         return `<div class="slot-case occupe" data-slot="${slot}">
           <div class="slot-label">${LABELS_SLOT[slot]}</div>
-          <div class="slot-item-nom">${echapper(it.nom)}</div>
+          <div class="slot-item-nom" style="color:${it.rareteCouleur || ""}">${echapper(it.nom)}</div>
+          ${badgeRareteHtml(it)}
           <div class="slot-item-effet">${echapper(badge)}</div>
           <button class="btn petit danger btn-desequiper" data-slot="${slot}">Retirer</button>
         </div>`;
@@ -1100,10 +1114,11 @@ const App = (() => {
           const badge = badgeEffetItem(it);
           return `<div class="inv-item">
             <div class="inv-item-header">
-              <span class="inv-item-nom">${echapper(it.nom)}</span>
+              <span class="inv-item-nom" style="color:${it.rareteCouleur || ""}">${echapper(it.nom)}</span>${badgeRareteHtml(it)}
               ${it.type ? `<span class="loot-badge loot-badge-${it.type}">${echapper(it.type)}</span>` : ""}
             </div>
             ${badge ? `<div class="inv-item-stats">${echapper(badge)}</div>` : ""}
+            ${it.effetRarete ? `<div class="inv-item-stats" style="color:${it.rareteCouleur || ""}">✨ ${echapper(it.effetRarete)}</div>` : ""}
             ${it.description ? `<div class="inv-item-desc">${echapper(it.description)}</div>` : ""}
             <div class="inv-actions">
               ${equipable ? `<button class="btn petit or btn-equiper-depuis-inv" data-idx="${idx}">Équiper</button>` : ""}
