@@ -1916,10 +1916,30 @@ const Carte = (() => {
       chargerCatalogue();
     }
 
+    // Idempotente : appelée à la fois quand une scène finit de charger (image
+    // onload) et quand l'utilisateur bascule l'onglet Carte sur "Battlemap"
+    // avec une scène déjà active en arrière-plan (sceneActive persiste tant
+    // qu'on ne quitte pas la scène — changer d'onglet ne doit pas la décharger).
+    // Sans le réaffichage explicite de #carte-image ici, revenir sur l'onglet
+    // Battlemap après être passé par Worldmap laissait la scène masquée par
+    // activerModeWorldmap() sans jamais la faire réapparaître.
     function activerModeBattlemap() {
       const cwm = document.getElementById('canvas-worldmap');
       if (cwm) cwm.style.display = 'none';
       document.querySelectorAll('.worldmap-ctrl').forEach(el => el.style.display = 'none');
+      if (estActive()) {
+        const imgEl = document.getElementById('carte-image');
+        if (imgEl) imgEl.style.display = 'block';
+        if (canvasMurs) canvasMurs.style.display = 'block';
+        if (canvasLoS)  canvasLoS.style.display  = 'block';
+        const btnTok = document.getElementById('btn-token-dd');
+        if (btnTok) btnTok.style.display = 'inline-block';
+        const sel = document.getElementById('select-scene-dd2vtt');
+        if (sel) sel.style.display = '';
+        const scene = scenes[sceneActive];
+        rendreTokensDD(scene);
+        calculerEtRendreLoS(scene);
+      }
     }
 
     function activerModeWorldmap() {
@@ -1935,6 +1955,11 @@ const Carte = (() => {
       if (canvasLoS)  canvasLoS.style.display  = 'none';
       const tokensEl = document.getElementById('dd2vtt-tokens');
       if (tokensEl) tokensEl.innerHTML = '';
+      // Cache l'image de scène de combat, partagée avec la worldmap (#carte-image) —
+      // sinon une scène restée "active" en arrière-plan (sceneActive non nul mais
+      // onglet Worldmap affiché) continue de s'afficher par-dessus la worldmap.
+      const imgEl = document.getElementById('carte-image');
+      if (imgEl) imgEl.style.display = 'none';
     }
 
     // Rafraîchit les tokens de la scène active (ex. PV d'un PJ modifiés depuis
@@ -1946,7 +1971,8 @@ const Carte = (() => {
 
     return {
       init, scenes: () => scenes, sceneActive: () => sceneActive,
-      ajouterToken: (sc) => ajouterTokenDD(sc), modeWorldmap: activerModeWorldmap, estActive, ajouterTokenData,
+      ajouterToken: (sc) => ajouterTokenDD(sc),
+      modeWorldmap: activerModeWorldmap, modeBattlemap: activerModeBattlemap, estActive, ajouterTokenData,
       tokensMonstres, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
       supprimerToken: supprimerTokenDD, onChange, actualiserTokens,
     };
@@ -1961,9 +1987,27 @@ const Carte = (() => {
 
   document.addEventListener("DOMContentLoaded", () => { init(); Worldmap.init(); DD2VTT.init(); });
 
+  // Applique le mode d'affichage (worldmap/battlemap) choisi via l'onglet Carte —
+  // bascule la couche DD2VTT partagée (#carte-image, tokens, murs/LoS) en plus
+  // du canvas worldmap, sinon une scène de combat restée active en arrière-plan
+  // continue de s'afficher par-dessus la worldmap (cf. activerModeWorldmap).
+  function definirModeCarte(mode) {
+    if (typeof DD2VTT === "undefined") return;
+    if (mode === "worldmap") {
+      DD2VTT.modeWorldmap();
+      // _appliquerEtatDistant évite volontairement d'appeler Worldmap.charger()
+      // pendant qu'une scène de combat est active (pour ne pas voler l'affichage
+      // en plein combat) — mais si l'utilisateur bascule lui-même explicitement
+      // sur l'onglet Worldmap, rien d'autre ne (re)charge alors le canvas.
+      if (etat.image && typeof Worldmap !== "undefined") Worldmap.charger(etat.image);
+    } else {
+      DD2VTT.modeBattlemap();
+    }
+  }
+
   return {
     onOpen, definirRole, definirMonPerso, ajouterMonstre,
     listeMonstresCombat, appliquerDegatsCombat, definirPvCombat, ajusterPvCombat,
-    supprimerMonstreCombat, onMonstresChange,
+    supprimerMonstreCombat, onMonstresChange, definirModeCarte,
   };
 })();

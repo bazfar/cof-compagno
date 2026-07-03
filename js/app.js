@@ -2319,6 +2319,11 @@ const App = (() => {
     const trigger = document.getElementById("trigger-carte");
     if (trigger) trigger.textContent = (isWorld ? "🗺 Worldmap" : "⚔ Battlemap") + " ▾";
 
+    // Bascule la couche DD2VTT partagée (#carte-image, tokens, murs/LoS) : sans
+    // ça, une scène de combat restée active en arrière-plan continuait de
+    // s'afficher par-dessus la worldmap après un changement d'onglet.
+    if (typeof Carte !== "undefined" && Carte.definirModeCarte) Carte.definirModeCarte(carteMode);
+
     // La sidebar fiche (battlemap-only) vient de changer la largeur dispo
     // pour la scène : on relaisse le temps au reflow puis on redéclenche le
     // redimensionnement (géré aujourd'hui via l'événement resize existant).
