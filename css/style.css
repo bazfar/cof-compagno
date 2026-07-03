@@ -1044,7 +1044,9 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 
 /* Modal loot MJ */
 .loot-modal-item-preview { background: var(--parchemin); border: 1px solid var(--parchemin-fonce); border-radius: var(--radius); padding: 12px; margin: 12px 0; }
-.loot-item-nom-modal { font-family: "Cinzel", serif; font-weight: 700; color: var(--violet); font-size: 1.05rem; margin-bottom: 4px; }
+.loot-item-nom-ligne { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.loot-item-nom-modal { font-family: "Cinzel", serif; font-weight: 700; color: var(--violet); font-size: 1.05rem; margin: 0; }
+.badge-rarete { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 10px; border-radius: 20px; color: #fff; }
 .loot-item-stats-modal { font-size: 0.8rem; color: var(--violet-clair); font-style: italic; margin-bottom: 4px; }
 .loot-item-desc-modal { font-size: 0.8rem; color: #5a5268; }
 .loot-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }

@@ -151,6 +151,11 @@ const Loot = (() => {
     const nomEl = document.getElementById("modal-loot-item-nom");
     nomEl.textContent = item.nom;
     nomEl.style.color = item.rareteCouleur || "";
+    const badgeEl = document.getElementById("modal-loot-item-rarete-badge");
+    if (badgeEl) {
+      badgeEl.textContent = item.rareteNom || "";
+      badgeEl.style.background = item.rareteCouleur || "";
+    }
     document.getElementById("modal-loot-item-stats").textContent = _statsItem(item);
     document.getElementById("modal-loot-item-desc").textContent = item.description;
 
