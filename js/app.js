@@ -246,7 +246,7 @@ const App = (() => {
       caracs: { FOR: 10, DEX: 10, CON: 10, INT: 10, SAG: 10, CHA: 10 },
       caracsLibres: { FOR: 0, DEX: 0, CON: 0, INT: 0, SAG: 0, CHA: 0 }, // points libres répartis (point-buy)
       capacites: [], // [{voie, rang}]
-      capacitesRace: [], // [rang] — capacités de la voie raciale (gratuite)
+      capacitesRace: [], // [rang] — capacités de la voie raciale (rang 1 gratuit, 2-5 sur le pool de points partagé)
       voiesHorsProfil: [], // [{classe, voie, cout}] — voies débloquées hors du profil de classe
       portrait: null, // data URL (optionnel)
       pvMax: null,
@@ -415,7 +415,7 @@ const App = (() => {
     majApercuPortrait();
   }
 
-  /* ---------- Voie raciale (gratuite, séparée des voies de classe) ---------- */
+  /* ---------- Voie raciale (rang 1 gratuit, rangs 2-5 sur le pool de points de capacité partagé avec les voies de classe) ---------- */
 
   function rangMaxRace() {
     return creation.capacitesRace.length ? Math.max(...creation.capacitesRace) : 0;
@@ -439,12 +439,14 @@ const App = (() => {
     const r = RACES[creation.race];
     const niveau = niveauCreation();
     const rangMax = rangMaxRace();
+    const pointsRestants = pointsVoieRestants();
 
     const aide = document.getElementById("aide-race");
     aide.innerHTML =
-      `<strong>Voie raciale gratuite</strong> — ne consomme pas tes points de capacité de classe. ` +
-      `Le <strong>rang 1 est acquis automatiquement</strong>. ` +
-      `Les rangs 2 à 5 s'acquièrent dans l'ordre (impossible de prendre le rang 3 sans 2) et restent ` +
+      `<strong>Voie raciale</strong> — le <strong>rang 1 est acquis automatiquement</strong> et gratuit. ` +
+      `Les rangs 2 à 5 puisent dans les <strong>mêmes points de capacité</strong> que les voies de classe ` +
+      `(1 point pour le rang 2, 2 points pour les rangs 3 à 5), s'acquièrent dans l'ordre (impossible de ` +
+      `prendre le rang 3 sans 2) et restent ` +
       (niveau <= 1
         ? `<strong>verrouillés tant que le personnage est niveau 1</strong>.`
         : `accessibles à partir du niveau 2.`);
@@ -471,9 +473,11 @@ const App = (() => {
     r.rangs.forEach((rg) => {
       const auto = rg.rang === 1; // rang 1 : acquis automatiquement, gratuit
       const choisi = auto || creation.capacitesRace.includes(rg.rang);
+      const cout = coutRangVoie(rg.rang);
       const verrouOrdre = !choisi && rg.rang > rangMax + 1;
       const verrouNiveau = !choisi && !auto && niveau <= 1;
-      const verrou = verrouOrdre || verrouNiveau;
+      const verrouPoints = !choisi && !auto && cout > pointsRestants;
+      const verrou = verrouOrdre || verrouNiveau || verrouPoints;
 
       const { nom, effet } = texteRangRace(r, rg, creation.raceVariante);
 
@@ -483,6 +487,7 @@ const App = (() => {
         `<div class="contenu">` +
         (nom ? `<div class="nom-cap">${nom}</div>` : "") +
         `<div class="effet">${effet}</div></div>` +
+        (auto ? "" : `<div class="cout-rang">${cout} pt${cout > 1 ? "s" : ""}</div>`) +
         `<div class="check">` +
         (auto
           ? `<span class="badge-auto">Automatique</span>`
@@ -517,9 +522,19 @@ const App = (() => {
       }
       creation.capacitesRace.splice(idx, 1);
     } else {
+      // Rang 1 excepté (acquis automatiquement à la sélection de race, cf.
+      // choisirRace) : les rangs 2-5 puisent dans le même pool de points de
+      // capacité que les voies de classe, au même tarif (coutRangVoie).
+      const cout = coutRangVoie(rang);
+      if (cout > pointsVoieRestants()) {
+        toast("Pas assez de points de capacité.");
+        rendreVoieRaciale();
+        return;
+      }
       creation.capacitesRace.push(rang);
     }
     rendreVoieRaciale();
+    if (creation.classe) rendreVoies(); // compteur de points de capacité partagé
   }
 
   /* ---------- Portrait ---------- */
@@ -768,11 +783,13 @@ const App = (() => {
     return 2 * niveauCreation();
   }
 
-  // Points déjà dépensés : rangs de voie pris + déblocages de voies hors profil
+  // Points déjà dépensés : rangs de voie pris + déblocages de voies hors profil +
+  // rangs de voie raciale (rang 1 excepté, toujours gratuit — cf. basculerCapaciteRace)
   function pointsVoieDepenses() {
     const coutRangs = creation.capacites.reduce((t, c) => t + coutRangVoie(c.rang), 0);
     const coutDeblocages = (creation.voiesHorsProfil || []).reduce((t, hp) => t + (hp.cout || 0), 0);
-    return coutRangs + coutDeblocages;
+    const coutRace = (creation.capacitesRace || []).reduce((t, rang) => t + (rang > 1 ? coutRangVoie(rang) : 0), 0);
+    return coutRangs + coutDeblocages + coutRace;
   }
 
   function pointsVoieRestants() {
