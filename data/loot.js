@@ -46,8 +46,12 @@ const LOOT_CATALOGUE = [
   { "id": "bouclier_rond_nain", "nom": "Bouclier rond nain", "type": "bouclier", "porte": false, "description": "Acier épais forgé à Khazrak Dûm, bordé de runes protectrices.", "bonusDEF": 2 },
   { "id": "bouclier_seve", "nom": "Bouclier de la Sève", "type": "bouclier", "porte": false, "description": "Bois vivant qui se referme sur les entailles entre deux combats.", "bonusDEF": 3 },
 
+  { "id": "potion_soin_petite", "nom": "Petite potion de soin", "type": "consommable", "porte": false, "description": "Régénère 1d4 PV immédiatement. Un simple cataplasme en flacon.", "quantite": 1 },
   { "id": "potion_soin", "nom": "Potion de soin", "type": "consommable", "porte": false, "description": "Régénère 1d6 PV immédiatement. Goût amer de Sève.", "quantite": 1 },
-  { "id": "potion_soin_sup", "nom": "Potion de soin améliorée", "type": "consommable", "porte": false, "description": "Régénère 2d6 PV. Préparée par un Druide de rang 3+.", "quantite": 1 },
+  { "id": "potion_soin_sup", "nom": "Potion de soin améliorée", "type": "consommable", "porte": false, "description": "Régénère 1d8 PV immédiatement. Préparée par un Druide de rang 3+.", "quantite": 1 },
+  { "id": "potion_soin_benie", "nom": "Potion de soin bénie", "type": "consommable", "porte": false, "description": "Régénère 1d10 PV immédiatement. Bénie par un prêtre, elle apaise aussi l'esprit.", "quantite": 1 },
+  { "id": "potion_soin_grande", "nom": "Grande potion de soin", "type": "consommable", "porte": false, "description": "Régénère 1d12 PV immédiatement. Rare et coûteuse, réservée aux blessures graves.", "quantite": 1 },
+  { "id": "potion_soin_grande_benie", "nom": "Grande potion de soin bénie", "type": "consommable", "porte": false, "description": "Régénère 1d20 PV immédiatement. Relique sacrée, capable de ramener un mourant au combat.", "quantite": 1 },
   { "id": "huile_sainte", "nom": "Huile sainte", "type": "consommable", "porte": false, "description": "Appliquée sur une arme : inflige +1d4 dégâts aux créatures du Chaos pendant 1 combat.", "quantite": 1 },
   { "id": "antidote", "nom": "Antidote", "type": "consommable", "porte": false, "description": "Neutralise immédiatement tout poison actif. Amère et efficace.", "quantite": 1 },
   { "id": "parchemin_sort", "nom": "Parchemin de sort", "type": "consommable", "porte": false, "description": "Sort à usage unique. Le lanceur peut l'utiliser même sans classe magique (test INT diff. 14).", "quantite": 1 },
