@@ -285,18 +285,24 @@ const Carte = (() => {
 
   function rendreJetons() {
     dom.jetons.innerHTML = "";
+    // Jetons posés avant l'ajout des tokens race/genre : on complète depuis la fiche
+    // vivante (source de vérité) plutôt que de se fier aux champs figés sur le jeton.
+    const personasPJ = (typeof window.DepotPersos !== "undefined") ? window.DepotPersos.charger() : {};
     etat.jetons.forEach((j) => {
       const el = document.createElement("div");
       el.className = "jeton";
       el.style.left = j.x + "%";
       el.style.top = j.y + "%";
       el.dataset.id = j.id;
-      const jetonToken = j.pj && typeof cheminTokenPersonnage === "function" ? cheminTokenPersonnage(j) : null;
+      const perso = j.pj && j.ref ? personasPJ[j.ref.replace(/^pj-/, "")] : null;
+      const infosToken = perso || j;
+      const jetonToken = j.pj && typeof cheminTokenPersonnage === "function" ? cheminTokenPersonnage(infosToken) : null;
+      const classePourEmbleme = infosToken.classe || j.classe;
       const interieur = j.portrait
         ? `<img src="${j.portrait}" alt="" />`
         : jetonToken
-        ? `<img src="${jetonToken}" alt="" onerror="this.outerHTML=embleme('${j.classe}',40)" />`
-        : (j.pj && typeof embleme === "function" ? embleme(j.classe, 40) : initiales(j.nom));
+        ? `<img src="${jetonToken}" alt="" onerror="this.outerHTML=embleme('${classePourEmbleme}',40)" />`
+        : (j.pj && typeof embleme === "function" ? embleme(classePourEmbleme, 40) : initiales(j.nom));
       el.innerHTML =
         `<div class="jeton-pion" style="border-color:${j.couleur};${j.portrait || j.pj ? "" : "background:" + j.couleur + ";"}">${interieur}</div>` +
         (role === "joueur" ? "" : `<button class="jeton-suppr" title="Retirer">✕</button>`) +
@@ -1295,6 +1301,7 @@ const Carte = (() => {
       conteneur.style.height = rect.height + 'px';
       conteneur.style.pointerEvents = 'none';
 
+      const personasPJ2 = (typeof window.DepotPersos !== 'undefined') ? window.DepotPersos.charger() : {};
       tokensDD.forEach(tok => {
         const el = document.createElement('div');
         el.className = 'dd-token' + (tokenSelectionne === tok.id ? ' selectionne' : '');
@@ -1311,7 +1318,8 @@ const Carte = (() => {
         el.style.borderColor = tok.couleur;
         el.style.fontSize = Math.max(8, tc * 0.35) + 'px';
         el.title = tok.nom;
-        const tokImg = (tok.pj && typeof cheminTokenPersonnage === 'function') ? cheminTokenPersonnage(tok) : null;
+        const perso = tok.pj && tok.ref ? personasPJ2[tok.ref.replace(/^pj-/, '')] : null;
+        const tokImg = (tok.pj && typeof cheminTokenPersonnage === 'function') ? cheminTokenPersonnage(perso || tok) : null;
         const contenuTok = tokImg
           ? '<img class="dd-token-img" src="' + tokImg + '" alt="" data-initiale="' + tok.nom.charAt(0).toUpperCase() + '" onerror="ddTokenFallback(this)" />'
           : '<span class="dd-token-initiale">' + tok.nom.charAt(0).toUpperCase() + '</span>';

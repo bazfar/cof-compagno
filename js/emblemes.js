@@ -106,12 +106,16 @@ function embleme(classe, taille) {
   );
 }
 
+// Bump ce numéro à chaque régénération des fichiers assets/portraits/tokens/*
+// pour forcer les navigateurs à recharger les images (même nom de fichier).
+const TOKENS_VERSION = 2;
+
 /* Chemin du portrait "token" (race + genre + classe), ou null si l'un des trois manque. */
 function cheminTokenPersonnage(p) {
   if (!p || !p.classe || !p.race) return null;
   const genre = p.genre === "femme" ? "femme" : "homme";
   const race = (p.race === "elfe" && p.raceVariante) ? `elfe-${p.raceVariante}` : p.race;
-  return `assets/portraits/tokens/${race}-${genre}-${p.classe}.png`;
+  return `assets/portraits/tokens/${race}-${genre}-${p.classe}.png?v=${TOKENS_VERSION}`;
 }
 
 /* Remplace une <img> de token en erreur par l'emblème SVG de la classe. */
