@@ -13,6 +13,10 @@ const App = (() => {
 
   // État de création en cours
   let creation = null;       // objet personnage en cours de création
+  // Accordéon des étapes de création : etapeCourante = étape actuellement dépliée,
+  // etapeDebloquee = étape la plus avancée déjà atteinte (les étapes au-delà restent masquées).
+  let etapeCourante = 1;
+  let etapeDebloquee = 1;
   let ficheActiveId = null;  // id du perso affiché dans "Ma fiche"
   let ficheSidebarActiveId = null;  // id du perso affiché dans la mini-fiche battlemap (sidebar)
   let role = null;           // "joueur" | "mj" | null (pas encore choisi)
@@ -253,6 +257,73 @@ const App = (() => {
       inventaireListe: [],
       notes: "",
     };
+    etapeCourante = 1;
+    etapeDebloquee = 1;
+  }
+
+  /* ---------- Accordéon des étapes de création ---------- */
+
+  const TITRES_ETAPES = {
+    1: "1 · Genre, race & classe",
+    2: "2 · Voies & capacités",
+    3: "3 · Équipement, inventaire & finition",
+  };
+
+  function resumeEtape1() {
+    const parts = [creation.genre === "femme" ? "Femme" : "Homme"];
+    if (creation.race) {
+      const r = RACES[creation.race];
+      let txt = r.nom_affiche;
+      if (creation.raceVariante && r.variantes) {
+        const v = r.variantes.find((vv) => vv.code === creation.raceVariante);
+        if (v) txt += ` (${v.nom_affiche})`;
+      }
+      parts.push(txt);
+    }
+    if (creation.classe) parts.push(CLASSES[creation.classe].nom_affiche);
+    return parts.join(" · ");
+  }
+
+  function resumeEtape2() {
+    return `${pointsVoieDepenses()}/${pointsVoieTotal()} points de capacité utilisés`;
+  }
+
+  function majAffichageEtapes() {
+    for (let n = 1; n <= 3; n++) {
+      const carte = document.getElementById(`etape-${n}`);
+      const corps = document.getElementById(`corps-etape-${n}`);
+      const entete = document.getElementById(`entete-etape-${n}`);
+      if (!carte || !corps || !entete) continue;
+      const debloquee = n <= etapeDebloquee;
+      carte.style.display = debloquee ? "block" : "none";
+      if (!debloquee) continue;
+
+      const ouverte = n === etapeCourante;
+      corps.style.display = ouverte ? "block" : "none";
+      entete.classList.toggle("repliee", !ouverte);
+
+      let resume = "";
+      if (!ouverte) {
+        if (n === 1) resume = resumeEtape1();
+        else if (n === 2) resume = resumeEtape2();
+      }
+      const h2 = entete.querySelector("h2");
+      h2.innerHTML = TITRES_ETAPES[n] + (resume ? ` <span class="etape-resume">— ${echapper(resume)}</span>` : "");
+    }
+  }
+
+  // Ouvre l'étape n (doit déjà avoir été débloquée) et y fait défiler la page.
+  function allerEtape(n) {
+    if (n > etapeDebloquee) return;
+    etapeCourante = n;
+    majAffichageEtapes();
+    document.getElementById(`etape-${n}`).scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // Débloque (si besoin) puis ouvre l'étape n — utilisé par les boutons "Continuer".
+  function debloquerEtape(n) {
+    if (n > etapeDebloquee) etapeDebloquee = n;
+    allerEtape(n);
   }
 
   /* ---------- Portraits : images individuelles dans assets/portraits/ ---------- */
@@ -306,8 +377,6 @@ const App = (() => {
     }
     rendreGrilleClasses();
     document.getElementById("bloc-caracs").style.display = "block";
-    document.getElementById("bloc-voies").style.display = "block";
-    document.getElementById("bloc-finition").style.display = "block";
     rendreCaracs();
     rendreVoies();
     recalculerDerives();
@@ -862,12 +931,9 @@ const App = (() => {
 
   // Calcule PV / DEF suggérés (modifiables ensuite)
   function recalculerDerives() {
-    const modDEX = modCarac(creation.caracs.DEX);
-    const def = 10 + modDEX;
-
     const champDef = document.getElementById("champ-def");
     // On ne réécrase que si l'utilisateur n'a pas saisi manuellement
-    if (!champDef.dataset.touche) champDef.value = def;
+    if (!champDef.dataset.touche) champDef.value = new Personnage(creation).calculerDEF();
     appliquerPvAuto();
   }
 
@@ -898,20 +964,20 @@ const App = (() => {
   }
 
   function reinitialiserCreation() {
-    nouvelleCreation();
+    nouvelleCreation(); // remet aussi etapeCourante/etapeDebloquee à 1
     document.getElementById("champ-nom").value = "";
     document.getElementById("champ-niveau").value = 1;
     document.getElementById("champ-notes").value = "";
     const pv = document.getElementById("champ-pvmax"), def = document.getElementById("champ-def");
     delete pv.dataset.touche; delete def.dataset.touche; pv.value = ""; def.value = "";
     document.getElementById("bloc-caracs").style.display = "none";
-    document.getElementById("bloc-voies").style.display = "none";
     document.getElementById("bloc-voie-raciale").style.display = "none";
-    document.getElementById("bloc-finition").style.display = "none";
     majApercuPortrait();
     rendreGrilleClasses();
     rendreChoixGenre();
     rendreGrilleRaces();
+    rendreEquipInventaireCreation();
+    majAffichageEtapes();
   }
 
   /* ============================================================
@@ -1053,6 +1119,137 @@ const App = (() => {
           <button class="btn petit or" id="btn-confirmer-ajout-item">Ajouter</button>
         </div>
       </div>`;
+  }
+
+  /* ---------- Équipement / Inventaire pendant la création (avant sauvegarde, pas encore de persoId) ----------
+     Même bloc visuel que la fiche (rendreBlocEquipement / rendreBlocInventaire), mais on
+     mute directement `creation.equipement` / `creation.inventaireListe` au lieu de passer
+     par chargerPersos()/sauverPersos() (le personnage n'existe pas encore en stockage). */
+
+  function rendreEquipInventaireCreation() {
+    const zone = document.getElementById("creation-equip-inventaire");
+    if (!zone) return;
+    const perso = new Personnage(creation); // partage les mêmes objets/tableaux que `creation`
+    zone.innerHTML = rendreBlocEquipement(perso) + rendreBlocInventaire(perso);
+    wireEquipInventaireCreation();
+  }
+
+  function wireEquipInventaireCreation() {
+    const zone = document.getElementById("creation-equip-inventaire");
+    if (!zone) return;
+    zone.querySelectorAll(".btn-desequiper").forEach((el) => {
+      el.onclick = () => desequiperItemCreation(el.dataset.slot);
+    });
+    zone.querySelectorAll(".btn-ouvrir-equiper").forEach((el) => {
+      el.onclick = () => ouvrirSelecteurEquipCreation(el.dataset.slot);
+    });
+    zone.querySelectorAll(".btn-equiper-depuis-inv").forEach((el) => {
+      el.onclick = () => equiperItemCreation(parseInt(el.dataset.idx, 10));
+    });
+    zone.querySelectorAll(".btn-jeter-item").forEach((el) => {
+      el.onclick = () => jeterItemCreation(parseInt(el.dataset.idx, 10));
+    });
+
+    const btnAjouterItem = document.getElementById("btn-ajouter-item");
+    const formAjouterItem = document.getElementById("form-ajout-item");
+    if (!btnAjouterItem || !formAjouterItem) return;
+    btnAjouterItem.onclick = () => {
+      formAjouterItem.style.display = formAjouterItem.style.display === "none" ? "flex" : "none";
+    };
+    const selectCatalogue = document.getElementById("nouvel-item-catalogue");
+    const diversChamps = document.getElementById("nouvel-item-divers-champs");
+    selectCatalogue.onchange = () => {
+      diversChamps.style.display = selectCatalogue.value === "__divers__" ? "flex" : "none";
+    };
+    document.getElementById("btn-confirmer-ajout-item").onclick = () => {
+      const choix = selectCatalogue.value;
+      if (!choix) { toast("Choisis un objet dans la liste."); return; }
+      if (choix === "__divers__") {
+        const nom = document.getElementById("nouvel-item-nom").value.trim();
+        if (!nom) { toast("Donne un nom à l'objet."); return; }
+        ajouterItemInventaireCreation({
+          id: "manuel-" + Date.now(),
+          nom,
+          type: "divers",
+          description: document.getElementById("nouvel-item-desc").value.trim(),
+        });
+      } else {
+        const catalogueItem = (typeof LOOT_CATALOGUE !== "undefined") ? LOOT_CATALOGUE.find((it) => it.id === choix) : null;
+        if (!catalogueItem) { toast("Objet introuvable dans le catalogue."); return; }
+        ajouterItemInventaireCreation(Object.assign({}, catalogueItem, { itemRef: catalogueItem.id }));
+      }
+    };
+  }
+
+  function equiperItemCreation(idx, slotPref) {
+    const perso = new Personnage(creation);
+    const item = perso.inventaireListe[idx];
+    if (!item) return;
+    const slotsPossibles = Personnage.slotsPourType(item);
+    if (!slotsPossibles.length) { toast("Cet objet ne peut pas être équipé."); return; }
+    const slot = slotPref && slotsPossibles.includes(slotPref)
+      ? slotPref
+      : (slotsPossibles.find((s) => !perso.equipement[s]) || slotsPossibles[0]);
+    const ancien = perso.equiper(slot, item);
+    if (ancien === undefined) { toast("Cet objet ne peut pas être équipé dans cet emplacement."); return; }
+    perso.inventaireListe.splice(idx, 1);
+    if (ancien) perso.inventaireListe.push(ancien);
+    rendreEquipInventaireCreation();
+    recalculerDerives();
+    toast(`« ${item.nom} » équipé (${LABELS_SLOT[slot]}).`);
+  }
+
+  function desequiperItemCreation(slot) {
+    const perso = new Personnage(creation);
+    const item = perso.deséquiper(slot);
+    if (!item) return;
+    perso.inventaireListe.push(item);
+    rendreEquipInventaireCreation();
+    recalculerDerives();
+    toast(`« ${item.nom} » retiré, renvoyé dans l'inventaire.`);
+  }
+
+  function ajouterItemInventaireCreation(item) {
+    creation.inventaireListe.push(item);
+    rendreEquipInventaireCreation();
+    toast(`« ${item.nom} » ajouté à l'inventaire.`);
+  }
+
+  function jeterItemCreation(idx) {
+    const item = creation.inventaireListe[idx];
+    if (!item) return;
+    if (!confirm(`Jeter « ${item.nom} » ?`)) return;
+    creation.inventaireListe.splice(idx, 1);
+    rendreEquipInventaireCreation();
+  }
+
+  // Ouvre, dans le bloc Équipement de la création, un sélecteur des items de
+  // l'inventaire compatibles avec `slot` (déclenché par "+ Équiper" sur un slot vide).
+  function ouvrirSelecteurEquipCreation(slot) {
+    const perso = new Personnage(creation);
+    const zone = document.getElementById("selecteur-slot-equip");
+    if (!zone) return;
+    const compatibles = perso.inventaireListe
+      .map((it, idx) => ({ it, idx }))
+      .filter(({ it }) => Personnage.slotsPourType(it).includes(slot));
+    if (!compatibles.length) {
+      zone.innerHTML = `<div class="aide">Aucun objet compatible dans l'inventaire pour « ${LABELS_SLOT[slot]} ».</div>`;
+      zone.style.display = "block";
+      return;
+    }
+    zone.innerHTML =
+      `<select id="select-item-a-equiper">` +
+      compatibles.map(({ it, idx }) => {
+        const badge = badgeEffetItem(it);
+        return `<option value="${idx}">${echapper(it.nom)}${badge ? " — " + echapper(badge) : ""}</option>`;
+      }).join("") +
+      `</select>` +
+      `<button class="btn petit or" id="btn-confirmer-equip">Équiper dans « ${LABELS_SLOT[slot]} »</button>`;
+    zone.style.display = "block";
+    document.getElementById("btn-confirmer-equip").onclick = () => {
+      const idx = parseInt(document.getElementById("select-item-a-equiper").value, 10);
+      equiperItemCreation(idx, slot);
+    };
   }
 
   // Ouvre, dans le bloc Équipement, un sélecteur des items de l'inventaire
@@ -1518,6 +1715,11 @@ const App = (() => {
       document.getElementById("bloc-voie-raciale").style.display = "block";
       rendreVoieRaciale();
     }
+    rendreEquipInventaireCreation();
+    // Personnage déjà complet : les 3 étapes sont débloquées, on ouvre sur la finition.
+    etapeDebloquee = 3;
+    etapeCourante = 3;
+    majAffichageEtapes();
   }
 
   // Monte le personnage d'un niveau : ouvre la fiche en édition, incrémente le niveau,
@@ -1539,7 +1741,7 @@ const App = (() => {
     if (creation.race) rendreVoieRaciale();
 
     toast(`Niveau ${creation.niveau} ! +${gainPv} PV (total ${pvTotalActuel()}). Points de capacité : ${pointsVoieRestants()}/${pointsVoieTotal()}. Pense à enregistrer.`);
-    document.getElementById("bloc-voies").scrollIntoView({ behavior: "smooth" });
+    allerEtape(2);
   }
 
   function supprimerPerso(id) {
@@ -1832,12 +2034,27 @@ const App = (() => {
     rendreGrilleClasses();
     rendreChoixGenre();
     rendreGrilleRaces();
+    rendreEquipInventaireCreation();
     rendreHisto();
     rendreLore();
 
     document.querySelectorAll("#choix-genre .btn-genre").forEach((b) => {
       b.onclick = () => choisirGenre(b.dataset.genre);
     });
+
+    // Accordéon de création : cliquer sur l'entête d'une étape repliée (déjà
+    // débloquée) la rouvre ; les étapes non atteintes restent inaccessibles.
+    [1, 2, 3].forEach((n) => {
+      document.getElementById(`entete-etape-${n}`).onclick = () => {
+        if (n <= etapeDebloquee && n !== etapeCourante) allerEtape(n);
+      };
+    });
+    document.getElementById("btn-continuer-etape1").onclick = () => {
+      if (!creation.classe) { toast("Choisis d'abord une classe."); return; }
+      debloquerEtape(2);
+    };
+    document.getElementById("btn-continuer-etape2").onclick = () => debloquerEtape(3);
+    majAffichageEtapes();
 
     // Rôle Joueur / MJ
     role = localStorage.getItem(STORAGE_ROLE);

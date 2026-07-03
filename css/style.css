@@ -226,6 +226,13 @@ textarea { resize: vertical; min-height: 70px; }
 .btn.petit { padding: 5px 10px; font-size: 0.8rem; }
 .barre-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 
+/* ---------- Étapes de création (accordéon genre → race → classe → ...) ---------- */
+.etape-entete .titre-bandeau { margin: 0; }
+.etape-entete.repliee h2.titre-bandeau { cursor: pointer; }
+.etape-entete.repliee h2.titre-bandeau:hover { filter: brightness(1.15); }
+.etape-resume { font-weight: 400; font-size: 0.82rem; opacity: 0.9; }
+.etape-corps { margin-top: 14px; }
+
 /* ---------- Choix du genre (portraits de race) ---------- */
 .choix-genre { display: flex; gap: 8px; }
 .btn-genre {

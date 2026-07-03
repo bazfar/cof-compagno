@@ -77,93 +77,117 @@
 
     <!-- CREATION -->
     <section class="panneau" id="panneau-creation">
-      <div class="carte">
-        <h2 class="titre-bandeau">1 · Identité, genre, race & classe</h2>
-        <div class="grille grille-2">
-          <div>
-            <label for="champ-nom">Nom du personnage</label>
-            <input id="champ-nom" type="text" placeholder="Ex. Aldric le Borgne" />
+      <div class="carte etape-creation" id="etape-1">
+        <div class="etape-entete" id="entete-etape-1">
+          <h2 class="titre-bandeau" data-titre-base="1 · Genre, race & classe">1 · Genre, race & classe</h2>
+        </div>
+        <div class="etape-corps" id="corps-etape-1">
+          <label>Genre</label>
+          <div class="choix-genre" id="choix-genre">
+            <button type="button" class="btn-genre" data-genre="homme">Homme</button>
+            <button type="button" class="btn-genre" data-genre="femme">Femme</button>
           </div>
-          <div>
-            <label for="champ-niveau">Niveau</label>
-            <input id="champ-niveau" type="number" min="1" max="20" value="1" />
-          </div>
-        </div>
-        <label style="margin-top:14px;">Genre</label>
-        <div class="choix-genre" id="choix-genre">
-          <button type="button" class="btn-genre" data-genre="homme">Homme</button>
-          <button type="button" class="btn-genre" data-genre="femme">Femme</button>
-        </div>
-        <label style="margin-top:14px;">Race</label>
-        <div class="grille-classes" id="grille-races"></div>
-        <label style="margin-top:14px;">Classe</label>
-        <div class="grille-classes" id="grille-classes"></div>
-      </div>
+          <label style="margin-top:14px;">Race</label>
+          <div class="grille-classes" id="grille-races"></div>
+          <label style="margin-top:14px;">Classe</label>
+          <div class="grille-classes" id="grille-classes"></div>
 
-      <div class="carte" id="bloc-caracs" style="display:none;">
-        <h2 class="titre-bandeau">2 · Caractéristiques</h2>
-        <p style="font-size:0.85rem;color:#6a6278;">Base 10 partout, <strong>bonus de classe</strong> automatique, et <strong>6 points libres</strong> à répartir (max +3 par caractéristique). Le modificateur est calculé automatiquement, façon d20.</p>
-        <div class="bonus-bar" id="bonus-bar-caracs"></div>
-        <div class="compteur-points" id="pool-caracs"></div>
-        <div class="grille grille-caracs" id="grille-caracs"></div>
-        <div class="barre-actions">
-          <button type="button" class="btn petit secondaire" id="btn-reset-libres">Réinitialiser les points libres</button>
-        </div>
+          <div id="bloc-caracs" style="display:none;">
+            <label style="margin-top:14px;">Niveau</label>
+            <input id="champ-niveau" type="number" min="1" max="20" value="1" style="max-width:120px;" />
 
-        <div class="bloc-pv">
-          <h3>Points de Vie</h3>
-          <div id="zone-pv"></div>
-        </div>
-      </div>
+            <h3 style="margin-top:18px;">Caractéristiques</h3>
+            <p style="font-size:0.85rem;color:#6a6278;">Base 10 partout, <strong>bonus de classe</strong> automatique, et <strong>6 points libres</strong> à répartir (max +3 par caractéristique). Le modificateur est calculé automatiquement, façon d20.</p>
+            <div class="bonus-bar" id="bonus-bar-caracs"></div>
+            <div class="compteur-points" id="pool-caracs"></div>
+            <div class="grille grille-caracs" id="grille-caracs"></div>
+            <div class="barre-actions">
+              <button type="button" class="btn petit secondaire" id="btn-reset-libres">Réinitialiser les points libres</button>
+            </div>
 
-      <div class="carte" id="bloc-voies" style="display:none;">
-        <h2 class="titre-bandeau">3 · Voies & capacités</h2>
-        <div class="aide" id="aide-creation"></div>
-        <div class="compteur-points" id="compteur-points-voie"></div>
-        <div id="zone-voies"></div>
-        <div class="aide" id="aide-horsprofil" style="margin-top:16px;"></div>
-        <div id="zone-voies-horsprofil"></div>
-      </div>
+            <div class="bloc-pv">
+              <h3>Points de Vie</h3>
+              <div id="zone-pv"></div>
+            </div>
 
-      <div class="carte" id="bloc-voie-raciale" style="display:none;">
-        <h2 class="titre-bandeau">Voie raciale <span style="font-weight:400;font-size:0.78rem;color:var(--or);">— gratuite</span></h2>
-        <div class="aide" id="aide-race"></div>
-        <div id="zone-voie-raciale"></div>
-      </div>
-
-      <div class="carte" id="bloc-finition" style="display:none;">
-        <h2 class="titre-bandeau">4 · Finition</h2>
-        <div class="grille grille-2">
-          <div>
-            <label for="champ-pvmax">PV max <span style="font-weight:400;font-size:0.75rem;">(auto, modifiable)</span></label>
-            <input id="champ-pvmax" type="number" min="1" />
-          </div>
-          <div>
-            <label for="champ-def">DEF <span style="font-weight:400;font-size:0.75rem;">(10 + Mod.DEX + armure)</span></label>
-            <input id="champ-def" type="number" />
-          </div>
-        </div>
-        <div style="margin-top:12px;">
-          <label>Portrait du personnage <span style="font-weight:400;font-size:0.75rem;">(optionnel)</span></label>
-          <div class="portrait-zone">
-            <div class="portrait-apercu" id="portrait-apercu">—</div>
-            <div>
-              <div class="barre-actions" style="margin-top:0;">
-                <button type="button" class="btn petit secondaire" id="btn-portrait">Choisir une image</button>
-                <button type="button" class="btn petit danger" id="btn-portrait-suppr" style="display:none;">Retirer</button>
-              </div>
-              <input type="file" id="input-portrait" accept="image/*" style="display:none;" />
-              <p style="font-size:0.72rem;color:#8a8296;margin:6px 0 0;">L'image est redimensionnée (max 256px) et stockée avec ta fiche. Sans portrait, l'emblème de la classe est utilisé.</p>
+            <div class="barre-actions">
+              <button type="button" class="btn or" id="btn-continuer-etape1">Continuer vers les voies →</button>
             </div>
           </div>
         </div>
-        <div style="margin-top:12px;">
-          <label for="champ-notes">Notes / historique du personnage</label>
-          <textarea id="champ-notes" placeholder="Race, background, objectifs, liens..."></textarea>
+      </div>
+
+      <div class="carte etape-creation" id="etape-2" style="display:none;">
+        <div class="etape-entete" id="entete-etape-2">
+          <h2 class="titre-bandeau" data-titre-base="2 · Voies & capacités">2 · Voies & capacités</h2>
         </div>
-        <div class="barre-actions">
-          <button class="btn or" id="btn-sauver">💾 Enregistrer le personnage</button>
-          <button class="btn secondaire" id="btn-reset">Réinitialiser</button>
+        <div class="etape-corps" id="corps-etape-2">
+          <div class="aide" id="aide-creation"></div>
+          <div class="compteur-points" id="compteur-points-voie"></div>
+          <div id="zone-voies"></div>
+          <div class="aide" id="aide-horsprofil" style="margin-top:16px;"></div>
+          <div id="zone-voies-horsprofil"></div>
+
+          <div id="bloc-voie-raciale" style="display:none;margin-top:20px;">
+            <h3 class="titre-bandeau" style="font-size:1rem;">Voie raciale <span style="font-weight:400;font-size:0.78rem;color:var(--or);">— gratuite</span></h3>
+            <div class="aide" id="aide-race"></div>
+            <div id="zone-voie-raciale"></div>
+          </div>
+
+          <div class="barre-actions">
+            <button type="button" class="btn or" id="btn-continuer-etape2">Continuer vers l'équipement →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="carte etape-creation" id="etape-3" style="display:none;">
+        <div class="etape-entete" id="entete-etape-3">
+          <h2 class="titre-bandeau" data-titre-base="3 · Équipement, inventaire & finition">3 · Équipement, inventaire & finition</h2>
+        </div>
+        <div class="etape-corps" id="corps-etape-3">
+          <div class="grille grille-2">
+            <div>
+              <label for="champ-nom">Nom du personnage</label>
+              <input id="champ-nom" type="text" placeholder="Ex. Aldric le Borgne" />
+            </div>
+            <div>
+              <label for="champ-pvmax">PV max <span style="font-weight:400;font-size:0.75rem;">(auto, modifiable)</span></label>
+              <input id="champ-pvmax" type="number" min="1" />
+            </div>
+          </div>
+          <div class="grille grille-2" style="margin-top:14px;">
+            <div>
+              <label for="champ-def">DEF <span style="font-weight:400;font-size:0.75rem;">(10 + Mod.DEX + armure)</span></label>
+              <input id="champ-def" type="number" />
+            </div>
+          </div>
+
+          <div style="margin-top:14px;">
+            <label>Portrait du personnage <span style="font-weight:400;font-size:0.75rem;">(optionnel)</span></label>
+            <div class="portrait-zone">
+              <div class="portrait-apercu" id="portrait-apercu">—</div>
+              <div>
+                <div class="barre-actions" style="margin-top:0;">
+                  <button type="button" class="btn petit secondaire" id="btn-portrait">Choisir une image</button>
+                  <button type="button" class="btn petit danger" id="btn-portrait-suppr" style="display:none;">Retirer</button>
+                </div>
+                <input type="file" id="input-portrait" accept="image/*" style="display:none;" />
+                <p style="font-size:0.72rem;color:#8a8296;margin:6px 0 0;">L'image est redimensionnée (max 256px) et stockée avec ta fiche. Sans portrait, l'emblème de la classe est utilisé.</p>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="margin-top:18px;">Équipement & inventaire</h3>
+          <div class="grille grille-2" id="creation-equip-inventaire"></div>
+
+          <div style="margin-top:14px;">
+            <label for="champ-notes">Notes / historique du personnage</label>
+            <textarea id="champ-notes" placeholder="Race, background, objectifs, liens..."></textarea>
+          </div>
+          <div class="barre-actions">
+            <button class="btn or" id="btn-sauver">💾 Enregistrer le personnage</button>
+            <button class="btn secondaire" id="btn-reset">Réinitialiser</button>
+          </div>
         </div>
       </div>
     </section>
