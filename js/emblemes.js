@@ -108,7 +108,7 @@ function embleme(classe, taille) {
 
 // Bump ce numéro à chaque régénération des fichiers assets/portraits/tokens/*
 // pour forcer les navigateurs à recharger les images (même nom de fichier).
-const TOKENS_VERSION = 2;
+const TOKENS_VERSION = 3;
 
 /* Chemin du portrait "token" (race + genre + classe), ou null si l'un des trois manque.
    Pour un elfe, la nation (Aetharion/Aelindra/Mordanel) n'est choisie qu'au rang 3 de la
