@@ -1015,13 +1015,17 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .loot-item-desc { font-size: 0.78rem; color: #5a5268; flex: 1; }
 .loot-item .btn-mettre-en-jeu { align-self: flex-start; margin-top: 4px; }
 
-/* Badges type */
+/* Badges type — catégorie de l'objet (arme/armure/...), sans lien avec sa
+   rareté. Choisies pour ne visuellement ressembler à aucune des 4 couleurs
+   de RARETES (gris/vert/violet/or) : sinon "tous les boucliers en vert"
+   ou "tous les accessoires en violet" donne l'illusion d'une rareté figée
+   par catégorie, alors que la rareté reste toujours un choix par objet. */
 .loot-badge { font-size: 0.62rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; white-space: nowrap; }
-.loot-badge-arme      { background: #e8d8b0; color: #6a4a10; }
+.loot-badge-arme      { background: #f2dcd5; color: #7a2f1a; }
 .loot-badge-armure    { background: #d8e4f0; color: #1a3a60; }
-.loot-badge-bouclier  { background: #d8ecd8; color: #1a4a1a; }
-.loot-badge-accessoire{ background: #ead8f0; color: #4a1a60; }
-.loot-badge-consommable{ background: #f0e8d0; color: #6a4010; }
+.loot-badge-bouclier  { background: #d2f0ec; color: #0e5c52; }
+.loot-badge-accessoire{ background: #f5dbe6; color: #70204a; }
+.loot-badge-consommable{ background: #e2e2ee; color: #33334f; }
 .loot-badge-magic     { background: var(--or); color: #fff; }
 
 /* Vote en cours (MJ) */
