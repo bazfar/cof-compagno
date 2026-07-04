@@ -637,19 +637,37 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
   color: var(--violet); font-size: 1.1rem; margin-bottom: 12px;
 }
 .overlay-jet-d20 {
-  width: 90px; height: 90px; margin: 0 auto 12px;
+  position: relative;
+  width: 96px; height: 96px; margin: 0 auto 12px;
   display: flex; align-items: center; justify-content: center;
-  background: var(--violet);
-  clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
+  color: var(--violet); /* repris par le SVG (fill/stroke: currentColor) */
 }
-.overlay-jet-d20 span { color: var(--parchemin); font-size: 2rem; font-weight: 800; line-height: 1; }
+.overlay-jet-d20-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.overlay-jet-d20-svg .d20-face { fill: currentColor; stroke: currentColor; stroke-width: 2.5; stroke-linejoin: round; }
+.overlay-jet-d20-svg .d20-aretes path {
+  fill: none; stroke: rgba(0,0,0,0.35); stroke-width: 1.6; stroke-linecap: round;
+}
+.overlay-jet-d20 span {
+  position: relative; color: var(--parchemin); font-size: 1.9rem; font-weight: 800; line-height: 1;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  transition: opacity 0.15s;
+}
+.overlay-jet-d20 span:empty { opacity: 0; }
+/* Roulement : le dé tourne (son + suspense) pendant que le résultat est masqué,
+   cf. afficherOverlayJet() qui ajoute/retire cette classe autour du reveal. */
+@keyframes d20-roule {
+  0%   { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(200deg) scale(1.12); }
+  100% { transform: rotate(400deg) scale(1); }
+}
+.overlay-jet-d20.en-cours .overlay-jet-d20-svg { animation: d20-roule 0.6s ease-out; }
 .overlay-jet-detail { font-size: 0.8rem; color: var(--violet-clair); margin-bottom: 6px; min-height: 1.1em; }
 .overlay-jet-badge { font-size: 0.85rem; font-weight: 700; min-height: 1.1em; color: var(--encre); }
 .overlay-jet.crit .overlay-jet-boite { border-color: var(--succes); }
-.overlay-jet.crit .overlay-jet-d20 { background: var(--succes); }
+.overlay-jet.crit .overlay-jet-d20 { color: var(--succes); }
 .overlay-jet.crit .overlay-jet-badge { color: var(--succes); }
 .overlay-jet.echec .overlay-jet-boite { border-color: var(--chaos); }
-.overlay-jet.echec .overlay-jet-d20 { background: var(--chaos); }
+.overlay-jet.echec .overlay-jet-d20 { color: var(--chaos); }
 .overlay-jet.echec .overlay-jet-badge { color: var(--chaos); }
 
 @media (max-width: 600px) {

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=31" />
+  <link rel="stylesheet" href="css/style.css?v=32" />
 </head>
 <body>
   <header>
@@ -417,6 +417,22 @@
       <div class="overlay-jet-auteur" id="overlay-jet-auteur"></div>
       <div class="overlay-jet-label" id="overlay-jet-label"></div>
       <div class="overlay-jet-d20" id="overlay-jet-d20">
+        <svg class="overlay-jet-d20-svg" viewBox="0 0 100 100" aria-hidden="true">
+          <polygon class="d20-face" points="50,4 93,28 93,72 50,96 7,72 7,28" />
+          <g class="d20-aretes">
+            <path d="M50,4 L50,24" />
+            <path d="M7,28 L50,24" />
+            <path d="M93,28 L50,24" />
+            <path d="M50,24 L30,76" />
+            <path d="M50,24 L70,76" />
+            <path d="M30,76 L50,96" />
+            <path d="M70,76 L50,96" />
+            <path d="M7,50 L50,24" />
+            <path d="M93,50 L50,24" />
+            <path d="M7,50 L30,76" />
+            <path d="M93,50 L70,76" />
+          </g>
+        </svg>
         <span id="overlay-jet-total"></span>
       </div>
       <div class="overlay-jet-detail" id="overlay-jet-detail"></div>
@@ -496,6 +512,6 @@
   <script src="js/carte.js?v=44"></script>
   <script src="js/raretes.js?v=2"></script>
   <script src="js/loot.js?v=7"></script>
-  <script src="js/app.js?v=37"></script>
+  <script src="js/app.js?v=38"></script>
 </body>
 </html>

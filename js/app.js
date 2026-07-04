@@ -38,6 +38,8 @@ const App = (() => {
   // là" (pas d'overlay) de "un nouveau jet vient d'être ajouté" (overlay).
   let histoOverlayInitialise = false;
   let overlayJetTimer = null;
+  let overlayJetRevealTimer = null;
+  let _sonDe = null; // instance Audio réutilisée (évite de la recréer à chaque jet)
 
   /* ---------- Utilitaires ---------- */
 
@@ -2431,27 +2433,54 @@ const App = (() => {
     rendreHisto();
   }
 
+  // Son de collision joué à chaque jet (local ou distant, cf. afficherOverlayJet).
+  // Instance réutilisée + currentTime remis à 0 pour permettre des jets
+  // rapprochés sans attendre la fin du son précédent.
+  function _jouerSonDe() {
+    try {
+      if (!_sonDe) _sonDe = new Audio("assets/sounds/de-lance.mp3");
+      _sonDe.currentTime = 0;
+      _sonDe.play().catch(() => {}); // autoplay bloqué (rare, nécessite une interaction) : silencieux
+    } catch (e) { /* pas de son plutôt que planter le jet */ }
+  }
+
   // Remplit et affiche l'overlay de jet de dé (visible sur n'importe quel
-  // onglet). entree suit le même format que les entrées de des:histo.
+  // onglet). entree suit le même format que les entrées de des:histo. Le dé
+  // "roule" (son + rotation CSS) le temps du roulement, puis révèle le total.
   function afficherOverlayJet(entree) {
     const overlay = document.getElementById("overlay-jet");
-    if (!overlay || !entree) return;
+    const d20 = document.getElementById("overlay-jet-d20");
+    if (!overlay || !d20 || !entree) return;
     document.getElementById("overlay-jet-auteur").textContent = entree.auteur || "";
     document.getElementById("overlay-jet-label").textContent = entree.label;
-    document.getElementById("overlay-jet-total").textContent = entree.total;
     document.getElementById("overlay-jet-detail").textContent = entree.detail || "";
-    document.getElementById("overlay-jet-badge").textContent =
-      entree.crit ? "CRITIQUE ! 🎉" : entree.echec ? "Échec critique 💀" : "";
+    document.getElementById("overlay-jet-total").textContent = "";
+    document.getElementById("overlay-jet-badge").textContent = "";
     overlay.classList.remove("cache", "crit", "echec");
-    if (entree.crit) overlay.classList.add("crit");
-    else if (entree.echec) overlay.classList.add("echec");
     overlay.classList.add("visible");
 
     if (overlayJetTimer) clearTimeout(overlayJetTimer);
-    overlayJetTimer = setTimeout(() => {
-      overlay.classList.remove("visible");
-      overlayJetTimer = null;
-    }, 5000);
+    if (overlayJetRevealTimer) clearTimeout(overlayJetRevealTimer);
+    // Relance l'animation même si un jet précédent tournait encore (retirer
+    // puis reflow forcé, sinon le navigateur ignore un ré-ajout à l'identique).
+    d20.classList.remove("en-cours");
+    void d20.offsetWidth;
+    d20.classList.add("en-cours");
+    _jouerSonDe();
+
+    overlayJetRevealTimer = setTimeout(() => {
+      d20.classList.remove("en-cours");
+      document.getElementById("overlay-jet-total").textContent = entree.total;
+      document.getElementById("overlay-jet-badge").textContent =
+        entree.crit ? "CRITIQUE ! 🎉" : entree.echec ? "Échec critique 💀" : "";
+      if (entree.crit) overlay.classList.add("crit");
+      else if (entree.echec) overlay.classList.add("echec");
+      overlayJetRevealTimer = null;
+      overlayJetTimer = setTimeout(() => {
+        overlay.classList.remove("visible");
+        overlayJetTimer = null;
+      }, 5000);
+    }, 620);
   }
 
   // Appelé à chaque synchro de l'historique partagé (voir subscribe plus
