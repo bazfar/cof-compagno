@@ -82,7 +82,21 @@ class Personnage extends Entite {
 
   /* ----- Caractéristiques ----- */
   mod(code) {
-    return Entite.modCarac(this.caracs[code]);
+    return Entite.modCarac(this.caracs[code] + this.bonusCaracCapacites(code));
+  }
+
+  // Bonus permanent à une caractéristique de base, accordé par un choix fixé
+  // à l'acquisition d'une capacité (ex. Guerrier — Spécimen d'élite : +1 FOR,
+  // DEX ou CON au choix, cf. CAPACITES_A_CHOIX côté app.js). N'altère pas la
+  // valeur affichée sur la fiche (this.caracs), seulement le modificateur
+  // effectif utilisé pour tous les calculs (attaque, DEF, PV...).
+  bonusCaracCapacites(code) {
+    let bonus = 0;
+    if (this.classe === "guerrier") {
+      const cap = this.capaciteEntree("Voie de l'élite", 1);
+      if (cap && cap.choix === code) bonus += 1;
+    }
+    return bonus;
   }
 
   get classeDef() {
@@ -99,14 +113,53 @@ class Personnage extends Entite {
   pvNiveau1() {
     return Math.max(1, this.facesDeVie() + this.mod("CON"));
   }
-  // PV total = niveau 1 + somme des jets de niveau historisés
+  // PV total = niveau 1 + somme des jets de niveau historisés + bonus de capacités
   pvCalcule() {
-    return (this.pvHistorique || []).reduce((t, j) => t + (j.total || 0), this.pvNiveau1());
+    return (this.pvHistorique || []).reduce((t, j) => t + (j.total || 0), this.pvNiveau1()) + this.bonusPvCapacites();
+  }
+  // Guerrier — Voie de l'élite, rang 2 "Endurance de fer" (passive) : +1 PV par niveau.
+  bonusPvCapacites() {
+    let bonus = 0;
+    if (this.classe === "guerrier" && this.estChoisie("Voie de l'élite", 2)) {
+      bonus += this.niveau || 1;
+    }
+    return bonus;
   }
 
   /* ----- Défense ----- */
   calculerDEF() {
     return 10 + this.mod("DEX") + this.bonusDefEquipement() + this.bonusDefCapacites();
+  }
+
+  // Initiative = Mod. de DEX + bonus de capacités (ex. Barde/Moine ajoutant
+  // Mod.INT ou Mod.SAG en plus de la DEX, cf. bonusInitiativeCapacites).
+  calculerInitiative() {
+    return this.mod("DEX") + this.bonusInitiativeCapacites();
+  }
+  bonusInitiativeCapacites() {
+    let bonus = 0;
+    // Barde — Voie de la rapière, rang 2 "Intelligence du combat" (passive) :
+    // ajoute aussi le Mod. d'INT à l'Initiative (déjà appliqué à la DEF).
+    if (this.classe === "barde" && this.estChoisie("Voie de la rapière", 2)) {
+      bonus += this.mod("INT");
+    }
+    // Moine — Voie de l'élévation, rang 2 : même choix (INT ou SAG) que pour la DEF.
+    if (this.classe === "moine") {
+      const cap = this.capaciteEntree("Voie de l'élévation", 2);
+      if (cap && (cap.choix === "INT" || cap.choix === "SAG")) bonus += this.mod(cap.choix);
+    }
+    return bonus;
+  }
+
+  // Seuil de critique pour un type d'attaque donné ("contact"/"distance"/
+  // "magique") : 20 par défaut, abaissé par certaines capacités.
+  critMinAttaque(type) {
+    // Guerrier — Voie de l'élite, rang 3 "Précision létale" (passive) :
+    // critique sur 19-20 au lieu de 20, uniquement sur les attaques au contact.
+    if (type === "contact" && this.classe === "guerrier" && this.estChoisie("Voie de l'élite", 3)) {
+      return 19;
+    }
+    return 20;
   }
 
   // Bonus de DEF accordés par certaines capacités passives et permanentes.
@@ -237,7 +290,19 @@ class Personnage extends Entite {
     return items;
   }
   reductionDegats() {
-    return this._itemsEquipesUniques().reduce((t, it) => t + (it.valeurArmure || 0), 0);
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.valeurArmure || 0), 0) + this.bonusReductionCapacites();
+  }
+  // Druide — Voie du chaos, rang 4 "Symbiose du chaos" : choix fixé à
+  // l'acquisition entre +2 réduction de dégâts et +1d6 DM à tous les sorts
+  // (cf. CAPACITES_A_CHOIX côté app.js) — seul le choix "reduction" est
+  // automatisable ici, l'autre étant un bonus au jet appliqué manuellement.
+  bonusReductionCapacites() {
+    let bonus = 0;
+    if (this.classe === "druide") {
+      const cap = this.capaciteEntree("Voie du chaos", 4);
+      if (cap && cap.choix === "reduction") bonus += 2;
+    }
+    return bonus;
   }
   bonusDefEquipement() {
     return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDEF || 0), 0);

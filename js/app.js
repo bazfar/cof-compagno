@@ -239,7 +239,7 @@ const App = (() => {
     const perso = Personnage.depuisJSON(p);
     const mods = {};
     CARACS.forEach((cc) => (mods[cc.code] = perso.mod(cc.code)));
-    const init = mods.DEX;
+    const init = perso.calculerInitiative();
 
     sidebar.innerHTML = `
       <div class="carte">
@@ -762,10 +762,17 @@ const App = (() => {
     return creation.classe ? maxDeDeVie(CLASSES[creation.classe].de_de_vie) : 6;
   }
   function pvBaseNiveau1() {
-    return Math.max(1, deDeVieFaces() + modCarac(creation.caracs.CON));
+    // Passe par Personnage.mod() (pas le modCarac brut) pour tenir compte d'un
+    // éventuel +1 CON permanent choisi via une capacité (ex. Guerrier —
+    // Spécimen d'élite), cf. Personnage.bonusCaracCapacites.
+    return Math.max(1, deDeVieFaces() + new Personnage(creation).mod("CON"));
+  }
+  // Guerrier — Voie de l'élite, rang 2 "Endurance de fer" (passive) : +1 PV par niveau.
+  function bonusPvVoies() {
+    return (creation.classe === "guerrier" && estChoisie("Voie de l'élite", 2)) ? niveauCreation() : 0;
   }
   function pvTotalActuel() {
-    return creation.pvHistorique.reduce((total, j) => total + j.total, pvBaseNiveau1());
+    return creation.pvHistorique.reduce((total, j) => total + j.total, pvBaseNiveau1()) + bonusPvVoies();
   }
 
   function rendrePv() {
@@ -998,6 +1005,23 @@ const App = (() => {
       options: [
         { valeur: "INT", label: "Modificateur d'INTELLIGENCE" },
         { valeur: "SAG", label: "Modificateur de SAGESSE" },
+      ],
+    },
+    "guerrier|Voie de l'élite|1": {
+      titre: "Spécimen d'élite",
+      consigne: "Choisis la caractéristique physique qui gagne +1 permanent :",
+      options: [
+        { valeur: "FOR", label: "+1 FORCE" },
+        { valeur: "DEX", label: "+1 DEXTÉRITÉ" },
+        { valeur: "CON", label: "+1 CONSTITUTION" },
+      ],
+    },
+    "druide|Voie du chaos|4": {
+      titre: "Symbiose du chaos",
+      consigne: "Choisis l'effet permanent (contrepartie : détecté comme corrompu) :",
+      options: [
+        { valeur: "reduction", label: "+2 réduction de dégâts" },
+        { valeur: "degats", label: "+1d6 DM à tous les sorts" },
       ],
     },
   };
@@ -1821,7 +1845,7 @@ const App = (() => {
     const attContact = perso.bonusAttaque("contact");
     const attDistance = perso.bonusAttaque("distance");
     const attMagique = perso.bonusAttaque("magique");
-    const init = mods.DEX;
+    const init = perso.calculerInitiative();
 
     const zone = document.getElementById("zone-fiche-active");
 
@@ -1965,7 +1989,7 @@ const App = (() => {
     zone.querySelectorAll("[data-attaque]").forEach((el) => {
       el.onclick = () => {
         const bonus = parseInt(el.dataset.bonus, 10);
-        lancerTest(`Attaque ${el.dataset.attaque}`, bonus);
+        lancerTest(`Attaque ${el.dataset.attaque}`, bonus, perso.critMinAttaque(el.dataset.attaque));
         allerVers("des");
       };
     });
@@ -2287,16 +2311,19 @@ const App = (() => {
     return el ? el.value : "normal";
   }
 
-  // Test = 1d20 + bonus, gère avantage/désavantage
-  function lancerTest(label, bonus) {
+  // Test = 1d20 + bonus, gère avantage/désavantage. critMin : seuil de
+  // critique (20 par défaut, abaissé par certaines capacités — cf.
+  // Personnage.critMinAttaque, ex. Guerrier "Précision létale" à 19).
+  function lancerTest(label, bonus, critMin) {
     bonus = bonus || 0;
+    critMin = critMin || 20;
     const mode = modeD20();
     let d1 = lancerDe(20), d2 = lancerDe(20), de, detailDes;
     if (mode === "avantage") { de = Math.max(d1, d2); detailDes = `2d20 av. [${d1}, ${d2}] → ${de}`; }
     else if (mode === "desavantage") { de = Math.min(d1, d2); detailDes = `2d20 dés. [${d1}, ${d2}] → ${de}`; }
     else { de = d1; detailDes = `d20 → ${de}`; }
     const total = de + bonus;
-    const crit = (de === 20), echec = (de === 1);
+    const crit = (de >= critMin), echec = (de === 1);
     const detail = `${detailDes} ${signe(bonus)}`;
     afficherResultat(label, total, detail, crit, echec);
     ajouterHisto(label + " " + signe(bonus), total, crit, echec, detail);
