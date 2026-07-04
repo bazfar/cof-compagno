@@ -247,9 +247,20 @@ const App = (() => {
     // arme à portée équipée (arc, arbalète...), Magique seulement pour une
     // classe de lanceur de sorts (cf. Personnage.bonusAttaque).
     const attContact = perso.bonusAttaque("contact");
+    const armeContact = perso.armeContactEquipee();
     const armeDistance = perso.armeDistanceEquipee();
     const attDistance = armeDistance ? perso.bonusAttaque("distance") : null;
     const attMagique = perso.bonusAttaque("magique");
+    // Dégâts = formule de l'arme réellement équipée (pas une valeur générique
+    // à mains nues) : même bonus que badgeEffetItem (bonusDegatsTotal posé
+    // par une rareté prime sur enchantement seul).
+    const formuleDegats = (arme) => {
+      if (!arme) return null;
+      const bonus = arme.bonusDegatsTotal !== undefined ? arme.bonusDegatsTotal : (arme.enchantement || 0);
+      return arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
+    };
+    const dmgContact = formuleDegats(armeContact);
+    const dmgDistance = formuleDegats(armeDistance);
 
     sidebar.innerHTML = `
       <div class="carte">
@@ -287,6 +298,11 @@ const App = (() => {
           ${attMagique !== null ? `<button class="btn petit" data-bm-attaque="magique" data-bonus="${attMagique}">✨ Magique (${signe(attMagique)})</button>` : ""}
         </div>
         ${attDistance === null ? `<p class="aide" style="font-size:0.72rem;margin:6px 0 0;">Équipe un arc ou une arbalète pour débloquer l'attaque à distance.</p>` : ""}
+        ${dmgContact || dmgDistance ? `
+        <div class="barre-actions" style="margin-top:6px;">
+          ${dmgContact ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}">🎲 Dégâts Contact (${dmgContact})</button>` : ""}
+          ${dmgDistance ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}">🎲 Dégâts Distance (${dmgDistance})</button>` : ""}
+        </div>` : ""}
       </div>
     `;
     majBarrePvSidebar(p);
@@ -301,6 +317,13 @@ const App = (() => {
       el.onclick = () => {
         const bonus = parseInt(el.dataset.bonus, 10);
         lancerTest(`Attaque ${el.dataset.bmAttaque}`, bonus, perso.critMinAttaque(el.dataset.bmAttaque));
+      };
+    });
+    // Dégâts de l'arme équipée (formule figée, pas de bonus au jet ici)
+    sidebar.querySelectorAll("[data-bm-degats]").forEach((el) => {
+      el.onclick = () => {
+        const formule = el.dataset.bmDegats;
+        lancerFormule(formule, `${p.nom} — Dégâts (${formule})`);
       };
     });
   }

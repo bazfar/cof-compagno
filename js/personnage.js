@@ -322,6 +322,16 @@ class Personnage extends Entite {
     }
     return null;
   }
+  // Arme de mêlée (portée "contact") équipée dans une main, ou null. Sert au
+  // bouton de dégâts (battlemap) : la formule vient de l'arme réellement
+  // équipée, pas d'une valeur générique à mains nues.
+  armeContactEquipee() {
+    for (const main of ["main_droite", "main_gauche"]) {
+      const arme = this.armeEquipee(main);
+      if (arme && arme.portee === "contact") return arme;
+    }
+    return null;
+  }
 
   /* ----- Attaque ----- */
   // Bonus de progression selon l'archétype : martial +1/niv, hybride +1/2 niv, lanceur +1/3 niv
