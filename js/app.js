@@ -2363,8 +2363,11 @@ const App = (() => {
     ajouterHisto(`d${faces}`, v, crit, echec, detail);
   }
 
-  // Parse une formule type "2d6+3" ou "1d20-1" ou "3d8"
-  function lancerFormule(formule) {
+  // Parse une formule type "2d6+3" ou "1d20-1" ou "3d8". label : texte affiché
+  // dans le résultat/journal à la place de la formule brute (ex. attaques de
+  // monstre, où "1d4" seul ne dit pas de qui/quoi il s'agit) — par défaut la
+  // formule elle-même, comme avant.
+  function lancerFormule(formule, label) {
     formule = (formule || "").trim().toLowerCase().replace(/\s/g, "");
     if (!formule) { toast("Entre une formule, ex. 2d6+3"); return; }
     const m = /^(\d*)d(\d+)([+-]\d+)?$/.exec(formule);
@@ -2380,8 +2383,9 @@ const App = (() => {
     let crit = false, echec = false;
     if (nb === 1 && faces === 20) { crit = (jets[0] === 20); echec = (jets[0] === 1); }
     const detail = `[${jets.join(", ")}] ${bonus ? signe(bonus) : ""}`;
-    afficherResultat(formule, total, detail, crit, echec);
-    ajouterHisto(formule, total, crit, echec, detail);
+    label = label || formule;
+    afficherResultat(label, total, detail, crit, echec);
+    ajouterHisto(label, total, crit, echec, detail);
   }
 
   function afficherResultat(label, total, detail, crit, echec) {
@@ -2846,6 +2850,28 @@ const App = (() => {
     rendreTableCombat(targetId);
   }
 
+  // Extrait le bonus d'un jet de monstre du bestiaire, ex. "1d20+3 vs DEF" -> +3.
+  function extraireBonusJetMonstre(jet) {
+    const m = /1d20\s*([+-]\s*\d+)/i.exec(jet || "");
+    return m ? parseInt(m[1].replace(/\s/g, ""), 10) : 0;
+  }
+
+  // Boutons d'attaque rapide pour un monstre de la table de combat : une ligne
+  // par attaque du bestiaire (m.monstreId -> BESTIAIRE_INDEX), jet 1d20+bonus
+  // à gauche, dégâts (formule figée, pas de bonus) à droite via l'icône 🎲.
+  function attaquesMonstreHtml(m) {
+    const def = (typeof BESTIAIRE_INDEX !== "undefined" && m.monstreId) ? BESTIAIRE_INDEX[m.monstreId] : null;
+    const attaques = def && def.attaques;
+    if (!attaques || !attaques.length) return "";
+    return `<div class="cm-attaques">${attaques.map((a, i) => {
+      const bonus = extraireBonusJetMonstre(a.jet);
+      return `<div class="cm-attaque-ligne">
+        <button class="btn petit secondaire" data-monstre-jet="${m.id}" data-idx-attaque="${i}" title="${echapper(a.jet || "")}">⚔ ${echapper(a.nom)} (${signe(bonus)})</button>
+        <button class="btn-de-cap" data-monstre-degats="${m.id}" data-idx-attaque="${i}" title="Dégâts : ${echapper(a.degats || "")}">🎲</button>
+      </div>`;
+    }).join("")}</div>`;
+  }
+
   // targetId : conteneur à peupler — l'onglet dédié "Table de combat"
   // (zone-table-combat) par défaut, ou la colonne MJ de la battlemap
   // (battlemap-zone-table-combat) pour suivre les monstres sans changer d'onglet.
@@ -2878,6 +2904,7 @@ const App = (() => {
             <span>Armure ${m.armure || 0}</span>
             ${etoiles ? `<span>${etoiles}</span>` : ""}
           </div>
+          ${attaquesMonstreHtml(m)}
           <div class="pv-control">
             <button data-pv-moins="${m.id}">−</button>
             <input type="number" value="${pvActuel}" data-pv-input="${m.id}" />
@@ -2892,6 +2919,27 @@ const App = (() => {
 
     monstres.forEach((m) => {
       wireDegatsSubisGenerique(`cm-${m.id}-`, (val) => subirDegatsMonstre(m.id, val, targetId));
+    });
+    // Attaques rapides du monstre (jet à gauche, dégâts via 🎲 à droite) —
+    // reste sur l'onglet courant (Battlemap ou Table de combat), comme les
+    // attaques rapides du joueur.
+    zone.querySelectorAll("[data-monstre-jet]").forEach((btn) => {
+      btn.onclick = () => {
+        const m = monstres.find((mm) => mm.id === btn.dataset.monstreJet);
+        const def = m && typeof BESTIAIRE_INDEX !== "undefined" ? BESTIAIRE_INDEX[m.monstreId] : null;
+        const a = def && def.attaques && def.attaques[parseInt(btn.dataset.idxAttaque, 10)];
+        if (!a) return;
+        lancerTest(`${m.nom} — ${a.nom}`, extraireBonusJetMonstre(a.jet));
+      };
+    });
+    zone.querySelectorAll("[data-monstre-degats]").forEach((btn) => {
+      btn.onclick = () => {
+        const m = monstres.find((mm) => mm.id === btn.dataset.monstreDegats);
+        const def = m && typeof BESTIAIRE_INDEX !== "undefined" ? BESTIAIRE_INDEX[m.monstreId] : null;
+        const a = def && def.attaques && def.attaques[parseInt(btn.dataset.idxAttaque, 10)];
+        if (!a) return;
+        lancerFormule(a.degats, `${m.nom} — ${a.nom} (dégâts)`);
+      };
     });
     zone.querySelectorAll("[data-pv-moins]").forEach((btn) => {
       btn.onclick = () => { Carte.ajusterPvCombat(btn.dataset.pvMoins, -1); rendreTableCombat(targetId); };
