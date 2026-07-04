@@ -19,13 +19,13 @@
    ============================================================ */
 
 const EQUIPEMENT_DEPART = {
-  guerrier:     { arme: "epee_longue",  armure: "cotte_mailles",     bouclier: "bouclier_acier", consommables: ["potion_soin"] },
-  chevalier:    { arme: "lance",        armure: "demi_plaques",      bouclier: "bouclier_acier", consommables: ["potion_soin"] },
+  guerrier:     { arme: "epee_longue",  armure: "armure_cuir",       bouclier: "bouclier_acier", consommables: ["potion_soin"] },
+  chevalier:    { arme: "lance",        armure: "armure_cuir",       bouclier: "bouclier_acier", consommables: ["potion_soin"] },
   moine:        { arme: "dague",        armure: "manteau_voyageur",  bouclier: null,             consommables: ["potion_soin"] },
   pretre:       { arme: "masse",        armure: "armure_cloute",     bouclier: "bouclier_acier", consommables: ["huile_sainte", "potion_soin"] },
   druide:       { arme: "francisque",   armure: "armure_druidique",  bouclier: "bouclier_seve",  consommables: ["antidote", "potion_soin"] },
-  magicien:     { arme: "dague",        armure: "robe_mage",         bouclier: null,             consommables: ["parchemin_sort", "potion_soin"] },
-  necromancien: { arme: "dague",        armure: "armure_ombre",      bouclier: null,             consommables: ["parchemin_sort", "potion_soin"] },
+  magicien:     { arme: "baton",        armure: "robe_mage",         bouclier: null,             consommables: ["parchemin_sort", "potion_soin"] },
+  necromancien: { arme: "baton",        armure: "armure_ombre",      bouclier: null,             consommables: ["parchemin_sort", "potion_soin"] },
   barde:        { arme: "rapiere",      armure: "manteau_voyageur",  bouclier: null,             consommables: ["corde_enchantee", "potion_soin"] },
   enchanteur:   { arme: "dague",        armure: "robe_mage",         bouclier: null,             consommables: ["parchemin_sort", "potion_soin"] },
   chasseur:     { arme: "arc_long",     armure: "armure_ecailles",   bouclier: null,             consommables: ["fumigene", "potion_soin"] },

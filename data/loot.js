@@ -24,6 +24,8 @@ const LOOT_CATALOGUE = [
   { "id": "arbalete_lourde", "nom": "Arbalète lourde", "type": "arme", "porte": false, "description": "Puissance dévastatrice, mais 2 rounds nécessaires pour recharger.", "degats": "1d10", "portee": "moyenne (18m)", "typedegats": "physique", "enchantement": 0, "deuxMains": true },
   { "id": "arc_aelindra_p1", "nom": "Arc composite d'Aelindra +1", "type": "arme", "porte": false, "description": "Arc elfique en bois vivant tressé, fabriqué à Aelindra. Les flèches trouvent leur cible.", "degats": "1d8", "portee": "longue (36m)", "typedegats": "physique", "enchantement": 1, "deuxMains": true },
   { "id": "hache_naine_p1", "nom": "Hache de guerre naine +1", "type": "arme", "porte": false, "description": "Forgée dans les profondeurs de Khazrak Dûm. Le tranchant ne s'émousse jamais.", "degats": "1d8", "portee": "contact", "typedegats": "physique", "enchantement": 1, "deuxMains": false },
+  { "id": "baton", "nom": "Bâton", "type": "arme", "porte": false, "description": "Long bâton de bois noueux, aussi utile pour marcher que pour canaliser un sort.", "degats": "1d6", "portee": "contact", "typedegats": "physique", "enchantement": 0, "deuxMains": true },
+  { "id": "baton_p1", "nom": "Bâton runique +1", "type": "arme", "porte": false, "description": "Bois gravé de runes arcaniques, encore tiède au toucher. Amplifie légèrement les sorts canalisés à travers lui.", "degats": "1d6", "portee": "contact", "typedegats": "physique", "enchantement": 1, "deuxMains": true },
 
   { "id": "armure_cuir", "nom": "Armure de cuir", "type": "armure", "porte": false, "description": "Protection légère, n'entrave pas les mouvements.", "valeurArmure": 2, "malusDEX": 0 },
   { "id": "armure_cloute", "nom": "Cuir clouté", "type": "armure", "porte": false, "description": "Cuir renforcé de clous métalliques. Bon compromis légèreté/protection.", "valeurArmure": 3, "malusDEX": 0 },
@@ -70,5 +72,6 @@ const LOOT_CATALOGUE = [
   { "id": "ceinture_force", "nom": "Ceinture de force", "type": "accessoire", "porte": false, "description": "Cuir clouté qui raffermit la constitution du porteur.", "effet": "+1 CON" },
   { "id": "boucle_aelindra", "nom": "Boucle d'oreille d'Aelindra", "type": "accessoire", "porte": false, "description": "Bijou elfique délicat, gravé du sceau d'Aelindra.", "effet": "+1 CHA" },
   { "id": "lentilles_nocturnes", "nom": "Lentilles de vision nocturne", "type": "accessoire", "porte": false, "description": "Fines lentilles enchantées qui percent l'obscurité.", "effet": "Vision dans le noir (6 cases)" },
-  { "id": "gantelets_renforces", "nom": "Gantelets renforcés", "type": "accessoire", "porte": false, "description": "Métal renforcé aux articulations, alourdit chaque coup porté.", "effet": "+1 dégâts armes de contact" }
+  { "id": "gantelets_renforces", "nom": "Gantelets renforcés", "type": "accessoire", "porte": false, "description": "Métal renforcé aux articulations, alourdit chaque coup porté.", "effet": "+1 dégâts armes de contact" },
+  { "id": "grimoire_ancien", "nom": "Grimoire ancien", "type": "accessoire", "porte": false, "description": "Recueil de formules arcaniques annoté par plusieurs générations de mages.", "effet": "+1 INT" }
 ];
