@@ -44,11 +44,13 @@ class Personnage extends Entite {
         equipement: equipementVide(),
         inventaireListe: [],
         notes: "",
+        etatsActifs: [],
+        usagesCapacites: {},
       },
       data
     );
 
-    super({ nom: d.nom, pvMax: d.pvMax, pvActuel: d.pvActuel, def: d.def });
+    super({ nom: d.nom, pvMax: d.pvMax, pvActuel: d.pvActuel, def: d.def, etatsActifs: d.etatsActifs });
 
     this.id = d.id;
     this.niveau = d.niveau;
@@ -66,6 +68,10 @@ class Personnage extends Entite {
     this.equipement = d.equipement;
     this.inventaireListe = d.inventaireListe;
     this.notes = d.notes;
+    // this.etatsActifs déjà posé par Entite (super()) ; usagesCapacites
+    // compte les usages d'une capacité à fréquence limitée (cf. js/etats.js,
+    // rang.mecanique.usage) : { [idCapacite]: nombreUtilise }.
+    this.usagesCapacites = d.usagesCapacites;
 
     // Migration douce : l'ancien champ libre `inventaire` (string) devient un
     // item texte libre dans inventaireListe, pour ne rien perdre à la casse
@@ -400,6 +406,8 @@ class Personnage extends Entite {
       equipement: this.equipement,
       inventaireListe: this.inventaireListe,
       notes: this.notes,
+      etatsActifs: this.etatsActifs,
+      usagesCapacites: this.usagesCapacites,
     };
   }
   static depuisJSON(obj) {

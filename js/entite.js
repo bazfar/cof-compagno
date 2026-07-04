@@ -11,13 +11,16 @@ class Entite {
    * @param {number|null} o.pvActuel  (null → plein)
    * @param {number} o.def
    * @param {number} o.atk  bonus d'attaque de base (surtout pour les monstres)
+   * @param {Array}  o.etatsActifs  [{ idEtat, dureeRestante, source }] — états/altérations
+   *   posés par js/capacites.js (cf. js/etats.js pour le catalogue des idEtat valides).
    */
-  constructor({ nom = "", pvMax = 1, pvActuel = null, def = 10, atk = 0 } = {}) {
+  constructor({ nom = "", pvMax = 1, pvActuel = null, def = 10, atk = 0, etatsActifs = [] } = {}) {
     this.nom = nom;
     this.pvMax = Math.max(1, pvMax | 0);
     this.pvActuel = pvActuel == null ? this.pvMax : pvActuel | 0;
     this.def = def | 0;
     this.atk = atk | 0;
+    this.etatsActifs = etatsActifs;
   }
 
   // Modificateur de caractéristique façon d20 : (val - 10) / 2 arrondi à l'inférieur
@@ -37,6 +40,12 @@ class Entite {
 
   estVivant() {
     return this.pvActuel > 0;
+  }
+
+  // Présence d'un état actif par id (ex. "immobilisee", "marquee_pretre") —
+  // cf. js/etats.js pour le catalogue et js/capacites.js pour la pose/l'expiration.
+  aEtat(idEtat) {
+    return this.etatsActifs.some((e) => e.idEtat === idEtat);
   }
 
   // Ratio de PV (0..1) — pratique pour les barres de vie
