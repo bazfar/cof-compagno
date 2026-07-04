@@ -140,7 +140,27 @@ class Personnage extends Entite {
     if (this.classe === "moine" && this.estChoisie("Voie des poings", 3)) {
       bonus += 2;
     }
+    // Chevalier — Voie du chaos, rang 4 "Marque du serment brisé" : choix fixé
+    // à l'acquisition entre +2 DEF permanent et +1d8 DM chaotique (cf.
+    // CAPACITES_A_CHOIX côté app.js) — seul le choix "def" affecte la DEF.
+    if (this.classe === "chevalier") {
+      const cap = this.capaciteEntree("Voie du chaos", 4);
+      if (cap && cap.choix === "def") bonus += 2;
+    }
+    // Moine — Voie de l'élévation, rang 2 : ajoute au choix (fixé à
+    // l'acquisition) le Mod. d'INT ou de SAG à l'Initiative et à la DEF.
+    if (this.classe === "moine") {
+      const cap = this.capaciteEntree("Voie de l'élévation", 2);
+      if (cap && (cap.choix === "INT" || cap.choix === "SAG")) bonus += this.mod(cap.choix);
+    }
     return bonus;
+  }
+
+  // Renvoie l'entrée de capacité (voie+rang) telle que stockée dans
+  // this.capacites — utile pour lire un `choix` mémorisé à l'acquisition
+  // (cf. CAPACITES_A_CHOIX côté app.js), au-delà du simple "est choisie ?".
+  capaciteEntree(voieNom, rang) {
+    return (this.capacites || []).find((c) => c.voie === voieNom && c.rang === rang) || null;
   }
 
   /* ----- Équipement (slots) -----

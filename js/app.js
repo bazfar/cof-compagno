@@ -918,12 +918,15 @@ const App = (() => {
         // Verrou : plus assez de points de capacité disponibles pour ce rang
         const verrouPoints = !choisi && cout > pointsRestants;
         const verrou = verrouOrdre || verrouPoints;
+        // Rappel du choix permanent fait à l'acquisition (cf. CAPACITES_A_CHOIX)
+        const capEntree = creation.capacites.find((c) => c.voie === voie.nom && c.rang === r.rang);
+        const choixLabel = capEntree && capEntree.choix ? _labelChoixCapacite(voie.nom, r.rang, capEntree.choix) : null;
         html +=
           `<div class="rang ${choisi ? "choisi" : ""} ${verrou ? "verrou" : ""}">` +
           `<div class="num">${r.rang}</div>` +
           `<div class="contenu">` +
           (r.nom ? `<div class="nom-cap">${r.nom}</div>` : "") +
-          `<div class="effet">${r.effet}</div></div>` +
+          `<div class="effet">${r.effet}${choixLabel ? ` — <strong>Choix : ${choixLabel}</strong>` : ""}</div></div>` +
           `<div class="cout-rang">${cout} pt${cout > 1 ? "s" : ""}</div>` +
           `<div class="check"><input type="checkbox" ${choisi ? "checked" : ""} ${verrou ? "disabled" : ""} ` +
           `data-voie="${encodeURIComponent(voie.nom)}" data-rang="${r.rang}" /></div>` +
@@ -957,10 +960,77 @@ const App = (() => {
         rendreVoies();
         return;
       }
+      // Certaines capacités fixent un choix permanent à l'acquisition (ex.
+      // +2 DEF OU +1d8 DM) — on affiche une modale et on n'ajoute la
+      // capacité qu'une fois le choix fait (cf. CAPACITES_A_CHOIX).
+      const choixDef = CAPACITES_A_CHOIX[creation.classe + "|" + voieNom + "|" + rang];
+      if (choixDef) {
+        rendreVoies(); // remet la case à cocher dans son état réel (pas encore prise) en attendant le choix
+        ouvrirModalChoixCapacite(choixDef, (valeurChoisie) => {
+          creation.capacites.push({ voie: voieNom, rang: rang, choix: valeurChoisie });
+          rendreVoies();
+          recalculerDerives();
+        });
+        return;
+      }
       creation.capacites.push({ voie: voieNom, rang: rang });
     }
     rendreVoies();
     recalculerDerives();
+  }
+
+  // Capacités dont l'acquisition fixe un choix permanent entre deux effets
+  // (clé "classe|voie|rang") — le choix est mémorisé sur la capacité elle-même
+  // (creation.capacites[].choix) et exploité par Personnage (cf.
+  // bonusDefCapacites/capaciteEntree) pour appliquer le bon effet mécanique.
+  const CAPACITES_A_CHOIX = {
+    "chevalier|Voie du chaos|4": {
+      titre: "Marque du serment brisé",
+      consigne: "Choisis l'effet permanent (contrepartie : rejeté par les ordres de chevalerie) :",
+      options: [
+        { valeur: "def", label: "+2 DEF permanent" },
+        { valeur: "degats", label: "+1d8 DM chaotique sur l'arme de prédilection" },
+      ],
+    },
+    "moine|Voie de l'élévation|2": {
+      titre: "Voie de l'élévation — rang 2",
+      consigne: "Choisis la caractéristique ajoutée à l'Initiative et à la DEF :",
+      options: [
+        { valeur: "INT", label: "Modificateur d'INTELLIGENCE" },
+        { valeur: "SAG", label: "Modificateur de SAGESSE" },
+      ],
+    },
+  };
+
+  function ouvrirModalChoixCapacite(config, onChoisi) {
+    const modal = document.getElementById("modal-choix-capacite");
+    if (!modal) { onChoisi(config.options[0].valeur); return; } // filet de sécurité si le DOM manque
+    document.getElementById("modal-choix-capacite-titre").textContent = config.titre;
+    document.getElementById("modal-choix-capacite-consigne").textContent = config.consigne;
+    const zone = document.getElementById("modal-choix-capacite-options");
+    zone.innerHTML = "";
+    config.options.forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn or";
+      btn.textContent = opt.label;
+      btn.onclick = () => { fermerModalChoixCapacite(); onChoisi(opt.valeur); };
+      zone.appendChild(btn);
+    });
+    modal.style.display = "flex";
+  }
+
+  function fermerModalChoixCapacite() {
+    const modal = document.getElementById("modal-choix-capacite");
+    if (modal) modal.style.display = "none";
+  }
+
+  // Libellé lisible du choix mémorisé sur une capacité (ex. "+2 DEF permanent"),
+  // pour le rappeler sur la fiche de création une fois le choix fait.
+  function _labelChoixCapacite(voieNom, rang, valeur) {
+    const cfg = CAPACITES_A_CHOIX[creation.classe + "|" + voieNom + "|" + rang];
+    const opt = cfg && cfg.options.find((o) => o.valeur === valeur);
+    return opt ? opt.label : valeur;
   }
 
   // Coût d'ouverture d'une voie hors profil : 2 points (même famille de caractéristique), 4 points (famille différente)
@@ -1027,6 +1097,12 @@ const App = (() => {
     // On ne réécrase que si l'utilisateur n'a pas saisi manuellement
     if (!champDef.dataset.touche) champDef.value = new Personnage(creation).calculerDEF();
     appliquerPvAuto();
+    // Le récap DEF affiché dans le bloc équipement (perso.calculerDEF()) doit
+    // rester en phase avec le champ-def ci-dessus : sans ça, cocher/décocher
+    // une capacité qui modifie la DEF (cf. Personnage.bonusDefCapacites)
+    // laissait ce bloc affiché avec une valeur périmée jusqu'au prochain
+    // changement d'équipement.
+    rendreEquipInventaireCreation();
   }
 
   function sauverPersonnage() {
@@ -2486,6 +2562,14 @@ const App = (() => {
     if (rechercheModal) rechercheModal.oninput = () => _peuplerListeMonstres(rechercheModal.value);
     document.getElementById("modal-monstre").addEventListener("click", (e) => {
       if (e.target === e.currentTarget) fermerModalMonstre();
+    });
+
+    // Modal choix permanent d'une capacité (ex. +2 DEF OU +1d8 DM)
+    const btnFermerModalChoix = document.getElementById("btn-fermer-modal-choix-capacite");
+    if (btnFermerModalChoix) btnFermerModalChoix.onclick = fermerModalChoixCapacite;
+    const modalChoixCapacite = document.getElementById("modal-choix-capacite");
+    if (modalChoixCapacite) modalChoixCapacite.addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) fermerModalChoixCapacite();
     });
 
     // Dropdown Carte
