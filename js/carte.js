@@ -1049,7 +1049,12 @@ const Carte = (() => {
     // hors de toute portion couverte par des murs, se retrouve alors coincé
     // dans un rectangle à peine plus grand que lui-même (padding de 1 unité)
     // au lieu de voir jusqu'au bord réel de la carte.
-    function compute(position, segments, bounds) {
+    // nbEchantillons : angles supplémentaires uniformément répartis, en plus de
+    // ceux dérivés des coins des murs — sans ça, une zone dégagée (aucun mur
+    // avant le bord du canvas/la portée de vision) ne produit qu'un polygone à
+    // 4-8 sommets (facettes du rectangle englobant), visuellement anguleux une
+    // fois recadré en cercle de portée limitée (cf. calculerEtRendreLoS).
+    function compute(position, segments, bounds, nbEchantillons) {
       const bounded = segments.slice();
       const [bx, by, bw, bh] = bounds || _bounds(bounded, position);
       bounded.push([[bx,by],[bx+bw,by]],[[bx+bw,by],[bx+bw,by+bh]],[[bx+bw,by+bh],[bx,by+bh]],[[bx,by+bh],[bx,by]]);
@@ -1062,6 +1067,8 @@ const Carte = (() => {
           angles.push(angle, angle-0.0001, angle+0.0001);
         }
       }
+      const n = nbEchantillons || 0;
+      for (let i = 0; i < n; i++) angles.push((i / n) * Math.PI * 2 - Math.PI);
       angles.sort((a,b)=>a-b);
       const polygon = [];
       let prevAngle = 0;
@@ -1565,6 +1572,14 @@ const Carte = (() => {
       return true;
     }
 
+    // Portée de vision d'un token PJ, en cases (~équivalent torche/vision
+    // nocturne). Sans limite, un token dans une zone ouverte (peu/pas de murs,
+    // ex. l'extérieur autour d'un bâtiment) voit d'un bord à l'autre du canvas
+    // — ce qui donnait l'impression qu'"il n'y a pas de brouillard" dans les
+    // zones dégagées. Les murs/objets bloquent toujours la vue avant cette
+    // limite ; elle ne fait que plafonner la distance en terrain ouvert.
+    const PORTEE_VISION_CASES = 12;
+
     // ── État tokens dd2vtt ───────────────────────────────────
     // token : { id, nom, cx, cy, couleur, pj, ref }
     // ref : "pj-"+persoId pour un token joueur (sert au contrôle d'accès et
@@ -1735,7 +1750,10 @@ const Carte = (() => {
       // Mur ou porte fermée sur la trajectoire directe : on bloque le
       // déplacement plutôt que de laisser le token traverser (il ne bougera
       // que quand la souris repassera par un chemin dégagé, ex. la porte).
-      if (_deplacementBloque(scene, tok.cx, tok.cy, nx, ny)) return;
+      // Les monstres/PNJ (tok.pj === false) y échappent : le MJ doit pouvoir
+      // les placer librement (embuscade derrière un mur, popup au milieu
+      // d'une pièce...) sans batailler avec la détection de mur case par case.
+      if (tok.pj && _deplacementBloque(scene, tok.cx, tok.cy, nx, ny)) return;
       tok.cx = nx; tok.cy = ny;
       rendreTokensDD(scene);
       calculerEtRendreLoS(scene);
@@ -1983,6 +2001,7 @@ const Carte = (() => {
         return;
       }
 
+      const maxDist = PORTEE_VISION_CASES * tc;
       const nouveauxPolygones = [];
       for (const tok of tokensVision) {
         // Position dans le référentiel du canvas (= référentiel image)
@@ -1991,10 +2010,19 @@ const Carte = (() => {
 
         let poly;
         try {
-          poly = VisibilityPolygon.compute([posX, posY], segsAff, [0, 0, affW, affH]);
-          console.log('[LoS] token', tok.nom, 'pos:', posX, posY, 'poly points:', poly ? poly.length : 0);
+          poly = VisibilityPolygon.compute([posX, posY], segsAff, [0, 0, affW, affH], 32);
         } catch(e) { console.error('[LoS] erreur compute:', e); continue; }
-        if (!poly || poly.length < 3) { console.warn('[LoS] polygone invalide'); continue; }
+        if (!poly || poly.length < 3) continue;
+        // Plafonne chaque sommet à PORTEE_VISION_CASES du token (cf. constante) :
+        // les murs/objets ont déjà découpé le polygone avant cette étape, donc
+        // ça ne fait que couper court une ligne de vue dégagée trop longue.
+        poly = poly.map(([px2, py2]) => {
+          const dx = px2 - posX, dy = py2 - posY;
+          const dist = Math.hypot(dx, dy);
+          if (dist <= maxDist) return [px2, py2];
+          const scale = maxDist / dist;
+          return [posX + dx * scale, posY + dy * scale];
+        });
         nouveauxPolygones.push(poly);
 
         // Marquer la zone comme explorée pour toujours (marque opaque, union
