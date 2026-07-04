@@ -1573,12 +1573,16 @@ const Carte = (() => {
     }
 
     // Portée de vision d'un token PJ, en cases (~équivalent torche/vision
-    // nocturne). Sans limite, un token dans une zone ouverte (peu/pas de murs,
-    // ex. l'extérieur autour d'un bâtiment) voit d'un bord à l'autre du canvas
-    // — ce qui donnait l'impression qu'"il n'y a pas de brouillard" dans les
-    // zones dégagées. Les murs/objets bloquent toujours la vue avant cette
-    // limite ; elle ne fait que plafonner la distance en terrain ouvert.
-    const PORTEE_VISION_CASES = 12;
+    // nocturne) : vision nette jusqu'à PORTEE_VISION_CLAIRE, puis vision
+    // altérée (assombrie, mais pas totalement cachée) sur PORTEE_VISION_ALTEREE
+    // cases supplémentaires. Sans limite, un token dans une zone ouverte
+    // (peu/pas de murs, ex. l'extérieur autour d'un bâtiment) voit d'un bord à
+    // l'autre du canvas — ce qui donnait l'impression qu'"il n'y a pas de
+    // brouillard" dans les zones dégagées. Les murs/objets bloquent toujours
+    // la vue avant ces limites ; elles ne font que plafonner la distance en
+    // terrain dégagé (cf. calculerEtRendreLoS).
+    const PORTEE_VISION_CLAIRE = 8;
+    const PORTEE_VISION_ALTEREE = 4;
 
     // ── État tokens dd2vtt ───────────────────────────────────
     // token : { id, nom, cx, cy, couleur, pj, ref }
@@ -2001,7 +2005,28 @@ const Carte = (() => {
         return;
       }
 
-      const maxDist = PORTEE_VISION_CASES * tc;
+      const maxDistClaire = PORTEE_VISION_CLAIRE * tc;
+      const maxDistAlteree = (PORTEE_VISION_CLAIRE + PORTEE_VISION_ALTEREE) * tc;
+      // Recadre chaque sommet d'un polygone de vision à une distance max du
+      // token (les murs/objets ont déjà découpé le polygone avant cet appel,
+      // ça ne fait que couper court une ligne de vue dégagée trop longue).
+      function _plafonnerPortee(poly, posX, posY, maxDist) {
+        return poly.map(([px2, py2]) => {
+          const dx = px2 - posX, dy = py2 - posY;
+          const dist = Math.hypot(dx, dy);
+          if (dist <= maxDist) return [px2, py2];
+          const scale = maxDist / dist;
+          return [posX + dx * scale, posY + dy * scale];
+        });
+      }
+      function _remplirChemin(ctx, poly) {
+        ctx.beginPath();
+        ctx.moveTo(poly[0][0], poly[0][1]);
+        for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i][0], poly[i][1]);
+        ctx.closePath();
+        ctx.fill();
+      }
+
       const nouveauxPolygones = [];
       for (const tok of tokensVision) {
         // Position dans le référentiel du canvas (= référentiel image)
@@ -2013,36 +2038,29 @@ const Carte = (() => {
           poly = VisibilityPolygon.compute([posX, posY], segsAff, [0, 0, affW, affH], 32);
         } catch(e) { console.error('[LoS] erreur compute:', e); continue; }
         if (!poly || poly.length < 3) continue;
-        // Plafonne chaque sommet à PORTEE_VISION_CASES du token (cf. constante) :
-        // les murs/objets ont déjà découpé le polygone avant cette étape, donc
-        // ça ne fait que couper court une ligne de vue dégagée trop longue.
-        poly = poly.map(([px2, py2]) => {
-          const dx = px2 - posX, dy = py2 - posY;
-          const dist = Math.hypot(dx, dy);
-          if (dist <= maxDist) return [px2, py2];
-          const scale = maxDist / dist;
-          return [posX + dx * scale, posY + dy * scale];
-        });
-        nouveauxPolygones.push(poly);
 
-        // Marquer la zone comme explorée pour toujours (marque opaque, union
-        // naturelle des passages successifs)
+        // Deux polygones emboîtés : vision nette (claire) et vision altérée
+        // (plus large, assombrie plutôt que masquée). La détection des
+        // monstres (cf. rendreTokensDD) utilise la version altérée : on
+        // perçoit une présence même en vision trouble, juste moins nettement.
+        const polyAlteree = _plafonnerPortee(poly, posX, posY, maxDistAlteree);
+        const polyClaire = _plafonnerPortee(poly, posX, posY, maxDistClaire);
+        nouveauxPolygones.push(polyAlteree);
+
+        // Marquer la zone (jusqu'à la portée altérée) comme explorée pour
+        // toujours (marque opaque, union naturelle des passages successifs)
         ctxFog2.globalCompositeOperation = 'source-over';
         ctxFog2.fillStyle = '#000';
-        ctxFog2.beginPath();
-        ctxFog2.moveTo(poly[0][0], poly[0][1]);
-        for (let i = 1; i < poly.length; i++) ctxFog2.lineTo(poly[i][0], poly[i][1]);
-        ctxFog2.closePath();
-        ctxFog2.fill();
+        _remplirChemin(ctxFog2, polyAlteree);
 
-        // Percer le fog actuel en clair total (vision EN TEMPS RÉEL) : passe
-        // après l'atténuation "déjà exploré" pour la remplacer totalement ici.
+        // Perce le fog actuel : d'abord la portée altérée en semi-transparent
+        // (vision trouble), puis la portée claire par-dessus en clair total —
+        // passe faite après l'atténuation "déjà exploré" pour la remplacer.
         ctxLoS.globalCompositeOperation = 'destination-out';
-        ctxLoS.beginPath();
-        ctxLoS.moveTo(poly[0][0], poly[0][1]);
-        for (let i = 1; i < poly.length; i++) ctxLoS.lineTo(poly[i][0], poly[i][1]);
-        ctxLoS.closePath();
-        ctxLoS.fill();
+        ctxLoS.globalAlpha = 0.5;
+        _remplirChemin(ctxLoS, polyAlteree);
+        ctxLoS.globalAlpha = 1.0;
+        _remplirChemin(ctxLoS, polyClaire);
         ctxLoS.globalCompositeOperation = 'source-over';
       }
 
