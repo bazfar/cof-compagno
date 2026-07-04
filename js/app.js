@@ -10,6 +10,8 @@ const App = (() => {
   const STORAGE_HISTO = "des:histo"; // via SyncStore (Firestore) : journal partagé, tout le monde voit les jets de tout le monde
   const STORAGE_ROLE = "cof_role";
   const STORAGE_MON_PERSO = "cof_mon_perso_actif";
+  const STORAGE_JOUEUR_ID = "cof_joueur_id";
+  const STORAGE_JOUEUR_NOM = "cof_joueur_nom";
 
   // État de création en cours
   let creation = null;       // objet personnage en cours de création
@@ -21,6 +23,10 @@ const App = (() => {
   let ficheSidebarActiveId = null;  // id du perso affiché dans la mini-fiche battlemap (sidebar)
   let role = null;           // "joueur" | "mj" | null (pas encore choisi)
   let carteMode = "worldmap"; // "worldmap" | "battlemap"
+  // Identité locale du joueur (par navigateur, pas d'authentification réelle) : sert
+  // à marquer un "propriétaire" sur les persos qu'il crée, cf. estProprietaire().
+  let joueurId = null;
+  let joueurNom = null;
 
   // Overlay de jet de dé partagée (voir _verifierNouveauJetPourOverlay) :
   // horodatage du dernier jet déjà montré, pour ne jamais rejouer une
@@ -88,8 +94,63 @@ const App = (() => {
   function definirRole(r) {
     role = r;
     localStorage.setItem(STORAGE_ROLE, r);
+    if (r === "joueur") assurerIdentiteJoueur();
     appliquerRole();
     allerVers("accueil");
+  }
+
+  // Identité locale (par navigateur) : sert de "propriétaire" pour les persos
+  // créés par ce joueur (cf. estProprietaire), afin qu'un autre joueur à la
+  // même table ne modifie pas sa fiche par erreur. Protection côté client
+  // seulement — pas d'authentification, pensée contre la maladresse entre
+  // amis, pas contre une triche volontaire (cf. discussion : protection douce).
+  function assurerIdentiteJoueur() {
+    joueurId = localStorage.getItem(STORAGE_JOUEUR_ID);
+    joueurNom = localStorage.getItem(STORAGE_JOUEUR_NOM);
+    if (!joueurId) {
+      joueurId = "j" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      localStorage.setItem(STORAGE_JOUEUR_ID, joueurId);
+    }
+    if (!joueurNom) {
+      // prompt() peut être bloqué/indisponible selon le navigateur (contexte
+      // embarqué, permissions...) — un rejet ne doit pas casser le choix de
+      // rôle, on retombe simplement sur un nom générique.
+      let saisie = "";
+      try { saisie = prompt("Ton prénom (pour retrouver tes personnages à cette table) :") || ""; }
+      catch (e) { saisie = ""; }
+      joueurNom = saisie.trim() || "Joueur";
+      localStorage.setItem(STORAGE_JOUEUR_NOM, joueurNom);
+    }
+  }
+
+  function renommerJoueur() {
+    let saisie = "";
+    try { saisie = prompt("Ton prénom :", joueurNom || "") || ""; }
+    catch (e) { return; }
+    const nom = saisie.trim();
+    if (!nom) return;
+    joueurNom = nom;
+    localStorage.setItem(STORAGE_JOUEUR_NOM, nom);
+    appliquerRole();
+  }
+
+  // Un joueur ne voit/modifie que ses propres persos (proprietaire === joueurId)
+  // + les persos "non réclamés" (créés avant ce système, ou par le MJ) — le MJ
+  // garde un accès total, pour ses besoins de table (loot, combat...).
+  function estProprietaire(p) {
+    return role === "mj" || !p.proprietaire || p.proprietaire === joueurId;
+  }
+
+  // Revendique un perso non réclamé comme sien (bouton "C'est le mien" dans la
+  // liste, ou sélection dans "Mon personnage" sur la carte). No-op si déjà
+  // réclamé par quelqu'un (soi-même y compris).
+  function reclamerPerso(id) {
+    const persos = chargerPersos();
+    const p = persos[id];
+    if (!p || p.proprietaire) return;
+    p.proprietaire = joueurId;
+    p.proprietaireNom = joueurNom;
+    sauverPersos(persos);
   }
 
   function changerDeRole() {
@@ -124,6 +185,11 @@ const App = (() => {
       const titreCarte = document.getElementById("titre-carte");
       if (titreCarte) titreCarte.textContent = estMj ? "Carte — mode MJ" : "Carte";
 
+      const blocJoueurNom = document.getElementById("bloc-joueur-nom");
+      if (blocJoueurNom) blocJoueurNom.style.display = estMj ? "none" : "inline";
+      const joueurNomLabel = document.getElementById("joueur-nom-label");
+      if (joueurNomLabel) joueurNomLabel.textContent = joueurNom || "";
+
       if (typeof Carte !== "undefined") Carte.definirRole(role);
     } else {
       if (nav) nav.style.display = "none";
@@ -136,7 +202,10 @@ const App = (() => {
     const sel = document.getElementById("select-mon-perso");
     if (!sel) return;
     const persos = chargerPersos();
-    const ids = Object.keys(persos);
+    // Même filtre que "Ma fiche" : un joueur ne choisit "son" personnage que
+    // parmi les siens + les non-réclamés (qu'il revendique alors en même
+    // temps, cf. reclamerPerso ci-dessous) — jamais le perso de quelqu'un d'autre.
+    const ids = Object.keys(persos).filter((id) => estProprietaire(persos[id]));
     sel.innerHTML = ids.length
       ? ids.map((id) => `<option value="${id}">${persos[id].nom}</option>`).join("")
       : `<option value="">Aucun personnage</option>`;
@@ -147,6 +216,7 @@ const App = (() => {
     rendreFicheSidebarBattlemap(actif || null);
     sel.onchange = () => {
       localStorage.setItem(STORAGE_MON_PERSO, sel.value);
+      if (sel.value) reclamerPerso(sel.value); // affirme la propriété si non réclamé
       if (typeof Carte !== "undefined") Carte.definirMonPerso(sel.value);
       rendreFicheSidebarBattlemap(sel.value || null);
     };
@@ -257,6 +327,8 @@ const App = (() => {
       equipement: (typeof SLOTS_EQUIPEMENT !== "undefined") ? Object.fromEntries(SLOTS_EQUIPEMENT.map((s) => [s, null])) : {},
       inventaireListe: [],
       notes: "",
+      proprietaire: null,    // joueurId — assigné au premier enregistrement (cf. sauverPersonnage/reclamerPerso)
+      proprietaireNom: null, // prénom du joueur au moment de la revendication, pour l'affichage MJ
     };
     etapeCourante = 1;
     etapeDebloquee = 1;
@@ -972,6 +1044,13 @@ const App = (() => {
     creation.def = parseInt(document.getElementById("champ-def").value, 10) || 10;
     creation.notes = document.getElementById("champ-notes").value;
     if (creation.pvActuel === null || creation.pvActuel > creation.pvMax) creation.pvActuel = creation.pvMax;
+    // Marque le propriétaire au premier enregistrement seulement (jamais réécrit
+    // ensuite) — cf. estProprietaire(). Un MJ qui crée un perso ne le revendique
+    // pas : ça reste "non réclamé", visible de tous les joueurs (ex. PNJ commun).
+    if (role === "joueur" && !creation.proprietaire) {
+      creation.proprietaire = joueurId;
+      creation.proprietaireNom = joueurNom;
+    }
 
     // `_kitDepart` n'est qu'un marqueur interne à la session de création (pour
     // savoir quoi retirer si le joueur change de classe) — on ne le persiste pas.
@@ -1012,7 +1091,9 @@ const App = (() => {
   function rendreListePersos() {
     const persos = chargerPersos();
     const liste = document.getElementById("liste-persos");
-    const ids = Object.keys(persos);
+    // Un joueur ne voit que ses propres persos + les non-réclamés (cf.
+    // estProprietaire) — le MJ voit tout le monde, comme avant.
+    const ids = Object.keys(persos).filter((id) => estProprietaire(persos[id]));
     if (!ids.length) {
       liste.innerHTML = `<div class="vide">Aucun personnage. Crée-en un dans l'onglet « Création ».</div>`;
       return;
@@ -1022,15 +1103,17 @@ const App = (() => {
       const p = persos[id];
       const c = CLASSES[p.classe];
       const r = p.race ? RACES[p.race] : null;
+      const nonReclame = !p.proprietaire;
       const tuile = document.createElement("div");
       tuile.className = "perso-tuile";
       tuile.innerHTML =
         `<div class="tuile-tete">${avatarHtml(p, 48)}<div>` +
-        `<h4>${p.nom}</h4>` +
+        `<h4>${p.nom}${nonReclame ? ' <span class="badge-chaos">non réclamé</span>' : (role === "mj" && p.proprietaireNom ? ` <span class="badge-chaos">${echapper(p.proprietaireNom)}</span>` : "")}</h4>` +
         `<div class="info">${c ? c.nom_affiche : p.classe}${r ? " · " + r.nom_affiche : ""} · niveau ${p.niveau} · ${p.pvActuel}/${p.pvMax} PV</div>` +
         `</div></div>` +
         `<div class="barre-actions">` +
         `<button class="btn petit or" data-act="ouvrir" data-id="${id}">Ouvrir</button>` +
+        (nonReclame && role === "joueur" ? `<button class="btn petit secondaire" data-act="reclamer" data-id="${id}">C'est le mien</button>` : "") +
         `<button class="btn petit secondaire" data-act="exporter" data-id="${id}">Exporter</button>` +
         `<button class="btn petit danger" data-act="supprimer" data-id="${id}">Suppr.</button>` +
         `</div>`;
@@ -1041,6 +1124,7 @@ const App = (() => {
       if (b.dataset.act === "ouvrir") b.onclick = () => afficherFiche(id);
       if (b.dataset.act === "exporter") b.onclick = () => exporterPerso(id);
       if (b.dataset.act === "supprimer") b.onclick = () => supprimerPerso(id);
+      if (b.dataset.act === "reclamer") b.onclick = () => { reclamerPerso(id); toast("Personnage réclamé ✔"); rendreListePersos(); };
     });
   }
 
@@ -1646,6 +1730,10 @@ const App = (() => {
     const persos = chargerPersos();
     const p = persos[id];
     if (!p) return;
+    // Garde-fou en plus du filtre de rendreListePersos (au cas où l'accès
+    // viendrait d'ailleurs, ex. lien direct) — un joueur ne peut pas ouvrir la
+    // fiche de quelqu'un d'autre.
+    if (role === "joueur" && !estProprietaire(p)) { toast("Ce n'est pas ton personnage."); return; }
     ficheActiveId = id;
     const c = CLASSES[p.classe];
     const niveau = p.niveau;
@@ -1988,6 +2076,7 @@ const App = (() => {
     const persos = chargerPersos();
     const p = persos[id];
     if (!p) return;
+    if (role === "joueur" && !estProprietaire(p)) { toast("Ce n'est pas ton personnage."); return; }
     creation = JSON.parse(JSON.stringify(p)); // copie
     if (!creation.capacitesRace) creation.capacitesRace = []; // compat fiches créées avant les voies raciales
     if (creation.race && !creation.capacitesRace.includes(1)) creation.capacitesRace.unshift(1); // rang 1 toujours acquis
@@ -2365,12 +2454,15 @@ const App = (() => {
 
     // Rôle Joueur / MJ
     role = localStorage.getItem(STORAGE_ROLE);
+    if (role === "joueur") assurerIdentiteJoueur();
     appliquerRole();
     document.querySelectorAll(".role-carte").forEach((b) => {
       b.onclick = () => definirRole(b.dataset.roleChoix);
     });
     const btnChangerRole = document.getElementById("btn-changer-role");
     if (btnChangerRole) btnChangerRole.onclick = changerDeRole;
+    const btnRenommerJoueur = document.getElementById("btn-renommer-joueur");
+    if (btnRenommerJoueur) btnRenommerJoueur.onclick = renommerJoueur;
 
     // Onglets
     document.querySelectorAll("nav.tabs button[data-panneau]").forEach((b) => {

@@ -72,7 +72,9 @@
           <button class="btn or" data-role="joueur" onclick="App.allerVers('creation')">Créer mon personnage</button>
           <button class="btn secondaire" onclick="App.allerVers('lore')">Découvrir le monde</button>
         </div>
-        <p class="role-actuel">Rôle actuel : <strong id="role-actuel-label"></strong> · <button type="button" class="btn petit secondaire" id="btn-changer-role">Changer de rôle</button></p>
+        <p class="role-actuel">Rôle actuel : <strong id="role-actuel-label"></strong>
+          <span id="bloc-joueur-nom" style="display:none;"> · Prénom : <strong id="joueur-nom-label"></strong> <button type="button" class="btn petit secondaire" id="btn-renommer-joueur">Renommer</button></span>
+          · <button type="button" class="btn petit secondaire" id="btn-changer-role">Changer de rôle</button></p>
       </div>
     </section>
 
