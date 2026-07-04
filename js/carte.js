@@ -1127,18 +1127,29 @@ const Carte = (() => {
       const lc = data.resolution.map_size.x;
       const hc = data.resolution.map_size.y;
 
-      // Polylignes de murs (coordonnées cases → pixels)
-      const polylignes = (data.line_of_sight || []).map(poly =>
-        poly.map(p => ({ x: p.x * px, y: p.y * px }))
-      );
-
-      // Segments aplatis pour LoS (étape 2)
-      const segments = [];
-      for (const poly of polylignes) {
-        for (let i = 0; i < poly.length - 1; i++) {
-          segments.push([[poly[i].x, poly[i].y], [poly[i+1].x, poly[i+1].y]]);
+      // Convertit une liste de polylignes (coordonnées cases, format UVTT) en
+      // polylignes pixels + segments aplatis, pour les murs comme pour les
+      // objets (cf. appels ci-dessous).
+      function _polylignesEtSegments(liste) {
+        const polylignes = (liste || []).map(poly => poly.map(p => ({ x: p.x * px, y: p.y * px })));
+        const segments = [];
+        for (const poly of polylignes) {
+          for (let i = 0; i < poly.length - 1; i++) {
+            segments.push([[poly[i].x, poly[i].y], [poly[i+1].x, poly[i+1].y]]);
+          }
         }
+        return { polylignes, segments };
       }
+
+      // Murs "en dur" (line_of_sight) : bloquent la vision ET le déplacement.
+      const { polylignes, segments } = _polylignesEtSegments(data.line_of_sight);
+
+      // Objets qui bloquent la vue sans bloquer le passage (arbres, rochers,
+      // statues...) — Dungeondraft les exporte séparément depuis la 0.3 UVTT
+      // (objects_line_of_sight) précisément pour cette distinction : contrairement
+      // à un mur, on peut marcher à travers un arbre. Utilisés pour le calcul de
+      // LoS (cf. _segmentsBloquants) mais jamais pour _deplacementBloque.
+      const { polylignes: polylignesObjets, segments: segmentsObjets } = _polylignesEtSegments(data.objects_line_of_sight);
 
       // Portails (portes ET fenêtres — Dungeondraft ne les distingue pas dans
       // l'export). id stable (ordre d'export, constant pour un même fichier)
@@ -1165,6 +1176,8 @@ const Carte = (() => {
         imageObj: null,
         polylignes,
         segments,
+        polylignesObjets,
+        segmentsObjets,
         portails,
         tokens: [],
         brouillard: []
@@ -1396,6 +1409,27 @@ const Carte = (() => {
         ctxMurs.stroke();
       }
       ctxMurs.shadowBlur = 0;
+
+      // Objets bloquant la vue mais pas le passage (arbres, rochers...) : même
+      // idée que les murs pour la LoS (cf. _segmentsBloquants), tracé en vert
+      // pointillé pour que le MJ les distingue visuellement d'un vrai mur.
+      if (scene.polylignesObjets && scene.polylignesObjets.length) {
+        ctxMurs.strokeStyle = 'rgba(60, 180, 90, 0.85)';
+        ctxMurs.shadowColor = '#3cb45a';
+        ctxMurs.shadowBlur  = 3;
+        ctxMurs.setLineDash([5, 4]);
+        for (const poly of scene.polylignesObjets) {
+          if (poly.length < 2) continue;
+          ctxMurs.beginPath();
+          ctxMurs.moveTo(offX + poly[0].x * sx, offY + poly[0].y * sy);
+          for (let i = 1; i < poly.length; i++) {
+            ctxMurs.lineTo(offX + poly[i].x * sx, offY + poly[i].y * sy);
+          }
+          ctxMurs.stroke();
+        }
+        ctxMurs.setLineDash([]);
+        ctxMurs.shadowBlur = 0;
+      }
     }
 
     function rendrePortails(scene, sx, sy, offX=0, offY=0) {
@@ -1840,17 +1874,25 @@ const Carte = (() => {
       }
     }
 
-    // ── Segments bloquants (murs + portails fermés) ──────────
+    // ── Segments bloquants pour la LoS (murs + objets + portails fermés) ──
     // Un portail (porte ou fenêtre — Dungeondraft ne les distingue pas) ouvert
     // ne génère aucun segment : le rayon de vision passe à travers l'embrasure.
     // Fermé, son "bounds" (les 2 points de l'ouverture dans le mur) devient un
     // segment bloquant au même titre qu'un mur. Le blocage est donc symétrique
     // par construction : ça sert aussi bien un token dedans que dehors.
+    // segmentsObjets (arbres, rochers...) bloquent la vue ici, mais ne sont
+    // volontairement PAS repris dans _deplacementBloque : contrairement à un
+    // mur, on peut marcher à travers.
     function _segmentsBloquants(scene, sx, sy) {
       const segs = scene.segments.map(seg => [
         [seg[0][0] * sx, seg[0][1] * sy],
         [seg[1][0] * sx, seg[1][1] * sy]
       ]);
+      if (scene.segmentsObjets) {
+        for (const seg of scene.segmentsObjets) {
+          segs.push([[seg[0][0] * sx, seg[0][1] * sy], [seg[1][0] * sx, seg[1][1] * sy]]);
+        }
+      }
       for (const p of scene.portails) {
         if (p.ouvert) continue;
         const b = p.bounds;
