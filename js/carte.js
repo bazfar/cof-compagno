@@ -552,6 +552,15 @@ const Carte = (() => {
   }
 
   function reset() {
+    // Battlemap active : l'image/les murs/les tokens viennent du .dd2vtt, pas
+    // de `etat` (worldmap) — "Réinitialiser" n'a de sens ici que pour repartir
+    // d'un brouillard d'exploration vierge sur la scène en cours.
+    if (typeof DD2VTT !== "undefined" && DD2VTT.estActive && DD2VTT.estActive()) {
+      if (!confirm("Réinitialiser le brouillard d'exploration de cette scène (tout redevient inexploré) ?")) return;
+      DD2VTT.reinitialiserExploration();
+      toastCarte("Brouillard de la scène réinitialisé.");
+      return;
+    }
     if (!confirm("Réinitialiser la carte (image, jetons, brouillard) ?")) return;
     etat = { image: null, jetons: [], grille: false, fog: false, fogData: null };
     pinceauActif = false;
@@ -1865,13 +1874,26 @@ const Carte = (() => {
       const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
       if (!rect || rect.width === 0) return;
       // canvasFog2 marque en NOIR OPAQUE les zones déjà explorées (transparent =
-      // jamais vu). Redimensionner un canvas le vide déjà en transparent, donc rien
-      // à dessiner ici : le (re)dimensionnement suffit à repartir d'un brouillard
-      // "rien d'exploré".
-      if (canvasFog2.width !== Math.round(rect.width) || canvasFog2.height !== Math.round(rect.height)) {
-        canvasFog2.width  = Math.round(rect.width);
-        canvasFog2.height = Math.round(rect.height);
-      }
+      // jamais vu) — UN SEUL canvas partagé par toutes les scènes (créé une fois
+      // dans init()). Affecter width/height vide TOUJOURS un canvas (comportement
+      // standard), y compris à valeur inchangée : on force cette (ré)affectation
+      // sans condition, sinon deux scènes affichées à la même taille de conteneur
+      // (cas courant, ex. même fenêtre) gardaient le brouillard déjà exploré de
+      // la scène précédente au lieu de repartir de zéro (cf. activerScene, qui
+      // appelle reinitFog2 à chaque activation, y compris un changement de scène).
+      canvasFog2.width  = Math.round(rect.width);
+      canvasFog2.height = Math.round(rect.height);
+    }
+
+    // Bouton "Réinitialiser" côté MJ, quand une battlemap est active : ne
+    // touche ni l'image, ni les murs, ni les tokens (contrairement au reset
+    // worldmap sur `etat`, qui n'a pas de sens ici) — repart juste d'un
+    // brouillard "rien d'exploré" pour la scène en cours.
+    function reinitialiserExploration() {
+      const scene = scenes[sceneActive];
+      if (!scene) return;
+      reinitFog2(scene);
+      calculerEtRendreLoS(scene);
     }
 
     // ── Segments bloquants pour la LoS (murs + objets + portails fermés) ──
@@ -2146,7 +2168,7 @@ const Carte = (() => {
       ajouterToken: (sc) => ajouterTokenDD(sc),
       modeWorldmap: activerModeWorldmap, modeBattlemap: activerModeBattlemap, estActive, ajouterTokenData,
       tokensMonstres, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
-      supprimerToken: supprimerTokenDD, onChange, actualiserTokens,
+      supprimerToken: supprimerTokenDD, onChange, actualiserTokens, reinitialiserExploration,
     };
   })();
   // Un changement de token dd2vtt (ajout/dégâts/suppression, local ou distant
