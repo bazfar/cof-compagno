@@ -1981,6 +1981,17 @@ const Carte = (() => {
         cv.style.zIndex = '5';
       }
 
+      // Redimensionnement (fenêtre, ou bascule worldmap/battlemap qui change la
+      // largeur dispo pour la scène, cf. _appliquerCarteMode côté app.js) : la
+      // scène dd2vtt n'a pas de canvas pan/zoom comme la Worldmap, elle doit
+      // recalculer sa mise à l'échelle (murs, LoS, tokens) sur la largeur réelle.
+      window.addEventListener('resize', () => {
+        if (!estActive()) return;
+        const sc = scenes[sceneActive];
+        rendreScene(sc);
+        calculerEtRendreLoS(sc); // ré-applique aussi rendreTokensDD(sc) à la fin
+      });
+
       // Clic sur la carte → bascule un portail proche (porte/fenêtre, accessible à
       // tous les joueurs, pas de check de rôle), sinon désélectionne le token actif.
       const scene2 = document.getElementById('carte-scene');

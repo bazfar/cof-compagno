@@ -241,6 +241,14 @@ const App = (() => {
     CARACS.forEach((cc) => (mods[cc.code] = perso.mod(cc.code)));
     const init = perso.calculerInitiative();
 
+    // Attaques rapides : Contact toujours dispo, Distance seulement avec une
+    // arme à portée équipée (arc, arbalète...), Magique seulement pour une
+    // classe de lanceur de sorts (cf. Personnage.bonusAttaque).
+    const attContact = perso.bonusAttaque("contact");
+    const armeDistance = perso.armeDistanceEquipee();
+    const attDistance = armeDistance ? perso.bonusAttaque("distance") : null;
+    const attMagique = perso.bonusAttaque("magique");
+
     sidebar.innerHTML = `
       <div class="carte">
         <div class="entete-fiche">
@@ -269,6 +277,15 @@ const App = (() => {
         </div>
         <button class="btn petit secondaire" id="bm-voir-fiche-complete" style="width:100%;margin-top:6px;">Voir la fiche complète</button>
       </div>
+      <div class="carte">
+        <h3 style="margin-top:0;">Attaques rapides</h3>
+        <div class="barre-actions">
+          <button class="btn petit" data-bm-attaque="contact" data-bonus="${attContact}">⚔️ Contact (${signe(attContact)})</button>
+          ${attDistance !== null ? `<button class="btn petit" data-bm-attaque="distance" data-bonus="${attDistance}">🏹 Distance (${signe(attDistance)})</button>` : ""}
+          ${attMagique !== null ? `<button class="btn petit" data-bm-attaque="magique" data-bonus="${attMagique}">✨ Magique (${signe(attMagique)})</button>` : ""}
+        </div>
+        ${attDistance === null ? `<p class="aide" style="font-size:0.72rem;margin:6px 0 0;">Équipe un arc ou une arbalète pour débloquer l'attaque à distance.</p>` : ""}
+      </div>
     `;
     majBarrePvSidebar(p);
     document.getElementById("bm-pv-plus").onclick = () => ajusterPv(id, +1);
@@ -276,6 +293,14 @@ const App = (() => {
     document.getElementById("bm-pv-actuel").onchange = (e) => definirPv(id, parseInt(e.target.value, 10));
     document.getElementById("bm-voir-fiche-complete").onclick = () => { allerVers("fiche"); afficherFiche(id); };
     wireDegatsSubis(id, "bm-");
+    // Jet d'attaque sans quitter la battlemap — l'overlay de jet est visible
+    // sur tous les onglets (cf. #overlay-jet), pas besoin de rejoindre "Dés".
+    sidebar.querySelectorAll("[data-bm-attaque]").forEach((el) => {
+      el.onclick = () => {
+        const bonus = parseInt(el.dataset.bonus, 10);
+        lancerTest(`Attaque ${el.dataset.bmAttaque}`, bonus, perso.critMinAttaque(el.dataset.bmAttaque));
+      };
+    });
   }
 
   /* ---------- Navigation onglets ---------- */
@@ -295,6 +320,7 @@ const App = (() => {
     if (panneau === "carte" && typeof Carte !== "undefined") {
       Carte.onOpen();
       if (role === "joueur") rendreSelecteurMonPerso();
+      if (role === "mj") rendreTableCombat("battlemap-zone-table-combat");
       _appliquerCarteMode();
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -2368,10 +2394,13 @@ const App = (() => {
   }
 
   // Nom affiché pour attribuer un jet dans le journal partagé : le perso
-  // actuellement ouvert dans "Ma fiche" si dispo, sinon le rôle.
+  // actuellement ouvert dans "Ma fiche" si dispo, sinon celui sélectionné
+  // sur la battlemap (un joueur peut lancer une attaque depuis la carte sans
+  // jamais être passé par "Ma fiche"), sinon le rôle.
   function nomLanceur() {
-    if (ficheActiveId) {
-      const p = chargerPersos()[ficheActiveId];
+    const id = ficheActiveId || ficheSidebarActiveId;
+    if (id) {
+      const p = chargerPersos()[id];
       if (p && p.nom) return p.nom;
     }
     return role === "mj" ? "MJ" : "Joueur";
@@ -2576,7 +2605,9 @@ const App = (() => {
     // retiré, y compris depuis la carte (jeton ✕) ou un autre client (sync).
     if (typeof Carte !== "undefined" && Carte.onMonstresChange) {
       Carte.onMonstresChange(() => {
-        if (document.querySelector(".panneau.actif")?.id === "panneau-table-combat") rendreTableCombat();
+        const actif = document.querySelector(".panneau.actif")?.id;
+        if (actif === "panneau-table-combat") rendreTableCombat();
+        if (actif === "panneau-carte" && role === "mj" && carteMode === "battlemap") rendreTableCombat("battlemap-zone-table-combat");
       });
     }
 
@@ -2804,7 +2835,7 @@ const App = (() => {
 
   // Applique des dégâts bruts à un monstre de la table de combat (réduits par
   // son armure, comme subirDegats côté fiche joueur), puis rafraîchit la table.
-  function subirDegatsMonstre(id, degatsBruts) {
+  function subirDegatsMonstre(id, degatsBruts, targetId) {
     degatsBruts = parseInt(degatsBruts, 10);
     if (isNaN(degatsBruts) || degatsBruts < 0) { toast("Entre un nombre de dégâts valide."); return; }
     const info = Carte.appliquerDegatsCombat(id, degatsBruts);
@@ -2812,11 +2843,15 @@ const App = (() => {
     toast(info.reduction > 0
       ? `🛡 ${degatsBruts} dégâts subis par ${info.nom} → ${info.degatsNets} après réduction d'armure (−${info.reduction}).`
       : `${info.degatsNets} dégâts subis par ${info.nom}.`);
-    rendreTableCombat();
+    rendreTableCombat(targetId);
   }
 
-  function rendreTableCombat() {
-    const zone = document.getElementById("zone-table-combat");
+  // targetId : conteneur à peupler — l'onglet dédié "Table de combat"
+  // (zone-table-combat) par défaut, ou la colonne MJ de la battlemap
+  // (battlemap-zone-table-combat) pour suivre les monstres sans changer d'onglet.
+  function rendreTableCombat(targetId) {
+    targetId = targetId || "zone-table-combat";
+    const zone = document.getElementById(targetId);
     if (!zone || typeof Carte === "undefined") return;
     const monstres = Carte.listeMonstresCombat();
 
@@ -2856,16 +2891,16 @@ const App = (() => {
     }).join("")}</div>`;
 
     monstres.forEach((m) => {
-      wireDegatsSubisGenerique(`cm-${m.id}-`, (val) => subirDegatsMonstre(m.id, val));
+      wireDegatsSubisGenerique(`cm-${m.id}-`, (val) => subirDegatsMonstre(m.id, val, targetId));
     });
     zone.querySelectorAll("[data-pv-moins]").forEach((btn) => {
-      btn.onclick = () => { Carte.ajusterPvCombat(btn.dataset.pvMoins, -1); rendreTableCombat(); };
+      btn.onclick = () => { Carte.ajusterPvCombat(btn.dataset.pvMoins, -1); rendreTableCombat(targetId); };
     });
     zone.querySelectorAll("[data-pv-plus]").forEach((btn) => {
-      btn.onclick = () => { Carte.ajusterPvCombat(btn.dataset.pvPlus, +1); rendreTableCombat(); };
+      btn.onclick = () => { Carte.ajusterPvCombat(btn.dataset.pvPlus, +1); rendreTableCombat(targetId); };
     });
     zone.querySelectorAll("[data-pv-input]").forEach((input) => {
-      input.onchange = () => { Carte.definirPvCombat(input.dataset.pvInput, parseInt(input.value, 10)); rendreTableCombat(); };
+      input.onchange = () => { Carte.definirPvCombat(input.dataset.pvInput, parseInt(input.value, 10)); rendreTableCombat(targetId); };
     });
     zone.querySelectorAll("[data-suppr-monstre]").forEach((btn) => {
       btn.onclick = () => {
@@ -2873,7 +2908,7 @@ const App = (() => {
         const m = monstres.find((mm) => mm.id === id);
         if (!confirm(`Retirer « ${m ? m.nom : "ce monstre"} » de la carte et de la table de combat ?`)) return;
         Carte.supprimerMonstreCombat(id);
-        rendreTableCombat();
+        rendreTableCombat(targetId);
       };
     });
   }

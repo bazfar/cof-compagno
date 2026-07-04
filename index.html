@@ -308,6 +308,13 @@
         <div class="battlemap-layout" id="battlemap-layout">
           <!-- Fiche du joueur, visible en continu à côté de la battlemap -->
           <aside class="battlemap-fiche-sidebar battlemap-only" id="battlemap-fiche-sidebar" data-role="joueur"></aside>
+          <!-- Table de combat (monstres), visible en continu côté MJ -->
+          <aside class="battlemap-fiche-sidebar battlemap-only" id="battlemap-mj-sidebar" data-role="mj">
+            <div class="carte">
+              <h3 style="margin-top:0;">⚔ Table de combat</h3>
+              <div id="battlemap-zone-table-combat"></div>
+            </div>
+          </aside>
           <div class="carte-scene" id="carte-scene">
             <div class="carte-vide" id="carte-vide">Choisis une carte dans le menu ou importe un .dd2vtt pour commencer.</div>
             <!-- Worldmap : canvas pan/zoom -->
@@ -479,16 +486,16 @@
   <script src="js/carte-monde.js?v=9"></script>
   <!-- Modèle OOP (Phase 1) : socle additif, n'altère pas l'app existante -->
   <script src="js/entite.js?v=1"></script>
-  <script src="js/personnage.js?v=2"></script>
+  <script src="js/personnage.js?v=3"></script>
   <!-- Firebase (SDK compat : garde une syntaxe classique, pas de modules/build tool) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js?v=1"></script>
   <script src="js/depot.js?v=5"></script>
   <script src="js/sync.js?v=2"></script>
-  <script src="js/carte.js?v=42"></script>
+  <script src="js/carte.js?v=43"></script>
   <script src="js/raretes.js?v=2"></script>
   <script src="js/loot.js?v=7"></script>
-  <script src="js/app.js?v=35"></script>
+  <script src="js/app.js?v=36"></script>
 </body>
 </html>

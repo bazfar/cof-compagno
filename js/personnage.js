@@ -312,6 +312,16 @@ class Personnage extends Entite {
     const it = this.equipement && this.equipement[main];
     return it && it.type === "arme" ? it : null;
   }
+  // Arme à portée (arc, arbalète...) équipée dans une main, ou null. Sert à
+  // n'afficher l'attaque à distance (battlemap) que si le perso a de quoi
+  // la faire — une arme de "contact" ne compte pas.
+  armeDistanceEquipee() {
+    for (const main of ["main_droite", "main_gauche"]) {
+      const arme = this.armeEquipee(main);
+      if (arme && arme.portee && arme.portee !== "contact") return arme;
+    }
+    return null;
+  }
 
   /* ----- Attaque ----- */
   // Bonus de progression selon l'archétype : martial +1/niv, hybride +1/2 niv, lanceur +1/3 niv
