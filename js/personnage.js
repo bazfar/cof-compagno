@@ -106,7 +106,41 @@ class Personnage extends Entite {
 
   /* ----- Défense ----- */
   calculerDEF() {
-    return 10 + this.mod("DEX") + this.bonusDefEquipement();
+    return 10 + this.mod("DEX") + this.bonusDefEquipement() + this.bonusDefCapacites();
+  }
+
+  // Bonus de DEF accordés par certaines capacités passives et permanentes.
+  // Seules les capacités inconditionnelles (ou dont la condition est
+  // mécaniquement vérifiable, ex. torse vide = pas d'armure physique) sont
+  // automatisées ici. Celles qui demandent un choix du joueur (ex. "Mod.INT
+  // OU Mod.SAG au choix") ou une condition non modélisée par l'app (terrain,
+  // immobilité, présence d'un allié...) restent gérées à la table par le MJ.
+  bonusDefCapacites() {
+    let bonus = 0;
+    // Prêtre — Voie de la conversion, rang 1 "Vêtements sacrés" : +5 DEF tant
+    // qu'aucune armure physique n'est portée. Seul un item de type "armure"
+    // peut occuper le slot torse (cf. slotsPourType) : torse vide = pas d'armure.
+    if (this.classe === "pretre" && this.estChoisie("Voie de la conversion", 1) && !this.equipement.torse) {
+      bonus += 5;
+    }
+    // Barde — Voie de la rapière, rang 2 "Intelligence du combat" (passive) :
+    // ajoute le Mod. d'INT à la DEF, en plus du Mod. de DEX.
+    if (this.classe === "barde" && this.estChoisie("Voie de la rapière", 2)) {
+      bonus += this.mod("INT");
+    }
+    // Druide — Voie du chaos, rang 2 "Écorce corrompue" (passive) : +2 DEF naturelle permanente.
+    if (this.classe === "druide" && this.estChoisie("Voie du chaos", 2)) {
+      bonus += 2;
+    }
+    // Chevalier — Voie du noble, rang 2 : ajoute le Mod. de CHA à la DEF.
+    if (this.classe === "chevalier" && this.estChoisie("Voie du noble", 2)) {
+      bonus += this.mod("CHA");
+    }
+    // Moine — Voie des poings, rang 3 : "le dé passe à 1d10, +2 DEF" (partie DEF).
+    if (this.classe === "moine" && this.estChoisie("Voie des poings", 3)) {
+      bonus += 2;
+    }
+    return bonus;
   }
 
   /* ----- Équipement (slots) -----
