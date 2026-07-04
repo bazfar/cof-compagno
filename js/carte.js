@@ -1548,6 +1548,29 @@ const Carte = (() => {
     let ctxFog2 = null;
     let fogRevele = null;   // ImageData du brouillard persistant
 
+    // Polygones de vision (référentiel canvas-image) des tokens PJ, recalculés
+    // à chaque appel de calculerEtRendreLoS — sert à savoir quels monstres
+    // montrer aux joueurs (cf. _monstreVisiblePourJoueurs / rendreTokensDD).
+    let _polygonsVisionJoueurs = [];
+    function _pointDansPolygone(pt, poly) {
+      let dedans = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const xi = poly[i][0], yi = poly[i][1];
+        const xj = poly[j][0], yj = poly[j][1];
+        const intersecte = ((yi > pt[1]) !== (yj > pt[1])) &&
+          (pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi);
+        if (intersecte) dedans = !dedans;
+      }
+      return dedans;
+    }
+    // Un monstre n'est montré aux joueurs que s'il est actuellement dans la
+    // vision d'au moins un token PJ — pas la mémoire du brouillard déjà
+    // exploré (fog2), qui n'a de sens que pour le décor : un monstre a pu
+    // bouger ou apparaître depuis. Le MJ voit toujours tout (cf. rendreTokensDD).
+    function _monstreVisiblePourJoueurs(px, py) {
+      return _polygonsVisionJoueurs.some(poly => _pointDansPolygone([px, py], poly));
+    }
+
     // ── Calcul taille case affichée ──────────────────────────
     function tailleCase(scene) {
       const imgEl = document.getElementById('carte-image');
@@ -1599,6 +1622,10 @@ const Carte = (() => {
         // Position en pixels depuis le coin haut-gauche de la scene (pas de l'image)
         const px = tok.cx * tc + tc/2;
         const py = tok.cy * tc + tc/2;
+        // Côté joueur, un monstre reste caché tant qu'aucun token PJ n'a
+        // actuellement ce point dans son champ de vision (cf. calculerEtRendreLoS).
+        // Le MJ voit toujours tous les tokens.
+        if (role === 'joueur' && !tok.pj && !_monstreVisiblePourJoueurs(px, py)) return;
         el.style.left   = px + 'px';
         el.style.top    = py + 'px';
         el.style.width  = (tc * 0.85) + 'px';
@@ -1883,12 +1910,16 @@ const Carte = (() => {
       ctxLoS.globalAlpha = 1.0;
       ctxLoS.globalCompositeOperation = 'source-over';
 
-      // Seuls les tokens joueurs dissipent le brouillard (LoS individuelle) ;
-      // les monstres restent rendus visuellement (rendreTokensDD) mais ne
-      // génèrent aucune vision.
+      // Seuls les tokens joueurs dissipent le brouillard (LoS individuelle) et
+      // déterminent quels monstres sont montrés aux joueurs (cf. rendreTokensDD).
       const tokensVision = tokensDD.filter(t => t.pj);
-      if (tokensVision.length === 0) return;
+      if (tokensVision.length === 0) {
+        _polygonsVisionJoueurs = [];
+        rendreTokensDD(scene); // aucun PJ sur la carte -> aucun monstre visible
+        return;
+      }
 
+      const nouveauxPolygones = [];
       for (const tok of tokensVision) {
         // Position dans le référentiel du canvas (= référentiel image)
         const posX = (tok.cx + 0.5) * tc;
@@ -1900,6 +1931,7 @@ const Carte = (() => {
           console.log('[LoS] token', tok.nom, 'pos:', posX, posY, 'poly points:', poly ? poly.length : 0);
         } catch(e) { console.error('[LoS] erreur compute:', e); continue; }
         if (!poly || poly.length < 3) { console.warn('[LoS] polygone invalide'); continue; }
+        nouveauxPolygones.push(poly);
 
         // Marquer la zone comme explorée pour toujours (marque opaque, union
         // naturelle des passages successifs)
@@ -1921,6 +1953,9 @@ const Carte = (() => {
         ctxLoS.fill();
         ctxLoS.globalCompositeOperation = 'source-over';
       }
+
+      _polygonsVisionJoueurs = nouveauxPolygones;
+      rendreTokensDD(scene); // ré-applique la visibilité des monstres avec la LoS à jour
     }
 
 
