@@ -548,13 +548,16 @@ const App = (() => {
     return parseInt(document.getElementById("champ-niveau").value, 10) || 1;
   }
 
-  // Résout le nom/effet d'un rang de voie raciale, en tenant compte de la variante (nation elfique au rang 3)
+  // Résout le nom/effet/mecanique d'un rang de voie raciale, en tenant compte
+  // de la variante (nation elfique au rang 3) : la variante a sa propre
+  // mecanique (cf. race.variantes[].mecanique), distincte de celle du rang 3
+  // générique "Héritage National" (qui n'est qu'un renvoi textuel).
   function texteRangRace(r, rg, variante) {
     if (r.variantes && rg.rang === 3 && variante) {
       const v = r.variantes.find((vv) => vv.code === variante);
-      if (v) return { nom: v.nom_capacite, effet: v.effet };
+      if (v) return { nom: v.nom_capacite, effet: v.effet, mecanique: v.mecanique, source: { origine: "variante", code: variante } };
     }
-    return { nom: rg.nom, effet: rg.effet };
+    return { nom: rg.nom, effet: rg.effet, mecanique: rg.mecanique, source: { origine: "race", rang: rg.rang } };
   }
 
   function rendreVoieRaciale() {
@@ -1289,6 +1292,56 @@ const App = (() => {
     return `${m[1] || "1"}d${m[2]}${m[3] || ""}`;
   }
 
+  // Bouton "⚔️ Lancer" (+ compteur d'usage) d'une capacité mécanisée — résolu
+  // par js/capacites.js. Absent pour les capacités passives (rien à
+  // déclencher) ou sans mecanique (pas encore mécanisée). `source` identifie
+  // la capacité pour le clic (cf. data-lancer-*, relu par Capacites.lancer) :
+  // { origine: "classe"|"race"|"variante", cle, voie?, rang?, code?, nomCap }.
+  function htmlLancerCapacite(source, mecanique, p) {
+    if (!mecanique || mecanique.type === "passive") return "";
+    const attrs = [
+      `data-lancer-origine="${source.origine}"`,
+      `data-lancer-cle="${source.cle}"`,
+      source.voie !== undefined ? `data-lancer-voie="${source.voie}"` : "",
+      source.rang !== undefined ? `data-lancer-rang="${source.rang}"` : "",
+      source.code !== undefined ? `data-lancer-code="${source.code}"` : "",
+      `data-lancer-nom="${echapper(source.nomCap || "")}"`,
+    ].filter(Boolean).join(" ");
+    let html = ` <button class="btn-lancer-cap" ${attrs} title="Résoudre cette capacité">⚔️ Lancer</button>`;
+    const freq = Capacites.parserFrequence(mecanique.usage && mecanique.usage.frequence);
+    if (freq) {
+      const cle = Capacites.cleCapacite(source);
+      const entree = (p.usagesCapacites || {})[cle];
+      const n = entree && entree.periode === freq.periode ? entree.utilisations : 0;
+      html += ` <span class="usage-cap">${n}/${freq.max} (${freq.periode}) ` +
+        `<button class="btn-reset-usage" data-reset-cle="${cle}" title="Réinitialiser ce compteur d'usage">↺</button></span>`;
+    }
+    return html;
+  }
+
+  // États/bonus actifs posés par Capacites.lancer (cf. p.etatsActifs) — carte
+  // "États actifs" affichée seulement si la liste n'est pas vide. Pas de
+  // décompte automatique de durée (aucune horloge de tour/combat dans l'app) :
+  // retrait manuel via le ✕, à la table, quand la durée annoncée est passée.
+  function htmlEtatsActifs(p) {
+    const liste = p.etatsActifs || [];
+    if (!liste.length) return "";
+    const items = liste.map((e, idx) => {
+      let libelle;
+      if (e.idEtat) {
+        const etat = typeof ETATS !== "undefined" ? ETATS[/^marquee_.+/.test(e.idEtat) ? "marquee" : e.idEtat] : null;
+        libelle = etat ? etat.nom : e.idEtat;
+      } else if (e.bonus) {
+        libelle = `Bonus ${e.bonus.cible} ${e.bonus.valeur >= 0 ? "+" : ""}${e.bonus.valeur}`;
+      } else {
+        libelle = "État";
+      }
+      return `<span class="etat-actif">${libelle}${e.dureeRestante ? ` (${e.dureeRestante})` : ""}${e.source ? ` · ${e.source}` : ""} ` +
+        `<button class="btn-retirer-etat" data-etat-idx="${idx}" title="Retirer cet état/bonus">✕</button></span>`;
+    }).join(" ");
+    return `<div class="carte"><h3>États actifs</h3><div class="etats-actifs-liste">${items}</div></div>`;
+  }
+
   /* ============================================================
      ÉQUIPEMENT / INVENTAIRE — colonne droite de la fiche
      ============================================================ */
@@ -1907,12 +1960,10 @@ const App = (() => {
         const voie = c.voies.find((v) => v.nom === cap.voie);
         const rang = voie && voie.rangs.find((r) => r.rang === cap.rang);
         if (!rang) return;
-        const de = extraireDeCapacite(rang.effet);
+        const source = { origine: "classe", cle: p.classe, voie: cap.voie, rang: cap.rang, nomCap: rang.nom || `Rang ${cap.rang}` };
         capHtml +=
           `<div class="cap-fiche ${voie.speciale ? "chaos" : ""}">` +
-          `<div class="titre-cap">${rang.nom || "Rang " + cap.rang}` +
-          (de ? `<button class="btn-de-cap" data-formule-cap="${de}" title="Lancer ${de} (dégâts de cette capacité)">🎲</button>` : "") +
-          `</div>` +
+          `<div class="titre-cap">${rang.nom || "Rang " + cap.rang}${htmlLancerCapacite(source, rang.mecanique, p)}</div>` +
           `<div class="voie-source">${cap.voie} · rang ${cap.rang}</div>` +
           `<div class="effet-cap">${rang.effet}</div></div>`;
       });
@@ -1929,13 +1980,11 @@ const App = (() => {
         liste.forEach((rang) => {
           const rg = race.rangs.find((x) => x.rang === rang);
           if (!rg) return;
-          const { nom, effet } = texteRangRace(race, rg, p.raceVariante);
-          const de = extraireDeCapacite(effet);
+          const { nom, effet, mecanique, source } = texteRangRace(race, rg, p.raceVariante);
+          const srcComplet = Object.assign({ cle: p.race, voie: race.voie_nom, nomCap: nom || `Rang ${rang}` }, source);
           capRaceHtml +=
             `<div class="cap-fiche">` +
-            `<div class="titre-cap">${nom || "Rang " + rang}` +
-            (de ? `<button class="btn-de-cap" data-formule-cap="${de}" title="Lancer ${de} (dégâts de cette capacité)">🎲</button>` : "") +
-            `</div>` +
+            `<div class="titre-cap">${nom || "Rang " + rang}${htmlLancerCapacite(srcComplet, mecanique, p)}</div>` +
             `<div class="voie-source">${race.voie_nom} · rang ${rang}</div>` +
             `<div class="effet-cap">${effet}</div></div>`;
         });
@@ -2000,8 +2049,15 @@ const App = (() => {
             <p style="font-size:0.75rem;color:#8a8296;margin-top:6px;">Bonus d'attaque (jet, pas les dégâts) = bonus de progression (${ARCHETYPE_CLASSE[p.classe] || "martial"}, ${signe(perso.bonusProgression())} au niveau ${niveau}) + modificateur. Ajuste selon tes voies (ex. +1 Tir ajusté) au moment du jet via l'onglet Dés si besoin.</p>
           </div>
 
+          ${htmlEtatsActifs(p)}
+
           <div class="carte">
             <h3>Capacités</h3>
+            <div id="cible-capacite-form" class="cible-capacite-form" style="display:none;">
+              <select id="cible-capacite-select"></select>
+              <button class="btn petit or" id="btn-confirmer-cible-capacite">Confirmer la cible</button>
+              <button class="btn petit secondaire" id="btn-annuler-cible-capacite">Annuler</button>
+            </div>
             ${capHtml}
           </div>
 
@@ -2044,11 +2100,102 @@ const App = (() => {
         allerVers("des");
       };
     });
-    // Dé de dégâts d'une capacité (icône 🎲 à côté du titre)
-    zone.querySelectorAll("[data-formule-cap]").forEach((el) => {
+    // Résolution d'une capacité mécanisée (bouton "⚔️ Lancer") — cf. js/capacites.js.
+    // La cible n'est demandée que pour cible:"allie"/"ennemi" (via le petit
+    // sélecteur partagé injecté dans la carte Capacités) ; "soi"/"zone"/"aucune"
+    // se résolvent directement.
+    const pickerForme = document.getElementById("cible-capacite-form");
+    const pickerSelect = document.getElementById("cible-capacite-select");
+    let lancerCapaciteEnAttente = null;
+
+    function fermerPickerCibleCapacite() {
+      if (pickerForme) pickerForme.style.display = "none";
+      lancerCapaciteEnAttente = null;
+    }
+    function resoudreCapaciteEtRafraichir(cibleId) {
+      const res = Capacites.lancer({
+        persoId: id,
+        source: lancerCapaciteEnAttente.source,
+        mecanique: lancerCapaciteEnAttente.mecanique,
+        cibleId,
+      });
+      fermerPickerCibleCapacite();
+      toast(res.messages.join(" · "));
+      afficherFiche(id);
+      allerVers("des");
+    }
+
+    zone.querySelectorAll("[data-lancer-origine]").forEach((el) => {
       el.onclick = () => {
-        lancerFormule(el.dataset.formuleCap);
-        allerVers("des");
+        const d = el.dataset;
+        const source = { origine: d.lancerOrigine, cle: d.lancerCle, nomCap: d.lancerNom };
+        let mecanique = null;
+        if (d.lancerOrigine === "classe") {
+          const cc = CLASSES[d.lancerCle];
+          const v = cc && cc.voies.find((vv) => vv.nom === d.lancerVoie);
+          const r = v && v.rangs.find((rr) => rr.rang === parseInt(d.lancerRang, 10));
+          mecanique = r && r.mecanique;
+          source.voie = d.lancerVoie;
+          source.rang = parseInt(d.lancerRang, 10);
+        } else if (d.lancerOrigine === "race") {
+          const rc = RACES[d.lancerCle];
+          const r = rc && rc.rangs.find((rr) => rr.rang === parseInt(d.lancerRang, 10));
+          mecanique = r && r.mecanique;
+          source.voie = d.lancerVoie;
+          source.rang = parseInt(d.lancerRang, 10);
+        } else if (d.lancerOrigine === "variante") {
+          const rc = RACES[d.lancerCle];
+          const v = rc && rc.variantes && rc.variantes.find((vv) => vv.code === d.lancerCode);
+          mecanique = v && v.mecanique;
+          source.code = d.lancerCode;
+        }
+        if (!mecanique) { toast("Capacité introuvable."); return; }
+        if (mecanique.cible === "allie" || mecanique.cible === "ennemi") {
+          lancerCapaciteEnAttente = { source, mecanique };
+          const cibles = Capacites.listeCibles(id).filter((cc) =>
+            mecanique.cible === "allie" ? cc.genre === "perso" : cc.genre === "monstre"
+          );
+          pickerSelect.innerHTML = cibles.length
+            ? cibles.map((cc) => `<option value="${cc.id}">${echapper(cc.nom)}${cc.soi ? " (soi-même)" : ""}</option>`).join("")
+            : `<option value="">Aucune cible disponible</option>`;
+          pickerForme.style.display = "flex";
+        } else {
+          lancerCapaciteEnAttente = { source, mecanique };
+          resoudreCapaciteEtRafraichir(null);
+        }
+      };
+    });
+    const btnConfirmerCible = document.getElementById("btn-confirmer-cible-capacite");
+    const btnAnnulerCible = document.getElementById("btn-annuler-cible-capacite");
+    if (btnConfirmerCible) {
+      btnConfirmerCible.onclick = () => {
+        const cibleId = pickerSelect.value;
+        if (!cibleId) { toast("Choisis une cible."); return; }
+        resoudreCapaciteEtRafraichir(cibleId);
+      };
+    }
+    if (btnAnnulerCible) btnAnnulerCible.onclick = fermerPickerCibleCapacite;
+
+    // Réinitialisation manuelle d'un compteur d'usage (nouvelle période : combat, jour, scénario...)
+    zone.querySelectorAll("[data-reset-cle]").forEach((el) => {
+      el.onclick = () => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp) return;
+        Capacites.reinitialiserUsage(pp, el.dataset.resetCle);
+        sauverPersos(persos);
+        afficherFiche(id);
+      };
+    });
+    // Retrait manuel d'un état/bonus actif (pas de décompte automatique de durée)
+    zone.querySelectorAll("[data-etat-idx]").forEach((el) => {
+      el.onclick = () => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp || !pp.etatsActifs) return;
+        pp.etatsActifs.splice(parseInt(el.dataset.etatIdx, 10), 1);
+        sauverPersos(persos);
+        afficherFiche(id);
       };
     });
     document.getElementById("btn-niveau-up").onclick = () => monterDeNiveau(id);
@@ -3146,5 +3293,7 @@ const App = (() => {
 
   // API publique (utilisée par les onclick inline, et par carte.js pour
   // forcer la navigation d'un joueur quand le MJ choisit une carte)
-  return { allerVers, allerVersCarteMode };
+  // — chargerPersos/sauverPersos/lancerDe/ajouterHisto sont en plus exposés
+  // pour js/capacites.js (moteur de résolution des capacités mécanisées).
+  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto };
 })();
