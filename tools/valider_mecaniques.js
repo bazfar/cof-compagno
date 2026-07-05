@@ -132,6 +132,17 @@ function verifierVoies(voies, classeCle, prefixeOu) {
   });
 }
 
+function verifierVariantes(variantes, raceCle, prefixeOu) {
+  (variantes || []).forEach((variante) => {
+    totalRangs++;
+    const ou = `${prefixeOu} / variante ${variante.nom_affiche || variante.code}`;
+    if (variante.mecanique === null && !estException(raceCle, "__variante__", variante.code)) {
+      problemes.push({ ou, message: "mecanique: null non whitelisté (cf. EXCEPTIONS_MECANIQUE_NULL en étape 2bis)." });
+    }
+    verifierMecanique(variante.mecanique, ou);
+  });
+}
+
 for (const [cle, c] of Object.entries(CLASSES)) {
   verifierVoies(c.voies, cle, `CLASSES.${cle}`);
 }
@@ -139,6 +150,7 @@ for (const [cle, r] of Object.entries(RACES)) {
   // Les races n'ont qu'une seule "voie" de rangs (pas de tableau `voies`) —
   // on l'enveloppe pour réutiliser verifierVoies telle quelle.
   verifierVoies([{ nom: r.voie_nom || cle, rangs: r.rangs }], cle, `RACES.${cle}`);
+  verifierVariantes(r.variantes, cle, `RACES.${cle}`);
 }
 
 console.log(`Rangs analysés : ${totalRangs} (dont ${totalNull} volontairement à null, ${totalManquants} manquants)`);
