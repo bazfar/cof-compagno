@@ -26,6 +26,8 @@ const ETATS = {
     description: "Doit s'éloigner de la source de peur, ne peut pas l'approcher ni l'attaquer." },
   silencieuse: { nom: "Réduite au silence", categorie: "controle",
     description: "Ne peut lancer aucun sort/capacité à composante vocale." },
+  invisible: { nom: "Invisible", categorie: "controle",
+    description: "Non ciblable par une attaque ou une capacité tant que le porteur n'a pas lui-même attaqué ni lancé de capacité offensive. Le déplacement reste normal. L'état est rompu immédiatement dès la première action offensive du porteur, ou à expiration de sa durée." },
 
   // ── Malus continus ─────────────────────────────────────────
   influencee: { nom: "Influencée", categorie: "malus",
@@ -53,7 +55,7 @@ const ETATS = {
   repoussee: { nom: "Repoussée", categorie: "physique",
     description: "Déplacée d'une distance fixe en ligne droite, sans dégât propre sauf collision." },
   gelee: { nom: "Gelée", categorie: "controle",
-    description: "Variante d'Immobilisée par le froid ; résistance testée en DEX si la capacité le prévoit." },
+    description: "-2 DEF. Ne peut réaliser aucune action (attaque, capacité) ni se déplacer tant que l'effet dure." },
   aveuglee: { nom: "Aveuglée", categorie: "malus",
     description: "Désavantage sur tous les jets d'attaque ; ne peut viser qu'au contact." },
   brulure: { nom: "Brûlure", categorie: "dot",
