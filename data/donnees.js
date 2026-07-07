@@ -1446,6 +1446,35 @@ const CLASSES = {
         ],
       },
       {
+        nom: "Voie de la magie protectrice",
+        speciale: false,
+        description: "Le savoir tourné vers la survie — boucliers, dissipation, renvoi. Le pilier défensif qui manquait au Magicien.",
+        rangs: [
+          { rang: 1, nom: "Bouclier arcanique (L)", effet: "Active un bouclier sur soi ou un allié à portée : +2 DEF pendant 2 tours",
+            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "allie", portee: 10, zone: null, jetOppose: null,
+              effets: [ { type: "bonus", cible: "DEF", valeur: 2, duree: "2" } ] } },
+
+          { rang: 2, nom: "Résistance arcanique", effet: "Passif : +2 aux jets de sauvegarde contre la magie. Bouclier arcanique passe à +3 DEF",
+            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "+2 aux jets de sauvegarde contre la magie — bonus de test hors combat." },
+                { type: "special", note: "Modifie Bouclier arcanique (rang 1) : le bonus passe de +2 à +3 DEF, durée inchangée (2 tours)." } ] } },
+
+          { rang: 3, nom: "Dissipation (L)", effet: "Test d'INT opposé contre le lanceur d'un effet magique ciblant le Magicien ou un allié à 10 m : succès = annule l'effet",
+            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "allie", portee: 10, zone: null,
+              jetOppose: { caracAttaquant: "INT", caracDefenseur: "INT", difficulteFixe: null },
+              effets: [ { type: "special", note: "Sur test d'INT réussi contre le lanceur de l'effet magique ciblé : annulation totale de cet effet, avant application." } ] } },
+
+          { rang: 4, nom: "Renvoi partiel", effet: "1x/combat, quand le Magicien encaisse un sort qui le ciblait directement (test d'attaque magique réussi contre lui), renvoie la moitié des dégâts (arrondi inf.) à l'attaquant, si celui-ci est en vue",
+            mecanique: { type: "limitee", usage: { frequence: "1x/combat" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "degats", formule: "moitieRecue" },
+                { type: "special", note: "Déclenché uniquement par un sort ciblé ayant réussi son test d'attaque magique contre le Magicien — ne s'applique pas aux dégâts de zone/AoE. Nécessite que l'attaquant soit en ligne de vue." } ] } },
+
+          { rang: 5, nom: "Sanctuaire (L, 1x/scénario)", effet: "Pendant [2 + Mod. d'INT] tours : immunité totale aux dégâts magiques",
+            mecanique: { type: "limitee", usage: { frequence: "1x/scenario" }, cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Immunité totale aux dégâts d'origine magique pendant [2 + Mod.INT] tours — immunité chiffrée par durée, non modélisée comme bonus/malus classique." } ] } },
+        ],
+      },
+      {
         nom: "Voie du chaos",
         speciale: true,
         description: "Voie spéciale — folie arcanique : un magicien qui a creusé trop profondément dans les savoirs interdits, jusqu'à laisser le chaos s'immiscer dans son esprit et sa magie.",
