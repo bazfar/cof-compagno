@@ -1504,7 +1504,7 @@ const CLASSES = {
       },
     ],
     creation: [
-      "Choisis ton orientation : érudit polyvalent (Universitaire), risque-tout instable (Sauvage), combattant magique (Élémentaire). La Voie du chaos n'est proposée que sur demande ou par accord avec le MJ.",
+      "Choisis ton orientation : érudit polyvalent (Universitaire), risque-tout instable (Sauvage), combattant magique (Élémentaire), gardien arcanique (Protectrice). La Voie du chaos n'est proposée que sur demande ou par accord avec le MJ.",
       "Un personnage débute avec 2 capacités de rang 1 au choix parmi les voies ouvertes à son profil.",
       "Les rangs supérieurs s'acquièrent dans l'ordre — impossible de prendre le rang 3 sans avoir les rangs 1 et 2 de la même voie.",
       "Magie Sauvage et Magie Élémentaire sont parfaitement combinables : un mage élémentaliste à la magie instable est un concept tout à fait viable.",
