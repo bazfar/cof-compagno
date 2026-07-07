@@ -238,6 +238,7 @@ const App = (() => {
       return;
     }
     const c = CLASSES[p.classe];
+    const race = p.race ? RACES[p.race] : null;
     const perso = Personnage.depuisJSON(p);
     const mods = {};
     CARACS.forEach((cc) => (mods[cc.code] = perso.mod(cc.code)));
@@ -304,6 +305,17 @@ const App = (() => {
           ${dmgDistance ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}">🎲 Dégâts Distance (${dmgDistance})</button>` : ""}
         </div>` : ""}
       </div>
+      ${htmlEtatsActifs(p)}
+      <div class="carte">
+        <h3 style="margin-top:0;">Capacités</h3>
+        <div class="cible-capacite-form" style="display:none;">
+          <select class="cible-capacite-select"></select>
+          <button class="btn petit or btn-confirmer-cible-capacite">Confirmer la cible</button>
+          <button class="btn petit secondaire btn-annuler-cible-capacite">Annuler</button>
+        </div>
+        ${htmlCapacitesClasse(p, c)}
+      </div>
+      ${race ? `<div class="carte"><h3>Capacités raciales — ${race.voie_nom}</h3>${htmlCapacitesRace(p, race)}</div>` : ""}
     `;
     majBarrePvSidebar(p);
     document.getElementById("bm-pv-plus").onclick = () => ajusterPv(id, +1);
@@ -326,6 +338,8 @@ const App = (() => {
         lancerFormule(formule, `${p.nom} — Dégâts (${formule})`);
       };
     });
+    // Capacités/états, mêmes règles que la fiche complète (cf. wireCapacitesEtEtats).
+    wireCapacitesEtEtats(sidebar, id, p, () => rendreFicheSidebarBattlemap(id));
   }
 
   /* ---------- Navigation onglets ---------- */
@@ -1342,6 +1356,158 @@ const App = (() => {
     return `<div class="carte"><h3>États actifs</h3><div class="etats-actifs-liste">${items}</div></div>`;
   }
 
+  // Capacités de classe débloquées (p.capacites), groupées par voie — factorisé
+  // pour être réutilisé tel quel par la fiche complète et la mini-fiche battlemap.
+  function htmlCapacitesClasse(p, c) {
+    if (!p.capacites.length) return `<div class="vide">Aucune capacité sélectionnée.</div>`;
+    let capHtml = "";
+    p.capacites.slice().sort((a, b) => a.voie.localeCompare(b.voie) || a.rang - b.rang).forEach((cap) => {
+      const voie = c.voies.find((v) => v.nom === cap.voie);
+      const rang = voie && voie.rangs.find((r) => r.rang === cap.rang);
+      if (!rang) return;
+      const source = { origine: "classe", cle: p.classe, voie: cap.voie, rang: cap.rang, nomCap: rang.nom || `Rang ${cap.rang}` };
+      capHtml +=
+        `<div class="cap-fiche ${voie.speciale ? "chaos" : ""}">` +
+        `<div class="titre-cap">${rang.nom || "Rang " + cap.rang}${htmlLancerCapacite(source, rang.mecanique, p)}</div>` +
+        `<div class="voie-source">${cap.voie} · rang ${cap.rang}</div>` +
+        `<div class="effet-cap">${rang.effet}</div></div>`;
+    });
+    return capHtml;
+  }
+
+  // Capacités de la voie raciale débloquées (p.capacitesRace) + variante
+  // elfique éventuelle — même logique de factorisation que ci-dessus.
+  function htmlCapacitesRace(p, race) {
+    if (!race) return "";
+    let capRaceHtml = "";
+    const liste = (p.capacitesRace || []).slice().sort((a, b) => a - b);
+    if (liste.length) {
+      liste.forEach((rang) => {
+        const rg = race.rangs.find((x) => x.rang === rang);
+        if (!rg) return;
+        const { nom, effet, mecanique, source } = texteRangRace(race, rg, p.raceVariante);
+        const srcComplet = Object.assign({ cle: p.race, voie: race.voie_nom, nomCap: nom || `Rang ${rang}` }, source);
+        capRaceHtml +=
+          `<div class="cap-fiche">` +
+          `<div class="titre-cap">${nom || "Rang " + rang}${htmlLancerCapacite(srcComplet, mecanique, p)}</div>` +
+          `<div class="voie-source">${race.voie_nom} · rang ${rang}</div>` +
+          `<div class="effet-cap">${effet}</div></div>`;
+      });
+    } else {
+      capRaceHtml = `<div class="vide">Aucune capacité raciale sélectionnée.</div>`;
+    }
+    if (race.trait_passif) {
+      capRaceHtml += `<div class="aide" style="margin-top:10px;"><em>Trait racial passif :</em> ${race.trait_passif}</div>`;
+    }
+    return capRaceHtml;
+  }
+
+  // Wiring du bouton "⚔️ Lancer", du sélecteur de cible, du reset des
+  // compteurs d'usage et du retrait manuel d'état — scoppé sur `racine`
+  // (jamais `document` directement) pour que la fiche complète et la
+  // mini-fiche battlemap puissent cohabiter dans le DOM sans collision.
+  // `rafraichir` est appelé après toute mutation pour re-rendre la bonne vue.
+  function wireCapacitesEtEtats(racine, id, p, rafraichir) {
+    const pickerForme = racine.querySelector(".cible-capacite-form");
+    const pickerSelect = racine.querySelector(".cible-capacite-select");
+    let lancerCapaciteEnAttente = null;
+
+    function fermerPickerCibleCapacite() {
+      if (pickerForme) pickerForme.style.display = "none";
+      lancerCapaciteEnAttente = null;
+    }
+    function resoudreCapaciteEtRafraichir(cibleId) {
+      const res = Capacites.lancer({
+        persoId: id,
+        source: lancerCapaciteEnAttente.source,
+        mecanique: lancerCapaciteEnAttente.mecanique,
+        cibleId,
+      });
+      fermerPickerCibleCapacite();
+      toast(res.messages.join(" · "));
+      rafraichir();
+      // La fiche complète redirige vers l'onglet "Dés" (comportement historique) ;
+      // la mini-fiche battlemap reste en place, comme les attaques rapides
+      // (cf. rendreFicheSidebarBattlemap) — l'overlay de jet est de toute façon
+      // visible sur tous les onglets.
+      if (racine.id === "zone-fiche-active") allerVers("des");
+    }
+
+    racine.querySelectorAll("[data-lancer-origine]").forEach((el) => {
+      el.onclick = () => {
+        const d = el.dataset;
+        const source = { origine: d.lancerOrigine, cle: d.lancerCle, nomCap: d.lancerNom };
+        let mecanique = null;
+        if (d.lancerOrigine === "classe") {
+          const cc = CLASSES[d.lancerCle];
+          const v = cc && cc.voies.find((vv) => vv.nom === d.lancerVoie);
+          const r = v && v.rangs.find((rr) => rr.rang === parseInt(d.lancerRang, 10));
+          mecanique = r && r.mecanique;
+          source.voie = d.lancerVoie;
+          source.rang = parseInt(d.lancerRang, 10);
+        } else if (d.lancerOrigine === "race") {
+          const rc = RACES[d.lancerCle];
+          const r = rc && rc.rangs.find((rr) => rr.rang === parseInt(d.lancerRang, 10));
+          mecanique = r && r.mecanique;
+          source.voie = d.lancerVoie;
+          source.rang = parseInt(d.lancerRang, 10);
+        } else if (d.lancerOrigine === "variante") {
+          const rc = RACES[d.lancerCle];
+          const v = rc && rc.variantes && rc.variantes.find((vv) => vv.code === d.lancerCode);
+          mecanique = v && v.mecanique;
+          source.code = d.lancerCode;
+        }
+        if (!mecanique) { toast("Capacité introuvable."); return; }
+        if (mecanique.cible === "allie" || mecanique.cible === "ennemi") {
+          lancerCapaciteEnAttente = { source, mecanique };
+          const cibles = Capacites.listeCibles(id).filter((cc) =>
+            mecanique.cible === "allie" ? cc.genre === "perso" : cc.genre === "monstre"
+          );
+          pickerSelect.innerHTML = cibles.length
+            ? cibles.map((cc) => `<option value="${cc.id}">${echapper(cc.nom)}${cc.soi ? " (soi-même)" : ""}</option>`).join("")
+            : `<option value="">Aucune cible disponible</option>`;
+          pickerForme.style.display = "flex";
+        } else {
+          lancerCapaciteEnAttente = { source, mecanique };
+          resoudreCapaciteEtRafraichir(null);
+        }
+      };
+    });
+    const btnConfirmerCible = racine.querySelector(".btn-confirmer-cible-capacite");
+    const btnAnnulerCible = racine.querySelector(".btn-annuler-cible-capacite");
+    if (btnConfirmerCible) {
+      btnConfirmerCible.onclick = () => {
+        const cibleId = pickerSelect.value;
+        if (!cibleId) { toast("Choisis une cible."); return; }
+        resoudreCapaciteEtRafraichir(cibleId);
+      };
+    }
+    if (btnAnnulerCible) btnAnnulerCible.onclick = fermerPickerCibleCapacite;
+
+    // Réinitialisation manuelle d'un compteur d'usage (nouvelle période : combat, jour, scénario...)
+    racine.querySelectorAll("[data-reset-cle]").forEach((el) => {
+      el.onclick = () => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp) return;
+        Capacites.reinitialiserUsage(pp, el.dataset.resetCle);
+        sauverPersos(persos);
+        rafraichir();
+      };
+    });
+    // Retrait manuel d'un état/bonus actif (pas de décompte automatique de durée)
+    racine.querySelectorAll("[data-etat-idx]").forEach((el) => {
+      el.onclick = () => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp || !pp.etatsActifs) return;
+        pp.etatsActifs.splice(parseInt(el.dataset.etatIdx, 10), 1);
+        sauverPersos(persos);
+        rafraichir();
+      };
+    });
+  }
+
   /* ============================================================
      ÉQUIPEMENT / INVENTAIRE — colonne droite de la fiche
      ============================================================ */
@@ -1953,48 +2119,11 @@ const App = (() => {
 
     const zone = document.getElementById("zone-fiche-active");
 
-    let capHtml = "";
-    if (p.capacites.length) {
-      // Regrouper par voie pour l'affichage
-      p.capacites.slice().sort((a, b) => a.voie.localeCompare(b.voie) || a.rang - b.rang).forEach((cap) => {
-        const voie = c.voies.find((v) => v.nom === cap.voie);
-        const rang = voie && voie.rangs.find((r) => r.rang === cap.rang);
-        if (!rang) return;
-        const source = { origine: "classe", cle: p.classe, voie: cap.voie, rang: cap.rang, nomCap: rang.nom || `Rang ${cap.rang}` };
-        capHtml +=
-          `<div class="cap-fiche ${voie.speciale ? "chaos" : ""}">` +
-          `<div class="titre-cap">${rang.nom || "Rang " + cap.rang}${htmlLancerCapacite(source, rang.mecanique, p)}</div>` +
-          `<div class="voie-source">${cap.voie} · rang ${cap.rang}</div>` +
-          `<div class="effet-cap">${rang.effet}</div></div>`;
-      });
-    } else {
-      capHtml = `<div class="vide">Aucune capacité sélectionnée.</div>`;
-    }
+    const capHtml = htmlCapacitesClasse(p, c);
 
     // Voie raciale (gratuite), affichée séparément des voies de classe
     const race = p.race ? RACES[p.race] : null;
-    let capRaceHtml = "";
-    if (race) {
-      const liste = (p.capacitesRace || []).slice().sort((a, b) => a - b);
-      if (liste.length) {
-        liste.forEach((rang) => {
-          const rg = race.rangs.find((x) => x.rang === rang);
-          if (!rg) return;
-          const { nom, effet, mecanique, source } = texteRangRace(race, rg, p.raceVariante);
-          const srcComplet = Object.assign({ cle: p.race, voie: race.voie_nom, nomCap: nom || `Rang ${rang}` }, source);
-          capRaceHtml +=
-            `<div class="cap-fiche">` +
-            `<div class="titre-cap">${nom || "Rang " + rang}${htmlLancerCapacite(srcComplet, mecanique, p)}</div>` +
-            `<div class="voie-source">${race.voie_nom} · rang ${rang}</div>` +
-            `<div class="effet-cap">${effet}</div></div>`;
-        });
-      } else {
-        capRaceHtml = `<div class="vide">Aucune capacité raciale sélectionnée.</div>`;
-      }
-      if (race.trait_passif) {
-        capRaceHtml += `<div class="aide" style="margin-top:10px;"><em>Trait racial passif :</em> ${race.trait_passif}</div>`;
-      }
-    }
+    const capRaceHtml = htmlCapacitesRace(p, race);
 
     zone.innerHTML = `
       <div class="fiche-layout">
@@ -2053,10 +2182,10 @@ const App = (() => {
 
           <div class="carte">
             <h3>Capacités</h3>
-            <div id="cible-capacite-form" class="cible-capacite-form" style="display:none;">
-              <select id="cible-capacite-select"></select>
-              <button class="btn petit or" id="btn-confirmer-cible-capacite">Confirmer la cible</button>
-              <button class="btn petit secondaire" id="btn-annuler-cible-capacite">Annuler</button>
+            <div class="cible-capacite-form" style="display:none;">
+              <select class="cible-capacite-select"></select>
+              <button class="btn petit or btn-confirmer-cible-capacite">Confirmer la cible</button>
+              <button class="btn petit secondaire btn-annuler-cible-capacite">Annuler</button>
             </div>
             ${capHtml}
           </div>
@@ -2100,104 +2229,11 @@ const App = (() => {
         allerVers("des");
       };
     });
-    // Résolution d'une capacité mécanisée (bouton "⚔️ Lancer") — cf. js/capacites.js.
-    // La cible n'est demandée que pour cible:"allie"/"ennemi" (via le petit
-    // sélecteur partagé injecté dans la carte Capacités) ; "soi"/"zone"/"aucune"
-    // se résolvent directement.
-    const pickerForme = document.getElementById("cible-capacite-form");
-    const pickerSelect = document.getElementById("cible-capacite-select");
-    let lancerCapaciteEnAttente = null;
-
-    function fermerPickerCibleCapacite() {
-      if (pickerForme) pickerForme.style.display = "none";
-      lancerCapaciteEnAttente = null;
-    }
-    function resoudreCapaciteEtRafraichir(cibleId) {
-      const res = Capacites.lancer({
-        persoId: id,
-        source: lancerCapaciteEnAttente.source,
-        mecanique: lancerCapaciteEnAttente.mecanique,
-        cibleId,
-      });
-      fermerPickerCibleCapacite();
-      toast(res.messages.join(" · "));
-      afficherFiche(id);
-      allerVers("des");
-    }
-
-    zone.querySelectorAll("[data-lancer-origine]").forEach((el) => {
-      el.onclick = () => {
-        const d = el.dataset;
-        const source = { origine: d.lancerOrigine, cle: d.lancerCle, nomCap: d.lancerNom };
-        let mecanique = null;
-        if (d.lancerOrigine === "classe") {
-          const cc = CLASSES[d.lancerCle];
-          const v = cc && cc.voies.find((vv) => vv.nom === d.lancerVoie);
-          const r = v && v.rangs.find((rr) => rr.rang === parseInt(d.lancerRang, 10));
-          mecanique = r && r.mecanique;
-          source.voie = d.lancerVoie;
-          source.rang = parseInt(d.lancerRang, 10);
-        } else if (d.lancerOrigine === "race") {
-          const rc = RACES[d.lancerCle];
-          const r = rc && rc.rangs.find((rr) => rr.rang === parseInt(d.lancerRang, 10));
-          mecanique = r && r.mecanique;
-          source.voie = d.lancerVoie;
-          source.rang = parseInt(d.lancerRang, 10);
-        } else if (d.lancerOrigine === "variante") {
-          const rc = RACES[d.lancerCle];
-          const v = rc && rc.variantes && rc.variantes.find((vv) => vv.code === d.lancerCode);
-          mecanique = v && v.mecanique;
-          source.code = d.lancerCode;
-        }
-        if (!mecanique) { toast("Capacité introuvable."); return; }
-        if (mecanique.cible === "allie" || mecanique.cible === "ennemi") {
-          lancerCapaciteEnAttente = { source, mecanique };
-          const cibles = Capacites.listeCibles(id).filter((cc) =>
-            mecanique.cible === "allie" ? cc.genre === "perso" : cc.genre === "monstre"
-          );
-          pickerSelect.innerHTML = cibles.length
-            ? cibles.map((cc) => `<option value="${cc.id}">${echapper(cc.nom)}${cc.soi ? " (soi-même)" : ""}</option>`).join("")
-            : `<option value="">Aucune cible disponible</option>`;
-          pickerForme.style.display = "flex";
-        } else {
-          lancerCapaciteEnAttente = { source, mecanique };
-          resoudreCapaciteEtRafraichir(null);
-        }
-      };
-    });
-    const btnConfirmerCible = document.getElementById("btn-confirmer-cible-capacite");
-    const btnAnnulerCible = document.getElementById("btn-annuler-cible-capacite");
-    if (btnConfirmerCible) {
-      btnConfirmerCible.onclick = () => {
-        const cibleId = pickerSelect.value;
-        if (!cibleId) { toast("Choisis une cible."); return; }
-        resoudreCapaciteEtRafraichir(cibleId);
-      };
-    }
-    if (btnAnnulerCible) btnAnnulerCible.onclick = fermerPickerCibleCapacite;
-
-    // Réinitialisation manuelle d'un compteur d'usage (nouvelle période : combat, jour, scénario...)
-    zone.querySelectorAll("[data-reset-cle]").forEach((el) => {
-      el.onclick = () => {
-        const persos = chargerPersos();
-        const pp = persos[id];
-        if (!pp) return;
-        Capacites.reinitialiserUsage(pp, el.dataset.resetCle);
-        sauverPersos(persos);
-        afficherFiche(id);
-      };
-    });
-    // Retrait manuel d'un état/bonus actif (pas de décompte automatique de durée)
-    zone.querySelectorAll("[data-etat-idx]").forEach((el) => {
-      el.onclick = () => {
-        const persos = chargerPersos();
-        const pp = persos[id];
-        if (!pp || !pp.etatsActifs) return;
-        pp.etatsActifs.splice(parseInt(el.dataset.etatIdx, 10), 1);
-        sauverPersos(persos);
-        afficherFiche(id);
-      };
-    });
+    // Capacités (bouton "⚔️ Lancer"), compteurs d'usage et retrait manuel
+    // d'état — logique partagée avec la mini-fiche battlemap (cf.
+    // wireCapacitesEtEtats, scoppée sur `zone` pour ne jamais toucher au DOM
+    // de l'autre vue si les deux sont montées en même temps).
+    wireCapacitesEtEtats(zone, id, p, () => afficherFiche(id));
     document.getElementById("btn-niveau-up").onclick = () => monterDeNiveau(id);
     document.getElementById("btn-editer-fiche").onclick = () => editerPerso(id);
     document.getElementById("btn-exporter-fiche").onclick = () => exporterPerso(id);

@@ -565,6 +565,9 @@ textarea { resize: vertical; min-height: 70px; }
 }
 .battlemap-fiche-sidebar .carte { margin-bottom: 12px; }
 .battlemap-fiche-sidebar .nom-perso { font-size: 1.15rem; }
+.battlemap-fiche-sidebar .cap-fiche { padding: 8px 10px; margin-bottom: 6px; }
+.battlemap-fiche-sidebar .titre-cap { font-size: 0.85rem; }
+.battlemap-fiche-sidebar .effet-cap { font-size: 0.78rem; }
 @media (max-width: 900px) {
   .battlemap-layout { flex-direction: column; }
   .battlemap-fiche-sidebar { width: 100%; position: static; max-height: none; }
