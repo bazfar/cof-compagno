@@ -3281,6 +3281,46 @@ const BESTIAIRE = [
       "description": "Peaux et cuirs rapiécés — réduit 1 point de dégâts physiques."
     },
     "emoji": "🐺🪓"
+  },
+  {
+    "id": "maitre_betes_orc",
+    "nom": "Maître des bêtes orc",
+    "famille": "maitre_betes",
+    "categorie": "Bestiaire général — Humanoïdes / Factions sauvages",
+    "faction": null,
+    "pv": 40,
+    "def": 16,
+    "init": 3,
+    "atk": 8,
+    "dangerosite": 3,
+    "boss": false,
+    "taille": "grande",
+    "attaques": [
+      {
+        "nom": "Hache à deux mains",
+        "jet": "1d20+8 vs DEF",
+        "degats": "1d10+3",
+        "portee": "contact",
+        "type": "physique",
+        "effetSpecial": null
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Contrôle des bêtes",
+        "description": "Toutes les créatures de catégorie Faune alliées à 12m gagnent +2 ATK et +2 Initiative tant qu'il est vivant et conscient."
+      },
+      {
+        "nom": "Dressage brutal",
+        "description": "1 fois/combat : force une créature Faune alliée effrayée ou hésitante à attaquer immédiatement ce round, sans jet de moral."
+      }
+    ],
+    "lore": "Impose son autorité aux bêtes par la peur autant que par le lien — un Maître des bêtes orc dresse ses créatures à coups de hache plutôt qu'à la patience. Efficace au combat, mais ses bêtes désertent souvent dès qu'il tombe.",
+    "armure": {
+      "valeur": 3,
+      "description": "Cuirasse de peaux cloutées — réduit 3 points de dégâts physiques."
+    },
+    "emoji": "🐗🪓"
   }
 ];
 const BESTIAIRE_INDEX = Object.fromEntries(BESTIAIRE.map(function(m){ return [m.id, m]; }));
