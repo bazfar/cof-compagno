@@ -2783,6 +2783,222 @@
       ],
       "lore": "La Pointe commande une compagnie de piquiers hors-la-loi avec une précision chirurgicale. Ancien officier disgracié, il a retourné sa formation militaire contre les institutions qui l'ont trahi. Potentiellement recruté comme mercenaire par les PJ si les circonstances s'y prêtent.",
       "emoji": "🗡️🔱"
+    },
+    {
+      "id": "chevalier_inquisiteur_veteran",
+      "nom": "Chevalier-Inquisiteur",
+      "famille": "chevalier_inquisiteur",
+      "tier": "veteran",
+      "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
+      "faction": "Église de Solvarn — Sacerdoce Solaire",
+      "pv": 30,
+      "def": 17,
+      "init": 3,
+      "atk": 6,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "moyenne",
+      "voies": [
+        {
+          "voieRef": "pretre.voie_jugement",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Zèle",
+              "effet": "+1 ATK contre toute cible ayant atteint au moins le palier Marque de corruption du Chaos."
+            },
+            {
+              "rang": 2,
+              "nom": "Sceau du silence",
+              "effet": "1 fois/combat : applique l'état Réduite au silence à une cible à 6m (test Volonté diff. 13 pour résister)."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Épée de jugement",
+          "jet": "1d20+6 vs DEF",
+          "degats": "1d8+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "+1d6 dégâts contre les créatures du Chaos ou les personnages ayant atteint le palier Marque/Fracture."
+        },
+        {
+          "nom": "Sceau du silence",
+          "jet": "1d20+5 vs DEF",
+          "degats": null,
+          "portee": "courte (6m)",
+          "type": "magique (sacré)",
+          "effetSpecial": "Applique l'état silencieuse (js/etats.js) pour 1 round."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Détection d'hérésie",
+          "description": "Perçoit sans jet tout personnage ayant atteint le palier Marque ou Fracture de corruption du Chaos, à 12m."
+        },
+        {
+          "nom": "Formation du Concile",
+          "description": "3 Chevaliers-Inquisiteurs ou plus adjacents : DEF +2 pour tous, immunité à la peur."
+        }
+      ],
+      "lore": "Recrutés jeunes dans les provinces les plus dévotes, formés à traquer l'hérésie autant qu'à combattre. Depuis l'échec de Corvain Ashe au Pont-Rompu, l'ordre a durci sa doctrine : le doute est traité comme une faiblesse à extirper, chez l'ennemi comme chez soi.",
+      "armure": {
+        "valeur": 5,
+        "description": "Harnois bénis de l'Ordre — réduit 5 points de dégâts physiques."
+      },
+      "emoji": "🔥⚔️"
+    },
+    {
+      "id": "chevalier_inquisiteur_elite",
+      "nom": "Inquisiteur-capitaine",
+      "famille": "chevalier_inquisiteur",
+      "tier": "elite",
+      "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
+      "faction": "Église de Solvarn — Sacerdoce Solaire",
+      "pv": 44,
+      "def": 19,
+      "init": 3,
+      "atk": 8,
+      "dangerosite": 3,
+      "boss": false,
+      "taille": "moyenne",
+      "voies": [
+        {
+          "voieRef": "pretre.voie_jugement",
+          "rang": 3,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Zèle",
+              "effet": "+1 ATK contre toute cible ayant atteint au moins le palier Marque de corruption du Chaos."
+            },
+            {
+              "rang": 2,
+              "nom": "Sceau du silence",
+              "effet": "1 fois/combat : applique silencieuse à 2 cibles à 6m."
+            },
+            {
+              "rang": 3,
+              "nom": "Jugement",
+              "effet": "1 fois/combat : jet 1d20+8 vs DEF ; touche automatiquement une cible en palier Fracture. 2d8 dégâts sacrés."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Épée de jugement (bénie)",
+          "jet": "1d20+8 vs DEF",
+          "degats": "1d8+3",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "+1d6 dégâts contre les créatures du Chaos ou les personnages en Marque/Fracture."
+        },
+        {
+          "nom": "Jugement",
+          "jet": "1d20+8 vs DEF",
+          "degats": "2d8",
+          "portee": "courte (6m)",
+          "type": "magique (sacré)",
+          "effetSpecial": "Touche automatiquement une cible ayant atteint le palier Fracture de corruption. 1 fois/combat."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Détection d'hérésie",
+          "description": "Perçoit sans jet tout personnage en Marque ou Fracture, à 12m."
+        },
+        {
+          "nom": "Commandement de l'Inquisition",
+          "description": "Chevaliers-Inquisiteurs vétérans adjacents : +1 ATK tant qu'il est debout."
+        }
+      ],
+      "lore": "Dirige une cellule d'Inquisiteurs en campagne. Rapporte directement au Concile des Flammes. Considère toute négociation avec un suspect comme une compromission personnelle.",
+      "armure": {
+        "valeur": 7,
+        "description": "Harnois de capitaine, béni deux fois — réduit 7 points de dégâts physiques."
+      },
+      "emoji": "🔥⚔️"
+    },
+    {
+      "id": "chevalier_inquisiteur_champion",
+      "nom": "Grand Inquisiteur Bastian Vorn",
+      "famille": "chevalier_inquisiteur",
+      "tier": "champion",
+      "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
+      "faction": "Église de Solvarn — Sacerdoce Solaire",
+      "pv": 68,
+      "def": 21,
+      "init": 3,
+      "atk": 10,
+      "dangerosite": 4,
+      "boss": true,
+      "taille": "moyenne",
+      "voies": [
+        {
+          "voieRef": "pretre.voie_jugement",
+          "rang": 4,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Zèle",
+              "effet": "+1 ATK contre toute cible en Marque."
+            },
+            {
+              "rang": 2,
+              "nom": "Sceau du silence",
+              "effet": "1 fois/combat : silencieuse à 2 cibles à 6m."
+            },
+            {
+              "rang": 3,
+              "nom": "Jugement",
+              "effet": "1 fois/combat : 2d8 dégâts sacrés, touche automatiquement une cible en Fracture."
+            },
+            {
+              "rang": 4,
+              "nom": "Bûcher purificateur",
+              "effet": "1 fois/combat : zone de 3m à 18m, 3d6 dégâts de feu sacré, ignore la moitié de l'armure des créatures du Chaos."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Épée du Concile (enchantée +2)",
+          "jet": "1d20+10 vs DEF",
+          "degats": "1d8+5",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "+2 dégâts fixes (enchantement). +1d6 contre les créatures du Chaos ou personnages en Marque/Fracture."
+        },
+        {
+          "nom": "Bûcher purificateur",
+          "jet": "1d20+9 vs DEF",
+          "degats": "3d6",
+          "portee": "moyenne (18m)",
+          "type": "magique (feu sacré)",
+          "effetSpecial": "Zone de 3m. Ignore la moitié de l'armure des créatures du Chaos. 1 fois/combat."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Autorité du Concile",
+          "description": "Sa présence force un test Volonté diff. 14 pour tout ennemi voulant l'attaquer en premier. Immunisé à l'intimidation."
+        },
+        {
+          "nom": "Détection d'hérésie",
+          "description": "Perçoit sans jet tout personnage en Marque ou Fracture, à 18m."
+        }
+      ],
+      "lore": "Membre du Concile des Flammes, envoyé personnellement traquer une hérésie jugée prioritaire. Sa légitimité vient directement du Flambeau Suprême — s'en prendre à lui, c'est s'en prendre à l'Église elle-même. Convaincu, sincèrement, d'agir pour le salut de ceux qu'il exécute.",
+      "armure": {
+        "valeur": 9,
+        "description": "Harnois du Concile, béni par le Flambeau Suprême en personne — réduit 9 points de dégâts physiques."
+      },
+      "emoji": "🔥⚔️"
     }
   ],
   "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide."
