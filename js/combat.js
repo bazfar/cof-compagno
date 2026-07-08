@@ -1,0 +1,277 @@
+/* ============================================================
+   COF-COMPAGNO — Moteur du tracker d'initiative/tour de combat.
+
+   État partagé en temps réel (MJ + joueurs) via SyncStore, clé
+   "combat:initiative" :
+     {
+       actif: boolean,
+       round: number,               // commence à 1
+       indexActuel: number,         // index dans `ordre` du combattant actif
+       ordre: [
+         {
+           id: string,               // id perso (PJ) ou id token (monstre)
+           type: "pj" | "monstre",
+           nom: string,
+           initiative: number|null,  // total 1d20+mod, null = PJ pas encore lancé
+           detail: string|null,      // ex. "d20[14]+2"
+           koTourCourant: boolean,   // true si 0 PV au moment du calcul de l'ordre courant
+         }, ...
+       ],
+     }
+
+   Dépendances (chargées avant ce fichier dans index.html) :
+   - js/personnage.js  → Personnage.calculerInitiative()
+   - js/sync.js        → SyncStore
+   - js/carte.js       → Carte.listeMonstresCombat/listeTokensJoueursCombat/
+     idPersoDepuisRef/monstreEstVisible/onMonstreDevientVisible/onMonstresChange/
+     reinitialiserDetectionVisibilite
+   - js/capacites.js   → Capacites.decompterEtatsDebutTour/retirerEtatsFinCombat
+   - js/app.js (chargé APRÈS ce fichier, référencé seulement à l'exécution,
+     jamais à la définition du module) → App.chargerPersos/sauverPersos/
+     lancerDe/ajouterHisto, déjà exposés pour js/capacites.js — réutilisés ici
+     plutôt que de dupliquer l'accès direct à Firestore.
+   ============================================================ */
+
+const Combat = (() => {
+  "use strict";
+
+  const STORAGE = "combat:initiative";
+
+  function _etatVide() {
+    return { actif: false, round: 1, indexActuel: 0, ordre: [] };
+  }
+
+  // Lit l'état partagé (cache SyncStore, synchrone) — jamais null, un combat
+  // inactif renvoie la forme vide plutôt que d'obliger chaque appelant à
+  // vérifier l'absence de document.
+  function _lire() {
+    return SyncStore.get(STORAGE) || _etatVide();
+  }
+  function _sauver(etat) {
+    SyncStore.set(STORAGE, etat);
+  }
+
+  function estActif() {
+    const e = SyncStore.get(STORAGE);
+    return !!(e && e.actif);
+  }
+  function etatCourant() {
+    return _lire();
+  }
+
+  /* ---------- Tri : initiatives desc, nulls (PJ pas encore lancés) en fin, égalité = ordre d'insertion ---------- */
+  function _comparerOrdre(a, b) {
+    if (a.initiative === null && b.initiative === null) return 0;
+    if (a.initiative === null) return 1;
+    if (b.initiative === null) return -1;
+    return b.initiative - a.initiative;
+  }
+
+  function _detailJet(d20, mod) {
+    return `d20[${d20}]${mod >= 0 ? "+" : ""}${mod}`;
+  }
+
+  // `indexActuel` est un index brut dans `ordre` : insérer une entrée qui se
+  // trie AVANT le combattant actif décalerait cet index vers une autre entrée.
+  // Ancre le pointeur sur l'id du combattant actif avant toute insertion/tri,
+  // pour le refaire pointer sur ce même id une fois l'ordre remanié.
+  function _idActifCourant(etat) {
+    return etat.ordre.length ? etat.ordre[etat.indexActuel].id : null;
+  }
+  function _reancrerIndexActuel(etat, idActifAvant) {
+    if (idActifAvant == null) return;
+    const idx = etat.ordre.findIndex((e) => e.id === idActifAvant);
+    if (idx !== -1) etat.indexActuel = idx;
+  }
+
+  // Jette 1d20+mod.init pour un token monstre, pousse l'entrée dans `etat`
+  // (pas encore triée) et journalise le jet dans l'historique partagé.
+  function _ajouterMonstreAvecJet(etat, tok) {
+    const mod = typeof tok.init === "number" ? tok.init : 0;
+    const d20 = App.lancerDe(20);
+    const initiative = d20 + mod;
+    const detail = _detailJet(d20, mod);
+    etat.ordre.push({ id: tok.id, type: "monstre", nom: tok.nom, initiative, detail, koTourCourant: false });
+    App.ajouterHisto(`Initiative — ${tok.nom}`, initiative, false, false, detail);
+  }
+
+  // Ajoute au combat en cours les PJ et monstres (visibles) qui n'y sont pas
+  // encore, sans jamais toucher aux entrées déjà présentes (jets déjà faits
+  // préservés). Utilisé aussi bien par demarrer() (premier appel = combat
+  // vide) que par la réouverture d'un combat déjà actif.
+  function _fusionnerCombattants(etat) {
+    const idActifAvant = _idActifCourant(etat);
+    const ids = new Set(etat.ordre.map((e) => e.id));
+    const persos = App.chargerPersos();
+
+    (Carte.listeTokensJoueursCombat() || []).forEach((tok) => {
+      if (!tok.ref) return; // jeton PJ sans ref = anomalie, ignoré plutôt que planter le tracker
+      const persoId = Carte.idPersoDepuisRef(tok.ref);
+      if (ids.has(persoId)) return;
+      const nom = (persos[persoId] && persos[persoId].nom) || tok.nom;
+      etat.ordre.push({ id: persoId, type: "pj", nom, initiative: null, detail: null, koTourCourant: false });
+      ids.add(persoId);
+    });
+
+    (Carte.listeMonstresCombat() || []).forEach((tok) => {
+      if (ids.has(tok.id) || !Carte.monstreEstVisible(tok.id)) return;
+      _ajouterMonstreAvecJet(etat, tok);
+      ids.add(tok.id);
+    });
+
+    etat.ordre.sort(_comparerOrdre);
+    _reancrerIndexActuel(etat, idActifAvant);
+  }
+
+  // MJ : ouverture de l'onglet "⚔ Combat". Idempotent — si un combat est déjà
+  // actif, ne relance aucun jet existant, ne fait que compléter l'ordre avec
+  // les combattants pas encore présents.
+  function demarrer() {
+    let etat = _lire();
+    if (!etat.actif) etat = { actif: true, round: 1, indexActuel: 0, ordre: [] };
+    _fusionnerCombattants(etat);
+    _sauver(etat);
+  }
+
+  // Callback interne branché sur Carte.onMonstreDevientVisible : un monstre
+  // pré-placé par le MJ derrière du brouillard vient d'être repéré par un PJ —
+  // rejoint l'ordre avec un jet auto, sans interrompre le tour en cours.
+  function _surMonstreVisible(token) {
+    const etat = _lire();
+    if (!etat.actif) return;
+    if (etat.ordre.some((e) => e.id === token.id)) return;
+    const idActifAvant = _idActifCourant(etat);
+    _ajouterMonstreAvecJet(etat, token);
+    etat.ordre.sort(_comparerOrdre);
+    _reancrerIndexActuel(etat, idActifAvant);
+    _sauver(etat);
+  }
+
+  // Callback interne branché sur Carte.onMonstresChange : nettoie l'ordre des
+  // monstres réellement supprimés de la carte (pas ceux juste tombés à 0 PV,
+  // qui restent affichés — badge "sautable", cf. tourSuivant).
+  function _surChangementMonstres() {
+    const etat = _lire();
+    if (!etat.actif || !etat.ordre.length) return;
+    const idActifAvant = _idActifCourant(etat);
+    const idsPresents = new Set((Carte.listeMonstresCombat() || []).map((m) => m.id));
+    const avant = etat.ordre.length;
+    etat.ordre = etat.ordre.filter((e) => e.type !== "monstre" || idsPresents.has(e.id));
+    if (etat.ordre.length === avant) return;
+    // Le combattant actif a lui-même été supprimé (cas limite) : avance au
+    // suivant plutôt que de planter sur un index désormais hors-sujet.
+    const idx = etat.ordre.findIndex((e) => e.id === idActifAvant);
+    etat.indexActuel = idx !== -1 ? idx : (etat.indexActuel % Math.max(1, etat.ordre.length));
+    _sauver(etat);
+  }
+
+  // Joueur uniquement (jamais le MJ, jamais automatique) : jet d'initiative
+  // pour SON personnage.
+  function lancerInitiativeJoueur(persoId) {
+    const etat = _lire();
+    if (!etat.actif) return;
+    const entree = etat.ordre.find((e) => e.id === persoId && e.type === "pj");
+    if (!entree || entree.initiative !== null) return;
+    const persos = App.chargerPersos();
+    const p = persos[persoId];
+    const mod = p ? Personnage.depuisJSON(p).calculerInitiative() : 0;
+    const d20 = App.lancerDe(20);
+    const idActifAvant = _idActifCourant(etat);
+    entree.initiative = d20 + mod;
+    entree.detail = _detailJet(d20, mod);
+    etat.ordre.sort(_comparerOrdre);
+    _reancrerIndexActuel(etat, idActifAvant);
+    App.ajouterHisto(`Initiative — ${entree.nom}`, entree.initiative, false, false, entree.detail);
+    _sauver(etat);
+  }
+
+  // PV courants d'une entrée de l'ordre — monstre via Carte, PJ via la fiche
+  // vivante — pour décider si son tour doit être sauté (0 PV = "hors combat").
+  function _pvActuel(entree) {
+    if (entree.type === "monstre") {
+      const m = (Carte.listeMonstresCombat() || []).find((t) => t.id === entree.id);
+      return m ? (m.pvActuel ?? m.pvMax ?? 0) : null;
+    }
+    const p = App.chargerPersos()[entree.id];
+    return p ? (p.pvActuel ?? p.pvMax ?? 0) : null;
+  }
+  function _estKO(entree) {
+    const pv = _pvActuel(entree);
+    return typeof pv === "number" && pv <= 0;
+  }
+
+  // MJ uniquement (vérifié côté app.js via le rôle, pas ici) : avance au
+  // prochain combattant pas à 0 PV. Décompte les états à durée numérique du
+  // nouveau PJ actif.
+  function tourSuivant() {
+    const etat = _lire();
+    if (!etat.actif || !etat.ordre.length) return;
+
+    etat.ordre.forEach((e) => { e.koTourCourant = _estKO(e); });
+
+    let index = etat.indexActuel;
+    for (let i = 0; i < etat.ordre.length; i++) {
+      index = (index + 1) % etat.ordre.length;
+      if (index === 0) etat.round += 1;
+      if (!etat.ordre[index].koTourCourant) break;
+    }
+    etat.indexActuel = index;
+
+    const actif = etat.ordre[etat.indexActuel];
+    if (actif && actif.type === "pj") {
+      const persos = App.chargerPersos();
+      const p = persos[actif.id];
+      if (p) {
+        const retires = Capacites.decompterEtatsDebutTour(p);
+        App.sauverPersos(persos);
+        retires.forEach((libelle) => App.ajouterHisto(`${libelle} s'est dissipée sur ${actif.nom}`, 0, false, false, ""));
+      }
+    }
+
+    _sauver(etat);
+  }
+
+  // MJ uniquement (vérifié côté app.js) : fin du combat — purge les états
+  // "finCombat" des PJ impliqués, remet le tracker à zéro, réinitialise la
+  // détection de visibilité (un monstre déjà repéré doit pouvoir re-déclencher
+  // sa détection au combat suivant s'il redevient caché puis revisible).
+  function terminerCombat() {
+    const etat = _lire();
+    const persos = App.chargerPersos();
+    let modifie = false;
+    etat.ordre.filter((e) => e.type === "pj").forEach((e) => {
+      const p = persos[e.id];
+      if (!p) return;
+      const avant = (p.etatsActifs || []).length;
+      Capacites.retirerEtatsFinCombat(p);
+      if ((p.etatsActifs || []).length !== avant) modifie = true;
+    });
+    if (modifie) App.sauverPersos(persos);
+    if (typeof Carte !== "undefined" && Carte.reinitialiserDetectionVisibilite) Carte.reinitialiserDetectionVisibilite();
+    _sauver(_etatVide());
+  }
+
+  function onChange(cb) {
+    return SyncStore.subscribe(STORAGE, cb);
+  }
+
+  // Abonnements internes (une seule fois, à l'évaluation du module) — les
+  // callbacks eux-mêmes vérifient `etat.actif` et ne font rien si aucun combat
+  // n'est en cours.
+  if (typeof Carte !== "undefined") {
+    if (Carte.onMonstreDevientVisible) Carte.onMonstreDevientVisible(_surMonstreVisible);
+    if (Carte.onMonstresChange) Carte.onMonstresChange(_surChangementMonstres);
+  }
+
+  return {
+    estActif,
+    etatCourant,
+    demarrer,
+    lancerInitiativeJoueur,
+    tourSuivant,
+    terminerCombat,
+    onChange,
+  };
+})();
+
+if (typeof window !== "undefined") window.Combat = Combat;
