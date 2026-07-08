@@ -469,19 +469,97 @@ textarea { resize: vertical; min-height: 70px; }
 
 /* ---------- Ordre d'initiative (tracker de combat, MJ + fiche joueur) ---------- */
 .initiative-entete { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-.initiative-liste { display: flex; flex-direction: column; gap: 6px; }
-.initiative-ligne {
-  display: flex; align-items: center; gap: 8px; background: #fffdf7;
-  border: 1px solid var(--parchemin-fonce); border-left: 4px solid transparent;
-  border-radius: 6px; padding: 7px 10px; font-size: 0.88rem;
-}
-.initiative-ligne.actif { background: #fff8e8; border-left-color: var(--violet-accent); border-color: var(--or); }
-.initiative-nom { flex: 1; font-weight: 600; color: var(--violet); }
-.initiative-type { font-weight: 400; color: #8a8296; font-size: 0.78rem; }
-.initiative-score { font-weight: 700; color: var(--encre); min-width: 26px; text-align: right; }
-.badge-attente-jet { font-size: 0.72rem; color: #8a8296; font-style: italic; }
-.badge-ko-tour { font-size: 0.9rem; }
 .initiative-mini p { font-size: 0.9rem; }
+
+/* Bandeau de portraits façon tracker de tour BG3 */
+.initiative-bandeau {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 10px 4px 12px;
+}
+.initiative-pastille {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  opacity: .82;
+  transition: transform .15s, opacity .15s;
+}
+.initiative-avatar-wrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+.initiative-avatar-cadre {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--violet-accent);
+  background: #7c5aa6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: .85rem;
+}
+.initiative-pastille.actif {
+  opacity: 1;
+  transform: scale(1.15);
+}
+.initiative-pastille.actif .initiative-avatar-cadre {
+  border-color: var(--or);
+  box-shadow: 0 0 0 3px var(--violet-accent), 0 2px 8px rgba(0,0,0,.35);
+}
+.initiative-pastille.actif::before {
+  content: "▼";
+  color: var(--or);
+  font-size: .65rem;
+  line-height: 1;
+}
+.initiative-pastille.ko .initiative-avatar-cadre {
+  filter: grayscale(1) brightness(.55);
+}
+.initiative-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--or);
+  color: var(--encre);
+  font-weight: 700;
+  font-size: .66rem;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  border: 1px solid var(--violet);
+}
+.initiative-badge.attente {
+  background: #8a8296;
+  color: #fff;
+}
+.initiative-badge-ko {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: .8rem;
+}
+.initiative-nom-mini {
+  font-size: .68rem;
+  max-width: 60px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--encre);
+}
 
 /* ---------- Corruption (Voie du chaos, homebrew) ---------- */
 .corruption-bloc { border-left: 4px solid var(--chaos); }

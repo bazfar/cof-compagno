@@ -3339,19 +3339,36 @@ const App = (() => {
     }).join("")}</div>`;
   }
 
-  // Carte "Ordre d'initiative" du panneau MJ "⚔ Combat" — au-dessus de la
-  // grille de monstres (rendreTableCombat). Alimentée par js/combat.js, dont
-  // l'état (SyncStore "combat:initiative") est partagé en temps réel avec les
-  // joueurs (cf. abonnement Combat.onChange dans init()).
+  // Bandeau d'initiative (façon tracker de tour BG3) du panneau MJ "⚔ Combat"
+  // — au-dessus de la grille de monstres (rendreTableCombat). Alimenté par
+  // js/combat.js, dont l'état (SyncStore "combat:initiative") est partagé en
+  // temps réel avec les joueurs (cf. abonnement Combat.onChange dans init()).
+  // Avatar PJ = portrait/token de fiche (avatarHtml, js/emblemes.js) ; avatar
+  // monstre = pastille couleur + initiales, même logique que les jetons de
+  // la battlemap (Carte.initiales/couleur du token, js/carte.js).
   function _ligneInitiativeHtml(e, estActif) {
-    const typeLabel = e.type === "monstre" ? ` <span class="initiative-type">(monstre)</span>` : "";
-    const score = e.initiative === null
-      ? `<span class="badge-attente-jet">en attente de jet</span>`
-      : `<span class="initiative-score">${e.initiative}</span>`;
-    return `<div class="initiative-ligne${estActif ? " actif" : ""}">
-      <span class="initiative-nom">${echapper(e.nom)}${typeLabel}</span>
-      ${score}
-      ${e.koTourCourant ? '<span class="badge-ko-tour">💀</span>' : ""}
+    let avatarInner, styleCadre = "";
+    if (e.type === "pj") {
+      const perso = chargerPersos()[e.id];
+      avatarInner = avatarHtml(perso, 52);
+    } else {
+      const monstre = (typeof Carte !== "undefined" ? Carte.listeMonstresCombat() : []).find((m) => m.id === e.id);
+      const couleur = (monstre && monstre.couleur) || "#7c5aa6";
+      const inits = typeof Carte !== "undefined" && Carte.initiales ? Carte.initiales(e.nom) : "?";
+      styleCadre = ` style="background:${couleur};"`;
+      avatarInner = echapper(inits);
+    }
+    const badgeInitiative = e.initiative === null
+      ? `<span class="initiative-badge attente">?</span>`
+      : `<span class="initiative-badge">${e.initiative}</span>`;
+    const titre = `${e.nom}${e.type === "monstre" ? " (monstre)" : ""}`;
+    return `<div class="initiative-pastille${estActif ? " actif" : ""}${e.koTourCourant ? " ko" : ""}" title="${echapper(titre)}">
+      <div class="initiative-avatar-wrap">
+        <div class="initiative-avatar-cadre"${styleCadre}>${avatarInner}</div>
+        ${badgeInitiative}
+        ${e.koTourCourant ? `<span class="initiative-badge-ko">💀</span>` : ""}
+      </div>
+      <span class="initiative-nom-mini">${echapper(e.nom)}</span>
     </div>`;
   }
 
@@ -3360,7 +3377,7 @@ const App = (() => {
     if (!zone || typeof Combat === "undefined") return;
 
     if (!Combat.estActif()) {
-      zone.innerHTML = `<div class="carte"><button class="btn or" id="btn-demarrer-combat">▶ Démarrer le combat</button></div>`;
+      zone.innerHTML = `<div class="carte"><button class="btn or" id="btn-demarrer-combat">⚔ Lancer le combat</button></div>`;
       document.getElementById("btn-demarrer-combat").onclick = () => {
         if (role !== "mj") return;
         Combat.demarrer();
@@ -3377,7 +3394,7 @@ const App = (() => {
           <button class="btn petit danger" id="btn-terminer-combat">⏹ Terminer le combat</button>
         </div>
       </div>
-      <div class="initiative-liste">
+      <div class="initiative-bandeau">
         ${etatCombat.ordre.map((e, idx) => _ligneInitiativeHtml(e, idx === etatCombat.indexActuel)).join("")}
       </div>
     </div>`;
