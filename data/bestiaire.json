@@ -3324,6 +3324,68 @@
         "description": "Cuirasse de peaux cloutées — réduit 3 points de dégâts physiques."
       },
       "emoji": "🐗🪓"
+    },
+    {
+      "id": "maitre_betes_humain",
+      "nom": "Maître des bêtes",
+      "famille": "maitre_betes",
+      "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
+      "faction": null,
+      "pv": 28,
+      "def": 15,
+      "init": 4,
+      "atk": 6,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "moyenne",
+      "voies": [
+        {
+          "voieRef": "chasseur.voie_meute",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Lien de meute",
+              "effet": "+1 ATK et +1 Initiative pour toute créature Faune alliée à 9m."
+            },
+            {
+              "rang": 2,
+              "nom": "Chasse coordonnée",
+              "effet": "1 fois/combat : lui et une créature Faune alliée attaquent la même cible ensemble ; +1d4 dégâts supplémentaires si les deux touchent."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Hache à deux mains",
+          "jet": "1d20+6 vs DEF",
+          "degats": "1d10+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Lien de meute (Contrôle des bêtes)",
+          "description": "+1 ATK et +1 Initiative pour toute créature Faune alliée à 9m tant qu'il est vivant et conscient."
+        },
+        {
+          "nom": "Chasse coordonnée",
+          "description": "1 fois/combat : lui et une créature Faune alliée attaquent la même cible ensemble, +1d4 dégâts si les deux touchent."
+        },
+        {
+          "nom": "Compagnon",
+          "description": "Se présente généralement accompagné d'un Loup vétéran ou d'un Ours vétéran (voir familles correspondantes du bestiaire) — à choisir selon le décor de la rencontre."
+        }
+      ],
+      "lore": "Rôdeur solitaire ou mercenaire, il ne commande pas ses bêtes — il chasse avec elles. Le lien est réciproque : il protège autant qu'il dirige, ce qui rend ses compagnons redoutablement loyaux, même face à la mort.",
+      "armure": {
+        "valeur": 4,
+        "description": "Cuir renforcé de chasse — réduit 4 points de dégâts physiques."
+      },
+      "emoji": "🐻🪓"
     }
   ],
   "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide."
