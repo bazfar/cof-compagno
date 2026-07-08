@@ -1774,6 +1774,94 @@ const LORE = {
 };
 
 /* ============================================================
+   PNJ CLÉS (panneau Lore > onglet "PNJ")
+   Rendu par js/app.js (rendrePnjCles), rien à dupliquer ailleurs.
+   ============================================================ */
+const PNJ_CLES = [
+  {
+    id: "empereur-aurelian",
+    nom: "Empereur Aurelian III de Solvarn",
+    titre: "Chef de l'Empire de Solvarn",
+    faction: "Solvarn",
+    resume: "Un Empereur dévot en public, rongé par un doute qu'il ne peut confier à personne.",
+    description:
+      "Revendique le sang des Gardiens de l'Écorce. Lors de son couronnement, le Rite de l'Aube — l'invocation censée faire virer la flamme sacrée au blanc-or en présence d'un héritier légitime — n'a pas produit le signe attendu. Le Flambeau Suprême de l'époque, pour ne pas déstabiliser un Empire déjà en guerre, a déclaré publiquement le signe manifesté. Un pacte de silence mutuel scelle depuis le trône et l'autel. Aurelian vit avec la terreur intime d'être un imposteur — ce qui explique sa dévotion publique quasi-excessive et son acharnement personnel dans la guerre contre Aetharion : il espère, sans jamais l'admettre, qu'une preuve trouvée en territoire elfique pourrait enfin valider ou éclaircir la nature de son sang.\n\nMesuré en public, presque froid — jamais un mot de trop. En privé (rare), on devine un homme épuisé qui interroge des théologiens sur des points de doctrine obscurs sans jamais dire pourquoi.",
+    accroches: [
+      "Les PJ tombent sur un document ou un témoin évoquant \"l'Aube silencieuse\" (nom codé du secret).",
+      "Un Chevalier-Inquisiteur trop curieux sur le sujet disparaît.",
+      "L'actuel Flambeau Suprême, héritier du secret, pourrait s'en servir comme levier si l'Empereur devient trop indépendant.",
+    ],
+  },
+  {
+    id: "tristan-daurvel",
+    nom: "Sire Tristan d'Aurvel",
+    titre: "Chevalier de l'Ordre du Pont",
+    faction: "Valdorne",
+    resume: "L'idéal chevaleresque de Valdorne, fatigué pour la première fois de devoir y croire seul.",
+    description:
+      "Membre de l'Ordre du Pont, fondé en mémoire du sacrifice d'Alaric de Valdorne à Pont-Rompu — vœu de couvrir la retraite des faibles, quel qu'en soit le prix personnel. Tristan incarne cet idéal : courage, sacrifice, parole donnée. Mais la Rupture actuelle (négociations secrètes d'Arveth, cynisme grandissant ailleurs) le fatigue : il commence, pour la première fois, à se demander si l'honneur seul peut encore tenir la Coalition, ou si ce n'est qu'une belle histoire qu'on se raconte pendant que le monde négocie dans l'ombre.",
+    accroches: [
+      "Tristan enquête, sans certitude, sur des rumeurs de contacts entre Arveth et Solvarn.",
+      "Face-à-face potentiel avec Lord Ranulf d'Arvenfall — non en ennemi, mais en homme qui refuse de croire ce qu'il soupçonne.",
+      "Bon miroir moral pour des PJ eux-mêmes tentés par le compromis.",
+    ],
+  },
+  {
+    id: "ranulf-darvenfall",
+    nom: "Lord Ranulf d'Arvenfall",
+    titre: "Seigneur d'Arveth — le vacillant",
+    faction: "Arveth",
+    resume: "Il négocie en secret avec Solvarn, non par ambition, mais par peur sincère pour son peuple.",
+    description:
+      "Tient les négociations secrètes avec Solvarn. A vu, année après année, les raids solvariens saigner ses terres frontalières — hameaux brûlés, garnisons décimées. Convaincu qu'une guerre ouverte anéantirait son peuple, et que la Coalition, trop lente et trop divisée, n'enverra jamais l'aide nécessaire à temps. Ses négociations visent à obtenir un statut vassal survivable plutôt qu'une destruction certaine — pas une trahison par intérêt personnel. Ranulf se déteste pour ce choix autant qu'il le croit nécessaire ; il n'est l'ennemi de personne, sauf peut-être de lui-même.",
+    accroches: [
+      "Les PJ interceptent une missive ou escortent un émissaire suspect.",
+      "Ranulf sollicite directement les PJ pour \"évaluer discrètement\" une option de repli, sans révéler tout de suite ses vraies intentions.",
+      "Confrontation possible avec Tristan d'Aurvel si les deux fils narratifs se croisent.",
+    ],
+  },
+  {
+    id: "thelior-vane",
+    nom: "Thélior Vane",
+    titre: "Ancien Mordanel",
+    faction: "Mordanel",
+    resume: "Prône la retenue absolue depuis le Silence de Valmoire — la seule voie de survie selon lui.",
+    description:
+      "Croit que toute réponse armée confirmerait le récit impérial et achèverait de condamner son peuple aux yeux du monde — y compris aux yeux des dryades, dont le retrait silencieux le hante. Pour lui, la seule voie de survie est de prouver, patiemment, l'innocence des Mordanel.",
+    accroches: [
+      "Un conseil mordanel où les PJ doivent arbitrer ou choisir un camp face à Sylvaine Ithreal.",
+      "Une action de Sylvaine (légitime défense ou provocation ?) met Thélior en position politique intenable.",
+    ],
+  },
+  {
+    id: "sylvaine-ithreal",
+    nom: "Sylvaine Ithreal",
+    titre: "Jeune Mordanel",
+    faction: "Mordanel",
+    resume: "A grandi sous le soupçon — pour elle, la patience des Anciens n'a rien changé.",
+    description:
+      "Incarnation de la génération qui a grandi sous le soupçon post-Silence de Valmoire. Pour elle, la retenue de Thélior Vane n'a rien changé — les dryades se sont retirées malgré des décennies de patience, l'Empire accuse toujours, alors autant agir. Ne prône pas nécessairement la violence aveugle, mais une affirmation publique et armée de la dignité mordanel, quitte à rompre avec la stratégie des Anciens.",
+    accroches: [
+      "Un PJ mordanel (si applicable) tiraillé personnellement entre Thélior et Sylvaine.",
+      "Une provocation de Sylvaine qui force les PJ à choisir un camp dans la politique interne mordanel.",
+    ],
+  },
+  {
+    id: "thrakan-kelgarn",
+    nom: "Thrakan Kelgarn",
+    titre: "Chef de clan Khazrak Dûm — Résistant",
+    faction: "Khazrak Dûm",
+    resume: "Trop \"corrompu\" pour les Nains de l'Ordre, trop loyaliste pour les siens — seul entre deux mondes.",
+    description:
+      "Chef d'un clan Résistant, campé aux abords des Failles Rouges les plus proches de Kaldrun. Refuse l'assimilation plus poussée aux tribus orques que prônent les Évolutionnistes, sans renier l'histoire de son peuple — il espère une réconciliation, même lointaine, avec les Nains de l'Ordre. Méprisé par les deux côtés : trop \"corrompu\" pour les Nains de l'Ordre, trop \"loyaliste\" pour les Évolutionnistes de son propre peuple. Une figure tragique, seule, qui pourrait devenir un allié précieux et improbable pour des PJ qui sauraient voir au-delà des apparences.",
+    accroches: [
+      "Thrakan cherche un intermédiaire (les PJ ?) pour renouer un contact avec Kaldrun.",
+      "Un raid évolutionniste contre son propre clan le force à demander de l'aide à des étrangers plutôt qu'aux siens.",
+    ],
+  },
+];
+
+/* ============================================================
    RÈGLES GÉNÉRALES (page "Règles" > onglet "Général")
    Même format que LORE.sections ({ titre, contenu }) — rendu par
    js/app.js (rendreReglesGeneral), rien à dupliquer ailleurs.
