@@ -3101,6 +3101,149 @@
         "description": "Robe renforcée de plaques légères — réduit 2 points de dégâts physiques."
       },
       "emoji": "🕯️"
+    },
+    {
+      "id": "ordre_pont_veteran",
+      "nom": "Chevalier de l'Ordre du Pont",
+      "famille": "ordre_pont",
+      "tier": "veteran",
+      "categorie": "Bestiaire général — Humanoïdes / Valdorne (Ordre du Pont)",
+      "faction": "Valdorne — Ordre du Pont",
+      "pv": 30,
+      "def": 17,
+      "init": 3,
+      "atk": 6,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "moyenne",
+      "voies": [
+        {
+          "voieRef": "chevalier.voie_sacrifice",
+          "rang": 2,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Couverture du sacrifice",
+              "effet": "Réaction, 1 fois/round : intercepte une attaque visant un allié adjacent, en prend les dégâts à sa place."
+            },
+            {
+              "rang": 2,
+              "nom": "Serment du Pont",
+              "effet": "+2 DEF tant qu'il protège un allié à terre ou en fuite adjacent."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Épée du serment",
+          "jet": "1d20+6 vs DEF",
+          "degats": "1d8+2",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Bouclier du Pont",
+          "jet": "1d20+5 vs DEF",
+          "degats": "1d4+1",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "Test FOR diff. 12 ou la cible est repoussée de 1,5m."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Couverture du sacrifice",
+          "description": "Réaction 1 fois/round : intercepte une attaque visant un allié adjacent."
+        },
+        {
+          "nom": "Serment du Pont",
+          "description": "+2 DEF tant qu'il protège un allié à terre ou en fuite adjacent."
+        },
+        {
+          "nom": "Fraternité d'armes",
+          "description": "+1 DEF tant qu'un autre chevalier de l'Ordre du Pont est adjacent."
+        }
+      ],
+      "lore": "Fondé en mémoire du sacrifice d'Alaric de Valdorne à Pont-Rompu. Vœu : couvrir la retraite des faibles, quel qu'en soit le prix personnel. Peu nombreux, mais leur seule réputation impressionne autant l'ennemi que l'allié.",
+      "armure": {
+        "valeur": 5,
+        "description": "Harnois de l'Ordre, gravé du pont brisé — réduit 5 points de dégâts physiques."
+      },
+      "emoji": "🛡️⚜️"
+    },
+    {
+      "id": "ordre_pont_champion",
+      "nom": "Tristan d'Aurvel — Chevalier de l'Ordre du Pont",
+      "famille": "ordre_pont",
+      "tier": "champion",
+      "categorie": "Bestiaire général — Humanoïdes / Valdorne (Ordre du Pont)",
+      "faction": "Valdorne — Ordre du Pont",
+      "pv": 62,
+      "def": 20,
+      "init": 4,
+      "atk": 9,
+      "dangerosite": 4,
+      "boss": true,
+      "taille": "moyenne",
+      "voies": [
+        {
+          "voieRef": "chevalier.voie_sacrifice",
+          "rang": 3,
+          "capacites": [
+            {
+              "rang": 1,
+              "nom": "Couverture du sacrifice",
+              "effet": "Réaction, 2 fois/round : intercepte une attaque visant un allié adjacent."
+            },
+            {
+              "rang": 2,
+              "nom": "Serment du Pont",
+              "effet": "+2 DEF tant qu'il protège un allié à terre ou en fuite adjacent."
+            },
+            {
+              "rang": 3,
+              "nom": "Le prix de l'honneur",
+              "effet": "1 fois/combat : sacrifie la moitié de ses PV actuels pour stabiliser instantanément, sans jet, un allié tombé à 0 PV."
+            }
+          ]
+        }
+      ],
+      "attaques": [
+        {
+          "nom": "Épée du Serment (héritage de l'Ordre)",
+          "jet": "1d20+9 vs DEF",
+          "degats": "1d8+4",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": "+1d6 dégâts contre toute cible ayant porté un coup à un allié tombé à terre ce combat."
+        },
+        {
+          "nom": "Couverture du sacrifice",
+          "jet": "Automatique",
+          "degats": "— (dégâts redirigés)",
+          "portee": "contact (allié adjacent)",
+          "type": "protection",
+          "effetSpecial": "2 fois/round : intercepte une attaque ciblant un allié adjacent, prend les dégâts à sa place."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Le prix de l'honneur",
+          "description": "1 fois/combat : sacrifie la moitié de ses PV actuels pour stabiliser instantanément un allié tombé à 0 PV."
+        },
+        {
+          "nom": "Doute silencieux (roleplay)",
+          "description": "Aucun effet mécanique — Tristan commence à douter que l'honneur seul suffise face à la Rupture actuelle. À utiliser pour teinter ses dialogues (hésitation face à un compromis, question directe posée aux PJ), pas en combat."
+        }
+      ],
+      "lore": "Voir la fiche PNJ Tristan d'Aurvel (PNJ_CLES, id tristan-daurvel) pour le contexte narratif complet. Ce statblock sert aux scènes où il combat réellement — allié en renfort, ou adversaire de duel si un scénario l'exige.",
+      "armure": {
+        "valeur": 7,
+        "description": "Harnois de l'Ordre du Pont, porté depuis des années — réduit 7 points de dégâts physiques."
+      },
+      "emoji": "⚜️🛡️"
     }
   ],
   "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide."
