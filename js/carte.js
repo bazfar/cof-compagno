@@ -269,6 +269,7 @@ const Carte = (() => {
       armure: (monstre.armure && monstre.armure.valeur) || 0,
       dangerosite: monstre.dangerosite || null,
       boss: !!monstre.boss,
+      init: (typeof monstre.init === "number") ? monstre.init : 0,
     };
     if (typeof DD2VTT !== "undefined" && DD2VTT.estActive && DD2VTT.estActive()) {
       DD2VTT.ajouterTokenData(Object.assign({ nom: label, couleur: couleur, pj: false }, donneesCombat));
@@ -298,9 +299,12 @@ const Carte = (() => {
      ajouter/retirer un jeton sur la carte suffit à le faire apparaître/disparaître
      ici, et vice versa. */
 
-  let _onChangementMonstres = null;
-  function onMonstresChange(cb) { _onChangementMonstres = cb; }
-  function _notifierChangementMonstres() { if (_onChangementMonstres) _onChangementMonstres(); }
+  // Plusieurs abonnés indépendants (rendreTableCombat côté app.js, moteur de
+  // tracker d'initiative côté combat.js) : liste plutôt qu'un unique callback,
+  // sinon le dernier abonné écrase les précédents.
+  let _onChangementMonstresListeners = [];
+  function onMonstresChange(cb) { _onChangementMonstresListeners.push(cb); }
+  function _notifierChangementMonstres() { _onChangementMonstresListeners.forEach((cb) => cb()); }
 
   function _combatEnBattlemap() {
     return typeof DD2VTT !== "undefined" && DD2VTT.estActive && DD2VTT.estActive();
@@ -309,6 +313,13 @@ const Carte = (() => {
   function listeMonstresCombat() {
     if (_combatEnBattlemap()) return DD2VTT.tokensMonstres();
     return etat.jetons.filter((j) => !j.pj && j.monstreId);
+  }
+
+  // Symétrique à listeMonstresCombat() côté PJ : source unique de vérité des
+  // tokens joueurs présents sur la scène de combat active (js/combat.js).
+  function listeTokensJoueursCombat() {
+    if (_combatEnBattlemap()) return DD2VTT.tokensPJ ? DD2VTT.tokensPJ() : [];
+    return etat.jetons.filter((j) => j.pj);
   }
 
   function appliquerDegatsCombat(id, degatsBruts) {
@@ -363,6 +374,10 @@ const Carte = (() => {
     return (nom || "?").trim().split(/\s+/).map((m) => m[0]).slice(0, 2).join("").toUpperCase();
   }
 
+  // Un token PJ porte ref = "pj-" + idPersonnage (cf. ajouterMonPersoBattlemap) —
+  // utilitaire partagé (Worldmap + DD2VTT) pour en extraire l'id personnage.
+  function idPersoDepuisRef(ref) { return (ref || "").replace(/^pj-/, ""); }
+
   // Résout {pvActuel, pvMax} pour la barre de PV au-dessus d'un jeton/token :
   // - monstre : pvMax/pvActuel déjà portés par le jeton lui-même (cf. ajouterMonstre)
   // - PJ : le jeton ne stocke pas ses PV, résolus depuis la fiche vivante (seule
@@ -370,7 +385,7 @@ const Carte = (() => {
   // - jeton libre (PNJ sans PV suivis) : pas de barre (retourne null)
   function _infosPv(j, personasPJ) {
     if (j.pj && j.ref) {
-      const perso = personasPJ[j.ref.replace(/^pj-/, "")];
+      const perso = personasPJ[idPersoDepuisRef(j.ref)];
       if (!perso || typeof perso.pvMax !== "number") return null;
       return { pvActuel: perso.pvActuel ?? perso.pvMax, pvMax: perso.pvMax };
     }
@@ -397,7 +412,7 @@ const Carte = (() => {
       el.style.left = j.x + "%";
       el.style.top = j.y + "%";
       el.dataset.id = j.id;
-      const perso = j.pj && j.ref ? personasPJ[j.ref.replace(/^pj-/, "")] : null;
+      const perso = j.pj && j.ref ? personasPJ[idPersoDepuisRef(j.ref)] : null;
       const infosToken = perso || j;
       const jetonToken = j.pj && typeof cheminTokenPersonnage === "function" ? cheminTokenPersonnage(infosToken) : null;
       const classePourEmbleme = infosToken.classe || j.classe;
@@ -884,7 +899,7 @@ const Carte = (() => {
 
         // portrait uploadé, sinon token race+genre+classe (fiche vivante en priorité,
         // au cas où le jeton ait été pose avant l'ajout de ces infos), sinon initiales
-        const perso = j.pj && j.ref ? personasPJ[j.ref.replace(/^pj-/, '')] : null;
+        const perso = j.pj && j.ref ? personasPJ[idPersoDepuisRef(j.ref)] : null;
         const infosToken = perso || j;
         const src = j.portrait || (j.pj && typeof cheminTokenPersonnage === 'function' ? cheminTokenPersonnage(infosToken) : null);
         let dessine = false;
@@ -1319,6 +1334,7 @@ const Carte = (() => {
       tokensDD = _depotTokens.liste();
       tokenSelectionne = null;
       fogRevele = null;
+      reinitialiserDetectionVisibilite();
       _desabonnerTokens = _depotTokens.ecouter((cache) => {
         tokensDD = Object.keys(cache).map(k => cache[k]);
         tokenSelectionne = null;
@@ -1614,6 +1630,33 @@ const Carte = (() => {
     // à chaque appel de calculerEtRendreLoS — sert à savoir quels monstres
     // montrer aux joueurs (cf. _monstreVisiblePourJoueurs / rendreTokensDD).
     let _polygonsVisionJoueurs = [];
+
+    // Notifie js/combat.js quand un monstre pré-placé par le MJ (planqué
+    // derrière du brouillard) entre dans le champ de vision d'au moins un PJ —
+    // permet au tracker d'initiative de ne l'ajouter à l'ordre qu'à cet
+    // instant. `_monstresDejaNotifiesVisibles` évite de spammer le callback à
+    // chaque frame tant que le monstre reste visible ; remise à zéro à la fin
+    // du combat (cf. reinitialiserDetectionVisibilite) ou au changement de scène.
+    let _onMonstreDevientVisible = null;
+    let _monstresDejaNotifiesVisibles = new Set();
+    function onMonstreDevientVisible(cb) { _onMonstreDevientVisible = cb; }
+    function reinitialiserDetectionVisibilite() { _monstresDejaNotifiesVisibles = new Set(); }
+
+    // Un monstre (par id de token) est-il actuellement visible d'au moins un
+    // PJ ? Sert au démarrage du tracker d'initiative (js/combat.js), qui ne
+    // doit pas inclure d'entrée pour un monstre encore planqué derrière le
+    // brouillard (cf. _polygonsVisionJoueurs, recalculé en continu par
+    // calculerEtRendreLoS).
+    function estMonstreVisible(id) {
+      const tok = tokensDD.find(t => t.id === id);
+      const scene = scenes[sceneActive];
+      if (!tok || !scene) return false;
+      const tc = tailleCase(scene);
+      const px = (tok.cx + 0.5) * tc;
+      const py = (tok.cy + 0.5) * tc;
+      return _monstreVisiblePourJoueurs(px, py);
+    }
+
     function _pointDansPolygone(pt, poly) {
       let dedans = false;
       for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -1695,7 +1738,7 @@ const Carte = (() => {
         el.style.borderColor = tok.couleur;
         el.style.fontSize = Math.max(8, tc * 0.35) + 'px';
         el.title = tok.nom;
-        const perso = tok.pj && tok.ref ? personasPJ2[tok.ref.replace(/^pj-/, '')] : null;
+        const perso = tok.pj && tok.ref ? personasPJ2[idPersoDepuisRef(tok.ref)] : null;
         const tokImg = (tok.pj && typeof cheminTokenPersonnage === 'function') ? cheminTokenPersonnage(perso || tok) : null;
         const contenuTok = tokImg
           ? '<img class="dd-token-img" src="' + tokImg + '" alt="" data-initiale="' + tok.nom.charAt(0).toUpperCase() + '" onerror="ddTokenFallback(this)" />'
@@ -1831,6 +1874,7 @@ const Carte = (() => {
         armure: (d && typeof d.armure === 'number') ? d.armure : 0,
         dangerosite: (d && d.dangerosite) || null,
         boss: !!(d && d.boss),
+        init: (d && typeof d.init === 'number') ? d.init : 0,
       };
       tokensDD.push(nouveauToken);
       rendreTokensDD(scene);
@@ -1846,6 +1890,10 @@ const Carte = (() => {
 
     function tokensMonstres() {
       return tokensDD.filter(t => !t.pj && t.monstreId);
+    }
+
+    function tokensPJ() {
+      return tokensDD.filter(t => t.pj);
     }
 
     // Applique des dégâts bruts à un token monstre, réduits par son armure
@@ -2065,6 +2113,22 @@ const Carte = (() => {
       }
 
       _polygonsVisionJoueurs = nouveauxPolygones;
+
+      // Détection des monstres qui viennent d'entrer dans le champ de vision
+      // d'un PJ (cf. onMonstreDevientVisible ci-dessus) — un seul appel par
+      // monstre tant qu'il reste visible en continu.
+      if (_onMonstreDevientVisible) {
+        for (const tok of tokensMonstres()) {
+          if (_monstresDejaNotifiesVisibles.has(tok.id)) continue;
+          const px = (tok.cx + 0.5) * tc;
+          const py = (tok.cy + 0.5) * tc;
+          if (_monstreVisiblePourJoueurs(px, py)) {
+            _monstresDejaNotifiesVisibles.add(tok.id);
+            _onMonstreDevientVisible(tok);
+          }
+        }
+      }
+
       rendreTokensDD(scene); // ré-applique la visibilité des monstres avec la LoS à jour
     }
 
@@ -2213,8 +2277,9 @@ const Carte = (() => {
       init, scenes: () => scenes, sceneActive: () => sceneActive,
       ajouterToken: (sc) => ajouterTokenDD(sc),
       modeWorldmap: activerModeWorldmap, modeBattlemap: activerModeBattlemap, estActive, ajouterTokenData,
-      tokensMonstres, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
+      tokensMonstres, tokensPJ, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
       supprimerToken: supprimerTokenDD, onChange, actualiserTokens, reinitialiserExploration,
+      onMonstreDevientVisible, reinitialiserDetectionVisibilite, estMonstreVisible,
     };
   })();
   // Un changement de token dd2vtt (ajout/dégâts/suppression, local ou distant
@@ -2245,9 +2310,25 @@ const Carte = (() => {
     }
   }
 
+  // Point d'accroche pour js/combat.js : un monstre devient visible d'un PJ
+  // (battlemap uniquement — pas de notion de brouillard en mode worldmap).
+  function onMonstreDevientVisible(cb) {
+    if (typeof DD2VTT !== "undefined" && DD2VTT.onMonstreDevientVisible) DD2VTT.onMonstreDevientVisible(cb);
+  }
+  function reinitialiserDetectionVisibilite() {
+    if (typeof DD2VTT !== "undefined" && DD2VTT.reinitialiserDetectionVisibilite) DD2VTT.reinitialiserDetectionVisibilite();
+  }
+  // Pas de brouillard/LoS en mode worldmap : un monstre posé sur la table y
+  // est donc toujours considéré visible.
+  function monstreEstVisible(id) {
+    if (!_combatEnBattlemap()) return true;
+    return DD2VTT.estMonstreVisible ? DD2VTT.estMonstreVisible(id) : true;
+  }
+
   return {
     onOpen, definirRole, definirMonPerso, ajouterMonstre,
-    listeMonstresCombat, appliquerDegatsCombat, definirPvCombat, ajusterPvCombat,
+    listeMonstresCombat, listeTokensJoueursCombat, appliquerDegatsCombat, definirPvCombat, ajusterPvCombat,
     supprimerMonstreCombat, onMonstresChange, definirModeCarte,
+    onMonstreDevientVisible, reinitialiserDetectionVisibilite, idPersoDepuisRef, monstreEstVisible,
   };
 })();
