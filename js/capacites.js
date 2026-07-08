@@ -173,11 +173,16 @@ const Capacites = (() => {
     return { tours: total, motCle: null };
   }
 
+  // effet.formuleDot (optionnel, ex. "1d4") : dégâts infligés à chaque tour
+  // de la cible tant que l'état dure (cf. decompterEtatsDebutTour) — la
+  // formule brute est stockée telle quelle, pas résolue ici, pour relancer
+  // les dés à chaque tick plutôt que de figer un total unique à la pose.
   function appliquerEtatSurPerso(pCible, effet, source, ctx) {
     pCible.etatsActifs = pCible.etatsActifs || [];
     pCible.etatsActifs.push({
       idEtat: effet.id,
       dureeRestante: Object.assign(resoudreDureeInitiale(effet.duree, ctx), { dureeAffichee: effet.duree }),
+      formuleDot: effet.formuleDot || null,
       source,
       poseLe: Date.now(),
     });
@@ -211,12 +216,27 @@ const Capacites = (() => {
 
   // p : objet perso brut. Décompte de 1 tour tous les etatsActifs à durée
   // numérique (motCle null), retire ceux qui tombent à 0. Ne touche jamais aux
-  // entrées motCle "permanente"/"finCombat"/"horsTour". Renvoie les libellés
-  // des entrées retirées (pour un toast/journal).
+  // entrées motCle "permanente"/"finCombat"/"horsTour". Pour toute entrée
+  // portant une formuleDot (ex. "maudite" posée avec un DOT), relance la
+  // formule à CE tick et applique les dégâts à p.pvActuel (clampé à 0, sans
+  // réduction d'armure — un DOT magique/malédiction n'est pas de l'armure
+  // physique) — le tick a lieu tant que l'état est actif ce tour, y compris
+  // le dernier tour avant expiration. Pas d'automatisation du jet de
+  // résistance "CON pour moitié" mentionné par certaines capacités : reste
+  // un ajustement manuel de table, comme le reste des nuances non chiffrées
+  // par le schéma standard.
+  // Renvoie { retires, degats } : libellés des entrées retirées, et détail
+  // des dégâts de DOT infligés à ce tick (pour un toast/journal).
   function decompterEtatsDebutTour(p) {
     const retires = [];
+    const degats = [];
     p.etatsActifs = (p.etatsActifs || []).filter((e) => {
       if (!e.dureeRestante || e.dureeRestante.motCle !== null || typeof e.dureeRestante.tours !== "number") return true;
+      if (e.formuleDot) {
+        const { total, detail } = resoudreExpression(e.formuleDot, {});
+        p.pvActuel = Math.max(0, (p.pvActuel || 0) - total);
+        degats.push({ libelle: _libelleEtatActif(e), total, detail, pvApres: p.pvActuel });
+      }
       e.dureeRestante.tours -= 1;
       if (e.dureeRestante.tours <= 0) {
         retires.push(_libelleEtatActif(e));
@@ -224,7 +244,7 @@ const Capacites = (() => {
       }
       return true;
     });
-    return retires;
+    return { retires, degats };
   }
 
   // Retire uniquement les entrées motCle === "finCombat" (appelé à la fin du combat).

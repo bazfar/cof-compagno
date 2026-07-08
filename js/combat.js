@@ -222,8 +222,12 @@ const Combat = (() => {
       const persos = App.chargerPersos();
       const p = persos[actif.id];
       if (p) {
-        const retires = Capacites.decompterEtatsDebutTour(p);
+        const { retires, degats } = Capacites.decompterEtatsDebutTour(p);
         App.sauverPersos(persos);
+        degats.forEach((d) => App.ajouterHisto(
+          `${d.libelle} — Dégâts de début de tour`, d.total, false, false,
+          `${d.detail} → ${actif.nom} : ${d.pvApres} PV restants.`
+        ));
         retires.forEach((libelle) => App.ajouterHisto(`${libelle} s'est dissipée sur ${actif.nom}`, 0, false, false, ""));
       }
     }
