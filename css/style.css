@@ -471,6 +471,18 @@ textarea { resize: vertical; min-height: 70px; }
 .badge-attente-jet { font-size: 0.72rem; color: #8a8296; font-style: italic; }
 .badge-ko-tour { font-size: 0.9rem; }
 .initiative-mini p { font-size: 0.9rem; }
+
+/* ---------- Corruption (Voie du chaos, homebrew) ---------- */
+.corruption-bloc { border-left: 4px solid var(--chaos); }
+.corruption-ligne { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 0.88rem; }
+.corruption-control { display: flex; align-items: center; gap: 6px; }
+.corruption-control button {
+  width: 22px; height: 22px; border-radius: 50%; border: none; cursor: pointer;
+  background: var(--violet-accent); color: #fff; font-weight: 700; line-height: 1;
+}
+.corruption-control button:hover { background: var(--or); color: var(--encre); }
+.corruption-valeur { min-width: 34px; text-align: center; font-weight: 700; }
+.corruption-valeur.corruption-danger { color: var(--chaos); }
 .cap-fiche .voie-source { font-size: 0.7rem; color: #8a8296; }
 .cap-fiche .effet-cap { font-size: 0.85rem; color: #4a4358; margin-top: 3px; }
 .btn-de-cap {

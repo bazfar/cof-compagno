@@ -307,6 +307,7 @@ const App = (() => {
       </div>
       ${htmlEtatsActifs(p)}
       ${htmlBlocInitiativeJoueur(id)}
+      ${htmlBlocCorruption(p, perso)}
       <div class="carte">
         <h3 style="margin-top:0;">Capacités</h3>
         <div class="cible-capacite-form" style="display:none;">
@@ -1373,6 +1374,40 @@ const App = (() => {
     return `<div class="carte initiative-mini"><h3 style="margin-top:0;">Initiative</h3>${contenu}</div>`;
   }
 
+  // Bloc "Corruption" (Voie du chaos, homebrew) — visible seulement pour un
+  // perso ayant pris au moins un rang dans sa Voie du chaos (opt-in, cf.
+  // Personnage.aVoieChaosActive). Jauge de combat incrémentée automatiquement
+  // par Capacites.lancer() (rang.mecanique.corruption) pour les capacités au
+  // gain univoque ; +/- manuels ici pour les déclencheurs passifs non
+  // automatisables (ex. Guerrier/Chasseur rang 1) et les corrections de table.
+  // Corruption d'Âme (majeure) ne se réinitialise jamais, y compris après combat.
+  function htmlBlocCorruption(p, perso) {
+    if (!perso.aVoieChaosActive() || typeof Capacites === "undefined") return "";
+    const combat = p.corruptionCombat || 0;
+    const majeure = p.corruptionMajeure || 0;
+    const seuil = Capacites.SEUIL_CORRUPTION_MAJEURE || 6;
+    return `<div class="carte corruption-bloc">
+      <h3 style="margin-top:0;">☣ Corruption</h3>
+      <div class="corruption-ligne">
+        <span>Jauge de combat</span>
+        <div class="corruption-control">
+          <button data-corruption-moins="combat" title="Diminuer">−</button>
+          <span class="corruption-valeur${combat > seuil ? " corruption-danger" : ""}">${combat}/${seuil}</span>
+          <button data-corruption-plus="combat" title="Augmenter">+</button>
+        </div>
+      </div>
+      <div class="corruption-ligne">
+        <span>Corruption d'Âme</span>
+        <div class="corruption-control">
+          <button data-corruption-moins="majeure" title="Diminuer">−</button>
+          <span class="corruption-valeur${majeure > 0 ? " corruption-danger" : ""}">${majeure}</span>
+          <button data-corruption-plus="majeure" title="Augmenter">+</button>
+        </div>
+      </div>
+      ${majeure >= 5 ? `<p class="aide" style="margin:6px 0 0;">⚠️ Dès Corruption d'Âme 5+ : le rang 4 « Voie du chaos » se débloque (contrepartie incluse).</p>` : ""}
+    </div>`;
+  }
+
   // Capacités de classe débloquées (p.capacites), groupées par voie — factorisé
   // pour être réutilisé tel quel par la fiche complète et la mini-fiche battlemap.
   function htmlCapacitesClasse(p, c) {
@@ -1531,6 +1566,32 @@ const App = (() => {
       el.onclick = () => {
         if (typeof Combat === "undefined") return;
         Combat.lancerInitiativeJoueur(el.dataset.lancerInitiative);
+        rafraichir();
+      };
+    });
+    // Ajustement manuel de la jauge de Corruption (cf. htmlBlocCorruption) —
+    // "combat" passe par Capacites.ajusterCorruptionCombat (gère le seuil de
+    // Corruption d'Âme et le clamp à 0), "majeure" s'ajuste directement (pas
+    // de seuil au-dessus, correction de table pure).
+    racine.querySelectorAll("[data-corruption-plus]").forEach((el) => {
+      el.onclick = () => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp) return;
+        if (el.dataset.corruptionPlus === "combat") Capacites.ajusterCorruptionCombat(pp, 1);
+        else pp.corruptionMajeure = (pp.corruptionMajeure || 0) + 1;
+        sauverPersos(persos);
+        rafraichir();
+      };
+    });
+    racine.querySelectorAll("[data-corruption-moins]").forEach((el) => {
+      el.onclick = () => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp) return;
+        if (el.dataset.corruptionMoins === "combat") Capacites.ajusterCorruptionCombat(pp, -1);
+        else pp.corruptionMajeure = Math.max(0, (pp.corruptionMajeure || 0) - 1);
+        sauverPersos(persos);
         rafraichir();
       };
     });
@@ -2208,6 +2269,7 @@ const App = (() => {
 
           ${htmlEtatsActifs(p)}
           ${htmlBlocInitiativeJoueur(id)}
+          ${htmlBlocCorruption(p, perso)}
 
           <div class="carte">
             <h3>Capacités</h3>
