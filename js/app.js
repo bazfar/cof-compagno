@@ -2826,6 +2826,7 @@ const App = (() => {
     }
 
     rendreReglesGeneral();
+    rendreReglesEtats();
 
     const select = document.getElementById("select-regles-classe");
     if (!select.options.length) {
@@ -2878,6 +2879,38 @@ const App = (() => {
     zone.innerHTML = REGLES_GENERALES.map((s) =>
       `<div class="carte"><h3 style="margin-top:0;">${echapper(s.titre)}</h3><div class="contenu">${echapper(s.contenu)}</div></div>`
     ).join("");
+  }
+
+  // Libellés lisibles des catégories d'états (js/etats.js, ORDRE_CATEGORIES_ETATS).
+  const LIBELLES_CATEGORIES_ETATS = {
+    controle: "Contrôle",
+    malus: "Malus",
+    dot: "Dégâts continus (DoT)",
+    physique: "Altérations physiques",
+  };
+
+  // Onglet "États & Malus" — généré depuis le catalogue ETATS (js/etats.js),
+  // aucune donnée dupliquée ici : toute nouvelle entrée du catalogue apparaît
+  // automatiquement, groupée par catégorie dans l'ordre de ORDRE_CATEGORIES_ETATS.
+  function rendreReglesEtats() {
+    const zone = document.getElementById("zone-regles-etats");
+    if (!zone || typeof ETATS === "undefined" || typeof ORDRE_CATEGORIES_ETATS === "undefined") return;
+    zone.innerHTML = ORDRE_CATEGORIES_ETATS.map((cat) => {
+      const ids = Object.keys(ETATS).filter((id) => ETATS[id].categorie === cat);
+      if (!ids.length) return "";
+      const items = ids.map((id) => {
+        const e = ETATS[id];
+        return `<div class="etat-regle">
+          <div class="etat-regle-nom">${echapper(e.nom)}` +
+          (e.parSource ? ` <span class="badge-chaos" title="Effet dépendant de sa source">selon source</span>` : "") +
+          (e.reserve ? ` <span class="badge-reserve" title="Réservé — pas de source actuelle">réservé</span>` : "") +
+          `</div>
+          <div class="etat-regle-desc">${echapper(e.description)}</div>
+          ${e.reserve ? `<p class="aide" style="margin:6px 0 0;font-size:0.78rem;">Réservé — pas de source actuelle (bestiaire/pièges futurs).</p>` : ""}
+        </div>`;
+      }).join("");
+      return `<div class="carte"><h3 style="margin-top:0;">${LIBELLES_CATEGORIES_ETATS[cat] || cat}</h3>${items}</div>`;
+    }).join("");
   }
 
   /* ============================================================

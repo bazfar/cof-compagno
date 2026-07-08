@@ -529,6 +529,17 @@ textarea { resize: vertical; min-height: 70px; }
 .btn-retirer-etat { border: none; background: transparent; color: var(--chaos); cursor: pointer; font-size: 0.8rem; padding: 0; }
 .btn-retirer-etat:hover { color: var(--violet); }
 
+/* ---------- Règles > États & Malus ---------- */
+.etat-regle { padding: 8px 0; border-bottom: 1px solid var(--parchemin-fonce); }
+.etat-regle:last-child { border-bottom: none; }
+.etat-regle-nom { font-weight: 700; color: var(--violet); }
+.etat-regle-desc { font-size: 0.88rem; color: #4a4358; margin-top: 2px; }
+.badge-reserve {
+  display: inline-block; background: var(--parchemin-fonce); color: #4a4358;
+  font-size: 0.65rem; padding: 2px 7px; border-radius: 10px; font-weight: 700;
+  vertical-align: middle; margin-left: 6px;
+}
+
 /* ---------- Lanceur de dés ---------- */
 .des-rapides { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }
 .de-btn {
