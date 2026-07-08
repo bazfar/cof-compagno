@@ -455,6 +455,22 @@ textarea { resize: vertical; min-height: 70px; }
 .cm-attaque-ligne { display: flex; align-items: center; gap: 6px; }
 .cm-attaque-ligne .btn { flex: 1; text-align: left; font-size: 0.78rem; padding: 5px 8px; }
 .badge-mort { display: inline-block; margin-top: 8px; font-size: 0.78rem; font-weight: 700; color: var(--chaos); }
+
+/* ---------- Ordre d'initiative (tracker de combat, MJ + fiche joueur) ---------- */
+.initiative-entete { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.initiative-liste { display: flex; flex-direction: column; gap: 6px; }
+.initiative-ligne {
+  display: flex; align-items: center; gap: 8px; background: #fffdf7;
+  border: 1px solid var(--parchemin-fonce); border-left: 4px solid transparent;
+  border-radius: 6px; padding: 7px 10px; font-size: 0.88rem;
+}
+.initiative-ligne.actif { background: #fff8e8; border-left-color: var(--violet-accent); border-color: var(--or); }
+.initiative-nom { flex: 1; font-weight: 600; color: var(--violet); }
+.initiative-type { font-weight: 400; color: #8a8296; font-size: 0.78rem; }
+.initiative-score { font-weight: 700; color: var(--encre); min-width: 26px; text-align: right; }
+.badge-attente-jet { font-size: 0.72rem; color: #8a8296; font-style: italic; }
+.badge-ko-tour { font-size: 0.9rem; }
+.initiative-mini p { font-size: 0.9rem; }
 .cap-fiche .voie-source { font-size: 0.7rem; color: #8a8296; }
 .cap-fiche .effet-cap { font-size: 0.85rem; color: #4a4358; margin-top: 3px; }
 .btn-de-cap {

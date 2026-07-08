@@ -306,6 +306,7 @@ const App = (() => {
         </div>` : ""}
       </div>
       ${htmlEtatsActifs(p)}
+      ${htmlBlocInitiativeJoueur(id)}
       <div class="carte">
         <h3 style="margin-top:0;">Capacités</h3>
         <div class="cible-capacite-form" style="display:none;">
@@ -355,7 +356,7 @@ const App = (() => {
     if (panneau === "loot" && typeof Loot !== "undefined") Loot.rendreCatalogue();
     if (panneau === "regles") rendreRegles();
     if (panneau === "bestiaire") rendreBestiaire();
-    if (panneau === "table-combat") rendreTableCombat();
+    if (panneau === "table-combat") { rendreOrdreInitiative(); rendreTableCombat(); }
     if (panneau === "carte" && typeof Carte !== "undefined") {
       Carte.onOpen();
       if (role === "joueur") rendreSelecteurMonPerso();
@@ -1357,6 +1358,21 @@ const App = (() => {
     return `<div class="carte"><h3>États actifs</h3><div class="etats-actifs-liste">${items}</div></div>`;
   }
 
+  // Bloc "Lancer mon initiative", visible sur la fiche vivante uniquement
+  // pendant un combat où ce PJ n'a pas encore jeté (cf. js/combat.js —
+  // Combat.lancerInitiativeJoueur, appelé par le joueur lui-même, jamais
+  // automatiquement ni par le MJ). Une fois lancée, affiche simplement le
+  // score (pas de re-bouton).
+  function htmlBlocInitiativeJoueur(persoId) {
+    if (typeof Combat === "undefined" || !Combat.estActif()) return "";
+    const entree = Combat.etatCourant().ordre.find((e) => e.type === "pj" && e.id === persoId);
+    if (!entree) return "";
+    const contenu = entree.initiative === null
+      ? `<button class="btn or" data-lancer-initiative="${persoId}">🎲 Lancer mon initiative</button>`
+      : `<p style="margin:0;">Ton initiative : <strong>${entree.initiative}</strong>${entree.detail ? ` (${entree.detail})` : ""}</p>`;
+    return `<div class="carte initiative-mini"><h3 style="margin-top:0;">Initiative</h3>${contenu}</div>`;
+  }
+
   // Capacités de classe débloquées (p.capacites), groupées par voie — factorisé
   // pour être réutilisé tel quel par la fiche complète et la mini-fiche battlemap.
   function htmlCapacitesClasse(p, c) {
@@ -1504,6 +1520,17 @@ const App = (() => {
         if (!pp || !pp.etatsActifs) return;
         pp.etatsActifs.splice(parseInt(el.dataset.etatIdx, 10), 1);
         sauverPersos(persos);
+        rafraichir();
+      };
+    });
+    // Jet d'initiative du joueur (jamais le MJ, jamais automatique) — cf.
+    // htmlBlocInitiativeJoueur. Combat.onChange (abonné une fois dans init())
+    // rafraîchit déjà la vue une fois le jet enregistré, mais rafraichir()
+    // ici couvre le cas où l'abonnement met plus de temps à revenir.
+    racine.querySelectorAll("[data-lancer-initiative]").forEach((el) => {
+      el.onclick = () => {
+        if (typeof Combat === "undefined") return;
+        Combat.lancerInitiativeJoueur(el.dataset.lancerInitiative);
         rafraichir();
       };
     });
@@ -2180,6 +2207,7 @@ const App = (() => {
           </div>
 
           ${htmlEtatsActifs(p)}
+          ${htmlBlocInitiativeJoueur(id)}
 
           <div class="carte">
             <h3>Capacités</h3>
@@ -2939,6 +2967,17 @@ const App = (() => {
     // Journal de dés partagé : re-rendu dès qu'un autre client lance un dé.
     SyncStore.subscribe(STORAGE_HISTO, () => { rendreHisto(); _verifierNouveauJetPourOverlay(); });
 
+    // Tracker d'initiative : re-rendu temps réel (MJ ET joueurs voient le même
+    // ordre/round/tour actif), y compris le bloc "Lancer mon initiative" sur
+    // la fiche d'un joueur dès que son entrée est mise à jour ailleurs.
+    if (typeof Combat !== "undefined") {
+      Combat.onChange(() => {
+        rendreOrdreInitiative();
+        if (ficheActiveId && chargerPersos()[ficheActiveId]) afficherFiche(ficheActiveId);
+        if (ficheSidebarActiveId && chargerPersos()[ficheSidebarActiveId]) rendreFicheSidebarBattlemap(ficheSidebarActiveId);
+      });
+    }
+
     // Loot — fermeture modals
     const btnFermerLoot = document.getElementById("btn-fermer-modal-loot");
     if (btnFermerLoot && typeof Loot !== "undefined") btnFermerLoot.onclick = Loot.fermerModalLoot;
@@ -3106,6 +3145,60 @@ const App = (() => {
         <button class="btn-de-cap" data-monstre-degats="${m.id}" data-idx-attaque="${i}" title="Dégâts : ${echapper(a.degats || "")}">🎲</button>
       </div>`;
     }).join("")}</div>`;
+  }
+
+  // Carte "Ordre d'initiative" du panneau MJ "⚔ Combat" — au-dessus de la
+  // grille de monstres (rendreTableCombat). Alimentée par js/combat.js, dont
+  // l'état (SyncStore "combat:initiative") est partagé en temps réel avec les
+  // joueurs (cf. abonnement Combat.onChange dans init()).
+  function _ligneInitiativeHtml(e, estActif) {
+    const typeLabel = e.type === "monstre" ? ` <span class="initiative-type">(monstre)</span>` : "";
+    const score = e.initiative === null
+      ? `<span class="badge-attente-jet">en attente de jet</span>`
+      : `<span class="initiative-score">${e.initiative}</span>`;
+    return `<div class="initiative-ligne${estActif ? " actif" : ""}">
+      <span class="initiative-nom">${echapper(e.nom)}${typeLabel}</span>
+      ${score}
+      ${e.koTourCourant ? '<span class="badge-ko-tour">💀</span>' : ""}
+    </div>`;
+  }
+
+  function rendreOrdreInitiative() {
+    const zone = document.getElementById("zone-ordre-initiative");
+    if (!zone || typeof Combat === "undefined") return;
+
+    if (!Combat.estActif()) {
+      zone.innerHTML = `<div class="carte"><button class="btn or" id="btn-demarrer-combat">▶ Démarrer le combat</button></div>`;
+      document.getElementById("btn-demarrer-combat").onclick = () => {
+        if (role !== "mj") return;
+        Combat.demarrer();
+      };
+      return;
+    }
+
+    const etatCombat = Combat.etatCourant();
+    zone.innerHTML = `<div class="carte initiative-carte">
+      <div class="initiative-entete">
+        <h3 style="margin:0;">Ordre d'initiative — Round ${etatCombat.round}</h3>
+        <div class="barre-actions">
+          <button class="btn petit" id="btn-tour-suivant">⏭ Tour suivant</button>
+          <button class="btn petit danger" id="btn-terminer-combat">⏹ Terminer le combat</button>
+        </div>
+      </div>
+      <div class="initiative-liste">
+        ${etatCombat.ordre.map((e, idx) => _ligneInitiativeHtml(e, idx === etatCombat.indexActuel)).join("")}
+      </div>
+    </div>`;
+
+    document.getElementById("btn-tour-suivant").onclick = () => {
+      if (role !== "mj") return;
+      Combat.tourSuivant();
+    };
+    document.getElementById("btn-terminer-combat").onclick = () => {
+      if (role !== "mj") return;
+      if (!confirm("Terminer le combat ? Les états « finCombat » actifs sur les PJ seront purgés.")) return;
+      Combat.terminerCombat();
+    };
   }
 
   // targetId : conteneur à peupler — l'onglet dédié "Table de combat"
