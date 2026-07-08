@@ -164,6 +164,17 @@ main {
 }
 .panneau { display: none; }
 .panneau.actif { display: block; animation: fade 0.2s ease; }
+
+/* ---------- Sous-navigation locale (ex. panneau Règles : Général/Classes/États) ---------- */
+.sous-tabs { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.sous-tab {
+  background: none; border: 1.5px solid var(--parchemin-fonce); border-radius: 6px;
+  padding: 6px 14px; font-size: 0.85rem; font-weight: 600; cursor: pointer; color: var(--violet);
+}
+.sous-tab:hover { border-color: var(--or); background: #fdf5e8; }
+.sous-tab.actif { border-color: var(--or); background: var(--or); color: #fff; }
+.sous-panneau { display: none; }
+.sous-panneau.actif { display: block; animation: fade 0.2s ease; }
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 /* ---------- Cartes parchemin ---------- */

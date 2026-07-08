@@ -2803,7 +2803,28 @@ const App = (() => {
      RÈGLES (référence)
      ============================================================ */
 
+  // Sous-navigation locale du panneau Règles (Général/Classes/États & Malus) —
+  // même principe que la navigation principale (allerVers) : classe "actif"
+  // basculée sur le bouton et le sous-panneau correspondants, scopée à
+  // #panneau-regles pour ne pas interférer avec nav.tabs.
+  function allerVersSousRegles(sousPanneau) {
+    document.querySelectorAll("#sous-onglets-regles .sous-tab").forEach((b) => {
+      b.classList.toggle("actif", b.dataset.sousPanneau === sousPanneau);
+    });
+    document.querySelectorAll("#panneau-regles .sous-panneau").forEach((p) => {
+      p.classList.toggle("actif", p.id === "sous-panneau-regles-" + sousPanneau);
+    });
+  }
+
   function rendreRegles() {
+    const nav = document.getElementById("sous-onglets-regles");
+    if (nav && !nav.dataset.wired) {
+      nav.dataset.wired = "1";
+      nav.querySelectorAll("[data-sous-panneau]").forEach((btn) => {
+        btn.onclick = () => allerVersSousRegles(btn.dataset.sousPanneau);
+      });
+    }
+
     const select = document.getElementById("select-regles-classe");
     if (!select.options.length) {
       ORDRE_CLASSES.forEach((cle) => {

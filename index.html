@@ -393,11 +393,30 @@
     <!-- REGLES -->
     <section class="panneau" id="panneau-regles">
       <div class="carte">
-        <h2 class="titre-bandeau">Règles des classes</h2>
-        <label for="select-regles-classe">Choisir une classe</label>
-        <select id="select-regles-classe"></select>
+        <h2 class="titre-bandeau">Règles</h2>
+        <nav class="sous-tabs" id="sous-onglets-regles">
+          <button type="button" class="sous-tab actif" data-sous-panneau="general">Général</button>
+          <button type="button" class="sous-tab" data-sous-panneau="classes">Classes</button>
+          <button type="button" class="sous-tab" data-sous-panneau="etats">États &amp; Malus</button>
+        </nav>
       </div>
-      <div id="zone-regles"></div>
+
+      <div class="sous-panneau actif" id="sous-panneau-regles-general">
+        <div id="zone-regles-general"></div>
+      </div>
+
+      <div class="sous-panneau" id="sous-panneau-regles-classes">
+        <div class="carte">
+          <h2 class="titre-bandeau">Règles des classes</h2>
+          <label for="select-regles-classe">Choisir une classe</label>
+          <select id="select-regles-classe"></select>
+        </div>
+        <div id="zone-regles"></div>
+      </div>
+
+      <div class="sous-panneau" id="sous-panneau-regles-etats">
+        <div id="zone-regles-etats"></div>
+      </div>
     </section>
 
     <!-- LORE -->
