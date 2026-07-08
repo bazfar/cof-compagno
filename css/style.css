@@ -1300,6 +1300,22 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .chip-variante:hover { border-color: var(--or); }
 .chip-variante.actif { border-style: solid; border-color: var(--or); background: #fdf5e8; color: var(--encre); }
 
+.loot-modal-materiau { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.loot-modal-materiau-rang { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.chip-materiau, .chip-rang-materiau {
+  background: none;
+  border: 1.5px solid var(--parchemin-fonce);
+  color: var(--violet);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.chip-materiau:hover, .chip-rang-materiau:hover { border-color: var(--or); }
+.chip-materiau.actif, .chip-rang-materiau.actif { background: var(--or); border-color: var(--or); color: #fff; }
+
 .loot-modal-destinataire { margin: 0 0 10px; }
 .loot-modal-destinataire label { margin-bottom: 4px; }
 

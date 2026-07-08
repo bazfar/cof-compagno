@@ -100,6 +100,7 @@ const Loot = (() => {
       const bonus = it.bonusDegatsTotal !== undefined ? it.bonusDegatsTotal : (it.enchantement || 0);
       const degats = bonus > 0 ? `${bonus}+${it.degats}` : it.degats;
       return `${degats} · ${it.portee}${it.deuxMains ? " · 2 mains" : ""}` +
+        (it.degatsFeu ? ` · 🔥+${it.degatsFeu}` : "") +
         (it.bonusAttaqueMagique ? ` · +${it.bonusAttaqueMagique} attaque magique` : "");
     }
     if (it.type === "armure")     return `Réduction ${it.valeurArmure}${it.malusDEX ? ` · Malus DEX -${it.malusDEX}` : ""}`;
@@ -113,7 +114,19 @@ const Loot = (() => {
   let _itemBase = null;
   let _rareteChoisie = "commun";
   let _varianteChoisie = null;
+  let _materiauChoisi = "aucun";
+  let _materiauRangChoisi = 1;
   let _modeModal = "vote"; // "vote" | "don"
+
+  // Axe matériau (ex. Feu) indépendant de la rareté — les deux se cumulent.
+  function _itemFinal() {
+    const itemMateriau = (typeof Materiaux !== "undefined")
+      ? Materiaux.appliquer(_itemBase, _materiauChoisi, _materiauRangChoisi)
+      : _itemBase;
+    return (typeof Raretes !== "undefined")
+      ? Raretes.appliquer(itemMateriau, _rareteChoisie, _varianteChoisie)
+      : itemMateriau;
+  }
 
   function ouvrirModalVote(item) { _ouvrirModal(item, "vote"); }
   // Donne l'item directement dans l'inventaire d'un personnage choisi, sans
@@ -129,6 +142,8 @@ const Loot = (() => {
     _rareteChoisie = "commun";
     const variantes = (typeof Raretes !== "undefined") ? Raretes.variantesDisponibles(item.id) : [];
     _varianteChoisie = variantes.length ? variantes[0].id : null;
+    _materiauChoisi = "aucun";
+    _materiauRangChoisi = 1;
     _modeModal = mode;
 
     const persos = lirePersos();
@@ -155,12 +170,12 @@ const Loot = (() => {
     _rendreApercuModalLoot();
     _rendreSelecteurRarete();
     _rendreSelecteurVariante();
+    _rendreSelecteurMateriau();
+    _rendreSelecteurRangMateriau();
 
     if (btnLancer) {
       btnLancer.onclick = () => {
-        const itemFinal = (typeof Raretes !== "undefined")
-          ? Raretes.appliquer(_itemBase, _rareteChoisie, _varianteChoisie)
-          : _itemBase;
+        const itemFinal = _itemFinal();
         const vote = { item: itemFinal, votes: {}, statut: "vote_en_cours", gagnant: null, ts: Date.now() };
         ids.forEach(id => { vote.votes[id] = { type: null, jet: null }; });
         sauverVote(vote);
@@ -176,9 +191,7 @@ const Loot = (() => {
         const persosActuels = lirePersos();
         const dest = persosActuels[destId];
         if (!dest) return;
-        const itemFinal = (typeof Raretes !== "undefined")
-          ? Raretes.appliquer(_itemBase, _rareteChoisie, _varianteChoisie)
-          : _itemBase;
+        const itemFinal = _itemFinal();
         if (!Array.isArray(dest.inventaireListe)) dest.inventaireListe = [];
         dest.inventaireListe.push(Object.assign({}, itemFinal, { itemRef: itemFinal.id }));
         sauverPersos(persosActuels);
@@ -195,9 +208,7 @@ const Loot = (() => {
   // et la variante choisies.
   function _rendreApercuModalLoot() {
     if (!_itemBase) return;
-    const item = (typeof Raretes !== "undefined")
-      ? Raretes.appliquer(_itemBase, _rareteChoisie, _varianteChoisie)
-      : _itemBase;
+    const item = _itemFinal();
 
     const nomEl = document.getElementById("modal-loot-item-nom");
     nomEl.textContent = item.nom;
@@ -218,6 +229,17 @@ const Loot = (() => {
         effetEl.style.display = "block";
       } else {
         effetEl.style.display = "none";
+      }
+    }
+
+    const effetMateriauEl = document.getElementById("modal-loot-item-effet-materiau");
+    if (effetMateriauEl) {
+      if (item.materiauEffet) {
+        effetMateriauEl.textContent = "🔥 " + item.materiauEffet;
+        effetMateriauEl.style.color = "var(--or)";
+        effetMateriauEl.style.display = "block";
+      } else {
+        effetMateriauEl.style.display = "none";
       }
     }
   }
@@ -254,6 +276,59 @@ const Loot = (() => {
       btn.onclick = () => {
         _varianteChoisie = btn.dataset.variante;
         _rendreSelecteurVariante();
+        _rendreApercuModalLoot();
+      };
+    });
+  }
+
+  // Sélecteur de matériau (ex. "Feu") — visible seulement si l'item de base
+  // peut en recevoir un (armes uniquement, cf. Materiaux.disponiblePour).
+  function _rendreSelecteurMateriau() {
+    const zone = document.getElementById("modal-loot-materiau");
+    if (!zone) return;
+    if (typeof Materiaux === "undefined" || !_itemBase || !Materiaux.disponiblePour(_itemBase)) {
+      zone.style.display = "none";
+      zone.innerHTML = "";
+      return;
+    }
+
+    const options = [{ id: "aucun", nom: "Aucun" }].concat(
+      Object.values(Materiaux.LISTE).map(m => ({ id: m.id, nom: m.nom }))
+    );
+    zone.style.display = "flex";
+    zone.innerHTML = options.map(o => `<button type="button" class="chip-materiau${o.id === _materiauChoisi ? " actif" : ""}"
+      data-materiau="${o.id}">${echapper(o.nom)}</button>`).join("");
+    zone.querySelectorAll(".chip-materiau").forEach(btn => {
+      btn.onclick = () => {
+        _materiauChoisi = btn.dataset.materiau;
+        _materiauRangChoisi = 1;
+        _rendreSelecteurMateriau();
+        _rendreSelecteurRangMateriau();
+        _rendreApercuModalLoot();
+      };
+    });
+  }
+
+  // Sélecteur de rang du matériau choisi — visible seulement si un matériau
+  // autre que "aucun" est sélectionné.
+  function _rendreSelecteurRangMateriau() {
+    const zone = document.getElementById("modal-loot-materiau-rang");
+    if (!zone) return;
+    if (typeof Materiaux === "undefined" || _materiauChoisi === "aucun") {
+      zone.style.display = "none";
+      zone.innerHTML = "";
+      return;
+    }
+    const materiau = Materiaux.trouver(_materiauChoisi);
+    if (!materiau) { zone.style.display = "none"; zone.innerHTML = ""; return; }
+
+    zone.style.display = "flex";
+    zone.innerHTML = materiau.rangs.map(r => `<button type="button" class="chip-rang-materiau${r.rang === _materiauRangChoisi ? " actif" : ""}"
+      data-rang="${r.rang}">Rang ${r.rang}</button>`).join("");
+    zone.querySelectorAll(".chip-rang-materiau").forEach(btn => {
+      btn.onclick = () => {
+        _materiauRangChoisi = Number(btn.dataset.rang);
+        _rendreSelecteurRangMateriau();
         _rendreApercuModalLoot();
       };
     });
