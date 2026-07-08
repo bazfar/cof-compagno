@@ -2999,6 +2999,108 @@
         "description": "Harnois du Concile, béni par le Flambeau Suprême en personne — réduit 9 points de dégâts physiques."
       },
       "emoji": "🔥⚔️"
+    },
+    {
+      "id": "flambeau_basique",
+      "nom": "Flambeau (clerc de paroisse)",
+      "famille": "flambeau",
+      "tier": "basique",
+      "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
+      "faction": "Église de Solvarn — Sacerdoce Solaire",
+      "pv": 16,
+      "def": 13,
+      "init": 1,
+      "atk": 3,
+      "dangerosite": 1,
+      "boss": false,
+      "taille": "moyenne",
+      "attaques": [
+        {
+          "nom": "Bâton béni",
+          "jet": "1d20+3 vs DEF",
+          "degats": "1d4",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Marque du jugement",
+          "jet": "1d20+3 vs DEF",
+          "degats": null,
+          "portee": "courte (6m)",
+          "type": "magique (sacré)",
+          "effetSpecial": "Applique l'état marquee (source marquee_pretre) : +1d6 dégâts sacrés pour tout allié qui frappe ensuite la cible."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Bénédiction",
+          "description": "1 fois/combat : +2 ATK à un allié à 9m pendant 1 round."
+        },
+        {
+          "nom": "Détection d'hérésie (novice)",
+          "description": "Test Perception diff. 12 pour repérer un personnage en Marque ou Fracture à 9m."
+        }
+      ],
+      "lore": "Tient les paroisses et accompagne parfois les Chevaliers-Inquisiteurs en soutien. Pas un combattant — sa présence est surtout un signal : là où il y a un Flambeau, l'Inquisition n'est jamais loin.",
+      "armure": {
+        "valeur": 1,
+        "description": "Robe de clerc — réduit 1 point de dégâts physiques."
+      },
+      "emoji": "🕯️"
+    },
+    {
+      "id": "flambeau_veteran",
+      "nom": "Flambeau zélé",
+      "famille": "flambeau",
+      "tier": "veteran",
+      "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
+      "faction": "Église de Solvarn — Sacerdoce Solaire",
+      "pv": 26,
+      "def": 15,
+      "init": 2,
+      "atk": 5,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "moyenne",
+      "attaques": [
+        {
+          "nom": "Bâton béni (renforcé)",
+          "jet": "1d20+5 vs DEF",
+          "degats": "1d6+1",
+          "portee": "contact",
+          "type": "physique",
+          "effetSpecial": null
+        },
+        {
+          "nom": "Marque du jugement",
+          "jet": "1d20+5 vs DEF",
+          "degats": null,
+          "portee": "courte (6m)",
+          "type": "magique (sacré)",
+          "effetSpecial": "Applique l'état marquee (source marquee_pretre)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Sceau purificateur",
+          "description": "1 fois/combat : suspend pour 1 round les effets d'un palier de corruption du Chaos sur un allié, ou retire l'état Ivresse/Halluciné."
+        },
+        {
+          "nom": "Chœur du Sacerdoce",
+          "description": "+1 aux jets de Volonté de tous les alliés à 9m tant qu'il chante (action de concentration)."
+        },
+        {
+          "nom": "Détection d'hérésie",
+          "description": "Perçoit sans jet tout personnage en Marque ou Fracture, à 9m."
+        }
+      ],
+      "lore": "Envoyé en accompagnement de cellules d'Inquisiteurs plus offensives. Sa foi est sincère — il se voit comme un soin apporté à des âmes égarées, pas comme un simple soutien de combat.",
+      "armure": {
+        "valeur": 2,
+        "description": "Robe renforcée de plaques légères — réduit 2 points de dégâts physiques."
+      },
+      "emoji": "🕯️"
     }
   ],
   "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide."
