@@ -2825,6 +2825,8 @@ const App = (() => {
       });
     }
 
+    rendreReglesGeneral();
+
     const select = document.getElementById("select-regles-classe");
     if (!select.options.length) {
       ORDRE_CLASSES.forEach((cle) => {
@@ -2866,6 +2868,16 @@ const App = (() => {
     html = `<div>${html}</div>`;
     // On insère les voies dans une carte conteneur
     zone.innerHTML = html;
+  }
+
+  // Onglet "Général" — REGLES_GENERALES (data/donnees.js), même format que
+  // LORE.sections, rendu à l'identique (une carte par section).
+  function rendreReglesGeneral() {
+    const zone = document.getElementById("zone-regles-general");
+    if (!zone || typeof REGLES_GENERALES === "undefined") return;
+    zone.innerHTML = REGLES_GENERALES.map((s) =>
+      `<div class="carte"><h3 style="margin-top:0;">${echapper(s.titre)}</h3><div class="contenu">${echapper(s.contenu)}</div></div>`
+    ).join("");
   }
 
   /* ============================================================

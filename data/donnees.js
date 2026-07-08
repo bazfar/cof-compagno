@@ -1773,6 +1773,34 @@ const LORE = {
   ],
 };
 
+/* ============================================================
+   RÈGLES GÉNÉRALES (page "Règles" > onglet "Général")
+   Même format que LORE.sections ({ titre, contenu }) — rendu par
+   js/app.js (rendreReglesGeneral), rien à dupliquer ailleurs.
+   ============================================================ */
+const REGLES_GENERALES = [
+  {
+    titre: "Les jets de dé",
+    contenu:
+      "Tout test = 1d20 + modificateur pertinent, contre un seuil de difficulté ou en opposition. Réussite critique sur 20 naturel, échec critique sur 1 naturel. Avantage = 2d20, garder le plus haut. Désavantage = 2d20, garder le plus bas.",
+  },
+  {
+    titre: "Attaque",
+    contenu:
+      "Jet = 1d20 + bonus d'attaque (caractéristique + bonus de classe/niveau + bonus de voie éventuel) contre la DEF de la cible. Le bonus de classe/niveau s'applique uniquement au jet, jamais aux dégâts : Martial (Guerrier, Chevalier, Chasseur) +1/niveau ; Hybride (Prêtre, Druide, Barde, Moine) +1 tous les 2 niveaux ; Lanceur (Magicien, Nécromancien, Enchanteur) +1 tous les 3 niveaux.",
+  },
+  {
+    titre: "Dégâts",
+    contenu:
+      "Formule fixe de l'arme/capacité + modificateur de caractéristique. Les dégâts n'augmentent pas avec le niveau — seulement via les voies ou l'enchantement (+X fixe au dégât, jamais au jet d'attaque, plafond +5).",
+  },
+  {
+    titre: "Défense et initiative",
+    contenu:
+      "DEF : caractéristique fixe du personnage/monstre, modifiée par l'armure, les capacités et les états actifs (ex. Renversée -4 DEF, Gelée -2 DEF, Déstabilisée -2 DEF). Une attaque touche si le jet égale ou dépasse la DEF.\nInitiative : 1d20 + modificateur d'initiative en début de combat, détermine l'ordre des tours. Les monstres la lancent automatiquement, les joueurs cliquent pour lancer la leur.",
+  },
+];
+
 /* ── Cartes monde disponibles dans assets/maps/ ────────────
    Pour ajouter une carte : ajouter une entrée ici + l'image dans assets/maps/ */
 const CARTES_MONDE = [
