@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=36" />
+  <link rel="stylesheet" href="css/style.css?v=37" />
 </head>
 <body>
   <header>
@@ -421,7 +421,20 @@
 
     <!-- LORE -->
     <section class="panneau" id="panneau-lore">
-      <div class="carte" id="zone-lore"></div>
+      <div class="carte">
+        <nav class="sous-tabs" id="sous-onglets-lore">
+          <button type="button" class="sous-tab actif" data-sous-panneau="chroniques">Chroniques</button>
+          <button type="button" class="sous-tab" data-sous-panneau="pnj">PNJ</button>
+        </nav>
+      </div>
+
+      <div class="sous-panneau actif" id="sous-panneau-lore-chroniques">
+        <div class="carte" id="zone-lore"></div>
+      </div>
+
+      <div class="sous-panneau" id="sous-panneau-lore-pnj">
+        <div id="zone-lore-pnj"></div>
+      </div>
     </section>
   </main>
 
@@ -535,6 +548,6 @@
   <script src="js/loot.js?v=7"></script>
   <script src="js/capacites.js?v=4"></script>
   <script src="js/combat.js?v=2"></script>
-  <script src="js/app.js?v=43"></script>
+  <script src="js/app.js?v=44"></script>
 </body>
 </html>

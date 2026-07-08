@@ -2800,30 +2800,42 @@ const App = (() => {
   }
 
   /* ============================================================
-     RÈGLES (référence)
+     SOUS-NAVIGATION LOCALE (réutilisable — panneaux Règles et Lore)
      ============================================================ */
 
-  // Sous-navigation locale du panneau Règles (Général/Classes/États & Malus) —
-  // même principe que la navigation principale (allerVers) : classe "actif"
-  // basculée sur le bouton et le sous-panneau correspondants, scopée à
-  // #panneau-regles pour ne pas interférer avec nav.tabs.
-  function allerVersSousRegles(sousPanneau) {
-    document.querySelectorAll("#sous-onglets-regles .sous-tab").forEach((b) => {
-      b.classList.toggle("actif", b.dataset.sousPanneau === sousPanneau);
-    });
-    document.querySelectorAll("#panneau-regles .sous-panneau").forEach((p) => {
-      p.classList.toggle("actif", p.id === "sous-panneau-regles-" + sousPanneau);
+  // Bascule la classe "actif" entre les boutons [data-sous-panneau] d'un
+  // conteneur nav et les sous-panneaux correspondants (`zones` : { clé:
+  // idDuSousPanneau }, une entrée par bouton). Même principe que la
+  // navigation principale (allerVers), scopé localement pour ne pas
+  // interférer avec nav.tabs. Idempotent — le wiring n'est posé qu'une seule
+  // fois par nav (nav.dataset.wired) ; l'onglet actif par défaut est déjà
+  // celui marqué "actif" dans le HTML statique, rien à faire ici pour ça.
+  function initSousOnglets(navId, zones) {
+    const nav = document.getElementById(navId);
+    if (!nav || nav.dataset.wired) return;
+    nav.dataset.wired = "1";
+    const boutons = nav.querySelectorAll("[data-sous-panneau]");
+    boutons.forEach((btn) => {
+      btn.onclick = () => {
+        boutons.forEach((b) => b.classList.toggle("actif", b === btn));
+        Object.keys(zones).forEach((cle) => {
+          const el = document.getElementById(zones[cle]);
+          if (el) el.classList.toggle("actif", cle === btn.dataset.sousPanneau);
+        });
+      };
     });
   }
 
+  /* ============================================================
+     RÈGLES (référence)
+     ============================================================ */
+
   function rendreRegles() {
-    const nav = document.getElementById("sous-onglets-regles");
-    if (nav && !nav.dataset.wired) {
-      nav.dataset.wired = "1";
-      nav.querySelectorAll("[data-sous-panneau]").forEach((btn) => {
-        btn.onclick = () => allerVersSousRegles(btn.dataset.sousPanneau);
-      });
-    }
+    initSousOnglets("sous-onglets-regles", {
+      general: "sous-panneau-regles-general",
+      classes: "sous-panneau-regles-classes",
+      etats: "sous-panneau-regles-etats",
+    });
 
     rendreReglesGeneral();
     rendreReglesEtats();
@@ -2949,6 +2961,53 @@ const App = (() => {
     }
   }
 
+  // Couleur de badge par faction — attribuée dynamiquement (pas de mapping
+  // figé par nom) depuis une petite palette, dans l'ordre de première
+  // apparition dans PNJ_CLES : une nouvelle faction ajoutée aux données
+  // obtient automatiquement une couleur sans retouche ici.
+  const PNJ_PALETTE_FACTIONS = ["#7c5aa6", "#b8924a", "#8a2f3b", "#3a7d44", "#2980b9", "#8e44ad"];
+  function _couleurFaction(faction) {
+    const factions = [...new Set(PNJ_CLES.map((p) => p.faction))];
+    const idx = factions.indexOf(faction);
+    return PNJ_PALETTE_FACTIONS[idx % PNJ_PALETTE_FACTIONS.length];
+  }
+
+  // Onglet "PNJ" du panneau Lore — une carte par entrée de PNJ_CLES
+  // (data/donnees.js), purement statique/local pour l'instant (comme le
+  // reste du Lore — pas de synchro Firestore). Filtre par faction optionnel.
+  let _pnjFactionFiltre = "";
+  function rendrePnjCles() {
+    const zone = document.getElementById("zone-lore-pnj");
+    if (!zone || typeof PNJ_CLES === "undefined") return;
+    const factions = [...new Set(PNJ_CLES.map((p) => p.faction))];
+    const filtreHtml = `<div class="barre-actions" style="margin-bottom:14px;">` +
+      `<button type="button" class="btn petit ${_pnjFactionFiltre === "" ? "or" : "secondaire"}" data-pnj-faction="">Toutes</button>` +
+      factions.map((f) =>
+        `<button type="button" class="btn petit ${_pnjFactionFiltre === f ? "or" : "secondaire"}" data-pnj-faction="${echapper(f)}">${echapper(f)}</button>`
+      ).join("") +
+      `</div>`;
+    const cartesHtml = PNJ_CLES
+      .filter((p) => !_pnjFactionFiltre || p.faction === _pnjFactionFiltre)
+      .map((p) => `<div class="carte pnj-carte">
+        <div class="pnj-entete">
+          <div>
+            <div class="pnj-nom">${echapper(p.nom)}</div>
+            <div class="pnj-titre">${echapper(p.titre)}</div>
+          </div>
+          <span class="badge-faction" style="background:${_couleurFaction(p.faction)};">${echapper(p.faction)}</span>
+        </div>
+        <p class="pnj-resume"><em>${echapper(p.resume)}</em></p>
+        <div class="contenu">${echapper(p.description)}</div>
+        ${(p.accroches || []).length ? `<div class="pnj-accroches"><h4>Accroches</h4><ul>${
+          p.accroches.map((a) => `<li>${echapper(a)}</li>`).join("")
+        }</ul></div>` : ""}
+      </div>`).join("");
+    zone.innerHTML = filtreHtml + cartesHtml;
+    zone.querySelectorAll("[data-pnj-faction]").forEach((btn) => {
+      btn.onclick = () => { _pnjFactionFiltre = btn.dataset.pnjFaction; rendrePnjCles(); };
+    });
+  }
+
   /* ============================================================
      INITIALISATION
      ============================================================ */
@@ -2961,6 +3020,11 @@ const App = (() => {
     rendreEquipInventaireCreation();
     rendreHisto();
     rendreLore();
+    initSousOnglets("sous-onglets-lore", {
+      chroniques: "sous-panneau-lore-chroniques",
+      pnj: "sous-panneau-lore-pnj",
+    });
+    rendrePnjCles();
 
     document.querySelectorAll("#choix-genre .btn-genre").forEach((b) => {
       b.onclick = () => choisirGenre(b.dataset.genre);

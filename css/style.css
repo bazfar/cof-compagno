@@ -582,6 +582,21 @@ textarea { resize: vertical; min-height: 70px; }
 .lore-section h3 { border-bottom: 2px solid var(--or); padding-bottom: 4px; }
 .lore-section .contenu { white-space: pre-wrap; font-size: 0.9rem; color: #3a3348; }
 
+/* ---------- Lore > PNJ clés ---------- */
+.pnj-carte .contenu { white-space: pre-wrap; font-size: 0.9rem; color: #3a3348; }
+.pnj-entete { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.pnj-nom { font-weight: 700; color: var(--violet); font-size: 1.05rem; }
+.pnj-titre { font-size: 0.82rem; color: #6a6278; }
+.pnj-resume { font-size: 0.9rem; color: var(--violet-clair); margin: 8px 0; }
+.badge-faction {
+  display: inline-block; color: #fff; font-size: 0.7rem; font-weight: 700;
+  padding: 3px 10px; border-radius: 10px; white-space: nowrap;
+}
+.pnj-accroches { margin-top: 10px; }
+.pnj-accroches h4 { margin: 0 0 4px; color: var(--violet); font-size: 0.85rem; }
+.pnj-accroches ul { margin: 0; padding-left: 20px; font-size: 0.88rem; color: #4a4358; }
+.pnj-accroches li { margin-bottom: 3px; }
+
 /* ---------- Listes de persos sauvegardés ---------- */
 .liste-persos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
 .perso-tuile { background: #fffdf7; border: 1px solid var(--parchemin-fonce); border-radius: 8px; padding: 14px; }
