@@ -157,20 +157,77 @@ const Capacites = (() => {
     return { gain: pCible.pvActuel - avant };
   }
 
-  function appliquerEtatSurPerso(pCible, effet, source) {
-    pCible.etatsActifs = pCible.etatsActifs || [];
-    pCible.etatsActifs.push({ idEtat: effet.id, dureeRestante: effet.duree, source, poseLe: Date.now() });
+  // Résout effet.duree (chaîne brute du catalogue) en une valeur canonique
+  // exploitable par le tracker de combat (js/combat.js) :
+  // - "permanente"/"finCombat"/"24h" -> mot-clé, jamais décompté tour par tour
+  //   ("24h" est hors-échelle de tour : ni décompté ni retiré ici, cf. motCle "horsTour") ;
+  // - "prochainTour" -> 1 tour ;
+  // - toute formule de dés/carac ("3", "3+Mod.CON", "1d4+rang") -> résolue UNE
+  //   SEULE FOIS ici (les dés ne sont pas relancés à chaque décompte de tour).
+  function resoudreDureeInitiale(dureeExpr, ctx) {
+    if (dureeExpr === "permanente") return { tours: null, motCle: "permanente" };
+    if (dureeExpr === "finCombat") return { tours: null, motCle: "finCombat" };
+    if (dureeExpr === "24h") return { tours: null, motCle: "horsTour" };
+    if (dureeExpr === "prochainTour") return { tours: 1, motCle: null };
+    const { total } = resoudreExpression(dureeExpr, ctx);
+    return { tours: total, motCle: null };
   }
 
-  function appliquerBonusSurPerso(pCible, effet, source) {
+  function appliquerEtatSurPerso(pCible, effet, source, ctx) {
+    pCible.etatsActifs = pCible.etatsActifs || [];
+    pCible.etatsActifs.push({
+      idEtat: effet.id,
+      dureeRestante: Object.assign(resoudreDureeInitiale(effet.duree, ctx), { dureeAffichee: effet.duree }),
+      source,
+      poseLe: Date.now(),
+    });
+  }
+
+  function appliquerBonusSurPerso(pCible, effet, source, ctx) {
     pCible.etatsActifs = pCible.etatsActifs || [];
     pCible.etatsActifs.push({
       idEtat: null,
       bonus: { cible: effet.cible, valeur: effet.valeur },
-      dureeRestante: effet.duree,
+      dureeRestante: Object.assign(resoudreDureeInitiale(effet.duree, ctx), { dureeAffichee: effet.duree }),
       source,
       poseLe: Date.now(),
     });
+  }
+
+  // Libellé humain d'une entrée etatsActifs (état ou bonus), utilisé pour les
+  // toasts/journal de décompte automatique — même logique que htmlEtatsActifs
+  // côté app.js.
+  function _libelleEtatActif(e) {
+    if (e.idEtat) {
+      const idCatalogue = /^marquee_.+/.test(e.idEtat) ? "marquee" : e.idEtat;
+      const etat = ETATS[idCatalogue];
+      return etat ? etat.nom : e.idEtat;
+    }
+    if (e.bonus) return `Bonus ${e.bonus.cible} ${e.bonus.valeur >= 0 ? "+" : ""}${e.bonus.valeur}`;
+    return "État";
+  }
+
+  // p : objet perso brut. Décompte de 1 tour tous les etatsActifs à durée
+  // numérique (motCle null), retire ceux qui tombent à 0. Ne touche jamais aux
+  // entrées motCle "permanente"/"finCombat"/"horsTour". Renvoie les libellés
+  // des entrées retirées (pour un toast/journal).
+  function decompterEtatsDebutTour(p) {
+    const retires = [];
+    p.etatsActifs = (p.etatsActifs || []).filter((e) => {
+      if (!e.dureeRestante || e.dureeRestante.motCle !== null || typeof e.dureeRestante.tours !== "number") return true;
+      e.dureeRestante.tours -= 1;
+      if (e.dureeRestante.tours <= 0) {
+        retires.push(_libelleEtatActif(e));
+        return false;
+      }
+      return true;
+    });
+    return retires;
+  }
+
+  // Retire uniquement les entrées motCle === "finCombat" (appelé à la fin du combat).
+  function retirerEtatsFinCombat(p) {
+    p.etatsActifs = (p.etatsActifs || []).filter((e) => !(e.dureeRestante && e.dureeRestante.motCle === "finCombat"));
   }
 
   // Résout+applique un seul effet de mecanique.effets[]. Renvoie un message
@@ -206,7 +263,7 @@ const Capacites = (() => {
       const idEtatCatalogue = /^marquee_.+/.test(effet.id) ? "marquee" : effet.id;
       const etat = getEtat(idEtatCatalogue); // lève si inconnu — l'entrée existe forcément (validée par tools/valider_mecaniques.js)
       if (cible && cible.genre === "perso" && persos[cible.id]) {
-        appliquerEtatSurPerso(persos[cible.id], effet, libelle);
+        appliquerEtatSurPerso(persos[cible.id], effet, libelle, { perso, rang });
         return `État « ${etat.nom} » appliqué à ${cible.nom} (${effet.duree}).`;
       }
       return `État « ${etat.nom} » (${effet.duree}) à appliquer manuellement à ${cible ? cible.nom : "la cible"} (pas de suivi d'état automatique pour les monstres).`;
@@ -216,7 +273,7 @@ const Capacites = (() => {
         return `Bonus permanent (${effet.cible} ${effet.valeur >= 0 ? "+" : ""}${effet.valeur}) — normalement fixé une fois pour toutes à l'acquisition de la capacité, pas à relancer ici.`;
       }
       if (cible && cible.genre === "perso" && persos[cible.id]) {
-        appliquerBonusSurPerso(persos[cible.id], effet, libelle);
+        appliquerBonusSurPerso(persos[cible.id], effet, libelle, { perso, rang });
         return `Bonus (${effet.cible} ${effet.valeur >= 0 ? "+" : ""}${effet.valeur}, ${effet.duree}) appliqué à ${cible.nom}.`;
       }
       return `Bonus (${effet.cible} ${effet.valeur}, ${effet.duree}) — aucune cible sélectionnée, à appliquer manuellement.`;
@@ -281,6 +338,9 @@ const Capacites = (() => {
 
   return {
     resoudreExpression,
+    resoudreDureeInitiale,
+    decompterEtatsDebutTour,
+    retirerEtatsFinCombat,
     cleCapacite,
     parserFrequence,
     verifierUsage,

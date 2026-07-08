@@ -1350,7 +1350,8 @@ const App = (() => {
       } else {
         libelle = "État";
       }
-      return `<span class="etat-actif">${libelle}${e.dureeRestante ? ` (${e.dureeRestante})` : ""}${e.source ? ` · ${e.source}` : ""} ` +
+      const dureeAffichee = e.dureeRestante && typeof e.dureeRestante === "object" ? e.dureeRestante.dureeAffichee : e.dureeRestante;
+      return `<span class="etat-actif">${libelle}${dureeAffichee ? ` (${dureeAffichee})` : ""}${e.source ? ` · ${e.source}` : ""} ` +
         `<button class="btn-retirer-etat" data-etat-idx="${idx}" title="Retirer cet état/bonus">✕</button></span>`;
     }).join(" ");
     return `<div class="carte"><h3>États actifs</h3><div class="etats-actifs-liste">${items}</div></div>`;
