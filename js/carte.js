@@ -1152,6 +1152,15 @@ const Carte = (() => {
     // Dungeondraft), synchronisé via un DepotDistant par scène (_depotPortails,
     // un document Firestore par portail — voir activerScene).
 
+    // Obstacles bloquant la vue dessinés à la main par le MJ (arbres, rochers...
+    // que l'export Dungeondraft n'a pas tagués en objects_line_of_sight) — même
+    // sémantique que scene.segmentsObjets : bloque la LoS, jamais _deplacementBloque.
+    // Un document par obstacle (_depotObjetsManuels), synchronisé comme les
+    // tokens/portails pour que tous les clients calculent la même LoS.
+    let modeDessinObjet = false;
+    let _depotObjetsManuels = null;
+    let _dessinEnCours = null; // { scene, x1, y1, x2, y2 } en pixels natifs de la scène
+
     // ── Parser ──────────────────────────────────────────────
     // key   : identifiant stable (clé de synchro) — nom de fichier pour un
     //         import manuel, ou la "key" du catalogue pour une scène commitée
@@ -1358,6 +1367,20 @@ const Carte = (() => {
         calculerEtRendreLoS(scene);
       });
 
+      // Idem pour les obstacles dessinés à la main (arbres/rochers ajoutés
+      // par le MJ) : un document par obstacle, reconstruit en segments à
+      // chaque changement pour _segmentsBloquants/rendreMurs.
+      if (_depotObjetsManuels) _depotObjetsManuels.arreter();
+      _depotObjetsManuels = new DepotDistant('battlemap_' + nom + '_objets_manuels');
+      scene.objetsManuelsBruts = _depotObjetsManuels.charger();
+      scene.segmentsObjetsManuels = Object.values(scene.objetsManuelsBruts).map(o => [[o.x1, o.y1], [o.x2, o.y2]]);
+      _depotObjetsManuels.ecouter((cache) => {
+        scene.objetsManuelsBruts = cache;
+        scene.segmentsObjetsManuels = Object.values(cache).map(o => [[o.x1, o.y1], [o.x2, o.y2]]);
+        rendreScene(scene);
+        calculerEtRendreLoS(scene);
+      });
+
       // Cacher le placeholder image PNG
       const vide = document.getElementById('carte-vide');
       if (vide) vide.style.display = 'none';
@@ -1460,6 +1483,25 @@ const Carte = (() => {
           for (let i = 1; i < poly.length; i++) {
             ctxMurs.lineTo(offX + poly[i].x * sx, offY + poly[i].y * sy);
           }
+          ctxMurs.stroke();
+        }
+        ctxMurs.setLineDash([]);
+        ctxMurs.shadowBlur = 0;
+      }
+
+      // Mêmes obstacles (bloquent la vue, pas le passage), mais dessinés à la
+      // main par le MJ directement dans l'appli (cf. basculerModeDessinObjet) —
+      // rendu identique aux objets importés, stockés en segments bruts plutôt
+      // qu'en polylignes.
+      if (scene.segmentsObjetsManuels && scene.segmentsObjetsManuels.length) {
+        ctxMurs.strokeStyle = 'rgba(60, 180, 90, 0.85)';
+        ctxMurs.shadowColor = '#3cb45a';
+        ctxMurs.shadowBlur  = 3;
+        ctxMurs.setLineDash([5, 4]);
+        for (const seg of scene.segmentsObjetsManuels) {
+          ctxMurs.beginPath();
+          ctxMurs.moveTo(offX + seg[0][0] * sx, offY + seg[0][1] * sy);
+          ctxMurs.lineTo(offX + seg[1][0] * sx, offY + seg[1][1] * sy);
           ctxMurs.stroke();
         }
         ctxMurs.setLineDash([]);
@@ -1589,6 +1631,106 @@ const Carte = (() => {
       calculerEtRendreLoS(scene);
       toastCarte(meilleur.ouvert ? 'Portail ouvert' : 'Portail fermé');
       return true;
+    }
+
+    // ── Dessin manuel d'obstacles (arbres/rochers) — MJ uniquement ───────
+    // Convertit un événement pointer en coordonnées natives de la scène
+    // (mêmes unités que scene.segments/portails.bounds, avant mise à l'échelle
+    // d'affichage sx/sy).
+    function _pointSceneDepuisEvent(ev, scene) {
+      const imgEl = document.getElementById('carte-image');
+      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
+      if (!rect || rect.width === 0) return null;
+      const sx = rect.width / scene.largeur, sy = rect.height / scene.hauteur;
+      return [(ev.clientX - rect.left) / sx, (ev.clientY - rect.top) / sy];
+    }
+
+    function basculerModeDessinObjet() {
+      modeDessinObjet = !modeDessinObjet;
+      const btn = document.getElementById('btn-objet-bloquant-dd');
+      if (btn) btn.classList.toggle('actif-bouton', modeDessinObjet);
+      toastCarte(modeDessinObjet
+        ? '🌳 Mode obstacle : clique-glisse pour tracer un obstacle (bloque la vue, pas le passage), clique sur un obstacle existant pour le retirer.'
+        : 'Mode obstacle désactivé.');
+    }
+
+    function _demarrerDessinObjet(ev) {
+      if (!modeDessinObjet) return;
+      if (ev.target && ev.target.closest && ev.target.closest('.dd-token')) return;
+      const scene = scenes[sceneActive];
+      if (!scene) return;
+      const pt = _pointSceneDepuisEvent(ev, scene);
+      if (!pt) return;
+      ev.preventDefault();
+      _dessinEnCours = { scene, x1: pt[0], y1: pt[1], x2: pt[0], y2: pt[1] };
+      window.addEventListener('pointermove', _surDessinObjet);
+      window.addEventListener('pointerup', _finDessinObjet);
+    }
+
+    function _surDessinObjet(ev) {
+      if (!_dessinEnCours) return;
+      const { scene } = _dessinEnCours;
+      const pt = _pointSceneDepuisEvent(ev, scene);
+      if (!pt) return;
+      _dessinEnCours.x2 = pt[0];
+      _dessinEnCours.y2 = pt[1];
+      rendreScene(scene);
+      // Prévisualisation en direct par-dessus le rendu normal des murs/objets.
+      const imgEl = document.getElementById('carte-image');
+      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
+      if (!rect || rect.width === 0) return;
+      const sx = rect.width / scene.largeur, sy = rect.height / scene.hauteur;
+      ctxMurs.strokeStyle = 'rgba(60, 180, 90, 0.85)';
+      ctxMurs.lineWidth   = Math.max(1.5, scene.px * sx / 60);
+      ctxMurs.setLineDash([5, 4]);
+      ctxMurs.beginPath();
+      ctxMurs.moveTo(_dessinEnCours.x1 * sx, _dessinEnCours.y1 * sy);
+      ctxMurs.lineTo(_dessinEnCours.x2 * sx, _dessinEnCours.y2 * sy);
+      ctxMurs.stroke();
+      ctxMurs.setLineDash([]);
+    }
+
+    function _finDessinObjet() {
+      window.removeEventListener('pointermove', _surDessinObjet);
+      window.removeEventListener('pointerup', _finDessinObjet);
+      if (!_dessinEnCours) return;
+      const { scene, x1, y1, x2, y2 } = _dessinEnCours;
+      _dessinEnCours = null;
+      const distance = Math.hypot(x2 - x1, y2 - y1);
+      if (distance < scene.px * 0.15) {
+        // Pas de glisser significatif : un clic sur un obstacle existant le retire.
+        _supprimerObjetManuelProche(scene, x1, y1);
+        return;
+      }
+      const id = 'obj-' + Date.now();
+      const obstacle = { x1, y1, x2, y2 };
+      if (!scene.objetsManuelsBruts) scene.objetsManuelsBruts = {};
+      scene.objetsManuelsBruts[id] = obstacle;
+      scene.segmentsObjetsManuels = Object.values(scene.objetsManuelsBruts).map(o => [[o.x1, o.y1], [o.x2, o.y2]]);
+      // Rendu local d'abord, synchro en dernier (cf. supprimerTokenDD) : un
+      // souci réseau/Firestore ne doit jamais empêcher l'obstacle d'apparaître
+      // tout de suite pour le MJ qui vient de le tracer.
+      rendreScene(scene);
+      calculerEtRendreLoS(scene);
+      if (_depotObjetsManuels) _depotObjetsManuels.sauver(obstacle, id);
+      toastCarte('Obstacle ajouté.');
+    }
+
+    function _supprimerObjetManuelProche(scene, x, y) {
+      const bruts = scene.objetsManuelsBruts || {};
+      let meilleurId = null, meilleureDist = scene.px * 0.5;
+      Object.keys(bruts).forEach((id) => {
+        const o = bruts[id];
+        const d = _distancePointSegment(x, y, o.x1, o.y1, o.x2, o.y2);
+        if (d < meilleureDist) { meilleureDist = d; meilleurId = id; }
+      });
+      if (!meilleurId) { rendreScene(scene); toastCarte('Aucun obstacle à cet endroit.'); return; }
+      delete bruts[meilleurId];
+      scene.segmentsObjetsManuels = Object.values(bruts).map(o => [[o.x1, o.y1], [o.x2, o.y2]]);
+      rendreScene(scene);
+      calculerEtRendreLoS(scene);
+      if (_depotObjetsManuels) _depotObjetsManuels.supprimer(meilleurId);
+      toastCarte('Obstacle retiré.');
     }
 
     // Portée de vision d'un token PJ, en cases (~équivalent torche/vision
@@ -2002,6 +2144,11 @@ const Carte = (() => {
           segs.push([[seg[0][0] * sx, seg[0][1] * sy], [seg[1][0] * sx, seg[1][1] * sy]]);
         }
       }
+      if (scene.segmentsObjetsManuels) {
+        for (const seg of scene.segmentsObjetsManuels) {
+          segs.push([[seg[0][0] * sx, seg[0][1] * sy], [seg[1][0] * sx, seg[1][1] * sy]]);
+        }
+      }
       for (const p of scene.portails) {
         if (p.ouvert) continue;
         const b = p.bounds;
@@ -2185,8 +2332,11 @@ const Carte = (() => {
 
       // Clic sur la carte → bascule un portail proche (porte/fenêtre, accessible à
       // tous les joueurs, pas de check de rôle), sinon désélectionne le token actif.
+      // En mode dessin d'obstacle, ce clic fait double emploi avec le pointerup
+      // du tracé (cf. _demarrerDessinObjet/_finDessinObjet) : on le court-circuite.
       const scene2 = document.getElementById('carte-scene');
       if (scene2) scene2.addEventListener('click', (ev) => {
+        if (modeDessinObjet) return;
         const sc = scenes[sceneActive];
         if (sc && _basculerPortailAuClic(ev, sc)) return;
         if (tokenSelectionne) {
@@ -2194,6 +2344,7 @@ const Carte = (() => {
           if (sc) { rendreTokensDD(sc); calculerEtRendreLoS(sc); }
         }
       });
+      if (scene2) scene2.addEventListener('pointerdown', _demarrerDessinObjet);
 
       // Sync scène active : le MJ choisit une scène → tous les clients la
       // chargent automatiquement au prochain poll (ou immédiatement si même
@@ -2226,6 +2377,14 @@ const Carte = (() => {
         });
       }
 
+      const btnObjet = document.getElementById('btn-objet-bloquant-dd');
+      if (btnObjet) {
+        btnObjet.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          basculerModeDessinObjet();
+        });
+      }
+
       chargerCatalogue();
     }
 
@@ -2254,6 +2413,8 @@ const Carte = (() => {
         if (tokensEl) tokensEl.style.display = 'block';
         const btnTok = document.getElementById('btn-token-dd');
         if (btnTok) btnTok.style.display = 'inline-block';
+        const btnObjet = document.getElementById('btn-objet-bloquant-dd');
+        if (btnObjet) btnObjet.style.display = 'inline-block';
         const sel = document.getElementById('select-scene-dd2vtt');
         if (sel) sel.style.display = '';
         const scene = scenes[sceneActive];
@@ -2269,6 +2430,9 @@ const Carte = (() => {
       // Cacher les éléments battlemap
       const btnTok = document.getElementById('btn-token-dd');
       if (btnTok) btnTok.style.display = 'none';
+      const btnObjet = document.getElementById('btn-objet-bloquant-dd');
+      if (btnObjet) { btnObjet.style.display = 'none'; btnObjet.classList.remove('actif-bouton'); }
+      modeDessinObjet = false;
       const sel = document.getElementById('select-scene-dd2vtt');
       if (sel) sel.style.display = 'none';
       // Cacher canvas battlemap
