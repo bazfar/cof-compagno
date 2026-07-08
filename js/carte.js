@@ -1859,11 +1859,23 @@ const Carte = (() => {
       const scene = scenes[sceneActive];
       const couleurs = ['#e74c3c','#3498db','#2ecc71','#9b59b6','#f39c12','#1abc9c'];
       const n = tokensDD.length;
+      const estPJ = !!(d && d.pj);
+      // Les PJ arrivent en colonne sur le bord gauche de la carte (case 1,
+      // pas 0, pour éviter d'atterrir pile sur un mur de bordure), empilés
+      // verticalement autour du centre au fur et à mesure qu'ils rejoignent
+      // la scène — plutôt qu'au centre de la grille comme les monstres/PNJ,
+      // que le MJ positionne lui-même à la main (embuscade, etc.).
+      const nPJ = tokensDD.filter(t => t.pj).length;
+      const cx = estPJ
+        ? Math.max(0, Math.min(scene.lc - 1, 1))
+        : Math.max(0, Math.min(scene.lc - 1, Math.floor(scene.lc / 2) + (n % 4)));
+      const cy = estPJ
+        ? Math.max(0, Math.min(scene.hc - 1, Math.floor(scene.hc / 2) - 2 + nPJ))
+        : Math.max(0, Math.min(scene.hc - 1, Math.floor(scene.hc / 2) + Math.floor(n / 4)));
       const nouveauToken = {
         id: 'dd-' + Date.now() + '-' + n,
         nom: (d && d.nom) ? d.nom : 'Jeton',
-        cx: Math.max(0, Math.min(scene.lc - 1, Math.floor(scene.lc / 2) + (n % 4))),
-        cy: Math.max(0, Math.min(scene.hc - 1, Math.floor(scene.hc / 2) + Math.floor(n / 4))),
+        cx, cy,
         couleur: (d && d.couleur) ? d.couleur : couleurs[n % couleurs.length],
         pj: !!(d && d.pj),
         ref: (d && d.ref) ? d.ref : null,
