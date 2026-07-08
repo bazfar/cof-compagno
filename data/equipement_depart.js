@@ -24,7 +24,7 @@ const EQUIPEMENT_DEPART = {
   moine:        { arme: "dague",        armure: "manteau_voyageur",  bouclier: null,             consommables: ["potion_soin"] },
   pretre:       { arme: "masse",        armure: "armure_cloute",     bouclier: "bouclier_acier", consommables: ["huile_sainte", "potion_soin"] },
   druide:       { arme: "francisque",   armure: "armure_druidique",  bouclier: "bouclier_seve",  consommables: ["antidote", "potion_soin"] },
-  magicien:     { arme: "baton",        armure: "robe_mage",         bouclier: null,             consommables: ["parchemin_sort", "potion_soin"] },
+  magicien:     { arme: "grimoire",     armure: "robe_mage",         bouclier: null,             consommables: ["parchemin_sort", "potion_soin"] },
   necromancien: { arme: "baton",        armure: "armure_ombre",      bouclier: null,             consommables: ["parchemin_sort", "potion_soin"] },
   barde:        { arme: "rapiere",      armure: "manteau_voyageur",  bouclier: null,             consommables: ["corde_enchantee", "potion_soin"] },
   enchanteur:   { arme: "dague",        armure: "robe_mage",         bouclier: null,             consommables: ["parchemin_sort", "potion_soin"] },
