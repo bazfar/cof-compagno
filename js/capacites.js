@@ -232,6 +232,42 @@ const Capacites = (() => {
     p.etatsActifs = (p.etatsActifs || []).filter((e) => !(e.dureeRestante && e.dureeRestante.motCle === "finCombat"));
   }
 
+  /* ---------- Voie du chaos (homebrew) : jauge de corruption de combat -------
+     Chaque classe a une "Voie du chaos" (voie.speciale === true, cf. données)
+     avec sa propre jauge (CF/CS/CP selon la classe) et un palier "Corruption
+     d'Âme" (CA) commun. Seuls les rangs dont le texte décrit un gain NET et
+     univoque à l'usage (ex. "+1 CS") portent un champ rang.mecanique.corruption
+     — volontairement absent des déclencheurs passifs hors bouton "Lancer"
+     (ex. Guerrier/Chasseur rang 1, déclenchés par les dégâts encaissés/portés,
+     pas par un clic), des "coûts" qui financent une AUTRE capacité (la famille
+     "Don corrompu"/"Étreinte du Vide"/rang 2 générique) et des poussées
+     optionnelles (Druide rang 1) : ces cas restent au jugement de la table via
+     l'ajustement manuel ci-dessous (ajusterCorruptionCombat), comme le reste
+     des mécaniques de jauge déjà marquées "non trackée par le schéma standard"
+     dans les données. */
+  const SEUIL_CORRUPTION_MAJEURE = 6;
+
+  // Mute p.corruptionMajeure une seule fois par combat (corruptionSeuilFranchi,
+  // remis à false par Combat.terminerCombat) quand la jauge dépasse le seuil —
+  // rester au-dessus ne la fait pas grimper indéfiniment dans le même combat.
+  function _verifierSeuilCorruptionMajeure(p) {
+    if (p.corruptionCombat > SEUIL_CORRUPTION_MAJEURE && !p.corruptionSeuilFranchi) {
+      p.corruptionSeuilFranchi = true;
+      p.corruptionMajeure = (p.corruptionMajeure || 0) + 1;
+      return true;
+    }
+    return false;
+  }
+
+  // Ajustement manuel (MJ ou joueur) de la jauge de combat — ex. déclencheurs
+  // passifs non automatisables, corrections de table. Pas de journalisation
+  // dans l'historique partagé (comme les boutons de PV), juste la jauge et le
+  // seuil. Renvoie true si ce réglage vient de faire franchir le seuil majeur.
+  function ajusterCorruptionCombat(p, delta) {
+    p.corruptionCombat = Math.max(0, (p.corruptionCombat || 0) + delta);
+    return _verifierSeuilCorruptionMajeure(p);
+  }
+
   // Résout+applique un seul effet de mecanique.effets[]. Renvoie un message
   // texte destiné au joueur (toast) — ne journalise PAS lui-même dans
   // l'historique partagé pour les effets sans jet de dé (etat/bonus/special).
@@ -336,6 +372,17 @@ const Capacites = (() => {
       if (msg) messages.push(msg);
     });
 
+    // Voie du chaos : gain de corruption sur le LANCEUR (jamais la cible),
+    // uniquement pour les rangs dont le gain est univoque (cf. commentaire
+    // au-dessus de SEUIL_CORRUPTION_MAJEURE).
+    if (mecanique.corruption) {
+      p.corruptionCombat = (p.corruptionCombat || 0) + mecanique.corruption;
+      const franchi = _verifierSeuilCorruptionMajeure(p);
+      App.ajouterHisto(`${libelle} — Corruption`, p.corruptionCombat, false, false, `+${mecanique.corruption} (jauge de combat, ${p.nom})`);
+      messages.push(`Corruption +${mecanique.corruption} (jauge de combat : ${p.corruptionCombat}/${SEUIL_CORRUPTION_MAJEURE}).` +
+        (franchi ? ` ⚠️ Seuil dépassé — Corruption d'Âme +1 (total ${p.corruptionMajeure}), risque de mutation.` : ""));
+    }
+
     usage.appliquer && usage.appliquer();
     App.sauverPersos(persos);
 
@@ -347,6 +394,8 @@ const Capacites = (() => {
     resoudreDureeInitiale,
     decompterEtatsDebutTour,
     retirerEtatsFinCombat,
+    ajusterCorruptionCombat,
+    SEUIL_CORRUPTION_MAJEURE,
     cleCapacite,
     parserFrequence,
     verifierUsage,

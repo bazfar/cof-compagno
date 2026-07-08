@@ -245,6 +245,14 @@ const Combat = (() => {
       const avant = (p.etatsActifs || []).length;
       Capacites.retirerEtatsFinCombat(p);
       if ((p.etatsActifs || []).length !== avant) modifie = true;
+      // Jauge de corruption de combat (Voie du chaos) : remise à 0 en fin de
+      // combat — la Corruption d'Âme (corruptionMajeure), elle, ne se
+      // réinitialise jamais.
+      if (p.corruptionCombat || p.corruptionSeuilFranchi) {
+        p.corruptionCombat = 0;
+        p.corruptionSeuilFranchi = false;
+        modifie = true;
+      }
     });
     if (modifie) App.sauverPersos(persos);
     if (typeof Carte !== "undefined" && Carte.reinitialiserDetectionVisibilite) Carte.reinitialiserDetectionVisibilite();

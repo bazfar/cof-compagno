@@ -46,6 +46,9 @@ class Personnage extends Entite {
         notes: "",
         etatsActifs: [],
         usagesCapacites: {},
+        corruptionCombat: 0,
+        corruptionMajeure: 0,
+        corruptionSeuilFranchi: false,
       },
       data
     );
@@ -72,6 +75,15 @@ class Personnage extends Entite {
     // compte les usages d'une capacité à fréquence limitée (cf. js/etats.js,
     // rang.mecanique.usage) : { [idCapacite]: nombreUtilise }.
     this.usagesCapacites = d.usagesCapacites;
+    // Voie du chaos (homebrew) : jauge de corruption du combat en cours
+    // (remise à 0 par Combat.terminerCombat), incrémentée automatiquement par
+    // Capacites.lancer() quand rang.mecanique.corruption est défini — cf.
+    // js/capacites.js. corruptionMajeure (Corruption d'Âme) ne se réinitialise
+    // jamais ; corruptionSeuilFranchi évite de la incrémenter plus d'une fois
+    // par combat quand la jauge reste au-delà du seuil sur plusieurs tours.
+    this.corruptionCombat = d.corruptionCombat;
+    this.corruptionMajeure = d.corruptionMajeure;
+    this.corruptionSeuilFranchi = d.corruptionSeuilFranchi;
 
     // Migration douce : l'ancien champ libre `inventaire` (string) devient un
     // item texte libre dans inventaireListe, pour ne rien perdre à la casse
@@ -236,6 +248,19 @@ class Personnage extends Entite {
   // (cf. CAPACITES_A_CHOIX côté app.js), au-delà du simple "est choisie ?".
   capaciteEntree(voieNom, rang) {
     return (this.capacites || []).find((c) => c.voie === voieNom && c.rang === rang) || null;
+  }
+
+  // A-t-il pris au moins un rang dans la "Voie du chaos" de sa classe
+  // (voie.speciale === true, cf. data/donnees.js) ? Sert à n'afficher le bloc
+  // Corruption sur la fiche qu'aux joueurs ayant opté pour cette mécanique
+  // (proposée sur demande/accord MJ, jamais par défaut).
+  aVoieChaosActive() {
+    const c = this.classeDef;
+    if (!c) return false;
+    return (this.capacites || []).some((cap) => {
+      const voie = c.voies.find((v) => v.nom === cap.voie);
+      return !!(voie && voie.speciale);
+    });
   }
 
   /* ----- Équipement (slots) -----
@@ -424,6 +449,9 @@ class Personnage extends Entite {
       notes: this.notes,
       etatsActifs: this.etatsActifs,
       usagesCapacites: this.usagesCapacites,
+      corruptionCombat: this.corruptionCombat,
+      corruptionMajeure: this.corruptionMajeure,
+      corruptionSeuilFranchi: this.corruptionSeuilFranchi,
     };
   }
   static depuisJSON(obj) {
