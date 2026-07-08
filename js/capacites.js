@@ -183,11 +183,13 @@ const Capacites = (() => {
     });
   }
 
-  function appliquerBonusSurPerso(pCible, effet, source, ctx) {
+  // valeurResolue : déjà résolue en nombre par l'appelant (resoudreEffet), pour
+  // ne calculer/afficher qu'une seule fois une formule comme "Mod.SAG".
+  function appliquerBonusSurPerso(pCible, effet, source, ctx, valeurResolue) {
     pCible.etatsActifs = pCible.etatsActifs || [];
     pCible.etatsActifs.push({
       idEtat: null,
-      bonus: { cible: effet.cible, valeur: effet.valeur },
+      bonus: { cible: effet.cible, valeur: valeurResolue },
       dureeRestante: Object.assign(resoudreDureeInitiale(effet.duree, ctx), { dureeAffichee: effet.duree }),
       source,
       poseLe: Date.now(),
@@ -269,14 +271,18 @@ const Capacites = (() => {
       return `État « ${etat.nom} » (${effet.duree}) à appliquer manuellement à ${cible ? cible.nom : "la cible"} (pas de suivi d'état automatique pour les monstres).`;
     }
     if (effet.type === "bonus") {
+      // effet.valeur peut être un nombre fixe ("2") ou une formule ("Mod.SAG") :
+      // résolue une seule fois ici (dés éventuels non relancés), réutilisée pour
+      // le message ET le stockage (cf. appliquerBonusSurPerso).
+      const { total: valeurResolue } = resoudreExpression(effet.valeur, { perso, rang });
       if (effet.duree === "permanente") {
-        return `Bonus permanent (${effet.cible} ${effet.valeur >= 0 ? "+" : ""}${effet.valeur}) — normalement fixé une fois pour toutes à l'acquisition de la capacité, pas à relancer ici.`;
+        return `Bonus permanent (${effet.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}) — normalement fixé une fois pour toutes à l'acquisition de la capacité, pas à relancer ici.`;
       }
       if (cible && cible.genre === "perso" && persos[cible.id]) {
-        appliquerBonusSurPerso(persos[cible.id], effet, libelle, { perso, rang });
-        return `Bonus (${effet.cible} ${effet.valeur >= 0 ? "+" : ""}${effet.valeur}, ${effet.duree}) appliqué à ${cible.nom}.`;
+        appliquerBonusSurPerso(persos[cible.id], effet, libelle, { perso, rang }, valeurResolue);
+        return `Bonus (${effet.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}, ${effet.duree}) appliqué à ${cible.nom}.`;
       }
-      return `Bonus (${effet.cible} ${effet.valeur}, ${effet.duree}) — aucune cible sélectionnée, à appliquer manuellement.`;
+      return `Bonus (${effet.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}, ${effet.duree}) — aucune cible sélectionnée, à appliquer manuellement.`;
     }
     if (effet.type === "special") {
       return `ℹ️ ${effet.note}`;

@@ -132,15 +132,31 @@ class Personnage extends Entite {
     return bonus;
   }
 
+  // Somme des bonus temporaires actuellement actifs (sorts/capacités posés via
+  // js/capacites.js — Bouclier arcanique, Faveur sombre, etc. — cf. etatsActifs)
+  // pour une cible donnée ("DEF", "attaque", "initiative"). Distinct des bonus
+  // permanents hardcodés ci-dessous (bonusDefCapacites, etc.), qui restent la
+  // seule source pour les bonus fixés à l'acquisition d'une capacité (les
+  // entrées "permanente" ne sont jamais poussées dans etatsActifs, cf.
+  // Capacites.lancer). Les bonus "caracteristique" (cible non précisée par le
+  // schéma de données) ne sont pas repris ici, cf. bonusCaracCapacites.
+  bonusTemporaire(cible) {
+    return (this.etatsActifs || []).reduce((total, e) => {
+      if (e.bonus && e.bonus.cible === cible && typeof e.bonus.valeur === "number") return total + e.bonus.valeur;
+      return total;
+    }, 0);
+  }
+
   /* ----- Défense ----- */
   calculerDEF() {
-    return 10 + this.mod("DEX") + this.bonusDefEquipement() + this.bonusDefCapacites();
+    return 10 + this.mod("DEX") + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusTemporaire("DEF");
   }
 
   // Initiative = Mod. de DEX + bonus de capacités (ex. Barde/Moine ajoutant
-  // Mod.INT ou Mod.SAG en plus de la DEX, cf. bonusInitiativeCapacites).
+  // Mod.INT ou Mod.SAG en plus de la DEX, cf. bonusInitiativeCapacites) +
+  // bonus temporaires actifs (sorts/capacités, cf. bonusTemporaire).
   calculerInitiative() {
-    return this.mod("DEX") + this.bonusInitiativeCapacites();
+    return this.mod("DEX") + this.bonusInitiativeCapacites() + this.bonusTemporaire("initiative");
   }
   bonusInitiativeCapacites() {
     let bonus = 0;
@@ -348,7 +364,7 @@ class Personnage extends Entite {
   }
   // type : "contact" (FOR), "distance" (DEX), "magique" (carac de magie de la classe)
   bonusAttaque(type) {
-    const b = this.bonusProgression();
+    const b = this.bonusProgression() + this.bonusTemporaire("attaque");
     if (type === "contact") return b + this.mod("FOR");
     if (type === "distance") return b + this.mod("DEX");
     if (type === "magique") {
