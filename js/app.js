@@ -3566,7 +3566,10 @@ const App = (() => {
   const TIER_LABELS = { basique: "Basique", veteran: "Vétéran", elite: "Élite", champion: "Champion" };
 
   function _carteMonstreHTML(m) {
-    const emoji = m.emoji ? `<span class="monstre-emoji">${m.emoji}</span>` : "";
+    const iconePath = typeof cheminIconeMonstre === "function" ? cheminIconeMonstre(m) : null;
+    const emoji = iconePath
+      ? `<img class="monstre-icone" src="${iconePath}" alt="" data-emoji-repli="${echapper(m.emoji || "")}" onerror="monstreIconeFallback(this)" />`
+      : (m.emoji ? `<span class="monstre-emoji">${m.emoji}</span>` : "");
     const boss = m.boss ? '<span class="badge-boss">BOSS</span>' : "";
     const tier = m.tier ? `<span class="badge-tier badge-tier-${echapper(m.tier)}">${echapper(TIER_LABELS[m.tier] || m.tier)}</span>` : "";
     const taille = m.taille ? `<span class="badge-taille">${echapper(m.taille)}</span>` : "";

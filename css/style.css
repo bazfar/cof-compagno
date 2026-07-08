@@ -1197,6 +1197,15 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
   line-height: 1;
 }
 
+.monstre-icone {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--or);
+  flex-shrink: 0;
+}
+
 .badge-taille {
   background: var(--parchemin-fonce);
   color: var(--encre);

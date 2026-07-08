@@ -415,11 +415,14 @@ const Carte = (() => {
       const perso = j.pj && j.ref ? personasPJ[idPersoDepuisRef(j.ref)] : null;
       const infosToken = perso || j;
       const jetonToken = j.pj && typeof cheminTokenPersonnage === "function" ? cheminTokenPersonnage(infosToken) : null;
+      const jetonIconeMonstre = (!j.pj && j.monstreId && typeof cheminIconeMonstre === "function") ? cheminIconeMonstre(j.monstreId) : null;
       const classePourEmbleme = infosToken.classe || j.classe;
       const interieur = j.portrait
         ? `<img src="${j.portrait}" alt="" />`
         : jetonToken
         ? `<img src="${jetonToken}" alt="" onerror="this.outerHTML=embleme('${classePourEmbleme}',40)" />`
+        : jetonIconeMonstre
+        ? `<img src="${jetonIconeMonstre}" alt="" onerror="this.outerHTML='${initiales(j.nom)}'" />`
         : (j.pj && typeof embleme === "function" ? embleme(classePourEmbleme, 40) : initiales(j.nom));
       const infosPv = _infosPv(j, personasPJ);
       const barreHp = infosPv
@@ -1739,7 +1742,9 @@ const Carte = (() => {
         el.style.fontSize = Math.max(8, tc * 0.35) + 'px';
         el.title = tok.nom;
         const perso = tok.pj && tok.ref ? personasPJ2[idPersoDepuisRef(tok.ref)] : null;
-        const tokImg = (tok.pj && typeof cheminTokenPersonnage === 'function') ? cheminTokenPersonnage(perso || tok) : null;
+        const tokImgPJ = (tok.pj && typeof cheminTokenPersonnage === 'function') ? cheminTokenPersonnage(perso || tok) : null;
+        const tokImgMonstre = (!tok.pj && tok.monstreId && typeof cheminIconeMonstre === 'function') ? cheminIconeMonstre(tok.monstreId) : null;
+        const tokImg = tokImgPJ || tokImgMonstre;
         const contenuTok = tokImg
           ? '<img class="dd-token-img" src="' + tokImg + '" alt="" data-initiale="' + tok.nom.charAt(0).toUpperCase() + '" onerror="ddTokenFallback(this)" />'
           : '<span class="dd-token-initiale">' + tok.nom.charAt(0).toUpperCase() + '</span>';

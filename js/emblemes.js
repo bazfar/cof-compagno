@@ -139,6 +139,31 @@ function ddTokenFallback(img) {
   img.replaceWith(span);
 }
 
+// Bump ce numéro à chaque ajout/régénération des fichiers assets/monstres/*.png
+// pour forcer les navigateurs à recharger les images (même nom de fichier).
+const MONSTRES_ICONES_VERSION = 1;
+
+/* Chemin de l'icône/jeton d'un monstre du bestiaire (assets/monstres/<id>.png),
+   ou null si aucun id. Simple convention par id — pas de champ à maintenir dans
+   data/bestiaire.js : tant que le fichier n'existe pas, l'appelant retombe sur
+   l'emoji/l'initiale via onerror (cf. monstreIconeFallback ci-dessous). */
+function cheminIconeMonstre(idOuMonstre) {
+  const id = (typeof idOuMonstre === "string") ? idOuMonstre : (idOuMonstre && idOuMonstre.id);
+  if (!id) return null;
+  return `assets/monstres/${id}.png?v=${MONSTRES_ICONES_VERSION}`;
+}
+
+/* Remplace une <img> d'icône de monstre en erreur par son emoji de repli
+   (lu depuis data-emoji-repli), ou la retire s'il n'y en a pas. */
+function monstreIconeFallback(img) {
+  const emoji = img.dataset.emojiRepli;
+  if (!emoji) { img.remove(); return; }
+  const span = document.createElement("span");
+  span.className = "monstre-emoji";
+  span.textContent = emoji;
+  img.replaceWith(span);
+}
+
 /* Avatar d'un personnage : portrait uploadé si présent, sinon token race+genre+classe,
    sinon emblème générique de classe. */
 function avatarHtml(p, taille) {
