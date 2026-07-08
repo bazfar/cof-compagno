@@ -394,7 +394,14 @@ class Personnage extends Entite {
     if (type === "distance") return b + this.mod("DEX");
     if (type === "magique") {
       const cm = typeof CARAC_MAGIE !== "undefined" ? CARAC_MAGIE[this.classe] : null;
-      return cm ? b + this.mod(cm) : null;
+      if (!cm) return null;
+      // Bonus simple et mécanique d'un item équipé (ex. Grimoire : +1 attaque
+      // magique tant qu'il est équipé, quelle que soit sa rareté) — à la
+      // différence des effets de rareté (purement descriptifs, cf.
+      // effetRarete), ce bonus est câblé directement ici.
+      const bonusGrimoire = this._itemsEquipesUniques()
+        .reduce((t, it) => t + (it.bonusAttaqueMagique || 0), 0);
+      return b + this.mod(cm) + bonusGrimoire;
     }
     return b;
   }

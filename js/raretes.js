@@ -128,6 +128,18 @@ const EFFETS_PAR_ITEM = {
     { id: "devastatrice", nom: "dévastatrice", rare: "+1d6 dégâts si la cible n'a pas encore agi ce tour", legendaire: "+2d6 dégâts si la cible n'a pas encore agi ce tour" },
     { id: "perforante", nom: "perforante", rare: "Ignore 3 points de valeurArmure de la cible", legendaire: "Ignore 6 points de valeurArmure de la cible" },
   ],
+  // 3 variantes plutôt que 2 (rien n'empêche d'en avoir plus, cf. en-tête de fichier).
+  grimoire: [
+    { id: "embrasement", nom: "d'embrasement",
+      rare: "+1 dégâts au jet de dégâts, et applique l'état Brûlure (1d4 dégâts en début de tour) au toucher",
+      legendaire: "+1 dégâts au jet de dégâts, et applique l'état Brûlure aggravée (1d6 dégâts en début de tour, 3 tours minimum) au toucher" },
+    { id: "effrayante", nom: "effrayante",
+      rare: "+1 dégâts au jet de dégâts, 1 chance sur 4 d'infliger l'état Effrayée (Fuite) à la cible pendant 1d4 tours",
+      legendaire: "+1 dégâts au jet de dégâts, 1 chance sur 2 d'infliger l'état Effrayée (Fuite) à la cible pendant 1d4 tours" },
+    { id: "affaiblissante", nom: "affaiblissante",
+      rare: "+1 dégâts au jet de dégâts, 1 chance sur 4 de réduire la DEF de la cible de 1 pendant 2 tours",
+      legendaire: "+1 dégâts au jet de dégâts, 1 chance sur 2 de réduire la DEF de la cible de 1 pendant 3 tours" },
+  ],
 
   // ── Armures ────────────────────────────────────────────────
   armure_cuir: [
@@ -268,6 +280,7 @@ const Raretes = (() => {
       case "arme":
         clone.bonusDegatsTotal = (item.enchantement || 0) + bonus;
         if (auMoinsRare) {
+          if (item.degatsAuMoinsRare) clone.degats = item.degatsAuMoinsRare;
           if (variante) { clone.effetRarete = variante[rarete.id]; clone.varianteNom = variante.nom; }
           else clone.effetRarete = _effetGenerique("arme", rarete.id);
         }

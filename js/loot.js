@@ -99,7 +99,8 @@ const Loot = (() => {
     if (it.type === "arme") {
       const bonus = it.bonusDegatsTotal !== undefined ? it.bonusDegatsTotal : (it.enchantement || 0);
       const degats = bonus > 0 ? `${bonus}+${it.degats}` : it.degats;
-      return `${degats} · ${it.portee}${it.deuxMains ? " · 2 mains" : ""}`;
+      return `${degats} · ${it.portee}${it.deuxMains ? " · 2 mains" : ""}` +
+        (it.bonusAttaqueMagique ? ` · +${it.bonusAttaqueMagique} attaque magique` : "");
     }
     if (it.type === "armure")     return `Réduction ${it.valeurArmure}${it.malusDEX ? ` · Malus DEX -${it.malusDEX}` : ""}`;
     if (it.type === "bouclier")   return `+${it.bonusDEF} DEF`;

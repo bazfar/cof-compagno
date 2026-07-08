@@ -1680,6 +1680,7 @@ const App = (() => {
             </div>
             ${badge ? `<div class="inv-item-stats">${echapper(badge)}</div>` : ""}
             ${it.effetRarete ? `<div class="inv-item-stats" style="color:${it.rareteCouleur || ""}">✨ ${echapper(it.effetRarete)}</div>` : ""}
+            ${it.bonusAttaqueMagique ? `<div class="inv-item-stats">+${it.bonusAttaqueMagique} attaque magique</div>` : ""}
             ${it.description ? `<div class="inv-item-desc">${echapper(it.description)}</div>` : ""}
             <div class="inv-actions">
               ${equipable ? `<button class="btn petit or btn-equiper-depuis-inv" data-idx="${idx}">Équiper</button>` : ""}
