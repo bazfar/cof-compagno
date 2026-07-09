@@ -1161,6 +1161,21 @@ const Carte = (() => {
     let _depotObjetsManuels = null;
     let _dessinEnCours = null; // { scene, x1, y1, x2, y2 } en pixels natifs de la scène
 
+    // Portes/fenêtres dessinées à la main par le MJ (indispensable pour une
+    // scène importée en simple image, cf. chargerImage — sans .dd2vtt, aucun
+    // portail n'existe). Poussées directement dans scene.portails au même
+    // titre que les portails importés : rendu (rendrePortails), bascule au
+    // clic (_basculerPortailAuClic) et blocage (_deplacementBloque,
+    // _segmentsBloquants) fonctionnent donc SANS modification, puisqu'ils
+    // itèrent tous scene.portails sans distinguer l'origine d'un portail.
+    // Seule la persistance diffère (cf. _sauverEtatPortail) : un portail
+    // importé ne synchronise que son état ouvert/fermé (_depotPortails,
+    // gardé par id stable venant du fichier) ; un portail manuel synchronise
+    // sa géométrie ET son état, car rien d'autre ne la connaît (_depotPortailsManuels).
+    let modeDessinPortail = false;
+    let _depotPortailsManuels = null;
+    let _dessinPortailEnCours = null; // { scene, x1, y1, x2, y2 } en pixels natifs de la scène
+
     // ── Parser ──────────────────────────────────────────────
     // key   : identifiant stable (clé de synchro) — nom de fichier pour un
     //         import manuel, ou la "key" du catalogue pour une scène commitée
@@ -1424,6 +1439,18 @@ const Carte = (() => {
         calculerEtRendreLoS(scene);
       });
 
+      // Idem pour les portes/fenêtres dessinées à la main (indispensable pour
+      // une scène importée en simple image, sans aucun portail Dungeondraft) —
+      // fusionnées directement dans scene.portails, cf. commentaire plus haut.
+      if (_depotPortailsManuels) _depotPortailsManuels.arreter();
+      _depotPortailsManuels = new DepotDistant('battlemap_' + nom + '_portails_manuels');
+      _fusionnerPortailsManuels(scene, _depotPortailsManuels.charger());
+      _depotPortailsManuels.ecouter((cache) => {
+        _fusionnerPortailsManuels(scene, cache);
+        rendreScene(scene);
+        calculerEtRendreLoS(scene);
+      });
+
       // Cacher le placeholder image PNG
       const vide = document.getElementById('carte-vide');
       if (vide) vide.style.display = 'none';
@@ -1642,7 +1669,39 @@ const Carte = (() => {
     }
 
     function _sauverEtatPortail(p) {
+      // Portail manuel : rien d'autre ne connaît sa géométrie, donc on
+      // resauvegarde le portail complet. Portail importé : seul l'état
+      // ouvert/fermé change de session en session, la géométrie vient du
+      // fichier — cf. commentaire sur modeDessinPortail plus haut.
+      if (p.manuel) {
+        if (_depotPortailsManuels) {
+          _depotPortailsManuels.sauver({
+            x1: p.bounds[0].x, y1: p.bounds[0].y, x2: p.bounds[1].x, y2: p.bounds[1].y, ouvert: p.ouvert,
+          }, p.id);
+        }
+        return;
+      }
       if (_depotPortails) _depotPortails.sauver({ ouvert: p.ouvert }, p.id);
+    }
+
+    // Reconstruit la portion "manuelle" de scene.portails à partir du cache
+    // synchronisé, sans toucher aux portails importés (déjà dans le tableau,
+    // jamais retirés ici). Appelé à l'activation de la scène et à chaque
+    // changement distant (cf. activerScene).
+    function _fusionnerPortailsManuels(scene, cache) {
+      scene.portailsManuelsBruts = cache || {};
+      scene.portails = (scene.portails || []).filter(p => !p.manuel);
+      Object.keys(scene.portailsManuelsBruts).forEach((id) => {
+        const o = scene.portailsManuelsBruts[id];
+        scene.portails.push({
+          id,
+          bounds: [{ x: o.x1, y: o.y1 }, { x: o.x2, y: o.y2 }],
+          position: { x: (o.x1 + o.x2) / 2, y: (o.y1 + o.y2) / 2 },
+          ouvert: !!o.ouvert,
+          rotation: 0,
+          manuel: true,
+        });
+      });
     }
 
     // Clic n'importe où sur la carte-scene : si assez proche d'un portail
@@ -1692,6 +1751,9 @@ const Carte = (() => {
       modeDessinObjet = !modeDessinObjet;
       const btn = document.getElementById('btn-objet-bloquant-dd');
       if (btn) btn.classList.toggle('actif-bouton', modeDessinObjet);
+      // Un seul mode de dessin à la fois (sinon les deux pointerdown se
+      // disputent le même geste).
+      if (modeDessinObjet && modeDessinPortail) basculerModeDessinPortail();
       toastCarte(modeDessinObjet
         ? '🌳 Mode obstacle : clique-glisse pour tracer un obstacle (bloque la vue, pas le passage), clique sur un obstacle existant pour le retirer.'
         : 'Mode obstacle désactivé.');
@@ -1774,6 +1836,99 @@ const Carte = (() => {
       calculerEtRendreLoS(scene);
       if (_depotObjetsManuels) _depotObjetsManuels.supprimer(meilleurId);
       toastCarte('Obstacle retiré.');
+    }
+
+    // ── Dessin manuel de portes/fenêtres — MJ uniquement ─────────────────
+    // Même interaction que le dessin d'obstacle (clique-glisse pour tracer,
+    // clic seul pour retirer), mais produit un portail normal dans
+    // scene.portails : une fois posé, il se bascule ouvert/fermé au clic par
+    // _basculerPortailAuClic comme n'importe quel portail importé.
+    function basculerModeDessinPortail() {
+      modeDessinPortail = !modeDessinPortail;
+      const btn = document.getElementById('btn-portail-dd');
+      if (btn) btn.classList.toggle('actif-bouton', modeDessinPortail);
+      if (modeDessinPortail && modeDessinObjet) basculerModeDessinObjet();
+      toastCarte(modeDessinPortail
+        ? '🚪 Mode porte/fenêtre : clique-glisse pour tracer une porte (clic simple dessus, ensuite, pour l\'ouvrir/fermer), clique sur une porte manuelle pour la retirer.'
+        : 'Mode porte/fenêtre désactivé.');
+    }
+
+    function _demarrerDessinPortail(ev) {
+      if (!modeDessinPortail) return;
+      if (ev.target && ev.target.closest && ev.target.closest('.dd-token')) return;
+      const scene = scenes[sceneActive];
+      if (!scene) return;
+      const pt = _pointSceneDepuisEvent(ev, scene);
+      if (!pt) return;
+      ev.preventDefault();
+      _dessinPortailEnCours = { scene, x1: pt[0], y1: pt[1], x2: pt[0], y2: pt[1] };
+      window.addEventListener('pointermove', _surDessinPortail);
+      window.addEventListener('pointerup', _finDessinPortail);
+    }
+
+    function _surDessinPortail(ev) {
+      if (!_dessinPortailEnCours) return;
+      const { scene } = _dessinPortailEnCours;
+      const pt = _pointSceneDepuisEvent(ev, scene);
+      if (!pt) return;
+      _dessinPortailEnCours.x2 = pt[0];
+      _dessinPortailEnCours.y2 = pt[1];
+      rendreScene(scene);
+      const imgEl = document.getElementById('carte-image');
+      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
+      if (!rect || rect.width === 0) return;
+      const sx = rect.width / scene.largeur, sy = rect.height / scene.hauteur;
+      ctxMurs.strokeStyle = '#ffcc00';
+      ctxMurs.lineWidth   = Math.max(2, scene.px * sx / 50);
+      ctxMurs.beginPath();
+      ctxMurs.moveTo(_dessinPortailEnCours.x1 * sx, _dessinPortailEnCours.y1 * sy);
+      ctxMurs.lineTo(_dessinPortailEnCours.x2 * sx, _dessinPortailEnCours.y2 * sy);
+      ctxMurs.stroke();
+    }
+
+    function _finDessinPortail() {
+      window.removeEventListener('pointermove', _surDessinPortail);
+      window.removeEventListener('pointerup', _finDessinPortail);
+      if (!_dessinPortailEnCours) return;
+      const { scene, x1, y1, x2, y2 } = _dessinPortailEnCours;
+      _dessinPortailEnCours = null;
+      const distance = Math.hypot(x2 - x1, y2 - y1);
+      if (distance < scene.px * 0.15) {
+        _supprimerPortailManuelProche(scene, x1, y1);
+        return;
+      }
+      const id = 'portail-' + Date.now();
+      const portail = {
+        id,
+        bounds: [{ x: x1, y: y1 }, { x: x2, y: y2 }],
+        position: { x: (x1 + x2) / 2, y: (y1 + y2) / 2 },
+        ouvert: false,
+        rotation: 0,
+        manuel: true,
+      };
+      if (!scene.portails) scene.portails = [];
+      scene.portails.push(portail);
+      // Rendu local d'abord, synchro en dernier (cf. _finDessinObjet).
+      rendreScene(scene);
+      calculerEtRendreLoS(scene);
+      _sauverEtatPortail(portail);
+      toastCarte('Porte/fenêtre ajoutée (fermée).');
+    }
+
+    function _supprimerPortailManuelProche(scene, x, y) {
+      const candidats = (scene.portails || []).filter(p => p.manuel);
+      let meilleur = null, meilleureDist = scene.px * 0.5;
+      candidats.forEach((p) => {
+        const b = p.bounds;
+        const d = _distancePointSegment(x, y, b[0].x, b[0].y, b[1].x, b[1].y);
+        if (d < meilleureDist) { meilleureDist = d; meilleur = p; }
+      });
+      if (!meilleur) { rendreScene(scene); toastCarte('Aucune porte/fenêtre manuelle à cet endroit.'); return; }
+      scene.portails = scene.portails.filter(p => p !== meilleur);
+      rendreScene(scene);
+      calculerEtRendreLoS(scene);
+      if (_depotPortailsManuels) _depotPortailsManuels.supprimer(meilleur.id);
+      toastCarte('Porte/fenêtre retirée.');
     }
 
     // Portée de vision d'un token PJ, en cases (~équivalent torche/vision
@@ -2379,7 +2534,7 @@ const Carte = (() => {
       // du tracé (cf. _demarrerDessinObjet/_finDessinObjet) : on le court-circuite.
       const scene2 = document.getElementById('carte-scene');
       if (scene2) scene2.addEventListener('click', (ev) => {
-        if (modeDessinObjet) return;
+        if (modeDessinObjet || modeDessinPortail) return;
         const sc = scenes[sceneActive];
         if (sc && _basculerPortailAuClic(ev, sc)) return;
         if (tokenSelectionne) {
@@ -2388,6 +2543,7 @@ const Carte = (() => {
         }
       });
       if (scene2) scene2.addEventListener('pointerdown', _demarrerDessinObjet);
+      if (scene2) scene2.addEventListener('pointerdown', _demarrerDessinPortail);
 
       // Sync scène active : le MJ choisit une scène → tous les clients la
       // chargent automatiquement au prochain poll (ou immédiatement si même
@@ -2438,6 +2594,14 @@ const Carte = (() => {
         });
       }
 
+      const btnPortailDessin = document.getElementById('btn-portail-dd');
+      if (btnPortailDessin) {
+        btnPortailDessin.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          basculerModeDessinPortail();
+        });
+      }
+
       chargerCatalogue();
     }
 
@@ -2468,6 +2632,8 @@ const Carte = (() => {
         if (btnTok) btnTok.style.display = 'inline-block';
         const btnObjet = document.getElementById('btn-objet-bloquant-dd');
         if (btnObjet) btnObjet.style.display = 'inline-block';
+        const btnPortailDessin = document.getElementById('btn-portail-dd');
+        if (btnPortailDessin) btnPortailDessin.style.display = 'inline-block';
         const sel = document.getElementById('select-scene-dd2vtt');
         if (sel) sel.style.display = '';
         const scene = scenes[sceneActive];
@@ -2486,6 +2652,9 @@ const Carte = (() => {
       const btnObjet = document.getElementById('btn-objet-bloquant-dd');
       if (btnObjet) { btnObjet.style.display = 'none'; btnObjet.classList.remove('actif-bouton'); }
       modeDessinObjet = false;
+      const btnPortailDessin = document.getElementById('btn-portail-dd');
+      if (btnPortailDessin) { btnPortailDessin.style.display = 'none'; btnPortailDessin.classList.remove('actif-bouton'); }
+      modeDessinPortail = false;
       const sel = document.getElementById('select-scene-dd2vtt');
       if (sel) sel.style.display = 'none';
       // Cacher canvas battlemap
