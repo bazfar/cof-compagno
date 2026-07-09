@@ -310,6 +310,7 @@ const App = (() => {
       ${htmlEtatsActifs(p)}
       ${htmlBlocInitiativeJoueur(id)}
       ${htmlBlocCorruption(p, perso)}
+      ${htmlBlocIllusions(p, perso)}
       <div class="carte">
         <h3 style="margin-top:0;">Capacités</h3>
         <div class="cible-capacite-form" style="display:none;">
@@ -1413,6 +1414,26 @@ const App = (() => {
     </div>`;
   }
 
+  // Compteur de doubles illusoires actifs (Enchanteur, "Image décalée") —
+  // visible seulement pour un enchanteur ayant pris cette capacité (cf.
+  // Personnage.aImageDecalee). +1 à chaque nouveau lancer, −1 quand un double
+  // "meurt" (consommé pour faire rater une attaque contre l'Enchanteur).
+  function htmlBlocIllusions(p, perso) {
+    if (!perso.aImageDecalee()) return "";
+    const n = p.illusionsActives || 0;
+    return `<div class="carte corruption-bloc">
+      <h3 style="margin-top:0;">🪞 Illusions actives</h3>
+      <div class="corruption-ligne">
+        <span>Doubles illusoires (Image décalée)</span>
+        <div class="corruption-control">
+          <button data-illusions-moins title="Retirer (consommée par une attaque)">−</button>
+          <span class="corruption-valeur">${n}</span>
+          <button data-illusions-plus title="Ajouter (nouveau lancer)">+</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
   // Capacités de classe débloquées (p.capacites), groupées par voie — factorisé
   // pour être réutilisé tel quel par la fiche complète et la mini-fiche battlemap.
   function htmlCapacitesClasse(p, c) {
@@ -1596,6 +1617,28 @@ const App = (() => {
         if (!pp) return;
         if (el.dataset.corruptionMoins === "combat") Capacites.ajusterCorruptionCombat(pp, -1);
         else pp.corruptionMajeure = Math.max(0, (pp.corruptionMajeure || 0) - 1);
+        sauverPersos(persos);
+        rafraichir();
+      };
+    });
+    // Compteur d'Illusions actives (cf. htmlBlocIllusions) — +1 à chaque
+    // nouveau lancer d'Image décalée, −1 quand un double est consommé.
+    racine.querySelectorAll("[data-illusions-plus]").forEach((el) => {
+      el.onclick = () => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp) return;
+        pp.illusionsActives = (pp.illusionsActives || 0) + 1;
+        sauverPersos(persos);
+        rafraichir();
+      };
+    });
+    racine.querySelectorAll("[data-illusions-moins]").forEach((el) => {
+      el.onclick = () => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp) return;
+        pp.illusionsActives = Math.max(0, (pp.illusionsActives || 0) - 1);
         sauverPersos(persos);
         rafraichir();
       };
@@ -2277,6 +2320,7 @@ const App = (() => {
           ${htmlEtatsActifs(p)}
           ${htmlBlocInitiativeJoueur(id)}
           ${htmlBlocCorruption(p, perso)}
+          ${htmlBlocIllusions(p, perso)}
 
           <div class="carte">
             <h3>Capacités</h3>

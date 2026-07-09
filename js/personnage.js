@@ -263,6 +263,13 @@ class Personnage extends Entite {
     });
   }
 
+  // A-t-il pris "Image décalée" (Enchanteur, Voie de l'enchantement rang 1) ?
+  // Sert à n'afficher le compteur de doubles illusoires actifs (fiche/mini-
+  // fiche battlemap) qu'aux enchanteurs ayant réellement cette capacité.
+  aImageDecalee() {
+    return this.classe === "enchanteur" && !!this.capaciteEntree("Voie de l'enchantement", 1);
+  }
+
   /* ----- Équipement (slots) -----
      Seuls les items placés dans un slot comptent pour les stats de combat.
      inventaireListe (simple sac) n'a aucun effet mécanique. */
