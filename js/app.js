@@ -361,7 +361,10 @@ const App = (() => {
     if (panneau === "carte" && typeof Carte !== "undefined") {
       Carte.onOpen();
       if (role === "joueur") rendreSelecteurMonPerso();
-      if (role === "mj") rendreTableCombat("battlemap-zone-table-combat");
+      if (role === "mj") {
+        rendreTableCombat("battlemap-zone-table-combat");
+        rendreOrdreInitiative("battlemap-zone-ordre-initiative");
+      }
       _appliquerCarteMode();
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -3167,6 +3170,7 @@ const App = (() => {
     if (typeof Combat !== "undefined") {
       Combat.onChange(() => {
         rendreOrdreInitiative();
+        rendreOrdreInitiative("battlemap-zone-ordre-initiative");
         if (ficheActiveId && chargerPersos()[ficheActiveId]) afficherFiche(ficheActiveId);
         if (ficheSidebarActiveId && chargerPersos()[ficheSidebarActiveId]) rendreFicheSidebarBattlemap(ficheSidebarActiveId);
       });
@@ -3374,13 +3378,22 @@ const App = (() => {
     </div>`;
   }
 
-  function rendreOrdreInitiative() {
-    const zone = document.getElementById("zone-ordre-initiative");
+  // targetId : conteneur à peupler — l'onglet dédié "Table de combat"
+  // (zone-ordre-initiative) par défaut, ou la colonne MJ de la battlemap
+  // (battlemap-zone-ordre-initiative) pour lancer/suivre le combat sans
+  // changer d'onglet. Les deux peuvent exister dans le DOM en même temps
+  // (l'onglet caché n'est que masqué en CSS) : les boutons sont donc
+  // ciblés via zone.querySelector (classes) plutôt que des id globaux,
+  // sinon document.getElementById ne câblerait le handler que sur la
+  // première instance trouvée dans le document.
+  function rendreOrdreInitiative(targetId) {
+    targetId = targetId || "zone-ordre-initiative";
+    const zone = document.getElementById(targetId);
     if (!zone || typeof Combat === "undefined") return;
 
     if (!Combat.estActif()) {
-      zone.innerHTML = `<div class="carte"><button class="btn or" id="btn-demarrer-combat">⚔ Lancer le combat</button></div>`;
-      document.getElementById("btn-demarrer-combat").onclick = () => {
+      zone.innerHTML = `<div class="carte"><button class="btn or btn-demarrer-combat">⚔ Lancer le combat</button></div>`;
+      zone.querySelector(".btn-demarrer-combat").onclick = () => {
         if (role !== "mj") return;
         Combat.demarrer();
       };
@@ -3392,8 +3405,8 @@ const App = (() => {
       <div class="initiative-entete">
         <h3 style="margin:0;">Ordre d'initiative — Round ${etatCombat.round}</h3>
         <div class="barre-actions">
-          <button class="btn petit" id="btn-tour-suivant">⏭ Tour suivant</button>
-          <button class="btn petit danger" id="btn-terminer-combat">⏹ Terminer le combat</button>
+          <button class="btn petit btn-tour-suivant">⏭ Tour suivant</button>
+          <button class="btn petit danger btn-terminer-combat">⏹ Terminer le combat</button>
         </div>
       </div>
       <div class="initiative-bandeau">
@@ -3401,11 +3414,11 @@ const App = (() => {
       </div>
     </div>`;
 
-    document.getElementById("btn-tour-suivant").onclick = () => {
+    zone.querySelector(".btn-tour-suivant").onclick = () => {
       if (role !== "mj") return;
       Combat.tourSuivant();
     };
-    document.getElementById("btn-terminer-combat").onclick = () => {
+    zone.querySelector(".btn-terminer-combat").onclick = () => {
       if (role !== "mj") return;
       if (!confirm("Terminer le combat ? Les états « finCombat » actifs sur les PJ seront purgés.")) return;
       Combat.terminerCombat();

@@ -1148,6 +1148,20 @@ const Carte = (() => {
     let canvasMurs = null;
     let ctxMurs = null;
 
+    // Sync des scènes importées à la main (chargerImage/chargerFichier) : à la
+    // différence du catalogue (assets/battlemaps/, fetché par URL — donc déjà
+    // identique chez tout le monde), une scène importée par le MJ n'existe au
+    // départ que dans son navigateur. On la republie ici (image compressée +
+    // géométrie) pour que les joueurs puissent la charger dès que le MJ
+    // l'active (cf. _publierSceneManuelle, _suivreSceneDistante).
+    let _depotScenesManuelles = null;
+    // Dernier nom de scène demandé via SyncStore "battlemap:scene-active" —
+    // permet de relancer activerScene() dès que le document Firestore de la
+    // scène arrive, si le joueur a reçu le changement de scène avant que la
+    // scène elle-même n'ait fini de se synchroniser (course possible, deux
+    // canaux temps réel indépendants).
+    let _sceneActiveDemandee = null;
+
     // État ouvert/fermé des portails (portes + fenêtres, indiscernables côté
     // Dungeondraft), synchronisé via un DepotDistant par scène (_depotPortails,
     // un document Firestore par portail — voir activerScene).
@@ -1254,6 +1268,7 @@ const Carte = (() => {
           mettreAJourSelect();
           activerScene(nom);
           _publierSceneActive(nom);
+          _publierSceneManuelle(nom, scene);
           toastCarte('Scène « ' + nom + ' » chargée ✔');
         } catch (err) {
           console.error('[DD2VTT]', err);
@@ -1298,6 +1313,7 @@ const Carte = (() => {
           const sel = document.getElementById('select-scene-dd2vtt');
           if (sel) sel.value = nom;
           _publierSceneActive(nom);
+          _publierSceneManuelle(nom, scene);
           toastCarte('Scène « ' + nom + ' » chargée (' + lc + '×' + hc + ' cases) ✔');
         };
         img.onerror = () => toastCarte('Erreur : image invalide.');
@@ -1350,21 +1366,104 @@ const Carte = (() => {
     }
 
     // Applique une scène choisie par le MJ (reçue via sync) : l'active si déjà
-    // connue localement (catalogue déjà chargé), sinon tente de la récupérer
-    // dans le catalogue. Une scène importée manuellement par le MJ (absente du
-    // catalogue) ne peut pas être suivie : on ne synchronise jamais l'image.
+    // connue localement, sinon tente de la récupérer dans le catalogue, sinon
+    // dans le dépôt des scènes importées à la main (cf. _publierSceneManuelle) —
+    // celui-ci peut ne pas avoir encore livré le document au moment de l'appel
+    // (course entre les deux canaux temps réel) ; _sceneActiveDemandee permet
+    // à _depotScenesManuelles.ecouter() de relancer l'activation dès qu'il arrive.
     function _suivreSceneDistante(nomDistant) {
+      _sceneActiveDemandee = nomDistant;
       if (!nomDistant || nomDistant === sceneActive) return;
       if (scenes[nomDistant]) { activerScene(nomDistant); return; }
       const entree = (typeof CARTES_BATTLEMAP !== 'undefined')
         ? CARTES_BATTLEMAP.find(c => c.key === nomDistant) : null;
-      if (!entree) {
-        toastCarte('Le MJ a chargé une scène importée manuellement, non disponible pour toi.');
+      if (entree) {
+        _chargerEntreeCatalogue(entree)
+          .then(() => activerScene(entree.key))
+          .catch(err => console.warn('[DD2VTT] échec chargement scène distante :', entree.file, err));
         return;
       }
-      _chargerEntreeCatalogue(entree)
-        .then(() => activerScene(entree.key))
-        .catch(err => console.warn('[DD2VTT] échec chargement scène distante :', entree.file, err));
+      toastCarte('Chargement de la scène du MJ…');
+    }
+
+    // ── Sync des scènes importées à la main (chargerImage/chargerFichier) ───
+    function _initDepotScenesManuelles() {
+      if (_depotScenesManuelles || typeof DepotDistant === 'undefined') return;
+      _depotScenesManuelles = new DepotDistant('battlemap_scenes_manuelles');
+      _depotScenesManuelles.ecouter((cache) => {
+        Object.keys(cache).forEach((nom) => {
+          if (scenes[nom]) return; // déjà connue localement (ex. le MJ qui vient de l'importer)
+          scenes[nom] = _sceneDepuisSync(nom, cache[nom]);
+          mettreAJourSelect();
+          if (nom === _sceneActiveDemandee && sceneActive !== nom) activerScene(nom);
+        });
+      });
+    }
+    function _sceneDepuisSync(nom, d) {
+      return {
+        nom, label: d.label || nom,
+        largeur: d.largeur, hauteur: d.hauteur, px: d.px, lc: d.lc, hc: d.hc,
+        image: d.image, imageObj: null,
+        polylignes: d.polylignes || [], segments: d.segments || [],
+        polylignesObjets: d.polylignesObjets || [], segmentsObjets: d.segmentsObjets || [],
+        portails: d.portails || [],
+        tokens: [], brouillard: [],
+      };
+    }
+
+    // Redimensionne/recompresse une image (dataURL) sous un seuil de taille
+    // avant synchro : les documents Firestore sont limités à 1 Mo, et une image
+    // de scène (photo/scan haute résolution, export Dungeondraft brut) le
+    // dépasse largement telle quelle. Baisse la résolution puis la qualité JPEG
+    // par paliers jusqu'à repasser sous le seuil (ou jusqu'à un plancher, pour
+    // ne jamais boucler indéfiniment sur une image pathologique).
+    function _comprimerImagePourSync(dataUrl) {
+      const LIMITE = 700000; // caractères base64 — grande marge sous 1 Mo Firestore
+      return new Promise((resolve) => {
+        if (!dataUrl || dataUrl.length <= LIMITE) { resolve(dataUrl); return; }
+        const img = new Image();
+        img.onload = () => {
+          const ratio = Math.min(1, Math.sqrt(LIMITE / dataUrl.length));
+          let w = Math.max(1, Math.round(img.naturalWidth * ratio));
+          let h = Math.max(1, Math.round(img.naturalHeight * ratio));
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          let qualite = 0.85;
+          let essai = 0;
+          function _tenter() {
+            essai++;
+            canvas.width = w; canvas.height = h;
+            ctx.clearRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            const out = canvas.toDataURL('image/jpeg', qualite);
+            if (out.length <= LIMITE || essai > 25) { resolve(out); return; }
+            if (qualite > 0.4) qualite -= 0.15;
+            else { w = Math.max(50, Math.round(w * 0.8)); h = Math.max(50, Math.round(h * 0.8)); }
+            _tenter();
+          }
+          _tenter();
+        };
+        img.onerror = () => resolve(dataUrl); // tant pis — la synchro échouera côté Firestore, pas pire qu'avant
+        img.src = dataUrl;
+      });
+    }
+
+    // Republie une scène importée à la main (image compressée + géométrie) —
+    // appelé après chargerImage()/chargerFichier(). N'écrit rien si le dépôt
+    // n'est pas encore prêt (DepotDistant non chargé, ex. Firebase indisponible).
+    function _publierSceneManuelle(nom, scene) {
+      if (typeof DepotDistant === 'undefined') return;
+      _initDepotScenesManuelles();
+      _comprimerImagePourSync(scene.image).then((image) => {
+        _depotScenesManuelles.sauver({
+          label: scene.label || nom,
+          largeur: scene.largeur, hauteur: scene.hauteur, px: scene.px, lc: scene.lc, hc: scene.hc,
+          image,
+          polylignes: scene.polylignes || [], segments: scene.segments || [],
+          polylignesObjets: scene.polylignesObjets || [], segmentsObjets: scene.segmentsObjets || [],
+          portails: scene.portails || [],
+        }, nom);
+      });
     }
 
     // ── Catalogue statique (assets/battlemaps/, cf. data/donnees.js) ────
@@ -2617,6 +2716,7 @@ const Carte = (() => {
       }
 
       chargerCatalogue();
+      _initDepotScenesManuelles();
     }
 
     // Idempotente : appelée à la fois quand une scène finit de charger (image
