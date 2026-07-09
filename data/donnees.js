@@ -13,6 +13,26 @@ const CARACS = [
   { code: "CHA", nom: "Charisme" },
 ];
 
+/* Compétences et tests associés à chaque caractéristique.
+   Sert de référence pour tout futur système de jets de compétence
+   (actuellement non modélisé côté combat/capacités). */
+const COMPETENCES_PAR_CARAC = {
+  FOR: ["Athlétisme"],
+  DEX: ["Discrétion", "Acrobaties", "Escamotage"],
+  CON: [], // pas de compétence dédiée : PV, résistance poison/maladie, apnée, marches forcées
+  INT: ["Connaissances (arcanes)", "Connaissances (histoire)", "Connaissances (nature)", "Investigation", "Artisanat"],
+  SAG: ["Perception", "Discernement", "Survie", "Médecine", "Dressage"],
+  CHA: ["Bluff", "Intimidation", "Représentation", "Persuasion"],
+};
+
+/* Les 3 jets de sauvegarde de COF, chacun porté par une seule caractéristique.
+   FOR, INT et CHA n'ont pas de sauvegarde dédiée. */
+const SAUVEGARDES = {
+  Reflexes: "DEX",
+  Vigueur: "CON",
+  Volonte: "SAG",
+};
+
 /* Caractéristique de référence pour l'attaque magique de chaque classe.
    Sert au calcul automatique du bonus d'attaque magique. */
 const CARAC_MAGIE = {
