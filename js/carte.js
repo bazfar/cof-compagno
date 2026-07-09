@@ -1248,6 +1248,49 @@ const Carte = (() => {
       reader.readAsText(fichier);
     }
 
+    // Import d'une simple image (PNG/JPG, sans métadonnées Dungeondraft) comme
+    // scène de combat : même structure de scène que parseDD2VTT (grille, LoS,
+    // tokens, portails), mais murs/objets/portails vides au départ — le MJ les
+    // pose lui-même à la main (cf. basculerModeDessinObjet/basculerModeDessinPortail).
+    function chargerImage(fichier) {
+      const nom = fichier.name.replace(/\.[a-z0-9]+$/i, '');
+      const reader = new FileReader();
+      reader.onload = e => {
+        const dataUrl = e.target.result;
+        const img = new Image();
+        img.onload = () => {
+          const px = parseInt(prompt('Taille d\'une case de grille, en pixels (mesure sur ton image) :', '70'), 10);
+          if (!px || px <= 0) { toastCarte('Import annulé (taille de case invalide).'); return; }
+          const lc = Math.max(1, Math.round(img.naturalWidth / px));
+          const hc = Math.max(1, Math.round(img.naturalHeight / px));
+          const scene = {
+            nom, label: nom,
+            largeur: lc * px, hauteur: hc * px,
+            px, lc, hc,
+            image: dataUrl, imageObj: null,
+            polylignes: [], segments: [],
+            polylignesObjets: [], segmentsObjets: [],
+            portails: [],
+            tokens: [], brouillard: [],
+          };
+          scenes[nom] = scene;
+          mettreAJourSelect();
+          activerScene(nom);
+          // mettreAJourSelect() conserve la sélection précédente du menu si elle
+          // existe toujours (cf. son commentaire) — sur un premier import, ça
+          // laisse le menu affiché sur une autre scène que celle qu'on vient
+          // d'activer. On force explicitement l'affichage sur la bonne scène.
+          const sel = document.getElementById('select-scene-dd2vtt');
+          if (sel) sel.value = nom;
+          _publierSceneActive(nom);
+          toastCarte('Scène « ' + nom + ' » chargée (' + lc + '×' + hc + ' cases) ✔');
+        };
+        img.onerror = () => toastCarte('Erreur : image invalide.');
+        img.src = dataUrl;
+      };
+      reader.readAsDataURL(fichier);
+    }
+
     // ── Sélecteur multi-scènes ───────────────────────────────
     function mettreAJourSelect() {
       const sel = document.getElementById('select-scene-dd2vtt');
@@ -2364,6 +2407,16 @@ const Carte = (() => {
         btnDD.onclick = () => inputDD.click();
         inputDD.onchange = e => {
           if (e.target.files[0]) chargerFichier(e.target.files[0]);
+          e.target.value = '';
+        };
+      }
+
+      const inputImg = document.getElementById('input-image-battlemap');
+      const btnImg   = document.getElementById('btn-import-image');
+      if (btnImg && inputImg) {
+        btnImg.onclick = () => inputImg.click();
+        inputImg.onchange = e => {
+          if (e.target.files[0]) chargerImage(e.target.files[0]);
           e.target.value = '';
         };
       }
