@@ -3089,6 +3089,19 @@ const App = (() => {
       if (e.target === e.currentTarget) fermerModalMonstre();
     });
 
+    // Bouton MJ "Ajouter malus" (dupliqué : onglet Table de combat + colonne
+    // battlemap, cf. index.html) — même modale partagée pour les deux.
+    document.querySelectorAll(".btn-ajouter-malus").forEach((btn) => {
+      btn.onclick = ouvrirModalMalus;
+    });
+    const btnFermerModalMalus = document.getElementById("btn-fermer-modal-malus");
+    if (btnFermerModalMalus) btnFermerModalMalus.onclick = fermerModalMalus;
+    const btnAppliquerMalus = document.getElementById("btn-appliquer-malus");
+    if (btnAppliquerMalus) btnAppliquerMalus.onclick = appliquerMalus;
+    document.getElementById("modal-malus").addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) fermerModalMalus();
+    });
+
     // Modal choix permanent d'une capacité (ex. +2 DEF OU +1d8 DM)
     const btnFermerModalChoix = document.getElementById("btn-fermer-modal-choix-capacite");
     if (btnFermerModalChoix) btnFermerModalChoix.onclick = fermerModalChoixCapacite;
@@ -3158,9 +3171,14 @@ const App = (() => {
     // déjà ouverte ailleurs tant que l'utilisateur ne renaviguait pas dessus.
     window.DepotPersos.ecouter(() => {
       const panneauFiche = document.getElementById("panneau-fiche");
-      if (!panneauFiche || !panneauFiche.classList.contains("actif")) return;
-      rendreListePersos();
-      if (ficheActiveId && chargerPersos()[ficheActiveId]) afficherFiche(ficheActiveId);
+      if (panneauFiche && panneauFiche.classList.contains("actif")) {
+        rendreListePersos();
+        if (ficheActiveId && chargerPersos()[ficheActiveId]) afficherFiche(ficheActiveId);
+      }
+      // Mini-fiche battlemap : rafraîchie même hors onglet "Ma fiche" — un
+      // malus posé par le MJ ("Ajouter malus") doit apparaître tout de suite
+      // pour un joueur resté sur la carte, pas seulement s'il revient sur sa fiche.
+      if (ficheSidebarActiveId && chargerPersos()[ficheSidebarActiveId]) rendreFicheSidebarBattlemap(ficheSidebarActiveId);
     });
 
     // Journal de dés partagé : re-rendu dès qu'un autre client lance un dé.
@@ -3306,6 +3324,88 @@ const App = (() => {
         }
       };
     });
+  }
+
+  /* ============================================================
+     MODAL MALUS (MJ) — applique un état du catalogue (js/etats.js) à un
+     PJ ou un monstre en combat, sans passer par une capacité mécanisée.
+     ============================================================ */
+
+  function ouvrirModalMalus() {
+    const modal = document.getElementById("modal-malus");
+    if (!modal || typeof ETATS === "undefined") return;
+
+    const selCible = document.getElementById("modal-malus-cible");
+    const persos = chargerPersos();
+    const monstres = typeof Carte !== "undefined" ? Carte.listeMonstresCombat() : [];
+    const optionsJoueurs = Object.keys(persos)
+      .map((id) => `<option value="pj:${id}">${echapper(persos[id].nom)}</option>`).join("");
+    const optionsMonstres = monstres
+      .map((m) => `<option value="monstre:${m.id}">${echapper(m.nom)}</option>`).join("");
+    selCible.innerHTML =
+      (optionsJoueurs ? `<optgroup label="Joueurs">${optionsJoueurs}</optgroup>` : "") +
+      (optionsMonstres ? `<optgroup label="Monstres">${optionsMonstres}</optgroup>` : "");
+    if (!optionsJoueurs && !optionsMonstres) {
+      selCible.innerHTML = `<option value="">Aucune cible disponible</option>`;
+    }
+
+    const selEtat = document.getElementById("modal-malus-etat");
+    selEtat.innerHTML = ORDRE_CATEGORIES_ETATS.map((cat) => {
+      const ids = Object.keys(ETATS).filter((id) => ETATS[id].categorie === cat && !ETATS[id].parSource);
+      if (!ids.length) return "";
+      const options = ids.map((id) => `<option value="${id}">${echapper(ETATS[id].nom)}</option>`).join("");
+      return `<optgroup label="${LIBELLES_CATEGORIES_ETATS[cat] || cat}">${options}</optgroup>`;
+    }).join("");
+
+    document.getElementById("modal-malus-duree").value = "";
+    modal.style.display = "flex";
+  }
+
+  function fermerModalMalus() {
+    const modal = document.getElementById("modal-malus");
+    if (modal) modal.style.display = "none";
+  }
+
+  // entrée etatsActifs manuelle (pas de durée numérique auto-décomptée — cf.
+  // decompterEtatsDebutTour côté capacites.js, qui ignore les entrées sans
+  // dureeRestante.tours numérique) : retrait toujours manuel via ✕, comme
+  // souhaité pour un malus posé "à la main" par le MJ.
+  function _entreeMalusMj(idEtat, dureeAffichee) {
+    return {
+      idEtat,
+      dureeRestante: { tours: null, motCle: null, dureeAffichee: dureeAffichee || null },
+      formuleDot: null,
+      source: "MJ",
+      poseLe: Date.now(),
+    };
+  }
+
+  function appliquerMalus() {
+    const cibleRaw = document.getElementById("modal-malus-cible").value;
+    const idEtat = document.getElementById("modal-malus-etat").value;
+    const duree = document.getElementById("modal-malus-duree").value.trim();
+    if (!cibleRaw || !idEtat) return;
+    const sep = cibleRaw.indexOf(":");
+    const type = cibleRaw.slice(0, sep);
+    const id = cibleRaw.slice(sep + 1);
+    const entree = _entreeMalusMj(idEtat, duree);
+
+    if (type === "pj") {
+      const persos = chargerPersos();
+      const p = persos[id];
+      if (!p) return;
+      p.etatsActifs = p.etatsActifs || [];
+      p.etatsActifs.push(entree);
+      sauverPersos(persos);
+      if (ficheActiveId === id) afficherFiche(id);
+      if (ficheSidebarActiveId === id) rendreFicheSidebarBattlemap(id);
+    } else if (type === "monstre" && typeof Carte !== "undefined") {
+      Carte.ajouterEtatCombat(id, entree);
+      rendreTableCombat();
+      rendreTableCombat("battlemap-zone-table-combat");
+    }
+    toast(`${ETATS[idEtat].nom} appliqué.`);
+    fermerModalMalus();
   }
 
   /* ============================================================
@@ -3468,6 +3568,7 @@ const App = (() => {
           </div>
           <div class="barre-pv"><div class="rempli" style="width:${pvMax ? Math.max(0, Math.min(100, (pvActuel / pvMax) * 100)) : 0}%;"></div></div>
           ${blocDegatsSubisHtml(prefixe)}
+          ${htmlEtatsActifs(m)}
           ${morEnCombat ? '<div class="badge-mort">💀 Hors combat</div>' : ""}
         </div>`;
     }).join("")}</div>`;
@@ -3513,6 +3614,18 @@ const App = (() => {
         Carte.supprimerMonstreCombat(id);
         rendreTableCombat(targetId);
       };
+    });
+    // Retrait d'un état/malus (posé via "Ajouter malus" ou une future capacité
+    // de monstre) — htmlEtatsActifs(m) génère un data-etat-idx par entrée,
+    // scopé ici à la carte .combat-monstre du bon id pour retrouver le token.
+    zone.querySelectorAll(".combat-monstre").forEach((carte) => {
+      const id = carte.dataset.id;
+      carte.querySelectorAll("[data-etat-idx]").forEach((btn) => {
+        btn.onclick = () => {
+          Carte.retirerEtatCombat(id, parseInt(btn.dataset.etatIdx, 10));
+          rendreTableCombat(targetId);
+        };
+      });
     });
   }
 

@@ -360,6 +360,33 @@ const Carte = (() => {
     _notifierChangementMonstres();
   }
 
+  // États/malus manuels posés par le MJ (cf. "Ajouter malus", js/app.js) sur
+  // un monstre/jeton de combat — même bascule battlemap/worldmap que
+  // appliquerDegatsCombat/ajusterPvCombat ci-dessus.
+  function ajouterEtatCombat(id, entree) {
+    if (_combatEnBattlemap() && DD2VTT.tokensMonstres().some((t) => t.id === id)) {
+      DD2VTT.ajouterEtat(id, entree);
+      return;
+    }
+    const tok = etat.jetons.find((j) => j.id === id);
+    if (!tok) return;
+    tok.etatsActifs = tok.etatsActifs || [];
+    tok.etatsActifs.push(entree);
+    sauver(); rendreJetons();
+    _notifierChangementMonstres();
+  }
+  function retirerEtatCombat(id, idx) {
+    if (_combatEnBattlemap() && DD2VTT.tokensMonstres().some((t) => t.id === id)) {
+      DD2VTT.retirerEtat(id, idx);
+      return;
+    }
+    const tok = etat.jetons.find((j) => j.id === id);
+    if (!tok || !tok.etatsActifs) return;
+    tok.etatsActifs.splice(idx, 1);
+    sauver(); rendreJetons();
+    _notifierChangementMonstres();
+  }
+
   // Retire le monstre à la fois de la table de combat et de la carte (même
   // suppression que le bouton ✕ du jeton/token) — quel que soit le mode actif.
   function supprimerMonstreCombat(id) {
@@ -2395,6 +2422,27 @@ const Carte = (() => {
       _onChangeMonstres && _onChangeMonstres();
     }
 
+    // États/malus actifs sur un token (monstre ou PNJ) — même forme d'entrée
+    // que p.etatsActifs côté PJ (cf. capacites.js appliquerEtatSurPerso), pour
+    // que htmlEtatsActifs (js/app.js) puisse afficher les deux indifféremment.
+    // Pas de décompte automatique tour par tour ici (aucune horloge de tour
+    // pour les monstres) : retrait manuel via le ✕, comme pour un PJ.
+    function ajouterEtatToken(id, entree) {
+      const tok = tokensDD.find(t => t.id === id);
+      if (!tok) return;
+      tok.etatsActifs = tok.etatsActifs || [];
+      tok.etatsActifs.push(entree);
+      _sauverToken(tok);
+      _onChangeMonstres && _onChangeMonstres();
+    }
+    function retirerEtatToken(id, idx) {
+      const tok = tokensDD.find(t => t.id === id);
+      if (!tok || !tok.etatsActifs) return;
+      tok.etatsActifs.splice(idx, 1);
+      _sauverToken(tok);
+      _onChangeMonstres && _onChangeMonstres();
+    }
+
     // Suppression : MJ uniquement (le bouton ✕ n'existe même pas dans le DOM
     // côté joueur, cf. rendreTokensDD — garde ici en défense supplémentaire).
     function supprimerTokenDD(id, scene) {
@@ -2795,6 +2843,7 @@ const Carte = (() => {
       ajouterToken: (sc) => ajouterTokenDD(sc),
       modeWorldmap: activerModeWorldmap, modeBattlemap: activerModeBattlemap, estActive, ajouterTokenData,
       tokensMonstres, tokensPJ, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
+      ajouterEtat: ajouterEtatToken, retirerEtat: retirerEtatToken,
       supprimerToken: supprimerTokenDD, onChange, actualiserTokens, reinitialiserExploration,
       onMonstreDevientVisible, reinitialiserDetectionVisibilite, estMonstreVisible,
     };
@@ -2845,6 +2894,7 @@ const Carte = (() => {
   return {
     onOpen, definirRole, definirMonPerso, ajouterMonstre,
     listeMonstresCombat, listeTokensJoueursCombat, appliquerDegatsCombat, definirPvCombat, ajusterPvCombat,
+    ajouterEtatCombat, retirerEtatCombat,
     supprimerMonstreCombat, onMonstresChange, definirModeCarte,
     onMonstreDevientVisible, reinitialiserDetectionVisibilite, idPersoDepuisRef, monstreEstVisible,
     initiales,
