@@ -262,6 +262,7 @@ const App = (() => {
     };
     const dmgContact = formuleDegats(armeContact);
     const dmgDistance = formuleDegats(armeDistance);
+    const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
 
     sidebar.innerHTML = `
       <div class="carte">
@@ -299,10 +300,11 @@ const App = (() => {
           ${attMagique !== null ? `<button class="btn petit" data-bm-attaque="magique" data-bonus="${attMagique}">✨ Magique (${signe(attMagique)})</button>` : ""}
         </div>
         ${attDistance === null ? `<p class="aide" style="font-size:0.72rem;margin:6px 0 0;">Équipe un arc ou une arbalète pour débloquer l'attaque à distance.</p>` : ""}
-        ${dmgContact || dmgDistance ? `
+        ${dmgContact || dmgDistance || dmgMagique ? `
         <div class="barre-actions" style="margin-top:6px;">
           ${dmgContact ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}">🎲 Dégâts Contact (${dmgContact})</button>` : ""}
           ${dmgDistance ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}">🎲 Dégâts Distance (${dmgDistance})</button>` : ""}
+          ${dmgMagique ? `<button class="btn petit secondaire" data-bm-degats="${dmgMagique}">🎲 Dégâts Magique (${dmgMagique})</button>` : ""}
         </div>` : ""}
       </div>
       ${htmlEtatsActifs(p)}

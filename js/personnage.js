@@ -405,6 +405,17 @@ class Personnage extends Entite {
     }
     return b;
   }
+  // Dégâts d'une attaque magique (jet de dés seul, pas de mod. de carac. ni
+  // bonus d'objet) : 1d6 de base, 1d8 à partir du niveau 4, 1d10 à partir du
+  // niveau 8. null si la classe n'a pas d'attaque magique (cf. bonusAttaque).
+  degatsMagiques() {
+    const cm = typeof CARAC_MAGIE !== "undefined" ? CARAC_MAGIE[this.classe] : null;
+    if (!cm) return null;
+    const niveau = this.niveau || 1;
+    if (niveau >= 8) return "1d10";
+    if (niveau >= 4) return "1d8";
+    return "1d6";
+  }
 
   /* ----- Points de capacité (voies) ----- */
   static coutRangVoie(rang) {
