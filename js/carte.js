@@ -1973,6 +1973,15 @@ const Carte = (() => {
     // à chaque appel de calculerEtRendreLoS — sert à savoir quels monstres
     // montrer aux joueurs (cf. _monstreVisiblePourJoueurs / rendreTokensDD).
     let _polygonsVisionJoueurs = [];
+    // Échelle case->pixel utilisée pour construire _polygonsVisionJoueurs ci-dessus.
+    // estMonstreVisible() doit reconvertir la position d'un token dans ce même
+    // référentiel — jamais recalculer sa propre échelle via tailleCase(), qui
+    // dépend de la largeur affichée de #carte-image : nulle dès que l'onglet
+    // Carte n'est pas affiché (ex. depuis l'onglet Table de combat, où
+    // Combat.demarrer() appelle justement cette fonction). Une échelle
+    // différente de celle du polygone fait tomber le point hors champ même
+    // pour un monstre juste à côté d'un PJ.
+    let _dernierTC = null;
 
     // Notifie js/combat.js quand un monstre pré-placé par le MJ (planqué
     // derrière du brouillard) entre dans le champ de vision d'au moins un PJ —
@@ -1994,7 +2003,11 @@ const Carte = (() => {
       const tok = tokensDD.find(t => t.id === id);
       const scene = scenes[sceneActive];
       if (!tok || !scene) return false;
-      const tc = tailleCase(scene);
+      // _dernierTC (échelle du dernier calcul de _polygonsVisionJoueurs) plutôt
+      // que tailleCase(scene) : cette dernière dépend de la largeur affichée de
+      // #carte-image, nulle depuis l'onglet Table de combat — recalculer sa
+      // propre échelle ici desynchronise ce point du polygone de référence.
+      const tc = _dernierTC || tailleCase(scene);
       const px = (tok.cx + 0.5) * tc;
       const py = (tok.cy + 0.5) * tc;
       return _monstreVisiblePourJoueurs(px, py);
@@ -2388,6 +2401,7 @@ const Carte = (() => {
       const segsAff = _segmentsBloquants(scene, sx, sy);
 
       const tc = tailleCase(scene);
+      _dernierTC = tc;
 
       // Remplir le brouillard opaque (zone jamais vue = totalement cachée)
       ctxLoS.clearRect(0, 0, affW, affH);
