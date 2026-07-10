@@ -1986,4 +1986,7 @@ const CARTES_MONDE = [
    file  : chemin du fichier .dd2vtt */
 const CARTES_BATTLEMAP = [
   { key: 'test_tavern', label: 'Taverne (test)', file: 'assets/battlemaps/test_tavern.dd2vtt' },
+  { key: 'ambush', label: 'Ambush', file: 'assets/battlemaps/Ambush.dd2vtt' },
+  { key: 'forest_1', label: 'Forest 1', file: 'assets/battlemaps/Forest 1.dd2vtt' },
+  { key: 'kratz', label: 'Kratz', file: 'assets/battlemaps/Kratz.dd2vtt' },
 ];

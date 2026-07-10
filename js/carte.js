@@ -1450,22 +1450,48 @@ const Carte = (() => {
     }
 
     // ── Sélecteur multi-scènes ───────────────────────────────
+    // Liste à la fois les scènes déjà chargées (scenes) et les entrées du
+    // catalogue pas encore récupérées (CARTES_BATTLEMAP) : le menu doit
+    // afficher toutes les cartes disponibles sans avoir à les télécharger en
+    // entier d'avance (cf. sel.onchange, qui charge à la demande). Un export
+    // Dungeondraft brut pèse facilement plusieurs dizaines de Mo ; les
+    // télécharger tous au démarrage, pour chaque visiteur, MJ ou pas, serait
+    // extrêmement lourd (cf. l'ancien chargerCatalogue() qui le faisait).
     function mettreAJourSelect() {
       const sel = document.getElementById('select-scene-dd2vtt');
       if (!sel) return;
       const valeurActuelle = sel.value;
       sel.innerHTML = '';
-      Object.keys(scenes).forEach(nom => {
+      const clesAjoutees = new Set();
+      const ajouterOption = (valeur, texte) => {
+        if (clesAjoutees.has(valeur)) return;
+        clesAjoutees.add(valeur);
         const opt = document.createElement('option');
-        opt.value = nom; opt.textContent = scenes[nom].label || nom;
+        opt.value = valeur; opt.textContent = texte;
         sel.appendChild(opt);
-      });
+      };
+      Object.keys(scenes).forEach(nom => ajouterOption(nom, scenes[nom].label || nom));
+      if (typeof CARTES_BATTLEMAP !== 'undefined') {
+        CARTES_BATTLEMAP.forEach(entree => ajouterOption(entree.key, entree.label || entree.key));
+      }
       // Visible dès qu'il y a au moins une scène (catalogue ou import manuel) :
       // avec une seule entrée, c'est le seul moyen pour le MJ de l'activer
       // (le catalogue ne s'auto-active pas au chargement).
-      sel.style.display = Object.keys(scenes).length >= 1 ? 'inline-block' : 'none';
-      if (scenes[valeurActuelle]) sel.value = valeurActuelle; // conserve la sélection après ajout catalogue
-      sel.onchange = () => { activerScene(sel.value); _publierSceneActive(sel.value); };
+      sel.style.display = clesAjoutees.size >= 1 ? 'inline-block' : 'none';
+      if (clesAjoutees.has(valeurActuelle)) sel.value = valeurActuelle; // conserve la sélection après ajout catalogue
+      sel.onchange = () => {
+        const val = sel.value;
+        if (scenes[val]) { activerScene(val); _publierSceneActive(val); return; }
+        const entree = (typeof CARTES_BATTLEMAP !== 'undefined') ? CARTES_BATTLEMAP.find(c => c.key === val) : null;
+        if (!entree) return;
+        toastCarte('Chargement de « ' + (entree.label || val) + ' »…');
+        _chargerEntreeCatalogue(entree)
+          .then(() => { activerScene(entree.key); _publierSceneActive(entree.key); })
+          .catch(err => {
+            console.warn('[DD2VTT] échec chargement scène catalogue :', entree.file, err);
+            toastCarte('Erreur : impossible de charger « ' + (entree.label || val) + ' ».');
+          });
+      };
     }
 
     // ── Synchro scène active (MJ → joueurs) ──────────────────
@@ -1611,14 +1637,13 @@ const Carte = (() => {
     }
 
     // ── Catalogue statique (assets/battlemaps/, cf. data/donnees.js) ────
-    // Chargé au démarrage en plus de l'import manuel (chargerFichier), qui
-    // reste disponible pour du one-shot MJ non committé.
+    // Ne fait qu'inscrire les entrées du catalogue dans le sélecteur (menu
+    // déroulant) au démarrage — le fichier .dd2vtt de chacune n'est téléchargé
+    // que lorsqu'elle est effectivement choisie (cf. mettreAJourSelect).
+    // L'import manuel (chargerFichier) reste disponible pour du one-shot MJ
+    // non committé au catalogue.
     function chargerCatalogue() {
-      if (typeof CARTES_BATTLEMAP === 'undefined') return;
-      CARTES_BATTLEMAP.forEach(entree => {
-        _chargerEntreeCatalogue(entree)
-          .catch(err => console.warn('[DD2VTT] catalogue introuvable :', entree.file, err));
-      });
+      mettreAJourSelect();
     }
 
     // ── Activation d'une scène ───────────────────────────────
