@@ -645,6 +645,20 @@ textarea { resize: vertical; min-height: 70px; }
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
+.livre-titre-champ {
+  display: block;
+  margin-bottom: 12px;
+}
+.livre-titre-lbl {
+  display: block;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--violet);
+  margin-bottom: 3px;
+}
 .livre-titre-input {
   display: block;
   width: 100%;
@@ -652,13 +666,13 @@ textarea { resize: vertical; min-height: 70px; }
   font-size: 1.15rem;
   font-weight: 600;
   color: var(--encre);
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid var(--parchemin-fonce);
-  padding: 4px 2px;
-  margin-bottom: 10px;
+  background: #fffdf7;
+  border: 1px solid var(--parchemin-fonce);
+  border-radius: 5px;
+  padding: 8px 10px;
 }
-.livre-titre-input:focus { outline: none; border-bottom-color: var(--or); }
+.livre-titre-input::placeholder { font-weight: 400; font-style: italic; color: #9a90a8; }
+.livre-titre-input:focus { outline: none; border-color: var(--or); box-shadow: 0 0 0 2px rgba(198, 160, 74, 0.25); }
 .livre-titre-lecture { font-family: Georgia, "Times New Roman", serif; color: var(--encre); margin: 0 0 10px; }
 
 /* Vue "livre ouvert" : présentée comme une vraie page de livre reliée */

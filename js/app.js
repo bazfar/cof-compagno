@@ -1521,9 +1521,11 @@ const App = (() => {
         ? `<div class="livre-etagere">${spines}</div>`
         : `<p class="vide">${editable ? "Aucun livre pour l'instant. Clique « ➕ Nouveau livre » pour commencer." : "Aucun livre."}</p>`}
     </div>
-    ${partages.length ? `<div class="carte livret-bloc">
+    ${role !== "mj" ? `<div class="carte livret-bloc">
       <h3 style="margin:0 0 12px;">📬 Partagés avec moi</h3>
-      <div class="livre-etagere">${spinesPartages}</div>
+      ${partages.length
+        ? `<div class="livre-etagere">${spinesPartages}</div>`
+        : `<p class="vide">Aucun livre partagé avec toi pour l'instant. Quand un joueur partagera un livre avec toi (ou avec toute la table), il apparaîtra ici.</p>`}
     </div>` : ""}`;
     zone.querySelectorAll('.livre-spine[data-type="mien"]').forEach((b) => {
       b.onclick = () => { livreOuvertId = b.dataset.livre; livreOuvertPersoId = p.id; _rendreZoneLivret(); };
@@ -2002,7 +2004,8 @@ const App = (() => {
         </span>` : ""}
       </div>
       ${editable
-        ? `<input type="text" id="livre-titre" class="livre-titre-input" value="${echapper(l.titre || "")}" placeholder="Titre du livre" maxlength="80" />`
+        ? `<label class="livre-titre-champ"><span class="livre-titre-lbl">Titre du livre</span>
+            <input type="text" id="livre-titre" class="livre-titre-input" value="${echapper(l.titre || "")}" placeholder="Donne un titre à ton livre…" maxlength="80" /></label>`
         : `<h3 class="livre-titre-lecture">📖 ${echapper(l.titre || "Sans titre")}</h3>`}
       ${editable ? _htmlPartageControl(p, l, persos) : _htmlInfoLecture(p, l)}
       ${illustration}
