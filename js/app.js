@@ -1678,6 +1678,20 @@ const App = (() => {
     return ` <span class="badge-rarete" style="background:${it.rareteCouleur || ""}">${echapper(it.rareteNom)}</span>`;
   }
 
+  // Bourse (pièces d'or/d'argent/de bronze) — éditable directement par le
+  // joueur (dépenses, achats hors combat...) ; le MJ peut aussi en donner
+  // depuis l'onglet Loot (cf. Loot.rendreCatalogue → "Donner des pièces").
+  function htmlBlocBourse(p) {
+    return `<div class="carte">
+      <h3 class="titre-bandeau" style="font-size:1rem;">🪙 Bourse</h3>
+      <div class="bourse-lignes">
+        <label class="bourse-ligne">🟡 Or <input type="number" min="0" id="bourse-or" value="${p.piecesOr || 0}" /></label>
+        <label class="bourse-ligne">⚪ Argent <input type="number" min="0" id="bourse-argent" value="${p.piecesArgent || 0}" /></label>
+        <label class="bourse-ligne">🟤 Bronze <input type="number" min="0" id="bourse-bronze" value="${p.piecesBronze || 0}" /></label>
+      </div>
+    </div>`;
+  }
+
   function rendreBlocEquipement(perso) {
     const casesHtml = SLOTS_EQUIPEMENT.map((slot) => {
       const it = perso.equipement[slot];
@@ -2341,6 +2355,7 @@ const App = (() => {
         </div>
 
         <div class="fiche-col-droite">
+          ${htmlBlocBourse(p)}
           ${rendreBlocEquipement(perso)}
           ${rendreBlocInventaire(perso, id)}
         </div>
@@ -2355,6 +2370,20 @@ const App = (() => {
     document.getElementById("pv-actuel").onchange = (e) => definirPv(id, parseInt(e.target.value, 10));
     document.getElementById("fiche-notes").onchange = (e) => definirNotes(id, e.target.value);
     wireDegatsSubis(id, "");
+    // Bourse (cf. htmlBlocBourse) — édition directe par le joueur.
+    const _wireBourse = (elId, champ) => {
+      document.getElementById(elId).onchange = (e) => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp) return;
+        const v = parseInt(e.target.value, 10);
+        pp[champ] = isNaN(v) ? 0 : Math.max(0, v);
+        sauverPersos(persos);
+      };
+    };
+    _wireBourse("bourse-or", "piecesOr");
+    _wireBourse("bourse-argent", "piecesArgent");
+    _wireBourse("bourse-bronze", "piecesBronze");
     // Tests de carac
     zone.querySelectorAll("[data-test]").forEach((el) => {
       el.onclick = () => {

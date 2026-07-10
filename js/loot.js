@@ -42,8 +42,50 @@ const Loot = (() => {
 
     _peuplerFiltreTypes();
     _afficherCatalogue();
+    _peuplerDonPieces();
+    _initDonPieces();
     _rendreVoteEnCours();
     _rendreHistorique();
+  }
+
+  // "Donner des pièces" (or/argent/bronze) — direct, sans passer par le
+  // catalogue d'items ni le vote besoin/greed (une bourse n'est pas un objet).
+  function _peuplerDonPieces() {
+    const sel = document.getElementById("loot-pieces-destinataire");
+    if (!sel) return;
+    const persos = lirePersos();
+    const ids = Object.keys(persos);
+    const valeurActuelle = sel.value;
+    sel.innerHTML = ids.length
+      ? ids.map(id => `<option value="${id}">${echapper(persos[id].nom)}</option>`).join("")
+      : `<option value="">— Aucun personnage —</option>`;
+    if (ids.includes(valeurActuelle)) sel.value = valeurActuelle;
+  }
+
+  function _initDonPieces() {
+    const btn = document.getElementById("btn-donner-pieces");
+    if (!btn || btn.dataset.pret) return;
+    btn.dataset.pret = "1";
+    btn.onclick = () => {
+      const destId = document.getElementById("loot-pieces-destinataire").value;
+      if (!destId) { toast("Choisis un destinataire."); return; }
+      const champOr = document.getElementById("loot-pieces-or");
+      const champArgent = document.getElementById("loot-pieces-argent");
+      const champBronze = document.getElementById("loot-pieces-bronze");
+      const or = parseInt(champOr.value, 10) || 0;
+      const argent = parseInt(champArgent.value, 10) || 0;
+      const bronze = parseInt(champBronze.value, 10) || 0;
+      if (!or && !argent && !bronze) { toast("Indique au moins une pièce à donner."); return; }
+      const persos = lirePersos();
+      const dest = persos[destId];
+      if (!dest) return;
+      dest.piecesOr = (dest.piecesOr || 0) + or;
+      dest.piecesArgent = (dest.piecesArgent || 0) + argent;
+      dest.piecesBronze = (dest.piecesBronze || 0) + bronze;
+      sauverPersos(persos);
+      champOr.value = ""; champArgent.value = ""; champBronze.value = "";
+      toast(`Pièces données à ${dest.nom} ✔`);
+    };
   }
 
   function _peuplerFiltreTypes() {

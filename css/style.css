@@ -572,6 +572,9 @@ textarea { resize: vertical; min-height: 70px; }
 .corruption-control button:hover { background: var(--or); color: var(--encre); }
 .corruption-valeur { min-width: 34px; text-align: center; font-weight: 700; }
 .corruption-valeur.corruption-danger { color: var(--chaos); }
+.bourse-lignes { display: flex; flex-direction: column; gap: 6px; }
+.bourse-ligne { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.88rem; }
+.bourse-ligne input { width: 70px; text-align: right; }
 .cap-fiche .voie-source { font-size: 0.7rem; color: #8a8296; }
 .cap-fiche .effet-cap { font-size: 0.85rem; color: #4a4358; margin-top: 3px; }
 .btn-de-cap {
@@ -1230,6 +1233,9 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 /* Filtres catalogue */
 .loot-filtres { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .loot-filtres select, .loot-filtres input { flex: 1; min-width: 160px; }
+.loot-don-pieces { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.loot-don-pieces select { flex: 2; min-width: 160px; }
+.loot-don-pieces input { flex: 1; min-width: 70px; }
 
 /* Item catalogue */
 #loot-catalogue { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
