@@ -607,6 +607,59 @@ textarea { resize: vertical; min-height: 70px; }
 }
 .livret-texte:focus { outline: 2px solid var(--or); outline-offset: 1px; }
 .livret-texte[readonly] { cursor: default; opacity: 0.85; }
+
+/* Étagère de livres (onglet Livret : plusieurs livres par personnage) */
+.livret-entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.livre-etagere {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.livre-spine {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  cursor: pointer;
+  padding: 10px 12px;
+  border: 1px solid var(--parchemin-fonce);
+  border-left: 4px solid var(--or);
+  border-radius: 4px;
+  background: var(--parchemin);
+  font-family: inherit;
+}
+.livre-spine:hover { background: #fff8e8; border-left-color: var(--violet); }
+.livre-spine-titre { font-weight: 600; color: var(--encre); font-size: 0.95rem; }
+.livre-spine-apercu {
+  font-size: 0.8rem;
+  color: #6a6278;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.livre-titre-input {
+  display: block;
+  width: 100%;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--encre);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--parchemin-fonce);
+  padding: 4px 2px;
+  margin-bottom: 10px;
+}
+.livre-titre-input:focus { outline: none; border-bottom-color: var(--or); }
+.livre-titre-lecture { font-family: Georgia, "Times New Roman", serif; color: var(--encre); }
 .cap-fiche .voie-source { font-size: 0.7rem; color: #8a8296; }
 .cap-fiche .effet-cap { font-size: 0.85rem; color: #4a4358; margin-top: 3px; }
 .btn-de-cap {

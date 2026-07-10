@@ -37,6 +37,7 @@ const App = (() => {
   // "alchimie:soin_seve:2", "alchimie:util:antidote") — un seul bouton MJ
   // "Nouveau jour" réinitialise les deux systèmes d'un coup.
   const STORAGE_ATELIER_TENTATIVES = "atelier:tentatives";
+  let livreOuvertId = null;  // id du livre ouvert dans l'étagère du perso (null = vue étagère)
   let role = null;           // "joueur" | "mj" | null (pas encore choisi)
   let carteMode = "worldmap"; // "worldmap" | "battlemap"
   // Identité locale du joueur (par navigateur, pas d'authentification réelle) : sert
@@ -1353,7 +1354,7 @@ const App = (() => {
 
   // Onglet "📖 Livret" : sélecteur de personnage (même filtre estProprietaire
   // que "Ma fiche" — un joueur ne voit que les siens, le MJ voit tout le
-  // monde) + carte livret (cf. htmlBlocLivret) du personnage choisi.
+  // monde) + étagère de livres (cf. _rendreEtagere) du personnage choisi.
   function rendrePanneauLivret() {
     const sel = document.getElementById("select-livret-perso");
     const zone = document.getElementById("zone-livret");
@@ -1366,20 +1367,55 @@ const App = (() => {
       return;
     }
     sel.innerHTML = ids.map((id) => `<option value="${id}">${echapper(persos[id].nom)}</option>`).join("");
+    const avant = livretPersoId;
     livretPersoId = ids.includes(livretPersoId) ? livretPersoId : (ids.includes(ficheActiveId) ? ficheActiveId : ids[0]);
+    if (livretPersoId !== avant) livreOuvertId = null; // changer de perso referme le livre ouvert
     sel.value = livretPersoId;
-    sel.onchange = () => { livretPersoId = sel.value; _rendreZoneLivret(); };
+    sel.onchange = () => { livretPersoId = sel.value; livreOuvertId = null; _rendreZoneLivret(); };
     _rendreZoneLivret();
   }
 
+  // Aiguille entre la vue "étagère" (liste des livres) et la vue "livre ouvert",
+  // selon qu'un livre est sélectionné (livreOuvertId) et existe encore.
   function _rendreZoneLivret() {
     const zone = document.getElementById("zone-livret");
     if (!zone) return;
     const p = chargerPersos()[livretPersoId];
     if (!p) return;
-    zone.innerHTML = htmlBlocLivret(p);
-    if (role !== "mj") {
-      document.getElementById("fiche-livret").onchange = (e) => definirLivret(livretPersoId, e.target.value);
+    const livres = livresDe(p);
+    const ouvert = livres.find((l) => l.id === livreOuvertId);
+    if (ouvert) _rendreLivreOuvert(p, ouvert);
+    else { livreOuvertId = null; _rendreEtagere(p, livres); }
+  }
+
+  // Vue "étagère" : la pile de livres du perso, plus un bouton "Nouveau livre"
+  // pour le propriétaire (le MJ lit seulement, comme pour l'ancien livret).
+  function _rendreEtagere(p, livres) {
+    const zone = document.getElementById("zone-livret");
+    const editable = role !== "mj";
+    const spines = livres.map((l) => {
+      const texte = (l.texte || "").trim();
+      const apercu = texte.slice(0, 120);
+      return `<button class="livre-spine" data-livre="${l.id}">
+        <span class="livre-spine-titre">📖 ${echapper(l.titre || "Sans titre")}</span>
+        <span class="livre-spine-apercu">${apercu ? echapper(apercu) + (texte.length > 120 ? "…" : "") : "<i>vide</i>"}</span>
+      </button>`;
+    }).join("");
+    zone.innerHTML = `<div class="carte livret-bloc">
+      <div class="livret-entete">
+        <h3 style="margin:0;">📚 Livres — ${echapper(p.nom)}</h3>
+        ${editable ? `<button class="btn petit" id="btn-nouveau-livre">➕ Nouveau livre</button>` : ""}
+      </div>
+      ${livres.length
+        ? `<div class="livre-etagere">${spines}</div>`
+        : `<p class="vide">${editable ? "Aucun livre pour l'instant. Clique « ➕ Nouveau livre » pour commencer." : "Aucun livre."}</p>`}
+    </div>`;
+    zone.querySelectorAll(".livre-spine").forEach((b) => {
+      b.onclick = () => { livreOuvertId = b.dataset.livre; _rendreZoneLivret(); };
+    });
+    if (editable) {
+      const btn = document.getElementById("btn-nouveau-livre");
+      if (btn) btn.onclick = () => creerLivre(p.id);
     }
   }
 
@@ -1793,6 +1829,88 @@ const App = (() => {
     toast(resultat.message);
 
     rendrePanneauAtelier();
+  }
+
+  // Vue "livre ouvert" : titre + texte. Éditable pour le propriétaire
+  // (sauvegarde à la volée sur onchange), lecture seule pour le MJ.
+  function _rendreLivreOuvert(p, l) {
+    const zone = document.getElementById("zone-livret");
+    const editable = role !== "mj";
+    zone.innerHTML = `<div class="carte livret-bloc">
+      <div class="livret-entete">
+        <button class="btn petit secondaire" id="btn-retour-etagere">← Tous les livres</button>
+        ${editable ? `<button class="btn petit danger" id="btn-suppr-livre">🗑 Supprimer</button>` : ""}
+      </div>
+      ${editable
+        ? `<input type="text" id="livre-titre" class="livre-titre-input" value="${echapper(l.titre || "")}" placeholder="Titre du livre" maxlength="80" />`
+        : `<h3 class="livre-titre-lecture" style="margin:0 0 8px;">📖 ${echapper(l.titre || "Sans titre")}</h3>`}
+      <textarea id="livre-texte" class="livret-texte" rows="16"${editable ? "" : " readonly"} placeholder="Écris ici l'histoire, tes notes, une lettre…">${echapper(l.texte || "")}</textarea>
+    </div>`;
+    document.getElementById("btn-retour-etagere").onclick = () => { livreOuvertId = null; _rendreZoneLivret(); };
+    if (editable) {
+      document.getElementById("livre-titre").onchange = (e) => sauverChampLivre(p.id, l.id, "titre", e.target.value);
+      document.getElementById("livre-texte").onchange = (e) => sauverChampLivre(p.id, l.id, "texte", e.target.value);
+      document.getElementById("btn-suppr-livre").onclick = () => supprimerLivre(p.id, l.id);
+    }
+  }
+
+  // Liste des livres d'un perso. Migre à la volée (sans écrire) l'ancien champ
+  // mono-texte `livret` de thomas en un premier livre "Mon histoire" ; l'écriture
+  // effective (et la suppression de `livret`) a lieu au premier _ecrireLivres.
+  function livresDe(p) {
+    if (Array.isArray(p.livres)) return p.livres;
+    if (p.livret && p.livret.trim()) return [{ id: "lv-histoire", titre: "Mon histoire", texte: p.livret }];
+    return [];
+  }
+
+  function _genLivreId() {
+    return "lv" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  // Écrit le tableau de livres dans la fiche et absorbe l'ancien champ `livret`
+  // (migration). Réservé au propriétaire : jamais câblé côté MJ.
+  function _ecrireLivres(persoId, livres) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    p.livres = livres;
+    delete p.livret;
+    sauverPersos(persos);
+  }
+
+  function creerLivre(persoId) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const livres = livresDe(p).slice();
+    const nouveau = { id: _genLivreId(), titre: "Nouveau livre", texte: "" };
+    livres.push(nouveau);
+    _ecrireLivres(persoId, livres);
+    livreOuvertId = nouveau.id;
+    _rendreZoneLivret();
+  }
+
+  function sauverChampLivre(persoId, livreId, champ, val) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const livres = livresDe(p).slice();
+    const l = livres.find((x) => x.id === livreId);
+    if (!l) return;
+    l[champ] = val;
+    _ecrireLivres(persoId, livres);
+  }
+
+  function supprimerLivre(persoId, livreId) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const livres = livresDe(p);
+    const l = livres.find((x) => x.id === livreId);
+    if (!confirm(`Supprimer le livre « ${l ? (l.titre || "Sans titre") : ""} » ?`)) return;
+    _ecrireLivres(persoId, livres.filter((x) => x.id !== livreId));
+    livreOuvertId = null;
+    _rendreZoneLivret();
   }
 
   // Détecte une notation de dé (ex. "1d6", "2d4+2") dans le texte d'effet
@@ -2213,21 +2331,6 @@ const App = (() => {
   function badgeRareteHtml(it) {
     if (!it || !it.rareteNom) return "";
     return ` <span class="badge-rarete" style="background:${it.rareteCouleur || ""}">${echapper(it.rareteNom)}</span>`;
-  }
-
-  // Livret personnel (lore/histoire du personnage), présenté comme un carnet
-  // (cf. .livret-bloc/.livret-texte, css/style.css) — onglet dédié
-  // "📖 Livret" (cf. rendrePanneauLivret), pas une carte de la fiche.
-  // Verrouillé par l'identité du joueur : le sélecteur de personnage de
-  // l'onglet (rendrePanneauLivret) ne propose que les persos dont il est
-  // propriétaire (estProprietaire) ; le MJ voit tout le monde mais en
-  // lecture seule (textarea readonly, jamais de wiring d'édition pour lui).
-  function htmlBlocLivret(p) {
-    const lectureSeule = role === "mj";
-    return `<div class="carte livret-bloc">
-      <h3 style="margin-top:0;">📖 Livret — ${echapper(p.nom)}</h3>
-      <textarea id="fiche-livret" class="livret-texte" rows="16"${lectureSeule ? " readonly" : ""} placeholder="Écris ici l'histoire de ton personnage...">${echapper(p.livret || "")}</textarea>
-    </div>`;
   }
 
   // Bourse (pièces d'or/d'argent/de bronze) — éditable directement par le
@@ -3075,16 +3178,6 @@ const App = (() => {
     const persos = chargerPersos();
     const p = persos[id];
     p.notes = val;
-    sauverPersos(persos);
-  }
-
-  // Livret (cf. htmlBlocLivret) — jamais appelé côté MJ (textarea readonly,
-  // pas de wiring dans afficherFiche), donc pas de garde de rôle ici : seul
-  // le joueur propriétaire peut atteindre ce point.
-  function definirLivret(id, val) {
-    const persos = chargerPersos();
-    const p = persos[id];
-    p.livret = val;
     sauverPersos(persos);
   }
 
