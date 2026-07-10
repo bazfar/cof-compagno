@@ -422,17 +422,26 @@
       <div id="loot-notif-joueur" style="display:none;" class="carte loot-notif-card" data-role="joueur"></div>
     </section>
 
-    <!-- ATELIER (enchantement à risque) -->
+    <!-- ATELIER (enchantement à risque + alchimie) -->
     <section class="panneau" id="panneau-atelier">
       <div class="carte">
         <h2 class="titre-bandeau">🔨 Atelier</h2>
-        <p style="font-size:0.85rem;color:#6a6278;">Enchante une arme ou une armure de ton inventaire — jet de 1d20, risque de destruction sur un jet bas.</p>
+        <p style="font-size:0.85rem;color:#6a6278;">Enchante une arme/armure ou brasse une potion depuis ton inventaire — jet de 1d20.</p>
         <div class="barre-actions">
           <select id="select-atelier-perso"></select>
           <button class="btn petit danger" id="btn-atelier-nouveau-jour" data-role="mj">🌅 Nouveau jour</button>
         </div>
+        <nav class="sous-tabs" id="sous-onglets-atelier">
+          <button type="button" class="sous-tab actif" data-sous-panneau="enchantement">🛡 Enchantement</button>
+          <button type="button" class="sous-tab" data-sous-panneau="alchimie">🧪 Alchimie</button>
+        </nav>
       </div>
-      <div id="zone-atelier"></div>
+      <div class="sous-panneau actif" id="sous-panneau-atelier-enchantement">
+        <div id="zone-atelier"></div>
+      </div>
+      <div class="sous-panneau" id="sous-panneau-atelier-alchimie">
+        <div id="zone-atelier-alchimie"></div>
+      </div>
     </section>
 
     <!-- REGLES -->
@@ -613,9 +622,9 @@
   </div>
 
   <script src="js/etats.js?v=2"></script>
-  <script src="data/donnees.js?v=19"></script>
+  <script src="data/donnees.js?v=21"></script>
   <script src="data/bestiaire.js?v=1"></script>
-  <script src="data/loot.js?v=6"></script>
+  <script src="data/loot.js?v=7"></script>
   <script src="data/equipement_depart.js?v=3"></script>
   <script src="js/emblemes.js?v=14"></script>
   <script src="js/carte-monde.js?v=9"></script>
@@ -632,9 +641,10 @@
   <script src="js/raretes.js?v=4"></script>
   <script src="js/materiaux.js?v=1"></script>
   <script src="js/enchantement.js?v=1"></script>
+  <script src="js/alchimie.js?v=1"></script>
   <script src="js/loot.js?v=9"></script>
   <script src="js/capacites.js?v=5"></script>
   <script src="js/combat.js?v=3"></script>
-  <script src="js/app.js?v=48"></script>
+  <script src="js/app.js?v=49"></script>
 </body>
 </html>

@@ -24,11 +24,19 @@ const App = (() => {
   let livretPersoId = null;  // id du perso choisi dans l'onglet "📖 Livret"
   // Sélection courante de l'onglet "🔨 Atelier" (cf. rendrePanneauAtelier) —
   // atelierItemIdx référence un index dans inventaireListe du perso choisi,
-  // jamais un id stable (l'inventaire n'a pas d'id par entrée).
+  // jamais un id stable (l'inventaire n'a pas d'id par entrée). Partagé entre
+  // les deux sous-onglets (Enchantement/Alchimie) : même personnage choisi.
   let atelierPersoId = null;
   let atelierItemIdx = null;
   let atelierSystemeId = null;
-  const STORAGE_ENCHANTEMENT_TENTATIVES = "enchantement:tentatives";
+  // Sélection courante du sous-onglet Alchimie (cf. _rendreAlchimieType et suite).
+  let alchimieType = null;      // "soin" | "utilitaires"
+  let alchimieFiliereId = null; // "seve" | "flambeau" (si alchimieType === "soin")
+  // Compteur de tentatives/jour partagé enchantement + alchimie (clé composite
+  // "categorie:sousId:palierOuRecetteId", ex. "enchantement:generique:3",
+  // "alchimie:soin_seve:2", "alchimie:util:antidote") — un seul bouton MJ
+  // "Nouveau jour" réinitialise les deux systèmes d'un coup.
+  const STORAGE_ATELIER_TENTATIVES = "atelier:tentatives";
   let role = null;           // "joueur" | "mj" | null (pas encore choisi)
   let carteMode = "worldmap"; // "worldmap" | "battlemap"
   // Identité locale du joueur (par navigateur, pas d'authentification réelle) : sert
@@ -1348,10 +1356,12 @@ const App = (() => {
   }
 
   /* ============================================================
-     ATELIER — enchantement à risque (js/enchantement.js)
+     ATELIER — enchantement (js/enchantement.js) + alchimie (js/alchimie.js)
+     à risque, partagent les mêmes bases : matériaux/inventaire, tentatives/
+     jour, jet 1d20 brut.
      ============================================================ */
 
-  // Nom affiché du catalogue loot pour un id de matériau (poussière, gemme...),
+  // Nom affiché du catalogue loot pour un id d'item (matériau, potion...),
   // repli sur l'id brut si le catalogue n'est pas chargé ou l'id inconnu.
   function _nomCatalogueLoot(id) {
     if (typeof LOOT_CATALOGUE === "undefined") return id;
@@ -1387,39 +1397,76 @@ const App = (() => {
     }
   }
 
-  function _tentativesAtelier() { return SyncStore.get(STORAGE_ENCHANTEMENT_TENTATIVES) || {}; }
-  function _tentativesJour(persoId, systemeId, palierId) {
-    const table = _tentativesAtelier();
-    const cle = `${systemeId}:${palierId}`;
-    return (table[persoId] && table[persoId][cle]) || 0;
-  }
-  function _incrementerTentative(persoId, systemeId, palierId) {
-    const table = _tentativesAtelier();
-    const cle = `${systemeId}:${palierId}`;
-    table[persoId] = table[persoId] || {};
-    table[persoId][cle] = (table[persoId][cle] || 0) + 1;
-    SyncStore.set(STORAGE_ENCHANTEMENT_TENTATIVES, table);
+  // Vérifie sans rien modifier si `persoId` possède tous les matériaux d'un
+  // coût (cout = [{id, qte}]) — partagé enchantement + alchimie.
+  function materiauxDisponibles(persoId, cout) {
+    const p = chargerPersos()[persoId];
+    if (!p) return false;
+    return cout.every((c) => _quantiteDisponible(p.inventaireListe, c.id) >= c.qte);
   }
 
-  // Onglet "🔨 Atelier" : sélecteur de personnage (même filtre estProprietaire
-  // que "Ma fiche"/"Livret") puis, en cascade, objet -> système -> paliers.
+  // Retire les matériaux d'un coût et persiste. À n'appeler qu'après
+  // materiauxDisponibles() === true (pas de re-vérification ici — c'est à
+  // l'appelant de garder le contrôle sur l'ordre des vérifications, cf.
+  // _tenterEnchantement/_brasserPotion).
+  function consommerMateriaux(persoId, cout) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    cout.forEach((c) => _consommerQuantite(p.inventaireListe, c.id, c.qte));
+    sauverPersos(persos);
+  }
+
+  function _tentativesAtelier() { return SyncStore.get(STORAGE_ATELIER_TENTATIVES) || {}; }
+  // cle : identifiant composite complet, ex. "enchantement:generique:3",
+  // "alchimie:soin_seve:2", "alchimie:util:antidote" — construit par l'appelant.
+  function _tentativesJour(persoId, cle) {
+    const table = _tentativesAtelier();
+    return (table[persoId] && table[persoId][cle]) || 0;
+  }
+  function _incrementerTentative(persoId, cle) {
+    const table = _tentativesAtelier();
+    table[persoId] = table[persoId] || {};
+    table[persoId][cle] = (table[persoId][cle] || 0) + 1;
+    SyncStore.set(STORAGE_ATELIER_TENTATIVES, table);
+  }
+
+  // Onglet "🔨 Atelier" : sélecteur de personnage commun aux deux sous-onglets
+  // (même filtre estProprietaire que "Ma fiche"/"Livret"), puis délègue le
+  // rendu de chaque sous-onglet — les deux sont tenus à jour en permanence,
+  // seule la visibilité CSS (.sous-panneau.actif, cf. initSousOnglets) change
+  // au clic, pas de re-rendu nécessaire à la bascule.
   function rendrePanneauAtelier() {
+    initSousOnglets("sous-onglets-atelier", {
+      enchantement: "sous-panneau-atelier-enchantement",
+      alchimie: "sous-panneau-atelier-alchimie",
+    });
     const sel = document.getElementById("select-atelier-perso");
-    const zone = document.getElementById("zone-atelier");
-    if (!sel || !zone) return;
+    if (!sel) return;
     const persos = chargerPersos();
     const ids = Object.keys(persos).filter((id) => estProprietaire(persos[id]));
     if (!ids.length) {
       sel.innerHTML = `<option value="">Aucun personnage</option>`;
-      zone.innerHTML = `<div class="carte"><p class="vide">Aucun personnage. Crée-en un dans l'onglet « Création ».</p></div>`;
+      const vide = `<div class="carte"><p class="vide">Aucun personnage. Crée-en un dans l'onglet « Création ».</p></div>`;
+      document.getElementById("zone-atelier").innerHTML = vide;
+      document.getElementById("zone-atelier-alchimie").innerHTML = "";
       return;
     }
     sel.innerHTML = ids.map((id) => `<option value="${id}">${echapper(persos[id].nom)}</option>`).join("");
     atelierPersoId = ids.includes(atelierPersoId) ? atelierPersoId : (ids.includes(ficheActiveId) ? ficheActiveId : ids[0]);
     sel.value = atelierPersoId;
-    sel.onchange = () => { atelierPersoId = sel.value; atelierItemIdx = null; atelierSystemeId = null; _rendreAtelierItems(); };
+    sel.onchange = () => {
+      atelierPersoId = sel.value;
+      atelierItemIdx = null; atelierSystemeId = null;
+      alchimieType = null; alchimieFiliereId = null;
+      _rendreAtelierItems();
+      _rendreAlchimieType();
+    };
     _rendreAtelierItems();
+    _rendreAlchimieType();
   }
+
+  /* ---------- Sous-onglet Enchantement ---------- */
 
   function _rendreAtelierItems() {
     const zone = document.getElementById("zone-atelier");
@@ -1487,9 +1534,10 @@ const App = (() => {
     if (!p || !item || !systeme) { zone.innerHTML = ""; return; }
 
     zone.innerHTML = systeme.paliers.map((palier) => {
-      const tentatives = _tentativesJour(atelierPersoId, atelierSystemeId, palier.id);
+      const cle = `enchantement:${atelierSystemeId}:${palier.id}`;
+      const tentatives = _tentativesJour(atelierPersoId, cle);
       const restantes = palier.tentativesJour - tentatives;
-      const materiauxOk = palier.cout.every((c) => _quantiteDisponible(p.inventaireListe, c.id) >= c.qte);
+      const materiauxOk = materiauxDisponibles(atelierPersoId, palier.cout);
       const coutTxt = palier.cout.map((c) => {
         const dispo = _quantiteDisponible(p.inventaireListe, c.id);
         const manque = dispo < c.qte;
@@ -1510,21 +1558,21 @@ const App = (() => {
   }
 
   function _tenterEnchantement(palierId) {
-    const persos = chargerPersos();
-    const p = persos[atelierPersoId];
+    const p = chargerPersos()[atelierPersoId];
     const item = p && p.inventaireListe[atelierItemIdx];
     const systeme = Enchantements.trouverSysteme(atelierSystemeId);
     const palier = systeme && systeme.paliers.find((pp) => pp.id === palierId);
     if (!p || !item || !palier) return;
+    const cle = `enchantement:${atelierSystemeId}:${palierId}`;
 
     // Gardes défensives (en plus du bouton désactivé) : re-vérifie tentatives
     // et matériaux au moment du clic, au cas où l'affichage serait périmé
     // (un autre client a pu consommer les mêmes matériaux entre-temps).
-    if (_tentativesJour(atelierPersoId, atelierSystemeId, palierId) >= palier.tentativesJour) {
+    if (_tentativesJour(atelierPersoId, cle) >= palier.tentativesJour) {
       toast("Plus de tentatives pour ce palier aujourd'hui.");
       return;
     }
-    if (!palier.cout.every((c) => _quantiteDisponible(p.inventaireListe, c.id) >= c.qte)) {
+    if (!materiauxDisponibles(atelierPersoId, palier.cout)) {
       toast("Matériaux insuffisants.");
       return;
     }
@@ -1539,23 +1587,179 @@ const App = (() => {
     const resultat = Enchantements.resoudre(item, atelierSystemeId, palierId, jetBrut, bonus);
 
     // Matériaux consommés dans tous les cas (succès, échec, destruction) —
-    // seul le sort de l'objet ensuite change selon le résultat.
-    palier.cout.forEach((c) => _consommerQuantite(p.inventaireListe, c.id, c.qte));
+    // seul le sort de l'objet ensuite change selon le résultat. consommerMateriaux
+    // recharge/sauve son propre snapshot de persos, mais p.inventaireListe reste
+    // la MÊME référence (chargerPersos ne fait qu'une copie superficielle de la
+    // map, cf. DepotDistant.charger) : les deux se voient mutuellement.
+    consommerMateriaux(atelierPersoId, palier.cout);
 
+    // Retrouve l'entrée par référence d'objet, jamais par index : la
+    // consommation ci-dessus a pu retirer une entrée de matériau placée AVANT
+    // atelierItemIdx dans inventaireListe, ce qui décale tous les index
+    // suivants — un index figé avant l'appel serait alors erroné.
+    const idxActuel = p.inventaireListe.indexOf(item);
+    if (idxActuel === -1) return; // sécurité : ne devrait pas arriver
     if (resultat.resultat === "destruction") {
-      p.inventaireListe.splice(atelierItemIdx, 1);
+      p.inventaireListe.splice(idxActuel, 1);
       atelierItemIdx = null;
     } else if (resultat.resultat === "succes") {
-      p.inventaireListe[atelierItemIdx] = resultat.itemMisAJour;
+      p.inventaireListe[idxActuel] = resultat.itemMisAJour;
+      atelierItemIdx = idxActuel;
     }
     // échec : objet inchangé, seuls les matériaux ci-dessus sont partis.
-    _incrementerTentative(atelierPersoId, atelierSystemeId, palierId);
-    sauverPersos(persos);
+    _incrementerTentative(atelierPersoId, cle);
+    sauverPersos(chargerPersos()); // persiste la mutation d'objet ci-dessus (partage la même map que consommerMateriaux)
 
     const total = jetBrut + bonus;
     const crit = jetBrut === 20, echec = jetBrut === 1;
     const detailJet = `d20[${jetBrut}]${bonus >= 0 ? "+" : ""}${bonus} — ${resultat.message}`;
     const label = `${p.nom} — ${systeme.label} palier ${palierId} sur « ${item.nom} »`;
+    afficherResultat(label, total, detailJet, crit, echec);
+    ajouterHisto(label, total, crit, echec, detailJet);
+    toast(resultat.message);
+
+    rendrePanneauAtelier();
+  }
+
+  /* ---------- Sous-onglet Alchimie ---------- */
+
+  // Reconstruit la recette/palier à partir d'une clé composite (cf.
+  // _tentativesJour) plutôt que de fermer sur une référence — les boutons
+  // sont re-générés à chaque rendu, autant relire depuis ALCHIMIE à chaque
+  // clic pour ne jamais dépendre d'un état capturé périmé.
+  function _recetteDepuisCle(cle) {
+    const parts = cle.split(":"); // ["alchimie", "soin_<filiere>" | "util", <palierId> | <recetteId>]
+    if (parts[1] === "util") return Alchimie.trouverRecetteUtilitaire(parts[2]);
+    const filiereId = parts[1].replace(/^soin_/, "");
+    return Alchimie.trouverRecetteSoin(filiereId, parseInt(parts[2], 10));
+  }
+
+  function _rendreAlchimieType() {
+    const zone = document.getElementById("zone-atelier-alchimie");
+    if (!zone || typeof Alchimie === "undefined") return;
+    const p = chargerPersos()[atelierPersoId];
+    if (!p) { zone.innerHTML = ""; return; }
+    zone.innerHTML = `<div class="carte">
+      <label>Type de potion
+        <select id="select-alchimie-type">
+          <option value="soin">${echapper(ALCHIMIE.soin.label)}</option>
+          <option value="utilitaires">${echapper(ALCHIMIE.utilitaires.label)}</option>
+        </select>
+      </label>
+      <label style="margin-left:12px;">Bonus au jet
+        <input type="number" id="alchimie-bonus" value="0" style="width:70px;" />
+      </label>
+      <div id="zone-alchimie-detail" style="margin-top:10px;"></div>
+    </div>`;
+    const sel = document.getElementById("select-alchimie-type");
+    alchimieType = alchimieType || "soin";
+    sel.value = alchimieType;
+    sel.onchange = () => { alchimieType = sel.value; alchimieFiliereId = null; _rendreAlchimieDetail(); };
+    _rendreAlchimieDetail();
+  }
+
+  function _rendreAlchimieDetail() {
+    if (alchimieType === "utilitaires") _rendreAlchimieUtilitaires();
+    else _rendreAlchimieSoin();
+  }
+
+  function _rendreAlchimieSoin() {
+    const zone = document.getElementById("zone-alchimie-detail");
+    if (!zone) return;
+    const filieres = Object.keys(ALCHIMIE.soin.filieres);
+    alchimieFiliereId = filieres.includes(alchimieFiliereId) ? alchimieFiliereId : filieres[0];
+    zone.innerHTML = `
+      <label>Filière
+        <select id="select-alchimie-filiere">
+          ${filieres.map((fid) => `<option value="${fid}">${echapper(ALCHIMIE.soin.filieres[fid].label)}</option>`).join("")}
+        </select>
+      </label>
+      <div id="zone-alchimie-paliers" style="margin-top:10px;"></div>
+    `;
+    const sel = document.getElementById("select-alchimie-filiere");
+    sel.value = alchimieFiliereId;
+    sel.onchange = () => { alchimieFiliereId = sel.value; _rendreAlchimiePaliersSoin(); };
+    _rendreAlchimiePaliersSoin();
+  }
+
+  function _rendreAlchimiePaliersSoin() {
+    const zone = document.getElementById("zone-alchimie-paliers");
+    if (!zone) return;
+    const filiere = ALCHIMIE.soin.filieres[alchimieFiliereId];
+    if (!filiere) { zone.innerHTML = ""; return; }
+    _rendreCartesRecettes(zone, filiere.paliers.map((palier) => ({ recette: palier, cle: `alchimie:soin_${alchimieFiliereId}:${palier.id}` })));
+  }
+
+  function _rendreAlchimieUtilitaires() {
+    const zone = document.getElementById("zone-alchimie-detail");
+    if (!zone) return;
+    zone.innerHTML = `<div id="zone-alchimie-paliers"></div>`;
+    _rendreCartesRecettes(document.getElementById("zone-alchimie-paliers"),
+      ALCHIMIE.utilitaires.recettes.map((r) => ({ recette: r, cle: `alchimie:util:${r.id}` })));
+  }
+
+  // Rendu partagé filière-soin/utilitaires : une carte par recette, même
+  // gabarit que _rendreAtelierPaliers côté enchantement (diff/tentatives/
+  // coût/bouton), adapté au vocabulaire alchimie (rate au lieu de détruit).
+  function _rendreCartesRecettes(zone, entrees) {
+    if (!zone || typeof Alchimie === "undefined") return;
+    const p = chargerPersos()[atelierPersoId];
+    if (!p) { zone.innerHTML = ""; return; }
+    zone.innerHTML = entrees.map(({ recette, cle }) => {
+      const nomPotion = _nomCatalogueLoot(recette.potionId);
+      const tentatives = _tentativesJour(atelierPersoId, cle);
+      const restantes = recette.tentativesJour - tentatives;
+      const materiauxOk = materiauxDisponibles(atelierPersoId, recette.cout);
+      const coutTxt = recette.cout.map((c) => {
+        const dispo = _quantiteDisponible(p.inventaireListe, c.id);
+        const manque = dispo < c.qte;
+        return `<span${manque ? ' style="color:var(--chaos);font-weight:700;"' : ""}>${c.qte}× ${echapper(_nomCatalogueLoot(c.id))} (${dispo} en stock)</span>`;
+      }).join(", ");
+      const desactive = restantes <= 0 || !materiauxOk;
+      return `<div class="carte" style="margin-top:10px;">
+        <div><strong>${echapper(nomPotion)}</strong> — diff. ${recette.diff}${recette.rateCritiqueSi > 0 ? ` · <span style="color:var(--chaos);">rate si jet brut ≤ ${recette.rateCritiqueSi} (Potion ratée)</span>` : ""}</div>
+        <div>Coût : ${coutTxt}</div>
+        <div>Tentatives aujourd'hui : ${tentatives}/${recette.tentativesJour}${restantes <= 0 ? " — épuisées" : ""}</div>
+        <button class="btn or" data-cle-recette="${echapper(cle)}" ${desactive ? "disabled" : ""} style="margin-top:6px;">Brasser</button>
+      </div>`;
+    }).join("");
+
+    zone.querySelectorAll("[data-cle-recette]").forEach((btn) => {
+      btn.onclick = () => _brasserPotion(btn.dataset.cleRecette);
+    });
+  }
+
+  function _brasserPotion(cle) {
+    const recette = _recetteDepuisCle(cle);
+    const p = chargerPersos()[atelierPersoId];
+    if (!recette || !p) return;
+
+    if (_tentativesJour(atelierPersoId, cle) >= recette.tentativesJour) {
+      toast("Plus de tentatives pour cette recette aujourd'hui.");
+      return;
+    }
+    if (!materiauxDisponibles(atelierPersoId, recette.cout)) {
+      toast("Matériaux insuffisants.");
+      return;
+    }
+
+    const bonus = parseInt(document.getElementById("alchimie-bonus").value, 10) || 0;
+    const jetBrut = lancerDe(20);
+    const resultat = Alchimie.resoudre(recette, jetBrut, bonus);
+
+    // Ingrédients consommés dans tous les cas (succès, échec, ratée).
+    consommerMateriaux(atelierPersoId, recette.cout);
+
+    if (resultat.resultat !== "echec") {
+      const itemCatalogue = (typeof LOOT_CATALOGUE !== "undefined") ? LOOT_CATALOGUE.find((it) => it.id === resultat.itemProduitId) : null;
+      if (itemCatalogue) ajouterItemInventaire(atelierPersoId, Object.assign({}, itemCatalogue));
+    }
+    _incrementerTentative(atelierPersoId, cle);
+
+    const total = jetBrut + bonus;
+    const crit = jetBrut === 20, echec = jetBrut === 1;
+    const detailJet = `d20[${jetBrut}]${bonus >= 0 ? "+" : ""}${bonus} — ${resultat.message}`;
+    const label = `${p.nom} — Alchimie (${_nomCatalogueLoot(recette.potionId)})`;
     afficherResultat(label, total, detailJet, crit, echec);
     ajouterHisto(label, total, crit, echec, detailJet);
     toast(resultat.message);
@@ -3507,24 +3711,31 @@ const App = (() => {
     });
 
     // Atelier — bouton MJ "Nouveau jour" : remet à zéro les tentatives
-    // d'enchantement de tout le monde (data-role="mj" masque déjà le bouton
-    // côté joueur, garde de rôle ici en défense supplémentaire).
+    // d'enchantement ET d'alchimie de tout le monde d'un seul coup (clé
+    // SyncStore partagée, cf. STORAGE_ATELIER_TENTATIVES) — data-role="mj"
+    // masque déjà le bouton côté joueur, garde de rôle ici en défense
+    // supplémentaire.
     const btnNouveauJourAtelier = document.getElementById("btn-atelier-nouveau-jour");
     if (btnNouveauJourAtelier) {
       btnNouveauJourAtelier.onclick = () => {
         if (role !== "mj") return;
-        if (!confirm("Réinitialiser les tentatives d'enchantement de tous les joueurs pour aujourd'hui ?")) return;
-        SyncStore.set(STORAGE_ENCHANTEMENT_TENTATIVES, {});
-        toast("Nouveau jour : tentatives d'enchantement réinitialisées.");
+        if (!confirm("Réinitialiser les tentatives d'enchantement et d'alchimie de tous les joueurs pour aujourd'hui ?")) return;
+        SyncStore.set(STORAGE_ATELIER_TENTATIVES, {});
+        toast("Nouveau jour : tentatives d'atelier réinitialisées.");
         rendrePanneauAtelier();
       };
     }
-    // Rafraîchit les tentatives/paliers affichés dès qu'un autre client
-    // (MJ "Nouveau jour", ou un autre joueur qui tente un enchantement)
-    // modifie le compteur partagé.
-    SyncStore.subscribe(STORAGE_ENCHANTEMENT_TENTATIVES, () => {
+    // Rafraîchit les tentatives/paliers affichés dès qu'un autre client (MJ
+    // "Nouveau jour", ou un autre joueur qui tente un enchantement/brassage)
+    // modifie le compteur partagé — les deux sous-onglets sont maintenus à
+    // jour en continu (cf. rendrePanneauAtelier), seule la visibilité CSS
+    // distingue lequel est affiché.
+    SyncStore.subscribe(STORAGE_ATELIER_TENTATIVES, () => {
       const panneauAtelier = document.getElementById("panneau-atelier");
-      if (panneauAtelier && panneauAtelier.classList.contains("actif")) _rendreAtelierPaliers();
+      if (panneauAtelier && panneauAtelier.classList.contains("actif")) {
+        _rendreAtelierPaliers();
+        _rendreAlchimieDetail();
+      }
     });
 
     // Modal choix permanent d'une capacité (ex. +2 DEF OU +1d8 DM)
