@@ -17,17 +17,22 @@
                    l'enchantement existant (jamais fusionné)
    - armure     -> bonusRarete s'ajoute à valeurArmure
    - bouclier   -> bonusRarete s'ajoute à bonusDEF
-   - accessoire -> le nombre du champ `effet` est augmenté
+   - accessoire -> le nombre du champ `effet` est augmenté (toujours),
+                   EN PLUS d'une variante d'effet spécial si l'item en
+                   propose (cf. ci-dessous) — les deux se cumulent, à la
+                   différence d'arme/armure/bouclier où la variante
+                   remplace l'effet générique par type.
 
-   Effets spéciaux (rare/légendaire) : chaque arme/armure/bouclier
-   générique a 2 variantes possibles (cf. EFFETS_PAR_ITEM), au
+   Effets spéciaux (rare/légendaire) : chaque arme/armure/bouclier/
+   accessoire générique a 2 variantes possibles (cf. EFFETS_PAR_ITEM), au
    choix du MJ au moment de mettre l'objet en jeu — ex. une dague
    peut être tirée "vampirique" ou "corruptrice". Les 5 objets
    déjà nommés/enchantés du catalogue (épée longue +1, dague +2,
    arc court +1, arc d'Aelindra +1, hache naine +1) n'ont pas
    d'entrée ici : ils retombent sur l'effet générique par type
    (EFFETS_RARETE) plutôt que de cumuler une identité en plus de
-   la leur.
+   la leur. Les accessoires n'ont pas de repli générique (EFFETS_RARETE) :
+   tous les accessoires du catalogue ont leurs deux variantes dédiées.
 
    Consommables : hors système (non concernés par la rareté).
    ============================================================ */
@@ -220,6 +225,94 @@ const EFFETS_PAR_ITEM = {
     { id: "regenerant", nom: "régénérant", rare: "Soigne 1 PV au porteur à chaque tour où le bouclier bloque une attaque", legendaire: "Soigne 2 PV au porteur dans les mêmes conditions" },
     { id: "vivant", nom: "vivant", rare: "Se répare de 1 point de bonusDEF perdu par jour de repos", legendaire: "Se répare intégralement après une nuit de repos" },
   ],
+
+  // ── Accessoires ────────────────────────────────────────────
+  anneau_protection: [
+    { id: "gardien", nom: "du gardien", rare: "+1 DEF ; annule automatiquement la surprise au premier round de combat", legendaire: "+2 DEF ; annule la surprise et agit en premier au premier round" },
+    { id: "absorbant", nom: "absorbant", rare: "+1 DEF ; 1 fois par combat, réduit de moitié les dégâts d'une attaque subie", legendaire: "+2 DEF ; 2 fois par combat, réduit de moitié les dégâts d'une attaque subie" },
+  ],
+  bracelets_defense: [
+    { id: "impassibles", nom: "impassibles", rare: "+2 DEF (sans armure/bouclier) ; +1 aux jets de résistance", legendaire: "+3 DEF (sans armure/bouclier) ; +2 aux jets de résistance" },
+    { id: "reactifs", nom: "réactifs", rare: "+2 DEF (sans armure/bouclier) ; 1 fois par combat, esquive totalement une attaque de contact", legendaire: "+3 DEF (sans armure/bouclier) ; 2 fois par combat, esquive totalement une attaque de contact" },
+  ],
+  bottes_vitesse: [
+    { id: "fulgurantes", nom: "fulgurantes", rare: "+1 case de déplacement ; 1 fois par combat, double le déplacement pour ce tour", legendaire: "+2 cases de déplacement ; 2 fois par combat, double le déplacement" },
+    { id: "esquivantes", nom: "esquivantes", rare: "+1 case de déplacement ; +1 DEF contre les attaques d'opportunité", legendaire: "+2 cases de déplacement ; +2 DEF contre les attaques d'opportunité, jamais pris au dépourvu" },
+  ],
+  gants_voleur: [
+    { id: "silencieux", nom: "silencieux", rare: "+1 Discrétion/Escamotage ; ouvre les serrures simples sans jet", legendaire: "+2 Discrétion/Escamotage ; ouvre les serrures complexes sans jet, désamorce les pièges simples automatiquement" },
+    { id: "prestes", nom: "prestes", rare: "+1 Discrétion/Escamotage ; +1 initiative", legendaire: "+2 Discrétion/Escamotage ; +2 initiative, agit en premier au premier tour" },
+  ],
+  anneau_resistance: [
+    { id: "renforce", nom: "renforcé", rare: "Résistance 2 au type de dégâts choisi", legendaire: "Résistance 3 au type choisi, immunité aux effets secondaires mineurs de ce type" },
+    { id: "polyvalent", nom: "polyvalent", rare: "Résistance 1 à deux types de dégâts au choix", legendaire: "Résistance 2 à deux types de dégâts au choix" },
+  ],
+  pierre_chance: [
+    { id: "insistante", nom: "insistante", rare: "2 fois par jour, relance un jet raté", legendaire: "3 fois par jour, relance un jet raté (garde le meilleur résultat)" },
+    { id: "protectrice", nom: "protectrice", rare: "1 fois par jour, relance un jet raté ; 1 fois par jour, transforme un coup critique subi en coup normal", legendaire: "2 fois par jour, relance un jet raté ; 1 fois par combat, transforme un coup critique subi en coup normal" },
+  ],
+  amulette_sante: [
+    { id: "vivifiante", nom: "vivifiante", rare: "+1d6 PV max ; régénère 1 PV par tour hors combat", legendaire: "+2d6 PV max ; régénère 1 PV par tour même en combat" },
+    { id: "purifiante", nom: "purifiante", rare: "+1d4 PV max ; immunité aux maladies mineures", legendaire: "+1d6 PV max ; immunité totale aux maladies et poisons faibles" },
+  ],
+  collier_clarte: [
+    { id: "impenetrable", nom: "impénétrable", rare: "Immunisé à la lecture de pensées ; +1 aux jets de résistance mentale", legendaire: "Immunisé à la lecture de pensées ; +2 aux jets de résistance mentale, immunité à la Terreur" },
+    { id: "voile", nom: "voilé", rare: "Immunisé à la lecture de pensées ; invisible à la divination à courte portée", legendaire: "Immunisé à la lecture de pensées ; invisible à toute divination" },
+  ],
+  ceinturon_colosse: [
+    { id: "ecrasant", nom: "écrasant", rare: "+2 FOR ; +1d4 dégâts avec armes de contact", legendaire: "+3 FOR ; +1d6 dégâts avec armes de contact" },
+    { id: "inebranlable", nom: "inébranlable", rare: "+2 FOR ; ne peut être renversé ni repoussé", legendaire: "+3 FOR ; idem, + immunité à l'Étourdissement" },
+  ],
+  cape_brume: [
+    { id: "insaisissable", nom: "insaisissable", rare: "+1 DEF contre la première attaque ; 1 fois par combat, une attaque manque automatiquement sa cible", legendaire: "+2 DEF contre la première attaque ; 2 fois par combat, une attaque manque automatiquement sa cible" },
+    { id: "evanescente", nom: "évanescente", rare: "+1 DEF contre la première attaque ; 1 fois par combat, disparaît de la vue 1 tour (Discrétion totale)", legendaire: "+2 DEF contre la première attaque ; 2 fois par combat, disparaît de la vue 1 tour" },
+  ],
+
+  // ── Armes (suite) ──────────────────────────────────────────
+  trident: [
+    { id: "des_profondeurs", nom: "des profondeurs", rare: "+1d4 dégâts contre les créatures aquatiques ou en zone immergée", legendaire: "+1d8 dégâts dans les mêmes conditions, ignore les malus de combat en zone immergée" },
+    { id: "immobilisante", nom: "immobilisante", rare: "1 chance sur 2 d'immobiliser la cible 1 tour sur un coup critique", legendaire: "Immobilise la cible 1 tour sur tout coup touché" },
+  ],
+  fouet: [
+    { id: "desarmant", nom: "désarmant", rare: "1 chance sur 2 de désarmer la cible sur un coup touché", legendaire: "Désarme automatiquement la cible sur tout coup touché" },
+    { id: "entravant", nom: "entravant", rare: "1 chance sur 2 d'immobiliser la cible 1 tour", legendaire: "Immobilise la cible 1 tour sur tout coup touché, 2 tours sur critique" },
+  ],
+  javelot: [
+    { id: "percant", nom: "perçant", rare: "Ignore 2 points de valeurArmure de la cible", legendaire: "Ignore 4 points de valeurArmure de la cible" },
+    { id: "revenant", nom: "revenant", rare: "Revient dans la main du porteur après un lancer réussi, 1 fois par combat", legendaire: "Revient systématiquement dans la main du porteur après chaque lancer" },
+  ],
+  fronde: [
+    { id: "precise", nom: "précise", rare: "+2 au jet d'attaque à longue portée", legendaire: "+4 au jet d'attaque à longue portée, critique sur 19-20" },
+    { id: "etourdissante", nom: "étourdissante", rare: "1 chance sur 2 d'étourdir la cible 1 tour sur un coup critique", legendaire: "Étourdit la cible 1 tour sur tout coup touché" },
+  ],
+  glaive_guerre: [
+    { id: "decapitant", nom: "décapitant", rare: "Critique sur 19-20 contre les cibles sans casque ni armure lourde", legendaire: "Critique sur 18-20 dans les mêmes conditions, dégâts doublés sur critique" },
+    { id: "imperial", nom: "impérial", rare: "+1 en intimidation tant que l'arme est visible", legendaire: "+2 en intimidation, effraie les créatures de faible dangerosité au 1er round" },
+  ],
+
+  // ── Armures (suite) ────────────────────────────────────────
+  cotte_mithril: [
+    { id: "legere_air", nom: "légère comme l'air", rare: "+1 case de déplacement", legendaire: "+2 cases de déplacement" },
+    { id: "protectrice_mithril", nom: "protectrice", rare: "+1 aux jets de résistance contre la magie", legendaire: "+2 aux jets de résistance, absorbe automatiquement 1 dégât magique par tour" },
+  ],
+  armure_ossements: [
+    { id: "macabre", nom: "macabre", rare: "+1 en intimidation, effraie les créatures vivantes de faible dangerosité", legendaire: "+2 en intimidation, immunise contre la Terreur" },
+    { id: "drainante_os", nom: "drainante", rare: "Soigne 1 PV au porteur à chaque ennemi tué à moins de 2 cases", legendaire: "Soigne 2 PV au porteur dans les mêmes conditions, + 1d4 PV temporaires" },
+  ],
+  armure_guerre_orque: [
+    { id: "brutale", nom: "brutale", rare: "+1d4 dégâts avec armes de contact tant que l'armure est équipée", legendaire: "+1d6 dégâts avec armes de contact tant que l'armure est équipée" },
+    { id: "increvable", nom: "increvable", rare: "Ignore 1 point de dégâts physiques après application de valeurArmure", legendaire: "Ignore 2 points de dégâts physiques après application de valeurArmure" },
+  ],
+
+  // ── Boucliers (suite) ──────────────────────────────────────
+  bouclier_guet: [
+    { id: "vigilant", nom: "vigilant", rare: "Ne peut jamais être surpris (garde une DEF normale même surpris)", legendaire: "Idem, + agit en premier au premier round si le groupe est surpris" },
+    { id: "imposant", nom: "imposant", rare: "+1 en intimidation", legendaire: "+2 en intimidation, +1 DEF aux alliés adjacents" },
+  ],
+  bouclier_miroir: [
+    { id: "reflechissant", nom: "réfléchissant", rare: "1 fois par combat, renvoie un sort ciblé à son lanceur", legendaire: "2 fois par combat, renvoie un sort ciblé à son lanceur" },
+    { id: "eblouissant", nom: "éblouissant", rare: "1 fois par combat, aveugle un attaquant au contact pendant 1 tour", legendaire: "2 fois par combat, aveugle un attaquant au contact pendant 1 tour" },
+  ],
 };
 
 const Raretes = (() => {
@@ -301,6 +394,9 @@ const Raretes = (() => {
         break;
       case "accessoire":
         clone.effet = _renforcerEffetAccessoire(item.effet, bonus);
+        if (auMoinsRare) {
+          if (variante) { clone.effetRarete = variante[rarete.id]; clone.varianteNom = variante.nom; }
+        }
         break;
       default:
         break; // consommable ou type inconnu
