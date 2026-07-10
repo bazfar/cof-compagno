@@ -1725,6 +1725,22 @@ const App = (() => {
     return ` <span class="badge-rarete" style="background:${it.rareteCouleur || ""}">${echapper(it.rareteNom)}</span>`;
   }
 
+  // Livret personnel (lore/histoire du personnage), présenté comme un carnet
+  // (cf. .livret-bloc/.livret-texte, css/style.css) — carte de la fiche
+  // complète uniquement (pas la mini-fiche battlemap). Verrouillé par
+  // l'identité du joueur : un joueur n'atteint cette carte que via sa propre
+  // fiche (estProprietaire déjà vérifié par afficherFiche avant d'afficher
+  // quoi que ce soit) ; le MJ peut ouvrir n'importe quelle fiche pour LIRE
+  // le livret, mais le champ passe en lecture seule pour lui.
+  function htmlBlocLivret(p) {
+    const lectureSeule = role === "mj";
+    return `<div class="carte livret-bloc">
+      <h3 style="margin-top:0;">📖 Livret</h3>
+      <p class="aide" style="margin:0 0 8px;">${lectureSeule ? "Lore du joueur (lecture seule côté MJ)." : "Ton histoire, ton lore — à toi de l'écrire. Visible par le MJ."}</p>
+      <textarea id="fiche-livret" class="livret-texte" rows="10"${lectureSeule ? " readonly" : ""} placeholder="Écris ici l'histoire de ton personnage...">${echapper(p.livret || "")}</textarea>
+    </div>`;
+  }
+
   // Bourse (pièces d'or/d'argent/de bronze) — éditable directement par le
   // joueur (dépenses, achats hors combat...) ; le MJ peut aussi en donner
   // depuis l'onglet Loot (cf. Loot.rendreCatalogue → "Donner des pièces").
@@ -2400,6 +2416,8 @@ const App = (() => {
             <h3>Notes</h3>
             <textarea id="fiche-notes" rows="5" style="width:100%;resize:vertical;font-family:inherit;font-size:0.9rem;" placeholder="Notes libres (idées, quêtes en cours, objectifs...)">${echapper(p.notes || "")}</textarea>
           </div>
+
+          ${htmlBlocLivret(p)}
         </div>
 
         <div class="fiche-col-droite">
@@ -2417,6 +2435,9 @@ const App = (() => {
     document.getElementById("pv-moins").onclick = () => ajusterPv(id, -1);
     document.getElementById("pv-actuel").onchange = (e) => definirPv(id, parseInt(e.target.value, 10));
     document.getElementById("fiche-notes").onchange = (e) => definirNotes(id, e.target.value);
+    if (role !== "mj") {
+      document.getElementById("fiche-livret").onchange = (e) => definirLivret(id, e.target.value);
+    }
     wireDegatsSubis(id, "");
     // Bourse (cf. htmlBlocBourse) — édition directe par le joueur.
     const _wireBourse = (elId, champ) => {
@@ -2570,6 +2591,16 @@ const App = (() => {
     const persos = chargerPersos();
     const p = persos[id];
     p.notes = val;
+    sauverPersos(persos);
+  }
+
+  // Livret (cf. htmlBlocLivret) — jamais appelé côté MJ (textarea readonly,
+  // pas de wiring dans afficherFiche), donc pas de garde de rôle ici : seul
+  // le joueur propriétaire peut atteindre ce point.
+  function definirLivret(id, val) {
+    const persos = chargerPersos();
+    const p = persos[id];
+    p.livret = val;
     sauverPersos(persos);
   }
 
