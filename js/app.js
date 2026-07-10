@@ -152,20 +152,48 @@ const App = (() => {
     appliquerRole();
   }
 
-  // Un joueur ne voit/modifie que ses propres persos (proprietaire === joueurId)
-  // + les persos "non réclamés" (créés avant ce système, ou par le MJ) — le MJ
-  // garde un accès total, pour ses besoins de table (loot, combat...).
-  function estProprietaire(p) {
-    return role === "mj" || !p.proprietaire || p.proprietaire === joueurId;
+  // Compare deux prénoms de joueur de façon tolérante (accents/casse/espaces
+  // ignorés). Sert d'identité STABLE pour la propriété des persos : l'id
+  // navigateur (joueurId) est volatil (vidage du cache/localStorage,
+  // autre appareil...) et un joueur qui le perd perdait l'accès à ses fiches.
+  function memeNom(a, b) {
+    if (!a || !b) return false;
+    const norm = (s) =>
+      String(s).trim().toLowerCase()
+        .normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "");
+    const na = norm(a), nb = norm(b);
+    // "Joueur" est le nom générique de repli — jamais une identité valable.
+    if (!na || na === "joueur") return false;
+    return na === nb;
   }
 
-  // Revendique un perso non réclamé comme sien (bouton "C'est le mien" dans la
-  // liste, ou sélection dans "Mon personnage" sur la carte). No-op si déjà
-  // réclamé par quelqu'un (soi-même y compris).
+  // Un joueur ne voit/modifie que ses propres persos. La propriété est
+  // établie sur DEUX critères, dans cet ordre :
+  //   1. le prénom (proprietaireNom === joueurNom) — identité STABLE, survit
+  //      à la perte de l'id navigateur : c'est ce qui répare le bug "je ne
+  //      retrouve plus mon perso après quelque temps".
+  //   2. l'ancien id navigateur (proprietaire === joueurId) — conservé en
+  //      repli pour ne casser AUCUN lien déjà en place.
+  // + les persos "non réclamés" (ni id ni nom) restent visibles/adoptables.
+  // Le MJ garde un accès total (loot, combat...).
+  function estProprietaire(p) {
+    if (role === "mj") return true;
+    if (!p.proprietaire && !p.proprietaireNom) return true; // non réclamé
+    if (memeNom(p.proprietaireNom, joueurNom)) return true;  // 1. par prénom
+    return p.proprietaire === joueurId;                      // 2. par id (compat)
+  }
+
+  // Revendique un perso comme sien (bouton "C'est le mien", ou sélection dans
+  // "Mon personnage" sur la carte). Autorisé si le perso est non réclamé OU
+  // s'il porte déjà mon prénom (reprise après perte de l'id). Ré-ancre l'id
+  // navigateur courant (auto-heal) pour que le repli par id reste à jour.
+  // No-op si le perso appartient à quelqu'un d'autre.
   function reclamerPerso(id) {
     const persos = chargerPersos();
     const p = persos[id];
-    if (!p || p.proprietaire) return;
+    if (!p) return;
+    const aMoiParNom = memeNom(p.proprietaireNom, joueurNom);
+    if (p.proprietaire && !aMoiParNom) return; // à un autre joueur → on ne vole pas
     p.proprietaire = joueurId;
     p.proprietaireNom = joueurNom;
     sauverPersos(persos);
