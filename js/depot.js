@@ -10,7 +10,7 @@
 class Depot {
   charger(id) { throw new Error("Depot.charger() non implémenté"); }
   liste() { throw new Error("Depot.liste() non implémenté"); }
-  sauver(obj, id) { throw new Error("Depot.sauver() non implémenté"); }
+  sauver(obj, id, onError) { throw new Error("Depot.sauver() non implémenté"); }
   supprimer(id) { throw new Error("Depot.supprimer() non implémenté"); }
   // Abonnement aux changements (temps réel). No-op en local.
   ecouter(/* callback */) { return () => {}; }
@@ -126,12 +126,18 @@ class DepotDistant extends Depot {
   liste() {
     return Object.keys(this._cache).map((k) => this._cache[k]);
   }
-  sauver(obj, id) {
+  // onError (optionnel) : appelé en plus du console.error si l'écriture
+  // Firestore échoue (ex. document > 1 Mo, tableau imbriqué refusé...) — permet
+  // à l'appelant de prévenir l'utilisateur au lieu d'un échec purement silencieux.
+  sauver(obj, id, onError) {
     const cle = id || (obj && obj.id);
     if (!cle) return null;
     this._cache[cle] = obj; // optimiste : visible localement tout de suite
     this._collection().doc(cle).set(obj)
-      .catch((e) => console.error(`DepotDistant(${this.cle}).sauver(${cle}) échoué :`, e));
+      .catch((e) => {
+        console.error(`DepotDistant(${this.cle}).sauver(${cle}) échoué :`, e);
+        if (onError) onError(e);
+      });
     return cle;
   }
   supprimer(id) {

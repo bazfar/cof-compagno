@@ -1309,6 +1309,28 @@ const Carte = (() => {
     let _depotPortailsManuels = null;
     let _dessinPortailEnCours = null; // { scene, x1, y1, x2, y2 } en pixels natifs de la scène
 
+    // Aplatit une liste de polylignes (déjà en pixels) en segments consécutifs
+    // [[x1,y1],[x2,y2]] — dérivable mécaniquement des polylignes, donc jamais
+    // stocké ni synchronisé séparément (cf. _sceneDepuisSync / _publierSceneManuelle) :
+    // seules les polylignes voyagent, les segments sont recalculés à l'arrivée.
+    function _segmentsDepuisPolylignes(polylignes) {
+      const segments = [];
+      for (const poly of polylignes) {
+        for (let i = 0; i < poly.length - 1; i++) {
+          segments.push([[poly[i].x, poly[i].y], [poly[i+1].x, poly[i+1].y]]);
+        }
+      }
+      return segments;
+    }
+
+    // Convertit une liste de polylignes (coordonnées cases, format UVTT) en
+    // polylignes pixels + segments aplatis, pour les murs comme pour les
+    // objets (cf. appels dans parseDD2VTT).
+    function _polylignesEtSegments(liste, px) {
+      const polylignes = (liste || []).map(poly => poly.map(p => ({ x: p.x * px, y: p.y * px })));
+      return { polylignes, segments: _segmentsDepuisPolylignes(polylignes) };
+    }
+
     // ── Parser ──────────────────────────────────────────────
     // key   : identifiant stable (clé de synchro) — nom de fichier pour un
     //         import manuel, ou la "key" du catalogue pour une scène commitée
@@ -1318,29 +1340,15 @@ const Carte = (() => {
       const lc = data.resolution.map_size.x;
       const hc = data.resolution.map_size.y;
 
-      // Convertit une liste de polylignes (coordonnées cases, format UVTT) en
-      // polylignes pixels + segments aplatis, pour les murs comme pour les
-      // objets (cf. appels ci-dessous).
-      function _polylignesEtSegments(liste) {
-        const polylignes = (liste || []).map(poly => poly.map(p => ({ x: p.x * px, y: p.y * px })));
-        const segments = [];
-        for (const poly of polylignes) {
-          for (let i = 0; i < poly.length - 1; i++) {
-            segments.push([[poly[i].x, poly[i].y], [poly[i+1].x, poly[i+1].y]]);
-          }
-        }
-        return { polylignes, segments };
-      }
-
       // Murs "en dur" (line_of_sight) : bloquent la vision ET le déplacement.
-      const { polylignes, segments } = _polylignesEtSegments(data.line_of_sight);
+      const { polylignes, segments } = _polylignesEtSegments(data.line_of_sight, px);
 
       // Objets qui bloquent la vue sans bloquer le passage (arbres, rochers,
       // statues...) — Dungeondraft les exporte séparément depuis la 0.3 UVTT
       // (objects_line_of_sight) précisément pour cette distinction : contrairement
       // à un mur, on peut marcher à travers un arbre. Utilisés pour le calcul de
       // LoS (cf. _segmentsBloquants) mais jamais pour _deplacementBloque.
-      const { polylignes: polylignesObjets, segments: segmentsObjets } = _polylignesEtSegments(data.objects_line_of_sight);
+      const { polylignes: polylignesObjets, segments: segmentsObjets } = _polylignesEtSegments(data.objects_line_of_sight, px);
 
       // Portails (portes ET fenêtres — Dungeondraft ne les distingue pas dans
       // l'export). id stable (ordre d'export, constant pour un même fichier)
@@ -1518,13 +1526,28 @@ const Carte = (() => {
         });
       });
     }
+    // Firestore refuse tout tableau contenant directement un autre tableau
+    // ("Nested arrays are not supported") — hors polylignes est un tableau de
+    // tableaux de points, et segments un tableau de [[x,y],[x,y]]. On enveloppe
+    // donc chaque polyligne dans { pts } pour la synchro, et on ne synchronise
+    // pas les segments (recalculés à l'arrivée, cf. _segmentsDepuisPolylignes) :
+    // ils sont de toute façon dérivés mécaniquement des polylignes.
+    function _polylignesPourSync(polylignes) {
+      return (polylignes || []).map(poly => ({ pts: poly }));
+    }
+    function _polylignesDepuisSync(polylignesSync) {
+      return (polylignesSync || []).map(p => p.pts || []);
+    }
+
     function _sceneDepuisSync(nom, d) {
+      const polylignes = _polylignesDepuisSync(d.polylignes);
+      const polylignesObjets = _polylignesDepuisSync(d.polylignesObjets);
       return {
         nom, label: d.label || nom,
         largeur: d.largeur, hauteur: d.hauteur, px: d.px, lc: d.lc, hc: d.hc,
         image: d.image, imageObj: null,
-        polylignes: d.polylignes || [], segments: d.segments || [],
-        polylignesObjets: d.polylignesObjets || [], segmentsObjets: d.segmentsObjets || [],
+        polylignes, segments: _segmentsDepuisPolylignes(polylignes),
+        polylignesObjets, segmentsObjets: _segmentsDepuisPolylignes(polylignesObjets),
         portails: d.portails || [],
         tokens: [], brouillard: [],
       };
@@ -1578,10 +1601,12 @@ const Carte = (() => {
           label: scene.label || nom,
           largeur: scene.largeur, hauteur: scene.hauteur, px: scene.px, lc: scene.lc, hc: scene.hc,
           image,
-          polylignes: scene.polylignes || [], segments: scene.segments || [],
-          polylignesObjets: scene.polylignesObjets || [], segmentsObjets: scene.segmentsObjets || [],
+          polylignes: _polylignesPourSync(scene.polylignes),
+          polylignesObjets: _polylignesPourSync(scene.polylignesObjets),
           portails: scene.portails || [],
-        }, nom);
+        }, nom, (err) => {
+          toastCarte('⚠ Échec de la synchro de « ' + (scene.label || nom) + ' » vers les joueurs : ' + (err && err.message ? err.message : err));
+        });
       });
     }
 
