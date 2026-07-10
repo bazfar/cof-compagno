@@ -861,9 +861,9 @@ const CLASSES = {
         speciale: false,
         description: "Illusions et tromperie — manipuler la réalité perçue plutôt que la réalité elle-même.",
         rangs: [
-          { rang: 1, nom: "Image décalée (sort, L)", effet: "Crée un double illusoire à 1 m de lui ; la prochaine attaque réussie contre lui rate automatiquement",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "La prochaine attaque réussie contre l'Enchanteur rate automatiquement (annulation d'un coup) — pas un état ou bonus chiffrable du schéma standard." } ] } },
+          { rang: 1, nom: "Image décalée (sort, L)", effet: "Crée un double illusoire à 1 m de lui ou d'une autre cible alliée ; la prochaine attaque réussie contre lui rate automatiquement",
+            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "allie", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "La prochaine attaque réussie contre la cible protégée (soi-même ou un allié à 1 m) rate automatiquement (annulation d'un coup) — pas un état ou bonus chiffrable du schéma standard." } ] } },
           { rang: 2, nom: "Déguisement magique (sort, L)", effet: "Prend l'apparence exacte d'une créature humanoïde connue pendant [5+Mod. de CHA] heures ; SAG diff. [10+Mod. de CHA] pour percer l'illusion",
             mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "special", note: "Change d'apparence pendant [5+Mod.CHA] heures (durée hors combat) ; un observateur doit réussir un test de SAG diff. [10+Mod.CHA] pour percer l'illusion — non modélisé par le schéma standard." } ] } },
