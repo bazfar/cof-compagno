@@ -38,6 +38,7 @@ const App = (() => {
   // "Nouveau jour" réinitialise les deux systèmes d'un coup.
   const STORAGE_ATELIER_TENTATIVES = "atelier:tentatives";
   let livreOuvertId = null;  // id du livre ouvert dans l'étagère du perso (null = vue étagère)
+  let livreOuvertPersoId = null; // id du perso auquel appartient le livre ouvert (le mien, ou celui d'un livre partagé avec moi)
   let role = null;           // "joueur" | "mj" | null (pas encore choisi)
   let carteMode = "worldmap"; // "worldmap" | "battlemap"
   // Identité locale du joueur (par navigateur, pas d'authentification réelle) : sert
@@ -1393,40 +1394,106 @@ const App = (() => {
     sel.innerHTML = ids.map((id) => `<option value="${id}">${echapper(persos[id].nom)}</option>`).join("");
     const avant = livretPersoId;
     livretPersoId = ids.includes(livretPersoId) ? livretPersoId : (ids.includes(ficheActiveId) ? ficheActiveId : ids[0]);
-    if (livretPersoId !== avant) livreOuvertId = null; // changer de perso referme le livre ouvert
+    if (livretPersoId !== avant) { livreOuvertId = null; livreOuvertPersoId = null; } // changer de perso referme le livre ouvert
     sel.value = livretPersoId;
-    sel.onchange = () => { livretPersoId = sel.value; livreOuvertId = null; _rendreZoneLivret(); };
+    sel.onchange = () => { livretPersoId = sel.value; livreOuvertId = null; livreOuvertPersoId = null; _rendreZoneLivret(); };
     _rendreZoneLivret();
   }
 
-  // Aiguille entre la vue "étagère" (liste des livres) et la vue "livre ouvert",
-  // selon qu'un livre est sélectionné (livreOuvertId) et existe encore.
+  // Aiguille entre la vue "étagère" (liste des livres) et la vue "livre ouvert".
+  // Le livre ouvert peut appartenir au perso sélectionné (le mien) OU à un autre
+  // perso (livre partagé avec moi) — d'où la résolution par livreOuvertPersoId.
   function _rendreZoneLivret() {
     const zone = document.getElementById("zone-livret");
     if (!zone) return;
-    const p = chargerPersos()[livretPersoId];
+    const persos = chargerPersos();
+    if (livreOuvertId) {
+      const pOuvert = persos[livreOuvertPersoId] || persos[livretPersoId];
+      const l = pOuvert && livresDe(pOuvert).find((x) => x.id === livreOuvertId);
+      if (pOuvert && l) { _rendreLivreOuvert(pOuvert, l, persos); return; }
+      livreOuvertId = null; livreOuvertPersoId = null; // introuvable → retour étagère
+    }
+    const p = persos[livretPersoId];
     if (!p) return;
-    const livres = livresDe(p);
-    const ouvert = livres.find((l) => l.id === livreOuvertId);
-    if (ouvert) _rendreLivreOuvert(p, ouvert);
-    else { livreOuvertId = null; _rendreEtagere(p, livres); }
+    _rendreEtagere(p, livresDe(p), persos);
   }
 
-  // Vue "étagère" : la pile de livres du perso, plus un bouton "Nouveau livre"
-  // pour le propriétaire (le MJ lit seulement, comme pour l'ancien livret).
-  function _rendreEtagere(p, livres) {
+  // Un joueur peut éditer les livres de SES persos (jamais le MJ, jamais les
+  // livres partagés par un autre joueur, qui restent en lecture seule).
+  function _peutEditerLivre(p) {
+    return role !== "mj" && estProprietaire(p);
+  }
+
+  // Un livre (d'un autre perso) m'est-il partagé ? "table" = tout le monde ;
+  // "joueurs" = mon prénom figure dans la liste des destinataires.
+  function _livrePartageAvecMoi(l) {
+    if (!l) return false;
+    if (l.partage === "table") return true;
+    if (l.partage === "joueurs" && Array.isArray(l.partageAvec)) {
+      return l.partageAvec.some((n) => memeNom(n, joueurNom));
+    }
+    return false;
+  }
+
+  // Collecte les livres que d'AUTRES joueurs ont partagés avec moi (parcourt
+  // tous les persos que je ne possède pas). Vide pour le MJ, qui voit déjà tout
+  // via le sélecteur de personnage.
+  function _livresPartagesAvecMoi(persos) {
+    if (role === "mj") return [];
+    const res = [];
+    Object.keys(persos).forEach((pid) => {
+      const p = persos[pid];
+      if (estProprietaire(p)) return; // mes persos : déjà dans mon étagère
+      livresDe(p).forEach((l) => { if (_livrePartageAvecMoi(l)) res.push({ persoId: pid, perso: p, livre: l }); });
+    });
+    return res;
+  }
+
+  // Liste dédupliquée des prénoms des autres joueurs de la table (pour choisir
+  // les destinataires d'un partage) — lus depuis proprietaireNom des persos.
+  function _rosterJoueurs(persos) {
+    const noms = [];
+    Object.keys(persos).forEach((pid) => {
+      const nom = persos[pid].proprietaireNom;
+      if (!nom || memeNom(nom, joueurNom)) return; // pas de nom, ou moi
+      if (String(nom).trim().toLowerCase() === "joueur") return; // nom générique
+      if (!noms.some((n) => memeNom(n, nom))) noms.push(nom);
+    });
+    return noms;
+  }
+
+  // Badge de partage affiché sur la tranche d'un de MES livres (état courant).
+  function _badgePartage(l) {
+    if (l.partage === "table") return ` <span class="badge-partage">🌐 table</span>`;
+    if (l.partage === "joueurs" && (l.partageAvec || []).length) return ` <span class="badge-partage">👥 ${l.partageAvec.length}</span>`;
+    return "";
+  }
+
+  // Tranche de livre (carte) de l'étagère. estPartage=true → livre d'un autre
+  // joueur partagé avec moi (on montre l'auteur au lieu du badge de partage).
+  function _htmlSpine(l, estPartage, perso) {
+    const texte = (l.texte || "").trim();
+    const apercu = texte.slice(0, 120);
+    const cover = l.image ? `<img class="livre-spine-cover" src="${l.image}" alt="" />` : "";
+    const meta = estPartage
+      ? ` <span class="livre-spine-meta">✍ ${echapper(perso.proprietaireNom || perso.nom)}</span>`
+      : _badgePartage(l);
+    const dataPerso = estPartage ? ` data-perso="${perso.id}"` : "";
+    return `<button class="livre-spine${l.image ? " avec-cover" : ""}" data-livre="${l.id}" data-type="${estPartage ? "autre" : "mien"}"${dataPerso}>
+      ${cover}
+      <span class="livre-spine-titre">📖 ${echapper(l.titre || "Sans titre")}${meta}</span>
+      <span class="livre-spine-apercu">${apercu ? echapper(apercu) + (texte.length > 120 ? "…" : "") : "<i>vide</i>"}</span>
+    </button>`;
+  }
+
+  // Vue "étagère" : mes livres (+ bouton Nouveau livre si éditable), puis une
+  // section "Partagés avec moi" avec les livres que d'autres joueurs m'ont ouverts.
+  function _rendreEtagere(p, livres, persos) {
     const zone = document.getElementById("zone-livret");
-    const editable = role !== "mj";
-    const spines = livres.map((l) => {
-      const texte = (l.texte || "").trim();
-      const apercu = texte.slice(0, 120);
-      const cover = l.image ? `<img class="livre-spine-cover" src="${l.image}" alt="" />` : "";
-      return `<button class="livre-spine${l.image ? " avec-cover" : ""}" data-livre="${l.id}">
-        ${cover}
-        <span class="livre-spine-titre">📖 ${echapper(l.titre || "Sans titre")}</span>
-        <span class="livre-spine-apercu">${apercu ? echapper(apercu) + (texte.length > 120 ? "…" : "") : "<i>vide</i>"}</span>
-      </button>`;
-    }).join("");
+    const editable = _peutEditerLivre(p);
+    const spines = livres.map((l) => _htmlSpine(l, false)).join("");
+    const partages = _livresPartagesAvecMoi(persos);
+    const spinesPartages = partages.map((it) => _htmlSpine(it.livre, true, it.perso)).join("");
     zone.innerHTML = `<div class="carte livret-bloc">
       <div class="livret-entete">
         <h3 style="margin:0;">📚 Livres — ${echapper(p.nom)}</h3>
@@ -1435,9 +1502,16 @@ const App = (() => {
       ${livres.length
         ? `<div class="livre-etagere">${spines}</div>`
         : `<p class="vide">${editable ? "Aucun livre pour l'instant. Clique « ➕ Nouveau livre » pour commencer." : "Aucun livre."}</p>`}
-    </div>`;
-    zone.querySelectorAll(".livre-spine").forEach((b) => {
-      b.onclick = () => { livreOuvertId = b.dataset.livre; _rendreZoneLivret(); };
+    </div>
+    ${partages.length ? `<div class="carte livret-bloc">
+      <h3 style="margin:0 0 12px;">📬 Partagés avec moi</h3>
+      <div class="livre-etagere">${spinesPartages}</div>
+    </div>` : ""}`;
+    zone.querySelectorAll('.livre-spine[data-type="mien"]').forEach((b) => {
+      b.onclick = () => { livreOuvertId = b.dataset.livre; livreOuvertPersoId = p.id; _rendreZoneLivret(); };
+    });
+    zone.querySelectorAll('.livre-spine[data-type="autre"]').forEach((b) => {
+      b.onclick = () => { livreOuvertId = b.dataset.livre; livreOuvertPersoId = b.dataset.perso; _rendreZoneLivret(); };
     });
     if (editable) {
       const btn = document.getElementById("btn-nouveau-livre");
@@ -1857,12 +1931,45 @@ const App = (() => {
     rendrePanneauAtelier();
   }
 
+  // Bloc de contrôle du partage (propriétaire uniquement) : Privé / Certains
+  // joueurs (cases à cocher des autres prénoms) / Toute la table.
+  function _htmlPartageControl(p, l, persos) {
+    const mode = l.partage || "prive";
+    const avec = l.partageAvec || [];
+    const btn = (val, txt) => `<button class="btn-partage${mode === val ? " actif" : ""}" data-mode="${val}">${txt}</button>`;
+    let checks = "";
+    if (mode === "joueurs") {
+      const roster = _rosterJoueurs(persos);
+      checks = roster.length
+        ? `<div class="partage-joueurs">${roster.map((n) =>
+            `<label><input type="checkbox" class="chk-partage" value="${echapper(n)}"${avec.some((x) => memeNom(x, n)) ? " checked" : ""}/> ${echapper(n)}</label>`).join("")}</div>`
+        : `<p class="partage-vide">Aucun autre joueur connu pour l'instant. Un joueur apparaît ici dès qu'il a créé un perso avec son prénom.</p>`;
+    }
+    return `<div class="livre-partage" id="livre-partage">
+      <span class="livre-partage-lbl">Partage :</span>
+      ${btn("prive", "🔒 Privé")}
+      ${btn("joueurs", "👥 Certains joueurs")}
+      ${btn("table", "🌐 Toute la table")}
+      ${checks}
+    </div>`;
+  }
+
+  // Ligne d'info affichée en lecture seule (MJ ou destinataire d'un partage) :
+  // auteur du livre + état de partage.
+  function _htmlInfoLecture(p, l) {
+    const bits = [];
+    if (p.proprietaireNom) bits.push(`✍ ${echapper(p.proprietaireNom)}`);
+    if (l.partage === "table") bits.push("🌐 partagé avec toute la table");
+    else if (l.partage === "joueurs") bits.push("👥 partagé avec certains joueurs");
+    return bits.length ? `<p class="livre-partage-info">${bits.join(" · ")}</p>` : "";
+  }
+
   // Vue "livre ouvert" : présenté comme une page de livre (couverture + titre +
   // illustration optionnelle + texte). Éditable pour le propriétaire (titre,
-  // texte et image sauvegardés à la volée), lecture seule pour le MJ.
-  function _rendreLivreOuvert(p, l) {
+  // texte, image et partage sauvegardés à la volée), lecture seule sinon.
+  function _rendreLivreOuvert(p, l, persos) {
     const zone = document.getElementById("zone-livret");
-    const editable = role !== "mj";
+    const editable = _peutEditerLivre(p);
     const illustration = l.image
       ? `<div class="livre-illustration"><img src="${l.image}" alt="illustration du livre" /></div>`
       : "";
@@ -1879,10 +1986,11 @@ const App = (() => {
       ${editable
         ? `<input type="text" id="livre-titre" class="livre-titre-input" value="${echapper(l.titre || "")}" placeholder="Titre du livre" maxlength="80" />`
         : `<h3 class="livre-titre-lecture">📖 ${echapper(l.titre || "Sans titre")}</h3>`}
+      ${editable ? _htmlPartageControl(p, l, persos) : _htmlInfoLecture(p, l)}
       ${illustration}
       <textarea id="livre-texte" class="livret-texte" rows="14"${editable ? "" : " readonly"} placeholder="Écris ici l'histoire, tes notes, une lettre…">${echapper(l.texte || "")}</textarea>
     </div>`;
-    document.getElementById("btn-retour-etagere").onclick = () => { livreOuvertId = null; _rendreZoneLivret(); };
+    document.getElementById("btn-retour-etagere").onclick = () => { livreOuvertId = null; livreOuvertPersoId = null; _rendreZoneLivret(); };
     if (editable) {
       document.getElementById("livre-titre").onchange = (e) => sauverChampLivre(p.id, l.id, "titre", e.target.value);
       document.getElementById("livre-texte").onchange = (e) => sauverChampLivre(p.id, l.id, "texte", e.target.value);
@@ -1898,6 +2006,23 @@ const App = (() => {
       };
       const supprImg = document.getElementById("btn-livre-image-suppr");
       if (supprImg) supprImg.onclick = () => { sauverChampLivre(p.id, l.id, "image", null); _rendreZoneLivret(); };
+      // Contrôles de partage
+      const zoneP = document.getElementById("livre-partage");
+      if (zoneP) {
+        zoneP.querySelectorAll(".btn-partage").forEach((b) => {
+          b.onclick = () => {
+            const avec = Array.from(document.querySelectorAll(".chk-partage:checked")).map((c) => c.value);
+            sauverPartageLivre(p.id, l.id, b.dataset.mode, avec);
+            _rendreZoneLivret(); // re-render pour afficher/masquer les cases à cocher
+          };
+        });
+        zoneP.querySelectorAll(".chk-partage").forEach((c) => {
+          c.onchange = () => {
+            const avec = Array.from(document.querySelectorAll(".chk-partage:checked")).map((x) => x.value);
+            sauverPartageLivre(p.id, l.id, "joueurs", avec);
+          };
+        });
+      }
     }
   }
 
@@ -1930,11 +2055,26 @@ const App = (() => {
     const p = persos[persoId];
     if (!p) return;
     const livres = livresDe(p).slice();
-    const nouveau = { id: _genLivreId(), titre: "Nouveau livre", texte: "" };
+    const nouveau = { id: _genLivreId(), titre: "Nouveau livre", texte: "", partage: "prive", partageAvec: [] };
     livres.push(nouveau);
     _ecrireLivres(persoId, livres);
     livreOuvertId = nouveau.id;
+    livreOuvertPersoId = persoId;
     _rendreZoneLivret();
+  }
+
+  // Enregistre le mode de partage d'un livre (prive/joueurs/table) et, pour
+  // "joueurs", la liste des prénoms destinataires. Réservé au propriétaire.
+  function sauverPartageLivre(persoId, livreId, partage, partageAvec) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const livres = livresDe(p).slice();
+    const l = livres.find((x) => x.id === livreId);
+    if (!l) return;
+    l.partage = partage;
+    l.partageAvec = partage === "joueurs" ? (partageAvec || []) : [];
+    _ecrireLivres(persoId, livres);
   }
 
   function sauverChampLivre(persoId, livreId, champ, val) {

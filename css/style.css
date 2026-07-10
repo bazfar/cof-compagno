@@ -690,6 +690,50 @@ textarea { resize: vertical; min-height: 70px; }
   border: 1px solid var(--parchemin-fonce);
   margin-bottom: 4px;
 }
+.livre-spine-meta { font-size: 0.72rem; font-weight: 400; color: #6a6278; }
+.badge-partage {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--violet);
+  background: #efe7f7;
+  border-radius: 10px;
+  padding: 1px 7px;
+  vertical-align: middle;
+}
+/* Contrôle de partage dans un livre ouvert */
+.livre-partage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px dashed var(--parchemin-fonce);
+  border-radius: 6px;
+}
+.livre-partage-lbl { font-size: 0.8rem; color: #6a6278; margin-right: 2px; }
+.btn-partage {
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border: 1px solid var(--parchemin-fonce);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--encre);
+  cursor: pointer;
+}
+.btn-partage:hover { border-color: var(--or); }
+.btn-partage.actif { border-color: var(--violet); background: var(--violet); color: #fff; }
+.partage-joueurs {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 4px;
+}
+.partage-joueurs label { font-size: 0.85rem; color: var(--encre); cursor: pointer; }
+.partage-vide { flex-basis: 100%; font-size: 0.8rem; color: #8a8296; font-style: italic; margin: 2px 0 0; }
+.livre-partage-info { font-size: 0.82rem; color: #6a6278; margin: 0 0 12px; font-style: italic; }
 .cap-fiche .voie-source { font-size: 0.7rem; color: #8a8296; }
 .cap-fiche .effet-cap { font-size: 0.85rem; color: #4a4358; margin-top: 3px; }
 .btn-de-cap {
