@@ -173,4 +173,10 @@ if (typeof window !== "undefined") {
   // (au lieu de chacun relire localStorage directement, qui ne reflète
   // jamais les persos créés sur un autre appareil).
   window.DepotPersos = new DepotDistant("cof_persos");
+  // Registre partagé des joueurs de la table (cof_joueurs) : un document par
+  // joueur { id: joueurId, nom: prénom }. Alimenté quand un joueur choisit son
+  // rôle/prénom (cf. app.js enregistrerJoueurCourant). Sert de "liste des
+  // joueurs" pour, p.ex., choisir avec qui partager un livre — indépendamment
+  // des personnages créés.
+  window.DepotJoueurs = new DepotDistant("cof_joueurs");
 }

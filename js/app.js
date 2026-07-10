@@ -141,6 +141,17 @@ const App = (() => {
       joueurNom = saisie.trim() || "Joueur";
       localStorage.setItem(STORAGE_JOUEUR_NOM, joueurNom);
     }
+    enregistrerJoueurCourant();
+  }
+
+  // Inscrit (ou met à jour) ce joueur dans le registre partagé des joueurs
+  // (cof_joueurs) : un document par joueurId. C'est ce registre qui alimente
+  // la "liste des joueurs" (p.ex. partage d'un livre), pour ne pas dépendre
+  // des personnages créés. On n'inscrit pas le nom générique "Joueur".
+  function enregistrerJoueurCourant() {
+    if (typeof window.DepotJoueurs === "undefined") return;
+    if (!joueurId || !joueurNom || joueurNom.trim().toLowerCase() === "joueur") return;
+    window.DepotJoueurs.sauver({ id: joueurId, nom: joueurNom }, joueurId);
   }
 
   function renommerJoueur() {
@@ -151,6 +162,7 @@ const App = (() => {
     if (!nom) return;
     joueurNom = nom;
     localStorage.setItem(STORAGE_JOUEUR_NOM, nom);
+    enregistrerJoueurCourant();
     appliquerRole();
   }
 
@@ -1449,16 +1461,22 @@ const App = (() => {
     return res;
   }
 
-  // Liste dédupliquée des prénoms des autres joueurs de la table (pour choisir
-  // les destinataires d'un partage) — lus depuis proprietaireNom des persos.
+  // Liste dédupliquée des prénoms des AUTRES joueurs de la table (destinataires
+  // possibles d'un partage). Source principale : le registre partagé des joueurs
+  // (cof_joueurs, cf. enregistrerJoueurCourant) ; on y fusionne les
+  // proprietaireNom des persos pour n'oublier aucun joueur (anciens, ou pas
+  // encore ré-inscrits). Mon prénom et le générique "Joueur" sont exclus.
   function _rosterJoueurs(persos) {
     const noms = [];
-    Object.keys(persos).forEach((pid) => {
-      const nom = persos[pid].proprietaireNom;
-      if (!nom || memeNom(nom, joueurNom)) return; // pas de nom, ou moi
+    const ajouter = (nom) => {
+      if (!nom || memeNom(nom, joueurNom)) return;               // pas de nom, ou moi
       if (String(nom).trim().toLowerCase() === "joueur") return; // nom générique
       if (!noms.some((n) => memeNom(n, nom))) noms.push(nom);
-    });
+    };
+    if (typeof window.DepotJoueurs !== "undefined") {
+      window.DepotJoueurs.liste().forEach((j) => ajouter(j && j.nom));
+    }
+    Object.keys(persos || {}).forEach((pid) => ajouter(persos[pid].proprietaireNom));
     return noms;
   }
 
