@@ -16,6 +16,7 @@
       <button data-panneau="accueil" class="actif">Accueil</button>
       <button data-panneau="creation" data-role="joueur">Création</button>
       <button data-panneau="fiche" id="onglet-fiche">Ma fiche</button>
+      <button data-panneau="livret">📖 Livret</button>
       <button data-panneau="des">Dés</button>
       <div class="tab-dropdown" id="tab-dropdown-carte">
         <button class="tab-dropdown-trigger" id="trigger-carte" data-panneau="carte">Carte ▾</button>
@@ -210,6 +211,17 @@
 
       <!-- Notification vote loot joueur (polling) -->
       <div id="loot-notif-fiche" style="display:none;" class="carte loot-notif-card" data-role="joueur"></div>
+    </section>
+
+    <!-- LIVRET -->
+    <section class="panneau" id="panneau-livret">
+      <div class="carte">
+        <h2 class="titre-bandeau">📖 Livret</h2>
+        <p style="font-size:0.85rem;color:#6a6278;" data-role="joueur">Ton histoire, ton lore — à toi de l'écrire. Visible par le MJ.</p>
+        <p style="font-size:0.85rem;color:#6a6278;" data-role="mj">Choisis un personnage pour lire son livret (lecture seule).</p>
+        <select id="select-livret-perso"></select>
+      </div>
+      <div id="zone-livret"></div>
     </section>
 
     <!-- DES -->

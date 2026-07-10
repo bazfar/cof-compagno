@@ -21,6 +21,7 @@ const App = (() => {
   let etapeDebloquee = 1;
   let ficheActiveId = null;  // id du perso affiché dans "Ma fiche"
   let ficheSidebarActiveId = null;  // id du perso affiché dans la mini-fiche battlemap (sidebar)
+  let livretPersoId = null;  // id du perso choisi dans l'onglet "📖 Livret"
   let role = null;           // "joueur" | "mj" | null (pas encore choisi)
   let carteMode = "worldmap"; // "worldmap" | "battlemap"
   // Identité locale du joueur (par navigateur, pas d'authentification réelle) : sert
@@ -358,6 +359,7 @@ const App = (() => {
       p.classList.toggle("actif", p.id === "panneau-" + panneau);
     });
     if (panneau === "fiche") { rendreListePersos(); _mettreAJourLootFiche(); }
+    if (panneau === "livret") rendrePanneauLivret();
     if (panneau === "loot" && typeof Loot !== "undefined") Loot.rendreCatalogue();
     if (panneau === "regles") rendreRegles();
     if (panneau === "bestiaire") rendreBestiaire();
@@ -1305,6 +1307,38 @@ const App = (() => {
     });
   }
 
+  // Onglet "📖 Livret" : sélecteur de personnage (même filtre estProprietaire
+  // que "Ma fiche" — un joueur ne voit que les siens, le MJ voit tout le
+  // monde) + carte livret (cf. htmlBlocLivret) du personnage choisi.
+  function rendrePanneauLivret() {
+    const sel = document.getElementById("select-livret-perso");
+    const zone = document.getElementById("zone-livret");
+    if (!sel || !zone) return;
+    const persos = chargerPersos();
+    const ids = Object.keys(persos).filter((id) => estProprietaire(persos[id]));
+    if (!ids.length) {
+      sel.innerHTML = `<option value="">Aucun personnage</option>`;
+      zone.innerHTML = `<div class="carte"><p class="vide">Aucun personnage. Crée-en un dans l'onglet « Création ».</p></div>`;
+      return;
+    }
+    sel.innerHTML = ids.map((id) => `<option value="${id}">${echapper(persos[id].nom)}</option>`).join("");
+    livretPersoId = ids.includes(livretPersoId) ? livretPersoId : (ids.includes(ficheActiveId) ? ficheActiveId : ids[0]);
+    sel.value = livretPersoId;
+    sel.onchange = () => { livretPersoId = sel.value; _rendreZoneLivret(); };
+    _rendreZoneLivret();
+  }
+
+  function _rendreZoneLivret() {
+    const zone = document.getElementById("zone-livret");
+    if (!zone) return;
+    const p = chargerPersos()[livretPersoId];
+    if (!p) return;
+    zone.innerHTML = htmlBlocLivret(p);
+    if (role !== "mj") {
+      document.getElementById("fiche-livret").onchange = (e) => definirLivret(livretPersoId, e.target.value);
+    }
+  }
+
   // Détecte une notation de dé (ex. "1d6", "2d4+2") dans le texte d'effet
   // d'une capacité, pour proposer un raccourci de lancer directement sur
   // la fiche. Renvoie null si aucun dé n'est mentionné dans le texte.
@@ -1726,18 +1760,17 @@ const App = (() => {
   }
 
   // Livret personnel (lore/histoire du personnage), présenté comme un carnet
-  // (cf. .livret-bloc/.livret-texte, css/style.css) — carte de la fiche
-  // complète uniquement (pas la mini-fiche battlemap). Verrouillé par
-  // l'identité du joueur : un joueur n'atteint cette carte que via sa propre
-  // fiche (estProprietaire déjà vérifié par afficherFiche avant d'afficher
-  // quoi que ce soit) ; le MJ peut ouvrir n'importe quelle fiche pour LIRE
-  // le livret, mais le champ passe en lecture seule pour lui.
+  // (cf. .livret-bloc/.livret-texte, css/style.css) — onglet dédié
+  // "📖 Livret" (cf. rendrePanneauLivret), pas une carte de la fiche.
+  // Verrouillé par l'identité du joueur : le sélecteur de personnage de
+  // l'onglet (rendrePanneauLivret) ne propose que les persos dont il est
+  // propriétaire (estProprietaire) ; le MJ voit tout le monde mais en
+  // lecture seule (textarea readonly, jamais de wiring d'édition pour lui).
   function htmlBlocLivret(p) {
     const lectureSeule = role === "mj";
     return `<div class="carte livret-bloc">
-      <h3 style="margin-top:0;">📖 Livret</h3>
-      <p class="aide" style="margin:0 0 8px;">${lectureSeule ? "Lore du joueur (lecture seule côté MJ)." : "Ton histoire, ton lore — à toi de l'écrire. Visible par le MJ."}</p>
-      <textarea id="fiche-livret" class="livret-texte" rows="10"${lectureSeule ? " readonly" : ""} placeholder="Écris ici l'histoire de ton personnage...">${echapper(p.livret || "")}</textarea>
+      <h3 style="margin-top:0;">📖 Livret — ${echapper(p.nom)}</h3>
+      <textarea id="fiche-livret" class="livret-texte" rows="16"${lectureSeule ? " readonly" : ""} placeholder="Écris ici l'histoire de ton personnage...">${echapper(p.livret || "")}</textarea>
     </div>`;
   }
 
@@ -2416,8 +2449,6 @@ const App = (() => {
             <h3>Notes</h3>
             <textarea id="fiche-notes" rows="5" style="width:100%;resize:vertical;font-family:inherit;font-size:0.9rem;" placeholder="Notes libres (idées, quêtes en cours, objectifs...)">${echapper(p.notes || "")}</textarea>
           </div>
-
-          ${htmlBlocLivret(p)}
         </div>
 
         <div class="fiche-col-droite">
@@ -2435,9 +2466,6 @@ const App = (() => {
     document.getElementById("pv-moins").onclick = () => ajusterPv(id, -1);
     document.getElementById("pv-actuel").onchange = (e) => definirPv(id, parseInt(e.target.value, 10));
     document.getElementById("fiche-notes").onchange = (e) => definirNotes(id, e.target.value);
-    if (role !== "mj") {
-      document.getElementById("fiche-livret").onchange = (e) => definirLivret(id, e.target.value);
-    }
     wireDegatsSubis(id, "");
     // Bourse (cf. htmlBlocBourse) — édition directe par le joueur.
     const _wireBourse = (elId, champ) => {
@@ -3331,6 +3359,8 @@ const App = (() => {
       // malus posé par le MJ ("Ajouter malus") doit apparaître tout de suite
       // pour un joueur resté sur la carte, pas seulement s'il revient sur sa fiche.
       if (ficheSidebarActiveId && chargerPersos()[ficheSidebarActiveId]) rendreFicheSidebarBattlemap(ficheSidebarActiveId);
+      const panneauLivret = document.getElementById("panneau-livret");
+      if (panneauLivret && panneauLivret.classList.contains("actif")) rendrePanneauLivret();
     });
 
     // Journal de dés partagé : re-rendu dès qu'un autre client lance un dé.
