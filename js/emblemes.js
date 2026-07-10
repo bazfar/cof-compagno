@@ -141,7 +141,7 @@ function ddTokenFallback(img) {
 
 // Bump ce numéro à chaque ajout/régénération des fichiers assets/monstres/*.png
 // pour forcer les navigateurs à recharger les images (même nom de fichier).
-const MONSTRES_ICONES_VERSION = 1;
+const MONSTRES_ICONES_VERSION = 2;
 
 /* Chemin de l'icône/jeton d'un monstre du bestiaire (assets/monstres/<id>.png),
    ou null si aucun id. Simple convention par id — pas de champ à maintenir dans
