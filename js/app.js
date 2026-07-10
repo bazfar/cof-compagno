@@ -776,6 +776,30 @@ const App = (() => {
     }
   }
 
+  // Lit un fichier image, le redimensionne (côté le plus long ≤ max) et renvoie
+  // un data URL JPEG compressé via cb(dataUrl). Les images de livre vivent dans
+  // la fiche du perso (Firestore, limite 1 Mo/document), d'où la compression
+  // pour rester léger même avec plusieurs livres illustrés.
+  function lireImageRedimensionnee(file, max, qualite, cb) {
+    if (!file || !file.type.startsWith("image/")) { toast("Choisis un fichier image."); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > h && w > max) { h = Math.round((h * max) / w); w = max; }
+        else if (h > max) { w = Math.round((w * max) / h); h = max; }
+        const cv = document.createElement("canvas");
+        cv.width = w; cv.height = h;
+        cv.getContext("2d").drawImage(img, 0, 0, w, h);
+        cb(cv.toDataURL("image/jpeg", qualite));
+      };
+      img.onerror = () => toast("Image illisible.");
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
   /* ---------- Caractéristiques (point-buy : base 10 + bonus de classe + points libres) ---------- */
 
   const CARACS_BASE = 10;
@@ -1396,7 +1420,9 @@ const App = (() => {
     const spines = livres.map((l) => {
       const texte = (l.texte || "").trim();
       const apercu = texte.slice(0, 120);
-      return `<button class="livre-spine" data-livre="${l.id}">
+      const cover = l.image ? `<img class="livre-spine-cover" src="${l.image}" alt="" />` : "";
+      return `<button class="livre-spine${l.image ? " avec-cover" : ""}" data-livre="${l.id}">
+        ${cover}
         <span class="livre-spine-titre">📖 ${echapper(l.titre || "Sans titre")}</span>
         <span class="livre-spine-apercu">${apercu ? echapper(apercu) + (texte.length > 120 ? "…" : "") : "<i>vide</i>"}</span>
       </button>`;
@@ -1831,26 +1857,47 @@ const App = (() => {
     rendrePanneauAtelier();
   }
 
-  // Vue "livre ouvert" : titre + texte. Éditable pour le propriétaire
-  // (sauvegarde à la volée sur onchange), lecture seule pour le MJ.
+  // Vue "livre ouvert" : présenté comme une page de livre (couverture + titre +
+  // illustration optionnelle + texte). Éditable pour le propriétaire (titre,
+  // texte et image sauvegardés à la volée), lecture seule pour le MJ.
   function _rendreLivreOuvert(p, l) {
     const zone = document.getElementById("zone-livret");
     const editable = role !== "mj";
-    zone.innerHTML = `<div class="carte livret-bloc">
+    const illustration = l.image
+      ? `<div class="livre-illustration"><img src="${l.image}" alt="illustration du livre" /></div>`
+      : "";
+    zone.innerHTML = `<div class="carte livre-ouvert">
       <div class="livret-entete">
         <button class="btn petit secondaire" id="btn-retour-etagere">← Tous les livres</button>
-        ${editable ? `<button class="btn petit danger" id="btn-suppr-livre">🗑 Supprimer</button>` : ""}
+        ${editable ? `<span class="livre-actions">
+          <button class="btn petit" id="btn-livre-image">🖼 ${l.image ? "Changer l'image" : "Ajouter une image"}</button>
+          ${l.image ? `<button class="btn petit secondaire" id="btn-livre-image-suppr">Retirer l'image</button>` : ""}
+          <button class="btn petit danger" id="btn-suppr-livre">🗑 Supprimer</button>
+          <input type="file" accept="image/*" id="input-livre-image" hidden />
+        </span>` : ""}
       </div>
       ${editable
         ? `<input type="text" id="livre-titre" class="livre-titre-input" value="${echapper(l.titre || "")}" placeholder="Titre du livre" maxlength="80" />`
-        : `<h3 class="livre-titre-lecture" style="margin:0 0 8px;">📖 ${echapper(l.titre || "Sans titre")}</h3>`}
-      <textarea id="livre-texte" class="livret-texte" rows="16"${editable ? "" : " readonly"} placeholder="Écris ici l'histoire, tes notes, une lettre…">${echapper(l.texte || "")}</textarea>
+        : `<h3 class="livre-titre-lecture">📖 ${echapper(l.titre || "Sans titre")}</h3>`}
+      ${illustration}
+      <textarea id="livre-texte" class="livret-texte" rows="14"${editable ? "" : " readonly"} placeholder="Écris ici l'histoire, tes notes, une lettre…">${echapper(l.texte || "")}</textarea>
     </div>`;
     document.getElementById("btn-retour-etagere").onclick = () => { livreOuvertId = null; _rendreZoneLivret(); };
     if (editable) {
       document.getElementById("livre-titre").onchange = (e) => sauverChampLivre(p.id, l.id, "titre", e.target.value);
       document.getElementById("livre-texte").onchange = (e) => sauverChampLivre(p.id, l.id, "texte", e.target.value);
       document.getElementById("btn-suppr-livre").onclick = () => supprimerLivre(p.id, l.id);
+      const inp = document.getElementById("input-livre-image");
+      document.getElementById("btn-livre-image").onclick = () => inp.click();
+      inp.onchange = (e) => {
+        lireImageRedimensionnee(e.target.files[0], 800, 0.8, (dataUrl) => {
+          sauverChampLivre(p.id, l.id, "image", dataUrl);
+          toast("Image ajoutée ✔");
+          _rendreZoneLivret(); // ré-affiche le livre avec son illustration
+        });
+      };
+      const supprImg = document.getElementById("btn-livre-image-suppr");
+      if (supprImg) supprImg.onclick = () => { sauverChampLivre(p.id, l.id, "image", null); _rendreZoneLivret(); };
     }
   }
 
