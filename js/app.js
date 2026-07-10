@@ -311,6 +311,7 @@ const App = (() => {
       ${htmlBlocInitiativeJoueur(id)}
       ${htmlBlocCorruption(p, perso)}
       ${htmlBlocIllusions(p, perso)}
+      ${htmlBlocAmes(p, perso)}
       <div class="carte">
         <h3 style="margin-top:0;">Capacités</h3>
         <div class="cible-capacite-form" style="display:none;">
@@ -1434,6 +1435,30 @@ const App = (() => {
     </div>`;
   }
 
+  // Compteur d'âmes capturées (Nécromancien, Voie des âmes) — visible pour un
+  // nécromancien ayant pris "Capture d'âme" (cf. Personnage.aCaptureAme).
+  // +1 à la capture d'une âme, −1 à la dépense (Libération vengeresse) ou à
+  // sa dissipation. Le réceptacle est normalement limité à 3 âmes ("Savoir
+  // volé" plafonne son propre bonus à +3) — pas de blocage dur ici, le rang 5
+  // "Moisson d'âmes" peut temporairement dépasser cette limite.
+  function htmlBlocAmes(p, perso) {
+    if (!perso.aCaptureAme()) return "";
+    const n = p.amesCapturees || 0;
+    const aSavoirVole = !!perso.capaciteEntree("Voie des âmes", 4);
+    const bonusSavoir = Math.min(n, 3);
+    return `<div class="carte corruption-bloc">
+      <h3 style="margin-top:0;">💀 Âmes capturées</h3>
+      <div class="corruption-ligne">
+        <span>Réceptacle (max 3)${aSavoirVole ? ` — Savoir volé : +${bonusSavoir} à un test d'INT` : ""}</span>
+        <div class="corruption-control">
+          <button data-ames-moins title="Dépenser une âme (Libération vengeresse) ou la retirer">−</button>
+          <span class="corruption-valeur">${n}</span>
+          <button data-ames-plus title="Capturer une âme (Capture d'âme)">+</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
   // Capacités de classe débloquées (p.capacites), groupées par voie — factorisé
   // pour être réutilisé tel quel par la fiche complète et la mini-fiche battlemap.
   function htmlCapacitesClasse(p, c) {
@@ -1639,6 +1664,28 @@ const App = (() => {
         const pp = persos[id];
         if (!pp) return;
         pp.illusionsActives = Math.max(0, (pp.illusionsActives || 0) - 1);
+        sauverPersos(persos);
+        rafraichir();
+      };
+    });
+    // Compteur d'Âmes capturées (cf. htmlBlocAmes) — +1 à la capture, −1 à la
+    // dépense (Libération vengeresse) ou au retrait.
+    racine.querySelectorAll("[data-ames-plus]").forEach((el) => {
+      el.onclick = () => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp) return;
+        pp.amesCapturees = (pp.amesCapturees || 0) + 1;
+        sauverPersos(persos);
+        rafraichir();
+      };
+    });
+    racine.querySelectorAll("[data-ames-moins]").forEach((el) => {
+      el.onclick = () => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp) return;
+        pp.amesCapturees = Math.max(0, (pp.amesCapturees || 0) - 1);
         sauverPersos(persos);
         rafraichir();
       };
@@ -2335,6 +2382,7 @@ const App = (() => {
           ${htmlBlocInitiativeJoueur(id)}
           ${htmlBlocCorruption(p, perso)}
           ${htmlBlocIllusions(p, perso)}
+          ${htmlBlocAmes(p, perso)}
 
           <div class="carte">
             <h3>Capacités</h3>
@@ -3505,11 +3553,14 @@ const App = (() => {
   }
 
   // Boutons d'attaque rapide pour un monstre de la table de combat : une ligne
-  // par attaque du bestiaire (m.monstreId -> BESTIAIRE_INDEX), jet 1d20+bonus
-  // à gauche, dégâts (formule figée, pas de bonus) à droite via l'icône 🎲.
+  // par attaque, jet 1d20+bonus à gauche, dégâts (formule figée, pas de bonus)
+  // à droite via l'icône 🎲. Source des attaques : m.attaques si présent
+  // directement sur le jeton (invocation de joueur, cf. INVOCATIONS/
+  // confirmerInvocation côté js/carte.js — pas d'entrée BESTIAIRE_INDEX pour
+  // ces créatures-là), sinon m.monstreId -> BESTIAIRE_INDEX comme avant.
   function attaquesMonstreHtml(m) {
     const def = (typeof BESTIAIRE_INDEX !== "undefined" && m.monstreId) ? BESTIAIRE_INDEX[m.monstreId] : null;
-    const attaques = def && def.attaques;
+    const attaques = m.attaques || (def && def.attaques);
     if (!attaques || !attaques.length) return "";
     return `<div class="cm-attaques">${attaques.map((a, i) => {
       const bonus = extraireBonusJetMonstre(a.jet);
@@ -3652,11 +3703,13 @@ const App = (() => {
     // Attaques rapides du monstre (jet à gauche, dégâts via 🎲 à droite) —
     // reste sur l'onglet courant (Battlemap ou Table de combat), comme les
     // attaques rapides du joueur.
+    // m.attaques (invocation, cf. attaquesMonstreHtml) prime sur BESTIAIRE_INDEX.
     zone.querySelectorAll("[data-monstre-jet]").forEach((btn) => {
       btn.onclick = () => {
         const m = monstres.find((mm) => mm.id === btn.dataset.monstreJet);
         const def = m && typeof BESTIAIRE_INDEX !== "undefined" ? BESTIAIRE_INDEX[m.monstreId] : null;
-        const a = def && def.attaques && def.attaques[parseInt(btn.dataset.idxAttaque, 10)];
+        const attaques = m && (m.attaques || (def && def.attaques));
+        const a = attaques && attaques[parseInt(btn.dataset.idxAttaque, 10)];
         if (!a) return;
         lancerTest(`${m.nom} — ${a.nom}`, extraireBonusJetMonstre(a.jet));
       };
@@ -3665,7 +3718,8 @@ const App = (() => {
       btn.onclick = () => {
         const m = monstres.find((mm) => mm.id === btn.dataset.monstreDegats);
         const def = m && typeof BESTIAIRE_INDEX !== "undefined" ? BESTIAIRE_INDEX[m.monstreId] : null;
-        const a = def && def.attaques && def.attaques[parseInt(btn.dataset.idxAttaque, 10)];
+        const attaques = m && (m.attaques || (def && def.attaques));
+        const a = attaques && attaques[parseInt(btn.dataset.idxAttaque, 10)];
         if (!a) return;
         lancerFormule(a.degats, `${m.nom} — ${a.nom} (dégâts)`);
       };

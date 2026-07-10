@@ -80,6 +80,38 @@ const CLASS_BONUS_CARACS = {
   chasseur: { plus2: "DEX", plus1: "CON" },
 };
 
+/* Catalogue des créatures invocables par capacité, pour poser un jeton de
+   combat (Carte.ajouterTokenData) plutôt que de suivre l'invocation à la
+   seule voix du MJ. voie/rangRequis pointent vers l'entrée réelle dans
+   CLASSES[classe].voies pour vérifier que le personnage l'a bien acquise
+   (cf. Personnage.capaciteEntree). pvMax/attaqueBonus null = valeur
+   dynamique, résolue à l'invocation à partir du personnage invocateur
+   (cf. js/carte.js, ouvrirModalInvocation/_resoudreInvocation) plutôt que
+   figée ici. */
+const INVOCATIONS = [
+  {
+    id: "zombie_necromancien",
+    nom: "Zombie",
+    classe: "necromancien", voie: "Voie de l'outre-tombe", rangRequis: 2,
+    pvMax: 12, def: 10, armure: 0, init: 8, attaqueBonus: 3, degats: "1d6+1",
+    description: "Init 8, DEF 10, PV 12, Att +3, DM 1d6+1. Se dégrade de 1 PV/minute (sauf rang 4 « Renfort macabre » qui l'arrête et ajoute +2 attaque/+5 PV).",
+  },
+  {
+    id: "compagnon_druide",
+    nom: "Compagnon animal (oiseau de proie)",
+    classe: "druide", voie: "Voie des compagnons", rangRequis: 3,
+    pvMax: 10, def: 12, armure: 0, init: null, attaqueBonus: null, degats: "1d4",
+    description: "Att = attaque magique du Druide, DM 1d4. Lien télépathique, perception partagée (+5 — non chiffré ici). PV non précisés par le texte officiel : 10 par défaut, ajustable à la table.",
+  },
+  {
+    id: "creature_corrompue_druide",
+    nom: "Créature corrompue (Invocation tainted)",
+    classe: "druide", voie: "Voie du chaos", rangRequis: 3,
+    pvMax: null, def: 10, armure: 0, init: null, attaqueBonus: null, degats: "1d8",
+    description: "PV = niveau × 2, Att = attaque du Druide − 2, DM 1d8. Ne dure que [1d4+1] tours — retire le jeton manuellement à expiration.",
+  },
+];
+
 const CLASSES = {
   guerrier: {
     classe: "guerrier",

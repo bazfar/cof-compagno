@@ -254,6 +254,88 @@ const Carte = (() => {
     });
   }
 
+  // ── Invocations (Nécromancien, Druide...) : jeton posé par le joueur lui-même ──
+  // Catalogue INVOCATIONS (data/donnees.js) filtré sur la classe ET la
+  // capacité réellement acquise (Personnage.capaciteEntree), pour ne
+  // proposer que ce que monPersoId peut effectivement invoquer.
+  function _invocationsDisponibles() {
+    if (!monPersoId || typeof INVOCATIONS === "undefined" || typeof Personnage === "undefined") return [];
+    const persos = (typeof window.DepotPersos !== "undefined") ? window.DepotPersos.charger() : {};
+    const p = persos[monPersoId];
+    if (!p) return [];
+    const perso = Personnage.depuisJSON(p);
+    return INVOCATIONS.filter((inv) => inv.classe === p.classe && !!perso.capaciteEntree(inv.voie, inv.rangRequis));
+  }
+
+  // pvMax/attaqueBonus === null dans le catalogue => valeur dynamique (cf.
+  // commentaire de INVOCATIONS) résolue ici à partir du personnage invocateur.
+  function _resoudreInvocation(inv, perso, p) {
+    const pvMax = inv.pvMax !== null ? inv.pvMax : (p.niveau || 1) * 2;
+    let attaqueBonus = inv.attaqueBonus;
+    if (attaqueBonus === null) {
+      const attaqueDruide = perso.bonusAttaque("magique") || 0;
+      attaqueBonus = inv.id === "creature_corrompue_druide" ? attaqueDruide - 2 : attaqueDruide;
+    }
+    return { pvMax, attaqueBonus };
+  }
+
+  function ouvrirModalInvocation() {
+    if (!monPersoId) { toastCarte("Choisis d'abord ton personnage."); return; }
+    if (typeof DD2VTT === "undefined" || !DD2VTT.estActive || !DD2VTT.estActive()) {
+      toastCarte("Aucune scène de combat active.");
+      return;
+    }
+    const modal = document.getElementById("modal-invocation");
+    if (!modal) return;
+    const dispo = _invocationsDisponibles();
+    if (!dispo.length) {
+      toastCarte("Ton personnage n'a aucune invocation disponible.");
+      return;
+    }
+    const sel = document.getElementById("modal-invocation-choix");
+    sel.innerHTML = dispo.map((inv) => `<option value="${inv.id}">${inv.nom}</option>`).join("");
+    const desc = document.getElementById("modal-invocation-desc");
+    const majDesc = () => {
+      const inv = dispo.find((i) => i.id === sel.value);
+      desc.textContent = inv ? inv.description : "";
+    };
+    sel.onchange = majDesc;
+    majDesc();
+    modal.style.display = "flex";
+  }
+
+  function fermerModalInvocation() {
+    const modal = document.getElementById("modal-invocation");
+    if (modal) modal.style.display = "none";
+  }
+
+  function confirmerInvocation() {
+    const dispo = _invocationsDisponibles();
+    const sel = document.getElementById("modal-invocation-choix");
+    const inv = dispo.find((i) => i.id === (sel && sel.value));
+    if (!inv) return;
+    const persos = (typeof window.DepotPersos !== "undefined") ? window.DepotPersos.charger() : {};
+    const p = persos[monPersoId];
+    if (!p) return;
+    const perso = Personnage.depuisJSON(p);
+    const { pvMax, attaqueBonus } = _resoudreInvocation(inv, perso, p);
+    const jetTxt = `1d20${attaqueBonus >= 0 ? "+" : ""}${attaqueBonus} vs DEF`;
+    const ok = DD2VTT.ajouterTokenData({
+      nom: `${inv.nom} (${p.nom})`,
+      couleur: "#5a4a7c",
+      pj: false,
+      invocateur: monPersoId,
+      pvMax, pvActuel: pvMax,
+      def: inv.def, armure: inv.armure || 0,
+      init: (typeof inv.init === "number") ? inv.init : 0,
+      attaques: [{ nom: "Attaque", jet: jetTxt, degats: inv.degats }],
+    });
+    if (ok) {
+      toastCarte(`« ${inv.nom} » invoqué(e) !`);
+      fermerModalInvocation();
+    }
+  }
+
   function ajouterMonstre(monstre) {
     if (!monstre) return;
     const couleurs = { 1: "#27ae60", 2: "#2980b9", 3: "#d35400", 4: "#c0392b", 5: "#7d1a24" };
@@ -312,7 +394,7 @@ const Carte = (() => {
 
   function listeMonstresCombat() {
     if (_combatEnBattlemap()) return DD2VTT.tokensMonstres();
-    return etat.jetons.filter((j) => !j.pj && j.monstreId);
+    return etat.jetons.filter((j) => !j.pj && (j.monstreId || j.invocateur));
   }
 
   // Symétrique à listeMonstresCombat() côté PJ : source unique de vérité des
@@ -649,6 +731,7 @@ const Carte = (() => {
       btnFogFill: document.getElementById("btn-fog-fill"),
       btnReset: document.getElementById("btn-carte-reset"),
       btnMonTokenBattlemap: document.getElementById("btn-mon-token-battlemap"),
+      btnInvocation: document.getElementById("btn-invocation-battlemap"),
     };
     if (!dom.scene) return;
 
@@ -698,6 +781,15 @@ const Carte = (() => {
     if (dom.btnFogFill)  dom.btnFogFill.onclick  = () => { remplirFog(); };
     if (dom.btnReset)    dom.btnReset.onclick    = reset;
     if (dom.btnMonTokenBattlemap) dom.btnMonTokenBattlemap.onclick = ajouterMonPersoBattlemap;
+    if (dom.btnInvocation) dom.btnInvocation.onclick = ouvrirModalInvocation;
+    const btnFermerModalInvocation = document.getElementById("btn-fermer-modal-invocation");
+    if (btnFermerModalInvocation) btnFermerModalInvocation.onclick = fermerModalInvocation;
+    const btnConfirmerInvocation = document.getElementById("btn-confirmer-invocation");
+    if (btnConfirmerInvocation) btnConfirmerInvocation.onclick = confirmerInvocation;
+    const modalInvocation = document.getElementById("modal-invocation");
+    if (modalInvocation) modalInvocation.addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) fermerModalInvocation();
+    });
 
     // peinture du brouillard
     dom.fog.addEventListener("pointerdown", brushDown);
@@ -2231,8 +2323,12 @@ const Carte = (() => {
         const barreHp = infosPv
           ? '<div class="dd-token-hp"><div class="rempli ' + _classePv(infosPv.pvActuel, infosPv.pvMax) + '" style="width:' + Math.max(0, Math.min(100, (infosPv.pvActuel / infosPv.pvMax) * 100)) + '%"></div></div>'
           : '';
+        // MJ : retire n'importe quel token. Joueur : seulement ses propres
+        // invocations (une créature qu'il a lui-même invoquée), jamais un
+        // monstre du bestiaire ni le jeton d'un autre joueur.
+        const peutSupprimer = role === 'mj' || (!!tok.invocateur && tok.invocateur === monPersoId);
         el.innerHTML = contenuTok + barreHp
-          + (role === 'mj' ? '<button class="dd-token-suppr" title="Retirer ' + tok.nom + '">✕</button>' : '');
+          + (peutSupprimer ? '<button class="dd-token-suppr" title="Retirer ' + tok.nom + '">✕</button>' : '');
 
         // Drag sur grille
         el.addEventListener('pointerdown', ev => demarrerDragDD(ev, tok, scene));
@@ -2243,7 +2339,7 @@ const Carte = (() => {
           rendreTokensDD(scene);
           calculerEtRendreLoS(scene);
         });
-        // Suppression (MJ uniquement — bouton absent du DOM sinon)
+        // Suppression (garde de rôle/propriété ci-dessus — bouton absent du DOM sinon)
         const btnSuppr = el.querySelector('.dd-token-suppr');
         if (btnSuppr) btnSuppr.addEventListener('click', ev => {
           ev.stopPropagation();
@@ -2255,12 +2351,13 @@ const Carte = (() => {
     }
 
     // ── Drag tokens sur grille ───────────────────────────────
-    // Joueur : ne peut déplacer que son propre token (ref === "pj-"+monPersoId).
+    // Joueur : ne peut déplacer que son propre token (ref === "pj-"+monPersoId)
+    // ou une invocation lui appartenant (invocateur === monPersoId).
     // MJ : peut déplacer n'importe quel token. Porte demarrerDrag() (jetons
     // historiques) sur les tokens dd2vtt.
     let dragDD = null;
     function demarrerDragDD(ev, tok, scene) {
-      if (role === 'joueur' && tok.ref !== 'pj-' + monPersoId) return;
+      if (role === 'joueur' && tok.ref !== 'pj-' + monPersoId && tok.invocateur !== monPersoId) return;
       ev.preventDefault();
       dragDD = { tok, scene };
       window.addEventListener('pointermove', surDragDD);
@@ -2317,19 +2414,27 @@ const Carte = (() => {
       _sauverToken(nouveauToken);
     }
 
-    // Ajout programmatique d'un token (depuis "+ Mes personnages / + Monstre / + Mon perso").
+    // Ajout programmatique d'un token (depuis "+ Mes personnages / + Monstre / + Mon perso / + Invocation").
     // Gatekeeper unique des permissions et de la règle de doublon, vérifiée
     // sur tokensDD (état synchronisé, donc visible par tous) :
     //  - MJ : peut ajouter n'importe quel token (pj ou monstre).
-    //  - Joueur : ne peut ajouter QUE son propre token (pj: true, ref = le sien).
+    //  - Joueur : peut ajouter son propre token (pj: true, ref = le sien) OU
+    //    une invocation lui appartenant (pj: false, invocateur = son id —
+    //    cf. INVOCATIONS/ouvrirModalInvocation ci-dessus).
     //  - Doublon (même ref) refusé pour tout le monde, peu importe qui a
-    //    tenté d'ajouter en premier — symétrique.
+    //    tenté d'ajouter en premier — symétrique. Les invocations n'ont pas
+    //    de ref : plusieurs instances de la même créature sont attendues
+    //    (ex. un zombie par rang possédé dans la voie).
     function estActive() { return !!sceneActive && !!scenes[sceneActive]; }
     function ajouterTokenData(d) {
       if (!estActive()) return false;
-      if (role === 'joueur' && (!d || !d.pj || d.ref !== 'pj-' + monPersoId)) {
-        toastCarte("Tu ne peux ajouter que ton propre personnage.");
-        return false;
+      if (role === 'joueur') {
+        const estMonPJ = !!(d && d.pj && d.ref === 'pj-' + monPersoId);
+        const estMonInvocation = !!(d && !d.pj && d.invocateur && d.invocateur === monPersoId);
+        if (!estMonPJ && !estMonInvocation) {
+          toastCarte("Tu ne peux ajouter que ton propre personnage ou tes propres invocations.");
+          return false;
+        }
       }
       if (d && d.ref && tokensDD.some(t => t.ref === d.ref)) {
         toastCarte("Ce personnage est déjà sur la carte.");
@@ -2371,6 +2476,12 @@ const Carte = (() => {
         dangerosite: (d && d.dangerosite) || null,
         boss: !!(d && d.boss),
         init: (d && typeof d.init === 'number') ? d.init : 0,
+        // Invocation d'un joueur (cf. INVOCATIONS, data/donnees.js) : id du perso
+        // invocateur (permission de déplacer/retirer) + attaques propres au
+        // jeton (pas de monstreId/BESTIAIRE_INDEX à interroger — cf.
+        // attaquesMonstreHtml côté app.js, qui préfère tok.attaques si présent).
+        invocateur: (d && d.invocateur) || null,
+        attaques: (d && d.attaques) || null,
       };
       tokensDD.push(nouveauToken);
       rendreTokensDD(scene);
@@ -2384,8 +2495,11 @@ const Carte = (() => {
     let _onChangeMonstres = null;
     function onChange(cb) { _onChangeMonstres = cb; }
 
+    // Monstres du bestiaire (monstreId) ET invocations de joueurs (invocateur) —
+    // les deux rejoignent la table de combat et l'ordre d'initiative de la
+    // même façon (cf. Carte.listeMonstresCombat, js/combat.js).
     function tokensMonstres() {
-      return tokensDD.filter(t => !t.pj && t.monstreId);
+      return tokensDD.filter(t => !t.pj && (t.monstreId || t.invocateur));
     }
 
     function tokensPJ() {
@@ -2443,10 +2557,12 @@ const Carte = (() => {
       _onChangeMonstres && _onChangeMonstres();
     }
 
-    // Suppression : MJ uniquement (le bouton ✕ n'existe même pas dans le DOM
-    // côté joueur, cf. rendreTokensDD — garde ici en défense supplémentaire).
+    // Suppression : MJ (n'importe quel token) ou joueur retirant sa propre
+    // invocation (cf. rendreTokensDD, même garde de propriété pour le bouton
+    // ✕ — défense supplémentaire ici au cas où l'appel viendrait d'ailleurs).
     function supprimerTokenDD(id, scene) {
-      if (role === 'joueur') return;
+      const tokActuel = tokensDD.find(t => t.id === id);
+      if (role === 'joueur' && !(tokActuel && tokActuel.invocateur === monPersoId)) return;
       tokensDD = tokensDD.filter(t => t.id !== id);
       if (tokenSelectionne === id) tokenSelectionne = null;
       const sc = scene || (sceneActive && scenes[sceneActive]);

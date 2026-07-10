@@ -270,6 +270,13 @@ class Personnage extends Entite {
     return this.classe === "enchanteur" && !!this.capaciteEntree("Voie de l'enchantement", 1);
   }
 
+  // A-t-il pris "Capture d'âme" (Nécromancien, Voie des âmes rang 2) ? Sert à
+  // n'afficher le compteur d'âmes capturées (fiche/mini-fiche battlemap) qu'aux
+  // nécromanciens ayant réellement cette capacité.
+  aCaptureAme() {
+    return this.classe === "necromancien" && !!this.capaciteEntree("Voie des âmes", 2);
+  }
+
   /* ----- Équipement (slots) -----
      Seuls les items placés dans un slot comptent pour les stats de combat.
      inventaireListe (simple sac) n'a aucun effet mécanique. */
