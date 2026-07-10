@@ -1939,6 +1939,11 @@ const REGLES_GENERALES = [
     contenu:
       "DEF : caractéristique fixe du personnage/monstre, modifiée par l'armure, les capacités et les états actifs (ex. Renversée -4 DEF, Gelée -2 DEF, Déstabilisée -2 DEF). Une attaque touche si le jet égale ou dépasse la DEF.\nInitiative : 1d20 + modificateur d'initiative en début de combat, détermine l'ordre des tours. Les monstres la lancent automatiquement, les joueurs cliquent pour lancer la leur.",
   },
+  {
+    titre: "Enchantement à risque (Atelier)",
+    contenu:
+      "Craft magique risqué sur une arme ou une armure déjà en inventaire (onglet Atelier) : le jet est 1d20 + bonus d'artisan, contre la difficulté du palier visé. La destruction se vérifie sur le d20 BRUT seul (avant bonus), indépendamment de la réussite du test — un jet bas peut détruire l'objet même si le bonus aurait suffi à réussir. Une tentative (succès, échec ou destruction) consomme toujours les matériaux ET compte pour le quota du jour, quel que soit le résultat ; seul un échec laisse l'objet intact. Le MJ réinitialise les compteurs de tous les joueurs via le bouton « Nouveau jour » de l'Atelier.\n\nEnchantement générique (arme, +1 à +5 dégâts) : +1 diff. 12 (3 tentatives/j, 1 Poussière de fer, aucune destruction) ; +2 diff. 14 (3/j, 1 Poussière d'acier, aucune) ; +3 diff. 16 (2/j, 1 Gemme magique, détruit si jet ≤2) ; +4 diff. 18 (1/j, 2 Gemmes magiques, détruit si jet ≤5) ; +5 diff. 20 (1/j, 3 Gemmes magiques + 1 Diamant, détruit si jet ≤10, ignore en permanence 2 points de valeurArmure de la cible).\n\nEnchantement de feu (arme, rangs 1-3, jamais de risque de destruction) : rang 1 « enflammée » diff. 12 (3/j, 1 Poussière de rubis, 1d4 dégâts de feu) ; rang 2 « ardente » diff. 14 (2/j, 2 Poussières de rubis, 1d6) ; rang 3 « incandescente » diff. 16 (1/j, 3 Poussières de rubis, 1d8).\n\nEnchantement de protection (armure, +1 à +3 valeurArmure) : +1 diff. 12 (3/j, 1 Poussière de diamant, aucune destruction) ; +2 diff. 14 (2/j, 2 Poussières de diamant, aucune) ; +3 diff. 16 (1/j, 3 Poussières de diamant, détruit si jet ≤5).",
+  },
 ];
 
 /* ── Cartes monde disponibles dans assets/maps/ ────────────

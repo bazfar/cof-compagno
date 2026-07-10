@@ -22,6 +22,13 @@ const App = (() => {
   let ficheActiveId = null;  // id du perso affiché dans "Ma fiche"
   let ficheSidebarActiveId = null;  // id du perso affiché dans la mini-fiche battlemap (sidebar)
   let livretPersoId = null;  // id du perso choisi dans l'onglet "📖 Livret"
+  // Sélection courante de l'onglet "🔨 Atelier" (cf. rendrePanneauAtelier) —
+  // atelierItemIdx référence un index dans inventaireListe du perso choisi,
+  // jamais un id stable (l'inventaire n'a pas d'id par entrée).
+  let atelierPersoId = null;
+  let atelierItemIdx = null;
+  let atelierSystemeId = null;
+  const STORAGE_ENCHANTEMENT_TENTATIVES = "enchantement:tentatives";
   let role = null;           // "joueur" | "mj" | null (pas encore choisi)
   let carteMode = "worldmap"; // "worldmap" | "battlemap"
   // Identité locale du joueur (par navigateur, pas d'authentification réelle) : sert
@@ -361,6 +368,7 @@ const App = (() => {
     if (panneau === "fiche") { rendreListePersos(); _mettreAJourLootFiche(); }
     if (panneau === "livret") rendrePanneauLivret();
     if (panneau === "loot" && typeof Loot !== "undefined") Loot.rendreCatalogue();
+    if (panneau === "atelier") rendrePanneauAtelier();
     if (panneau === "regles") rendreRegles();
     if (panneau === "bestiaire") rendreBestiaire();
     if (panneau === "table-combat") { rendreOrdreInitiative(); rendreTableCombat(); }
@@ -1337,6 +1345,222 @@ const App = (() => {
     if (role !== "mj") {
       document.getElementById("fiche-livret").onchange = (e) => definirLivret(livretPersoId, e.target.value);
     }
+  }
+
+  /* ============================================================
+     ATELIER — enchantement à risque (js/enchantement.js)
+     ============================================================ */
+
+  // Nom affiché du catalogue loot pour un id de matériau (poussière, gemme...),
+  // repli sur l'id brut si le catalogue n'est pas chargé ou l'id inconnu.
+  function _nomCatalogueLoot(id) {
+    if (typeof LOOT_CATALOGUE === "undefined") return id;
+    const it = LOOT_CATALOGUE.find((l) => l.id === id);
+    return it ? it.nom : id;
+  }
+
+  // Quantité totale d'un consommable dans un inventaire — les entrées ne sont
+  // JAMAIS fusionnées à l'ajout (cf. ajouterItemInventaire, simple push), donc
+  // un même id peut apparaître dans plusieurs entrées séparées à additionner.
+  function _quantiteDisponible(inventaireListe, itemId) {
+    return (inventaireListe || []).filter((it) => it.id === itemId).reduce((total, it) => total + (it.quantite || 1), 0);
+  }
+
+  // Consomme `qte` unités d'un consommable, en piochant sur autant d'entrées
+  // que nécessaire (cf. _quantiteDisponible) — décrémente une entrée
+  // partiellement plutôt que de la retirer si elle n'est pas épuisée.
+  // Boucle à l'envers : la suppression d'une entrée ne décale jamais les
+  // index déjà visités.
+  function _consommerQuantite(inventaireListe, itemId, qte) {
+    let restant = qte;
+    for (let i = inventaireListe.length - 1; i >= 0 && restant > 0; i--) {
+      const it = inventaireListe[i];
+      if (it.id !== itemId) continue;
+      const dispo = it.quantite || 1;
+      if (dispo <= restant) {
+        restant -= dispo;
+        inventaireListe.splice(i, 1);
+      } else {
+        it.quantite = dispo - restant;
+        restant = 0;
+      }
+    }
+  }
+
+  function _tentativesAtelier() { return SyncStore.get(STORAGE_ENCHANTEMENT_TENTATIVES) || {}; }
+  function _tentativesJour(persoId, systemeId, palierId) {
+    const table = _tentativesAtelier();
+    const cle = `${systemeId}:${palierId}`;
+    return (table[persoId] && table[persoId][cle]) || 0;
+  }
+  function _incrementerTentative(persoId, systemeId, palierId) {
+    const table = _tentativesAtelier();
+    const cle = `${systemeId}:${palierId}`;
+    table[persoId] = table[persoId] || {};
+    table[persoId][cle] = (table[persoId][cle] || 0) + 1;
+    SyncStore.set(STORAGE_ENCHANTEMENT_TENTATIVES, table);
+  }
+
+  // Onglet "🔨 Atelier" : sélecteur de personnage (même filtre estProprietaire
+  // que "Ma fiche"/"Livret") puis, en cascade, objet -> système -> paliers.
+  function rendrePanneauAtelier() {
+    const sel = document.getElementById("select-atelier-perso");
+    const zone = document.getElementById("zone-atelier");
+    if (!sel || !zone) return;
+    const persos = chargerPersos();
+    const ids = Object.keys(persos).filter((id) => estProprietaire(persos[id]));
+    if (!ids.length) {
+      sel.innerHTML = `<option value="">Aucun personnage</option>`;
+      zone.innerHTML = `<div class="carte"><p class="vide">Aucun personnage. Crée-en un dans l'onglet « Création ».</p></div>`;
+      return;
+    }
+    sel.innerHTML = ids.map((id) => `<option value="${id}">${echapper(persos[id].nom)}</option>`).join("");
+    atelierPersoId = ids.includes(atelierPersoId) ? atelierPersoId : (ids.includes(ficheActiveId) ? ficheActiveId : ids[0]);
+    sel.value = atelierPersoId;
+    sel.onchange = () => { atelierPersoId = sel.value; atelierItemIdx = null; atelierSystemeId = null; _rendreAtelierItems(); };
+    _rendreAtelierItems();
+  }
+
+  function _rendreAtelierItems() {
+    const zone = document.getElementById("zone-atelier");
+    if (!zone) return;
+    const p = chargerPersos()[atelierPersoId];
+    if (!p) { zone.innerHTML = ""; return; }
+    const items = (p.inventaireListe || [])
+      .map((it, idx) => ({ it, idx }))
+      .filter(({ it }) => it.type === "arme" || it.type === "armure");
+
+    if (!items.length) {
+      zone.innerHTML = `<div class="carte"><p class="vide">Aucune arme ni armure dans l'inventaire de ${echapper(p.nom)}.</p></div>`;
+      return;
+    }
+    zone.innerHTML = `<div class="carte">
+      <label>Objet à enchanter
+        <select id="select-atelier-item">
+          ${items.map(({ it, idx }) => `<option value="${idx}">${echapper(it.nom)} (${it.type})</option>`).join("")}
+        </select>
+      </label>
+      <div id="zone-atelier-systeme" style="margin-top:10px;"></div>
+    </div>`;
+    const selItem = document.getElementById("select-atelier-item");
+    atelierItemIdx = items.some(({ idx }) => idx === atelierItemIdx) ? atelierItemIdx : items[0].idx;
+    selItem.value = atelierItemIdx;
+    selItem.onchange = () => { atelierItemIdx = parseInt(selItem.value, 10); atelierSystemeId = null; _rendreAtelierSysteme(); };
+    _rendreAtelierSysteme();
+  }
+
+  function _rendreAtelierSysteme() {
+    const zoneSys = document.getElementById("zone-atelier-systeme");
+    if (!zoneSys || typeof Enchantements === "undefined") return;
+    const p = chargerPersos()[atelierPersoId];
+    const item = p && p.inventaireListe[atelierItemIdx];
+    if (!item) { zoneSys.innerHTML = ""; return; }
+    const systemes = Enchantements.systemesDisponibles(item);
+    if (!systemes.length) {
+      zoneSys.innerHTML = `<p class="vide">Aucun système d'enchantement pour ce type d'objet.</p>`;
+      return;
+    }
+    zoneSys.innerHTML = `
+      <label>Système
+        <select id="select-atelier-systeme">
+          ${systemes.map((sid) => `<option value="${sid}">${echapper(Enchantements.trouverSysteme(sid).label)}</option>`).join("")}
+        </select>
+      </label>
+      <label style="margin-left:12px;">Bonus au jet
+        <input type="number" id="atelier-bonus" value="0" style="width:70px;" />
+      </label>
+      <div id="zone-atelier-paliers"></div>
+    `;
+    const selSys = document.getElementById("select-atelier-systeme");
+    atelierSystemeId = systemes.includes(atelierSystemeId) ? atelierSystemeId : systemes[0];
+    selSys.value = atelierSystemeId;
+    selSys.onchange = () => { atelierSystemeId = selSys.value; _rendreAtelierPaliers(); };
+    _rendreAtelierPaliers();
+  }
+
+  function _rendreAtelierPaliers() {
+    const zone = document.getElementById("zone-atelier-paliers");
+    if (!zone || typeof Enchantements === "undefined") return;
+    const p = chargerPersos()[atelierPersoId];
+    const item = p && p.inventaireListe[atelierItemIdx];
+    const systeme = Enchantements.trouverSysteme(atelierSystemeId);
+    if (!p || !item || !systeme) { zone.innerHTML = ""; return; }
+
+    zone.innerHTML = systeme.paliers.map((palier) => {
+      const tentatives = _tentativesJour(atelierPersoId, atelierSystemeId, palier.id);
+      const restantes = palier.tentativesJour - tentatives;
+      const materiauxOk = palier.cout.every((c) => _quantiteDisponible(p.inventaireListe, c.id) >= c.qte);
+      const coutTxt = palier.cout.map((c) => {
+        const dispo = _quantiteDisponible(p.inventaireListe, c.id);
+        const manque = dispo < c.qte;
+        return `<span${manque ? ' style="color:var(--chaos);font-weight:700;"' : ""}>${c.qte}× ${echapper(_nomCatalogueLoot(c.id))} (${dispo} en stock)</span>`;
+      }).join(", ");
+      const desactive = restantes <= 0 || !materiauxOk;
+      return `<div class="carte" style="margin-top:10px;">
+        <div><strong>Palier ${palier.id}</strong> — diff. ${palier.diff}${palier.destructionSi > 0 ? ` · <span style="color:var(--chaos);">destruction si jet brut ≤ ${palier.destructionSi}</span>` : ""}</div>
+        <div>Coût : ${coutTxt}</div>
+        <div>Tentatives aujourd'hui : ${tentatives}/${palier.tentativesJour}${restantes <= 0 ? " — épuisées" : ""}</div>
+        <button class="btn or" data-palier="${palier.id}" ${desactive ? "disabled" : ""} style="margin-top:6px;">Tenter</button>
+      </div>`;
+    }).join("");
+
+    zone.querySelectorAll("[data-palier]").forEach((btn) => {
+      btn.onclick = () => _tenterEnchantement(parseInt(btn.dataset.palier, 10));
+    });
+  }
+
+  function _tenterEnchantement(palierId) {
+    const persos = chargerPersos();
+    const p = persos[atelierPersoId];
+    const item = p && p.inventaireListe[atelierItemIdx];
+    const systeme = Enchantements.trouverSysteme(atelierSystemeId);
+    const palier = systeme && systeme.paliers.find((pp) => pp.id === palierId);
+    if (!p || !item || !palier) return;
+
+    // Gardes défensives (en plus du bouton désactivé) : re-vérifie tentatives
+    // et matériaux au moment du clic, au cas où l'affichage serait périmé
+    // (un autre client a pu consommer les mêmes matériaux entre-temps).
+    if (_tentativesJour(atelierPersoId, atelierSystemeId, palierId) >= palier.tentativesJour) {
+      toast("Plus de tentatives pour ce palier aujourd'hui.");
+      return;
+    }
+    if (!palier.cout.every((c) => _quantiteDisponible(p.inventaireListe, c.id) >= c.qte)) {
+      toast("Matériaux insuffisants.");
+      return;
+    }
+    // Avertissement AVANT de lancer le dé (on ne sait pas encore si le jet
+    // sera assez bas pour détruire l'objet — le risque se prend à l'aveugle).
+    if (palier.destructionSi > 0 && !confirm(`Risque de destruction : « ${item.nom} » sera détruit(e) si le d20 brut tombe à ${palier.destructionSi} ou moins. Tenter quand même ?`)) {
+      return;
+    }
+
+    const bonus = parseInt(document.getElementById("atelier-bonus").value, 10) || 0;
+    const jetBrut = lancerDe(20);
+    const resultat = Enchantements.resoudre(item, atelierSystemeId, palierId, jetBrut, bonus);
+
+    // Matériaux consommés dans tous les cas (succès, échec, destruction) —
+    // seul le sort de l'objet ensuite change selon le résultat.
+    palier.cout.forEach((c) => _consommerQuantite(p.inventaireListe, c.id, c.qte));
+
+    if (resultat.resultat === "destruction") {
+      p.inventaireListe.splice(atelierItemIdx, 1);
+      atelierItemIdx = null;
+    } else if (resultat.resultat === "succes") {
+      p.inventaireListe[atelierItemIdx] = resultat.itemMisAJour;
+    }
+    // échec : objet inchangé, seuls les matériaux ci-dessus sont partis.
+    _incrementerTentative(atelierPersoId, atelierSystemeId, palierId);
+    sauverPersos(persos);
+
+    const total = jetBrut + bonus;
+    const crit = jetBrut === 20, echec = jetBrut === 1;
+    const detailJet = `d20[${jetBrut}]${bonus >= 0 ? "+" : ""}${bonus} — ${resultat.message}`;
+    const label = `${p.nom} — ${systeme.label} palier ${palierId} sur « ${item.nom} »`;
+    afficherResultat(label, total, detailJet, crit, echec);
+    ajouterHisto(label, total, crit, echec, detailJet);
+    toast(resultat.message);
+
+    rendrePanneauAtelier();
   }
 
   // Détecte une notation de dé (ex. "1d6", "2d4+2") dans le texte d'effet
@@ -3282,6 +3506,27 @@ const App = (() => {
       if (e.target === e.currentTarget) fermerModalMalus();
     });
 
+    // Atelier — bouton MJ "Nouveau jour" : remet à zéro les tentatives
+    // d'enchantement de tout le monde (data-role="mj" masque déjà le bouton
+    // côté joueur, garde de rôle ici en défense supplémentaire).
+    const btnNouveauJourAtelier = document.getElementById("btn-atelier-nouveau-jour");
+    if (btnNouveauJourAtelier) {
+      btnNouveauJourAtelier.onclick = () => {
+        if (role !== "mj") return;
+        if (!confirm("Réinitialiser les tentatives d'enchantement de tous les joueurs pour aujourd'hui ?")) return;
+        SyncStore.set(STORAGE_ENCHANTEMENT_TENTATIVES, {});
+        toast("Nouveau jour : tentatives d'enchantement réinitialisées.");
+        rendrePanneauAtelier();
+      };
+    }
+    // Rafraîchit les tentatives/paliers affichés dès qu'un autre client
+    // (MJ "Nouveau jour", ou un autre joueur qui tente un enchantement)
+    // modifie le compteur partagé.
+    SyncStore.subscribe(STORAGE_ENCHANTEMENT_TENTATIVES, () => {
+      const panneauAtelier = document.getElementById("panneau-atelier");
+      if (panneauAtelier && panneauAtelier.classList.contains("actif")) _rendreAtelierPaliers();
+    });
+
     // Modal choix permanent d'une capacité (ex. +2 DEF OU +1d8 DM)
     const btnFermerModalChoix = document.getElementById("btn-fermer-modal-choix-capacite");
     if (btnFermerModalChoix) btnFermerModalChoix.onclick = fermerModalChoixCapacite;
@@ -3361,6 +3606,11 @@ const App = (() => {
       if (ficheSidebarActiveId && chargerPersos()[ficheSidebarActiveId]) rendreFicheSidebarBattlemap(ficheSidebarActiveId);
       const panneauLivret = document.getElementById("panneau-livret");
       if (panneauLivret && panneauLivret.classList.contains("actif")) rendrePanneauLivret();
+      // Atelier : un inventaire modifié ailleurs (loot reçu, objet donné...)
+      // doit mettre à jour la liste d'objets/matériaux disponibles sans
+      // attendre que le joueur change d'onglet et y revienne.
+      const panneauAtelier = document.getElementById("panneau-atelier");
+      if (panneauAtelier && panneauAtelier.classList.contains("actif")) rendrePanneauAtelier();
     });
 
     // Journal de dés partagé : re-rendu dès qu'un autre client lance un dé.

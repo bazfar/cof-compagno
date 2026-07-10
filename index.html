@@ -28,6 +28,7 @@
       <button data-panneau="table-combat" data-role="mj">⚔ Combat</button>
       <button data-panneau="bestiaire" data-role="mj">Bestiaire</button>
       <button data-panneau="loot" data-role="mj">Loot</button>
+      <button data-panneau="atelier">🔨 Atelier</button>
       <button data-panneau="regles">Règles</button>
       <button data-panneau="lore">Lore</button>
     </nav>
@@ -421,6 +422,19 @@
       <div id="loot-notif-joueur" style="display:none;" class="carte loot-notif-card" data-role="joueur"></div>
     </section>
 
+    <!-- ATELIER (enchantement à risque) -->
+    <section class="panneau" id="panneau-atelier">
+      <div class="carte">
+        <h2 class="titre-bandeau">🔨 Atelier</h2>
+        <p style="font-size:0.85rem;color:#6a6278;">Enchante une arme ou une armure de ton inventaire — jet de 1d20, risque de destruction sur un jet bas.</p>
+        <div class="barre-actions">
+          <select id="select-atelier-perso"></select>
+          <button class="btn petit danger" id="btn-atelier-nouveau-jour" data-role="mj">🌅 Nouveau jour</button>
+        </div>
+      </div>
+      <div id="zone-atelier"></div>
+    </section>
+
     <!-- REGLES -->
     <section class="panneau" id="panneau-regles">
       <div class="carte">
@@ -599,27 +613,28 @@
   </div>
 
   <script src="js/etats.js?v=2"></script>
-  <script src="data/donnees.js?v=18"></script>
+  <script src="data/donnees.js?v=19"></script>
   <script src="data/bestiaire.js?v=1"></script>
-  <script src="data/loot.js?v=5"></script>
+  <script src="data/loot.js?v=6"></script>
   <script src="data/equipement_depart.js?v=3"></script>
-  <script src="js/emblemes.js?v=13"></script>
+  <script src="js/emblemes.js?v=14"></script>
   <script src="js/carte-monde.js?v=9"></script>
   <!-- Modèle OOP (Phase 1) : socle additif, n'altère pas l'app existante -->
   <script src="js/entite.js?v=2"></script>
-  <script src="js/personnage.js?v=8"></script>
+  <script src="js/personnage.js?v=9"></script>
   <!-- Firebase (SDK compat : garde une syntaxe classique, pas de modules/build tool) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js?v=1"></script>
   <script src="js/depot.js?v=5"></script>
   <script src="js/sync.js?v=2"></script>
-  <script src="js/carte.js?v=55"></script>
-  <script src="js/raretes.js?v=3"></script>
+  <script src="js/carte.js?v=56"></script>
+  <script src="js/raretes.js?v=4"></script>
   <script src="js/materiaux.js?v=1"></script>
-  <script src="js/loot.js?v=8"></script>
+  <script src="js/enchantement.js?v=1"></script>
+  <script src="js/loot.js?v=9"></script>
   <script src="js/capacites.js?v=5"></script>
   <script src="js/combat.js?v=3"></script>
-  <script src="js/app.js?v=47"></script>
+  <script src="js/app.js?v=48"></script>
 </body>
 </html>
