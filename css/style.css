@@ -442,6 +442,11 @@ textarea { resize: vertical; min-height: 70px; }
 .pv-control input { width: 48px; text-align: center; padding: 3px; font-weight: 700; background: #fffdf7; color: var(--encre); border-radius: 4px; }
 .barre-pv { height: 8px; background: var(--chaos); border-radius: 4px; margin-top: 8px; overflow: hidden; }
 .barre-pv .rempli { height: 100%; background: var(--succes); transition: width 0.2s; }
+/* Mini-fiche battlemap : PV en grand (pleine largeur), DEF + Init côte à côte en dessous */
+#battlemap-fiche-sidebar .stats-rapides { grid-template-columns: 1fr 1fr; }
+#battlemap-fiche-sidebar .stat-pv { grid-column: 1 / -1; padding: 14px; }
+#battlemap-fiche-sidebar .stat-pv .valeur,
+#battlemap-fiche-sidebar .stat-pv .pv-control input { font-size: 1.15rem; }
 
 /* Dégâts subis (applique la réduction d'armure avant de retirer les PV) */
 .btn-toggle-degats { margin-top: 8px; }

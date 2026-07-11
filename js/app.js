@@ -338,7 +338,7 @@ const App = (() => {
           </div>
         </div>
         <div class="stats-rapides">
-          <div class="stat-box">
+          <div class="stat-box stat-pv">
             <div class="label">Points de vie</div>
             <div class="pv-control">
               <button id="bm-pv-moins">−</button>
@@ -3418,7 +3418,7 @@ const App = (() => {
   // fiche complète et la mini-fiche battlemap (prefixe distingue les ids).
   function blocDegatsSubisHtml(prefixe) {
     return `
-      <button class="btn petit secondaire btn-toggle-degats" id="${prefixe}btn-toggle-degats" style="width:100%;">🛡 Subir des dégâts</button>
+      <button class="btn petit danger btn-toggle-degats" id="${prefixe}btn-toggle-degats" style="width:100%;">🛡 Subir des dégâts</button>
       <div class="degats-subis" id="${prefixe}degats-subis-form" style="display:none;">
         <input type="number" id="${prefixe}champ-degats-bruts" placeholder="Dégâts bruts" min="0" />
         <button class="btn petit or" id="${prefixe}btn-appliquer-degats">Appliquer</button>
