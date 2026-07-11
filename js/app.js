@@ -523,6 +523,14 @@ const App = (() => {
     }).join("");
 
     const aChaos = typeof perso.aVoieChaosActive === "function" && perso.aVoieChaosActive();
+    const reduction = perso.reductionDegats();
+    // Objets utilisables (potions/consommables de soin) — index conservé pour
+    // utiliserConsommable(id, idx).
+    const objets = (p.inventaireListe || []).map((it, i) => ({ it, i })).filter((x) => formuleSoinItem(x.it));
+    const objetTiles = objets.map((x) => {
+      const qte = x.it.quantite || 1;
+      return `<button class="dock-tuile dock-objet" data-utiliser-idx="${x.i}" title="${echapper(x.it.nom)}"><span class="dock-ic">🧪</span><span class="dock-lbl">${echapper(_courtNom(x.it.nom))}</span>${qte > 1 ? `<span class="dock-usage">×${qte}</span>` : ""}</button>`;
+    }).join("");
 
     dock.innerHTML = `<div class="dock-combat${cEstMonTour ? " mon-tour" : ""}">
       <div class="dock-zone dock-identite">
@@ -534,8 +542,9 @@ const App = (() => {
             <span class="dock-hp-val">${pv}/${pvMax}</span>
           </div>
           <div class="dock-chips">
-            <span class="dock-chip">🛡 ${perso.calculerDEF()}</span>
-            <span class="dock-chip">⚡ ${signe(perso.calculerInitiative())}</span>
+            <span class="dock-chip" title="Défense">🛡 ${perso.calculerDEF()}</span>
+            ${reduction > 0 ? `<span class="dock-chip" title="Réduction de dégâts (armure)">🪖 ${reduction}</span>` : ""}
+            <span class="dock-chip" title="Initiative">⚡ ${signe(perso.calculerInitiative())}</span>
             ${aChaos ? `<span class="dock-chip chaos">${p.corruptionCombat || 0} CS</span>` : ""}
           </div>
         </div>
@@ -551,6 +560,10 @@ const App = (() => {
       ${sorts.length ? `<div class="dock-zone">
         <div class="dock-zone-titre">Sorts &amp; capacités</div>
         <div class="dock-tuiles">${sortTiles}</div>
+      </div>` : ""}
+      ${objets.length ? `<div class="dock-zone">
+        <div class="dock-zone-titre">Objets</div>
+        <div class="dock-tuiles">${objetTiles}</div>
       </div>` : ""}
       <div class="dock-zone dock-degats">
         ${blocDegatsSubisHtml("dock-")}
@@ -572,6 +585,11 @@ const App = (() => {
     // (l'overlay de jet est visible sur tous les onglets, cf. #overlay-jet).
     dock.querySelectorAll("[data-test]").forEach((el) => {
       el.onclick = () => lancerTest(`Test de ${el.dataset.test}`, mods[el.dataset.test]);
+    });
+    // Objets : boire/utiliser un consommable de soin sur soi (réutilise
+    // utiliserConsommable), puis re-render du dock (PV + quantité mis à jour).
+    dock.querySelectorAll("[data-utiliser-idx]").forEach((el) => {
+      el.onclick = () => { utiliserConsommable(id, parseInt(el.dataset.utiliserIdx, 10)); rendreDockCombat(); };
     });
     wireDegatsSubis(id, "dock-");
     wireCapacitesEtEtats(dock, id, p, rendreDockCombat);
