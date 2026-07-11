@@ -556,7 +556,7 @@ textarea { resize: vertical; min-height: 70px; }
   flex-wrap: wrap;
   align-items: stretch;
   width: fit-content;
-  max-width: 100%;
+  max-width: min(100%, 880px);
   margin: 0 auto;
   background: var(--parchemin);
   border: 1px solid var(--parchemin-fonce);
@@ -564,7 +564,7 @@ textarea { resize: vertical; min-height: 70px; }
   overflow: hidden;
 }
 .dock-combat.mon-tour { border-color: var(--or); animation: pulseTonTour 1.6s ease-in-out infinite; }
-.dock-zone { padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; }
+.dock-zone { padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
 .dock-zone + .dock-zone { border-left: 1px solid var(--parchemin-fonce); }
 .dock-zone-titre { font-size: 0.68rem; letter-spacing: 0.4px; text-transform: uppercase; color: #6a6278; }
 .dock-identite { flex: 0 1 320px; min-width: 240px; flex-direction: row; align-items: center; gap: 10px; }
