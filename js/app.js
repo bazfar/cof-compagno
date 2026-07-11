@@ -479,6 +479,8 @@ const App = (() => {
       return;
     }
     const perso = Personnage.depuisJSON(p);
+    const mods = {};
+    CARACS.forEach((cc) => (mods[cc.code] = perso.mod(cc.code)));
 
     const attContact = perso.bonusAttaque("contact");
     const armeDistance = perso.armeDistanceEquipee();
@@ -542,6 +544,10 @@ const App = (() => {
         <div class="dock-zone-titre">Attaques</div>
         <div class="dock-tuiles">${attTiles.join("")}</div>
       </div>
+      <div class="dock-zone">
+        <div class="dock-zone-titre">Jets de carac</div>
+        <div class="dock-tuiles">${CARACS.map((cc) => `<button class="dock-tuile dock-stat" data-test="${cc.code}" title="Test de ${cc.code}"><span class="dock-stat-code">${cc.code}</span><span class="dock-lbl">${signe(mods[cc.code])}</span></button>`).join("")}</div>
+      </div>
       ${sorts.length ? `<div class="dock-zone">
         <div class="dock-zone-titre">Sorts &amp; capacités</div>
         <div class="dock-tuiles">${sortTiles}</div>
@@ -561,6 +567,11 @@ const App = (() => {
     });
     dock.querySelectorAll("[data-bm-degats]").forEach((el) => {
       el.onclick = () => lancerFormule(el.dataset.bmDegats, `${p.nom} — Dégâts (${el.dataset.bmDegats})`);
+    });
+    // Jets de caractéristique (d20 + mod) — sans quitter la battlemap
+    // (l'overlay de jet est visible sur tous les onglets, cf. #overlay-jet).
+    dock.querySelectorAll("[data-test]").forEach((el) => {
+      el.onclick = () => lancerTest(`Test de ${el.dataset.test}`, mods[el.dataset.test]);
     });
     wireDegatsSubis(id, "dock-");
     wireCapacitesEtEtats(dock, id, p, rendreDockCombat);

@@ -590,6 +590,8 @@ textarea { resize: vertical; min-height: 70px; }
 .dock-tuile .dock-lbl { font-size: 0.72rem; white-space: nowrap; }
 .dock-tuile-dmg { background: var(--violet-clair); }
 .dock-sort { min-width: 66px; }
+.dock-stat { min-width: 46px; padding: 6px 5px; }
+.dock-stat-code { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px; }
 .dock-lbl-sort { font-size: 0.74rem; text-align: center; line-height: 1.2; }
 .dock-usage { position: absolute; top: -5px; right: -5px; background: var(--or); color: var(--encre); font-size: 0.62rem; font-weight: 700; border-radius: 9px; padding: 0 5px; }
 .dock-degats { justify-content: center; min-width: 150px; }
