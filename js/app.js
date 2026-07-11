@@ -529,7 +529,7 @@ const App = (() => {
     const objets = (p.inventaireListe || []).map((it, i) => ({ it, i })).filter((x) => formuleSoinItem(x.it));
     const objetTiles = objets.map((x) => {
       const qte = x.it.quantite || 1;
-      return `<button class="dock-tuile dock-objet" data-utiliser-idx="${x.i}" title="${echapper(x.it.nom)}"><span class="dock-ic">🧪</span><span class="dock-lbl">${echapper(_courtNom(x.it.nom))}</span>${qte > 1 ? `<span class="dock-usage">×${qte}</span>` : ""}</button>`;
+      return `<button class="dock-tuile dock-objet" data-utiliser-idx="${x.i}" title="${echapper(x.it.nom)}"><span class="dock-ic">🧪</span><span class="dock-lbl">${echapper(_courtNom(x.it.nom))}</span><span class="dock-usage">×${qte}</span></button>`;
     }).join("");
 
     dock.innerHTML = `<div class="dock-combat${cEstMonTour ? " mon-tour" : ""}">
