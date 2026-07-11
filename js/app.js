@@ -530,7 +530,7 @@ const App = (() => {
         <div class="dock-id-txt">
           <div class="dock-nom">${echapper(p.nom)}${cEstMonTour ? ` <span class="dock-badge-tour">⚔️ À toi</span>` : ""}</div>
           <div class="dock-hp-ligne">
-            <div class="barre-pv dock-hp"><div class="rempli" style="width:${pct}%;"></div></div>
+            <div class="barre-pv dock-hp"><div class="rempli" style="width:${pct}%;background:${_couleurPv(pct)};"></div></div>
             <span class="dock-hp-val">${pv}/${pvMax}</span>
           </div>
           <div class="dock-chips">
@@ -3512,15 +3512,25 @@ const App = (() => {
     return d.innerHTML;
   }
 
+  // Couleur de la barre de PV selon le pourcentage restant : vert (plein) →
+  // ambre (entamé) → rouge (critique). Renvoie une valeur utilisable en CSS.
+  function _couleurPv(pct) {
+    if (pct <= 25) return "var(--chaos)";
+    if (pct <= 55) return "#c9a43a";
+    return "var(--succes)";
+  }
+  function _appliquerBarrePv(el, pct) {
+    if (!el) return;
+    el.style.width = pct + "%";
+    el.style.background = _couleurPv(pct);
+  }
   function majBarrePv(p) {
     const pct = Math.max(0, Math.min(100, (p.pvActuel / p.pvMax) * 100));
-    const el = document.getElementById("barre-pv-rempli");
-    if (el) el.style.width = pct + "%";
+    _appliquerBarrePv(document.getElementById("barre-pv-rempli"), pct);
   }
   function majBarrePvSidebar(p) {
     const pct = Math.max(0, Math.min(100, (p.pvActuel / p.pvMax) * 100));
-    const el = document.getElementById("bm-barre-pv-rempli");
-    if (el) el.style.width = pct + "%";
+    _appliquerBarrePv(document.getElementById("bm-barre-pv-rempli"), pct);
   }
   // Répercute les PV à jour sur toutes les vues actuellement montées pour ce
   // personnage (la fiche complète et/ou la mini-fiche battlemap), sans
@@ -4736,7 +4746,7 @@ const App = (() => {
             <span style="font-weight:700;">/ ${pvMax}</span>
             <button data-pv-plus="${m.id}">+</button>
           </div>
-          <div class="barre-pv"><div class="rempli" style="width:${pvMax ? Math.max(0, Math.min(100, (pvActuel / pvMax) * 100)) : 0}%;"></div></div>
+          <div class="barre-pv"><div class="rempli" style="width:${pvMax ? Math.max(0, Math.min(100, (pvActuel / pvMax) * 100)) : 0}%;background:${_couleurPv(pvMax ? (pvActuel / pvMax) * 100 : 0)};"></div></div>
           ${blocDegatsSubisHtml(prefixe)}
           ${htmlEtatsActifs(m)}
           ${morEnCombat ? '<div class="badge-mort">💀 Hors combat</div>' : ""}

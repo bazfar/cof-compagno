@@ -164,16 +164,29 @@ function monstreIconeFallback(img) {
   img.replaceWith(span);
 }
 
+/* Couleur d'identité par classe (liseré d'avatar, accents de fiche...) —
+   repli sur le violet accent pour toute classe inconnue. */
+const COULEUR_CLASSE = {
+  guerrier: "#a5433a", chevalier: "#b8924a", chasseur: "#5a7d3a",
+  barde: "#b5567d", pretre: "#c9a24a", druide: "#4a8d5a", moine: "#c47a3a",
+  magicien: "#4a6db5", necromancien: "#6a4a8d", enchanteur: "#8d5aa6",
+};
+function couleurClasse(classe) {
+  return COULEUR_CLASSE[classe] || "#7c5aa6";
+}
+
 /* Avatar d'un personnage : portrait uploadé si présent, sinon token race+genre+classe,
-   sinon emblème générique de classe. */
+   sinon emblème générique de classe. Liseré coloré selon la classe (box-sizing pour
+   ne pas décaler la taille). */
 function avatarHtml(p, taille) {
   taille = taille || 64;
+  const anneau = p && p.classe ? `border:2px solid ${couleurClasse(p.classe)};box-sizing:border-box;` : "";
   if (p && p.portrait) {
-    return `<img class="avatar" style="width:${taille}px;height:${taille}px;" src="${p.portrait}" alt="portrait" />`;
+    return `<img class="avatar" style="width:${taille}px;height:${taille}px;${anneau}" src="${p.portrait}" alt="portrait" />`;
   }
   const token = cheminTokenPersonnage(p);
   if (token) {
-    return `<img class="avatar" style="width:${taille}px;height:${taille}px;object-fit:cover;" src="${token}" alt="" onerror="avatarFallback(this,'${p.classe}',${taille})" />`;
+    return `<img class="avatar" style="width:${taille}px;height:${taille}px;object-fit:cover;${anneau}" src="${token}" alt="" onerror="avatarFallback(this,'${p.classe}',${taille})" />`;
   }
-  return `<span class="avatar-embleme" style="width:${taille}px;height:${taille}px;">${embleme(p ? p.classe : null, taille)}</span>`;
+  return `<span class="avatar-embleme" style="width:${taille}px;height:${taille}px;${anneau}border-radius:50%;">${embleme(p ? p.classe : null, taille)}</span>`;
 }
