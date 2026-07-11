@@ -297,6 +297,7 @@ const App = (() => {
     const p = id && persos[id];
     if (!p) {
       sidebar.innerHTML = ordreHtml + `<div class="carte"><p class="aide">Choisis ton personnage dans « Mon personnage » ci-dessus pour afficher sa fiche ici.</p></div>`;
+      rendreDockCombat(); // masque le dock si aucun perso sélectionné
       return;
     }
     const c = CLASSES[p.classe];
@@ -408,6 +409,162 @@ const App = (() => {
     });
     // Capacités/états, mêmes règles que la fiche complète (cf. wireCapacitesEtEtats).
     wireCapacitesEtEtats(sidebar, id, p, () => rendreFicheSidebarBattlemap(id));
+    rendreDockCombat(); // barre d'action de combat sous la carte (cf. plus bas)
+  }
+
+  /* ---------- Dock de combat (barre d'action sous la battlemap) ---------- */
+
+  // Énumère les capacités LANÇABLES (non passives, mécanisées) d'un perso —
+  // classe + voie raciale — sous la forme { source, mecanique, nom }, en
+  // répliquant l'énumération de htmlCapacitesClasse/htmlCapacitesRace.
+  function _capacitesLancablesPerso(p) {
+    const out = [];
+    const c = CLASSES[p.classe];
+    if (c && Array.isArray(p.capacites)) {
+      p.capacites.slice().sort((a, b) => a.voie.localeCompare(b.voie) || a.rang - b.rang).forEach((cap) => {
+        const voie = c.voies.find((v) => v.nom === cap.voie);
+        const rang = voie && voie.rangs.find((r) => r.rang === cap.rang);
+        if (!rang || !rang.mecanique || rang.mecanique.type === "passive") return;
+        out.push({ source: { origine: "classe", cle: p.classe, voie: cap.voie, rang: cap.rang, nomCap: rang.nom || `Rang ${cap.rang}` }, mecanique: rang.mecanique, nom: rang.nom || `Rang ${cap.rang}` });
+      });
+    }
+    const race = p.race ? RACES[p.race] : null;
+    if (race && Array.isArray(p.capacitesRace)) {
+      p.capacitesRace.slice().sort((a, b) => a - b).forEach((rangNum) => {
+        const rg = race.rangs.find((x) => x.rang === rangNum);
+        if (!rg) return;
+        const t = texteRangRace(race, rg, p.raceVariante);
+        if (!t.mecanique || t.mecanique.type === "passive") return;
+        const src = Object.assign({ cle: p.race, voie: race.voie_nom, nomCap: t.nom || `Rang ${rangNum}` }, t.source);
+        out.push({ source: src, mecanique: t.mecanique, nom: t.nom || `Rang ${rangNum}` });
+      });
+    }
+    return out;
+  }
+
+  // Attributs data-lancer-* d'une capacité (repris tels quels par
+  // wireCapacitesEtEtats / Capacites.lancer) — mêmes que htmlLancerCapacite.
+  function _attrsLancer(source) {
+    return [
+      `data-lancer-origine="${source.origine}"`,
+      `data-lancer-cle="${source.cle}"`,
+      source.voie !== undefined ? `data-lancer-voie="${source.voie}"` : "",
+      source.rang !== undefined ? `data-lancer-rang="${source.rang}"` : "",
+      source.code !== undefined ? `data-lancer-code="${source.code}"` : "",
+      `data-lancer-nom="${echapper(source.nomCap || "")}"`,
+    ].filter(Boolean).join(" ");
+  }
+
+  // Nom court de sort pour une tuile (retire "(sort, L)" etc., tronque).
+  function _courtNom(n) {
+    const s = String(n || "").replace(/\s*\(.*?\)\s*/g, " ").trim();
+    return s.length > 16 ? s.slice(0, 15) + "…" : s;
+  }
+
+  // Barre d'action de combat (dock) sous la battlemap, côté JOUEUR : identité +
+  // PV + DEF/Init/corruption, attaques rapides, sorts lançables, subir des
+  // dégâts. Réutilise les mêmes handlers que la sidebar (lancerTest/
+  // lancerFormule, wireDegatsSubis, wireCapacitesEtEtats) — aucune logique
+  // dupliquée. Visible seulement pour un joueur, en battlemap, combat actif.
+  function rendreDockCombat() {
+    const dock = document.getElementById("battlemap-dock-combat");
+    if (!dock) return;
+    const id = ficheSidebarActiveId;
+    const persos = chargerPersos();
+    const p = id && persos[id];
+    const enCombat = (typeof Combat !== "undefined" && Combat.estActif());
+    if (role === "mj" || carteMode !== "battlemap" || !enCombat || !p) {
+      dock.innerHTML = "";
+      dock.classList.remove("visible");
+      return;
+    }
+    const perso = Personnage.depuisJSON(p);
+
+    const attContact = perso.bonusAttaque("contact");
+    const armeDistance = perso.armeDistanceEquipee();
+    const attDistance = armeDistance ? perso.bonusAttaque("distance") : null;
+    const attMagique = perso.bonusAttaque("magique");
+    const armeContact = perso.armeContactEquipee();
+    const formuleDegats = (arme) => {
+      if (!arme) return null;
+      const bonus = arme.bonusDegatsTotal !== undefined ? arme.bonusDegatsTotal : (arme.enchantement || 0);
+      return arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
+    };
+    const dmgContact = formuleDegats(armeContact);
+    const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
+
+    const pv = p.pvActuel || 0, pvMax = p.pvMax || 1;
+    const pct = Math.max(0, Math.min(100, Math.round((pv / pvMax) * 100)));
+    const etatC = Combat.etatCourant();
+    const actifC = etatC.ordre[etatC.indexActuel];
+    const cEstMonTour = !!(actifC && actifC.type === "pj" && actifC.id === id);
+
+    const attTiles = [
+      `<button class="dock-tuile" data-bm-attaque="contact" data-bonus="${attContact}"><span class="dock-ic">⚔️</span><span class="dock-lbl">Contact ${signe(attContact)}</span></button>`,
+    ];
+    if (attDistance !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="distance" data-bonus="${attDistance}"><span class="dock-ic">🏹</span><span class="dock-lbl">Distance ${signe(attDistance)}</span></button>`);
+    if (attMagique !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="magique" data-bonus="${attMagique}"><span class="dock-ic">✨</span><span class="dock-lbl">Magique ${signe(attMagique)}</span></button>`);
+    if (dmgContact) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}</span></button>`);
+    if (dmgMagique) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgMagique}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgMagique}</span></button>`);
+
+    const sorts = _capacitesLancablesPerso(p);
+    const sortTiles = sorts.map((s) => {
+      const freq = Capacites.parserFrequence(s.mecanique.usage && s.mecanique.usage.frequence);
+      let badge = "";
+      if (freq) {
+        const cle = Capacites.cleCapacite(s.source);
+        const entree = (p.usagesCapacites || {})[cle];
+        const n = entree && entree.periode === freq.periode ? entree.utilisations : 0;
+        badge = `<span class="dock-usage">${n}/${freq.max}</span>`;
+      }
+      return `<button class="dock-tuile dock-sort" ${_attrsLancer(s.source)} title="${echapper(s.nom)}"><span class="dock-lbl-sort">${echapper(_courtNom(s.nom))}</span>${badge}</button>`;
+    }).join("");
+
+    const aChaos = typeof perso.aVoieChaosActive === "function" && perso.aVoieChaosActive();
+
+    dock.innerHTML = `<div class="dock-combat${cEstMonTour ? " mon-tour" : ""}">
+      <div class="dock-zone dock-identite">
+        <div class="dock-avatar">${avatarHtml(p, 46)}</div>
+        <div class="dock-id-txt">
+          <div class="dock-nom">${echapper(p.nom)}${cEstMonTour ? ` <span class="dock-badge-tour">⚔️ À toi</span>` : ""}</div>
+          <div class="dock-hp-ligne">
+            <div class="barre-pv dock-hp"><div class="rempli" style="width:${pct}%;"></div></div>
+            <span class="dock-hp-val">${pv}/${pvMax}</span>
+          </div>
+          <div class="dock-chips">
+            <span class="dock-chip">🛡 ${perso.calculerDEF()}</span>
+            <span class="dock-chip">⚡ ${signe(perso.calculerInitiative())}</span>
+            ${aChaos ? `<span class="dock-chip chaos">${p.corruptionCombat || 0} CS</span>` : ""}
+          </div>
+        </div>
+      </div>
+      <div class="dock-zone">
+        <div class="dock-zone-titre">Attaques</div>
+        <div class="dock-tuiles">${attTiles.join("")}</div>
+      </div>
+      ${sorts.length ? `<div class="dock-zone">
+        <div class="dock-zone-titre">Sorts &amp; capacités</div>
+        <div class="dock-tuiles">${sortTiles}</div>
+      </div>` : ""}
+      <div class="dock-zone dock-degats">
+        ${blocDegatsSubisHtml("dock-")}
+      </div>
+      <div class="cible-capacite-form" style="display:none;">
+        <select class="cible-capacite-select"></select>
+        <button class="btn petit or btn-confirmer-cible-capacite">Confirmer la cible</button>
+        <button class="btn petit secondaire btn-annuler-cible-capacite">Annuler</button>
+      </div>
+    </div>`;
+
+    dock.querySelectorAll("[data-bm-attaque]").forEach((el) => {
+      el.onclick = () => lancerTest(`Attaque ${el.dataset.bmAttaque}`, parseInt(el.dataset.bonus, 10), perso.critMinAttaque(el.dataset.bmAttaque));
+    });
+    dock.querySelectorAll("[data-bm-degats]").forEach((el) => {
+      el.onclick = () => lancerFormule(el.dataset.bmDegats, `${p.nom} — Dégâts (${el.dataset.bmDegats})`);
+    });
+    wireDegatsSubis(id, "dock-");
+    wireCapacitesEtEtats(dock, id, p, rendreDockCombat);
+    dock.classList.add("visible");
   }
 
   /* ---------- Navigation onglets ---------- */
@@ -4246,6 +4403,7 @@ const App = (() => {
     // pour la scène : on relaisse le temps au reflow puis on redéclenche le
     // redimensionnement (géré aujourd'hui via l'événement resize existant).
     requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
+    rendreDockCombat(); // reconstruit/masque le dock de combat selon le mode
   }
 
   /* ============================================================
