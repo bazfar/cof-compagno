@@ -523,6 +523,24 @@ textarea { resize: vertical; min-height: 70px; }
 .initiative-pastille.ko .initiative-avatar-cadre {
   filter: grayscale(1) brightness(.55);
 }
+/* "C'est ton tour" — surbrillance de la carte d'ordre côté joueur */
+.initiative-carte.mon-tour {
+  border: 2px solid var(--or);
+  animation: pulseTonTour 1.6s ease-in-out infinite;
+}
+@keyframes pulseTonTour {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(198, 160, 74, 0.28); }
+  50% { box-shadow: 0 0 0 6px rgba(198, 160, 74, 0.12); }
+}
+.badge-mon-tour {
+  background: var(--or);
+  color: var(--encre);
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
 .initiative-badge {
   position: absolute;
   top: -4px;

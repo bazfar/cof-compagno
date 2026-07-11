@@ -289,10 +289,14 @@ const App = (() => {
     const sidebar = document.getElementById("battlemap-fiche-sidebar");
     if (!sidebar) return;
     ficheSidebarActiveId = id || null;
+    // Ordre d'initiative (lecture seule) en tête de la sidebar joueur pendant un
+    // combat — re-rendu en temps réel car cette fonction est rappelée à chaque
+    // Combat.onChange (cf. init()).
+    const ordreHtml = _htmlOrdreInitiativeLecture(id);
     const persos = chargerPersos();
     const p = id && persos[id];
     if (!p) {
-      sidebar.innerHTML = `<div class="carte"><p class="aide">Choisis ton personnage dans « Mon personnage » ci-dessus pour afficher sa fiche ici.</p></div>`;
+      sidebar.innerHTML = ordreHtml + `<div class="carte"><p class="aide">Choisis ton personnage dans « Mon personnage » ci-dessus pour afficher sa fiche ici.</p></div>`;
       return;
     }
     const c = CLASSES[p.classe];
@@ -322,7 +326,7 @@ const App = (() => {
     const dmgDistance = formuleDegats(armeDistance);
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
 
-    sidebar.innerHTML = `
+    sidebar.innerHTML = ordreHtml + `
       <div class="carte">
         <div class="entete-fiche">
           <div class="tete-gauche">
@@ -4452,6 +4456,28 @@ const App = (() => {
         ${e.koTourCourant ? `<span class="initiative-badge-ko">💀</span>` : ""}
       </div>
       <span class="initiative-nom-mini">${echapper(e.nom)}</span>
+    </div>`;
+  }
+
+  // Ordre d'initiative en LECTURE SEULE pour un joueur (aucun bouton MJ) —
+  // affiché en haut de sa sidebar battlemap pendant un combat, pour qu'il voie
+  // les cartes de tous les combattants et à qui c'est le tour, sans dépendre du
+  // partage d'écran du MJ. monPersoId sert à détecter "c'est ton tour".
+  // Renvoie "" hors combat (le MJ n'a pas encore lancé le mode combat).
+  function _htmlOrdreInitiativeLecture(monPersoId) {
+    if (typeof Combat === "undefined" || !Combat.estActif()) return "";
+    const etat = Combat.etatCourant();
+    if (!etat.ordre.length) return "";
+    const actif = etat.ordre[etat.indexActuel];
+    const cEstMonTour = !!(actif && actif.type === "pj" && actif.id === monPersoId);
+    return `<div class="carte initiative-carte${cEstMonTour ? " mon-tour" : ""}">
+      <div class="initiative-entete">
+        <h3 style="margin:0;">Ordre d'initiative — Round ${etat.round}</h3>
+        ${cEstMonTour ? `<span class="badge-mon-tour">⚔️ À toi de jouer !</span>` : ""}
+      </div>
+      <div class="initiative-bandeau">
+        ${etat.ordre.map((e, idx) => _ligneInitiativeHtml(e, idx === etat.indexActuel)).join("")}
+      </div>
     </div>`;
   }
 
