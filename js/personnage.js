@@ -295,6 +295,27 @@ class Personnage extends Entite {
     }
   }
 
+  // Combinaisons main_droite/main_gauche acceptées quand aucun des deux
+  // objets n'est à deux mains (déjà géré séparément) : mêlée (courte ou
+  // longue) + bouclier (historique) ; mêlée + arbalète courte ; mêlée +
+  // arme courte (bi-arme) ; arc court + arme courte. Tout le reste (deux
+  // armes à distance ensemble, arc court + bouclier ou + mêlée longue...)
+  // reste hors du périmètre décrit par la table, donc refusé. Repose sur la
+  // convention d'id du catalogue ("arc_*"/"arbalete_*") pour distinguer arc
+  // court et arbalète courte, qui n'ont pas de champ dédié.
+  static _estArmeContact(it) { return !!it && it.type === "arme" && it.portee === "contact"; }
+  static _estArmeContactCourte(it) { return Personnage._estArmeContact(it) && it.categorieArme === "courte"; }
+  static _estArbaleteCourte(it) { return !!it && it.type === "arme" && it.portee !== "contact" && (it.id || "").startsWith("arbalete"); }
+  static _estArcCourt(it) { return !!it && it.type === "arme" && it.portee !== "contact" && (it.id || "").startsWith("arc"); }
+  static _armesCompatiblesMainsCroisees(a, b) {
+    if (!a || !b) return true; // main libre : toujours compatible
+    if (a.deuxMains || b.deuxMains) return false;
+    const paire = (x, y) =>
+      (Personnage._estArmeContact(x) && (y.type === "bouclier" || Personnage._estArbaleteCourte(y) || Personnage._estArmeContactCourte(y))) ||
+      (Personnage._estArcCourt(x) && Personnage._estArmeContactCourte(y));
+    return paire(a, b) || paire(b, a);
+  }
+
   // Équipe item dans slot. Renvoie l'ancien occupant du slot (item ou null
   // s'il était vide), à remettre dans l'inventaire côté appelant — ou
   // `undefined` si la combinaison item/slot est invalide (rien n'est changé).
@@ -314,9 +335,10 @@ class Personnage extends Entite {
       return ancien;
     }
 
-    if (item.type === "bouclier") {
-      const occupant = this.equipement.main_droite || this.equipement.main_gauche;
-      if (occupant && occupant.type === "arme" && occupant.deuxMains) return undefined;
+    if (slot === "main_droite" || slot === "main_gauche") {
+      const autreSlot = slot === "main_droite" ? "main_gauche" : "main_droite";
+      const autre = this.equipement[autreSlot];
+      if (autre && autre !== item && !Personnage._armesCompatiblesMainsCroisees(item, autre)) return undefined;
     }
 
     const ancien = this.equipement[slot];
@@ -386,13 +408,28 @@ class Personnage extends Entite {
   // Arme de mêlée (portée "contact") équipée dans une main, ou null. Sert au
   // bouton de dégâts (battlemap) : la formule vient de l'arme réellement
   // équipée si le Moine en porte une (cf. degatsPoings pour le repli à mains
-  // nues quand aucune arme n'est équipée).
+  // nues quand aucune arme n'est équipée). En bi-arme (mêlée + arme courte,
+  // cf. Personnage._armesCompatiblesMainsCroisees), l'arme NON courte fait
+  // référence comme "principale" (armeCourteSecondaire complète les dégâts) ;
+  // en dague+dague, la première main trouvée sert de référence.
   armeContactEquipee() {
-    for (const main of ["main_droite", "main_gauche"]) {
-      const arme = this.armeEquipee(main);
-      if (arme && arme.portee === "contact") return arme;
-    }
-    return null;
+    const contacts = [this.armeEquipee("main_droite"), this.armeEquipee("main_gauche")]
+      .filter((a) => Personnage._estArmeContact(a));
+    if (!contacts.length) return null;
+    return contacts.find((a) => a.categorieArme !== "courte") || contacts[0];
+  }
+
+  // Arme courte en main secondaire (bi-arme), si l'AUTRE main que celle de
+  // armeContactEquipee() porte une arme de contact courte distincte — null
+  // sinon (pas de bi-arme ; l'autre main porte un bouclier, une arbalète
+  // courte, ou rien). Sert à combiner les dégâts de contact (cf. app.js).
+  armeCourteSecondaire() {
+    const droite = this.armeEquipee("main_droite");
+    const gauche = this.armeEquipee("main_gauche");
+    const principale = this.armeContactEquipee();
+    if (!principale) return null;
+    const autre = principale === droite ? gauche : droite;
+    return (autre && autre !== principale && Personnage._estArmeContactCourte(autre)) ? autre : null;
   }
 
   // Dégâts à mains nues du Moine (Voie des poings), résolus en formule

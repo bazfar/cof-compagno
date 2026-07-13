@@ -302,6 +302,15 @@ const App = (() => {
     return [...monstres, ...pjs].filter((t) => t.id !== monTokenId);
   }
 
+  // Combine deux formules de dégâts (bi-arme : mêlée + arme courte en main
+  // secondaire, cf. Personnage.armeCourteSecondaire) en une seule formule
+  // lançable via lancerFormule (qui gère désormais plusieurs termes de dés).
+  function _combinerFormules(a, b) {
+    if (!a) return b || null;
+    if (!b) return a;
+    return a + (b.startsWith("-") ? "" : "+") + b;
+  }
+
   // Mini-fiche affichée en permanence à gauche de la battlemap (joueur
   // uniquement) : suit le personnage sélectionné dans "Mon personnage",
   // le même que celui dont le jeton est posé sur la scène.
@@ -338,13 +347,16 @@ const App = (() => {
     // Dégâts = formule de l'arme réellement équipée (même bonus que
     // badgeEffetItem : bonusDegatsTotal posé par une rareté prime sur
     // enchantement seul) ; si aucune arme de contact n'est équipée, repli sur
-    // les dégâts à mains nues du Moine (Voie des poings) le cas échéant.
+    // les dégâts à mains nues du Moine (Voie des poings) le cas échéant. En
+    // bi-arme (mêlée + arme courte en main secondaire), combine les deux
+    // formules — cf. Personnage.armeCourteSecondaire.
     const formuleDegats = (arme) => {
       if (!arme) return null;
       const bonus = arme.bonusDegatsTotal !== undefined ? arme.bonusDegatsTotal : (arme.enchantement || 0);
       return arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
     };
-    const dmgContact = formuleDegats(armeContact) || perso.degatsPoings();
+    const armeCourteSecondaire = perso.armeCourteSecondaire();
+    const dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
     const dmgDistance = formuleDegats(armeDistance);
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
 
@@ -434,7 +446,7 @@ const App = (() => {
         ${attDistance === null ? `<p class="aide" style="font-size:0.72rem;margin:6px 0 0;">Équipe un arc ou une arbalète pour débloquer l'attaque à distance.</p>` : ""}
         ${dmgContact || dmgDistance || dmgMagique ? `
         <div class="barre-actions" style="margin-top:6px;">
-          ${dmgContact ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}" title="${echapper(armeContact ? armeContact.nom : "Poings (Voie des poings)")}">🎲 Dégâts Contact (${dmgContact})</button>` : ""}
+          ${dmgContact ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}">🎲 Dégâts Contact (${dmgContact})</button>` : ""}
           ${dmgDistance ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}" title="${echapper(armeDistance ? armeDistance.nom : "")}">🎲 Dégâts Distance (${dmgDistance})</button>` : ""}
           ${dmgMagique ? `<button class="btn petit secondaire" data-bm-degats="${dmgMagique}">🎲 Dégâts Magique (${dmgMagique})</button>` : ""}
         </div>` : ""}
@@ -596,8 +608,10 @@ const App = (() => {
       return arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
     };
     // Repli sur les dégâts à mains nues du Moine (Voie des poings) si aucune
-    // arme de contact n'est équipée, cf. rendreFicheSidebarBattlemap.
-    const dmgContact = formuleDegats(armeContact) || perso.degatsPoings();
+    // arme de contact n'est équipée ; combine avec l'arme courte en main
+    // secondaire (bi-arme) le cas échéant — cf. rendreFicheSidebarBattlemap.
+    const armeCourteSecondaire = perso.armeCourteSecondaire();
+    const dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
 
     const pv = p.pvActuel || 0, pvMax = p.pvMax || 1;
@@ -611,7 +625,7 @@ const App = (() => {
     ];
     if (attDistance !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="distance" data-bonus="${attDistance}"><span class="dock-ic">🏹</span><span class="dock-lbl">Distance ${signe(attDistance)}</span></button>`);
     if (attMagique !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="magique" data-bonus="${attMagique}"><span class="dock-ic">✨</span><span class="dock-lbl">Magique ${signe(attMagique)}</span></button>`);
-    if (dmgContact) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}" title="${echapper(armeContact ? armeContact.nom : "Poings (Voie des poings)")}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}</span></button>`);
+    if (dmgContact) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}</span></button>`);
     if (dmgMagique) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgMagique}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgMagique}</span></button>`);
 
     const sorts = _capacitesLancablesPerso(p);
@@ -3973,26 +3987,49 @@ const App = (() => {
     ajouterHisto(`d${faces}`, v, crit, echec, detail);
   }
 
-  // Parse une formule type "2d6+3" ou "1d20-1" ou "3d8". label : texte affiché
-  // dans le résultat/journal à la place de la formule brute (ex. attaques de
-  // monstre, où "1d4" seul ne dit pas de qui/quoi il s'agit) — par défaut la
-  // formule elle-même, comme avant.
+  // Parse une formule type "2d6+3", "1d20-1" ou "1d8+1d4+2" (plusieurs
+  // termes de dés, ex. dégâts de contact bi-arme — cf. Personnage.
+  // armeCourteSecondaire). label : texte affiché dans le résultat/journal à
+  // la place de la formule brute (ex. attaques de monstre, où "1d4" seul ne
+  // dit pas de qui/quoi il s'agit) — par défaut la formule elle-même.
   function lancerFormule(formule, label) {
     formule = (formule || "").trim().toLowerCase().replace(/\s/g, "");
     if (!formule) { toast("Entre une formule, ex. 2d6+3"); return; }
-    const m = /^(\d*)d(\d+)([+-]\d+)?$/.exec(formule);
-    if (!m) { toast("Formule invalide. Ex : 2d6+3, 1d20-1"); return; }
-    const nb = parseInt(m[1] || "1", 10);
-    const faces = parseInt(m[2], 10);
-    const bonus = parseInt(m[3] || "0", 10);
-    if (nb < 1 || nb > 50 || faces < 2 || faces > 1000) { toast("Valeurs hors limites."); return; }
-    const jets = [];
-    let somme = 0;
-    for (let i = 0; i < nb; i++) { const v = lancerDe(faces); jets.push(v); somme += v; }
-    const total = somme + bonus;
-    let crit = false, echec = false;
-    if (nb === 1 && faces === 20) { crit = (jets[0] === 20); echec = (jets[0] === 1); }
-    const detail = `[${jets.join(", ")}] ${bonus ? signe(bonus) : ""}`;
+    const termes = formule.match(/[+-]?[^+-]+/g) || [];
+    const valide = termes.length > 0 && termes.every((t) => /^[+-]?(\d*d\d+|\d+)$/.test(t));
+    if (!valide) { toast("Formule invalide. Ex : 2d6+3, 1d20-1, 1d8+1d4+2"); return; }
+
+    let total = 0;
+    let horsLimites = false;
+    let nbTermesDe = 0;
+    let jetD20Unique = null; // crit/échec seulement si un SEUL terme de dés, et c'est 1d20
+    const detailParts = [];
+    termes.forEach((terme) => {
+      const negatif = terme.startsWith("-");
+      const brut = terme.replace(/^[+-]/, "");
+      const de = /^(\d*)d(\d+)$/.exec(brut);
+      if (de) {
+        nbTermesDe++;
+        const nb = parseInt(de[1] || "1", 10);
+        const faces = parseInt(de[2], 10);
+        if (nb < 1 || nb > 50 || faces < 2 || faces > 1000) { horsLimites = true; return; }
+        const jets = [];
+        for (let i = 0; i < nb; i++) jets.push(lancerDe(faces));
+        const somme = jets.reduce((a, b) => a + b, 0);
+        total += negatif ? -somme : somme;
+        detailParts.push(`${negatif ? "-" : detailParts.length ? "+" : ""}${brut}[${jets.join(",")}]`);
+        if (nb === 1 && faces === 20) jetD20Unique = jets[0];
+      } else {
+        const v = parseInt(brut, 10);
+        total += negatif ? -v : v;
+        detailParts.push(`${negatif ? "-" : detailParts.length ? "+" : ""}${v}`);
+      }
+    });
+    if (horsLimites) { toast("Valeurs hors limites."); return; }
+
+    const crit = nbTermesDe === 1 && jetD20Unique === 20;
+    const echec = nbTermesDe === 1 && jetD20Unique === 1;
+    const detail = detailParts.join(" ");
     label = label || formule;
     afficherResultat(label, total, detail, crit, echec);
     ajouterHisto(label, total, crit, echec, detail);
