@@ -1916,6 +1916,136 @@ const PNJ_CLES = [
       "Un raid évolutionniste contre son propre clan le force à demander de l'aide à des étrangers plutôt qu'aux siens.",
     ],
   },
+  {
+    id: "selyne-orwick",
+    nom: "Selyne Orwick",
+    titre: "Teneuse de comptes du Grand Marché",
+    faction: "Comptoir",
+    resume: "Discrète et terrifiée à l'idée de perdre sa place, elle tient les vrais livres de comptes d'intermédiaires du Comptoir sans jamais avoir posé de questions.",
+    description:
+      "Méthodique et effacée, Selyne gère la comptabilité de plusieurs intermédiaires du Comptoir, dont certains liés au réseau de Maître Aurèle Ferrand — sans jamais avoir cherché à savoir ce qu'elle validait. Peut être convaincue de parler contre une garantie de protection, ou contre une somme qu'elle n'oserait jamais réclamer elle-même.",
+    accroches: [
+      "Peut confirmer ou infirmer des mouvements d'argent suspects si les PJ remontent la piste du médaillon.",
+      "Sait qui, chez Ferrand, panique depuis peu — signe qu'un fil se tend ailleurs dans la campagne.",
+    ],
+  },
+  {
+    id: "grizzard-ancre",
+    nom: "Grizzard « l'Ancre »",
+    titre: "Vigie des Docks de Cendre-Claire",
+    faction: "Comptoir",
+    resume: "Vieux docker balafré qui voit tout ce qui entre et sort du port, et vend ses informations pas cher.",
+    description:
+      "Plus à sa place sur les quais que n'importe où ailleurs, Grizzard observe le trafic portuaire depuis des décennies. Pas malveillant, juste pragmatique : il vend ses informations contre à boire à la Table Commune.",
+    accroches: [
+      "Premier à savoir quand une cargaison ou un passager « ne colle pas ».",
+      "Source naturelle pour tout hook lié à la contrebande ou à l'espionnage étranger.",
+    ],
+  },
+  {
+    id: "aldous-kenrick",
+    nom: "Aldous Kenrick",
+    titre: "Archiviste du Palais du Serment",
+    faction: "Serment de Libris",
+    resume: "Passionné et un peu pédant, il garde la charte fondatrice et des décennies d'archives que plus personne ne consulte.",
+    description:
+      "Aldous connaît des pans entiers de l'histoire de la République que même Vasnal a oubliés. Sa passion pour les archives confine à l'obsession, mais elle en fait une mine d'informations historiques précieuses.",
+    accroches: [
+      "Peut fournir un document historique perdu, utile pour légitimer une action des PJ devant l'Assemblée.",
+      "Inquiet de constater que certains dossiers anciens ont récemment été consultés par quelqu'un — sans savoir qui.",
+    ],
+  },
+  {
+    id: "liora-sennett",
+    nom: "Liora Sennett",
+    titre: "Aide du Consul Vasnal, successeure pressentie",
+    faction: "Serment de Libris",
+    resume: "Jeune et idéaliste, encore assez naïve pour croire que la charte fondatrice peut suffire à elle seule.",
+    description:
+      "Vasnal la teste discrètement pour sa succession sans le lui dire ouvertement. Liora porte encore intacte la foi dans les idéaux fondateurs de la République, dans un contexte où de moins en moins de blocs y croient encore vraiment.",
+    accroches: [
+      "Peut recruter les PJ pour des missions « propres » soutenant le Serment (protéger un témoin, porter un message sensible).",
+      "Si les PJ l'aident à réussir, elle gagne en assurance ; si elle échoue, elle pourrait basculer vers le cynisme ambiant.",
+    ],
+  },
+  {
+    id: "bram-osgoode",
+    nom: "Lieutenant Bram Osgoode",
+    titre: "Officier de la Citadelle des Ponts",
+    faction: "Garde Citoyenne",
+    resume: "Discipliné en apparence, rongé par le doute depuis qu'il a vu le dossier sur le financement solvarien des Fils de Libris.",
+    description:
+      "Bram a vu le document que Kessing garde confidentiel, et l'ordre de le taire le ronge depuis. Officier loyal jusqu'ici, il commence à se demander si l'obéissance vaut encore quelque chose face à ce qu'il sait.",
+    accroches: [
+      "Pourrait être la fuite qui rend le document public, si les PJ gagnent sa confiance.",
+      "Hook moral : obéir à Kessing ou trahir sa hiérarchie pour ce qu'il croit juste.",
+    ],
+  },
+  {
+    id: "yannick-doria",
+    nom: "Sergent Yannick Doria",
+    titre: "Ancien de la Garde, tient une salle d'armes",
+    faction: "Garde Citoyenne",
+    resume: "Retraité bourru qui entraîne encore quelques jeunes recrues et connaît tout le monde dans la Garde.",
+    description:
+      "Yannick a quitté le service actif mais garde un pied dans tous les cercles militaires de Libris, y compris ceux qui en sont partis en mauvais termes. Bon contact pour tout ce qui touche au monde martial de la République.",
+    accroches: [
+      "Bon contact pour recruter des PNJ mercenaires ou vétérans ponctuels.",
+      "Sait qui, dans la Garde, a des sympathies inquiétantes pour les Fils de Libris.",
+    ],
+  },
+  {
+    id: "mira-sylvenne",
+    nom: "Mira Sylvenne",
+    titre: "Guérisseuse du Quartier du Tissage",
+    faction: "Cercle des Peuples",
+    resume: "Aelindra installée à Libris depuis des années, elle soigne sans distinction et voit la tension monter avant qu'elle n'éclate.",
+    description:
+      "Figure discrète mais respectée du Quartier du Tissage, Mira est souvent la première à percevoir les signaux faibles d'une escalade — bien avant que l'Assemblée ne s'en préoccupe.",
+    accroches: [
+      "Première à alerter les PJ si une attaque des Fils de Libris se prépare contre le quartier.",
+      "Peut demander une escorte ou une protection en échange de soins ou d'informations sur la communauté.",
+    ],
+  },
+  {
+    id: "corin-vashtel",
+    nom: "Corin Vashtel",
+    titre: "Informateur mordanel en exil",
+    faction: "Cercle des Peuples",
+    resume: "Méfiant et discret, survivant du Silence de Valmoire, toujours sur le qui-vive.",
+    description:
+      "Corin garde des contacts dans des réseaux qu'il ne nomme jamais directement. Sa méfiance est le fruit d'une histoire personnelle marquée par le Silence de Valmoire — il ne fait confiance qu'à ceux qui ont fait leurs preuves.",
+    accroches: [
+      "Peut relier un fil de campagne à des rumeurs venues d'Aetharion ou du reste du continent.",
+      "Bon PNJ à débloquer progressivement plutôt qu'à rencontrer d'emblée.",
+    ],
+  },
+  {
+    id: "petra-voss",
+    nom: "Petra Voss",
+    titre: "Ancienne membre repentie des Fils de Libris",
+    faction: "Fils de Libris",
+    resume: "A quitté le mouvement après avoir vu la violence tourner sérieux, vit cachée par peur d'être reconnue.",
+    description:
+      "Petra n'était pas une fanatique, juste quelqu'un de ruiné qui cherchait une communauté. Le basculement du mouvement vers la violence l'a poussée à fuir — mais elle sait encore beaucoup de choses sur son fonctionnement interne.",
+    accroches: [
+      "Informatrice potentielle contre Dessalles, mais seulement si les PJ garantissent sa sécurité.",
+      "Hook d'humanité : nuance le mouvement au-delà de la caricature fanatique.",
+    ],
+  },
+  {
+    id: "denner-ashcombe",
+    nom: "Denner Ashcombe",
+    titre: "Petit commerçant sympathisant des Fils de Libris",
+    faction: "Fils de Libris",
+    resume: "Ruiné par la concurrence des guildes du Comptoir, pas violent, mais assiste aux discours de la Racine Noire faute d'alternative.",
+    description:
+      "Denner incarne le terreau économique du mouvement plutôt que son extrémisme. Sa colère est réelle et compréhensible, même si elle le pousse vers des cercles dangereux.",
+    accroches: [
+      "Peut donner aux PJ une vision nuancée du ressentiment des Fils de Libris — utile pour éviter le manichéisme.",
+      "Quête possible : lui offrir une vraie alternative économique, pour tester si le mouvement perd du terrain autrement que par la force.",
+    ],
+  },
 ];
 
 /* ============================================================
