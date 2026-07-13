@@ -639,8 +639,12 @@ const App = (() => {
     // État Mourant(e)/Mort (0 PV, cf. REGLES_GENERALES "Mort et stabilisation") :
     // remplace la zone Attaques par le jet de mort (uniquement à son tour) tant
     // que le perso n'est ni stabilisé ni mort ; plus aucune action une fois mort.
+    // Un personnage Mourant·e ou Mort ne peut RIEN faire d'autre que son jet
+    // de mort — Relever un allié/Jets de carac/Sorts/Objets sont masqués tant
+    // que peutAgir est faux (recevoir des dégâts reste possible, cf. plus bas).
     const estMourant = pv <= 0 && !p.etatMort;
     const estMort = !!p.etatMort;
+    const peutAgir = !estMourant && !estMort;
     // Alliés à relever (Mourant·e OU Renversée) — n'importe quel autre PJ,
     // pas seulement ceux présents dans l'ordre d'initiative (cf. releverAllie).
     const alliesARelever = Object.keys(persos).filter((pid) => {
@@ -725,7 +729,7 @@ const App = (() => {
         <div class="dock-zone-titre">Attaques</div>
         <div class="dock-tuiles">${attTiles.join("")}</div>
       </div>`}
-      ${alliesARelever.length ? `<div class="dock-zone">
+      ${peutAgir && alliesARelever.length ? `<div class="dock-zone">
         <div class="dock-zone-titre">Relever un allié</div>
         <div class="dock-tuiles">
           <button class="dock-tuile" id="dock-btn-relever"${entreeActions && entreeActions.actionPrincipaleUtilisee ? " disabled" : ""}><span class="dock-ic">🤝</span><span class="dock-lbl">Relever un allié</span></button>
@@ -735,15 +739,15 @@ const App = (() => {
           <button class="btn petit or btn-confirmer-relever">Relever</button>
         </div>
       </div>` : ""}
-      <div class="dock-zone">
+      ${peutAgir ? `<div class="dock-zone">
         <div class="dock-zone-titre">Jets de carac</div>
         <div class="dock-tuiles">${CARACS.map((cc) => `<button class="dock-tuile dock-stat" data-test="${cc.code}" title="Test de ${cc.code}"><span class="dock-stat-code">${cc.code}</span><span class="dock-lbl">${signe(mods[cc.code])}</span></button>`).join("")}</div>
-      </div>
-      ${sorts.length ? `<div class="dock-zone">
+      </div>` : ""}
+      ${peutAgir && sorts.length ? `<div class="dock-zone">
         <div class="dock-zone-titre">Sorts &amp; capacités</div>
         <div class="dock-tuiles">${sortTiles}</div>
       </div>` : ""}
-      ${objets.length ? `<div class="dock-zone">
+      ${peutAgir && objets.length ? `<div class="dock-zone">
         <div class="dock-zone-titre">Objets</div>
         <div class="dock-tuiles">${objetTiles}</div>
       </div>` : ""}
@@ -772,6 +776,7 @@ const App = (() => {
         const cle = el.dataset.toggleDon;
         togglesDons[cle] = !togglesDons[cle];
         rendreDockCombat();
+        rendreFicheSidebarBattlemap(id);
       };
     });
     const btnJetMort = dock.querySelector("#dock-btn-jet-mort");
