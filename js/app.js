@@ -4142,7 +4142,7 @@ const App = (() => {
         </div>
         <p class="pnj-resume"><em>${echapper(p.resume)}</em></p>
         <div class="contenu">${echapper(p.description)}</div>
-        ${(p.accroches || []).length ? `<div class="pnj-accroches"><h4>Accroches</h4><ul>${
+        ${(p.accroches || []).length ? `<div class="pnj-accroches" data-role="mj"><h4>Accroches</h4><ul>${
           p.accroches.map((a) => `<li>${echapper(a)}</li>`).join("")
         }</ul></div>` : ""}
       </div>`).join("");
