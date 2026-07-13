@@ -21,6 +21,10 @@ const App = (() => {
   let etapeDebloquee = 1;
   let ficheActiveId = null;  // id du perso affiché dans "Ma fiche"
   let ficheSidebarActiveId = null;  // id du perso affiché dans la mini-fiche battlemap (sidebar)
+  // Bascules manuelles des dons Frappe puissante / Tir de précision (-2 attaque
+  // / +4 dégâts) dans le dock de combat — état de session, pas persisté, ne
+  // distingue pas les personnages (cf. rendreDockCombat).
+  const togglesDons = { frappe_puissante: false, tir_precision: false };
   let _cibleDistanceId = null;  // token cible choisi pour le vérificateur de portée (cf. rendreFicheSidebarBattlemap)
   let _typeAttaquePortee = "contact";  // type d'attaque choisi dans le vérificateur de portée : "contact" | "distance" | "magique"
   let livretPersoId = null;  // id du perso choisi dans l'onglet "📖 Livret"
@@ -597,9 +601,7 @@ const App = (() => {
     const mods = {};
     CARACS.forEach((cc) => (mods[cc.code] = perso.mod(cc.code)));
 
-    const attContact = perso.bonusAttaque("contact");
     const armeDistance = perso.armeDistanceEquipee();
-    const attDistance = armeDistance ? perso.bonusAttaque("distance") : null;
     const attMagique = perso.bonusAttaque("magique");
     const armeContact = perso.armeContactEquipee();
     const formuleDegats = (arme) => {
@@ -607,11 +609,26 @@ const App = (() => {
       const bonus = arme.bonusDegatsTotal !== undefined ? arme.bonusDegatsTotal : (arme.enchantement || 0);
       return arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
     };
+    // Dons mécaniques Frappe puissante (contact, arme deux_mains) / Tir de
+    // précision (distance) : -2 au jet d'attaque pour +4 aux dégâts, au choix
+    // via une bascule (cf. togglesDons) plutôt qu'automatique à chaque attaque.
+    const dons = p.dons || [];
+    const peutFrappePuissante = dons.includes("frappe_puissante") && !!(armeContact && armeContact.deuxMains);
+    const peutTirPrecision = dons.includes("tir_precision") && !!armeDistance;
+    const actifFrappePuissante = peutFrappePuissante && togglesDons.frappe_puissante;
+    const actifTirPrecision = peutTirPrecision && togglesDons.tir_precision;
+
+    const attContact = perso.bonusAttaque("contact") - (actifFrappePuissante ? 2 : 0);
+    const attDistance = armeDistance ? perso.bonusAttaque("distance") - (actifTirPrecision ? 2 : 0) : null;
+
     // Repli sur les dégâts à mains nues du Moine (Voie des poings) si aucune
     // arme de contact n'est équipée ; combine avec l'arme courte en main
     // secondaire (bi-arme) le cas échéant — cf. rendreFicheSidebarBattlemap.
     const armeCourteSecondaire = perso.armeCourteSecondaire();
-    const dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
+    let dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
+    if (dmgContact && actifFrappePuissante) dmgContact += "+4";
+    let dmgDistance = armeDistance ? formuleDegats(armeDistance) : null;
+    if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
 
     const pv = p.pvActuel || 0, pvMax = p.pvMax || 1;
@@ -626,7 +643,13 @@ const App = (() => {
     if (attDistance !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="distance" data-bonus="${attDistance}"><span class="dock-ic">🏹</span><span class="dock-lbl">Distance ${signe(attDistance)}</span></button>`);
     if (attMagique !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="magique" data-bonus="${attMagique}"><span class="dock-ic">✨</span><span class="dock-lbl">Magique ${signe(attMagique)}</span></button>`);
     if (dmgContact) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}</span></button>`);
+    if (dmgDistance) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgDistance}" title="${echapper(armeDistance.nom)}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgDistance}</span></button>`);
     if (dmgMagique) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgMagique}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgMagique}</span></button>`);
+    // Bascules Frappe puissante / Tir de précision : -2 attaque / +4 dégâts
+    // tant qu'actives, visibles seulement si le don est acquis ET l'arme requise
+    // équipée (cf. peutFrappePuissante/peutTirPrecision ci-dessus).
+    if (peutFrappePuissante) attTiles.push(`<button class="dock-tuile" data-toggle-don="frappe_puissante" style="${actifFrappePuissante ? "outline:2px solid var(--or);" : ""}"><span class="dock-ic">💥</span><span class="dock-lbl">Frappe puissante ${actifFrappePuissante ? "ON" : "OFF"}</span></button>`);
+    if (peutTirPrecision) attTiles.push(`<button class="dock-tuile" data-toggle-don="tir_precision" style="${actifTirPrecision ? "outline:2px solid var(--or);" : ""}"><span class="dock-ic">🎯</span><span class="dock-lbl">Tir de précision ${actifTirPrecision ? "ON" : "OFF"}</span></button>`);
 
     const sorts = _capacitesLancablesPerso(p);
     const sortTiles = sorts.map((s) => {
@@ -711,6 +734,13 @@ const App = (() => {
     });
     dock.querySelectorAll("[data-bm-degats]").forEach((el) => {
       el.onclick = () => lancerFormule(el.dataset.bmDegats, `${p.nom} — Dégâts (${el.dataset.bmDegats})`);
+    });
+    dock.querySelectorAll("[data-toggle-don]").forEach((el) => {
+      el.onclick = () => {
+        const cle = el.dataset.toggleDon;
+        togglesDons[cle] = !togglesDons[cle];
+        rendreDockCombat();
+      };
     });
     // Jets de caractéristique (d20 + mod) — sans quitter la battlemap
     // (l'overlay de jet est visible sur tous les onglets, cf. #overlay-jet).
@@ -1246,14 +1276,16 @@ const App = (() => {
     return creation.classe ? maxDeDeVie(CLASSES[creation.classe].de_de_vie) : 6;
   }
   function pvBaseNiveau1() {
-    // Passe par Personnage.mod() (pas le modCarac brut) pour tenir compte d'un
-    // éventuel +1 CON permanent choisi via une capacité (ex. Guerrier —
-    // Spécimen d'élite), cf. Personnage.bonusCaracCapacites.
-    return Math.max(1, deDeVieFaces() + new Personnage(creation).mod("CON"));
+    // Délègue à Personnage.pvNiveau1() au lieu de dupliquer la formule (dé de
+    // vie + Mod.CON + 2, cf. équilibrage) — évite un écart silencieux si la
+    // règle change côté Personnage sans être répercutée ici.
+    return new Personnage(creation).pvNiveau1();
   }
-  // Guerrier — Voie de l'élite, rang 2 "Endurance de fer" (passive) : +1 PV par niveau.
+  // Guerrier — Voie de l'élite, rang 2 "Endurance de fer" (passive) : +1 PV/niveau.
+  // Don Robuste : +2 PV par niveau, rétroactif (cf. Personnage.bonusPvDons).
   function bonusPvVoies() {
-    return (creation.classe === "guerrier" && estChoisie("Voie de l'élite", 2)) ? niveauCreation() : 0;
+    const perso = new Personnage(creation);
+    return perso.bonusPvCapacites() + perso.bonusPvDons();
   }
   function pvTotalActuel() {
     return creation.pvHistorique.reduce((total, j) => total + j.total, pvBaseNiveau1()) + bonusPvVoies();
@@ -1556,6 +1588,56 @@ const App = (() => {
   function fermerModalChoixDon() {
     const modal = document.getElementById("modal-choix-don");
     if (modal) modal.style.display = "none";
+  }
+
+  // Plafond d'une caractéristique pour le don Amélioration de caractéristique :
+  // 20 si affinité raciale (cf. data/dons.js), 18 sinon.
+  const AFFINITES_RACE_CARAC = { elfe: ["INT", "DEX"], nain: ["CON", "FOR"], demi_orc: ["CON", "FOR"], demi_gobelin: ["DEX", "INT"] };
+  function plafondCaracDon(code, race) {
+    return (AFFINITES_RACE_CARAC[race] || []).includes(code) ? 20 : 18;
+  }
+
+  // Deux prompts séquentiels (réutilise le modal de choix de capacité, un
+  // seul choix par appel) pour le don Amélioration de caractéristique —
+  // exclut du 2e choix la carac déjà prise, et toute carac déjà au plafond.
+  function ouvrirChoixAmeliorationCarac(cible, onDone) {
+    const options1 = CARACS.filter((c) => (cible.caracs[c.code] || 10) < plafondCaracDon(c.code, cible.race));
+    if (!options1.length) { toast("Toutes les caractéristiques sont déjà au plafond."); onDone([]); return; }
+    ouvrirModalChoixCapacite({
+      titre: "Amélioration de caractéristique",
+      consigne: "Choisis la 1ère caractéristique (+1) :",
+      options: options1.map((c) => ({ label: `${c.nom} (${c.code}) — actuellement ${cible.caracs[c.code] || 10}`, valeur: c.code })),
+    }, (code1) => {
+      const options2 = CARACS.filter((c) => c.code !== code1 && (cible.caracs[c.code] || 10) < plafondCaracDon(c.code, cible.race));
+      if (!options2.length) { onDone([code1]); return; }
+      ouvrirModalChoixCapacite({
+        titre: "Amélioration de caractéristique",
+        consigne: "Choisis la 2e caractéristique (+1) :",
+        options: options2.map((c) => ({ label: `${c.nom} (${c.code}) — actuellement ${cible.caracs[c.code] || 10}`, valeur: c.code })),
+      }, (code2) => onDone([code1, code2]));
+    });
+  }
+
+  // Finalise l'acquisition d'un don sur `cible` (creation, ou perso persisté
+  // côté Fiche) : l'ajoute à cible.dons, résout le choix supplémentaire du don
+  // Amélioration de caractéristique s'il y a lieu (cible.donsChoix), puis
+  // appelle onTermine() — au caller de gérer PV/persistance/re-rendu ensuite
+  // (ex. Robuste modifie pvMax, cf. monterDeNiveau et le bouton de rattrapage).
+  function finaliserChoixDon(idDon, cible, msgSuffix, onTermine) {
+    if (!cible.dons) cible.dons = [];
+    cible.dons.push(idDon);
+    const don = (typeof DONS !== "undefined") && DONS.find((d) => d.id === idDon);
+    if (idDon === "amelioration_carac") {
+      if (!cible.donsChoix) cible.donsChoix = {};
+      ouvrirChoixAmeliorationCarac(cible, (choix) => {
+        cible.donsChoix.amelioration_carac = choix;
+        toast(`Don choisi : ${don ? don.nom : idDon}${choix.length ? ` (+1 ${choix.join(", +1 ")})` : ""}.${msgSuffix}`);
+        onTermine();
+      });
+      return;
+    }
+    toast(`Don choisi : ${don ? don.nom : idDon}.${msgSuffix}`);
+    onTermine();
   }
 
   // Libellé lisible du choix mémorisé sur une capacité (ex. "+2 DEF permanent"),
@@ -2691,7 +2773,9 @@ const App = (() => {
     return ids.map((id) => {
       const don = (typeof DONS !== "undefined") && DONS.find((d) => d.id === id);
       if (!don) return "";
-      return `<div class="cap-fiche"><div class="titre-cap">${don.nom}</div><div class="effet-cap">${don.effet}</div></div>`;
+      const choix = id === "amelioration_carac" && p.donsChoix && p.donsChoix.amelioration_carac;
+      const choixLabel = choix && choix.length ? ` — <strong>Choix : +1 ${choix.join(", +1 ")}</strong>` : "";
+      return `<div class="cap-fiche"><div class="titre-cap">${don.nom}</div><div class="effet-cap">${don.effet}${choixLabel}</div></div>`;
     }).join("");
   }
 
@@ -3695,12 +3779,18 @@ const App = (() => {
         const persos = chargerPersos();
         const pp = persos[id];
         if (!pp) return;
-        if (!pp.dons) pp.dons = [];
-        pp.dons.push(idDon);
-        sauverPersos(persos);
-        const don = (typeof DONS !== "undefined") && DONS.find((d) => d.id === idDon);
-        toast(`Don choisi : ${don ? don.nom : idDon} ✔`);
-        afficherFiche(id);
+        if (!pp.donsChoix) pp.donsChoix = {};
+        finaliserChoixDon(idDon, pp, " ✔", () => {
+          // Robuste modifie pvMax rétroactivement (cf. Personnage.bonusPvDons) —
+          // pas de re-jet, juste le delta appliqué aussi aux PV actuels.
+          if (idDon === "robuste") {
+            const nouveauMax = new Personnage(pp).pvCalcule();
+            pp.pvActuel = Math.min(nouveauMax, (pp.pvActuel || 0) + (nouveauMax - pp.pvMax));
+            pp.pvMax = nouveauMax;
+          }
+          sauverPersos(persos);
+          afficherFiche(id);
+        });
       });
     };
 
@@ -3902,6 +3992,7 @@ const App = (() => {
     if (typeof creation.pvNiveauActuel !== "number") creation.pvNiveauActuel = creation.niveau || 1;
     if (!creation.voiesHorsProfil) creation.voiesHorsProfil = []; // compat fiches créées avant les voies hors profil
     if (!creation.dons) creation.dons = []; // compat fiches créées avant les Dons (niveaux 4/8/12)
+    if (!creation.donsChoix) creation.donsChoix = {}; // compat fiches créées avant les dons à choix (Amélioration de caractéristique)
     if (!creation.equipement) creation.equipement = Object.fromEntries(SLOTS_EQUIPEMENT.map((s) => [s, null])); // compat fiches créées avant les slots d'équipement
     if (!creation.inventaireListe) creation.inventaireListe = [];
     if (!creation.genre) creation.genre = "homme"; // compat fiches créées avant le choix du genre
@@ -3956,9 +4047,9 @@ const App = (() => {
     if (!creation.dons) creation.dons = [];
     if (Personnage.donsRequisPourNiveau(creation.niveau) > creation.dons.length) {
       ouvrirModalChoixDon(creation.dons, (idDon) => {
-        creation.dons.push(idDon);
-        const don = (typeof DONS !== "undefined") && DONS.find((d) => d.id === idDon);
-        toast(`Don choisi : ${don ? don.nom : idDon}. Pense à enregistrer.`);
+        finaliserChoixDon(idDon, creation, " Pense à enregistrer.", () => {
+          champPv.value = pvTotalActuel(); // reflète Robuste si c'est le don choisi
+        });
       });
     }
   }

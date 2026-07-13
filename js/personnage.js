@@ -36,6 +36,7 @@ class Personnage extends Entite {
         capacitesRace: [],
         voiesHorsProfil: [],
         dons: [],
+        donsChoix: {},
         portrait: null,
         pvMax: 1,
         pvActuel: null,
@@ -66,9 +67,15 @@ class Personnage extends Entite {
     this.capacites = d.capacites;
     this.capacitesRace = d.capacitesRace;
     this.voiesHorsProfil = d.voiesHorsProfil;
-    // Dons (niveaux 4/8/12, cf. data/dons.js) : tableau d'ids, bonus descriptifs
-    // appliqués manuellement par le joueur, comme les capacités textuelles.
+    // Dons (niveaux 4/8/12, cf. data/dons.js) : tableau d'ids. La plupart restent
+    // des bonus descriptifs appliqués manuellement par le joueur, mais certains
+    // sont mécanisés ci-dessous (Frappe puissante, Tir de précision, Ambidextre,
+    // Maître d'armes doubles, Robuste, Alerte, Amélioration de caractéristique).
     this.dons = d.dons;
+    // Choix fixés à l'acquisition d'un don qui en demande un (ex. Amélioration
+    // de caractéristique : { amelioration_carac: ["FOR","DEX"] }) — même esprit
+    // que capacites[].choix, mais indexé par id de don (un don n'est pris qu'une fois).
+    this.donsChoix = d.donsChoix;
     this.portrait = d.portrait;
     this.pvHistorique = d.pvHistorique;
     this.pvNiveauActuel = d.pvNiveauActuel;
@@ -104,7 +111,7 @@ class Personnage extends Entite {
 
   /* ----- Caractéristiques ----- */
   mod(code) {
-    return Entite.modCarac(this.caracs[code] + this.bonusCaracCapacites(code));
+    return Entite.modCarac(this.caracs[code] + this.bonusCaracCapacites(code) + this.bonusCaracDons(code));
   }
 
   // Bonus permanent à une caractéristique de base, accordé par un choix fixé
@@ -121,6 +128,15 @@ class Personnage extends Entite {
     return bonus;
   }
 
+  // Don Amélioration de caractéristique : +1 aux deux caractéristiques
+  // choisies à l'acquisition (cf. this.donsChoix.amelioration_carac, posé côté
+  // app.js lors du choix du don — le plafond 18/20 n'est vérifié qu'à ce
+  // moment-là, pas ici).
+  bonusCaracDons(code) {
+    const choix = this.donsChoix && this.donsChoix.amelioration_carac;
+    return Array.isArray(choix) && choix.includes(code) ? 1 : 0;
+  }
+
   get classeDef() {
     return (typeof CLASSES !== "undefined" && CLASSES[this.classe]) || null;
   }
@@ -135,9 +151,9 @@ class Personnage extends Entite {
   pvNiveau1() {
     return Math.max(1, this.facesDeVie() + this.mod("CON") + 2);
   }
-  // PV total = niveau 1 + somme des jets de niveau historisés + bonus de capacités
+  // PV total = niveau 1 + somme des jets de niveau historisés + bonus de capacités/dons
   pvCalcule() {
-    return (this.pvHistorique || []).reduce((t, j) => t + (j.total || 0), this.pvNiveau1()) + this.bonusPvCapacites();
+    return (this.pvHistorique || []).reduce((t, j) => t + (j.total || 0), this.pvNiveau1()) + this.bonusPvCapacites() + this.bonusPvDons();
   }
   // Guerrier — Voie de l'élite, rang 2 "Endurance de fer" (passive) : +1 PV par niveau.
   bonusPvCapacites() {
@@ -146,6 +162,10 @@ class Personnage extends Entite {
       bonus += this.niveau || 1;
     }
     return bonus;
+  }
+  // Don Robuste : +2 PV par niveau, rétroactif sur tous les niveaux déjà acquis.
+  bonusPvDons() {
+    return (this.dons || []).includes("robuste") ? 2 * (this.niveau || 1) : 0;
   }
 
   // Somme des bonus temporaires actuellement actifs (sorts/capacités posés via
@@ -172,7 +192,7 @@ class Personnage extends Entite {
   // Mod.INT ou Mod.SAG en plus de la DEX, cf. bonusInitiativeCapacites) +
   // bonus temporaires actifs (sorts/capacités, cf. bonusTemporaire).
   calculerInitiative() {
-    return this.mod("DEX") + this.bonusInitiativeCapacites() + this.bonusTemporaire("initiative");
+    return this.mod("DEX") + this.bonusInitiativeCapacites() + this.bonusInitiativeDons() + this.bonusTemporaire("initiative");
   }
   bonusInitiativeCapacites() {
     let bonus = 0;
@@ -187,6 +207,11 @@ class Personnage extends Entite {
       if (cap && (cap.choix === "INT" || cap.choix === "SAG")) bonus += this.mod(cap.choix);
     }
     return bonus;
+  }
+  // Don Alerte : +5 Initiative. ("Ne peut jamais être surpris" reste descriptif,
+  // aucune mécanique de surprise n'existe dans l'app.)
+  bonusInitiativeDons() {
+    return (this.dons || []).includes("alerte") ? 5 : 0;
   }
 
   // Seuil de critique pour un type d'attaque donné ("contact"/"distance"/
@@ -311,12 +336,16 @@ class Personnage extends Entite {
   static _estArmeContactCourte(it) { return Personnage._estArmeContact(it) && it.categorieArme === "courte"; }
   static _estArbaleteCourte(it) { return !!it && it.type === "arme" && it.portee !== "contact" && (it.id || "").startsWith("arbalete"); }
   static _estArcCourt(it) { return !!it && it.type === "arme" && it.portee !== "contact" && (it.id || "").startsWith("arc"); }
-  static _armesCompatiblesMainsCroisees(a, b) {
+  // `armeLongueAutorisee` (don Maître d'armes doubles) élargit la main
+  // secondaire aux armes de contact "longue", en plus de "courte".
+  static _armesCompatiblesMainsCroisees(a, b, armeLongueAutorisee) {
     if (!a || !b) return true; // main libre : toujours compatible
     if (a.deuxMains || b.deuxMains) return false;
+    const estCourteOuAutorisee = (it) =>
+      Personnage._estArmeContactCourte(it) || (armeLongueAutorisee && Personnage._estArmeContact(it) && it.categorieArme === "longue");
     const paire = (x, y) =>
-      (Personnage._estArmeContact(x) && (y.type === "bouclier" || Personnage._estArbaleteCourte(y) || Personnage._estArmeContactCourte(y))) ||
-      (Personnage._estArcCourt(x) && Personnage._estArmeContactCourte(y));
+      (Personnage._estArmeContact(x) && (y.type === "bouclier" || Personnage._estArbaleteCourte(y) || estCourteOuAutorisee(y))) ||
+      (Personnage._estArcCourt(x) && estCourteOuAutorisee(y));
     return paire(a, b) || paire(b, a);
   }
 
@@ -342,7 +371,8 @@ class Personnage extends Entite {
     if (slot === "main_droite" || slot === "main_gauche") {
       const autreSlot = slot === "main_droite" ? "main_gauche" : "main_droite";
       const autre = this.equipement[autreSlot];
-      if (autre && autre !== item && !Personnage._armesCompatiblesMainsCroisees(item, autre)) return undefined;
+      const armeLongueAutorisee = (this.dons || []).includes("maitre_armes_doubles");
+      if (autre && autre !== item && !Personnage._armesCompatiblesMainsCroisees(item, autre, armeLongueAutorisee)) return undefined;
     }
 
     const ancien = this.equipement[slot];
@@ -423,17 +453,56 @@ class Personnage extends Entite {
     return contacts.find((a) => a.categorieArme !== "courte") || contacts[0];
   }
 
-  // Arme courte en main secondaire (bi-arme), si l'AUTRE main que celle de
+  // Arme en main secondaire (bi-arme), si l'AUTRE main que celle de
   // armeContactEquipee() porte une arme de contact courte distincte — null
   // sinon (pas de bi-arme ; l'autre main porte un bouclier, une arbalète
-  // courte, ou rien). Sert à combiner les dégâts de contact (cf. app.js).
+  // courte, ou rien). Avec le don Maître d'armes doubles, une arme "longue"
+  // en main secondaire compte aussi (cf. equiper/_armesCompatiblesMainsCroisees).
+  // Sert à combiner les dégâts de contact (cf. app.js).
   armeCourteSecondaire() {
     const droite = this.armeEquipee("main_droite");
     const gauche = this.armeEquipee("main_gauche");
     const principale = this.armeContactEquipee();
     if (!principale) return null;
     const autre = principale === droite ? gauche : droite;
-    return (autre && autre !== principale && Personnage._estArmeContactCourte(autre)) ? autre : null;
+    if (!autre || autre === principale) return null;
+    if (Personnage._estArmeContactCourte(autre)) return autre;
+    if ((this.dons || []).includes("maitre_armes_doubles") && Personnage._estArmeContact(autre) && autre.categorieArme === "longue") return autre;
+    return null;
+  }
+
+  // Arme à deux mains actuellement équipée (contact OU distance), ou null —
+  // sert de base au don Frappe puissante (contact) et Tir de précision
+  // (distance) exigent chacun un type d'arme précis, cf. app.js pour le
+  // détail ; ce booléen générique sert surtout à l'affichage.
+  armeDeuxMainsEquipee() {
+    const contact = this.armeContactEquipee();
+    if (contact && contact.deuxMains) return contact;
+    const distance = this.armeDistanceEquipee();
+    if (distance && distance.deuxMains) return distance;
+    return null;
+  }
+
+  // Combat à deux armes valide (cf. REGLES_GENERALES) : une arme à une main
+  // dans chaque main, sans bouclier. Sert de base au malus d'attaque de
+  // contact (cf. malusCombatDeuxArmes) — indépendant de la compatibilité
+  // bi-arme déjà validée à l'équipement (_armesCompatiblesMainsCroisees),
+  // qui autorise aussi mêlée+bouclier ou mêlée+arbalète courte (non concernés).
+  enCombatDeuxArmes() {
+    const d = this.equipement && this.equipement.main_droite;
+    const g = this.equipement && this.equipement.main_gauche;
+    return !!(d && g && d !== g && d.type === "arme" && g.type === "arme" && !d.deuxMains && !g.deuxMains);
+  }
+
+  // Malus/bonus d'attaque du combat à deux armes, uniquement au contact (la
+  // règle de base est FOR-based, cf. REGLES_GENERALES) : -4 par défaut, -2
+  // avec le don Ambidextre, 0 avec Maître d'armes doubles (qui inclut Ambidextre).
+  malusCombatDeuxArmes(type) {
+    if (type !== "contact" || !this.enCombatDeuxArmes()) return 0;
+    const dons = this.dons || [];
+    if (dons.includes("maitre_armes_doubles")) return 0;
+    if (dons.includes("ambidextre")) return -2;
+    return -4;
   }
 
   // Dégâts à mains nues du Moine (Voie des poings), résolus en formule
@@ -466,7 +535,7 @@ class Personnage extends Entite {
   }
   // type : "contact" (FOR), "distance" (DEX), "magique" (carac de magie de la classe)
   bonusAttaque(type) {
-    const b = this.bonusProgression() + this.bonusTemporaire("attaque");
+    const b = this.bonusProgression() + this.bonusTemporaire("attaque") + this.malusCombatDeuxArmes(type);
     if (type === "contact") return b + this.mod("FOR");
     if (type === "distance") return b + this.mod("DEX");
     if (type === "magique") {
