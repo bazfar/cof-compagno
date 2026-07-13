@@ -267,6 +267,16 @@ class Personnage extends Entite {
     if (type === "contact" && this.classe === "guerrier" && this.estChoisie("Voie de l'élite", 3)) {
       seuil = 19;
     }
+    // Chasseur — Voie de la gâchette, rang 5 "Tir fatal" (L, 1x/combat en
+    // théorie) : critique sur 18-20 au lieu de 20 sur les attaques à distance.
+    // Simplification : traité ici comme une capacité passive (toujours
+    // active dès qu'acquise), la limite "1x/combat" et le triplement des
+    // dégâts critiques ne sont PAS mécanisés (cf. data/donnees.js, effet
+    // "special" hors schéma standard — nécessiterait de toucher
+    // js/capacites.js, hors périmètre ici).
+    if (type === "distance" && this.classe === "chasseur" && this.estChoisie("Voie de la gâchette", 5)) {
+      seuil = Math.min(seuil, 18);
+    }
     const arme = type === "contact" ? this.armeContactEquipee()
       : type === "distance" ? this.armeDistanceEquipee()
       : null;
