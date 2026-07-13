@@ -385,13 +385,33 @@ class Personnage extends Entite {
   }
   // Arme de mêlée (portée "contact") équipée dans une main, ou null. Sert au
   // bouton de dégâts (battlemap) : la formule vient de l'arme réellement
-  // équipée, pas d'une valeur générique à mains nues.
+  // équipée si le Moine en porte une (cf. degatsPoings pour le repli à mains
+  // nues quand aucune arme n'est équipée).
   armeContactEquipee() {
     for (const main of ["main_droite", "main_gauche"]) {
       const arme = this.armeEquipee(main);
       if (arme && arme.portee === "contact") return arme;
     }
     return null;
+  }
+
+  // Dégâts à mains nues du Moine (Voie des poings), résolus en formule
+  // directement lançable (Mod.FOR remplacé par sa valeur numérique) — null si
+  // la classe n'est pas Moine ou si la voie n'est pas acquise. Le dé progresse
+  // et REMPLACE (ne s'additionne pas) d'un rang à l'autre : seul le rang le
+  // plus élevé acquis (rangMaxVoie) fait foi, cf. data/donnees.js rangs 1-5.
+  degatsPoings() {
+    if (this.classe !== "moine") return null;
+    const rangMax = this.rangMaxVoie("Voie des poings");
+    if (!rangMax) return null;
+    const voie = this.classeDef && this.classeDef.voies.find((v) => v.nom === "Voie des poings");
+    const rg = voie && voie.rangs.find((r) => r.rang === rangMax);
+    const effet = rg && rg.mecanique.effets.find((e) => e.type === "degats");
+    if (!effet) return null;
+    return effet.formule.replace(/([+-])Mod\.([A-Za-z]+)/gi, (_, signe, code) => {
+      const v = (signe === "-" ? -1 : 1) * this.mod(code.toUpperCase());
+      return v >= 0 ? "+" + v : String(v);
+    });
   }
 
   /* ----- Attaque ----- */

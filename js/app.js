@@ -315,15 +315,16 @@ const App = (() => {
     const armeDistance = perso.armeDistanceEquipee();
     const attDistance = armeDistance ? perso.bonusAttaque("distance") : null;
     const attMagique = perso.bonusAttaque("magique");
-    // Dégâts = formule de l'arme réellement équipée (pas une valeur générique
-    // à mains nues) : même bonus que badgeEffetItem (bonusDegatsTotal posé
-    // par une rareté prime sur enchantement seul).
+    // Dégâts = formule de l'arme réellement équipée (même bonus que
+    // badgeEffetItem : bonusDegatsTotal posé par une rareté prime sur
+    // enchantement seul) ; si aucune arme de contact n'est équipée, repli sur
+    // les dégâts à mains nues du Moine (Voie des poings) le cas échéant.
     const formuleDegats = (arme) => {
       if (!arme) return null;
       const bonus = arme.bonusDegatsTotal !== undefined ? arme.bonusDegatsTotal : (arme.enchantement || 0);
       return arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
     };
-    const dmgContact = formuleDegats(armeContact);
+    const dmgContact = formuleDegats(armeContact) || perso.degatsPoings();
     const dmgDistance = formuleDegats(armeDistance);
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
 
@@ -365,8 +366,8 @@ const App = (() => {
         ${attDistance === null ? `<p class="aide" style="font-size:0.72rem;margin:6px 0 0;">Équipe un arc ou une arbalète pour débloquer l'attaque à distance.</p>` : ""}
         ${dmgContact || dmgDistance || dmgMagique ? `
         <div class="barre-actions" style="margin-top:6px;">
-          ${dmgContact ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}">🎲 Dégâts Contact (${dmgContact})</button>` : ""}
-          ${dmgDistance ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}">🎲 Dégâts Distance (${dmgDistance})</button>` : ""}
+          ${dmgContact ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}" title="${echapper(armeContact ? armeContact.nom : "Poings (Voie des poings)")}">🎲 Dégâts Contact (${dmgContact})</button>` : ""}
+          ${dmgDistance ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}" title="${echapper(armeDistance ? armeDistance.nom : "")}">🎲 Dégâts Distance (${dmgDistance})</button>` : ""}
           ${dmgMagique ? `<button class="btn petit secondaire" data-bm-degats="${dmgMagique}">🎲 Dégâts Magique (${dmgMagique})</button>` : ""}
         </div>` : ""}
       </div>
@@ -492,7 +493,9 @@ const App = (() => {
       const bonus = arme.bonusDegatsTotal !== undefined ? arme.bonusDegatsTotal : (arme.enchantement || 0);
       return arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
     };
-    const dmgContact = formuleDegats(armeContact);
+    // Repli sur les dégâts à mains nues du Moine (Voie des poings) si aucune
+    // arme de contact n'est équipée, cf. rendreFicheSidebarBattlemap.
+    const dmgContact = formuleDegats(armeContact) || perso.degatsPoings();
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
 
     const pv = p.pvActuel || 0, pvMax = p.pvMax || 1;
@@ -506,7 +509,7 @@ const App = (() => {
     ];
     if (attDistance !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="distance" data-bonus="${attDistance}"><span class="dock-ic">🏹</span><span class="dock-lbl">Distance ${signe(attDistance)}</span></button>`);
     if (attMagique !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="magique" data-bonus="${attMagique}"><span class="dock-ic">✨</span><span class="dock-lbl">Magique ${signe(attMagique)}</span></button>`);
-    if (dmgContact) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}</span></button>`);
+    if (dmgContact) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}" title="${echapper(armeContact ? armeContact.nom : "Poings (Voie des poings)")}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}</span></button>`);
     if (dmgMagique) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgMagique}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgMagique}</span></button>`);
 
     const sorts = _capacitesLancablesPerso(p);
