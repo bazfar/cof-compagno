@@ -158,16 +158,22 @@ const Loot = (() => {
   let _varianteChoisie = null;
   let _materiauChoisi = "aucun";
   let _materiauRangChoisi = 1;
+  let _affixeChoisi = "aucun";
   let _modeModal = "vote"; // "vote" | "don"
 
-  // Axe matériau (ex. Feu) indépendant de la rareté — les deux se cumulent.
+  // Axes matériau (ex. Feu) et affixe (ex. Aiguisé/Folie) indépendants de la
+  // rareté — tous se cumulent. L'affixe est appliqué en dernier car son
+  // palier dépend de la rareté déjà choisie (cf. js/affixes.js).
   function _itemFinal() {
     const itemMateriau = (typeof Materiaux !== "undefined")
       ? Materiaux.appliquer(_itemBase, _materiauChoisi, _materiauRangChoisi)
       : _itemBase;
-    return (typeof Raretes !== "undefined")
+    const itemRarete = (typeof Raretes !== "undefined")
       ? Raretes.appliquer(itemMateriau, _rareteChoisie, _varianteChoisie)
       : itemMateriau;
+    return (typeof Affixes !== "undefined")
+      ? Affixes.appliquer(itemRarete, _affixeChoisi, _rareteChoisie)
+      : itemRarete;
   }
 
   function ouvrirModalVote(item) { _ouvrirModal(item, "vote"); }
@@ -186,6 +192,7 @@ const Loot = (() => {
     _varianteChoisie = variantes.length ? variantes[0].id : null;
     _materiauChoisi = "aucun";
     _materiauRangChoisi = 1;
+    _affixeChoisi = "aucun";
     _modeModal = mode;
 
     const persos = lirePersos();
@@ -214,6 +221,7 @@ const Loot = (() => {
     _rendreSelecteurVariante();
     _rendreSelecteurMateriau();
     _rendreSelecteurRangMateriau();
+    _rendreSelecteurAffixe();
 
     if (btnLancer) {
       btnLancer.onclick = () => {
@@ -284,6 +292,17 @@ const Loot = (() => {
         effetMateriauEl.style.display = "none";
       }
     }
+
+    const effetAffixeEl = document.getElementById("modal-loot-item-effet-affixe");
+    if (effetAffixeEl) {
+      if (item.effetAffixe) {
+        effetAffixeEl.textContent = "⚔ " + item.effetAffixe;
+        effetAffixeEl.style.color = "var(--or)";
+        effetAffixeEl.style.display = "block";
+      } else {
+        effetAffixeEl.style.display = "none";
+      }
+    }
   }
 
   function _rendreSelecteurRarete() {
@@ -296,6 +315,7 @@ const Loot = (() => {
         _rareteChoisie = btn.dataset.rarete;
         _rendreSelecteurRarete();
         _rendreSelecteurVariante();
+        _rendreSelecteurAffixe();
         _rendreApercuModalLoot();
       };
     });
@@ -318,6 +338,32 @@ const Loot = (() => {
       btn.onclick = () => {
         _varianteChoisie = btn.dataset.variante;
         _rendreSelecteurVariante();
+        _rendreApercuModalLoot();
+      };
+    });
+  }
+
+  // Sélecteur d'affixe (ex. "Aiguisé"/"Folie") — indépendant des variantes
+  // par item (EFFETS_PAR_ITEM) : disponible sur toute arme dès "Peu commun",
+  // cf. js/affixes.js.
+  function _rendreSelecteurAffixe() {
+    const zone = document.getElementById("modal-loot-affixe");
+    if (!zone) return;
+    const disponible = _rareteChoisie !== "commun" &&
+      (typeof Affixes !== "undefined" && _itemBase && Affixes.disponiblePour(_itemBase));
+
+    if (!disponible) { zone.style.display = "none"; zone.innerHTML = ""; _affixeChoisi = "aucun"; return; }
+
+    const options = [{ id: "aucun", nom: "Aucun" }].concat(
+      Object.values(AFFIXES_ARMES).map(a => ({ id: a.id, nom: a.nom }))
+    );
+    zone.style.display = "flex";
+    zone.innerHTML = options.map(o => `<button type="button" class="chip-affixe${o.id === _affixeChoisi ? " actif" : ""}"
+      data-affixe="${o.id}">${echapper(o.nom)}</button>`).join("");
+    zone.querySelectorAll(".chip-affixe").forEach(btn => {
+      btn.onclick = () => {
+        _affixeChoisi = btn.dataset.affixe;
+        _rendreSelecteurAffixe();
         _rendreApercuModalLoot();
       };
     });

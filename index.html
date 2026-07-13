@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=54" />
+  <link rel="stylesheet" href="css/style.css?v=55" />
 </head>
 <body>
   <header>
@@ -549,11 +549,13 @@
         <div class="loot-item-desc-modal" id="modal-loot-item-desc"></div>
         <div class="loot-item-effet-modal" id="modal-loot-item-effet" style="display:none;"></div>
         <div class="loot-item-effet-modal" id="modal-loot-item-effet-materiau" style="display:none;"></div>
+        <div class="loot-item-effet-modal" id="modal-loot-item-effet-affixe" style="display:none;"></div>
       </div>
       <div class="loot-modal-materiau" id="modal-loot-materiau" style="display:none;"></div>
       <div class="loot-modal-materiau-rang" id="modal-loot-materiau-rang" style="display:none;"></div>
       <div class="loot-modal-rarete" id="modal-loot-rarete"></div>
       <div class="loot-modal-variante" id="modal-loot-variante" style="display:none;"></div>
+      <div class="loot-modal-variante" id="modal-loot-affixe" style="display:none;"></div>
       <div class="loot-modal-destinataire" id="modal-loot-destinataire" style="display:none;">
         <label for="select-don-destinataire">Donner à</label>
         <select id="select-don-destinataire"></select>
@@ -649,7 +651,7 @@
   <script src="js/carte-monde.js?v=9"></script>
   <!-- Modèle OOP (Phase 1) : socle additif, n'altère pas l'app existante -->
   <script src="js/entite.js?v=2"></script>
-  <script src="js/personnage.js?v=16"></script>
+  <script src="js/personnage.js?v=17"></script>
   <!-- Firebase (SDK compat : garde une syntaxe classique, pas de modules/build tool) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -659,11 +661,12 @@
   <script src="js/carte.js?v=57"></script>
   <script src="js/raretes.js?v=5"></script>
   <script src="js/materiaux.js?v=1"></script>
+  <script src="js/affixes.js?v=1"></script>
   <script src="js/enchantement.js?v=1"></script>
   <script src="js/alchimie.js?v=1"></script>
-  <script src="js/loot.js?v=9"></script>
+  <script src="js/loot.js?v=10"></script>
   <script src="js/capacites.js?v=5"></script>
   <script src="js/combat.js?v=5"></script>
-  <script src="js/app.js?v=72"></script>
+  <script src="js/app.js?v=73"></script>
 </body>
 </html>

@@ -256,14 +256,22 @@ class Personnage extends Entite {
   }
 
   // Seuil de critique pour un type d'attaque donné ("contact"/"distance"/
-  // "magique") : 20 par défaut, abaissé par certaines capacités.
+  // "magique") : 20 par défaut, abaissé par certaines capacités ou par
+  // l'affixe de loot "Aiguisé" sur l'arme réellement utilisée pour ce type
+  // (cf. js/affixes.js) — les deux sources se cumulent en gardant la
+  // meilleure (la plus basse). "magique" n'a pas d'arme associée.
   critMinAttaque(type) {
+    let seuil = 20;
     // Guerrier — Voie de l'élite, rang 3 "Précision létale" (passive) :
     // critique sur 19-20 au lieu de 20, uniquement sur les attaques au contact.
     if (type === "contact" && this.classe === "guerrier" && this.estChoisie("Voie de l'élite", 3)) {
-      return 19;
+      seuil = 19;
     }
-    return 20;
+    const arme = type === "contact" ? this.armeContactEquipee()
+      : type === "distance" ? this.armeDistanceEquipee()
+      : null;
+    if (arme && arme.critMin) seuil = Math.min(seuil, arme.critMin);
+    return seuil;
   }
 
   // Bonus de DEF accordés par certaines capacités passives et permanentes.

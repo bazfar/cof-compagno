@@ -352,10 +352,15 @@ const App = (() => {
     // les dégâts à mains nues du Moine (Voie des poings) le cas échéant. En
     // bi-arme (mêlée + arme courte en main secondaire), combine les deux
     // formules — cf. Personnage.armeCourteSecondaire.
+    // bonusDegatsAffixe : bonus de dégâts fixe de l'affixe de loot "Folie"
+    // (js/affixes.js), mécanisé ici comme un terme additionnel de la formule
+    // (au même titre que l'enchantement/bonusDegatsTotal), à la différence du
+    // bonus SUR critique de "Aiguisé" qui reste descriptif (cf. affixes.js).
     const formuleDegats = (arme) => {
       if (!arme) return null;
       const bonus = arme.bonusDegatsTotal !== undefined ? arme.bonusDegatsTotal : (arme.enchantement || 0);
-      return arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
+      const base = arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
+      return arme.bonusDegatsAffixe ? base + "+" + arme.bonusDegatsAffixe : base;
     };
     // Dons mécaniques Frappe puissante/Tir de précision (cf. rendreDockCombat) :
     // les bascules sont pilotées depuis le dock (togglesDons, état module
@@ -634,10 +639,15 @@ const App = (() => {
     const armeDistance = perso.armeDistanceEquipee();
     const attMagique = perso.bonusAttaque("magique");
     const armeContact = perso.armeContactEquipee();
+    // bonusDegatsAffixe : bonus de dégâts fixe de l'affixe de loot "Folie"
+    // (js/affixes.js), mécanisé ici comme un terme additionnel de la formule
+    // (au même titre que l'enchantement/bonusDegatsTotal), à la différence du
+    // bonus SUR critique de "Aiguisé" qui reste descriptif (cf. affixes.js).
     const formuleDegats = (arme) => {
       if (!arme) return null;
       const bonus = arme.bonusDegatsTotal !== undefined ? arme.bonusDegatsTotal : (arme.enchantement || 0);
-      return arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
+      const base = arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
+      return arme.bonusDegatsAffixe ? base + "+" + arme.bonusDegatsAffixe : base;
     };
     // Dons mécaniques Frappe puissante (contact, arme deux_mains) / Tir de
     // précision (distance) : -2 au jet d'attaque pour +4 aux dégâts, au choix
@@ -3202,6 +3212,7 @@ const App = (() => {
             ${badge ? `<div class="inv-item-stats">${echapper(badge)}</div>` : ""}
             ${it.effetRarete ? `<div class="inv-item-stats" style="color:${it.rareteCouleur || ""}">✨ ${echapper(it.effetRarete)}</div>` : ""}
             ${it.materiauEffet ? `<div class="inv-item-stats" style="color:var(--or);">🔥 ${echapper(it.materiauEffet)}</div>` : ""}
+            ${it.effetAffixe ? `<div class="inv-item-stats" style="color:var(--or);">⚔ ${echapper(it.effetAffixe)}</div>` : ""}
             ${it.bonusAttaqueMagique ? `<div class="inv-item-stats">+${it.bonusAttaqueMagique} attaque magique</div>` : ""}
             ${it.description ? `<div class="inv-item-desc">${echapper(it.description)}</div>` : ""}
             <div class="inv-actions">
