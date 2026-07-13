@@ -1,0 +1,72 @@
+/* ============================================================
+   Dons — bonus descriptifs gratuits acquis aux niveaux 4, 8 et 12
+   (cf. REGLES_GENERALES dans data/donnees.js pour le contexte des
+   paliers et js/personnage.js pour le champ `dons` du personnage).
+   Appliqués manuellement par le joueur en jeu, comme les effets
+   d'accessoires (js/raretes.js) ou les capacités textuelles ci-dessus —
+   aucune automatisation de calcul de dégâts/DEF ici.
+   ============================================================ */
+
+const DONS = [
+  { id: "frappe_puissante", nom: "Frappe puissante", categorie: "combat",
+    effet: "Avec une arme deux_mains : accepte -2 au jet d'attaque pour +4 aux dégâts, au choix à chaque attaque." },
+
+  { id: "tir_precision", nom: "Tir de précision", categorie: "combat",
+    effet: "Avec une arme à distance : accepte -2 au jet d'attaque pour +4 aux dégâts. Ignore les bonus de couverture partielle de la cible." },
+
+  { id: "combattant_duel", nom: "Combattant en duel", categorie: "combat",
+    effet: "Tant que vous ne maniez qu'une seule arme (une main libre, ni bouclier ni seconde arme) et qu'un seul adversaire vous est adjacent : +2 DEF." },
+
+  { id: "ambidextre", nom: "Ambidextre", categorie: "combat",
+    effet: "Permet d'équiper une arme à une main dans chaque main (sans bouclier). Réduit de -4 à -2 le malus au jet d'attaque de la règle de combat à deux armes." },
+
+  { id: "maitre_armes_doubles", nom: "Maître d'armes doubles", categorie: "combat",
+    effet: "Retire le malus restant de la règle de combat à deux armes (attaques à jet normal). Permet en plus d'équiper une arme longue en main secondaire (au lieu de courte uniquement)." },
+
+  { id: "expert_hast", nom: "Expert en hast", categorie: "combat",
+    effet: "Avec une arme deux_mains à allonge (lance, hallebarde, pique, glaive de guerre) : +1 dégâts, et attaque d'opportunité bonus quand un ennemi entre à contact avec vous." },
+
+  { id: "sentinelle", nom: "Sentinelle", categorie: "combat",
+    effet: "Une cible qui quitte votre portée de contact subit une attaque d'opportunité même via une action de retrait organisé ; cette attaque réduit son déplacement à 0 pour le reste du tour." },
+
+  { id: "robuste", nom: "Robuste", categorie: "defense",
+    effet: "+2 PV par niveau, rétroactif sur tous les niveaux déjà acquis." },
+
+  { id: "maitre_armures_moyennes", nom: "Maître des armures moyennes", categorie: "defense",
+    effet: "Armure équipée avec valeurArmure 3-4 : aucun malus de Discrétion, et le plafond de bonus DEX passe de +2 à +3." },
+
+  { id: "maitre_armures_lourdes", nom: "Maître des armures lourdes", categorie: "defense",
+    effet: "Armure équipée avec valeurArmure 5+ : réduit de 3 les dégâts physiques subis, avant application de valeurArmure." },
+
+  { id: "expert_bouclier", nom: "Expert du bouclier", categorie: "defense",
+    effet: "Bouclier équipé : +2 aux jets de résistance Réflexes ; 1 fois par tour, réaction pour réduire de moitié des dégâts subis." },
+
+  { id: "alerte", nom: "Alerte", categorie: "perception",
+    effet: "+5 Initiative. Ne peut jamais être surpris." },
+
+  { id: "mobile", nom: "Mobile", categorie: "mobilite",
+    effet: "+1 case de déplacement. Ignore le terrain difficile après avoir attaqué un ennemi au contact ce tour. Ne provoque jamais d'attaque d'opportunité en s'éloignant d'une cible qu'il vient de frapper." },
+
+  { id: "fouilleur_donjon", nom: "Fouilleur de donjon", categorie: "exploration",
+    effet: "Avantage (relance en gardant le meilleur résultat) sur les jets de Perception liés aux pièges et passages secrets." },
+
+  { id: "athlete", nom: "Athlète", categorie: "exploration",
+    effet: "+1 FOR ou DEX au choix. Aucun malus au premier mètre d'escalade, de saut ou de nage." },
+
+  { id: "doue", nom: "Doué", categorie: "social",
+    effet: "+1 CHA lors des conversations (jets de Bluff, Intimidation, Représentation, Persuasion en dialogue, hors combat)." },
+
+  { id: "acteur", nom: "Acteur", categorie: "social",
+    effet: "Avantage sur les jets de CHA liés à l'imitation ou la tromperie. Peut imiter une voix déjà entendue." },
+
+  { id: "initie_arcanes", nom: "Initié aux arcanes", categorie: "magie",
+    effet: "Apprend la capacité de rang 1 d'une Voie d'une autre classe, au choix. Ne progresse jamais au-delà de ce rang 1 via ce don." },
+
+  { id: "chanceux", nom: "Chanceux", categorie: "utilitaire",
+    effet: "3 points de chance par jour. Dépenser un point pour relancer un jet raté (le sien, ou imposer la relance d'un jet qu'un ennemi vient de réussir contre lui)." },
+
+  { id: "amelioration_carac", nom: "Amélioration de caractéristique", categorie: "stat",
+    effet: "+1 à deux caractéristiques au choix. Plafond 18, sauf pour les caractéristiques d'affinité raciale qui montent à 20 : Elfe (INT, DEX) ; Nain / Demi-orc (CON, FOR) ; Demi-gobelin (DEX, INT)." },
+];
+
+if (typeof window !== "undefined") { window.DONS = DONS; }

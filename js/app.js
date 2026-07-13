@@ -1214,6 +1214,31 @@ const App = (() => {
     if (modal) modal.style.display = "none";
   }
 
+  // Sélecteur de Don (niveaux 4/8/12, cf. data/dons.js) : un seul choix, jamais
+  // de doublon avec un don déjà acquis (donsDejaPris = tableau d'ids).
+  function ouvrirModalChoixDon(donsDejaPris, onChoisi) {
+    const modal = document.getElementById("modal-choix-don");
+    const zone = document.getElementById("modal-choix-don-options");
+    if (!modal || !zone || typeof DONS === "undefined") return;
+    const disponibles = DONS.filter((d) => !(donsDejaPris || []).includes(d.id));
+    zone.innerHTML = "";
+    disponibles.forEach((don) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn or";
+      btn.style.textAlign = "left";
+      btn.innerHTML = `<strong>${don.nom}</strong><br><span style="font-weight:400;font-size:0.8rem;">${don.effet}</span>`;
+      btn.onclick = () => { fermerModalChoixDon(); onChoisi(don.id); };
+      zone.appendChild(btn);
+    });
+    modal.style.display = "flex";
+  }
+
+  function fermerModalChoixDon() {
+    const modal = document.getElementById("modal-choix-don");
+    if (modal) modal.style.display = "none";
+  }
+
   // Libellé lisible du choix mémorisé sur une capacité (ex. "+2 DEF permanent"),
   // pour le rappeler sur la fiche de création une fois le choix fait.
   function _labelChoixCapacite(voieNom, rang, valeur) {
@@ -2298,6 +2323,18 @@ const App = (() => {
     return capHtml;
   }
 
+  // Dons acquis (p.dons, cf. data/dons.js) — bonus descriptifs appliqués
+  // manuellement par le joueur, comme les capacités textuelles ci-dessus.
+  function htmlDons(p) {
+    const ids = p.dons || [];
+    if (!ids.length) return `<div class="vide">Aucun don acquis.</div>`;
+    return ids.map((id) => {
+      const don = (typeof DONS !== "undefined") && DONS.find((d) => d.id === id);
+      if (!don) return "";
+      return `<div class="cap-fiche"><div class="titre-cap">${don.nom}</div><div class="effet-cap">${don.effet}</div></div>`;
+    }).join("");
+  }
+
   // Capacités de la voie raciale débloquées (p.capacitesRace) + variante
   // elfique éventuelle — même logique de factorisation que ci-dessus.
   function htmlCapacitesRace(p, race) {
@@ -3216,6 +3253,12 @@ const App = (() => {
 
           ${race ? `<div class="carte"><h3>Capacités raciales — ${race.voie_nom}</h3>${capRaceHtml}</div>` : ""}
 
+          ${perso.donsRequis() > 0 ? `<div class="carte">
+            <h3>Dons</h3>
+            ${htmlDons(p)}
+            ${perso.donsManquants() > 0 ? `<button class="btn petit or" id="btn-choisir-don" style="margin-top:8px;">🎁 Choisir un don (niveau ${niveau})</button>` : ""}
+          </div>` : ""}
+
           <div class="carte">
             <h3>Notes</h3>
             <textarea id="fiche-notes" rows="5" style="width:100%;resize:vertical;font-family:inherit;font-size:0.9rem;" placeholder="Notes libres (idées, quêtes en cours, objectifs...)">${echapper(p.notes || "")}</textarea>
@@ -3276,6 +3319,23 @@ const App = (() => {
     document.getElementById("btn-niveau-up").onclick = () => monterDeNiveau(id);
     document.getElementById("btn-editer-fiche").onclick = () => editerPerso(id);
     document.getElementById("btn-exporter-fiche").onclick = () => exporterPerso(id);
+    // Rattrapage d'un Don manquant (perso déjà à ce niveau avant l'introduction
+    // de la fonctionnalité, ou palier atteint sans choix fait) — persistance
+    // directe comme ajusterPv/definirNotes, sans passer par la création.
+    const btnChoisirDon = document.getElementById("btn-choisir-don");
+    if (btnChoisirDon) btnChoisirDon.onclick = () => {
+      ouvrirModalChoixDon(p.dons, (idDon) => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp) return;
+        if (!pp.dons) pp.dons = [];
+        pp.dons.push(idDon);
+        sauverPersos(persos);
+        const don = (typeof DONS !== "undefined") && DONS.find((d) => d.id === idDon);
+        toast(`Don choisi : ${don ? don.nom : idDon} ✔`);
+        afficherFiche(id);
+      });
+    };
 
     // Équipement — retirer un item équipé
     zone.querySelectorAll(".btn-desequiper").forEach((el) => {
@@ -3464,6 +3524,7 @@ const App = (() => {
     if (!creation.pvHistorique) creation.pvHistorique = []; // compat fiches créées avant le jet de PV par niveau
     if (typeof creation.pvNiveauActuel !== "number") creation.pvNiveauActuel = creation.niveau || 1;
     if (!creation.voiesHorsProfil) creation.voiesHorsProfil = []; // compat fiches créées avant les voies hors profil
+    if (!creation.dons) creation.dons = []; // compat fiches créées avant les Dons (niveaux 4/8/12)
     if (!creation.equipement) creation.equipement = Object.fromEntries(SLOTS_EQUIPEMENT.map((s) => [s, null])); // compat fiches créées avant les slots d'équipement
     if (!creation.inventaireListe) creation.inventaireListe = [];
     if (!creation.genre) creation.genre = "homme"; // compat fiches créées avant le choix du genre
@@ -3511,6 +3572,18 @@ const App = (() => {
 
     toast(`Niveau ${creation.niveau} ! +${gainPv} PV (total ${pvTotalActuel()}). Points de capacité : ${pointsVoieRestants()}/${pointsVoieTotal()}. Pense à enregistrer.`);
     allerEtape(2);
+
+    // Don gratuit aux niveaux 4/8/12 (cf. data/dons.js) : gratuit, n'entame pas
+    // les points de voie. Ne propose que s'il manque effectivement un choix
+    // pour le palier atteint (pas de doublon avec un don déjà pris).
+    if (!creation.dons) creation.dons = [];
+    if (Personnage.donsRequisPourNiveau(creation.niveau) > creation.dons.length) {
+      ouvrirModalChoixDon(creation.dons, (idDon) => {
+        creation.dons.push(idDon);
+        const don = (typeof DONS !== "undefined") && DONS.find((d) => d.id === idDon);
+        toast(`Don choisi : ${don ? don.nom : idDon}. Pense à enregistrer.`);
+      });
+    }
   }
 
   function supprimerPerso(id) {
@@ -4077,6 +4150,14 @@ const App = (() => {
     const modalChoixCapacite = document.getElementById("modal-choix-capacite");
     if (modalChoixCapacite) modalChoixCapacite.addEventListener("click", (e) => {
       if (e.target === e.currentTarget) fermerModalChoixCapacite();
+    });
+
+    // Modal choix d'un Don (niveaux 4/8/12)
+    const btnFermerModalDon = document.getElementById("btn-fermer-modal-choix-don");
+    if (btnFermerModalDon) btnFermerModalDon.onclick = fermerModalChoixDon;
+    const modalChoixDon = document.getElementById("modal-choix-don");
+    if (modalChoixDon) modalChoixDon.addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) fermerModalChoixDon();
     });
 
     // Dropdown Carte

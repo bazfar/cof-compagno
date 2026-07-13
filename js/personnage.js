@@ -35,6 +35,7 @@ class Personnage extends Entite {
         capacites: [],
         capacitesRace: [],
         voiesHorsProfil: [],
+        dons: [],
         portrait: null,
         pvMax: 1,
         pvActuel: null,
@@ -65,6 +66,9 @@ class Personnage extends Entite {
     this.capacites = d.capacites;
     this.capacitesRace = d.capacitesRace;
     this.voiesHorsProfil = d.voiesHorsProfil;
+    // Dons (niveaux 4/8/12, cf. data/dons.js) : tableau d'ids, bonus descriptifs
+    // appliqués manuellement par le joueur, comme les capacités textuelles.
+    this.dons = d.dons;
     this.portrait = d.portrait;
     this.pvHistorique = d.pvHistorique;
     this.pvNiveauActuel = d.pvNiveauActuel;
@@ -431,6 +435,22 @@ class Personnage extends Entite {
     if (niveau >= 8) return "1d10";
     if (niveau >= 4) return "1d8";
     return "1d6";
+  }
+
+  /* ----- Dons (niveaux 4/8/12) ----- */
+  // Nombre de Dons dus au niveau actuel : gratuits, indépendants des points de voie.
+  static donsRequisPourNiveau(niveau) {
+    let n = 0;
+    if (niveau >= 4) n++;
+    if (niveau >= 8) n++;
+    if (niveau >= 12) n++;
+    return n;
+  }
+  donsRequis() {
+    return Personnage.donsRequisPourNiveau(this.niveau || 1);
+  }
+  donsManquants() {
+    return Math.max(0, this.donsRequis() - (this.dons || []).length);
   }
 
   /* ----- Points de capacité (voies) ----- */

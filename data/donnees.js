@@ -1935,6 +1935,25 @@ const REGLES_GENERALES = [
       "Formule fixe de l'arme/capacité + modificateur de caractéristique. Les dégâts n'augmentent pas avec le niveau — seulement via les voies ou l'enchantement (+X fixe au dégât, jamais au jet d'attaque, plafond +5).",
   },
   {
+    titre: "Combat à deux armes",
+    contenu:
+      "Équiper une arme à une main dans chaque main (sans bouclier) est possible, mais sans le don Ambidextre, chaque attaque avec ces armes utilise la formule 1d20 + Mod.FOR - 4 au lieu du bonus d'attaque habituel du personnage. Le don Ambidextre réduit ce malus à -2. Le don Maître d'armes doubles retire ce malus restant et autorise en plus une arme de catégorie longue en main secondaire (normalement réservée aux armes courtes). Cette règle générique est indépendante des capacités de Voie qui accordent leurs propres attaques supplémentaires (ex. « Enchaînement » du Barde, Voie de l'escrime rang 4).",
+  },
+  {
+    titre: "Dons (niveaux 4, 8 et 12)",
+    contenu:
+      "Aux niveaux 4, 8 et 12 (soit 1, 2 et 3 voies de classe complètes, cf. pointsVoieTotal), chaque personnage obtient un Don gratuit au choix parmi la liste ci-dessous, en plus des points de voie habituels — aucune réduction de ceux-ci. Un personnage déjà à ces niveaux avant l'introduction de cette règle peut rattraper ses Dons manquants depuis sa fiche. Les Dons sont des bonus descriptifs, appliqués manuellement par le joueur en jeu, comme les effets d'accessoires ou les capacités textuelles — aucune automatisation de calcul de dégâts/DEF.\n\n" +
+      "Combat : Frappe puissante (arme deux_mains : -2 attaque / +4 dégâts au choix) · Tir de précision (arme à distance : -2 attaque / +4 dégâts, ignore couverture partielle) · Combattant en duel (arme unique, main libre, un seul adversaire adjacent : +2 DEF) · Ambidextre (permet deux armes à une main, malus de combat à deux armes réduit à -2) · Maître d'armes doubles (retire ce malus, autorise une arme longue en main secondaire) · Expert en hast (arme deux_mains à allonge : +1 dégâts, attaque d'opportunité bonus au contact) · Sentinelle (attaque d'opportunité même sur retrait organisé, réduit le déplacement de la cible à 0).\n\n" +
+      "Défense : Robuste (+2 PV par niveau, rétroactif) · Maître des armures moyennes (valeurArmure 3-4 : aucun malus de Discrétion, plafond DEX +3) · Maître des armures lourdes (valeurArmure 5+ : -3 dégâts physiques subis avant valeurArmure) · Expert du bouclier (bouclier équipé : +2 Réflexes, 1x/tour réduit de moitié des dégâts subis).\n\n" +
+      "Perception : Alerte (+5 Initiative, jamais surpris).\n\n" +
+      "Mobilité : Mobile (+1 case de déplacement, ignore terrain difficile après avoir attaqué au contact, jamais d'attaque d'opportunité en s'éloignant d'une cible frappée).\n\n" +
+      "Exploration : Fouilleur de donjon (avantage Perception sur pièges et passages secrets) · Athlète (+1 FOR ou DEX au choix, aucun malus au premier mètre d'escalade/saut/nage).\n\n" +
+      "Social : Doué (+1 CHA en conversation hors combat) · Acteur (avantage CHA imitation/tromperie, peut imiter une voix entendue).\n\n" +
+      "Magie : Initié aux arcanes (apprend le rang 1 d'une Voie d'une autre classe, plafonné à ce rang).\n\n" +
+      "Utilitaire : Chanceux (3 points de chance/jour, relance un jet raté ou impose la relance d'un jet ennemi réussi).\n\n" +
+      "Caractéristique : Amélioration de caractéristique (+1 à deux caractéristiques, plafond 18, ou 20 pour l'affinité raciale : Elfe INT/DEX, Nain/Demi-orc CON/FOR, Demi-gobelin DEX/INT).",
+  },
+  {
     titre: "Défense et initiative",
     contenu:
       "DEF : caractéristique fixe du personnage/monstre, modifiée par l'armure, les capacités et les états actifs (ex. Renversée -4 DEF, Gelée -2 DEF, Déstabilisée -2 DEF). Une attaque touche si le jet égale ou dépasse la DEF.\nInitiative : 1d20 + modificateur d'initiative en début de combat, détermine l'ordre des tours. Les monstres la lancent automatiquement, les joueurs cliquent pour lancer la leur.",
