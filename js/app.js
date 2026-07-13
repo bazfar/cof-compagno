@@ -636,6 +636,20 @@ const App = (() => {
     const etatC = Combat.etatCourant();
     const actifC = etatC.ordre[etatC.indexActuel];
     const cEstMonTour = !!(actifC && actifC.type === "pj" && actifC.id === id);
+    // État Mourant(e)/Mort (0 PV, cf. REGLES_GENERALES "Mort et stabilisation") :
+    // remplace la zone Attaques par le jet de mort (uniquement à son tour) tant
+    // que le perso n'est ni stabilisé ni mort ; plus aucune action une fois mort.
+    const estMourant = pv <= 0 && !p.etatMort;
+    const estMort = !!p.etatMort;
+    // Alliés à relever (Mourant·e OU Renversée) — n'importe quel autre PJ,
+    // pas seulement ceux présents dans l'ordre d'initiative (cf. releverAllie).
+    const alliesARelever = Object.keys(persos).filter((pid) => {
+      if (pid === id) return false;
+      const d = persos[pid];
+      const dMourant = (d.pvActuel || 0) <= 0 && !d.etatMort;
+      const dRenversee = (d.etatsActifs || []).some((e) => e.idEtat === "renversee");
+      return dMourant || dRenversee;
+    });
 
     const attTiles = [
       `<button class="dock-tuile" data-bm-attaque="contact" data-bonus="${attContact}"><span class="dock-ic">⚔️</span><span class="dock-lbl">Contact ${signe(attContact)}</span></button>`,
@@ -699,10 +713,28 @@ const App = (() => {
           </div>
         </div>
       </div>
-      <div class="dock-zone">
+      ${estMort ? `<div class="dock-zone">
+        <div class="dock-zone-titre">💀 Mort</div>
+        <p class="aide" style="margin:0;">Plus aucune action possible.</p>
+      </div>` : estMourant ? `<div class="dock-zone">
+        <div class="dock-zone-titre">🩸 Mourant(e) — Succès ${p.mortSucces || 0}/3 · Échecs ${p.mortEchecs || 0}/3</div>
+        ${cEstMonTour
+          ? `<div class="dock-tuiles"><button class="dock-tuile" id="dock-btn-jet-mort"><span class="dock-ic">🎲</span><span class="dock-lbl">Jet de mort</span></button></div>`
+          : `<p class="aide" style="margin:0;">Attends ton tour pour lancer ton jet de mort.</p>`}
+      </div>` : `<div class="dock-zone">
         <div class="dock-zone-titre">Attaques</div>
         <div class="dock-tuiles">${attTiles.join("")}</div>
-      </div>
+      </div>`}
+      ${alliesARelever.length ? `<div class="dock-zone">
+        <div class="dock-zone-titre">Relever un allié</div>
+        <div class="dock-tuiles">
+          <button class="dock-tuile" id="dock-btn-relever"${entreeActions && entreeActions.actionPrincipaleUtilisee ? " disabled" : ""}><span class="dock-ic">🤝</span><span class="dock-lbl">Relever un allié</span></button>
+        </div>
+        <div class="relever-allie-form" style="display:none;margin-top:6px;">
+          <select class="relever-allie-select">${alliesARelever.map((pid) => `<option value="${pid}">${echapper(persos[pid].nom)}</option>`).join("")}</select>
+          <button class="btn petit or btn-confirmer-relever">Relever</button>
+        </div>
+      </div>` : ""}
       <div class="dock-zone">
         <div class="dock-zone-titre">Jets de carac</div>
         <div class="dock-tuiles">${CARACS.map((cc) => `<button class="dock-tuile dock-stat" data-test="${cc.code}" title="Test de ${cc.code}"><span class="dock-stat-code">${cc.code}</span><span class="dock-lbl">${signe(mods[cc.code])}</span></button>`).join("")}</div>
@@ -742,6 +774,18 @@ const App = (() => {
         rendreDockCombat();
       };
     });
+    const btnJetMort = dock.querySelector("#dock-btn-jet-mort");
+    if (btnJetMort) btnJetMort.onclick = () => jetDeMort(id);
+    const btnRelever = dock.querySelector("#dock-btn-relever");
+    if (btnRelever) btnRelever.onclick = () => {
+      const form = dock.querySelector(".relever-allie-form");
+      if (form) form.style.display = form.style.display === "none" ? "block" : "none";
+    };
+    const btnConfirmerRelever = dock.querySelector(".btn-confirmer-relever");
+    if (btnConfirmerRelever) btnConfirmerRelever.onclick = () => {
+      const destId = dock.querySelector(".relever-allie-select").value;
+      releverAllie(id, destId);
+    };
     // Jets de caractéristique (d20 + mod) — sans quitter la battlemap
     // (l'overlay de jet est visible sur tous les onglets, cf. #overlay-jet).
     dock.querySelectorAll("[data-test]").forEach((el) => {
@@ -3507,8 +3551,10 @@ const App = (() => {
     if (!p) return;
     const avant = p.pvActuel;
     p.pvActuel = Math.max(0, Math.min(p.pvMax, p.pvActuel + montant));
+    const transition = _majEtatMourant(p, avant);
     sauverPersos(persos);
     _syncPvAffichages(id, p);
+    if (transition) _rerendreApresTransitionMourant(id);
     const gain = p.pvActuel - avant;
     toast(`❤ ${p.nom} récupère ${gain} PV${source ? " (" + source + ")" : ""}.`);
   }
@@ -3604,6 +3650,71 @@ const App = (() => {
     }, 1800);
   }
 
+  // Jet de mort (état Mourant, 0 PV, cf. REGLES_GENERALES "Mort et
+  // stabilisation") : 1d20, ≥11 = succès. 3 succès = stabilisé à 1 PV
+  // (jet de mort remis à zéro). 3 échecs = mort (etatMort, plus aucun jet,
+  // tour définitivement sauté — cf. Combat._estKO). Uniquement disponible à
+  // son propre tour (cf. bouton câblé sur cEstMonTour dans rendreDockCombat).
+  function jetDeMort(id) {
+    const persos = chargerPersos();
+    const p = persos[id];
+    if (!p || p.pvActuel > 0 || p.etatMort) return;
+    const d20 = lancerDe(20);
+    const reussite = d20 >= 11;
+    if (reussite) p.mortSucces = (p.mortSucces || 0) + 1;
+    else p.mortEchecs = (p.mortEchecs || 0) + 1;
+
+    let issue = "";
+    if (p.mortSucces >= 3) {
+      p.pvActuel = 1;
+      p.mortSucces = 0;
+      p.mortEchecs = 0;
+      p.etatMort = false;
+      issue = ` ${p.nom} se stabilise et rouvre les yeux (1 PV) !`;
+    } else if (p.mortEchecs >= 3) {
+      p.etatMort = true;
+      issue = ` ${p.nom} succombe...`;
+    }
+    ajouterHisto(`${p.nom} — Jet de mort`, d20, d20 === 20, d20 === 1,
+      `d20 [${d20}] → ${reussite ? "succès" : "échec"} (${p.mortSucces || 0}/3 succès, ${p.mortEchecs || 0}/3 échecs)`);
+    sauverPersos(persos);
+    _syncPvAffichages(id, p);
+    toast(`🎲 Jet de mort (${d20}) : ${reussite ? "succès" : "échec"}.${issue}`);
+    if (ficheActiveId === id) afficherFiche(id);
+    rendreDockCombat();
+  }
+
+  // Relève un allié Mourant(e) (stabilise à 1 PV, sans jet) ou Renversée
+  // (retire l'état, sans jet non plus) — action principale, consomme
+  // Combat.utiliserActionPrincipale comme les attaques. Contrairement à
+  // soignerAllie (soin), ne consomme aucun objet et réussit toujours : c'est
+  // le fait d'y consacrer son action qui fait la différence, pas un test.
+  function releverAllie(persoId, destId) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    const dest = persos[destId];
+    if (!p || !dest) return;
+    const estMourant = (dest.pvActuel || 0) <= 0 && !dest.etatMort;
+    const idxRenversee = (dest.etatsActifs || []).findIndex((e) => e.idEtat === "renversee");
+    if (!estMourant && idxRenversee === -1) { toast(`${dest.nom} n'a besoin d'être ni stabilisé·e ni relevé·e.`); return; }
+
+    if (estMourant) {
+      dest.pvActuel = 1;
+      dest.mortSucces = 0;
+      dest.mortEchecs = 0;
+      dest.etatMort = false;
+    }
+    if (idxRenversee !== -1) dest.etatsActifs.splice(idxRenversee, 1);
+
+    sauverPersos(persos);
+    if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(persoId);
+    toast(`🤝 ${p.nom} relève ${dest.nom}${estMourant ? " (stabilisé·e, 1 PV)" : " (debout)"}.`);
+    _syncPvAffichages(destId, dest);
+    if (ficheActiveId === destId) afficherFiche(destId);
+    rendreFicheSidebarBattlemap(ficheSidebarActiveId);
+    rendreDockCombat();
+  }
+
   function afficherFiche(id) {
     const persos = chargerPersos();
     const p = persos[id];
@@ -3667,6 +3778,9 @@ const App = (() => {
               <div class="stat-box"><div class="label">DEF</div><div class="valeur">${perso.calculerDEF()}</div></div>
               <div class="stat-box"><div class="label">Initiative</div><div class="valeur">${signe(init)}</div></div>
             </div>
+
+            ${perso.estMort() ? `<p class="aide" style="color:#c0392b;font-weight:700;">💀 Mort.</p>`
+              : perso.estMourant() ? `<p class="aide" style="color:#c0392b;font-weight:700;">🩸 Mourant(e) — Succès ${p.mortSucces || 0}/3 · Échecs ${p.mortEchecs || 0}/3. Jet de mort à son tour (onglet Battlemap) ou stabilisation via « Relever un allié ».</p>` : ""}
 
             <div class="stats-rapides">
               ${CARACS.map((cc) =>
@@ -3896,19 +4010,50 @@ const App = (() => {
       majBarrePvSidebar(p);
     }
   }
+  // Bascule l'état Mourant(e) (cf. REGLES_GENERALES "Mort et stabilisation")
+  // à chaque franchissement du seuil de 0 PV : remet à zéro le jet de mort en
+  // entrant (0 PV) comme en sortant (soin au-dessus de 0). Ne touche à rien
+  // si le perso reste déjà à 0 PV (jet de mort en cours) ou déjà au-dessus.
+  // Renvoie true si le perso vient d'entrer/sortir de l'état Mourant(e) — les
+  // callers doivent alors forcer un re-rendu complet (afficherFiche/dock),
+  // au-delà du simple _syncPvAffichages (barre + input PV), pour que le
+  // badge Mourant/Mort et les boutons du dock (jet de mort, Relever un allié)
+  // reflètent le changement sans attendre une réouverture manuelle de la fiche.
+  function _majEtatMourant(p, pvAvant) {
+    const etaitMourant = (pvAvant || 0) <= 0;
+    const estMourant = (p.pvActuel || 0) <= 0;
+    if (etaitMourant === estMourant) return false;
+    p.mortSucces = 0;
+    p.mortEchecs = 0;
+    p.etatMort = false;
+    return true;
+  }
+  // Re-rendu complet des vues affectées par une bascule d'état Mourant(e) —
+  // mêmes cibles que releverAllie/jetDeMort.
+  function _rerendreApresTransitionMourant(id) {
+    if (ficheActiveId === id) afficherFiche(id);
+    rendreFicheSidebarBattlemap(ficheSidebarActiveId);
+    rendreDockCombat();
+  }
   function ajusterPv(id, delta) {
     const persos = chargerPersos();
     const p = persos[id];
+    const pvAvant = p.pvActuel;
     p.pvActuel = Math.max(0, Math.min(p.pvMax, p.pvActuel + delta));
+    const transition = _majEtatMourant(p, pvAvant);
     sauverPersos(persos);
     _syncPvAffichages(id, p);
+    if (transition) _rerendreApresTransitionMourant(id);
   }
   function definirPv(id, val) {
     const persos = chargerPersos();
     const p = persos[id];
+    const pvAvant = p.pvActuel;
     p.pvActuel = isNaN(val) ? p.pvActuel : Math.max(0, Math.min(p.pvMax, val));
+    const transition = _majEtatMourant(p, pvAvant);
     sauverPersos(persos);
     _syncPvAffichages(id, p);
+    if (transition) _rerendreApresTransitionMourant(id);
   }
 
   // Notes libres de la fiche vivante (idées, quêtes en cours...) — éditables
@@ -3933,9 +4078,12 @@ const App = (() => {
     const perso = Personnage.depuisJSON(p);
     const reduction = perso.reductionDegats();
     const degatsNets = Math.max(0, degatsBruts - reduction);
+    const pvAvant = p.pvActuel;
     p.pvActuel = Math.max(0, p.pvActuel - degatsNets);
+    const transition = _majEtatMourant(p, pvAvant);
     sauverPersos(persos);
     _syncPvAffichages(id, p);
+    if (transition) _rerendreApresTransitionMourant(id);
     toast(reduction > 0
       ? `🛡 ${degatsBruts} dégâts subis → ${degatsNets} après réduction d'armure (−${reduction}).`
       : `${degatsNets} dégâts subis.`);

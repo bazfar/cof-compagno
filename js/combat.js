@@ -216,7 +216,15 @@ const Combat = (() => {
     const p = App.chargerPersos()[entree.id];
     return p ? (p.pvActuel ?? p.pvMax ?? 0) : null;
   }
+  // Un PJ à 0 PV est Mourant(e), pas KO : il garde son tour pour lancer son
+  // jet de mort (cf. REGLES_GENERALES "Mort et stabilisation") — son tour
+  // n'est sauté qu'une fois etatMort=true (3 échecs). Un monstre à 0 PV reste
+  // simplement hors combat, aucun jet de mort pour eux.
   function _estKO(entree) {
+    if (entree.type === "pj") {
+      const p = App.chargerPersos()[entree.id];
+      return !!(p && p.etatMort);
+    }
     const pv = _pvActuel(entree);
     return typeof pv === "number" && pv <= 0;
   }

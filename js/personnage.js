@@ -51,6 +51,14 @@ class Personnage extends Entite {
         corruptionCombat: 0,
         corruptionMajeure: 0,
         corruptionSeuilFranchi: false,
+        // État Mourant(e) (0 PV, cf. REGLES_GENERALES "Mort et stabilisation") :
+        // compteurs du jet de mort en cours, remis à zéro à chaque franchissement
+        // du seuil de 0 PV (cf. js/app.js _majEtatMourant). etatMort=true une
+        // fois 3 échecs atteints — plus aucun jet de mort, tour définitivement
+        // sauté (cf. Combat._estKO).
+        mortSucces: 0,
+        mortEchecs: 0,
+        etatMort: false,
       },
       data
     );
@@ -95,6 +103,10 @@ class Personnage extends Entite {
     this.corruptionCombat = d.corruptionCombat;
     this.corruptionMajeure = d.corruptionMajeure;
     this.corruptionSeuilFranchi = d.corruptionSeuilFranchi;
+    // État Mourant(e) — cf. estMourant()/estMort() ci-dessous.
+    this.mortSucces = d.mortSucces;
+    this.mortEchecs = d.mortEchecs;
+    this.etatMort = d.etatMort;
 
     // Migration douce : l'ancien champ libre `inventaire` (string) devient un
     // item texte libre dans inventaireListe, pour ne rien perdre à la casse
@@ -577,6 +589,15 @@ class Personnage extends Entite {
   }
   donsManquants() {
     return Math.max(0, this.donsRequis() - (this.dons || []).length);
+  }
+
+  /* ----- Mort et stabilisation ----- */
+  // 0 PV, jet de mort toujours en cours (ni stabilisé ni mort).
+  estMourant() {
+    return (this.pvActuel || 0) <= 0 && !this.etatMort;
+  }
+  estMort() {
+    return !!this.etatMort;
   }
 
   /* ----- Points de capacité (voies) ----- */
