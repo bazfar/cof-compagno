@@ -1914,6 +1914,108 @@ const PNJ_CLES = [
 ];
 
 /* ============================================================
+   FACTIONS (page "Lore" > onglet "Factions")
+   Un groupe = un camp politique (Empire, République...), chacun avec ses
+   entités internes (maisons/blocs) et une synthèse des rapports de force.
+   ============================================================ */
+const FACTIONS = [
+  {
+    groupe: "Empire de Solvarn",
+    intro:
+      "Quatre grandes maisons ont fait sécession lors de la Rupture pour fonder les Royaumes Coalisés (Valdorne, Arveth, Mornac, Serval). Quatre autres sont restées fidèles au trône de Solmaris. Narrativement, huit maisons issues du même Premier Empire — quatre qui ont trahi, quatre qui ont tenu bon, chacune des loyalistes reflétant, sous une forme corrompue par la doctrine impériale, la vertu qui a poussé son miroir sécessionniste à partir.",
+    entites: [
+      {
+        nom: "Maison Ashe — Le Glaive",
+        devise: "Un ordre, une lame.",
+        figure: "Grand Maréchal Théodren Ashe, arrière-petit-fils du Haut-Maréchal Corvain Ashe (Siège de Mornhaven). Rigide, incorruptible en apparence — use la doctrine de son aïeul comme un dogme figé plutôt qu'une conviction vivante.",
+        insigne: "Soleil noir sur bronze, deux lames croisées.",
+        controle: "Commande l'armée impériale régulière, forme les officiers, supervise (sans les diriger) les Chevaliers-Inquisiteurs.",
+        fracture: "Son fils cadet Ilyan Ashe doute depuis Mornhaven — pas de la cause, de la méthode — et a été écarté du commandement plutôt que réduit au silence publiquement.",
+        miroir: "Valdorne, la chevalerie sincère devenue discipline totale.",
+      },
+      {
+        nom: "Maison Solenne — La Flamme",
+        devise: "La lumière ne négocie pas.",
+        figure: "Grande Sacerdotesse Yvelle Solenne, charismatique, absolument sincère dans sa foi — ce qui la rend plus dangereuse qu'une cynique.",
+        insigne: "Flamme dorée à sept pointes sur pourpre.",
+        controle: "Tient le Temple-Mère, légitime la lignée impériale, supervise doctrinalement les Chevaliers-Inquisiteurs.",
+        fracture: "Les \"Cendres Blanches\", faction jeune du clergé, prônent une purification encore plus radicale — tolérées comme bras armé idéologique, elles commencent à échapper à son contrôle.",
+        miroir: "Aucun miroir sécessionniste direct : Solenne est le cœur idéologique de l'Empire.",
+      },
+      {
+        nom: "Maison Vosgard — La Bourse",
+        devise: "Ce qui se compte, se gouverne.",
+        figure: "Intendant Général Bastian Vosgard, administrateur brillant, sans conviction religieuse réelle.",
+        insigne: "Balance dorée sur gris-bleu.",
+        controle: "Trésorerie impériale, impôts provinciaux, logistique militaire — Ashe dépend de lui autant que de ses propres officiers.",
+        fracture: "Certains agents Vosgard vendent des renseignements économiques à Mornac, par intérêt commercial plus que par trahison idéologique.",
+        miroir: "Mornac, le pragmatisme marchand devenu corruption structurelle.",
+      },
+      {
+        nom: "Maison Kestrel — Les Marches",
+        devise: "La peur tient mieux qu'un traité.",
+        figure: "Margravine Sélène Kestrel, dure, pragmatique, façonnée par des décennies de guerre frontalière contre Aetharion et les passes disputées avec Khazrak Dûm.",
+        insigne: "Faucon gris plongeant sur blanc glacé.",
+        controle: "Défend les Marches orientales, gère les garnisons frontalières et un réseau d'éclaireurs au-delà des lignes.",
+        fracture: "Maquille ses rapports envoyés à Ashe pour cacher l'épuisement réel de ses garnisons sous-équipées.",
+        miroir: "Serval, même géographie montagnarde, logique opposée (alliance vs domination par la peur).",
+      },
+    ],
+    synthese:
+      "Rapports de force à la cour de Solmaris (contexte : guerre ouverte contre Aetharion, siège naval sans percée depuis 3 ans)\n\n1. Ashe — ascendante : l'armée est incontournable en temps de guerre, mais dépend entièrement de Vosgard pour le financement.\n2. Solenne — le levier silencieux : légitimité rituelle de l'Empereur, mais les Cendres Blanches échappent peu à peu à son contrôle.\n3. Vosgard — indispensable et méprisée : pouvoir structurel jamais honoré en public.\n4. Kestrel — puissante localement, marginale à la cour : isolée politiquement, dépend de renforts qui n'arrivent jamais vraiment.\n\nAxes de tension : Ashe ↔ Solenne (rivalité froide pour l'oreille de l'Empereur) ; Ashe ↔ Vosgard (dépendance forcée sans confiance) ; Solenne ↔ Vosgard (méfiance doctrinale, l'argent sent l'hérésie pragmatique) ; Kestrel isolée, traitée en subalterne par Ashe.\n\nCe qui pourrait faire basculer l'équilibre : l'aboutissement des négociations secrètes Arveth–Solvarn libérerait des troupes pour Aetharion et renforcerait Ashe ; une dérive incontrôlée des Cendres Blanches forcerait l'Empereur à trancher entre les maisons ; la révélation de la corruption Vosgard–Mornac pourrait pousser Ashe et Solenne à une alliance ponctuelle inédite ; la chute d'une garnison Kestrel faute de renfort exposerait publiquement le mensonge de ses rapports.",
+  },
+  {
+    groupe: "République de Liberra",
+    intro:
+      "Contrairement à l'Empire, la République ne repose pas sur une noblesse mais sur une Assemblée de citoyens divisée en cinq blocs politiques, reflétant fidèlement ses fractures internes déjà connues : marchands, idéalistes, militaires, communautés non-humaines — auxquelles s'ajoute un cinquième bloc né du ressentiment, les Fils de Libris.",
+    entites: [
+      {
+        nom: "Le Comptoir — bloc marchand",
+        devise: "Le fleuve ne choisit pas ses passagers.",
+        figure: "Consule Ilsabet Draeven, ancienne capitaine de commerce fluvial, pragmatique jusqu'à l'os.",
+        insigne: "Écharpe bleu-marine, sceau d'une balance posée sur une vague.",
+        controle: "Contrôle les routes commerciales de la Lisdane et les ports, finance une bonne partie du budget de l'Assemblée par les taxes portuaires.",
+        fracture: "Des guildes affiliées au Comptoir opèrent en sous-main jusque dans les provinces frontalières — le complot de guilde du Scénario 0 (Maître Aurèle Ferrand, le médaillon) est une ramification directe de ce bloc. Draeven ignore-t-elle vraiment ce que font ses guildes les plus zélées, ou ferme-t-elle les yeux tant que l'or rentre ?",
+      },
+      {
+        nom: "Le Serment de Libris — bloc idéaliste",
+        devise: "Ce que nous avons juré, nous le tiendrons.",
+        figure: "Consul Emeric Vasnal, vieillissant, l'un des derniers signataires encore vivants de la charte fondatrice.",
+        insigne: "Écharpe blanche, sceau d'une plume sur un livre ouvert.",
+        controle: "Faible en moyens concrets, fort en légitimité morale.",
+        fracture: "En perte de vitesse face aux blocs pragmatiques ; Vasnal cherche un successeur charismatique avant que le Serment ne devienne une relique symbolique sans pouvoir réel.",
+      },
+      {
+        nom: "La Garde Citoyenne — bloc militaire",
+        devise: "La liberté se défend, elle ne se proclame pas.",
+        figure: "Général-Consul Rohar Kessing, ancien officier de terrain, discipline avant tout.",
+        insigne: "Écharpe grise, sceau d'un bouclier croisé de deux lances.",
+        controle: "Contrôle la milice et la défense des frontières orientales — poids grandissant à mesure que la pression de Solvarn et les raids venus des Failles Rouges s'intensifient.",
+        fracture: "Certains officiers murmurent qu'une République sans hiérarchie forte ne survivra pas à une vraie guerre — tentation autoritaire qui inquiète le Serment de Libris.",
+      },
+      {
+        nom: "Le Cercle des Peuples — bloc communautés non-humaines",
+        devise: "Admis n'est pas égal.",
+        figure: "Conseillère Ythel Aelindra (majorité sylvaine), épaulée par une minorité mordanel en exil.",
+        insigne: "Écharpe verte, sceau d'une feuille entrelacée à une main.",
+        controle: "Représentation officielle garantie par la charte, mais poids réel disproportionnellement faible face aux sièges humains.",
+        fracture: "Pousse pour une réforme de représentation proportionnelle, combattue frontalement par les Fils de Libris — point de friction central de l'Assemblée.",
+      },
+      {
+        nom: "Les Fils de Libris — bloc suprémaciste",
+        devise: "Libris pour ceux qui l'ont bâtie.",
+        figure: "Tribun Corwan Dessalles, orateur populiste, ancien petit commerçant ruiné par la concurrence des guildes du Comptoir.",
+        insigne: "Écharpe rouge sombre, sceau d'un poing fermé sur une racine.",
+        controle: "Né du ressentiment économique et de la peur post-Silence de Valmoire — recrute chez les laissés-pour-compte du miracle marchand de la République.",
+        fracture: "Ironie centrale : ce bloc reproduit, sans se l'avouer, la rhétorique de pureté de Solvarn — l'ennemi même que la Sécession voulait fuir. Certains soupçonnent, sans preuve, des financements discrets venus de l'Empire pour déstabiliser la République de l'intérieur. Hook : un attentat ou une manifestation des Fils de Libris pourrait forcer les quatre autres blocs à une alliance de circonstance qu'ils détestent tous.",
+      },
+    ],
+    synthese:
+      "Rapports de force à l'Assemblée de Libris\n\n1. Le Comptoir — dominant : finance une bonne partie du budget de l'Assemblée, personne ne peut gouverner longtemps contre lui sans risquer la paralysie budgétaire.\n2. La Garde Citoyenne — en ascension rapide : la pression de Solvarn et les raids des Failles Rouges la rendent de plus en plus indispensable, et écoutée au-delà de son mandat strictement défensif.\n3. Les Fils de Libris — influence disproportionnée à son nombre réel de sièges : mobilisation de rue efficace, plus inquiétante que son poids électoral.\n4. Le Serment de Libris — autorité morale déclinante : peut encore mobiliser l'opinion en invoquant la charte fondatrice, mais de moins en moins de leviers concrets.\n5. Le Cercle des Peuples — représentation garantie, pouvoir réel le plus faible : sièges officiels sans poids proportionnel face aux blocs humains.\n\nAxes de tension : Comptoir ↔ Garde Citoyenne (alliance transactionnelle tendue sur les priorités budgétaires) ; Cercle des Peuples ↔ Fils de Libris (collision frontale et publique sur la représentation proportionnelle) ; Serment ↔ Cercle des Peuples (alliés idéologiques naturels mais sans moyens réels) ; Comptoir ↔ Fils de Libris (tension cachée — les guildes du Comptoir sont la cause économique directe du ressentiment qui nourrit les Fils) ; Garde Citoyenne ↔ Fils de Libris (flirt dangereux et non assumé entre discipline militaire et rhétorique d'ordre).\n\nCe qui pourrait faire basculer l'équilibre : la preuve d'un financement de Solvarn aux Fils de Libris unirait instantanément les quatre autres blocs contre eux ; un successeur charismatique pour Vasnal redonnerait du poids réel au Serment ; une trop grande montée en puissance de la Garde Citoyenne ferait craindre une dérive autoritaire ; l'issue de la réforme de représentation proportionnelle déterminerait si le Cercle des Peuples s'intègre durablement ou si les Fils de Libris gagnent un argument de recrutement supplémentaire.",
+  },
+];
+
+/* ============================================================
    RÈGLES GÉNÉRALES (page "Règles" > onglet "Général")
    Même format que LORE.sections ({ titre, contenu }) — rendu par
    js/app.js (rendreReglesGeneral), rien à dupliquer ailleurs.

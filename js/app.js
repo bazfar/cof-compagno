@@ -4152,6 +4152,56 @@ const App = (() => {
     });
   }
 
+  // Onglet "Factions" du panneau Lore — une carte par entité (maison/bloc)
+  // groupée par camp politique (FACTIONS, data/donnees.js), même charte
+  // visuelle que l'onglet PNJ (réutilise .pnj-carte/.pnj-entete/.badge-faction).
+  // Filtre par groupe optionnel, comme le filtre par faction de rendrePnjCles.
+  let _factionsGroupeFiltre = "";
+  function _couleurGroupeFaction(groupe, groupes) {
+    const idx = groupes.indexOf(groupe);
+    return PNJ_PALETTE_FACTIONS[idx % PNJ_PALETTE_FACTIONS.length];
+  }
+  function rendreFactions() {
+    const zone = document.getElementById("zone-lore-factions");
+    if (!zone || typeof FACTIONS === "undefined") return;
+    const groupes = FACTIONS.map((g) => g.groupe);
+    const filtreHtml = `<div class="barre-actions" style="margin-bottom:14px;">` +
+      `<button type="button" class="btn petit ${_factionsGroupeFiltre === "" ? "or" : "secondaire"}" data-factions-groupe="">Tous</button>` +
+      groupes.map((g) =>
+        `<button type="button" class="btn petit ${_factionsGroupeFiltre === g ? "or" : "secondaire"}" data-factions-groupe="${echapper(g)}">${echapper(g)}</button>`
+      ).join("") +
+      `</div>`;
+    const groupesHtml = FACTIONS
+      .filter((g) => !_factionsGroupeFiltre || g.groupe === _factionsGroupeFiltre)
+      .map((g) => {
+        const entitesHtml = g.entites.map((e) => `<div class="carte pnj-carte">
+          <div class="pnj-entete">
+            <div>
+              <div class="pnj-nom">${echapper(e.nom)}</div>
+              <div class="pnj-titre">« ${echapper(e.devise)} »</div>
+            </div>
+            <span class="badge-faction" style="background:${_couleurGroupeFaction(g.groupe, groupes)};">${echapper(g.groupe)}</span>
+          </div>
+          <div class="contenu">
+            <p><strong>Figure de proue :</strong> ${echapper(e.figure)}</p>
+            <p><strong>Insigne :</strong> ${echapper(e.insigne)}</p>
+            <p><strong>Contrôle :</strong> ${echapper(e.controle)}</p>
+            <p><strong>Fracture :</strong> ${echapper(e.fracture)}</p>
+            ${e.miroir ? `<p><strong>Miroir :</strong> ${echapper(e.miroir)}</p>` : ""}
+          </div>
+        </div>`).join("");
+        return `<div class="lore-section"><h3>${echapper(g.groupe)}</h3>` +
+          `<p style="font-style:italic;color:#6a6278;">${echapper(g.intro)}</p>` +
+          entitesHtml +
+          `<div class="carte pnj-carte" style="margin-top:10px;"><div class="contenu">${echapper(g.synthese)}</div></div>` +
+          `</div>`;
+      }).join("");
+    zone.innerHTML = filtreHtml + groupesHtml;
+    zone.querySelectorAll("[data-factions-groupe]").forEach((btn) => {
+      btn.onclick = () => { _factionsGroupeFiltre = btn.dataset.factionsGroupe; rendreFactions(); };
+    });
+  }
+
   /* ============================================================
      INITIALISATION
      ============================================================ */
@@ -4167,8 +4217,10 @@ const App = (() => {
     initSousOnglets("sous-onglets-lore", {
       chroniques: "sous-panneau-lore-chroniques",
       pnj: "sous-panneau-lore-pnj",
+      factions: "sous-panneau-lore-factions",
     });
     rendrePnjCles();
+    rendreFactions();
 
     document.querySelectorAll("#choix-genre .btn-genre").forEach((b) => {
       b.onclick = () => choisirGenre(b.dataset.genre);
