@@ -1662,11 +1662,28 @@ const App = (() => {
     });
   }
 
+  // Un seul prompt (réutilise le modal de choix de capacité) pour le don
+  // Athlète — +1 FOR OU DEX au choix, jamais les deux. Le don ne précise pas
+  // de plafond propre : réutilise plafondCaracDon par cohérence avec
+  // Amélioration de caractéristique.
+  function ouvrirChoixAthlete(cible, onDone) {
+    const options = ["FOR", "DEX"]
+      .map((code) => CARACS.find((c) => c.code === code))
+      .filter((c) => c && (cible.caracs[c.code] || 10) < plafondCaracDon(c.code, cible.race));
+    if (!options.length) { toast("FOR et DEX sont déjà au plafond."); onDone(null); return; }
+    ouvrirModalChoixCapacite({
+      titre: "Athlète",
+      consigne: "Choisis la caractéristique (+1) :",
+      options: options.map((c) => ({ label: `${c.nom} (${c.code}) — actuellement ${cible.caracs[c.code] || 10}`, valeur: c.code })),
+    }, (code) => onDone(code));
+  }
+
   // Finalise l'acquisition d'un don sur `cible` (creation, ou perso persisté
-  // côté Fiche) : l'ajoute à cible.dons, résout le choix supplémentaire du don
-  // Amélioration de caractéristique s'il y a lieu (cible.donsChoix), puis
-  // appelle onTermine() — au caller de gérer PV/persistance/re-rendu ensuite
-  // (ex. Robuste modifie pvMax, cf. monterDeNiveau et le bouton de rattrapage).
+  // côté Fiche) : l'ajoute à cible.dons, résout le choix supplémentaire des
+  // dons Amélioration de caractéristique / Athlète s'il y a lieu
+  // (cible.donsChoix), puis appelle onTermine() — au caller de gérer PV/
+  // persistance/re-rendu ensuite (ex. Robuste modifie pvMax, cf.
+  // monterDeNiveau et le bouton de rattrapage).
   function finaliserChoixDon(idDon, cible, msgSuffix, onTermine) {
     if (!cible.dons) cible.dons = [];
     cible.dons.push(idDon);
@@ -1676,6 +1693,15 @@ const App = (() => {
       ouvrirChoixAmeliorationCarac(cible, (choix) => {
         cible.donsChoix.amelioration_carac = choix;
         toast(`Don choisi : ${don ? don.nom : idDon}${choix.length ? ` (+1 ${choix.join(", +1 ")})` : ""}.${msgSuffix}`);
+        onTermine();
+      });
+      return;
+    }
+    if (idDon === "athlete") {
+      if (!cible.donsChoix) cible.donsChoix = {};
+      ouvrirChoixAthlete(cible, (choix) => {
+        cible.donsChoix.athlete = choix;
+        toast(`Don choisi : ${don ? don.nom : idDon}${choix ? ` (+1 ${choix})` : ""}.${msgSuffix}`);
         onTermine();
       });
       return;
@@ -2817,8 +2843,10 @@ const App = (() => {
     return ids.map((id) => {
       const don = (typeof DONS !== "undefined") && DONS.find((d) => d.id === id);
       if (!don) return "";
-      const choix = id === "amelioration_carac" && p.donsChoix && p.donsChoix.amelioration_carac;
-      const choixLabel = choix && choix.length ? ` — <strong>Choix : +1 ${choix.join(", +1 ")}</strong>` : "";
+      let choixLabel = "";
+      const choixCarac = id === "amelioration_carac" && p.donsChoix && p.donsChoix.amelioration_carac;
+      if (choixCarac && choixCarac.length) choixLabel = ` — <strong>Choix : +1 ${choixCarac.join(", +1 ")}</strong>`;
+      else if (id === "athlete" && p.donsChoix && p.donsChoix.athlete) choixLabel = ` — <strong>Choix : +1 ${p.donsChoix.athlete}</strong>`;
       return `<div class="cap-fiche"><div class="titre-cap">${don.nom}</div><div class="effet-cap">${don.effet}${choixLabel}</div></div>`;
     }).join("");
   }

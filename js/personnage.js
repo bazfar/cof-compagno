@@ -145,8 +145,15 @@ class Personnage extends Entite {
   // app.js lors du choix du don — le plafond 18/20 n'est vérifié qu'à ce
   // moment-là, pas ici).
   bonusCaracDons(code) {
+    let bonus = 0;
     const choix = this.donsChoix && this.donsChoix.amelioration_carac;
-    return Array.isArray(choix) && choix.includes(code) ? 1 : 0;
+    if (Array.isArray(choix) && choix.includes(code)) bonus += 1;
+    // Don Athlète : +1 FOR ou DEX au choix, fixé à l'acquisition
+    // (this.donsChoix.athlete) — même plafond que Amélioration de
+    // caractéristique (18, ou 20 par affinité raciale), réutilisé par
+    // cohérence même si le don ne précise pas de plafond spécifique.
+    if (this.donsChoix && this.donsChoix.athlete === code) bonus += 1;
+    return bonus;
   }
 
   get classeDef() {
