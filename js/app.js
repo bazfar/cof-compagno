@@ -3193,6 +3193,7 @@ const App = (() => {
           const equipable = Personnage.slotsPourType(it).length > 0;
           const badge = badgeEffetItem(it);
           const soin = formuleSoinItem(it);
+          const resurrection = estParcheminResurrection(it);
           return `<div class="inv-item">
             <div class="inv-item-header">
               <span class="inv-item-nom" style="color:${it.rareteCouleur || ""}">${echapper(it.nom)}</span>${badgeRareteHtml(it)}
@@ -3207,6 +3208,7 @@ const App = (() => {
               ${equipable ? `<button class="btn petit or btn-equiper-depuis-inv" data-idx="${idx}">Équiper</button>` : ""}
               ${soin && persoId ? `<button class="btn petit or btn-utiliser-item" data-idx="${idx}">🧪 Utiliser</button>` : ""}
               ${soin && persoId ? `<button class="btn petit secondaire btn-soigner-allie" data-idx="${idx}">❤ Soigner un allié</button>` : ""}
+              ${resurrection && persoId ? `<button class="btn petit or btn-reanimer-allie" data-idx="${idx}">📜 Réanimer un allié</button>` : ""}
               ${persoId ? `<button class="btn petit secondaire btn-donner-item" data-idx="${idx}">🎁 Donner</button>` : ""}
               <button class="btn petit danger btn-jeter-item" data-idx="${idx}">Jeter</button>
             </div>
@@ -3578,6 +3580,13 @@ const App = (() => {
     return extraireDeCapacite(it.description);
   }
 
+  // Objet à effet binaire (pas de dé de soin, donc absent de formuleSoinItem) :
+  // identifié par id, pour proposer un bouton dédié plutôt qu'un "Utiliser"
+  // générique qui ne ferait rien.
+  function estParcheminResurrection(it) {
+    return !!it && it.type === "consommable" && it.id === "parchemin_resurrection";
+  }
+
   // Réduit la quantité d'un consommable utilisé, retire l'entrée si elle tombe à 0.
   function _consommerUnite(perso, idx) {
     const it = perso.inventaireListe[idx];
@@ -3714,6 +3723,67 @@ const App = (() => {
       const total = _tirerEtAnnoncer(formule, `${dest.nom} est soigné par ${p.nom}`);
       if (total !== null) soigner(destId, total, item.nom);
     }, 1800);
+  }
+
+  // Sélecteur d'allié à réanimer avec un parchemin de résurrection — même
+  // conteneur/modèle que ouvrirSelecteurSoin, mais restreint aux alliés
+  // effectivement Morts (etatMort) : un simple Mourant·e ou Renversée relève
+  // déjà de « Relever un allié », pas d'un objet à usage unique.
+  function ouvrirSelecteurReanimation(persoId, idx) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const item = p.inventaireListe[idx];
+    if (!item) return;
+    const zone = document.getElementById("selecteur-soin-item");
+    if (!zone) return;
+    const morts = Object.keys(persos).filter((pid) => pid !== persoId && persos[pid].etatMort);
+    if (!morts.length) {
+      zone.innerHTML = `<div class="aide">Aucun allié tombé à réanimer.</div>`;
+      zone.style.display = "block";
+      return;
+    }
+    zone.innerHTML =
+      `<select id="select-destinataire-reanimation">` +
+      morts.map((pid) => `<option value="${pid}">${echapper(persos[pid].nom)}</option>`).join("") +
+      `</select>` +
+      `<button class="btn petit or" id="btn-confirmer-reanimation">Réanimer avec « ${echapper(item.nom)} »</button>`;
+    zone.style.display = "block";
+    document.getElementById("btn-confirmer-reanimation").onclick = () => {
+      const destId = document.getElementById("select-destinataire-reanimation").value;
+      reanimerAllie(persoId, idx, destId);
+    };
+  }
+
+  // Réanime un allié Mort (etatMort) à 1 PV, jets de mort remis à zéro —
+  // contrairement à Relever un allié (qui ne gère que Mourant·e/Renversée),
+  // c'est le seul moyen de récupérer un PJ ayant franchi ce seuil. Objet à
+  // usage unique, consommé dans tous les cas. Consomme l'action secondaire
+  // du RÉANIMATEUR (no-op hors combat), comme soignerAllie.
+  function reanimerAllie(persoId, idx, destId) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    const dest = persos[destId];
+    if (!p || !dest) return;
+    const item = p.inventaireListe[idx];
+    if (!item) return;
+    _consommerUnite(p, idx);
+    if (dest.etatMort) {
+      dest.pvActuel = 1;
+      dest.mortSucces = 0;
+      dest.mortEchecs = 0;
+      dest.etatMort = false;
+    }
+    sauverPersos(persos);
+    afficherFiche(persoId);
+    if (typeof Combat !== "undefined" && Combat.utiliserActionSecondaire) Combat.utiliserActionSecondaire(persoId);
+    const zone = document.getElementById("selecteur-soin-item");
+    if (zone) zone.style.display = "none";
+    toast(`📜 ${p.nom} réanime ${dest.nom} avec « ${item.nom} » (1 PV) !`);
+    _syncPvAffichages(destId, dest);
+    if (ficheActiveId === destId) afficherFiche(destId);
+    rendreFicheSidebarBattlemap(ficheSidebarActiveId);
+    rendreDockCombat();
   }
 
   // Jet de mort (état Mourant, 0 PV, cf. REGLES_GENERALES "Mort et
@@ -4001,6 +4071,10 @@ const App = (() => {
     // Inventaire — administrer un objet de soin à un allié (test de FOR)
     zone.querySelectorAll(".btn-soigner-allie").forEach((el) => {
       el.onclick = () => ouvrirSelecteurSoin(id, parseInt(el.dataset.idx, 10));
+    });
+    // Inventaire — réanimer un allié Mort avec un parchemin de résurrection
+    zone.querySelectorAll(".btn-reanimer-allie").forEach((el) => {
+      el.onclick = () => ouvrirSelecteurReanimation(id, parseInt(el.dataset.idx, 10));
     });
     // Inventaire — formulaire d'ajout, lié au catalogue loot (+ option "divers")
     const btnAjouterItem = document.getElementById("btn-ajouter-item");

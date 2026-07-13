@@ -70,6 +70,7 @@ const LOOT_CATALOGUE = [
   { "id": "huile_sainte", "nom": "Huile sainte", "type": "consommable", "porte": false, "description": "Appliquée sur une arme : inflige +1d4 dégâts aux créatures du Chaos pendant 1 combat.", "quantite": 1 },
   { "id": "antidote", "nom": "Antidote", "type": "consommable", "porte": false, "description": "Neutralise immédiatement tout poison actif. Amère et efficace.", "quantite": 1 },
   { "id": "parchemin_sort", "nom": "Parchemin de sort", "type": "consommable", "porte": false, "description": "Sort à usage unique. Le lanceur peut l'utiliser même sans classe magique (test INT diff. 14).", "quantite": 1 },
+  { "id": "parchemin_resurrection", "nom": "Parchemin de résurrection", "type": "consommable", "porte": false, "description": "Rituel d'urgence à usage unique : réanime un allié tombé au combat (état Mort) en le stabilisant à 1 point de vie.", "quantite": 1 },
   { "id": "elixir_force", "nom": "Élixir de force", "type": "consommable", "porte": false, "description": "Confère +2 FOR pendant 1 combat. Effet brutal mais bref.", "quantite": 1 },
   { "id": "fumigene", "nom": "Fumigène tactique", "type": "consommable", "porte": false, "description": "Crée un nuage de fumée dense sur 3 cases de rayon, bloquant la vue pendant 2 rounds.", "quantite": 1 },
   { "id": "corde_enchantee", "nom": "Corde enchantée", "type": "consommable", "porte": false, "description": "20m de corde qui se love et se déroule seule sur commande verbale.", "quantite": 1 },
