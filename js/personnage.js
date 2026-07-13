@@ -197,7 +197,29 @@ class Personnage extends Entite {
 
   /* ----- Défense ----- */
   calculerDEF() {
-    return 10 + this.mod("DEX") + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusTemporaire("DEF");
+    const dex = Math.min(this.mod("DEX"), this.plafondDex());
+    return 10 + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusTemporaire("DEF");
+  }
+
+  // Plafond de bonus DEX à la DEF selon le poids de l'armure équipée (aucun
+  // plafond si aucune armure ou armure légère, valeurArmure <= 2). Le champ
+  // malusDEX du catalogue (data/loot.json) n'est volontairement pas lu ici :
+  // superseded par ce plafond dérivé de valeurArmure (cf. commit) — laissé
+  // en place sur les données pour ne rien casser, mais plus consulté.
+  plafondDex() {
+    const armure = this._itemsEquipesUniques().find((it) => it.type === "armure");
+    const va = armure ? (armure.valeurArmure || 0) : 0;
+    if (va >= 5) return this.plafondDexDons(0);
+    if (va >= 3) return this.plafondDexDons(2);
+    return Infinity; // pas d'armure ou armure légère : aucun plafond
+  }
+  // Don Maître des armures moyennes : relève le plafond des armures moyennes
+  // (valeurArmure 3-4) de +2 à +3. Sans effet sur les armures lourdes (cf.
+  // Maître des armures lourdes, qui ne touche pas au plafond DEX mais à la
+  // réduction de dégâts physiques, cf. bonusReductionLourdeDons).
+  plafondDexDons(plafondBase) {
+    if (plafondBase === 2 && (this.dons || []).includes("maitre_armures_moyennes")) return 3;
+    return plafondBase;
   }
 
   // Initiative = Mod. de DEX + bonus de capacités (ex. Barde/Moine ajoutant
