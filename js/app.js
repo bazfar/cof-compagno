@@ -343,10 +343,8 @@ const App = (() => {
     // Attaques rapides : Contact toujours dispo, Distance seulement avec une
     // arme à portée équipée (arc, arbalète...), Magique seulement pour une
     // classe de lanceur de sorts (cf. Personnage.bonusAttaque).
-    const attContact = perso.bonusAttaque("contact");
     const armeContact = perso.armeContactEquipee();
     const armeDistance = perso.armeDistanceEquipee();
-    const attDistance = armeDistance ? perso.bonusAttaque("distance") : null;
     const attMagique = perso.bonusAttaque("magique");
     // Dégâts = formule de l'arme réellement équipée (même bonus que
     // badgeEffetItem : bonusDegatsTotal posé par une rareté prime sur
@@ -359,10 +357,31 @@ const App = (() => {
       const bonus = arme.bonusDegatsTotal !== undefined ? arme.bonusDegatsTotal : (arme.enchantement || 0);
       return arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
     };
+    // Dons mécaniques Frappe puissante/Tir de précision (cf. rendreDockCombat) :
+    // les bascules sont pilotées depuis le dock (togglesDons, état module
+    // partagé) mais doivent aussi ajuster les chiffres affichés ici.
+    const dons = p.dons || [];
+    const peutFrappePuissante = dons.includes("frappe_puissante") && !!(armeContact && armeContact.deuxMains);
+    const peutTirPrecision = dons.includes("tir_precision") && !!armeDistance;
+    const actifFrappePuissante = peutFrappePuissante && togglesDons.frappe_puissante;
+    const actifTirPrecision = peutTirPrecision && togglesDons.tir_precision;
+    const attContact = perso.bonusAttaque("contact") - (actifFrappePuissante ? 2 : 0);
+    const attDistance = armeDistance ? perso.bonusAttaque("distance") - (actifTirPrecision ? 2 : 0) : null;
     const armeCourteSecondaire = perso.armeCourteSecondaire();
-    const dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
-    const dmgDistance = formuleDegats(armeDistance);
+    let dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
+    if (dmgContact && actifFrappePuissante) dmgContact += "+4";
+    let dmgDistance = formuleDegats(armeDistance);
+    if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
+    // État Mourant(e)/Mort (cf. rendreDockCombat) : plus aucune action tant que
+    // peutAgir est faux, seul le jet de mort reste disponible (à son tour).
+    const pv = p.pvActuel || 0;
+    const estMourant = pv <= 0 && !p.etatMort;
+    const estMort = !!p.etatMort;
+    const peutAgir = !estMourant && !estMort;
+    const etatCS = typeof Combat !== "undefined" ? Combat.etatCourant() : null;
+    const actifCS = etatCS && etatCS.ordre[etatCS.indexActuel];
+    const cEstMonTourS = !!(actifCS && actifCS.type === "pj" && actifCS.id === id);
 
     // Vérificateur de portée (grille dd2vtt) : ne propose comme cible QUE les
     // tokens effectivement à portée du type d'attaque choisi (Contact/
@@ -440,7 +459,16 @@ const App = (() => {
         </div>
         <button class="btn petit secondaire" id="bm-voir-fiche-complete" style="width:100%;margin-top:6px;">Voir la fiche complète</button>
       </div>
-      <div class="carte">
+      ${estMort ? `<div class="carte">
+        <h3 style="margin-top:0;">💀 Mort</h3>
+        <p class="aide" style="margin:0;">Plus aucune action possible.</p>
+      </div>` : estMourant ? `<div class="carte">
+        <h3 style="margin-top:0;">🩸 Mourant(e)</h3>
+        <p class="aide" style="margin:0 0 6px;">Succès ${p.mortSucces || 0}/3 · Échecs ${p.mortEchecs || 0}/3</p>
+        ${cEstMonTourS
+          ? `<button class="btn petit" id="bm-btn-jet-mort">🎲 Jet de mort</button>`
+          : `<p class="aide" style="margin:0;">Attends ton tour pour lancer ton jet de mort.</p>`}
+      </div>` : `<div class="carte">
         <h3 style="margin-top:0;">Attaques rapides</h3>
         <div class="barre-actions">
           <button class="btn petit" data-bm-attaque="contact" data-bonus="${attContact}">⚔️ Contact (${signe(attContact)})</button>
@@ -455,8 +483,8 @@ const App = (() => {
           ${dmgMagique ? `<button class="btn petit secondaire" data-bm-degats="${dmgMagique}">🎲 Dégâts Magique (${dmgMagique})</button>` : ""}
         </div>` : ""}
         ${porteeHtml}
-      </div>
-      ${htmlBlocActionsDuTour(id)}
+      </div>`}
+      ${peutAgir ? htmlBlocActionsDuTour(id) : ""}
       ${htmlEtatsActifs(p)}
       ${htmlBlocInitiativeJoueur(id)}
       ${htmlBlocCorruption(p, perso)}
@@ -479,6 +507,8 @@ const App = (() => {
     document.getElementById("bm-pv-actuel").onchange = (e) => definirPv(id, parseInt(e.target.value, 10));
     document.getElementById("bm-voir-fiche-complete").onclick = () => { allerVers("fiche"); afficherFiche(id); };
     wireDegatsSubis(id, "bm-");
+    const btnJetMortS = document.getElementById("bm-btn-jet-mort");
+    if (btnJetMortS) btnJetMortS.onclick = () => jetDeMort(id);
     // Jet d'attaque sans quitter la battlemap — l'overlay de jet est visible
     // sur tous les onglets (cf. #overlay-jet), pas besoin de rejoindre "Dés".
     // Consomme l'action principale du tour (no-op hors combat, cf. Combat.utiliserActionPrincipale).
