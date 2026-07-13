@@ -127,9 +127,9 @@ class Personnage extends Entite {
     const m = c && /1d(\d+)/.exec(c.de_de_vie || "");
     return m ? parseInt(m[1], 10) : 6;
   }
-  // PV de base au niveau 1 = dé de vie max + Mod. CON (min 1)
+  // PV de base au niveau 1 = dé de vie max + Mod. CON + 2 (bonus fixe, min 1)
   pvNiveau1() {
-    return Math.max(1, this.facesDeVie() + this.mod("CON"));
+    return Math.max(1, this.facesDeVie() + this.mod("CON") + 2);
   }
   // PV total = niveau 1 + somme des jets de niveau historisés + bonus de capacités
   pvCalcule() {
