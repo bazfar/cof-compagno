@@ -1927,38 +1927,26 @@ const FACTIONS = [
       {
         nom: "Maison Ashe — Le Glaive",
         devise: "Un ordre, une lame.",
-        figure: "Grand Maréchal Théodren Ashe, arrière-petit-fils du Haut-Maréchal Corvain Ashe (Siège de Mornhaven). Rigide, incorruptible en apparence — use la doctrine de son aïeul comme un dogme figé plutôt qu'une conviction vivante.",
-        insigne: "Soleil noir sur bronze, deux lames croisées.",
-        controle: "Commande l'armée impériale régulière, forme les officiers, supervise (sans les diriger) les Chevaliers-Inquisiteurs.",
-        fracture: "Son fils cadet Ilyan Ashe doute depuis Mornhaven — pas de la cause, de la méthode — et a été écarté du commandement plutôt que réduit au silence publiquement.",
-        miroir: "Valdorne, la chevalerie sincère devenue discipline totale.",
+        description:
+          "Chef actuel : Grand Maréchal Théodren Ashe, arrière-petit-fils du Haut-Maréchal Corvain Ashe (Siège de Mornhaven). Rigide, incorruptible en apparence — use la doctrine de son aïeul comme un dogme figé plutôt qu'une conviction vivante. Blason : soleil noir sur bronze, deux lames croisées. Commande l'armée impériale régulière, forme les officiers, supervise (sans les diriger) les Chevaliers-Inquisiteurs. Fracture interne : son fils cadet Ilyan Ashe doute depuis Mornhaven — pas de la cause, de la méthode — et a été écarté du commandement plutôt que réduit au silence publiquement. Miroir : Valdorne, la chevalerie sincère devenue discipline totale.",
       },
       {
         nom: "Maison Solenne — La Flamme",
         devise: "La lumière ne négocie pas.",
-        figure: "Grande Sacerdotesse Yvelle Solenne, charismatique, absolument sincère dans sa foi — ce qui la rend plus dangereuse qu'une cynique.",
-        insigne: "Flamme dorée à sept pointes sur pourpre.",
-        controle: "Tient le Temple-Mère, légitime la lignée impériale, supervise doctrinalement les Chevaliers-Inquisiteurs.",
-        fracture: "Les \"Cendres Blanches\", faction jeune du clergé, prônent une purification encore plus radicale — tolérées comme bras armé idéologique, elles commencent à échapper à son contrôle.",
-        miroir: "Aucun miroir sécessionniste direct : Solenne est le cœur idéologique de l'Empire.",
+        description:
+          "Cheffe actuelle : Grande Sacerdotesse Yvelle Solenne, charismatique, absolument sincère dans sa foi — ce qui la rend plus dangereuse qu'une cynique. Blason : flamme dorée à sept pointes sur pourpre. Tient le Temple-Mère, légitime la lignée impériale, supervise doctrinalement les Chevaliers-Inquisiteurs. Fracture interne : les \"Cendres Blanches\", faction jeune du clergé, prônent une purification encore plus radicale — tolérées comme bras armé idéologique, elles commencent à échapper à son contrôle. Aucun miroir sécessionniste direct : Solenne est le cœur idéologique de l'Empire.",
       },
       {
         nom: "Maison Vosgard — La Bourse",
         devise: "Ce qui se compte, se gouverne.",
-        figure: "Intendant Général Bastian Vosgard, administrateur brillant, sans conviction religieuse réelle.",
-        insigne: "Balance dorée sur gris-bleu.",
-        controle: "Trésorerie impériale, impôts provinciaux, logistique militaire — Ashe dépend de lui autant que de ses propres officiers.",
-        fracture: "Certains agents Vosgard vendent des renseignements économiques à Mornac, par intérêt commercial plus que par trahison idéologique.",
-        miroir: "Mornac, le pragmatisme marchand devenu corruption structurelle.",
+        description:
+          "Chef actuel : Intendant Général Bastian Vosgard, administrateur brillant, sans conviction religieuse réelle. Blason : balance dorée sur gris-bleu. Trésorerie impériale, impôts provinciaux, logistique militaire — Ashe dépend de lui autant que de ses propres officiers. Fracture interne : certains agents Vosgard vendent des renseignements économiques à Mornac, par intérêt commercial plus que par trahison idéologique. Miroir : Mornac, le pragmatisme marchand devenu corruption structurelle.",
       },
       {
         nom: "Maison Kestrel — Les Marches",
         devise: "La peur tient mieux qu'un traité.",
-        figure: "Margravine Sélène Kestrel, dure, pragmatique, façonnée par des décennies de guerre frontalière contre Aetharion et les passes disputées avec Khazrak Dûm.",
-        insigne: "Faucon gris plongeant sur blanc glacé.",
-        controle: "Défend les Marches orientales, gère les garnisons frontalières et un réseau d'éclaireurs au-delà des lignes.",
-        fracture: "Maquille ses rapports envoyés à Ashe pour cacher l'épuisement réel de ses garnisons sous-équipées.",
-        miroir: "Serval, même géographie montagnarde, logique opposée (alliance vs domination par la peur).",
+        description:
+          "Cheffe actuelle : Margravine Sélène Kestrel, dure, pragmatique, façonnée par des décennies de guerre frontalière contre Aetharion et les passes disputées avec Khazrak Dûm. Blason : faucon gris plongeant sur blanc glacé. Défend les Marches orientales, gère les garnisons frontalières et un réseau d'éclaireurs au-delà des lignes. Fracture interne : maquille ses rapports envoyés à Ashe pour cacher l'épuisement réel de ses garnisons sous-équipées. Miroir : Serval, même géographie montagnarde, logique opposée (alliance vs domination par la peur).",
       },
     ],
     synthese:
@@ -1972,42 +1960,32 @@ const FACTIONS = [
       {
         nom: "Le Comptoir — bloc marchand",
         devise: "Le fleuve ne choisit pas ses passagers.",
-        figure: "Consule Ilsabet Draeven, ancienne capitaine de commerce fluvial, pragmatique jusqu'à l'os.",
-        insigne: "Écharpe bleu-marine, sceau d'une balance posée sur une vague.",
-        controle: "Contrôle les routes commerciales de la Lisdane et les ports, finance une bonne partie du budget de l'Assemblée par les taxes portuaires.",
-        fracture: "Des guildes affiliées au Comptoir opèrent en sous-main jusque dans les provinces frontalières — le complot de guilde du Scénario 0 (Maître Aurèle Ferrand, le médaillon) est une ramification directe de ce bloc. Draeven ignore-t-elle vraiment ce que font ses guildes les plus zélées, ou ferme-t-elle les yeux tant que l'or rentre ?",
+        description:
+          "Figure de proue : Consule Ilsabet Draeven, ancienne capitaine de commerce fluvial, pragmatique jusqu'à l'os. Insigne : écharpe bleu-marine, sceau d'une balance posée sur une vague. Contrôle les routes commerciales de la Lisdane et les ports, finance une bonne partie du budget de l'Assemblée par les taxes portuaires. Fracture/hook : des guildes affiliées au Comptoir opèrent en sous-main jusque dans les provinces frontalières — le complot de guilde du Scénario 0 (Maître Aurèle Ferrand, le médaillon) est une ramification directe de ce bloc. Draeven ignore-t-elle vraiment ce que font ses guildes les plus zélées, ou ferme-t-elle les yeux tant que l'or rentre ?",
       },
       {
         nom: "Le Serment de Libris — bloc idéaliste",
         devise: "Ce que nous avons juré, nous le tiendrons.",
-        figure: "Consul Emeric Vasnal, vieillissant, l'un des derniers signataires encore vivants de la charte fondatrice.",
-        insigne: "Écharpe blanche, sceau d'une plume sur un livre ouvert.",
-        controle: "Faible en moyens concrets, fort en légitimité morale.",
-        fracture: "En perte de vitesse face aux blocs pragmatiques ; Vasnal cherche un successeur charismatique avant que le Serment ne devienne une relique symbolique sans pouvoir réel.",
+        description:
+          "Figure de proue : Consul Emeric Vasnal, vieillissant, l'un des derniers signataires encore vivants de la charte fondatrice. Insigne : écharpe blanche, sceau d'une plume sur un livre ouvert. Faible en moyens concrets, fort en légitimité morale. Fracture/hook : en perte de vitesse face aux blocs pragmatiques ; Vasnal cherche un successeur charismatique avant que le Serment ne devienne une relique symbolique sans pouvoir réel.",
       },
       {
         nom: "La Garde Citoyenne — bloc militaire",
         devise: "La liberté se défend, elle ne se proclame pas.",
-        figure: "Général-Consul Rohar Kessing, ancien officier de terrain, discipline avant tout.",
-        insigne: "Écharpe grise, sceau d'un bouclier croisé de deux lances.",
-        controle: "Contrôle la milice et la défense des frontières orientales — poids grandissant à mesure que la pression de Solvarn et les raids venus des Failles Rouges s'intensifient.",
-        fracture: "Certains officiers murmurent qu'une République sans hiérarchie forte ne survivra pas à une vraie guerre — tentation autoritaire qui inquiète le Serment de Libris.",
+        description:
+          "Figure de proue : Général-Consul Rohar Kessing, ancien officier de terrain, discipline avant tout. Insigne : écharpe grise, sceau d'un bouclier croisé de deux lances. Contrôle la milice et la défense des frontières orientales — poids grandissant à mesure que la pression de Solvarn et les raids venus des Failles Rouges s'intensifient. Fracture/hook : certains officiers murmurent qu'une République sans hiérarchie forte ne survivra pas à une vraie guerre — tentation autoritaire qui inquiète le Serment de Libris.",
       },
       {
         nom: "Le Cercle des Peuples — bloc communautés non-humaines",
         devise: "Admis n'est pas égal.",
-        figure: "Conseillère Ythel Aelindra (majorité sylvaine), épaulée par une minorité mordanel en exil.",
-        insigne: "Écharpe verte, sceau d'une feuille entrelacée à une main.",
-        controle: "Représentation officielle garantie par la charte, mais poids réel disproportionnellement faible face aux sièges humains.",
-        fracture: "Pousse pour une réforme de représentation proportionnelle, combattue frontalement par les Fils de Libris — point de friction central de l'Assemblée.",
+        description:
+          "Figure de proue : Conseillère Ythel Aelindra (majorité sylvaine), épaulée par une minorité mordanel en exil. Insigne : écharpe verte, sceau d'une feuille entrelacée à une main. Représentation officielle garantie par la charte, mais poids réel disproportionnellement faible face aux sièges humains. Fracture/hook : pousse pour une réforme de représentation proportionnelle, combattue frontalement par les Fils de Libris — point de friction central de l'Assemblée.",
       },
       {
         nom: "Les Fils de Libris — bloc suprémaciste",
         devise: "Libris pour ceux qui l'ont bâtie.",
-        figure: "Tribun Corwan Dessalles, orateur populiste, ancien petit commerçant ruiné par la concurrence des guildes du Comptoir.",
-        insigne: "Écharpe rouge sombre, sceau d'un poing fermé sur une racine.",
-        controle: "Né du ressentiment économique et de la peur post-Silence de Valmoire — recrute chez les laissés-pour-compte du miracle marchand de la République.",
-        fracture: "Ironie centrale : ce bloc reproduit, sans se l'avouer, la rhétorique de pureté de Solvarn — l'ennemi même que la Sécession voulait fuir. Certains soupçonnent, sans preuve, des financements discrets venus de l'Empire pour déstabiliser la République de l'intérieur. Hook : un attentat ou une manifestation des Fils de Libris pourrait forcer les quatre autres blocs à une alliance de circonstance qu'ils détestent tous.",
+        description:
+          "Figure de proue : Tribun Corwan Dessalles, orateur populiste, ancien petit commerçant ruiné par la concurrence des guildes du Comptoir. Insigne : écharpe rouge sombre, sceau d'un poing fermé sur une racine. Né du ressentiment économique et de la peur post-Silence de Valmoire — recrute chez les laissés-pour-compte du miracle marchand de la République. Ironie centrale : ce bloc reproduit, sans se l'avouer, la rhétorique de pureté de Solvarn — l'ennemi même que la Sécession voulait fuir. Certains soupçonnent, sans preuve, des financements discrets venus de l'Empire pour déstabiliser la République de l'intérieur. Hook : un attentat ou une manifestation des Fils de Libris pourrait forcer les quatre autres blocs à une alliance de circonstance qu'ils détestent tous.",
       },
     ],
     synthese:

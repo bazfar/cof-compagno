@@ -4165,11 +4165,15 @@ const App = (() => {
     const zone = document.getElementById("zone-lore-factions");
     if (!zone || typeof FACTIONS === "undefined") return;
     const groupes = FACTIONS.map((g) => g.groupe);
-    const filtreHtml = `<div class="barre-actions" style="margin-bottom:14px;">` +
+    const filtreHtml =
+      `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">` +
+      `<div class="barre-actions" style="margin:0;">` +
       `<button type="button" class="btn petit ${_factionsGroupeFiltre === "" ? "or" : "secondaire"}" data-factions-groupe="">Tous</button>` +
       groupes.map((g) =>
         `<button type="button" class="btn petit ${_factionsGroupeFiltre === g ? "or" : "secondaire"}" data-factions-groupe="${echapper(g)}">${echapper(g)}</button>`
       ).join("") +
+      `</div>` +
+      `<button type="button" class="btn petit secondaire" id="btn-modifier-factions" data-role="mj">✏️ Modifier</button>` +
       `</div>`;
     const groupesHtml = FACTIONS
       .filter((g) => !_factionsGroupeFiltre || g.groupe === _factionsGroupeFiltre)
@@ -4182,13 +4186,7 @@ const App = (() => {
             </div>
             <span class="badge-faction" style="background:${_couleurGroupeFaction(g.groupe, groupes)};">${echapper(g.groupe)}</span>
           </div>
-          <div class="contenu">
-            <p><strong>Figure de proue :</strong> ${echapper(e.figure)}</p>
-            <p><strong>Insigne :</strong> ${echapper(e.insigne)}</p>
-            <p><strong>Contrôle :</strong> ${echapper(e.controle)}</p>
-            <p><strong>Fracture :</strong> ${echapper(e.fracture)}</p>
-            ${e.miroir ? `<p><strong>Miroir :</strong> ${echapper(e.miroir)}</p>` : ""}
-          </div>
+          <div class="contenu">${echapper(e.description)}</div>
         </div>`).join("");
         return `<div class="lore-section"><h3>${echapper(g.groupe)}</h3>` +
           `<p style="font-style:italic;color:#6a6278;">${echapper(g.intro)}</p>` +
@@ -4200,6 +4198,11 @@ const App = (() => {
     zone.querySelectorAll("[data-factions-groupe]").forEach((btn) => {
       btn.onclick = () => { _factionsGroupeFiltre = btn.dataset.factionsGroupe; rendreFactions(); };
     });
+    const btnModifierFactions = document.getElementById("btn-modifier-factions");
+    if (btnModifierFactions) {
+      btnModifierFactions.onclick = () =>
+        toast("Édition des factions — bientôt disponible, une fois la synchro serveur en place.");
+    }
   }
 
   /* ============================================================
