@@ -22,6 +22,7 @@ const App = (() => {
   let ficheActiveId = null;  // id du perso affiché dans "Ma fiche"
   let ficheSidebarActiveId = null;  // id du perso affiché dans la mini-fiche battlemap (sidebar)
   let _cibleDistanceId = null;  // token cible choisi pour le vérificateur de portée (cf. rendreFicheSidebarBattlemap)
+  let _typeAttaquePortee = "contact";  // type d'attaque choisi dans le vérificateur de portée : "contact" | "distance" | "magique"
   let livretPersoId = null;  // id du perso choisi dans l'onglet "📖 Livret"
   // Sélection courante de l'onglet "🔨 Atelier" (cf. rendrePanneauAtelier) —
   // atelierItemIdx référence un index dans inventaireListe du perso choisi,
@@ -347,38 +348,50 @@ const App = (() => {
     const dmgDistance = formuleDegats(armeDistance);
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
 
-    // Vérificateur de portée (grille dd2vtt) : distance en cases entre le
-    // jeton du joueur et une cible choisie, comparée à porteeMinCases/
-    // porteeMaxCases de l'arme à distance équipée — seulement affiché en
-    // combat, jeton posé, et arme à distance avec portée en cases renseignée
-    // (les armes pas encore migrées au nouveau schéma n'ont pas ces champs).
+    // Vérificateur de portée (grille dd2vtt) : ne propose comme cible QUE les
+    // tokens effectivement à portée du type d'attaque choisi (Contact/
+    // Distance/Magique), plutôt que lister tout le monde avec un verdict —
+    // Contact = 1 case (mêlée de base), Distance = porteeMinCases/
+    // porteeMaxCases de l'arme équipée, Magique = 5 cases de base (aucune
+    // arme concernée, valeur fixe indépendante de l'équipement).
+    const PORTEE_CONTACT = { min: 0, max: 1 };
+    const PORTEE_MAGIQUE_BASE = { min: 0, max: 5 };
+    const porteesParType = { contact: PORTEE_CONTACT };
+    if (armeDistance && armeDistance.porteeMaxCases !== undefined) {
+      porteesParType.distance = { min: armeDistance.porteeMinCases || 0, max: armeDistance.porteeMaxCases };
+    }
+    if (attMagique !== null) porteesParType.magique = PORTEE_MAGIQUE_BASE;
+
     let porteeHtml = "";
-    if (armeDistance && armeDistance.porteeMaxCases !== undefined &&
-        typeof Combat !== "undefined" && Combat.estActif() &&
+    if (typeof Combat !== "undefined" && Combat.estActif() &&
         typeof Carte !== "undefined" && Carte.distanceCasesEntre) {
       const monTokenId = _monTokenId(id);
-      const cibles = monTokenId ? _ciblesPortee(monTokenId) : [];
-      if (monTokenId && cibles.length) {
-        if (!cibles.some((cc) => cc.id === _cibleDistanceId)) _cibleDistanceId = cibles[0].id;
-        const distance = Carte.distanceCasesEntre(monTokenId, _cibleDistanceId);
-        let verdict = "";
-        if (distance === null) {
-          verdict = `<span class="aide">cible introuvable sur la carte</span>`;
-        } else if (distance < (armeDistance.porteeMinCases || 0)) {
-          verdict = `<span style="color:var(--chaos);font-weight:700;">trop proche (min. ${armeDistance.porteeMinCases})</span>`;
-        } else if (distance > armeDistance.porteeMaxCases) {
-          verdict = `<span style="color:var(--chaos);font-weight:700;">hors de portée (max. ${armeDistance.porteeMaxCases})</span>`;
-        } else {
-          verdict = `<span style="color:#2f9e44;font-weight:700;">en portée</span>`;
+      const toutesLesCibles = monTokenId ? _ciblesPortee(monTokenId) : [];
+      if (monTokenId && toutesLesCibles.length) {
+        const TYPE_LABELS = { contact: "⚔️ Contact", distance: "🏹 Distance", magique: "✨ Magique" };
+        const typesDispo = Object.keys(porteesParType);
+        if (!typesDispo.includes(_typeAttaquePortee)) _typeAttaquePortee = typesDispo[0];
+        const portee = porteesParType[_typeAttaquePortee];
+        const ciblesEnPortee = toutesLesCibles
+          .map((cc) => Object.assign({ _distance: Carte.distanceCasesEntre(monTokenId, cc.id) }, cc))
+          .filter((cc) => cc._distance !== null && cc._distance >= portee.min && cc._distance <= portee.max);
+        if (!ciblesEnPortee.some((cc) => cc.id === _cibleDistanceId)) {
+          _cibleDistanceId = ciblesEnPortee.length ? ciblesEnPortee[0].id : null;
         }
+        const cibleActuelle = ciblesEnPortee.find((cc) => cc.id === _cibleDistanceId);
         porteeHtml = `
         <div style="margin-top:8px;">
-          <label style="font-size:0.78rem;display:block;">📏 Portée (${echapper(armeDistance.nom)})
-            <select id="bm-cible-portee" style="width:100%;margin-top:2px;">
-              ${cibles.map((cc) => `<option value="${cc.id}" ${cc.id === _cibleDistanceId ? "selected" : ""}>${echapper(cc.nom)}</option>`).join("")}
+          <label style="font-size:0.78rem;display:block;">📏 Portée
+            <select id="bm-type-portee" style="width:100%;margin-top:2px;">
+              ${typesDispo.map((t) => `<option value="${t}" ${t === _typeAttaquePortee ? "selected" : ""}>${TYPE_LABELS[t]} (${porteesParType[t].min}-${porteesParType[t].max} cases)</option>`).join("")}
             </select>
           </label>
-          <p style="font-size:0.78rem;margin:4px 0 0;">Distance : <strong>${distance === null ? "?" : distance}</strong> case${distance === 1 ? "" : "s"} — ${verdict}</p>
+          ${ciblesEnPortee.length ? `
+          <select id="bm-cible-portee" style="width:100%;margin-top:4px;">
+            ${ciblesEnPortee.map((cc) => `<option value="${cc.id}" ${cc.id === _cibleDistanceId ? "selected" : ""}>${echapper(cc.nom)} (${cc._distance} case${cc._distance === 1 ? "" : "s"})</option>`).join("")}
+          </select>
+          ${cibleActuelle ? `<p style="font-size:0.78rem;margin:4px 0 0;color:#2f9e44;font-weight:700;">En portée — ${cibleActuelle._distance} case${cibleActuelle._distance === 1 ? "" : "s"}</p>` : ""}
+          ` : `<p class="aide" style="font-size:0.72rem;margin:4px 0 0;">Aucune cible à portée pour cette attaque.</p>`}
         </div>`;
       }
     }
@@ -464,7 +477,16 @@ const App = (() => {
         lancerFormule(formule, `${p.nom} — Dégâts (${formule})`);
       };
     });
-    // Vérificateur de portée : changer de cible re-rend juste ce calcul.
+    // Vérificateur de portée : changer de type d'attaque ou de cible re-rend
+    // juste ce bloc (recalcule la liste des cibles à portée pour le type choisi).
+    const selTypePortee = document.getElementById("bm-type-portee");
+    if (selTypePortee) {
+      selTypePortee.onchange = () => {
+        _typeAttaquePortee = selTypePortee.value;
+        _cibleDistanceId = null; // la cible précédente peut ne plus être à portée pour ce type
+        rendreFicheSidebarBattlemap(id);
+      };
+    }
     const selCiblePortee = document.getElementById("bm-cible-portee");
     if (selCiblePortee) {
       selCiblePortee.onchange = () => {
