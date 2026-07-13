@@ -533,15 +533,17 @@ class Personnage extends Entite {
     return null;
   }
 
-  // Combat à deux armes valide (cf. REGLES_GENERALES) : une arme à une main
-  // dans chaque main, sans bouclier. Sert de base au malus d'attaque de
-  // contact (cf. malusCombatDeuxArmes) — indépendant de la compatibilité
-  // bi-arme déjà validée à l'équipement (_armesCompatiblesMainsCroisees),
-  // qui autorise aussi mêlée+bouclier ou mêlée+arbalète courte (non concernés).
+  // Combat à deux armes valide (cf. REGLES_GENERALES) : une arme de CONTACT à
+  // une main dans chaque main, sans bouclier. Sert de base au malus d'attaque
+  // de contact (cf. malusCombatDeuxArmes) — indépendant de la compatibilité
+  // bi-arme déjà validée à l'équipement (_armesCompatiblesMainsCroisees), qui
+  // autorise aussi mêlée+bouclier ou mêlée+arbalète courte (non concernés).
+  // Exclut explicitement arc court + arme courte (une main tient une arme à
+  // distance, ce n'est pas le combat à deux armes de mêlée).
   enCombatDeuxArmes() {
     const d = this.equipement && this.equipement.main_droite;
     const g = this.equipement && this.equipement.main_gauche;
-    return !!(d && g && d !== g && d.type === "arme" && g.type === "arme" && !d.deuxMains && !g.deuxMains);
+    return !!(d && g && d !== g && Personnage._estArmeContact(d) && Personnage._estArmeContact(g) && !d.deuxMains && !g.deuxMains);
   }
 
   // Malus/bonus d'attaque du combat à deux armes, uniquement au contact (la
