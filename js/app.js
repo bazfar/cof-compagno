@@ -440,6 +440,7 @@ const App = (() => {
         </div>` : ""}
         ${porteeHtml}
       </div>
+      ${htmlBlocActionsDuTour(id)}
       ${htmlEtatsActifs(p)}
       ${htmlBlocInitiativeJoueur(id)}
       ${htmlBlocCorruption(p, perso)}
@@ -464,10 +465,13 @@ const App = (() => {
     wireDegatsSubis(id, "bm-");
     // Jet d'attaque sans quitter la battlemap — l'overlay de jet est visible
     // sur tous les onglets (cf. #overlay-jet), pas besoin de rejoindre "Dés".
+    // Consomme l'action principale du tour (no-op hors combat, cf. Combat.utiliserActionPrincipale).
     sidebar.querySelectorAll("[data-bm-attaque]").forEach((el) => {
       el.onclick = () => {
         const bonus = parseInt(el.dataset.bonus, 10);
         lancerTest(`Attaque ${el.dataset.bmAttaque}`, bonus, perso.critMinAttaque(el.dataset.bmAttaque));
+        if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
+        rendreFicheSidebarBattlemap(id);
       };
     });
     // Dégâts de l'arme équipée (formule figée, pas de bonus au jet ici)
@@ -494,6 +498,18 @@ const App = (() => {
         rendreFicheSidebarBattlemap(id);
       };
     }
+    // Actions du tour (déplacement, action principale/secondaire) — cf.
+    // htmlBlocActionsDuTour et js/combat.js.
+    const btnDeplacementMoins = document.getElementById("bm-deplacement-moins");
+    if (btnDeplacementMoins) btnDeplacementMoins.onclick = () => { Combat.ajusterDeplacement(id, -1); rendreFicheSidebarBattlemap(id); };
+    const btnDeplacementPlus = document.getElementById("bm-deplacement-plus");
+    if (btnDeplacementPlus) btnDeplacementPlus.onclick = () => { Combat.ajusterDeplacement(id, 1); rendreFicheSidebarBattlemap(id); };
+    const btnSprint = document.getElementById("bm-sprint");
+    if (btnSprint) btnSprint.onclick = () => { Combat.sprint(id); toast(`Sprint : +${Combat.SPRINT_BONUS} cases de déplacement.`); rendreFicheSidebarBattlemap(id); };
+    const btnActionSecondaire = document.getElementById("bm-action-secondaire");
+    if (btnActionSecondaire) btnActionSecondaire.onclick = () => { Combat.utiliserActionSecondaire(id); rendreFicheSidebarBattlemap(id); };
+    const btnReinitActions = document.getElementById("bm-reinit-actions");
+    if (btnReinitActions) btnReinitActions.onclick = () => { Combat.reinitialiserActions(id); rendreFicheSidebarBattlemap(id); };
     // Capacités/états, mêmes règles que la fiche complète (cf. wireCapacitesEtEtats).
     wireCapacitesEtEtats(sidebar, id, p, () => rendreFicheSidebarBattlemap(id));
     rendreDockCombat(); // barre d'action de combat sous la carte (cf. plus bas)
@@ -613,6 +629,9 @@ const App = (() => {
 
     const aChaos = typeof perso.aVoieChaosActive === "function" && perso.aVoieChaosActive();
     const reduction = perso.reductionDegats();
+    // Actions du tour (compact, cf. htmlBlocActionsDuTour côté sidebar pour
+    // la version détaillée avec Sprint/réinitialisation).
+    const entreeActions = etatC.ordre.find((e) => e.type === "pj" && e.id === id);
     // Objets utilisables (potions/consommables de soin) — index conservé pour
     // utiliserConsommable(id, idx).
     const objets = (p.inventaireListe || []).map((it, i) => ({ it, i })).filter((x) => formuleSoinItem(x.it));
@@ -635,6 +654,11 @@ const App = (() => {
             ${reduction > 0 ? `<span class="dock-chip" title="Réduction de dégâts (armure)">🪖 ${reduction}</span>` : ""}
             <span class="dock-chip" title="Initiative">⚡ ${signe(perso.calculerInitiative())}</span>
             ${aChaos ? `<span class="dock-chip chaos">${p.corruptionCombat || 0} CS</span>` : ""}
+            ${entreeActions ? `
+            <span class="dock-chip" title="Déplacement restant">🚶 ${entreeActions.deplacementRestant}</span>
+            <span class="dock-chip" title="Action principale ${entreeActions.actionPrincipaleUtilisee ? "utilisée" : "disponible"}">${entreeActions.actionPrincipaleUtilisee ? "◼️" : "◻️"}A</span>
+            <span class="dock-chip" title="Action secondaire ${entreeActions.actionSecondaireUtilisee ? "utilisée" : "disponible"}">${entreeActions.actionSecondaireUtilisee ? "◼️" : "◻️"}B</span>
+            ` : ""}
           </div>
         </div>
       </div>
@@ -665,7 +689,11 @@ const App = (() => {
     </div>`;
 
     dock.querySelectorAll("[data-bm-attaque]").forEach((el) => {
-      el.onclick = () => lancerTest(`Attaque ${el.dataset.bmAttaque}`, parseInt(el.dataset.bonus, 10), perso.critMinAttaque(el.dataset.bmAttaque));
+      el.onclick = () => {
+        lancerTest(`Attaque ${el.dataset.bmAttaque}`, parseInt(el.dataset.bonus, 10), perso.critMinAttaque(el.dataset.bmAttaque));
+        if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
+        rendreFicheSidebarBattlemap(id);
+      };
     });
     dock.querySelectorAll("[data-bm-degats]").forEach((el) => {
       el.onclick = () => lancerFormule(el.dataset.bmDegats, `${p.nom} — Dégâts (${el.dataset.bmDegats})`);
@@ -676,9 +704,11 @@ const App = (() => {
       el.onclick = () => lancerTest(`Test de ${el.dataset.test}`, mods[el.dataset.test]);
     });
     // Objets : boire/utiliser un consommable de soin sur soi (réutilise
-    // utiliserConsommable), puis re-render du dock (PV + quantité mis à jour).
+    // utiliserConsommable, qui marque aussi l'action secondaire consommée),
+    // puis re-render de la sidebar (PV + quantité + action secondaire mis à
+    // jour) — rendreFicheSidebarBattlemap réappelle rendreDockCombat().
     dock.querySelectorAll("[data-utiliser-idx]").forEach((el) => {
-      el.onclick = () => { utiliserConsommable(id, parseInt(el.dataset.utiliserIdx, 10)); rendreDockCombat(); };
+      el.onclick = () => { utiliserConsommable(id, parseInt(el.dataset.utiliserIdx, 10)); rendreFicheSidebarBattlemap(id); };
     });
     wireDegatsSubis(id, "dock-");
     wireCapacitesEtEtats(dock, id, p, rendreDockCombat);
@@ -2476,6 +2506,47 @@ const App = (() => {
     return `<div class="carte initiative-mini"><h3 style="margin-top:0;">Initiative</h3>${contenu}</div>`;
   }
 
+  // Bloc "Actions du tour" (déplacement + action principale/secondaire),
+  // visible sur la fiche vivante pendant un combat où ce PJ a rejoint
+  // l'ordre d'initiative (cf. js/combat.js — Combat.ajusterDeplacement/
+  // utiliserActionPrincipale/sprint/utiliserActionSecondaire). Remis à zéro
+  // automatiquement au tour de ce PJ (Combat.tourSuivant) ; affiché à tout
+  // moment du combat, pas seulement pendant son propre tour, comme le reste
+  // des compteurs manuels de l'app (PV...).
+  function htmlBlocActionsDuTour(persoId) {
+    if (typeof Combat === "undefined" || !Combat.estActif()) return "";
+    const entree = Combat.etatCourant().ordre.find((e) => e.type === "pj" && e.id === persoId);
+    if (!entree) return "";
+    const base = Combat.DEPLACEMENT_BASE || 5;
+    return `<div class="carte">
+      <h3 style="margin-top:0;">Actions du tour</h3>
+      <div class="stats-rapides">
+        <div class="stat-box">
+          <div class="label">Déplacement</div>
+          <div class="pv-control">
+            <button id="bm-deplacement-moins">−</button>
+            <span style="font-weight:700;">${entree.deplacementRestant}</span>
+            <button id="bm-deplacement-plus">+</button>
+          </div>
+          <div style="font-size:0.7rem;color:#6a6278;">/ ${base} cases</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Principale</div>
+          <div class="valeur" style="font-size:0.85rem;">${entree.actionPrincipaleUtilisee ? "✅ utilisée" : "◻️ disponible"}</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Secondaire</div>
+          <div class="valeur" style="font-size:0.85rem;">${entree.actionSecondaireUtilisee ? "✅ utilisée" : "◻️ disponible"}</div>
+        </div>
+      </div>
+      <div class="barre-actions" style="margin-top:6px;">
+        ${!entree.actionPrincipaleUtilisee ? `<button class="btn petit secondaire" id="bm-sprint" title="Consomme l'action principale sans attaquer, contre +${Combat.SPRINT_BONUS || 2} cases">🏃 Sprint (+${Combat.SPRINT_BONUS || 2} cases)</button>` : ""}
+        ${!entree.actionSecondaireUtilisee ? `<button class="btn petit secondaire" id="bm-action-secondaire" title="Boire une potion, utiliser un parchemin, relever un allié...">Action secondaire</button>` : ""}
+        <button class="btn petit secondaire" id="bm-reinit-actions" title="Réinitialise sans attendre le prochain tour (correction de table)">↺</button>
+      </div>
+    </div>`;
+  }
+
   // Bloc "Corruption" (Voie du chaos, homebrew) — visible seulement pour un
   // perso ayant pris au moins un rang dans sa Voie du chaos (opt-in, cf.
   // Personnage.aVoieChaosActive). Jauge de combat incrémentée automatiquement
@@ -2623,6 +2694,9 @@ const App = (() => {
       });
       fermerPickerCibleCapacite();
       toast(res.messages.join(" · "));
+      // Consomme l'action principale du tour en combat (no-op hors combat) —
+      // "compétence" est l'autre exemple type d'action principale.
+      if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
       rafraichir();
       // La fiche complète redirige vers l'onglet "Dés" (comportement historique) ;
       // la mini-fiche battlemap reste en place, comme les attaques rapides
@@ -3306,6 +3380,9 @@ const App = (() => {
 
   // Bouton "Utiliser" : le personnage consomme lui-même l'objet, soin immédiat
   // sans jet de caractéristique (boire sa propre potion ne demande pas de test).
+  // Consomme l'action secondaire du tour en combat (no-op hors combat, cf.
+  // Combat.utiliserActionSecondaire) — "boire une potion" est l'exemple type
+  // d'action secondaire de l'économie d'action.
   function utiliserConsommable(persoId, idx) {
     const persos = chargerPersos();
     const p = persos[persoId];
@@ -3320,6 +3397,7 @@ const App = (() => {
     sauverPersos(persos);
     afficherFiche(persoId);
     soigner(persoId, total, item.nom);
+    if (typeof Combat !== "undefined" && Combat.utiliserActionSecondaire) Combat.utiliserActionSecondaire(persoId);
   }
 
   // Ouvre le sélecteur d'allié à qui administrer le consommable — même modèle
