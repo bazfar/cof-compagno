@@ -3642,7 +3642,9 @@ const App = (() => {
   // soigneur) avant de tirer le dé de soin — représente la difficulté à faire
   // boire/appliquer correctement l'objet à quelqu'un d'autre, contrairement à
   // l'utiliser sur soi-même. L'objet est consommé dans tous les cas (réussite
-  // ou échec), seul le soin est conditionnel.
+  // ou échec), seul le soin est conditionnel. Consomme l'action secondaire du
+  // tour du SOIGNEUR (no-op hors combat), comme utiliserConsommable (soin sur
+  // soi-même).
   function soignerAllie(persoId, idx, destId) {
     const persos = chargerPersos();
     const p = persos[persoId];
@@ -3663,6 +3665,7 @@ const App = (() => {
     _consommerUnite(p, idx);
     sauverPersos(persos);
     afficherFiche(persoId);
+    if (typeof Combat !== "undefined" && Combat.utiliserActionSecondaire) Combat.utiliserActionSecondaire(persoId);
     const zone = document.getElementById("selecteur-soin-item");
     if (zone) zone.style.display = "none";
 
