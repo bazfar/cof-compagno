@@ -53,7 +53,7 @@ const ARCHETYPE_CLASSE = {
   magicien: "lanceur", necromancien: "lanceur", enchanteur: "lanceur",
 };
 /* Niveaux requis pour gagner +1 au bonus d'attaque selon l'archétype. */
-const DIVISEUR_ATTAQUE = { martial: 1, hybride: 2, lanceur: 3 };
+const DIVISEUR_ATTAQUE = { martial: 2, hybride: 2, lanceur: 3 };
 
 /* Famille de caractéristique associée à chaque classe, utilisée pour le coût
    d'ouverture des voies hors profil lors d'une montée de niveau. */
@@ -1927,7 +1927,7 @@ const REGLES_GENERALES = [
   {
     titre: "Attaque",
     contenu:
-      "Jet = 1d20 + bonus d'attaque (caractéristique + bonus de classe/niveau + bonus de voie éventuel) contre la DEF de la cible. Le bonus de classe/niveau s'applique uniquement au jet, jamais aux dégâts : Martial (Guerrier, Chevalier, Chasseur) +1/niveau ; Hybride (Prêtre, Druide, Barde, Moine) +1 tous les 2 niveaux ; Lanceur (Magicien, Nécromancien, Enchanteur) +1 tous les 3 niveaux.",
+      "Jet = 1d20 + bonus d'attaque (caractéristique + bonus de classe/niveau + bonus de voie éventuel) contre la DEF de la cible. Le bonus de classe/niveau s'applique uniquement au jet, jamais aux dégâts : Martial (Guerrier, Chevalier, Chasseur) +1 tous les 2 niveaux ; Hybride (Prêtre, Druide, Barde, Moine) +1 tous les 2 niveaux ; Lanceur (Magicien, Nécromancien, Enchanteur) +1 tous les 3 niveaux.",
   },
   {
     titre: "Dégâts",

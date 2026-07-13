@@ -395,7 +395,9 @@ class Personnage extends Entite {
   }
 
   /* ----- Attaque ----- */
-  // Bonus de progression selon l'archétype : martial +1/niv, hybride +1/2 niv, lanceur +1/3 niv
+  // Bonus de progression selon l'archétype : martial +1 tous les 2 niv (aligné sur hybride),
+  // lanceur +1 tous les 3 niv. La distinction Martial/Hybride se fait via dégâts/PV/voies,
+  // pas via ce bonus.
   bonusProgression() {
     const arch = (typeof ARCHETYPE_CLASSE !== "undefined" && ARCHETYPE_CLASSE[this.classe]) || "martial";
     const div = (typeof DIVISEUR_ATTAQUE !== "undefined" && DIVISEUR_ATTAQUE[arch]) || 1;
