@@ -4068,54 +4068,69 @@ const App = (() => {
   // Applique un jet de dégâts subis : retranche la réduction de dégâts de
   // l'équipement (armure) avant de décompter les PV, contrairement à
   // ajusterPv/definirPv qui manipulent les PV bruts sans passer par
-  // l'équipement (undo d'un soin, correction manuelle...).
-  function subirDegats(id, degatsBruts) {
+  // l'équipement (undo d'un soin, correction manuelle...). typeDegats
+  // ("physique"/"magique", cf. blocDegatsSubisHtml) détermine si le don
+  // Maître des armures lourdes (-3 dégâts physiques, avant valeurArmure)
+  // s'applique — sans effet sur des dégâts magiques.
+  function subirDegats(id, degatsBruts, typeDegats) {
     degatsBruts = parseInt(degatsBruts, 10);
     if (isNaN(degatsBruts) || degatsBruts < 0) { toast("Entre un nombre de dégâts valide."); return; }
     const persos = chargerPersos();
     const p = persos[id];
     if (!p) return;
     const perso = Personnage.depuisJSON(p);
+    const reductionLourde = typeDegats === "physique" ? perso.bonusReductionLourdeDons() : 0;
+    const apresLourde = Math.max(0, degatsBruts - reductionLourde);
     const reduction = perso.reductionDegats();
-    const degatsNets = Math.max(0, degatsBruts - reduction);
+    const degatsNets = Math.max(0, apresLourde - reduction);
     const pvAvant = p.pvActuel;
     p.pvActuel = Math.max(0, p.pvActuel - degatsNets);
     const transition = _majEtatMourant(p, pvAvant);
     sauverPersos(persos);
     _syncPvAffichages(id, p);
     if (transition) _rerendreApresTransitionMourant(id);
-    toast(reduction > 0
-      ? `🛡 ${degatsBruts} dégâts subis → ${degatsNets} après réduction d'armure (−${reduction}).`
+    const reductionTotale = reductionLourde + reduction;
+    toast(reductionTotale > 0
+      ? `🛡 ${degatsBruts} dégâts subis → ${degatsNets} après réduction d'armure${reductionLourde > 0 ? " + don" : ""} (−${reductionTotale}).`
       : `${degatsNets} dégâts subis.`);
   }
 
   // HTML + câblage du petit formulaire "Subir des dégâts", réutilisé par la
-  // fiche complète et la mini-fiche battlemap (prefixe distingue les ids).
+  // fiche complète, la mini-fiche battlemap et la table de combat (monstres) —
+  // prefixe distingue les ids. Le sélecteur de type (physique/magique) sert
+  // au don Maître des armures lourdes (cf. subirDegats) ; ignoré côté monstre,
+  // qui n'a pas cette mécanique.
   function blocDegatsSubisHtml(prefixe) {
     return `
       <button class="btn petit danger btn-toggle-degats" id="${prefixe}btn-toggle-degats" style="width:100%;">🛡 Subir des dégâts</button>
       <div class="degats-subis" id="${prefixe}degats-subis-form" style="display:none;">
         <input type="number" id="${prefixe}champ-degats-bruts" placeholder="Dégâts bruts" min="0" />
+        <select id="${prefixe}type-degats-subis">
+          <option value="physique" selected>Physique</option>
+          <option value="magique">Magique</option>
+        </select>
         <button class="btn petit or" id="${prefixe}btn-appliquer-degats">Appliquer</button>
       </div>`;
   }
   function wireDegatsSubis(id, prefixe) {
-    wireDegatsSubisGenerique(prefixe, (val) => subirDegats(id, val));
+    wireDegatsSubisGenerique(prefixe, (val, typeDegats) => subirDegats(id, val, typeDegats));
   }
 
   // Câblage générique du petit formulaire "Subir des dégâts" (toggle + input +
-  // bouton + Entrée) : `appliquer(valeurBrute)` porte la logique propre à
-  // l'appelant (joueur via subirDegats, monstre de la table de combat, etc.).
+  // bouton + Entrée) : `appliquer(valeurBrute, typeDegats)` porte la logique
+  // propre à l'appelant (joueur via subirDegats, monstre de la table de
+  // combat, etc. — ce dernier ignore simplement le 2e argument).
   function wireDegatsSubisGenerique(prefixe, appliquer) {
     const btnToggle = document.getElementById(`${prefixe}btn-toggle-degats`);
     const form = document.getElementById(`${prefixe}degats-subis-form`);
     const champ = document.getElementById(`${prefixe}champ-degats-bruts`);
+    const selType = document.getElementById(`${prefixe}type-degats-subis`);
     if (!btnToggle || !form || !champ) return;
     btnToggle.onclick = () => {
       form.style.display = form.style.display === "none" ? "flex" : "none";
       if (form.style.display === "flex") champ.focus();
     };
-    const appliquerEtVider = () => { appliquer(champ.value); champ.value = ""; };
+    const appliquerEtVider = () => { appliquer(champ.value, selType ? selType.value : "physique"); champ.value = ""; };
     document.getElementById(`${prefixe}btn-appliquer-degats`).onclick = appliquerEtVider;
     champ.addEventListener("keydown", (e) => { if (e.key === "Enter") appliquerEtVider(); });
   }

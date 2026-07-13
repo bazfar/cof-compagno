@@ -455,6 +455,15 @@ class Personnage extends Entite {
     }
     return bonus;
   }
+  // Don Maître des armures lourdes : -3 dégâts physiques subis, appliqué
+  // AVANT valeurArmure (cf. subirDegats côté app.js — pas inclus dans
+  // reductionDegats(), qui n'a pas connaissance du type de dégâts). Actif
+  // uniquement avec une armure valeurArmure >= 5 équipée.
+  bonusReductionLourdeDons() {
+    const armure = this._itemsEquipesUniques().find((it) => it.type === "armure");
+    const va = armure ? (armure.valeurArmure || 0) : 0;
+    return (va >= 5 && (this.dons || []).includes("maitre_armures_lourdes")) ? 3 : 0;
+  }
   bonusDefEquipement() {
     return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDEF || 0), 0);
   }
