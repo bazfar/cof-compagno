@@ -21,6 +21,7 @@ const App = (() => {
   let etapeDebloquee = 1;
   let ficheActiveId = null;  // id du perso affiché dans "Ma fiche"
   let ficheSidebarActiveId = null;  // id du perso affiché dans la mini-fiche battlemap (sidebar)
+  let _cibleDistanceId = null;  // token cible choisi pour le vérificateur de portée (cf. rendreFicheSidebarBattlemap)
   let livretPersoId = null;  // id du perso choisi dans l'onglet "📖 Livret"
   // Sélection courante de l'onglet "🔨 Atelier" (cf. rendrePanneauAtelier) —
   // atelierItemIdx référence un index dans inventaireListe du perso choisi,
@@ -282,6 +283,24 @@ const App = (() => {
     };
   }
 
+  // Id du token dd2vtt du perso `persoId` sur la scène de combat active, ou
+  // null s'il n'a pas (encore) de jeton posé — sert de point de référence
+  // pour le vérificateur de portée (cf. Carte.distanceCasesEntre).
+  function _monTokenId(persoId) {
+    if (typeof Carte === "undefined" || !Carte.listeTokensJoueursCombat) return null;
+    const tok = Carte.listeTokensJoueursCombat().find((t) => t.ref === "pj-" + persoId);
+    return tok ? tok.id : null;
+  }
+
+  // Cibles possibles pour le vérificateur de portée : tous les tokens de la
+  // table de combat (monstres + autres PJ), hors soi-même.
+  function _ciblesPortee(monTokenId) {
+    if (typeof Carte === "undefined") return [];
+    const monstres = Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : [];
+    const pjs = Carte.listeTokensJoueursCombat ? Carte.listeTokensJoueursCombat() : [];
+    return [...monstres, ...pjs].filter((t) => t.id !== monTokenId);
+  }
+
   // Mini-fiche affichée en permanence à gauche de la battlemap (joueur
   // uniquement) : suit le personnage sélectionné dans "Mon personnage",
   // le même que celui dont le jeton est posé sur la scène.
@@ -328,6 +347,42 @@ const App = (() => {
     const dmgDistance = formuleDegats(armeDistance);
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
 
+    // Vérificateur de portée (grille dd2vtt) : distance en cases entre le
+    // jeton du joueur et une cible choisie, comparée à porteeMinCases/
+    // porteeMaxCases de l'arme à distance équipée — seulement affiché en
+    // combat, jeton posé, et arme à distance avec portée en cases renseignée
+    // (les armes pas encore migrées au nouveau schéma n'ont pas ces champs).
+    let porteeHtml = "";
+    if (armeDistance && armeDistance.porteeMaxCases !== undefined &&
+        typeof Combat !== "undefined" && Combat.estActif() &&
+        typeof Carte !== "undefined" && Carte.distanceCasesEntre) {
+      const monTokenId = _monTokenId(id);
+      const cibles = monTokenId ? _ciblesPortee(monTokenId) : [];
+      if (monTokenId && cibles.length) {
+        if (!cibles.some((cc) => cc.id === _cibleDistanceId)) _cibleDistanceId = cibles[0].id;
+        const distance = Carte.distanceCasesEntre(monTokenId, _cibleDistanceId);
+        let verdict = "";
+        if (distance === null) {
+          verdict = `<span class="aide">cible introuvable sur la carte</span>`;
+        } else if (distance < (armeDistance.porteeMinCases || 0)) {
+          verdict = `<span style="color:var(--chaos);font-weight:700;">trop proche (min. ${armeDistance.porteeMinCases})</span>`;
+        } else if (distance > armeDistance.porteeMaxCases) {
+          verdict = `<span style="color:var(--chaos);font-weight:700;">hors de portée (max. ${armeDistance.porteeMaxCases})</span>`;
+        } else {
+          verdict = `<span style="color:#2f9e44;font-weight:700;">en portée</span>`;
+        }
+        porteeHtml = `
+        <div style="margin-top:8px;">
+          <label style="font-size:0.78rem;display:block;">📏 Portée (${echapper(armeDistance.nom)})
+            <select id="bm-cible-portee" style="width:100%;margin-top:2px;">
+              ${cibles.map((cc) => `<option value="${cc.id}" ${cc.id === _cibleDistanceId ? "selected" : ""}>${echapper(cc.nom)}</option>`).join("")}
+            </select>
+          </label>
+          <p style="font-size:0.78rem;margin:4px 0 0;">Distance : <strong>${distance === null ? "?" : distance}</strong> case${distance === 1 ? "" : "s"} — ${verdict}</p>
+        </div>`;
+      }
+    }
+
     sidebar.innerHTML = ordreHtml + `
       <div class="carte">
         <div class="entete-fiche">
@@ -370,6 +425,7 @@ const App = (() => {
           ${dmgDistance ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}" title="${echapper(armeDistance ? armeDistance.nom : "")}">🎲 Dégâts Distance (${dmgDistance})</button>` : ""}
           ${dmgMagique ? `<button class="btn petit secondaire" data-bm-degats="${dmgMagique}">🎲 Dégâts Magique (${dmgMagique})</button>` : ""}
         </div>` : ""}
+        ${porteeHtml}
       </div>
       ${htmlEtatsActifs(p)}
       ${htmlBlocInitiativeJoueur(id)}
@@ -408,6 +464,14 @@ const App = (() => {
         lancerFormule(formule, `${p.nom} — Dégâts (${formule})`);
       };
     });
+    // Vérificateur de portée : changer de cible re-rend juste ce calcul.
+    const selCiblePortee = document.getElementById("bm-cible-portee");
+    if (selCiblePortee) {
+      selCiblePortee.onchange = () => {
+        _cibleDistanceId = selCiblePortee.value;
+        rendreFicheSidebarBattlemap(id);
+      };
+    }
     // Capacités/états, mêmes règles que la fiche complète (cf. wireCapacitesEtEtats).
     wireCapacitesEtEtats(sidebar, id, p, () => rendreFicheSidebarBattlemap(id));
     rendreDockCombat(); // barre d'action de combat sous la carte (cf. plus bas)
@@ -2708,7 +2772,7 @@ const App = (() => {
   const LABELS_SLOT = {
     tete: "Tête", torse: "Torse", jambe: "Jambes", botte: "Bottes",
     avant_bras: "Avant-bras", main_droite: "Main droite", main_gauche: "Main gauche",
-    collier: "Collier", bague: "Bague",
+    collier: "Collier", bague: "Bague", mains: "Mains",
   };
 
   // Résumé chiffré de l'effet d'un item, pour les badges de slot/inventaire.

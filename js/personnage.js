@@ -12,7 +12,7 @@
 // 9 emplacements d'équipement fixes. Seul ce qui est placé ici compte pour
 // les stats de combat (DEF, réduction de dégâts, dégâts d'arme) — le reste
 // vit dans inventaireListe, un simple sac sans effet mécanique.
-const SLOTS_EQUIPEMENT = ["tete", "torse", "jambe", "botte", "avant_bras", "main_droite", "main_gauche", "collier", "bague"];
+const SLOTS_EQUIPEMENT = ["tete", "torse", "jambe", "botte", "avant_bras", "main_droite", "main_gauche", "collier", "bague", "mains"];
 
 function equipementVide() {
   const e = {};

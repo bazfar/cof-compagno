@@ -303,6 +303,10 @@ const EFFETS_PAR_ITEM = {
     { id: "brutale", nom: "brutale", rare: "+1d4 dégâts avec armes de contact tant que l'armure est équipée", legendaire: "+1d6 dégâts avec armes de contact tant que l'armure est équipée" },
     { id: "increvable", nom: "increvable", rare: "Ignore 1 point de dégâts physiques après application de valeurArmure", legendaire: "Ignore 2 points de dégâts physiques après application de valeurArmure" },
   ],
+  gants_poing: [
+    { id: "percutants", nom: "percutants", rare: "+1 dégâts à mains nues ; ignore 1 point de valeurArmure de la cible", legendaire: "+2 dégâts à mains nues ; ignore 2 points de valeurArmure de la cible" },
+    { id: "foudroyants", nom: "foudroyants", rare: "+1 dégâts à mains nues ; 1 chance sur 2 d'étourdir la cible 1 tour sur un coup critique", legendaire: "+2 dégâts à mains nues ; étourdit systématiquement la cible 1 tour sur tout coup critique" },
+  ],
 
   // ── Boucliers (suite) ──────────────────────────────────────
   bouclier_guet: [
