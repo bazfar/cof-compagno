@@ -404,6 +404,16 @@ const Carte = (() => {
     return etat.jetons.filter((j) => j.pj);
   }
 
+  // Distance en cases (grille dd2vtt) entre deux tokens de la scène de combat
+  // active — sert à vérifier la portée d'une arme à distance
+  // (porteeMinCases/porteeMaxCases, cf. data/loot.json) contre une cible
+  // choisie. null hors battlemap dd2vtt (worldmap, sans grille en cases) ou
+  // si l'un des deux tokens est introuvable.
+  function distanceCasesEntre(idA, idB) {
+    if (!_combatEnBattlemap()) return null;
+    return DD2VTT.distanceCases(idA, idB);
+  }
+
   function appliquerDegatsCombat(id, degatsBruts) {
     if (_combatEnBattlemap() && DD2VTT.tokensMonstres().some((t) => t.id === id)) {
       return DD2VTT.appliquerDegats(id, degatsBruts);
@@ -2556,6 +2566,17 @@ const Carte = (() => {
       return tokensDD.filter(t => t.pj);
     }
 
+    // Distance en cases entre deux tokens de la scène active, façon dd2vtt :
+    // distance de Chebyshev (max des deltas x/y — une diagonale compte pour 1
+    // case, pas plus qu'un déplacement orthogonal), pas une distance
+    // euclidienne. null si l'un des deux tokens est introuvable.
+    function distanceCases(idA, idB) {
+      const a = tokensDD.find(t => t.id === idA);
+      const b = tokensDD.find(t => t.id === idB);
+      if (!a || !b) return null;
+      return Math.max(Math.abs(a.cx - b.cx), Math.abs(a.cy - b.cy));
+    }
+
     // Applique des dégâts bruts à un token monstre, réduits par son armure
     // (comme Personnage.reductionDegats côté fiche joueur). Renvoie le détail
     // pour le toast de l'appelant, ou null si le token n'existe pas/plus.
@@ -3008,7 +3029,7 @@ const Carte = (() => {
       init, scenes: () => scenes, sceneActive: () => sceneActive,
       ajouterToken: (sc) => ajouterTokenDD(sc),
       modeWorldmap: activerModeWorldmap, modeBattlemap: activerModeBattlemap, estActive, ajouterTokenData,
-      tokensMonstres, tokensPJ, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
+      tokensMonstres, tokensPJ, distanceCases, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
       ajouterEtat: ajouterEtatToken, retirerEtat: retirerEtatToken,
       supprimerToken: supprimerTokenDD, onChange, actualiserTokens, reinitialiserExploration,
       onMonstreDevientVisible, reinitialiserDetectionVisibilite, estMonstreVisible,
@@ -3060,7 +3081,7 @@ const Carte = (() => {
   return {
     onOpen, definirRole, definirMonPerso, ajouterMonstre,
     listeMonstresCombat, listeTokensJoueursCombat, appliquerDegatsCombat, definirPvCombat, ajusterPvCombat,
-    ajouterEtatCombat, retirerEtatCombat,
+    ajouterEtatCombat, retirerEtatCombat, distanceCasesEntre,
     supprimerMonstreCombat, onMonstresChange, definirModeCarte,
     onMonstreDevientVisible, reinitialiserDetectionVisibilite, idPersoDepuisRef, monstreEstVisible,
     initiales,

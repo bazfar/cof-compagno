@@ -37,6 +37,17 @@ const Combat = (() => {
 
   const STORAGE = "combat:initiative";
 
+  // Économie d'action par tour (PJ uniquement) : une action de déplacement
+  // (DEPLACEMENT_BASE cases), une action principale (attaque/capacité, ou
+  // "Sprint" qui la consomme sans attaquer contre +SPRINT_BONUS cases) et
+  // une action secondaire (boire une potion, utiliser un parchemin, relever
+  // un allié...). Remise à zéro automatiquement quand tourSuivant() rend ce
+  // PJ actif. Pas de décompte automatique case par case au déplacement du
+  // jeton sur la carte (trop couplé au rendu) : le joueur ajuste lui-même
+  // son compteur, comme le reste des compteurs manuels de l'app (PV...).
+  const DEPLACEMENT_BASE = 5;
+  const SPRINT_BONUS = 2;
+
   function _etatVide() {
     return { actif: false, round: 1, indexActuel: 0, ordre: [] };
   }
@@ -69,6 +80,14 @@ const Combat = (() => {
 
   function _detailJet(d20, mod) {
     return `d20[${d20}]${mod >= 0 ? "+" : ""}${mod}`;
+  }
+
+  // Remet à zéro l'économie d'action d'une entrée PJ — appelé à sa création
+  // (premier tour) et à chaque fois que tourSuivant() la rend active.
+  function _reinitialiserActionsEntree(e) {
+    e.deplacementRestant = DEPLACEMENT_BASE;
+    e.actionPrincipaleUtilisee = false;
+    e.actionSecondaireUtilisee = false;
   }
 
   // `indexActuel` est un index brut dans `ordre` : insérer une entrée qui se
@@ -109,7 +128,9 @@ const Combat = (() => {
       const persoId = Carte.idPersoDepuisRef(tok.ref);
       if (ids.has(persoId)) return;
       const nom = (persos[persoId] && persos[persoId].nom) || tok.nom;
-      etat.ordre.push({ id: persoId, type: "pj", nom, initiative: null, detail: null, koTourCourant: false });
+      const entree = { id: persoId, type: "pj", nom, initiative: null, detail: null, koTourCourant: false };
+      _reinitialiserActionsEntree(entree);
+      etat.ordre.push(entree);
       ids.add(persoId);
     });
 
@@ -219,6 +240,7 @@ const Combat = (() => {
 
     const actif = etat.ordre[etat.indexActuel];
     if (actif && actif.type === "pj") {
+      _reinitialiserActionsEntree(actif);
       const persos = App.chargerPersos();
       const p = persos[actif.id];
       if (p) {
@@ -232,6 +254,59 @@ const Combat = (() => {
       }
     }
 
+    _sauver(etat);
+  }
+
+  // Ajuste le déplacement restant du PJ (+1/-1 case, ou tout delta) — jamais
+  // négatif. Le joueur décrémente lui-même en déplaçant son jeton, comme les
+  // compteurs manuels du reste de l'app (PV...) : pas de calcul automatique
+  // à partir de la distance parcourue sur la carte.
+  function ajusterDeplacement(persoId, delta) {
+    const etat = _lire();
+    const entree = etat.ordre.find((e) => e.id === persoId && e.type === "pj");
+    if (!entree) return;
+    entree.deplacementRestant = Math.max(0, (entree.deplacementRestant || 0) + delta);
+    _sauver(etat);
+  }
+
+  // Action principale consommée par une attaque/capacité (cf. app.js, câblé
+  // sur les boutons d'attaque/dégâts/capacités du joueur actif).
+  function utiliserActionPrincipale(persoId) {
+    const etat = _lire();
+    const entree = etat.ordre.find((e) => e.id === persoId && e.type === "pj");
+    if (!entree) return;
+    entree.actionPrincipaleUtilisee = true;
+    _sauver(etat);
+  }
+
+  // Sprint : consomme l'action principale SANS attaquer, contre
+  // +SPRINT_BONUS cases de déplacement ce tour.
+  function sprint(persoId) {
+    const etat = _lire();
+    const entree = etat.ordre.find((e) => e.id === persoId && e.type === "pj");
+    if (!entree) return;
+    entree.actionPrincipaleUtilisee = true;
+    entree.deplacementRestant = (entree.deplacementRestant || 0) + SPRINT_BONUS;
+    _sauver(etat);
+  }
+
+  // Action secondaire (boire une potion, utiliser un parchemin, relever un
+  // allié...) — un seul flag, pas de sous-catégorie automatisée.
+  function utiliserActionSecondaire(persoId) {
+    const etat = _lire();
+    const entree = etat.ordre.find((e) => e.id === persoId && e.type === "pj");
+    if (!entree) return;
+    entree.actionSecondaireUtilisee = true;
+    _sauver(etat);
+  }
+
+  // Réinitialisation manuelle de l'économie d'action (correction de table,
+  // sans attendre le prochain tour) — même entrée que _reinitialiserActionsEntree.
+  function reinitialiserActions(persoId) {
+    const etat = _lire();
+    const entree = etat.ordre.find((e) => e.id === persoId && e.type === "pj");
+    if (!entree) return;
+    _reinitialiserActionsEntree(entree);
     _sauver(etat);
   }
 
@@ -283,6 +358,13 @@ const Combat = (() => {
     tourSuivant,
     terminerCombat,
     onChange,
+    DEPLACEMENT_BASE,
+    SPRINT_BONUS,
+    ajusterDeplacement,
+    utiliserActionPrincipale,
+    sprint,
+    utiliserActionSecondaire,
+    reinitialiserActions,
   };
 })();
 

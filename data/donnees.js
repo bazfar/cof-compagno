@@ -305,7 +305,7 @@ const CLASSES = {
                 { type: "special", note: "Déjà calculé dans Personnage (cf. calculerDEF) pour la partie DEF ; valeur dynamique (Mod.INT), pas un nombre fixe." } ] } },
           { rang: 3, nom: "Feinte (L)", effet: "Test d'attaque opposé contre la DEF adverse : réussite → la cible subit -4 DEF jusqu'au prochain tour du Barde",
             mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
-              jetOppose: { caracAttaquant: "attaque", caracDefenseur: "DEF", difficulteFixe: null },
+              jetOppose: { caracAttaquant: "attaqueContact", caracDefenseur: "DEF", difficulteFixe: null },
               effets: [ { type: "bonus", cible: "DEF", valeur: -4, duree: "prochainTour" } ] } },
           { rang: 4, nom: "Enchaînement (L)", effet: "Attaque supplémentaire avec arme légère, malus de -2 sur les deux attaques du tour",
             mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
@@ -329,7 +329,7 @@ const CLASSES = {
               effets: [ { type: "special", note: "+2 m de déplacement par tour ; se relever devient une action gratuite — règles de déplacement/économie d'action non chiffrables." } ] } },
           { rang: 3, nom: "Lanceur de couteau", effet: "Lance des dagues à 10 m de portée, 1d4 + Mod. de DEX DM ; +1 en attaque avec les armes de jet légères",
             mecanique: { type: "activable", usage: { frequence: "libre" }, cible: "ennemi", portee: 10, zone: null,
-              jetOppose: { caracAttaquant: "attaque", caracDefenseur: "DEF", difficulteFixe: null },
+              jetOppose: { caracAttaquant: "attaqueDistance", caracDefenseur: "DEF", difficulteFixe: null },
               effets: [ { type: "degats", formule: "1d4+Mod.DEX", elementaire: null } ] } },
           { rang: 4, nom: "Esquive acrobatique (passive)", effet: "+2 DEF contre les attaques d'ennemis qui se sont déplacés ce tour ; sur attaque ratée contre lui, déplacement de 3 m en action gratuite",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
@@ -728,7 +728,7 @@ const CLASSES = {
                 { type: "special", note: "Bonus actif uniquement en terrain difficile naturel (neige/boue/broussailles) — condition non trackée automatiquement. Ignore aussi la pénalité de déplacement en terrain difficile." } ] } },
           { rang: 3, nom: "Combat au bâton", effet: "Combat avec les deux extrémités de son bâton : deux attaques de contact, 1d6+Mod. de FOR ou DEX (au choix) chacune",
             mecanique: { type: "activable", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
-              jetOppose: { caracAttaquant: "attaque", caracDefenseur: "DEF", difficulteFixe: null },
+              jetOppose: { caracAttaquant: "attaqueContact", caracDefenseur: "DEF", difficulteFixe: null },
               effets: [ { type: "degats", formule: "1d6+Mod.FOR", elementaire: null },
                 { type: "special", note: "Deux attaques distinctes par tour (contact, 1d6+Mod.FOR ou Mod.DEX au choix chacune) — un seul jet de dégâts représenté ici, à répéter pour la seconde attaque." } ] } },
           { rang: 4, nom: "Résistance naturelle", effet: "Réduction de DM égale à [Rang×2] contre les dégâts naturels (froid, chaleur, chutes, poisons, animaux/insectes)",
@@ -819,7 +819,7 @@ const CLASSES = {
         rangs: [
           { rang: 1, nom: "Chair instable", effet: "Attaque naturelle (griffes/ronces, contact) : 1d6 DM. Optionnel : pousser pour +1d6 DM (+1 CS)",
             mecanique: { type: "activable", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
-              jetOppose: { caracAttaquant: "attaque", caracDefenseur: "DEF", difficulteFixe: null },
+              jetOppose: { caracAttaquant: "attaqueContact", caracDefenseur: "DEF", difficulteFixe: null },
               effets: [ { type: "degats", formule: "1d6", elementaire: null },
                 { type: "special", note: "Optionnel : pousser pour +1d6 DM supplémentaires en payant +1 CS (jauge de Chaos) — coût/bonus optionnel non modélisé par un effet fixe." } ] } },
           { rang: 2, nom: "Écorce corrompue (passive)", effet: "+2 DEF naturelle permanente",
@@ -1249,7 +1249,7 @@ const CLASSES = {
                 { type: "special", note: "Alternative possible : +2 DEF au lieu de +2 attaque. Force n'importe quelle capacité martiale. +1 CP (jauge de Corruption du Pacte)." } ] } },
           { rang: 3, nom: "Frappe du pacte (L)", effet: "Attaque au contact : +2d6 DM chaotiques en cas de réussite. +2 CP. Critique (19-20) : jet sur la table de mutation Palier 1",
             mecanique: { type: "limitee", corruption: 2, usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
-              jetOppose: { caracAttaquant: "attaque", caracDefenseur: "DEF", difficulteFixe: null },
+              jetOppose: { caracAttaquant: "attaqueContact", caracDefenseur: "DEF", difficulteFixe: null },
               effets: [ { type: "degats", formule: "2d6", elementaire: "chaos" },
                 { type: "special", note: "+2 CP (jauge de Corruption du Pacte). Critique sur 19-20 : jet sur la table de mutation Palier 1." } ] } },
           { rang: 4, nom: "Marque du serment brisé (passive, dès CA 5+)", effet: "Au choix, fixe : +2 DEF permanent, ou +1d8 DM chaotique sur l'arme de prédilection. Contrepartie : rejeté par les ordres de chevalerie",
@@ -1287,24 +1287,24 @@ const CLASSES = {
         rangs: [
           { rang: 1, nom: null, effet: "Les attaques à mains nues infligent des dégâts létaux : 1d6 + Mod. de FOR",
             mecanique: { type: "activable", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
-              jetOppose: { caracAttaquant: "attaque", caracDefenseur: "DEF", difficulteFixe: null },
+              jetOppose: { caracAttaquant: "attaqueContact", caracDefenseur: "DEF", difficulteFixe: null },
               effets: [ { type: "degats", formule: "1d6+Mod.FOR", elementaire: null } ] } },
           { rang: 2, nom: null, effet: "Le dé de dégâts passe à 1d8",
             mecanique: { type: "activable", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
-              jetOppose: { caracAttaquant: "attaque", caracDefenseur: "DEF", difficulteFixe: null },
+              jetOppose: { caracAttaquant: "attaqueContact", caracDefenseur: "DEF", difficulteFixe: null },
               effets: [ { type: "degats", formule: "1d8+Mod.FOR", elementaire: null } ] } },
           { rang: 3, nom: null, effet: "Le dé passe à 1d10, +2 DEF",
             mecanique: { type: "activable", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
-              jetOppose: { caracAttaquant: "attaque", caracDefenseur: "DEF", difficulteFixe: null },
+              jetOppose: { caracAttaquant: "attaqueContact", caracDefenseur: "DEF", difficulteFixe: null },
               effets: [ { type: "degats", formule: "1d10+Mod.FOR", elementaire: null },
                 { type: "bonus", cible: "DEF", valeur: 2, duree: "permanente" } ] } },
           { rang: 4, nom: null, effet: "Le dé passe à 1d12",
             mecanique: { type: "activable", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
-              jetOppose: { caracAttaquant: "attaque", caracDefenseur: "DEF", difficulteFixe: null },
+              jetOppose: { caracAttaquant: "attaqueContact", caracDefenseur: "DEF", difficulteFixe: null },
               effets: [ { type: "degats", formule: "1d12+Mod.FOR", elementaire: null } ] } },
           { rang: 5, nom: null, effet: "Le dé passe à 2d6 ; option d'attaquer avec un d12 au lieu du d20 pour +2d6 DM bonus en cas de réussite",
             mecanique: { type: "activable", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
-              jetOppose: { caracAttaquant: "attaque", caracDefenseur: "DEF", difficulteFixe: null },
+              jetOppose: { caracAttaquant: "attaqueContact", caracDefenseur: "DEF", difficulteFixe: null },
               effets: [ { type: "degats", formule: "2d6+Mod.FOR", elementaire: null },
                 { type: "special", note: "Option : remplacer le d20 du jet d'attaque par un d12 pour +2d6 DM bonus en cas de réussite — bascule de dé d'attaque non modélisée par le schéma standard." } ] } },
         ],
@@ -1783,6 +1783,11 @@ const LORE = {
         "La Grande Sécession (la Rupture) a eu lieu il y a environ 170 ans — assez loin pour ne plus être un souvenir personnel, assez proche pour rester un souvenir de famille encore instrumentalisé politiquement.\n\nMême origine pour tous les Humains — le sang divin fracturé. Après la Grande Sécession du Premier Empire, trois systèmes se disputent le monde connu : l'Empire de Solvarn, les Royaumes Coalisés (Valdorne, Arveth, Mornac, Serval) et la République de Liberra.\n\nL'Empire de Solvarn (Xénophobe · Centralisé · Religieux · Solaire)\nHéritier du Premier Empire ; la famille impériale revendique le sang des Gardiens de l'Écorce. Le soleil est son symbole. Doctrine : pureté du sang humain comme rempart au Chaos, non-humains = vecteurs de corruption. Ironie : Solvarn a raison sur un point (les Humains sont plus susceptibles au Chaos), appliqué de façon monstrueuse. But : purifier et reconquérir.\n\nLes Royaumes Coalisés (Chevaleresques · Féodaux · Hypocrites)\n• Valdorne : le plus ancien, berceau de la sécession, chevalerie sincère.\n• Arveth : frontalier de Solvarn, sous pression constante — le vacillant.\n• Mornac : maritime et commerçant, chevalerie de façade, pragmatique.\n• Serval : montagnard, allié des Nains de l'Ordre, le plus indépendant.\nStructure féodale (Seigneurs → Chevaliers → Paysans). Point de rupture : si Arveth tombe, la coalition se fracture.\n\nLa République de Liberra (Idéaliste · Inclusive · Fracturée)\nNée de la Sécession, rejette l'Empire et le féodalisme. Assemblée de citoyens ; non-humains admis (représentation inégale). Majorité Aelindra, minorité Mordanel. Fractures : marchands vs idéalistes vs militaires vs communautés non-humaines.\n\nTensions actuelles\n• Solvarn → Royaumes : reconquête (Arveth en première ligne).\n• Solvarn → Liberra : hérésie raciale.\n• Solvarn → Aetharion : guerre ouverte.\n• Valdorne → Solvarn : résistance idéaliste, refuse tout compromis.\n• Arveth → Coalition : négociations secrètes déjà engagées avec Solvarn — un flanc coalisé neutralisé libérerait des troupes impériales pour l'effort contre Aetharion. Rupture potentielle si ces contacts sont révélés.\n• Mornac : pragmatisme marchand (commerce avec Liberra, vend à Solvarn si le prix est bon).\n• Serval ↔ Nains de l'Ordre : alliance montagnarde solide.\n• Liberra ↔ Aelindra : alliance naturelle. Liberra ↔ Royaumes : alliance inconfortable contre Solvarn.",
     },
     {
+      titre: "Les Lieux de Libris",
+      contenu:
+        "Sept lieux structurent la vie politique et sociale de Libris — territoires informels des cinq blocs de l'Assemblée, ou terrains neutres où tout le monde se croise.\n\nLe Grand Marché (Quartier des Marchés)\nCœur commercial de la ville, sur la Lisdane. Entrepôts, comptoirs de change, guildes en tout genre — territoire naturel du Comptoir. C'est ici, dans l'arrière-boutique d'un entrepôt discret appartenant à un intermédiaire de confiance, que Maître Aurèle Ferrand traite ses affaires les moins avouables.\n\nLe Palais du Serment\nSiège officiel de l'Assemblée, bâtiment le plus ancien de Libris — la charte fondatrice y est conservée sous verre, dans la salle où Vasnal préside encore les débats. Terrain neutre en théorie ; en pratique, les cinq blocs s'y affrontent à coups de procédure.\n\nLa Citadelle des Ponts\nCaserne principale de la Garde Citoyenne, sur un éperon rocheux dominant un des ponts de la Lisdane. Accès restreint, patrouilles visibles — un lieu qui rassure certains habitants et en inquiète d'autres.\n\nLe Quartier du Tissage\nTerritoire du Cercle des Peuples. Quartier mixte où se concentrent Aelindra, Mordanel exilés et autres non-humains de la ville. Ateliers, maisons communes, un petit temple dédié à Aelindros.\n\nLa Racine Noire\nTaverne discrète en périphérie, loin des quartiers marchands — repaire informel des Fils de Libris. Pas de siège officiel : leur pouvoir se construit ici, autour de bière bon marché et de discours populistes adressés à ceux que le Comptoir a ruinés.\n\nLa Table Commune\nAuberge-carrefour près des quais, fréquentée par tout le monde — marchands, miliciens en repos, idéalistes désabusés, parfois même un Fils de Libris qui ne veut pas se faire remarquer. Le lieu neutre par excellence pour une rencontre discrète.\n\nLes Docks de Cendre-Claire\nPort principal, où arrivent les nouvelles de la guerre navale contre Aetharion et les cargaisons du Comptoir. Lieu de passage pour toute intrigue impliquant contrebande, espionnage étranger, ou rumeurs fraîchement débarquées d'un autre continent.",
+    },
+    {
       titre: "La Rupture — chronique de la Grande Sécession",
       contenu:
         "Quand la dynastie régnante du Premier Empire a durci sa doctrine solaire, une branche a revendiqué l'exclusivité du sang divin des Gardiens et verrouillé le pouvoir — devenant Solvarn. Quatre grandes maisons provinciales (futurs Valdorne, Arveth, Mornac, Serval) ont refusé cette purification et se sont soulevées ensemble : la Rupture. Guerre de dix ans, achevée sur un armistice que Solvarn n'a jamais considéré comme définitif.\n\nTrois batailles marquantes :\n\n• La Charge de Fossessainte (an 1) — bataille d'ouverture à un gué frontalier. Sire Alaric de Valdorne, jeune chevalier sans grade, rallie les colonnes dispersées et transforme une déroute en victoire. Fondateur du code chevaleresque de Valdorne : l'honneur individuel qui sauve la cause commune.\n\n• Le Siège de Mornhaven (an 4-5) — le Haut-Maréchal Corvain Ashe assiège la capitale de Mornac huit mois. Mornac tient grâce aux convois de Serval à travers ses cols — ce qui soude la Coalition en alliance réelle.\n\n• La Bataille du Pont-Rompu (an 9) — Alaric, devenu commandant respecté, meurt en détruisant un pont pour couvrir la retraite coalisée. Un mois plus tard, les deux camps épuisés négocient.\n\nL'Armistice des Quatre Sceaux — signé près de Pont-Rompu. Chaque maison appose son sceau séparément (d'où le nom), refusant un sceau commun. Solvarn signe sous protestation, le considérant comme une pause tactique. Corvain Ashe, marqué par cet échec, aurait inspiré des décennies plus tard le durcissement de la doctrine des Chevaliers-Inquisiteurs.\n\n\"Être un Alaric\", à Valdorne, désigne aujourd'hui un acte de courage qui dépasse son rang.",
@@ -1911,6 +1916,216 @@ const PNJ_CLES = [
       "Un raid évolutionniste contre son propre clan le force à demander de l'aide à des étrangers plutôt qu'aux siens.",
     ],
   },
+  {
+    id: "selyne-orwick",
+    nom: "Selyne Orwick",
+    titre: "Teneuse de comptes du Grand Marché",
+    faction: "Comptoir",
+    resume: "Discrète et terrifiée à l'idée de perdre sa place, elle tient les vrais livres de comptes d'intermédiaires du Comptoir sans jamais avoir posé de questions.",
+    description:
+      "Méthodique et effacée, Selyne gère la comptabilité de plusieurs intermédiaires du Comptoir, dont certains liés au réseau de Maître Aurèle Ferrand — sans jamais avoir cherché à savoir ce qu'elle validait. Peut être convaincue de parler contre une garantie de protection, ou contre une somme qu'elle n'oserait jamais réclamer elle-même.",
+    accroches: [
+      "Peut confirmer ou infirmer des mouvements d'argent suspects si les PJ remontent la piste du médaillon.",
+      "Sait qui, chez Ferrand, panique depuis peu — signe qu'un fil se tend ailleurs dans la campagne.",
+    ],
+  },
+  {
+    id: "grizzard-ancre",
+    nom: "Grizzard « l'Ancre »",
+    titre: "Vigie des Docks de Cendre-Claire",
+    faction: "Comptoir",
+    resume: "Vieux docker balafré qui voit tout ce qui entre et sort du port, et vend ses informations pas cher.",
+    description:
+      "Plus à sa place sur les quais que n'importe où ailleurs, Grizzard observe le trafic portuaire depuis des décennies. Pas malveillant, juste pragmatique : il vend ses informations contre à boire à la Table Commune.",
+    accroches: [
+      "Premier à savoir quand une cargaison ou un passager « ne colle pas ».",
+      "Source naturelle pour tout hook lié à la contrebande ou à l'espionnage étranger.",
+    ],
+  },
+  {
+    id: "aldous-kenrick",
+    nom: "Aldous Kenrick",
+    titre: "Archiviste du Palais du Serment",
+    faction: "Serment de Libris",
+    resume: "Passionné et un peu pédant, il garde la charte fondatrice et des décennies d'archives que plus personne ne consulte.",
+    description:
+      "Aldous connaît des pans entiers de l'histoire de la République que même Vasnal a oubliés. Sa passion pour les archives confine à l'obsession, mais elle en fait une mine d'informations historiques précieuses.",
+    accroches: [
+      "Peut fournir un document historique perdu, utile pour légitimer une action des PJ devant l'Assemblée.",
+      "Inquiet de constater que certains dossiers anciens ont récemment été consultés par quelqu'un — sans savoir qui.",
+    ],
+  },
+  {
+    id: "liora-sennett",
+    nom: "Liora Sennett",
+    titre: "Aide du Consul Vasnal, successeure pressentie",
+    faction: "Serment de Libris",
+    resume: "Jeune et idéaliste, encore assez naïve pour croire que la charte fondatrice peut suffire à elle seule.",
+    description:
+      "Vasnal la teste discrètement pour sa succession sans le lui dire ouvertement. Liora porte encore intacte la foi dans les idéaux fondateurs de la République, dans un contexte où de moins en moins de blocs y croient encore vraiment.",
+    accroches: [
+      "Peut recruter les PJ pour des missions « propres » soutenant le Serment (protéger un témoin, porter un message sensible).",
+      "Si les PJ l'aident à réussir, elle gagne en assurance ; si elle échoue, elle pourrait basculer vers le cynisme ambiant.",
+    ],
+  },
+  {
+    id: "bram-osgoode",
+    nom: "Lieutenant Bram Osgoode",
+    titre: "Officier de la Citadelle des Ponts",
+    faction: "Garde Citoyenne",
+    resume: "Discipliné en apparence, rongé par le doute depuis qu'il a vu le dossier sur le financement solvarien des Fils de Libris.",
+    description:
+      "Bram a vu le document que Kessing garde confidentiel, et l'ordre de le taire le ronge depuis. Officier loyal jusqu'ici, il commence à se demander si l'obéissance vaut encore quelque chose face à ce qu'il sait.",
+    accroches: [
+      "Pourrait être la fuite qui rend le document public, si les PJ gagnent sa confiance.",
+      "Hook moral : obéir à Kessing ou trahir sa hiérarchie pour ce qu'il croit juste.",
+    ],
+  },
+  {
+    id: "yannick-doria",
+    nom: "Sergent Yannick Doria",
+    titre: "Ancien de la Garde, tient une salle d'armes",
+    faction: "Garde Citoyenne",
+    resume: "Retraité bourru qui entraîne encore quelques jeunes recrues et connaît tout le monde dans la Garde.",
+    description:
+      "Yannick a quitté le service actif mais garde un pied dans tous les cercles militaires de Libris, y compris ceux qui en sont partis en mauvais termes. Bon contact pour tout ce qui touche au monde martial de la République.",
+    accroches: [
+      "Bon contact pour recruter des PNJ mercenaires ou vétérans ponctuels.",
+      "Sait qui, dans la Garde, a des sympathies inquiétantes pour les Fils de Libris.",
+    ],
+  },
+  {
+    id: "mira-sylvenne",
+    nom: "Mira Sylvenne",
+    titre: "Guérisseuse du Quartier du Tissage",
+    faction: "Cercle des Peuples",
+    resume: "Aelindra installée à Libris depuis des années, elle soigne sans distinction et voit la tension monter avant qu'elle n'éclate.",
+    description:
+      "Figure discrète mais respectée du Quartier du Tissage, Mira est souvent la première à percevoir les signaux faibles d'une escalade — bien avant que l'Assemblée ne s'en préoccupe.",
+    accroches: [
+      "Première à alerter les PJ si une attaque des Fils de Libris se prépare contre le quartier.",
+      "Peut demander une escorte ou une protection en échange de soins ou d'informations sur la communauté.",
+    ],
+  },
+  {
+    id: "corin-vashtel",
+    nom: "Corin Vashtel",
+    titre: "Informateur mordanel en exil",
+    faction: "Cercle des Peuples",
+    resume: "Méfiant et discret, survivant du Silence de Valmoire, toujours sur le qui-vive.",
+    description:
+      "Corin garde des contacts dans des réseaux qu'il ne nomme jamais directement. Sa méfiance est le fruit d'une histoire personnelle marquée par le Silence de Valmoire — il ne fait confiance qu'à ceux qui ont fait leurs preuves.",
+    accroches: [
+      "Peut relier un fil de campagne à des rumeurs venues d'Aetharion ou du reste du continent.",
+      "Bon PNJ à débloquer progressivement plutôt qu'à rencontrer d'emblée.",
+    ],
+  },
+  {
+    id: "petra-voss",
+    nom: "Petra Voss",
+    titre: "Ancienne membre repentie des Fils de Libris",
+    faction: "Fils de Libris",
+    resume: "A quitté le mouvement après avoir vu la violence tourner sérieux, vit cachée par peur d'être reconnue.",
+    description:
+      "Petra n'était pas une fanatique, juste quelqu'un de ruiné qui cherchait une communauté. Le basculement du mouvement vers la violence l'a poussée à fuir — mais elle sait encore beaucoup de choses sur son fonctionnement interne.",
+    accroches: [
+      "Informatrice potentielle contre Dessalles, mais seulement si les PJ garantissent sa sécurité.",
+      "Hook d'humanité : nuance le mouvement au-delà de la caricature fanatique.",
+    ],
+  },
+  {
+    id: "denner-ashcombe",
+    nom: "Denner Ashcombe",
+    titre: "Petit commerçant sympathisant des Fils de Libris",
+    faction: "Fils de Libris",
+    resume: "Ruiné par la concurrence des guildes du Comptoir, pas violent, mais assiste aux discours de la Racine Noire faute d'alternative.",
+    description:
+      "Denner incarne le terreau économique du mouvement plutôt que son extrémisme. Sa colère est réelle et compréhensible, même si elle le pousse vers des cercles dangereux.",
+    accroches: [
+      "Peut donner aux PJ une vision nuancée du ressentiment des Fils de Libris — utile pour éviter le manichéisme.",
+      "Quête possible : lui offrir une vraie alternative économique, pour tester si le mouvement perd du terrain autrement que par la force.",
+    ],
+  },
+];
+
+/* ============================================================
+   FACTIONS (page "Lore" > onglet "Factions")
+   Un groupe = un camp politique (Empire, République...), chacun avec ses
+   entités internes (maisons/blocs) et une synthèse des rapports de force.
+   ============================================================ */
+const FACTIONS = [
+  {
+    groupe: "Empire de Solvarn",
+    intro:
+      "Quatre grandes maisons ont fait sécession lors de la Rupture pour fonder les Royaumes Coalisés (Valdorne, Arveth, Mornac, Serval). Quatre autres sont restées fidèles au trône de Solmaris. Narrativement, huit maisons issues du même Premier Empire — quatre qui ont trahi, quatre qui ont tenu bon, chacune des loyalistes reflétant, sous une forme corrompue par la doctrine impériale, la vertu qui a poussé son miroir sécessionniste à partir.",
+    entites: [
+      {
+        nom: "Maison Ashe — Le Glaive",
+        devise: "Un ordre, une lame.",
+        description:
+          "Chef actuel : Grand Maréchal Théodren Ashe, arrière-petit-fils du Haut-Maréchal Corvain Ashe (Siège de Mornhaven). Rigide, incorruptible en apparence — use la doctrine de son aïeul comme un dogme figé plutôt qu'une conviction vivante.\nBlason : soleil noir sur bronze, deux lames croisées. Commande l'armée impériale régulière, forme les officiers, supervise (sans les diriger) les Chevaliers-Inquisiteurs.\nFracture interne : son fils cadet Ilyan Ashe doute depuis Mornhaven — pas de la cause, de la méthode — et a été écarté du commandement plutôt que réduit au silence publiquement.\nMiroir : Valdorne, la chevalerie sincère devenue discipline totale.",
+      },
+      {
+        nom: "Maison Solenne — La Flamme",
+        devise: "La lumière ne négocie pas.",
+        description:
+          "Cheffe actuelle : Grande Sacerdotesse Yvelle Solenne, charismatique, absolument sincère dans sa foi — ce qui la rend plus dangereuse qu'une cynique.\nBlason : flamme dorée à sept pointes sur pourpre. Tient le Temple-Mère, légitime la lignée impériale, supervise doctrinalement les Chevaliers-Inquisiteurs.\nFracture interne : les \"Cendres Blanches\", faction jeune du clergé, prônent une purification encore plus radicale — tolérées comme bras armé idéologique, elles commencent à échapper à son contrôle.\nMiroir : aucun miroir sécessionniste direct — Solenne est le cœur idéologique de l'Empire.",
+      },
+      {
+        nom: "Maison Vosgard — La Bourse",
+        devise: "Ce qui se compte, se gouverne.",
+        description:
+          "Chef actuel : Intendant Général Bastian Vosgard, administrateur brillant, sans conviction religieuse réelle.\nBlason : balance dorée sur gris-bleu. Trésorerie impériale, impôts provinciaux, logistique militaire — Ashe dépend de lui autant que de ses propres officiers.\nFracture interne : certains agents Vosgard vendent des renseignements économiques à Mornac, par intérêt commercial plus que par trahison idéologique.\nMiroir : Mornac, le pragmatisme marchand devenu corruption structurelle.",
+      },
+      {
+        nom: "Maison Kestrel — Les Marches",
+        devise: "La peur tient mieux qu'un traité.",
+        description:
+          "Cheffe actuelle : Margravine Sélène Kestrel, dure, pragmatique, façonnée par des décennies de guerre frontalière contre Aetharion et les passes disputées avec Khazrak Dûm.\nBlason : faucon gris plongeant sur blanc glacé. Défend les Marches orientales, gère les garnisons frontalières et un réseau d'éclaireurs au-delà des lignes.\nFracture interne : maquille ses rapports envoyés à Ashe pour cacher l'épuisement réel de ses garnisons sous-équipées.\nMiroir : Serval, même géographie montagnarde, logique opposée (alliance vs domination par la peur).",
+      },
+    ],
+    synthese:
+      "Rapports de force à la cour de Solmaris (contexte : guerre ouverte contre Aetharion, siège naval sans percée depuis 3 ans)\n\n1. Ashe — ascendante : l'armée est incontournable en temps de guerre, mais dépend entièrement de Vosgard pour le financement.\n2. Solenne — le levier silencieux : légitimité rituelle de l'Empereur, mais les Cendres Blanches échappent peu à peu à son contrôle.\n3. Vosgard — indispensable et méprisée : pouvoir structurel jamais honoré en public.\n4. Kestrel — puissante localement, marginale à la cour : isolée politiquement, dépend de renforts qui n'arrivent jamais vraiment.\n\nAxes de tension : Ashe ↔ Solenne (rivalité froide pour l'oreille de l'Empereur) ; Ashe ↔ Vosgard (dépendance forcée sans confiance) ; Solenne ↔ Vosgard (méfiance doctrinale, l'argent sent l'hérésie pragmatique) ; Kestrel isolée, traitée en subalterne par Ashe.\n\nCe qui pourrait faire basculer l'équilibre : l'aboutissement des négociations secrètes Arveth–Solvarn libérerait des troupes pour Aetharion et renforcerait Ashe ; une dérive incontrôlée des Cendres Blanches forcerait l'Empereur à trancher entre les maisons ; la révélation de la corruption Vosgard–Mornac pourrait pousser Ashe et Solenne à une alliance ponctuelle inédite ; la chute d'une garnison Kestrel faute de renfort exposerait publiquement le mensonge de ses rapports.",
+  },
+  {
+    groupe: "République de Liberra",
+    intro:
+      "Contrairement à l'Empire, la République ne repose pas sur une noblesse mais sur une Assemblée de citoyens divisée en cinq blocs politiques, reflétant fidèlement ses fractures internes déjà connues : marchands, idéalistes, militaires, communautés non-humaines — auxquelles s'ajoute un cinquième bloc né du ressentiment, les Fils de Libris.",
+    entites: [
+      {
+        nom: "Le Comptoir — bloc marchand",
+        devise: "Le fleuve ne choisit pas ses passagers.",
+        description:
+          "Figure de proue : Consule Ilsabet Draeven, ancienne capitaine de commerce fluvial, pragmatique jusqu'à l'os.\nInsigne : écharpe bleu-marine, sceau d'une balance posée sur une vague. Contrôle les routes commerciales de la Lisdane et les ports, finance une bonne partie du budget de l'Assemblée par les taxes portuaires.\nFracture/hook : des guildes affiliées au Comptoir opèrent en sous-main jusque dans les provinces frontalières — le complot de guilde du Scénario 0 (Maître Aurèle Ferrand, le médaillon) est une ramification directe de ce bloc. Draeven ignore-t-elle vraiment ce que font ses guildes les plus zélées, ou ferme-t-elle les yeux tant que l'or rentre ?",
+      },
+      {
+        nom: "Le Serment de Libris — bloc idéaliste",
+        devise: "Ce que nous avons juré, nous le tiendrons.",
+        description:
+          "Figure de proue : Consul Emeric Vasnal, vieillissant, l'un des derniers signataires encore vivants de la charte fondatrice.\nInsigne : écharpe blanche, sceau d'une plume sur un livre ouvert. Faible en moyens concrets, fort en légitimité morale.\nFracture/hook : en perte de vitesse face aux blocs pragmatiques ; Vasnal cherche un successeur charismatique avant que le Serment ne devienne une relique symbolique sans pouvoir réel.",
+      },
+      {
+        nom: "La Garde Citoyenne — bloc militaire",
+        devise: "La liberté se défend, elle ne se proclame pas.",
+        description:
+          "Figure de proue : Général-Consul Rohar Kessing, ancien officier de terrain, discipline avant tout.\nInsigne : écharpe grise, sceau d'un bouclier croisé de deux lances. Contrôle la milice et la défense des frontières orientales — poids grandissant à mesure que la pression de Solvarn et les raids venus des Failles Rouges s'intensifient.\nFracture/hook : certains officiers murmurent qu'une République sans hiérarchie forte ne survivra pas à une vraie guerre — tentation autoritaire qui inquiète le Serment de Libris.",
+      },
+      {
+        nom: "Le Cercle des Peuples — bloc communautés non-humaines",
+        devise: "Admis n'est pas égal.",
+        description:
+          "Figure de proue : Conseillère Ythel Aelindra (majorité sylvaine), épaulée par une minorité mordanel en exil.\nInsigne : écharpe verte, sceau d'une feuille entrelacée à une main. Représentation officielle garantie par la charte, mais poids réel disproportionnellement faible face aux sièges humains.\nFracture/hook : pousse pour une réforme de représentation proportionnelle, combattue frontalement par les Fils de Libris — point de friction central de l'Assemblée.",
+      },
+      {
+        nom: "Les Fils de Libris — bloc suprémaciste",
+        devise: "Libris pour ceux qui l'ont bâtie.",
+        description:
+          "Figure de proue : Tribun Corwan Dessalles, orateur populiste, ancien petit commerçant ruiné par la concurrence des guildes du Comptoir.\nInsigne : écharpe rouge sombre, sceau d'un poing fermé sur une racine. Né du ressentiment économique et de la peur post-Silence de Valmoire — recrute chez les laissés-pour-compte du miracle marchand de la République.\nFracture/hook : ironie centrale, ce bloc reproduit, sans se l'avouer, la rhétorique de pureté de Solvarn — l'ennemi même que la Sécession voulait fuir. Certains soupçonnent, sans preuve, des financements discrets venus de l'Empire pour déstabiliser la République de l'intérieur. Un attentat ou une manifestation des Fils de Libris pourrait forcer les quatre autres blocs à une alliance de circonstance qu'ils détestent tous.",
+      },
+    ],
+    synthese:
+      "Rapports de force à l'Assemblée de Libris\n\n1. Le Comptoir — dominant : finance une bonne partie du budget de l'Assemblée, personne ne peut gouverner longtemps contre lui sans risquer la paralysie budgétaire.\n2. La Garde Citoyenne — en ascension rapide : la pression de Solvarn et les raids des Failles Rouges la rendent de plus en plus indispensable, et écoutée au-delà de son mandat strictement défensif.\n3. Les Fils de Libris — influence disproportionnée à son nombre réel de sièges : mobilisation de rue efficace, plus inquiétante que son poids électoral.\n4. Le Serment de Libris — autorité morale déclinante : peut encore mobiliser l'opinion en invoquant la charte fondatrice, mais de moins en moins de leviers concrets.\n5. Le Cercle des Peuples — représentation garantie, pouvoir réel le plus faible : sièges officiels sans poids proportionnel face aux blocs humains.\n\nAxes de tension : Comptoir ↔ Garde Citoyenne (alliance transactionnelle tendue sur les priorités budgétaires) ; Cercle des Peuples ↔ Fils de Libris (collision frontale et publique sur la représentation proportionnelle) ; Serment ↔ Cercle des Peuples (alliés idéologiques naturels mais sans moyens réels) ; Comptoir ↔ Fils de Libris (tension cachée — les guildes du Comptoir sont la cause économique directe du ressentiment qui nourrit les Fils) ; Garde Citoyenne ↔ Fils de Libris (flirt dangereux et non assumé entre discipline militaire et rhétorique d'ordre).\n\nCe qui pourrait faire basculer l'équilibre : la preuve d'un financement de Solvarn aux Fils de Libris unirait instantanément les quatre autres blocs contre eux ; un successeur charismatique pour Vasnal redonnerait du poids réel au Serment ; une trop grande montée en puissance de la Garde Citoyenne ferait craindre une dérive autoritaire ; l'issue de la réforme de représentation proportionnelle déterminerait si le Cercle des Peuples s'intègre durablement ou si les Fils de Libris gagnent un argument de recrutement supplémentaire.",
+  },
 ];
 
 /* ============================================================
@@ -1967,6 +2182,16 @@ const REGLES_GENERALES = [
     titre: "Alchimie à risque (Atelier)",
     contenu:
       "Brassage de potions (onglet Atelier, sous-onglet Alchimie) : le jet est 1d20 + bonus d'artisan, contre la difficulté du palier/recette visé. Contrairement à l'enchantement, rien n'est jamais détruit — il n'y a pas d'objet de départ à perdre, seulement des ingrédients. Un jet catastrophique (d20 BRUT seul, avant bonus, ≤ seuil du palier) ne produit pas d'échec sec : il produit une Potion ratée à la place de la potion visée. Un palier/recette compte toujours comme une tentative consommée pour la journée, quel que soit le résultat (réussite, échec ou ratée). Le MJ réinitialise les compteurs de tous les joueurs via le même bouton « Nouveau jour » de l'Atelier.\n\nPotions de soin — filière Sève (Druide) : palier 1 « Potion de soin mineure » diff. 10 (5/j, 1 Fleur de sève naissante) ; palier 2 « Potion de soin » diff. 12 (4/j, 1 Fleur de sève éclose) ; palier 3 « Potion de soin supérieure » diff. 14 (3/j, 2 Fleurs de sève ancienne, ratée si jet ≤2).\nPotions de soin — filière Flambeau (Prêtre) : palier 4 « Potion de soin bénie » diff. 16 (2/j, 1 Fleur-flambeau, ratée si jet ≤3) ; palier 5 « Potion de soin majeure » diff. 18 (1/j, 2 Fleurs-flambeau embrasées, ratée si jet ≤5) ; palier 6 « Potion de soin majeure bénie » diff. 20 (1/j, 1 Fleur d'aurore éternelle + 1 Diamant, ratée si jet ≤8).\n\nPotions utilitaires (aucun risque de ratée) : Antidote diff. 10 (5/j, 2 Herbes médicinales) ; Huile sainte diff. 12 (3/j, 1 Fleur-flambeau) ; Élixir de vision nocturne diff. 12 (3/j, 1 Fleur de lune) ; Fumigène diff. 10 (4/j, 1 Poussière de fer + 1 Herbe médicinale) ; Élixir de force diff. 14 (2/j, 2 Fleurs rugissantes) ; Bombe alchimique diff. 14 (2/j, 2 Herbes de feu).",
+  },
+  {
+    titre: "Portée en cases, rechargement et catégories d'armes",
+    contenu:
+      "Portée en cases : les armes à distance (arcs, arbalètes) portent désormais porteeMinCases/porteeMaxCases, la fourchette de cases utilisables sur la grille de combat en plus du texte descriptif. porteeMinCases: 0 signifie utilisable au contact (ex. Arc court, Arbalète courte) ; au-delà de porteeMaxCases ou en-deçà de porteeMinCases, le tir n'est pas possible.\n\nRechargement : une arme avec un champ rechargement: N ne peut pas retirer au round suivant un tir — elle doit être rechargée (N rounds d'attente) avant de pouvoir être utilisée à nouveau (Arbalète légère : 1 round ; Arbalète lourde : 2 rounds). L'Arbalète courte n'a aucun rechargement (tir libre chaque round), en échange de dégâts plus faibles.\n\ncategorieArme (courte / longue / deux_mains) : classification de référence apposée sur toutes les armes de mêlée du catalogue — sert désormais aux combinaisons d'équipement mains droite/gauche (voir entrée suivante).",
+  },
+  {
+    titre: "Équipement des mains (une main / deux mains, bi-arme)",
+    contenu:
+      "Un arc long (ou une arbalète normale/lourde) occupe les DEUX mains, comme n'importe quelle arme à deux mains — rien d'autre ne peut être équipé en même temps. Un arc court ou une arbalète courte n'occupe qu'UNE main : l'autre reste libre pour une arme courte de corps à corps (dague, masse, épée courte...).\n\nUne arme de corps à corps (courte ou longue, une main) peut être équipée avec, dans l'autre main : un bouclier (comme avant), une arbalète courte, ou une arme courte de corps à corps. Une arme longue ou à deux mains ne peut PAS être combinée avec une autre arme de corps à corps dans l'autre main — seule une arme courte complète une arme courte ou longue.\n\nBi-arme : si l'autre main porte une arme courte de corps à corps, les dégâts de contact combinent le jet de l'arme principale ET celui de l'arme courte (les deux formules s'additionnent, ex. \"1d8+1d4\") — un seul jet d'attaque, mais deux dés de dégâts cumulés.",
   },
 ];
 

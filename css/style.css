@@ -441,7 +441,7 @@ textarea { resize: vertical; min-height: 70px; }
 }
 .pv-control input { width: 48px; text-align: center; padding: 3px; font-weight: 700; background: #fffdf7; color: var(--encre); border-radius: 4px; }
 .barre-pv { height: 8px; background: var(--chaos); border-radius: 4px; margin-top: 8px; overflow: hidden; }
-.barre-pv .rempli { height: 100%; background: var(--succes); transition: width 0.2s; }
+.barre-pv .rempli { height: 100%; background: var(--succes); transition: width 0.2s, background 0.3s; }
 /* Mini-fiche battlemap : PV en grand (pleine largeur), DEF + Init côte à côte en dessous */
 #battlemap-fiche-sidebar .stats-rapides { grid-template-columns: 1fr 1fr; }
 #battlemap-fiche-sidebar .stat-pv { grid-column: 1 / -1; padding: 14px; }
@@ -547,6 +547,57 @@ textarea { resize: vertical; min-height: 70px; }
   border-radius: 12px;
   white-space: nowrap;
 }
+
+/* ---------- Dock de combat (barre d'action sous la battlemap) ---------- */
+#battlemap-dock-combat:empty { display: none; }
+#battlemap-dock-combat { margin-top: 10px; }
+.dock-combat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  width: fit-content;
+  max-width: min(100%, 880px);
+  margin: 0 auto;
+  background: var(--parchemin);
+  border: 1px solid var(--parchemin-fonce);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.dock-combat.mon-tour { border-color: var(--or); animation: pulseTonTour 1.6s ease-in-out infinite; }
+.dock-zone { padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.dock-zone + .dock-zone { border-left: 1px solid var(--parchemin-fonce); }
+.dock-zone-titre { font-size: 0.68rem; letter-spacing: 0.4px; text-transform: uppercase; color: #6a6278; }
+.dock-identite { flex: 0 1 320px; min-width: 240px; flex-direction: row; align-items: center; gap: 10px; }
+.dock-avatar img, .dock-avatar .avatar-embleme { border-radius: 8px; }
+.dock-id-txt { flex: 1; }
+.dock-nom { font-weight: 600; color: var(--encre); font-size: 0.95rem; display: flex; align-items: center; gap: 6px; }
+.dock-badge-tour { background: var(--or); color: var(--encre); font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+.dock-hp-ligne { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+.dock-hp { flex: 1; height: 12px; margin: 0; max-width: 220px; }
+.dock-hp-val { font-size: 0.85rem; font-weight: 700; color: var(--encre); }
+.dock-chips { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+.dock-chip { background: var(--violet); color: var(--parchemin); border-radius: 6px; padding: 2px 8px; font-size: 0.78rem; }
+.dock-chip.chaos { background: var(--chaos-bg); color: var(--chaos); }
+.dock-tuiles { display: flex; gap: 7px; flex-wrap: wrap; }
+.dock-tuile {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  min-width: 58px; padding: 7px 6px; cursor: pointer;
+  background: var(--violet); color: var(--parchemin);
+  border: 1px solid var(--violet-accent); border-radius: 8px; position: relative;
+}
+.dock-tuile:hover { border-color: var(--or); }
+.dock-tuile .dock-ic { font-size: 1.1rem; line-height: 1; }
+.dock-tuile .dock-lbl { font-size: 0.72rem; white-space: nowrap; }
+.dock-tuile-dmg { background: var(--violet-clair); }
+.dock-sort { min-width: 66px; }
+.dock-stat { min-width: 46px; padding: 6px 5px; }
+.dock-stat-code { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px; }
+.dock-objet { background: var(--succes); border-color: #2f6537; min-width: 62px; }
+.dock-objet:hover { border-color: var(--or); }
+.dock-lbl-sort { font-size: 0.74rem; text-align: center; line-height: 1.2; }
+.dock-usage { position: absolute; top: -5px; right: -5px; background: var(--or); color: var(--encre); font-size: 0.62rem; font-weight: 700; border-radius: 9px; padding: 0 5px; }
+.dock-degats { justify-content: center; min-width: 150px; }
+.dock-degats .btn-toggle-degats { margin-top: 0; }
 .initiative-badge {
   position: absolute;
   top: -4px;

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=47" />
+  <link rel="stylesheet" href="css/style.css?v=54" />
 </head>
 <body>
   <header>
@@ -348,6 +348,7 @@
             <div id="carte-jetons"></div>
           </div>
         </div>
+        <div id="battlemap-dock-combat" class="battlemap-only" data-role="joueur"></div>
       </div>
     </section>
 
@@ -479,6 +480,7 @@
         <nav class="sous-tabs" id="sous-onglets-lore">
           <button type="button" class="sous-tab actif" data-sous-panneau="chroniques">Chroniques</button>
           <button type="button" class="sous-tab" data-sous-panneau="pnj">PNJ</button>
+          <button type="button" class="sous-tab" data-sous-panneau="factions">Factions</button>
         </nav>
       </div>
 
@@ -488,6 +490,10 @@
 
       <div class="sous-panneau" id="sous-panneau-lore-pnj">
         <div id="zone-lore-pnj"></div>
+      </div>
+
+      <div class="sous-panneau" id="sous-panneau-lore-factions">
+        <div id="zone-lore-factions"></div>
       </div>
     </section>
   </main>
@@ -634,30 +640,30 @@
   </div>
 
   <script src="js/etats.js?v=2"></script>
-  <script src="data/donnees.js?v=24"></script>
+  <script src="data/donnees.js?v=31"></script>
   <script src="data/dons.js?v=1"></script>
   <script src="data/bestiaire.js?v=2"></script>
-  <script src="data/loot.js?v=7"></script>
+  <script src="data/loot.js?v=9"></script>
   <script src="data/equipement_depart.js?v=3"></script>
-  <script src="js/emblemes.js?v=14"></script>
+  <script src="js/emblemes.js?v=15"></script>
   <script src="js/carte-monde.js?v=9"></script>
   <!-- Modèle OOP (Phase 1) : socle additif, n'altère pas l'app existante -->
   <script src="js/entite.js?v=2"></script>
-  <script src="js/personnage.js?v=11"></script>
+  <script src="js/personnage.js?v=13"></script>
   <!-- Firebase (SDK compat : garde une syntaxe classique, pas de modules/build tool) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js?v=1"></script>
   <script src="js/depot.js?v=6"></script>
   <script src="js/sync.js?v=2"></script>
-  <script src="js/carte.js?v=56"></script>
-  <script src="js/raretes.js?v=4"></script>
+  <script src="js/carte.js?v=57"></script>
+  <script src="js/raretes.js?v=5"></script>
   <script src="js/materiaux.js?v=1"></script>
   <script src="js/enchantement.js?v=1"></script>
   <script src="js/alchimie.js?v=1"></script>
   <script src="js/loot.js?v=9"></script>
   <script src="js/capacites.js?v=5"></script>
-  <script src="js/combat.js?v=3"></script>
-  <script src="js/app.js?v=55"></script>
+  <script src="js/combat.js?v=4"></script>
+  <script src="js/app.js?v=68"></script>
 </body>
 </html>

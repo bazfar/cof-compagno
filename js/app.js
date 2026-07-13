@@ -21,6 +21,8 @@ const App = (() => {
   let etapeDebloquee = 1;
   let ficheActiveId = null;  // id du perso affiché dans "Ma fiche"
   let ficheSidebarActiveId = null;  // id du perso affiché dans la mini-fiche battlemap (sidebar)
+  let _cibleDistanceId = null;  // token cible choisi pour le vérificateur de portée (cf. rendreFicheSidebarBattlemap)
+  let _typeAttaquePortee = "contact";  // type d'attaque choisi dans le vérificateur de portée : "contact" | "distance" | "magique"
   let livretPersoId = null;  // id du perso choisi dans l'onglet "📖 Livret"
   // Sélection courante de l'onglet "🔨 Atelier" (cf. rendrePanneauAtelier) —
   // atelierItemIdx référence un index dans inventaireListe du perso choisi,
@@ -282,6 +284,33 @@ const App = (() => {
     };
   }
 
+  // Id du token dd2vtt du perso `persoId` sur la scène de combat active, ou
+  // null s'il n'a pas (encore) de jeton posé — sert de point de référence
+  // pour le vérificateur de portée (cf. Carte.distanceCasesEntre).
+  function _monTokenId(persoId) {
+    if (typeof Carte === "undefined" || !Carte.listeTokensJoueursCombat) return null;
+    const tok = Carte.listeTokensJoueursCombat().find((t) => t.ref === "pj-" + persoId);
+    return tok ? tok.id : null;
+  }
+
+  // Cibles possibles pour le vérificateur de portée : tous les tokens de la
+  // table de combat (monstres + autres PJ), hors soi-même.
+  function _ciblesPortee(monTokenId) {
+    if (typeof Carte === "undefined") return [];
+    const monstres = Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : [];
+    const pjs = Carte.listeTokensJoueursCombat ? Carte.listeTokensJoueursCombat() : [];
+    return [...monstres, ...pjs].filter((t) => t.id !== monTokenId);
+  }
+
+  // Combine deux formules de dégâts (bi-arme : mêlée + arme courte en main
+  // secondaire, cf. Personnage.armeCourteSecondaire) en une seule formule
+  // lançable via lancerFormule (qui gère désormais plusieurs termes de dés).
+  function _combinerFormules(a, b) {
+    if (!a) return b || null;
+    if (!b) return a;
+    return a + (b.startsWith("-") ? "" : "+") + b;
+  }
+
   // Mini-fiche affichée en permanence à gauche de la battlemap (joueur
   // uniquement) : suit le personnage sélectionné dans "Mon personnage",
   // le même que celui dont le jeton est posé sur la scène.
@@ -297,6 +326,7 @@ const App = (() => {
     const p = id && persos[id];
     if (!p) {
       sidebar.innerHTML = ordreHtml + `<div class="carte"><p class="aide">Choisis ton personnage dans « Mon personnage » ci-dessus pour afficher sa fiche ici.</p></div>`;
+      rendreDockCombat(); // masque le dock si aucun perso sélectionné
       return;
     }
     const c = CLASSES[p.classe];
@@ -314,17 +344,69 @@ const App = (() => {
     const armeDistance = perso.armeDistanceEquipee();
     const attDistance = armeDistance ? perso.bonusAttaque("distance") : null;
     const attMagique = perso.bonusAttaque("magique");
-    // Dégâts = formule de l'arme réellement équipée (pas une valeur générique
-    // à mains nues) : même bonus que badgeEffetItem (bonusDegatsTotal posé
-    // par une rareté prime sur enchantement seul).
+    // Dégâts = formule de l'arme réellement équipée (même bonus que
+    // badgeEffetItem : bonusDegatsTotal posé par une rareté prime sur
+    // enchantement seul) ; si aucune arme de contact n'est équipée, repli sur
+    // les dégâts à mains nues du Moine (Voie des poings) le cas échéant. En
+    // bi-arme (mêlée + arme courte en main secondaire), combine les deux
+    // formules — cf. Personnage.armeCourteSecondaire.
     const formuleDegats = (arme) => {
       if (!arme) return null;
       const bonus = arme.bonusDegatsTotal !== undefined ? arme.bonusDegatsTotal : (arme.enchantement || 0);
       return arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
     };
-    const dmgContact = formuleDegats(armeContact);
+    const armeCourteSecondaire = perso.armeCourteSecondaire();
+    const dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
     const dmgDistance = formuleDegats(armeDistance);
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
+
+    // Vérificateur de portée (grille dd2vtt) : ne propose comme cible QUE les
+    // tokens effectivement à portée du type d'attaque choisi (Contact/
+    // Distance/Magique), plutôt que lister tout le monde avec un verdict —
+    // Contact = 1 case (mêlée de base), Distance = porteeMinCases/
+    // porteeMaxCases de l'arme équipée, Magique = 5 cases de base (aucune
+    // arme concernée, valeur fixe indépendante de l'équipement).
+    const PORTEE_CONTACT = { min: 0, max: 1 };
+    const PORTEE_MAGIQUE_BASE = { min: 0, max: 5 };
+    const porteesParType = { contact: PORTEE_CONTACT };
+    if (armeDistance && armeDistance.porteeMaxCases !== undefined) {
+      porteesParType.distance = { min: armeDistance.porteeMinCases || 0, max: armeDistance.porteeMaxCases };
+    }
+    if (attMagique !== null) porteesParType.magique = PORTEE_MAGIQUE_BASE;
+
+    let porteeHtml = "";
+    if (typeof Combat !== "undefined" && Combat.estActif() &&
+        typeof Carte !== "undefined" && Carte.distanceCasesEntre) {
+      const monTokenId = _monTokenId(id);
+      const toutesLesCibles = monTokenId ? _ciblesPortee(monTokenId) : [];
+      if (monTokenId && toutesLesCibles.length) {
+        const TYPE_LABELS = { contact: "⚔️ Contact", distance: "🏹 Distance", magique: "✨ Magique" };
+        const typesDispo = Object.keys(porteesParType);
+        if (!typesDispo.includes(_typeAttaquePortee)) _typeAttaquePortee = typesDispo[0];
+        const portee = porteesParType[_typeAttaquePortee];
+        const ciblesEnPortee = toutesLesCibles
+          .map((cc) => Object.assign({ _distance: Carte.distanceCasesEntre(monTokenId, cc.id) }, cc))
+          .filter((cc) => cc._distance !== null && cc._distance >= portee.min && cc._distance <= portee.max);
+        if (!ciblesEnPortee.some((cc) => cc.id === _cibleDistanceId)) {
+          _cibleDistanceId = ciblesEnPortee.length ? ciblesEnPortee[0].id : null;
+        }
+        const cibleActuelle = ciblesEnPortee.find((cc) => cc.id === _cibleDistanceId);
+        porteeHtml = `
+        <div style="margin-top:8px;">
+          <label style="font-size:0.78rem;display:block;">📏 Portée
+            <select id="bm-type-portee" style="width:100%;margin-top:2px;">
+              ${typesDispo.map((t) => `<option value="${t}" ${t === _typeAttaquePortee ? "selected" : ""}>${TYPE_LABELS[t]} (${porteesParType[t].min}-${porteesParType[t].max} cases)</option>`).join("")}
+            </select>
+          </label>
+          ${ciblesEnPortee.length ? `
+          <select id="bm-cible-portee" style="width:100%;margin-top:4px;">
+            ${ciblesEnPortee.map((cc) => `<option value="${cc.id}" ${cc.id === _cibleDistanceId ? "selected" : ""}>${echapper(cc.nom)} (${cc._distance} case${cc._distance === 1 ? "" : "s"})</option>`).join("")}
+          </select>
+          ${cibleActuelle ? `<p style="font-size:0.78rem;margin:4px 0 0;color:#2f9e44;font-weight:700;">En portée — ${cibleActuelle._distance} case${cibleActuelle._distance === 1 ? "" : "s"}</p>` : ""}
+          ` : `<p class="aide" style="font-size:0.72rem;margin:4px 0 0;">Aucune cible à portée pour cette attaque.</p>`}
+        </div>`;
+      }
+    }
 
     sidebar.innerHTML = ordreHtml + `
       <div class="carte">
@@ -364,11 +446,13 @@ const App = (() => {
         ${attDistance === null ? `<p class="aide" style="font-size:0.72rem;margin:6px 0 0;">Équipe un arc ou une arbalète pour débloquer l'attaque à distance.</p>` : ""}
         ${dmgContact || dmgDistance || dmgMagique ? `
         <div class="barre-actions" style="margin-top:6px;">
-          ${dmgContact ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}">🎲 Dégâts Contact (${dmgContact})</button>` : ""}
-          ${dmgDistance ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}">🎲 Dégâts Distance (${dmgDistance})</button>` : ""}
+          ${dmgContact ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}">🎲 Dégâts Contact (${dmgContact})</button>` : ""}
+          ${dmgDistance ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}" title="${echapper(armeDistance ? armeDistance.nom : "")}">🎲 Dégâts Distance (${dmgDistance})</button>` : ""}
           ${dmgMagique ? `<button class="btn petit secondaire" data-bm-degats="${dmgMagique}">🎲 Dégâts Magique (${dmgMagique})</button>` : ""}
         </div>` : ""}
+        ${porteeHtml}
       </div>
+      ${htmlBlocActionsDuTour(id)}
       ${htmlEtatsActifs(p)}
       ${htmlBlocInitiativeJoueur(id)}
       ${htmlBlocCorruption(p, perso)}
@@ -393,10 +477,13 @@ const App = (() => {
     wireDegatsSubis(id, "bm-");
     // Jet d'attaque sans quitter la battlemap — l'overlay de jet est visible
     // sur tous les onglets (cf. #overlay-jet), pas besoin de rejoindre "Dés".
+    // Consomme l'action principale du tour (no-op hors combat, cf. Combat.utiliserActionPrincipale).
     sidebar.querySelectorAll("[data-bm-attaque]").forEach((el) => {
       el.onclick = () => {
         const bonus = parseInt(el.dataset.bonus, 10);
         lancerTest(`Attaque ${el.dataset.bmAttaque}`, bonus, perso.critMinAttaque(el.dataset.bmAttaque));
+        if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
+        rendreFicheSidebarBattlemap(id);
       };
     });
     // Dégâts de l'arme équipée (formule figée, pas de bonus au jet ici)
@@ -406,8 +493,240 @@ const App = (() => {
         lancerFormule(formule, `${p.nom} — Dégâts (${formule})`);
       };
     });
+    // Vérificateur de portée : changer de type d'attaque ou de cible re-rend
+    // juste ce bloc (recalcule la liste des cibles à portée pour le type choisi).
+    const selTypePortee = document.getElementById("bm-type-portee");
+    if (selTypePortee) {
+      selTypePortee.onchange = () => {
+        _typeAttaquePortee = selTypePortee.value;
+        _cibleDistanceId = null; // la cible précédente peut ne plus être à portée pour ce type
+        rendreFicheSidebarBattlemap(id);
+      };
+    }
+    const selCiblePortee = document.getElementById("bm-cible-portee");
+    if (selCiblePortee) {
+      selCiblePortee.onchange = () => {
+        _cibleDistanceId = selCiblePortee.value;
+        rendreFicheSidebarBattlemap(id);
+      };
+    }
+    // Actions du tour (déplacement, action principale/secondaire) — cf.
+    // htmlBlocActionsDuTour et js/combat.js.
+    const btnDeplacementMoins = document.getElementById("bm-deplacement-moins");
+    if (btnDeplacementMoins) btnDeplacementMoins.onclick = () => { Combat.ajusterDeplacement(id, -1); rendreFicheSidebarBattlemap(id); };
+    const btnDeplacementPlus = document.getElementById("bm-deplacement-plus");
+    if (btnDeplacementPlus) btnDeplacementPlus.onclick = () => { Combat.ajusterDeplacement(id, 1); rendreFicheSidebarBattlemap(id); };
+    const btnSprint = document.getElementById("bm-sprint");
+    if (btnSprint) btnSprint.onclick = () => { Combat.sprint(id); toast(`Sprint : +${Combat.SPRINT_BONUS} cases de déplacement.`); rendreFicheSidebarBattlemap(id); };
+    const btnActionSecondaire = document.getElementById("bm-action-secondaire");
+    if (btnActionSecondaire) btnActionSecondaire.onclick = () => { Combat.utiliserActionSecondaire(id); rendreFicheSidebarBattlemap(id); };
+    const btnReinitActions = document.getElementById("bm-reinit-actions");
+    if (btnReinitActions) btnReinitActions.onclick = () => { Combat.reinitialiserActions(id); rendreFicheSidebarBattlemap(id); };
     // Capacités/états, mêmes règles que la fiche complète (cf. wireCapacitesEtEtats).
     wireCapacitesEtEtats(sidebar, id, p, () => rendreFicheSidebarBattlemap(id));
+    rendreDockCombat(); // barre d'action de combat sous la carte (cf. plus bas)
+  }
+
+  /* ---------- Dock de combat (barre d'action sous la battlemap) ---------- */
+
+  // Énumère les capacités LANÇABLES (non passives, mécanisées) d'un perso —
+  // classe + voie raciale — sous la forme { source, mecanique, nom }, en
+  // répliquant l'énumération de htmlCapacitesClasse/htmlCapacitesRace.
+  function _capacitesLancablesPerso(p) {
+    const out = [];
+    const c = CLASSES[p.classe];
+    if (c && Array.isArray(p.capacites)) {
+      p.capacites.slice().sort((a, b) => a.voie.localeCompare(b.voie) || a.rang - b.rang).forEach((cap) => {
+        const voie = c.voies.find((v) => v.nom === cap.voie);
+        const rang = voie && voie.rangs.find((r) => r.rang === cap.rang);
+        if (!rang || !rang.mecanique || rang.mecanique.type === "passive") return;
+        out.push({ source: { origine: "classe", cle: p.classe, voie: cap.voie, rang: cap.rang, nomCap: rang.nom || `Rang ${cap.rang}` }, mecanique: rang.mecanique, nom: rang.nom || `Rang ${cap.rang}` });
+      });
+    }
+    const race = p.race ? RACES[p.race] : null;
+    if (race && Array.isArray(p.capacitesRace)) {
+      p.capacitesRace.slice().sort((a, b) => a - b).forEach((rangNum) => {
+        const rg = race.rangs.find((x) => x.rang === rangNum);
+        if (!rg) return;
+        const t = texteRangRace(race, rg, p.raceVariante);
+        if (!t.mecanique || t.mecanique.type === "passive") return;
+        const src = Object.assign({ cle: p.race, voie: race.voie_nom, nomCap: t.nom || `Rang ${rangNum}` }, t.source);
+        out.push({ source: src, mecanique: t.mecanique, nom: t.nom || `Rang ${rangNum}` });
+      });
+    }
+    return out;
+  }
+
+  // Attributs data-lancer-* d'une capacité (repris tels quels par
+  // wireCapacitesEtEtats / Capacites.lancer) — mêmes que htmlLancerCapacite.
+  function _attrsLancer(source) {
+    return [
+      `data-lancer-origine="${source.origine}"`,
+      `data-lancer-cle="${source.cle}"`,
+      source.voie !== undefined ? `data-lancer-voie="${source.voie}"` : "",
+      source.rang !== undefined ? `data-lancer-rang="${source.rang}"` : "",
+      source.code !== undefined ? `data-lancer-code="${source.code}"` : "",
+      `data-lancer-nom="${echapper(source.nomCap || "")}"`,
+    ].filter(Boolean).join(" ");
+  }
+
+  // Nom court de sort pour une tuile (retire "(sort, L)" etc., tronque).
+  function _courtNom(n) {
+    const s = String(n || "").replace(/\s*\(.*?\)\s*/g, " ").trim();
+    return s.length > 16 ? s.slice(0, 15) + "…" : s;
+  }
+
+  // Barre d'action de combat (dock) sous la battlemap, côté JOUEUR : identité +
+  // PV + DEF/Init/corruption, attaques rapides, sorts lançables, subir des
+  // dégâts. Réutilise les mêmes handlers que la sidebar (lancerTest/
+  // lancerFormule, wireDegatsSubis, wireCapacitesEtEtats) — aucune logique
+  // dupliquée. Visible seulement pour un joueur, en battlemap, combat actif.
+  function rendreDockCombat() {
+    const dock = document.getElementById("battlemap-dock-combat");
+    if (!dock) return;
+    const id = ficheSidebarActiveId;
+    const persos = chargerPersos();
+    const p = id && persos[id];
+    const enCombat = (typeof Combat !== "undefined" && Combat.estActif());
+    if (role === "mj" || carteMode !== "battlemap" || !enCombat || !p) {
+      dock.innerHTML = "";
+      dock.classList.remove("visible");
+      return;
+    }
+    const perso = Personnage.depuisJSON(p);
+    const mods = {};
+    CARACS.forEach((cc) => (mods[cc.code] = perso.mod(cc.code)));
+
+    const attContact = perso.bonusAttaque("contact");
+    const armeDistance = perso.armeDistanceEquipee();
+    const attDistance = armeDistance ? perso.bonusAttaque("distance") : null;
+    const attMagique = perso.bonusAttaque("magique");
+    const armeContact = perso.armeContactEquipee();
+    const formuleDegats = (arme) => {
+      if (!arme) return null;
+      const bonus = arme.bonusDegatsTotal !== undefined ? arme.bonusDegatsTotal : (arme.enchantement || 0);
+      return arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
+    };
+    // Repli sur les dégâts à mains nues du Moine (Voie des poings) si aucune
+    // arme de contact n'est équipée ; combine avec l'arme courte en main
+    // secondaire (bi-arme) le cas échéant — cf. rendreFicheSidebarBattlemap.
+    const armeCourteSecondaire = perso.armeCourteSecondaire();
+    const dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
+    const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
+
+    const pv = p.pvActuel || 0, pvMax = p.pvMax || 1;
+    const pct = Math.max(0, Math.min(100, Math.round((pv / pvMax) * 100)));
+    const etatC = Combat.etatCourant();
+    const actifC = etatC.ordre[etatC.indexActuel];
+    const cEstMonTour = !!(actifC && actifC.type === "pj" && actifC.id === id);
+
+    const attTiles = [
+      `<button class="dock-tuile" data-bm-attaque="contact" data-bonus="${attContact}"><span class="dock-ic">⚔️</span><span class="dock-lbl">Contact ${signe(attContact)}</span></button>`,
+    ];
+    if (attDistance !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="distance" data-bonus="${attDistance}"><span class="dock-ic">🏹</span><span class="dock-lbl">Distance ${signe(attDistance)}</span></button>`);
+    if (attMagique !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="magique" data-bonus="${attMagique}"><span class="dock-ic">✨</span><span class="dock-lbl">Magique ${signe(attMagique)}</span></button>`);
+    if (dmgContact) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}</span></button>`);
+    if (dmgMagique) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgMagique}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgMagique}</span></button>`);
+
+    const sorts = _capacitesLancablesPerso(p);
+    const sortTiles = sorts.map((s) => {
+      const freq = Capacites.parserFrequence(s.mecanique.usage && s.mecanique.usage.frequence);
+      let badge = "";
+      if (freq) {
+        const cle = Capacites.cleCapacite(s.source);
+        const entree = (p.usagesCapacites || {})[cle];
+        const n = entree && entree.periode === freq.periode ? entree.utilisations : 0;
+        badge = `<span class="dock-usage">${n}/${freq.max}</span>`;
+      }
+      return `<button class="dock-tuile dock-sort" ${_attrsLancer(s.source)} title="${echapper(s.nom)}"><span class="dock-lbl-sort">${echapper(_courtNom(s.nom))}</span>${badge}</button>`;
+    }).join("");
+
+    const aChaos = typeof perso.aVoieChaosActive === "function" && perso.aVoieChaosActive();
+    const reduction = perso.reductionDegats();
+    // Actions du tour (compact, cf. htmlBlocActionsDuTour côté sidebar pour
+    // la version détaillée avec Sprint/réinitialisation).
+    const entreeActions = etatC.ordre.find((e) => e.type === "pj" && e.id === id);
+    // Objets utilisables (potions/consommables de soin) — index conservé pour
+    // utiliserConsommable(id, idx).
+    const objets = (p.inventaireListe || []).map((it, i) => ({ it, i })).filter((x) => formuleSoinItem(x.it));
+    const objetTiles = objets.map((x) => {
+      const qte = x.it.quantite || 1;
+      return `<button class="dock-tuile dock-objet" data-utiliser-idx="${x.i}" title="${echapper(x.it.nom)}"><span class="dock-ic">🧪</span><span class="dock-lbl">${echapper(_courtNom(x.it.nom))}</span><span class="dock-usage">×${qte}</span></button>`;
+    }).join("");
+
+    dock.innerHTML = `<div class="dock-combat${cEstMonTour ? " mon-tour" : ""}">
+      <div class="dock-zone dock-identite">
+        <div class="dock-avatar">${avatarHtml(p, 46)}</div>
+        <div class="dock-id-txt">
+          <div class="dock-nom">${echapper(p.nom)}${cEstMonTour ? ` <span class="dock-badge-tour">⚔️ À toi</span>` : ""}</div>
+          <div class="dock-hp-ligne">
+            <div class="barre-pv dock-hp"><div class="rempli" style="width:${pct}%;background:${_couleurPv(pct)};"></div></div>
+            <span class="dock-hp-val">${pv}/${pvMax}</span>
+          </div>
+          <div class="dock-chips">
+            <span class="dock-chip" title="Défense">🛡 ${perso.calculerDEF()}</span>
+            ${reduction > 0 ? `<span class="dock-chip" title="Réduction de dégâts (armure)">🪖 ${reduction}</span>` : ""}
+            <span class="dock-chip" title="Initiative">⚡ ${signe(perso.calculerInitiative())}</span>
+            ${aChaos ? `<span class="dock-chip chaos">${p.corruptionCombat || 0} CS</span>` : ""}
+            ${entreeActions ? `
+            <span class="dock-chip" title="Déplacement restant">🚶 ${entreeActions.deplacementRestant}</span>
+            <span class="dock-chip" title="Action principale ${entreeActions.actionPrincipaleUtilisee ? "utilisée" : "disponible"}">${entreeActions.actionPrincipaleUtilisee ? "◼️" : "◻️"}A</span>
+            <span class="dock-chip" title="Action secondaire ${entreeActions.actionSecondaireUtilisee ? "utilisée" : "disponible"}">${entreeActions.actionSecondaireUtilisee ? "◼️" : "◻️"}B</span>
+            ` : ""}
+          </div>
+        </div>
+      </div>
+      <div class="dock-zone">
+        <div class="dock-zone-titre">Attaques</div>
+        <div class="dock-tuiles">${attTiles.join("")}</div>
+      </div>
+      <div class="dock-zone">
+        <div class="dock-zone-titre">Jets de carac</div>
+        <div class="dock-tuiles">${CARACS.map((cc) => `<button class="dock-tuile dock-stat" data-test="${cc.code}" title="Test de ${cc.code}"><span class="dock-stat-code">${cc.code}</span><span class="dock-lbl">${signe(mods[cc.code])}</span></button>`).join("")}</div>
+      </div>
+      ${sorts.length ? `<div class="dock-zone">
+        <div class="dock-zone-titre">Sorts &amp; capacités</div>
+        <div class="dock-tuiles">${sortTiles}</div>
+      </div>` : ""}
+      ${objets.length ? `<div class="dock-zone">
+        <div class="dock-zone-titre">Objets</div>
+        <div class="dock-tuiles">${objetTiles}</div>
+      </div>` : ""}
+      <div class="dock-zone dock-degats">
+        ${blocDegatsSubisHtml("dock-")}
+      </div>
+      <div class="cible-capacite-form" style="display:none;">
+        <select class="cible-capacite-select"></select>
+        <button class="btn petit or btn-confirmer-cible-capacite">Confirmer la cible</button>
+        <button class="btn petit secondaire btn-annuler-cible-capacite">Annuler</button>
+      </div>
+    </div>`;
+
+    dock.querySelectorAll("[data-bm-attaque]").forEach((el) => {
+      el.onclick = () => {
+        lancerTest(`Attaque ${el.dataset.bmAttaque}`, parseInt(el.dataset.bonus, 10), perso.critMinAttaque(el.dataset.bmAttaque));
+        if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
+        rendreFicheSidebarBattlemap(id);
+      };
+    });
+    dock.querySelectorAll("[data-bm-degats]").forEach((el) => {
+      el.onclick = () => lancerFormule(el.dataset.bmDegats, `${p.nom} — Dégâts (${el.dataset.bmDegats})`);
+    });
+    // Jets de caractéristique (d20 + mod) — sans quitter la battlemap
+    // (l'overlay de jet est visible sur tous les onglets, cf. #overlay-jet).
+    dock.querySelectorAll("[data-test]").forEach((el) => {
+      el.onclick = () => lancerTest(`Test de ${el.dataset.test}`, mods[el.dataset.test]);
+    });
+    // Objets : boire/utiliser un consommable de soin sur soi (réutilise
+    // utiliserConsommable, qui marque aussi l'action secondaire consommée),
+    // puis re-render de la sidebar (PV + quantité + action secondaire mis à
+    // jour) — rendreFicheSidebarBattlemap réappelle rendreDockCombat().
+    dock.querySelectorAll("[data-utiliser-idx]").forEach((el) => {
+      el.onclick = () => { utiliserConsommable(id, parseInt(el.dataset.utiliserIdx, 10)); rendreFicheSidebarBattlemap(id); };
+    });
+    wireDegatsSubis(id, "dock-");
+    wireCapacitesEtEtats(dock, id, p, rendreDockCombat);
+    dock.classList.add("visible");
   }
 
   /* ---------- Navigation onglets ---------- */
@@ -2226,6 +2545,47 @@ const App = (() => {
     return `<div class="carte initiative-mini"><h3 style="margin-top:0;">Initiative</h3>${contenu}</div>`;
   }
 
+  // Bloc "Actions du tour" (déplacement + action principale/secondaire),
+  // visible sur la fiche vivante pendant un combat où ce PJ a rejoint
+  // l'ordre d'initiative (cf. js/combat.js — Combat.ajusterDeplacement/
+  // utiliserActionPrincipale/sprint/utiliserActionSecondaire). Remis à zéro
+  // automatiquement au tour de ce PJ (Combat.tourSuivant) ; affiché à tout
+  // moment du combat, pas seulement pendant son propre tour, comme le reste
+  // des compteurs manuels de l'app (PV...).
+  function htmlBlocActionsDuTour(persoId) {
+    if (typeof Combat === "undefined" || !Combat.estActif()) return "";
+    const entree = Combat.etatCourant().ordre.find((e) => e.type === "pj" && e.id === persoId);
+    if (!entree) return "";
+    const base = Combat.DEPLACEMENT_BASE || 5;
+    return `<div class="carte">
+      <h3 style="margin-top:0;">Actions du tour</h3>
+      <div class="stats-rapides">
+        <div class="stat-box">
+          <div class="label">Déplacement</div>
+          <div class="pv-control">
+            <button id="bm-deplacement-moins">−</button>
+            <span style="font-weight:700;">${entree.deplacementRestant}</span>
+            <button id="bm-deplacement-plus">+</button>
+          </div>
+          <div style="font-size:0.7rem;color:#6a6278;">/ ${base} cases</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Principale</div>
+          <div class="valeur" style="font-size:0.85rem;">${entree.actionPrincipaleUtilisee ? "✅ utilisée" : "◻️ disponible"}</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Secondaire</div>
+          <div class="valeur" style="font-size:0.85rem;">${entree.actionSecondaireUtilisee ? "✅ utilisée" : "◻️ disponible"}</div>
+        </div>
+      </div>
+      <div class="barre-actions" style="margin-top:6px;">
+        ${!entree.actionPrincipaleUtilisee ? `<button class="btn petit secondaire" id="bm-sprint" title="Consomme l'action principale sans attaquer, contre +${Combat.SPRINT_BONUS || 2} cases">🏃 Sprint (+${Combat.SPRINT_BONUS || 2} cases)</button>` : ""}
+        ${!entree.actionSecondaireUtilisee ? `<button class="btn petit secondaire" id="bm-action-secondaire" title="Boire une potion, utiliser un parchemin, relever un allié...">Action secondaire</button>` : ""}
+        <button class="btn petit secondaire" id="bm-reinit-actions" title="Réinitialise sans attendre le prochain tour (correction de table)">↺</button>
+      </div>
+    </div>`;
+  }
+
   // Bloc "Corruption" (Voie du chaos, homebrew) — visible seulement pour un
   // perso ayant pris au moins un rang dans sa Voie du chaos (opt-in, cf.
   // Personnage.aVoieChaosActive). Jauge de combat incrémentée automatiquement
@@ -2385,6 +2745,9 @@ const App = (() => {
       });
       fermerPickerCibleCapacite();
       toast(res.messages.join(" · "));
+      // Consomme l'action principale du tour en combat (no-op hors combat) —
+      // "compétence" est l'autre exemple type d'action principale.
+      if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
       rafraichir();
       // La fiche complète redirige vers l'onglet "Dés" (comportement historique) ;
       // la mini-fiche battlemap reste en place, comme les attaques rapides
@@ -2556,7 +2919,7 @@ const App = (() => {
   const LABELS_SLOT = {
     tete: "Tête", torse: "Torse", jambe: "Jambes", botte: "Bottes",
     avant_bras: "Avant-bras", main_droite: "Main droite", main_gauche: "Main gauche",
-    collier: "Collier", bague: "Bague",
+    collier: "Collier", bague: "Bague", mains: "Mains",
   };
 
   // Résumé chiffré de l'effet d'un item, pour les badges de slot/inventaire.
@@ -3068,6 +3431,9 @@ const App = (() => {
 
   // Bouton "Utiliser" : le personnage consomme lui-même l'objet, soin immédiat
   // sans jet de caractéristique (boire sa propre potion ne demande pas de test).
+  // Consomme l'action secondaire du tour en combat (no-op hors combat, cf.
+  // Combat.utiliserActionSecondaire) — "boire une potion" est l'exemple type
+  // d'action secondaire de l'économie d'action.
   function utiliserConsommable(persoId, idx) {
     const persos = chargerPersos();
     const p = persos[persoId];
@@ -3082,6 +3448,7 @@ const App = (() => {
     sauverPersos(persos);
     afficherFiche(persoId);
     soigner(persoId, total, item.nom);
+    if (typeof Combat !== "undefined" && Combat.utiliserActionSecondaire) Combat.utiliserActionSecondaire(persoId);
   }
 
   // Ouvre le sélecteur d'allié à qui administrer le consommable — même modèle
@@ -3404,15 +3771,25 @@ const App = (() => {
     return d.innerHTML;
   }
 
+  // Couleur de la barre de PV selon le pourcentage restant : vert (plein) →
+  // ambre (entamé) → rouge (critique). Renvoie une valeur utilisable en CSS.
+  function _couleurPv(pct) {
+    if (pct <= 25) return "var(--chaos)";
+    if (pct <= 55) return "#c9a43a";
+    return "var(--succes)";
+  }
+  function _appliquerBarrePv(el, pct) {
+    if (!el) return;
+    el.style.width = pct + "%";
+    el.style.background = _couleurPv(pct);
+  }
   function majBarrePv(p) {
     const pct = Math.max(0, Math.min(100, (p.pvActuel / p.pvMax) * 100));
-    const el = document.getElementById("barre-pv-rempli");
-    if (el) el.style.width = pct + "%";
+    _appliquerBarrePv(document.getElementById("barre-pv-rempli"), pct);
   }
   function majBarrePvSidebar(p) {
     const pct = Math.max(0, Math.min(100, (p.pvActuel / p.pvMax) * 100));
-    const el = document.getElementById("bm-barre-pv-rempli");
-    if (el) el.style.width = pct + "%";
+    _appliquerBarrePv(document.getElementById("bm-barre-pv-rempli"), pct);
   }
   // Répercute les PV à jour sur toutes les vues actuellement montées pour ce
   // personnage (la fiche complète et/ou la mini-fiche battlemap), sans
@@ -3683,26 +4060,49 @@ const App = (() => {
     ajouterHisto(`d${faces}`, v, crit, echec, detail);
   }
 
-  // Parse une formule type "2d6+3" ou "1d20-1" ou "3d8". label : texte affiché
-  // dans le résultat/journal à la place de la formule brute (ex. attaques de
-  // monstre, où "1d4" seul ne dit pas de qui/quoi il s'agit) — par défaut la
-  // formule elle-même, comme avant.
+  // Parse une formule type "2d6+3", "1d20-1" ou "1d8+1d4+2" (plusieurs
+  // termes de dés, ex. dégâts de contact bi-arme — cf. Personnage.
+  // armeCourteSecondaire). label : texte affiché dans le résultat/journal à
+  // la place de la formule brute (ex. attaques de monstre, où "1d4" seul ne
+  // dit pas de qui/quoi il s'agit) — par défaut la formule elle-même.
   function lancerFormule(formule, label) {
     formule = (formule || "").trim().toLowerCase().replace(/\s/g, "");
     if (!formule) { toast("Entre une formule, ex. 2d6+3"); return; }
-    const m = /^(\d*)d(\d+)([+-]\d+)?$/.exec(formule);
-    if (!m) { toast("Formule invalide. Ex : 2d6+3, 1d20-1"); return; }
-    const nb = parseInt(m[1] || "1", 10);
-    const faces = parseInt(m[2], 10);
-    const bonus = parseInt(m[3] || "0", 10);
-    if (nb < 1 || nb > 50 || faces < 2 || faces > 1000) { toast("Valeurs hors limites."); return; }
-    const jets = [];
-    let somme = 0;
-    for (let i = 0; i < nb; i++) { const v = lancerDe(faces); jets.push(v); somme += v; }
-    const total = somme + bonus;
-    let crit = false, echec = false;
-    if (nb === 1 && faces === 20) { crit = (jets[0] === 20); echec = (jets[0] === 1); }
-    const detail = `[${jets.join(", ")}] ${bonus ? signe(bonus) : ""}`;
+    const termes = formule.match(/[+-]?[^+-]+/g) || [];
+    const valide = termes.length > 0 && termes.every((t) => /^[+-]?(\d*d\d+|\d+)$/.test(t));
+    if (!valide) { toast("Formule invalide. Ex : 2d6+3, 1d20-1, 1d8+1d4+2"); return; }
+
+    let total = 0;
+    let horsLimites = false;
+    let nbTermesDe = 0;
+    let jetD20Unique = null; // crit/échec seulement si un SEUL terme de dés, et c'est 1d20
+    const detailParts = [];
+    termes.forEach((terme) => {
+      const negatif = terme.startsWith("-");
+      const brut = terme.replace(/^[+-]/, "");
+      const de = /^(\d*)d(\d+)$/.exec(brut);
+      if (de) {
+        nbTermesDe++;
+        const nb = parseInt(de[1] || "1", 10);
+        const faces = parseInt(de[2], 10);
+        if (nb < 1 || nb > 50 || faces < 2 || faces > 1000) { horsLimites = true; return; }
+        const jets = [];
+        for (let i = 0; i < nb; i++) jets.push(lancerDe(faces));
+        const somme = jets.reduce((a, b) => a + b, 0);
+        total += negatif ? -somme : somme;
+        detailParts.push(`${negatif ? "-" : detailParts.length ? "+" : ""}${brut}[${jets.join(",")}]`);
+        if (nb === 1 && faces === 20) jetD20Unique = jets[0];
+      } else {
+        const v = parseInt(brut, 10);
+        total += negatif ? -v : v;
+        detailParts.push(`${negatif ? "-" : detailParts.length ? "+" : ""}${v}`);
+      }
+    });
+    if (horsLimites) { toast("Valeurs hors limites."); return; }
+
+    const crit = nbTermesDe === 1 && jetD20Unique === 20;
+    const echec = nbTermesDe === 1 && jetD20Unique === 1;
+    const detail = detailParts.join(" ");
     label = label || formule;
     afficherResultat(label, total, detail, crit, echec);
     ajouterHisto(label, total, crit, echec, detail);
@@ -4019,7 +4419,7 @@ const App = (() => {
         </div>
         <p class="pnj-resume"><em>${echapper(p.resume)}</em></p>
         <div class="contenu">${echapper(p.description)}</div>
-        ${(p.accroches || []).length ? `<div class="pnj-accroches"><h4>Accroches</h4><ul>${
+        ${(p.accroches || []).length ? `<div class="pnj-accroches" data-role="mj"><h4>Accroches</h4><ul>${
           p.accroches.map((a) => `<li>${echapper(a)}</li>`).join("")
         }</ul></div>` : ""}
       </div>`).join("");
@@ -4027,6 +4427,59 @@ const App = (() => {
     zone.querySelectorAll("[data-pnj-faction]").forEach((btn) => {
       btn.onclick = () => { _pnjFactionFiltre = btn.dataset.pnjFaction; rendrePnjCles(); };
     });
+  }
+
+  // Onglet "Factions" du panneau Lore — une carte par entité (maison/bloc)
+  // groupée par camp politique (FACTIONS, data/donnees.js), même charte
+  // visuelle que l'onglet PNJ (réutilise .pnj-carte/.pnj-entete/.badge-faction).
+  // Filtre par groupe optionnel, comme le filtre par faction de rendrePnjCles.
+  let _factionsGroupeFiltre = "";
+  function _couleurGroupeFaction(groupe, groupes) {
+    const idx = groupes.indexOf(groupe);
+    return PNJ_PALETTE_FACTIONS[idx % PNJ_PALETTE_FACTIONS.length];
+  }
+  function rendreFactions() {
+    const zone = document.getElementById("zone-lore-factions");
+    if (!zone || typeof FACTIONS === "undefined") return;
+    const groupes = FACTIONS.map((g) => g.groupe);
+    const filtreHtml =
+      `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">` +
+      `<div class="barre-actions" style="margin:0;">` +
+      `<button type="button" class="btn petit ${_factionsGroupeFiltre === "" ? "or" : "secondaire"}" data-factions-groupe="">Tous</button>` +
+      groupes.map((g) =>
+        `<button type="button" class="btn petit ${_factionsGroupeFiltre === g ? "or" : "secondaire"}" data-factions-groupe="${echapper(g)}">${echapper(g)}</button>`
+      ).join("") +
+      `</div>` +
+      `<button type="button" class="btn petit secondaire" id="btn-modifier-factions" data-role="mj">✏️ Modifier</button>` +
+      `</div>`;
+    const groupesHtml = FACTIONS
+      .filter((g) => !_factionsGroupeFiltre || g.groupe === _factionsGroupeFiltre)
+      .map((g) => {
+        const entitesHtml = g.entites.map((e) => `<div class="carte pnj-carte">
+          <div class="pnj-entete">
+            <div>
+              <div class="pnj-nom">${echapper(e.nom)}</div>
+              <div class="pnj-titre">« ${echapper(e.devise)} »</div>
+            </div>
+            <span class="badge-faction" style="background:${_couleurGroupeFaction(g.groupe, groupes)};">${echapper(g.groupe)}</span>
+          </div>
+          <div class="contenu">${echapper(e.description)}</div>
+        </div>`).join("");
+        return `<div class="lore-section"><h3>${echapper(g.groupe)}</h3>` +
+          `<p style="font-style:italic;color:#6a6278;">${echapper(g.intro)}</p>` +
+          entitesHtml +
+          `<div class="carte pnj-carte" style="margin-top:10px;"><div class="contenu">${echapper(g.synthese)}</div></div>` +
+          `</div>`;
+      }).join("");
+    zone.innerHTML = filtreHtml + groupesHtml;
+    zone.querySelectorAll("[data-factions-groupe]").forEach((btn) => {
+      btn.onclick = () => { _factionsGroupeFiltre = btn.dataset.factionsGroupe; rendreFactions(); };
+    });
+    const btnModifierFactions = document.getElementById("btn-modifier-factions");
+    if (btnModifierFactions) {
+      btnModifierFactions.onclick = () =>
+        toast("Édition des factions — bientôt disponible, une fois la synchro serveur en place.");
+    }
   }
 
   /* ============================================================
@@ -4044,8 +4497,10 @@ const App = (() => {
     initSousOnglets("sous-onglets-lore", {
       chroniques: "sous-panneau-lore-chroniques",
       pnj: "sous-panneau-lore-pnj",
+      factions: "sous-panneau-lore-factions",
     });
     rendrePnjCles();
+    rendreFactions();
 
     document.querySelectorAll("#choix-genre .btn-genre").forEach((b) => {
       b.onclick = () => choisirGenre(b.dataset.genre);
@@ -4327,6 +4782,7 @@ const App = (() => {
     // pour la scène : on relaisse le temps au reflow puis on redéclenche le
     // redimensionnement (géré aujourd'hui via l'événement resize existant).
     requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
+    rendreDockCombat(); // reconstruit/masque le dock de combat selon le mode
   }
 
   /* ============================================================
@@ -4648,7 +5104,7 @@ const App = (() => {
             <span style="font-weight:700;">/ ${pvMax}</span>
             <button data-pv-plus="${m.id}">+</button>
           </div>
-          <div class="barre-pv"><div class="rempli" style="width:${pvMax ? Math.max(0, Math.min(100, (pvActuel / pvMax) * 100)) : 0}%;"></div></div>
+          <div class="barre-pv"><div class="rempli" style="width:${pvMax ? Math.max(0, Math.min(100, (pvActuel / pvMax) * 100)) : 0}%;background:${_couleurPv(pvMax ? (pvActuel / pvMax) * 100 : 0)};"></div></div>
           ${blocDegatsSubisHtml(prefixe)}
           ${htmlEtatsActifs(m)}
           ${morEnCombat ? '<div class="badge-mort">💀 Hors combat</div>' : ""}
