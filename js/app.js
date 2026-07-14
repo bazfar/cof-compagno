@@ -12,6 +12,11 @@ const App = (() => {
   const STORAGE_MON_PERSO = "cof_mon_perso_actif";
   const STORAGE_JOUEUR_ID = "cof_joueur_id";
   const STORAGE_JOUEUR_NOM = "cof_joueur_nom";
+  // Messages MJ → joueur individuel : liste partagée (SyncStore), même
+  // schéma que STORAGE_HISTO — ciblage par NOM (memeNom), pas par joueurId,
+  // pour rester cohérent avec le partage de livres (_rosterJoueurs/
+  // _livrePartageAvecMoi), seul précédent de ciblage MJ->joueur nommé.
+  const STORAGE_MESSAGES = "mj:messages";
 
   // État de création en cours
   let creation = null;       // objet personnage en cours de création
@@ -997,6 +1002,7 @@ const App = (() => {
     });
     if (panneau === "fiche") { rendreListePersos(); _mettreAJourLootFiche(); }
     if (panneau === "livret") rendrePanneauLivret();
+    if (panneau === "messages") { rendreMessages(); _majBadgeMessages(); }
     if (panneau === "loot" && typeof Loot !== "undefined") Loot.rendreCatalogue();
     if (panneau === "atelier") rendrePanneauAtelier();
     if (panneau === "regles") rendreRegles();
@@ -2229,6 +2235,119 @@ const App = (() => {
     }
     Object.keys(persos || {}).forEach((pid) => ajouter(persos[pid].proprietaireNom));
     return noms;
+  }
+
+  /* ============================================================
+     MESSAGES MJ → JOUEUR (homebrew) — ciblage par nom (memeNom), cf.
+     STORAGE_MESSAGES. Liste partagée façon journal de dés (STORAGE_HISTO) :
+     un seul document SyncStore, jamais purgé automatiquement (le MJ garde
+     l'historique de ce qu'il a envoyé).
+     ============================================================ */
+
+  function _messages() { return SyncStore.get(STORAGE_MESSAGES) || []; }
+  function _genMessageId() { return "msg" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  // Mes messages (joueur courant), triés du plus récent au plus ancien —
+  // ciblage par nom, cf. _rosterJoueurs/_livrePartageAvecMoi (même
+  // convention que le partage de livres, seul précédent de ciblage nommé).
+  function _mesMessages() {
+    return _messages()
+      .filter((m) => memeNom(m.destinataireNom, joueurNom))
+      .slice()
+      .sort((a, b) => b.envoyeLe - a.envoyeLe);
+  }
+
+  function _rendreOptionsDestinatairesMessage() {
+    const sel = document.getElementById("msg-destinataire");
+    if (!sel) return;
+    const persos = chargerPersos();
+    const noms = _rosterJoueurs(persos);
+    const valeurAvant = sel.value;
+    sel.innerHTML = noms.length
+      ? noms.map((n) => `<option value="${echapper(n)}">${echapper(n)}</option>`).join("")
+      : `<option value="">Aucun joueur connu</option>`;
+    if (noms.includes(valeurAvant)) sel.value = valeurAvant;
+  }
+
+  function envoyerMessage() {
+    const sel = document.getElementById("msg-destinataire");
+    const champ = document.getElementById("msg-texte");
+    if (!sel || !champ) return;
+    const destinataireNom = sel.value;
+    const texte = champ.value.trim();
+    if (!destinataireNom) { toast("Choisis un destinataire."); return; }
+    if (!texte) { toast("Écris un message avant d'envoyer."); return; }
+    const messages = _messages();
+    messages.push({ id: _genMessageId(), destinataireNom, texte, envoyeLe: Date.now(), lu: false });
+    SyncStore.set(STORAGE_MESSAGES, messages);
+    champ.value = "";
+    toast(`Message envoyé à ${destinataireNom}.`);
+    rendreMessages();
+  }
+
+  function marquerMessageLu(id) {
+    const messages = _messages();
+    const m = messages.find((mm) => mm.id === id);
+    if (!m || m.lu) return;
+    m.lu = true;
+    SyncStore.set(STORAGE_MESSAGES, messages);
+  }
+
+  function _formatDateMessage(ts) {
+    try { return new Date(ts).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); }
+    catch (e) { return ""; }
+  }
+
+  function rendreMessages() {
+    const zone = document.getElementById("zone-messages");
+    if (!zone) return;
+    if (role === "mj") {
+      _rendreOptionsDestinatairesMessage();
+      const envoyes = _messages().slice().sort((a, b) => b.envoyeLe - a.envoyeLe);
+      zone.innerHTML = envoyes.length
+        ? envoyes.map((m) => `<div class="message-ligne${m.lu ? "" : " message-non-lu"}">
+            <div class="message-entete"><strong>${echapper(m.destinataireNom)}</strong> · ${_formatDateMessage(m.envoyeLe)}${m.lu ? " · lu" : " · pas encore lu"}</div>
+            <div class="message-texte">${echapper(m.texte)}</div>
+          </div>`).join("")
+        : `<div class="vide">Aucun message envoyé pour l'instant.</div>`;
+      return;
+    }
+    const mesMsg = _mesMessages();
+    zone.innerHTML = mesMsg.length
+      ? mesMsg.map((m) => `<div class="message-ligne${m.lu ? "" : " message-non-lu"}" data-message-id="${m.id}">
+          <div class="message-entete">${_formatDateMessage(m.envoyeLe)}${m.lu ? "" : " · <strong>nouveau</strong>"}</div>
+          <div class="message-texte">${echapper(m.texte)}</div>
+        </div>`).join("")
+      : `<div class="vide">Aucun message pour l'instant.</div>`;
+    zone.querySelectorAll("[data-message-id]").forEach((el) => { marquerMessageLu(el.dataset.messageId); });
+  }
+
+  // Badge de compteur non-lu sur l'onglet "✉️ Messages" — mis à jour à
+  // chaque rendu/synchro (cf. rendreMessages/abonnement SyncStore dans init()).
+  function _majBadgeMessages() {
+    const btn = document.getElementById("onglet-messages");
+    if (!btn) return;
+    const n = role === "joueur" ? _mesMessages().filter((m) => !m.lu).length : 0;
+    btn.textContent = n > 0 ? `✉️ Messages (${n})` : "✉️ Messages";
+  }
+
+  // Notifie (toast) l'arrivée d'un nouveau message pour MOI, en temps réel —
+  // même principe que la notification de vote loot (SyncStore.subscribe).
+  // _messagesConnus évite de re-notifier au premier chargement (l'abonnement
+  // Firestore renvoie tout l'historique existant dès la connexion).
+  let _messagesConnus = null;
+  function _verifierNouveauxMessages(messages) {
+    const mesMsg = (messages || []).filter((m) => memeNom(m.destinataireNom, joueurNom));
+    if (_messagesConnus === null) {
+      _messagesConnus = new Set(mesMsg.map((m) => m.id));
+      return;
+    }
+    mesMsg.forEach((m) => {
+      if (!_messagesConnus.has(m.id)) {
+        _messagesConnus.add(m.id);
+        toast(`✉️ Nouveau message : « ${m.texte.length > 60 ? m.texte.slice(0, 60) + "…" : m.texte} »`);
+      }
+    });
   }
 
   // Badge de partage affiché sur la tranche d'un de MES livres (état courant).
@@ -5595,6 +5714,17 @@ const App = (() => {
       if (e.key === "Enter") lancerFormule(e.target.value);
     });
     document.getElementById("btn-vider-histo").onclick = viderHisto;
+
+    // Messages MJ → joueur
+    const btnEnvoyerMessage = document.getElementById("btn-envoyer-message");
+    if (btnEnvoyerMessage) btnEnvoyerMessage.onclick = envoyerMessage;
+    SyncStore.subscribe(STORAGE_MESSAGES, (messages) => {
+      _verifierNouveauxMessages(messages);
+      _majBadgeMessages();
+      const panneauMessages = document.getElementById("panneau-messages");
+      if (panneauMessages && panneauMessages.classList.contains("actif")) rendreMessages();
+    });
+    _majBadgeMessages();
 
     // Fiche : import
     document.getElementById("btn-importer").onclick = () => document.getElementById("input-import").click();

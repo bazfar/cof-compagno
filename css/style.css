@@ -923,6 +923,13 @@ textarea { resize: vertical; min-height: 70px; }
 .options-de label { display: flex; align-items: center; gap: 6px; font-weight: 500; }
 .options-de input[type="radio"], .options-de input[type="checkbox"] { width: auto; }
 
+/* ---------- Messages MJ -> joueur ---------- */
+.message-ligne { padding: 8px 10px; border-bottom: 1px solid var(--parchemin-fonce); font-size: 0.88rem; }
+.message-ligne:last-child { border-bottom: none; }
+.message-ligne.message-non-lu { background: rgba(255, 216, 107, 0.15); border-left: 3px solid var(--or); }
+.message-entete { font-size: 0.78rem; color: #6a6278; margin-bottom: 3px; }
+.message-texte { white-space: pre-wrap; }
+
 /* ---------- Lore ---------- */
 .lore-carte { display: block; width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--parchemin-fonce); margin: 0 0 16px; box-shadow: 0 3px 10px var(--ombre); }
 .lore-section { margin-bottom: 18px; }
