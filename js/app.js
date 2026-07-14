@@ -4901,6 +4901,25 @@ const App = (() => {
     rendreDockCombat();
   }
 
+  // Grande illustration du personnage (p.illustration) — distincte du petit
+  // avatar/icône (p.portrait/token/emblème). Affichée en tête de la fiche
+  // complète ; le propriétaire peut l'ajouter/changer/retirer (image
+  // compressée, cf. lireImageRedimensionnee). Rien pour le MJ si absente.
+  function htmlPortraitFiche(p) {
+    const editable = role !== "mj";
+    if (!p.illustration && !editable) return "";
+    return `<div class="carte portrait-fiche">
+      ${p.illustration
+        ? `<img class="portrait-fiche-img" src="${p.illustration}" alt="illustration de ${echapper(p.nom)}" />`
+        : `<div class="portrait-fiche-vide">Aucune illustration — ajoute une image qui représente ton personnage.</div>`}
+      ${editable ? `<div class="barre-actions" style="justify-content:center;margin-top:10px;">
+        <button class="btn petit or" id="btn-portrait-fiche">🖼 ${p.illustration ? "Changer l'illustration" : "Ajouter une illustration"}</button>
+        ${p.illustration ? `<button class="btn petit secondaire" id="btn-portrait-fiche-suppr">Retirer</button>` : ""}
+        <input type="file" accept="image/*" id="input-portrait-fiche" hidden />
+      </div>` : ""}
+    </div>`;
+  }
+
   function afficherFiche(id) {
     const persos = chargerPersos();
     const p = persos[id];
@@ -4944,6 +4963,7 @@ const App = (() => {
     zone.innerHTML = `
       <div class="fiche-layout">
         <div class="fiche-col-gauche">
+          ${htmlPortraitFiche(p)}
           <div class="carte">
             <div class="entete-fiche">
               <div class="tete-gauche">
@@ -5148,6 +5168,27 @@ const App = (() => {
     document.getElementById("btn-niveau-up").onclick = () => monterDeNiveau(id);
     document.getElementById("btn-editer-fiche").onclick = () => editerPerso(id);
     document.getElementById("btn-exporter-fiche").onclick = () => exporterPerso(id);
+    // Grande illustration du personnage (cf. htmlPortraitFiche) — upload
+    // compressé (max 600px) et retrait, réservés au propriétaire.
+    const btnPortraitFiche = document.getElementById("btn-portrait-fiche");
+    if (btnPortraitFiche) {
+      const inp = document.getElementById("input-portrait-fiche");
+      btnPortraitFiche.onclick = () => inp.click();
+      inp.onchange = (e) => {
+        lireImageRedimensionnee(e.target.files[0], 600, 0.82, (dataUrl) => {
+          const pers = chargerPersos(); const pp = pers[id]; if (!pp) return;
+          pp.illustration = dataUrl; sauverPersos(pers);
+          toast("Illustration ajoutée ✔");
+          afficherFiche(id);
+        });
+      };
+      const supprPortrait = document.getElementById("btn-portrait-fiche-suppr");
+      if (supprPortrait) supprPortrait.onclick = () => {
+        const pers = chargerPersos(); const pp = pers[id]; if (!pp) return;
+        delete pp.illustration; sauverPersos(pers);
+        afficherFiche(id);
+      };
+    }
     // Rattrapage d'un Don manquant (perso déjà à ce niveau avant l'introduction
     // de la fonctionnalité, ou palier atteint sans choix fait) — persistance
     // directe comme ajusterPv/definirNotes, sans passer par la création.

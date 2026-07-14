@@ -428,6 +428,26 @@ textarea { resize: vertical; min-height: 70px; }
 .entete-fiche .nom-perso { font-size: 1.6rem; font-weight: 700; color: var(--violet); }
 .entete-fiche .meta { font-size: 0.85rem; color: var(--violet-accent); }
 
+/* Grande illustration du personnage (fiche complète) — distincte de l'avatar */
+.portrait-fiche { text-align: center; padding: 12px; }
+.portrait-fiche-img {
+  display: block;
+  max-width: 100%;
+  max-height: 380px;
+  margin: 0 auto;
+  border-radius: 10px;
+  border: 3px solid var(--or);
+  box-shadow: 0 4px 16px var(--ombre);
+  object-fit: contain;
+}
+.portrait-fiche-vide {
+  padding: 30px 16px;
+  color: #8a8296;
+  font-style: italic;
+  border: 2px dashed var(--parchemin-fonce);
+  border-radius: 10px;
+}
+
 .stats-rapides { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin: 14px 0; }
 .stat-box { background: var(--violet); color: var(--parchemin); border-radius: 8px; padding: 10px; text-align: center; }
 .stat-box .label { font-size: 0.7rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; }
