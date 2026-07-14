@@ -1549,7 +1549,8 @@ const CLASSES = {
 
           { rang: 5, nom: "Sanctuaire (L, 1x/scénario)", effet: "Pendant [2 + Mod. d'INT] tours : immunité totale aux dégâts magiques",
             mecanique: { type: "limitee", usage: { frequence: "1x/scenario" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Immunité totale aux dégâts d'origine magique pendant [2 + Mod.INT] tours — immunité chiffrée par durée, non modélisée comme bonus/malus classique." } ] } },
+              effets: [ { type: "etat", id: "sanctuaire_magicien", duree: "2+Mod.INT" },
+                { type: "special", note: "Pose l'état 'Sanctuaire' (durée 2+Mod.INT tours, décomptée automatiquement chaque tour comme tout autre état) ; subirDegats côté app.js annule intégralement tout dégât marqué 'magique' tant que l'état est actif — détection automatique, pas de case à cocher (même principe que l'état 'renversee')." } ] } },
         ],
       },
       {

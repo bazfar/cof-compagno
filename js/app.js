@@ -4888,7 +4888,10 @@ const App = (() => {
   // l'usage du jour via Capacites.verifierUsage (même mécanique que les
   // capacités à fréquence limitée, appelée à la volée puisque Cœur de
   // Montagne ne passe jamais par Capacites.lancer()) ; si déjà utilisé
-  // aujourd'hui, prévient et applique les dégâts normalement.
+  // aujourd'hui, prévient et applique les dégâts normalement. Sanctuaire
+  // (Magicien) n'a pas de paramètre dédié : détecté automatiquement via
+  // l'état 'sanctuaire_magicien' posé par Capacites.lancer(), tant qu'il
+  // est actif tout dégât typeDegats === "magique" est intégralement annulé.
   function subirDegats(id, degatsBruts, typeDegats, coeurMontagneArme) {
     degatsBruts = parseInt(degatsBruts, 10);
     if (isNaN(degatsBruts) || degatsBruts < 0) { toast("Entre un nombre de dégâts valide."); return; }
@@ -4903,6 +4906,12 @@ const App = (() => {
       if (res.ok) { res.appliquer(); coeurMontagneActif = true; }
       else toast(res.raison);
     }
+    // Magicien — Voie de la magie protectrice, rang 5 "Sanctuaire" : pendant
+    // sa durée (état 'sanctuaire_magicien', posé par Capacites.lancer et
+    // décompté automatiquement comme tout autre état), immunité totale aux
+    // dégâts marqués "magique" — détection automatique, pas de case à
+    // cocher (même principe que l'état 'renversee' ailleurs dans l'app).
+    const sanctuaireActif = typeDegats === "magique" && (p.etatsActifs || []).some((e) => e.idEtat === "sanctuaire_magicien");
 
     const reductionLourde = typeDegats === "physique" ? perso.bonusReductionLourdeDons() : 0;
     const apresLourde = Math.max(0, degatsBruts - reductionLourde);
@@ -4911,7 +4920,7 @@ const App = (() => {
     // Demi-Orc — Résistance Instinctive (rang racial 3) : -3 dégâts quand le
     // résultat passerait sous la moitié des PV max.
     degatsNets = Math.max(0, degatsNets - perso.reductionSeuilBasPv(degatsNets));
-    if (coeurMontagneActif) degatsNets = 0;
+    if (coeurMontagneActif || sanctuaireActif) degatsNets = 0;
 
     const pvAvant = p.pvActuel;
     p.pvActuel = Math.max(0, p.pvActuel - degatsNets);
@@ -4922,9 +4931,11 @@ const App = (() => {
     const reductionTotale = reductionLourde + reduction;
     toast(coeurMontagneActif
       ? `🏔 Cœur de Montagne : ${degatsBruts} dégâts encaissés sans dommage.`
-      : reductionTotale > 0
-        ? `🛡 ${degatsBruts} dégâts subis → ${degatsNets} après réduction d'armure${reductionLourde > 0 ? " + don" : ""} (−${reductionTotale}).`
-        : `${degatsNets} dégâts subis.`);
+      : sanctuaireActif
+        ? `✨ Sanctuaire : ${degatsBruts} dégâts magiques encaissés sans dommage.`
+        : reductionTotale > 0
+          ? `🛡 ${degatsBruts} dégâts subis → ${degatsNets} après réduction d'armure${reductionLourde > 0 ? " + don" : ""} (−${reductionTotale}).`
+          : `${degatsNets} dégâts subis.`);
   }
 
   // HTML + câblage du petit formulaire "Subir des dégâts", réutilisé par la
@@ -5440,6 +5451,7 @@ const App = (() => {
     malus: "Malus",
     dot: "Dégâts continus (DoT)",
     physique: "Altérations physiques",
+    buff: "Buffs",
   };
 
   // Onglet "États & Malus" — généré depuis le catalogue ETATS (js/etats.js),

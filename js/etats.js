@@ -60,9 +60,13 @@ const ETATS = {
     description: "Désavantage sur tous les jets d'attaque ; ne peut viser qu'au contact." },
   brulure: { nom: "Brûlure", categorie: "dot",
     description: "1d4 dégâts en début de tour tant que la cible reste dans les flammes / n'éteint pas le feu (action de mouvement pour éteindre)." },
+
+  // ── Buffs ───────────────────────────────────────────────────
+  sanctuaire_magicien: { nom: "Sanctuaire", categorie: "buff",
+    description: "Immunité totale aux dégâts d'origine magique tant que l'état dure (Magicien, Voie de la magie protectrice, rang 5)." },
 };
 
-const ORDRE_CATEGORIES_ETATS = ["controle", "malus", "dot", "physique"];
+const ORDRE_CATEGORIES_ETATS = ["controle", "malus", "dot", "physique", "buff"];
 
 // Utilitaire : retrouve un état par id, lève une erreur explicite si absent
 // (mieux vaut planter tôt que d'afficher "undefined" à la table).
