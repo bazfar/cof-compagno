@@ -25,10 +25,15 @@ const Capacites = (() => {
 
   /* ---------- Résolution de formules ("1d8+niveau", "rang+Mod.SAG", "2d6", "Mod.INT") ---------- */
 
-  // ctx = { perso: Personnage, rang: number }
+  // ctx = { perso: Personnage, rang: number, critique?: boolean }. critique
+  // (cf. liaison attaque->dégâts) relance et additionne une SECONDE fois
+  // chaque terme de dés "NdF" (mais pas Mod.XXX/niveau/rang/constantes),
+  // conformément à la règle "critique = dés doublés, pas les modificateurs" —
+  // ex. "1d8+niveau" en critique donne 1d8[x]+1d8[y]+niveau, pas 2×(1d8+niveau).
   function resoudreExpression(expr, ctx) {
     ctx = ctx || {};
     if (!expr) return { total: 0, detail: "" };
+    const critique = !!ctx.critique;
     const termes = String(expr).replace(/\s/g, "").match(/[+-]?[^+-]+/g) || [];
     let total = 0;
     const details = [];
@@ -46,6 +51,12 @@ const Capacites = (() => {
         for (let i = 0; i < nb; i++) jets.push(App.lancerDe(faces));
         valeur = jets.reduce((a, b) => a + b, 0);
         libelle = `${brut}[${jets.join(",")}]`;
+        if (critique) {
+          const jets2 = [];
+          for (let i = 0; i < nb; i++) jets2.push(App.lancerDe(faces));
+          valeur += jets2.reduce((a, b) => a + b, 0);
+          libelle = `${brut}[${jets.join(",")}]+${brut}[${jets2.join(",")}]`;
+        }
       } else if (mod) {
         valeur = ctx.perso ? ctx.perso.mod(mod[1].toUpperCase()) : 0;
         libelle = `Mod.${mod[1].toUpperCase()}(${valeur >= 0 ? "+" : ""}${valeur})`;
@@ -129,6 +140,25 @@ const Capacites = (() => {
       });
     }
     return cibles;
+  }
+
+  // DEF numérique d'une cible (issue de listeCibles), ou null si indisponible
+  // — sert à déterminer touché/raté pour les capacités d'attaque vs DEF (cf.
+  // lancer()). PJ : recalculée via Personnage.calculerDEF() (jamais stockée
+  // telle quelle, contrairement aux monstres). Monstre : lit le champ `def`
+  // du token (Carte.listeMonstresCombat()) — peut être `null` si le bestiaire
+  // ne le renseigne pas (cf. js/carte.js), traité ici comme "DEF inconnue".
+  function obtenirDefCible(cible, persos) {
+    if (!cible) return null;
+    if (cible.genre === "perso") {
+      const p = persos[cible.id];
+      return p ? Personnage.depuisJSON(p).calculerDEF() : null;
+    }
+    if (cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
+      const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
+      return tok && typeof tok.def === "number" ? tok.def : null;
+    }
+    return null;
   }
 
   /* ---------- Application des effets ----------
@@ -292,9 +322,11 @@ const Capacites = (() => {
   // texte destiné au joueur (toast) — ne journalise PAS lui-même dans
   // l'historique partagé pour les effets sans jet de dé (etat/bonus/special).
   function resoudreEffet(effet, ctx) {
-    const { perso, rang, cible, libelle, persos } = ctx;
+    const { perso, rang, cible, libelle, persos, critique } = ctx;
     if (effet.type === "degats") {
-      const { total, detail } = resoudreExpression(effet.formule, { perso, rang });
+      // critique (cf. liaison attaque->dégâts, lancer()/resoudreDegatsEnAttente)
+      // double les termes de dés de la formule, pas les modificateurs fixes.
+      const { total, detail } = resoudreExpression(effet.formule, { perso, rang, critique });
       App.ajouterHisto(`${libelle} — Dégâts`, total, false, false, detail);
       if (cible && cible.genre === "monstre" && typeof Carte !== "undefined") {
         const res = Carte.appliquerDegatsCombat(cible.id, total);
@@ -348,8 +380,28 @@ const Capacites = (() => {
 
   /* ---------- Point d'entrée ---------- */
 
+  // Types d'effets dont l'application est DIFFÉRÉE (cf. lancer()) pour les
+  // capacités d'attaque vs DEF, jusqu'à confirmation que l'attaque touche.
+  const TYPES_EFFETS_DIFFERES = ["degats", "etat"];
+
   // { persoId, source, mecanique, cibleId? }
   // source : { origine: "classe"|"race"|"variante", cle, voie?, rang?, code?, nomCap }
+  //
+  // Pour une capacité dont jetOppose.caracDefenseur === "DEF" (attaque de
+  // contact/distance/magique ciblant la DEF adverse), le jet d'attaque est
+  // comparé automatiquement à la DEF de la cible (cf. obtenirDefCible) pour
+  // déterminer touché/raté/critique — les effets degats/etat ne sont PAS
+  // résolus ici mais renvoyés dans `resolutionDegats`, à passer ensuite à
+  // resoudreDegatsEnAttente() une fois que l'appelant (app.js) a confirmé que
+  // l'attaque touche. Les effets bonus/special de la même capacité, eux, se
+  // résolvent normalement dans CET appel (cf. limite connue plus bas).
+  //
+  // Limite connue (non corrigée dans ce chantier) : certains rangs avec
+  // jetOppose vs DEF n'ont QUE des effets bonus/special (ex. Barde rang 3
+  // "Feinte" — un jet d'attaque opposé qui devrait normalement conditionner
+  // le malus de DEF à la réussite). Comme seuls degats/etat sont conditionnés
+  // à la touche, ces capacités continuent d'appliquer leur bonus même sur un
+  // raté — à traiter séparément si besoin.
   function lancer({ persoId, source, mecanique, cibleId }) {
     if (!mecanique || mecanique.type === "passive") {
       return { ok: false, messages: ["Cette capacité est passive : rien à lancer."] };
@@ -373,21 +425,61 @@ const Capacites = (() => {
     }
 
     const messages = [];
+    let resolutionDegats = null;
+    const attaqueVsDef = !!(mecanique.jetOppose && mecanique.jetOppose.caracDefenseur === "DEF");
 
     if (mecanique.jetOppose) {
       const ca = mecanique.jetOppose.caracAttaquant;
       let bonus = 0;
-      if (ca === "attaqueMagique") bonus = perso.bonusAttaque("magique") || 0;
-      else if (ca === "attaqueContact") bonus = perso.bonusAttaque("contact");
-      else if (ca === "attaqueDistance") bonus = perso.bonusAttaque("distance");
+      // typeAttaque : "contact"/"distance"/"magique", pour Personnage.
+      // critMinAttaque(type) — les 28 rangs jetOppose vs DEF du jeu ont
+      // toujours un caracAttaquant parmi ces trois valeurs (vérifié dans
+      // data/donnees.js), jamais un Mod.XXX brut.
+      let typeAttaque = null;
+      if (ca === "attaqueMagique") { bonus = perso.bonusAttaque("magique") || 0; typeAttaque = "magique"; }
+      else if (ca === "attaqueContact") { bonus = perso.bonusAttaque("contact"); typeAttaque = "contact"; }
+      else if (ca === "attaqueDistance") { bonus = perso.bonusAttaque("distance"); typeAttaque = "distance"; }
       else if (ca) bonus = perso.mod(ca.replace(/^Mod\./i, "").toUpperCase());
       const d20 = App.lancerDe(20);
       const total = d20 + bonus;
       App.ajouterHisto(`${libelle} — Jet d'attaque`, total, d20 === 20, d20 === 1, `d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}`);
-      messages.push(`Jet d'attaque : ${total} (d20 ${d20} ${bonus >= 0 ? "+" : ""}${bonus}) — à comparer à la défense/DD de la cible.`);
+
+      if (attaqueVsDef) {
+        // Règles : 1 naturel = échec critique (raté systématique) ; 20 naturel
+        // ou jet >= seuil de critique de l'arme (critMinAttaque, qui intègre
+        // déjà l'affixe "Aiguisé", cf. js/affixes.js) = critique (touche
+        // toujours, dégâts doublés) ; sinon touché si total >= DEF cible.
+        const critMin = typeAttaque ? perso.critMinAttaque(typeAttaque) : 20;
+        const echecCritique = d20 === 1;
+        const critique = !echecCritique && (d20 === 20 || d20 >= critMin);
+        const defCible = obtenirDefCible(cible, persos);
+        let touche;
+        if (echecCritique) touche = false;
+        else if (critique) touche = true;
+        else if (defCible === null) touche = null; // DEF inconnue : ne pas bloquer, à trancher manuellement
+        else touche = total >= defCible;
+
+        if (echecCritique) {
+          messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) — 1 naturel, échec critique automatique.`);
+        } else if (critique) {
+          messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) — CRITIQUE !` +
+            (defCible !== null ? ` (DEF cible ${defCible})` : ""));
+        } else if (defCible === null) {
+          messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) — DEF de la cible inconnue, à comparer manuellement.`);
+        } else {
+          messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) vs DEF ${defCible} — ${touche ? "Touché !" : "Raté."}`);
+        }
+
+        resolutionDegats = { touche, critique, echecCritique, totalAttaque: total, defCible, persoId, source, mecanique, cible };
+      } else {
+        messages.push(`Jet d'attaque : ${total} (d20 ${d20} ${bonus >= 0 ? "+" : ""}${bonus}) — à comparer à la défense/DD de la cible.`);
+      }
     }
 
     (mecanique.effets || []).forEach((effet) => {
+      // Différé : résolu plus tard par resoudreDegatsEnAttente(), une fois la
+      // touche confirmée (cf. resolutionDegats ci-dessus).
+      if (attaqueVsDef && TYPES_EFFETS_DIFFERES.includes(effet.type)) return;
       const msg = resoudreEffet(effet, { perso, rang: source.rang, cible, libelle, persos });
       if (msg) messages.push(msg);
     });
@@ -403,9 +495,39 @@ const Capacites = (() => {
         (franchi ? ` ⚠️ Seuil dépassé — Corruption d'Âme +1 (total ${p.corruptionMajeure}), risque de mutation.` : ""));
     }
 
+    // Consommé dès le jet d'attaque, même en cas de raté — jamais décalé à
+    // resoudreDegatsEnAttente(), qui ne revérifie/redécompte pas l'usage.
     usage.appliquer && usage.appliquer();
     App.sauverPersos(persos);
 
+    return { ok: true, messages, resolutionDegats };
+  }
+
+  // Résout les effets degats/etat DIFFÉRÉS par lancer() pour une capacité
+  // d'attaque vs DEF, une fois que l'appelant a confirmé `touche` (true ou
+  // null — DEF inconnue, cf. lancer()). Recharge/sauve `persos` lui-même
+  // (nouvel appel : ne réutilise jamais la map chargée pendant lancer(),
+  // potentiellement périmée entre le jet d'attaque et le clic sur "Dégâts",
+  // ex. un autre joueur a agi entre-temps).
+  function resoudreDegatsEnAttente(resolutionDegats) {
+    if (!resolutionDegats || resolutionDegats.touche === false) {
+      return { ok: false, messages: ["Cette attaque n'a pas touché — aucun dégât à résoudre."] };
+    }
+    const { persoId, source, mecanique, cible, critique } = resolutionDegats;
+    const persos = App.chargerPersos();
+    const p = persos[persoId];
+    if (!p) return { ok: false, messages: ["Personnage introuvable."] };
+    const perso = Personnage.depuisJSON(p);
+    const libelle = source.nomCap || "Capacité";
+
+    const messages = [];
+    (mecanique.effets || []).forEach((effet) => {
+      if (!TYPES_EFFETS_DIFFERES.includes(effet.type)) return;
+      const msg = resoudreEffet(effet, { perso, rang: source.rang, cible, libelle, persos, critique });
+      if (msg) messages.push(msg);
+    });
+
+    App.sauverPersos(persos);
     return { ok: true, messages };
   }
 
@@ -421,7 +543,9 @@ const Capacites = (() => {
     verifierUsage,
     reinitialiserUsage,
     listeCibles,
+    obtenirDefCible,
     lancer,
+    resoudreDegatsEnAttente,
   };
 })();
 
