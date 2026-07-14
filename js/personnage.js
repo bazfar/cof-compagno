@@ -435,6 +435,16 @@ class Personnage extends Entite {
     if (type === "contact" && this.classe === "guerrier" && this.estChoisie("Voie de l'élite", 3)) {
       seuil = 19;
     }
+    // Moine — Voie de l'élévation, rang 1 "Bonus de précision" (passive) :
+    // même seuil que Précision létale (19-20), fixé par Thomas car le texte
+    // d'origine ("critiques facilités") n'en donnait pas — seulement aux
+    // attaques au contact à mains nues ou au bâton (id catalogue "baton*",
+    // cf. data/loot.js), pas avec une autre arme équipée.
+    if (type === "contact" && this.classe === "moine" && this.estChoisie("Voie de l'élévation", 1)) {
+      const armeContact = this.armeContactEquipee();
+      const mainsNuesOuBaton = !armeContact || (armeContact.id || "").startsWith("baton");
+      if (mainsNuesOuBaton) seuil = Math.min(seuil, 19);
+    }
     // Chasseur — Voie de la gâchette, rang 5 "Tir fatal" (L, 1x/combat en
     // théorie) : critique sur 18-20 au lieu de 20 sur les attaques à distance.
     // Simplification : traité ici comme une capacité passive (toujours

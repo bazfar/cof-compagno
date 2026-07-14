@@ -1338,9 +1338,9 @@ const CLASSES = {
         speciale: false,
         description: "Maîtrise spirituelle et technique du corps et du bâton — la précision avant la force. (Adaptation de la Voie de la maîtrise officielle.)",
         rangs: [
-          { rang: 1, nom: null, effet: "Bonus de précision : critiques facilités sur les attaques à mains nues ou au bâton",
+          { rang: 1, nom: null, effet: "Bonus de précision : critiques sur 19-20 au lieu de 20 sur les attaques au contact à mains nues ou au bâton",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Critiques facilités sur les attaques à mains nues/bâton — seuil exact non chiffré dans le texte (ex. 19-20 au lieu de 20 ?), à préciser avec Thomas avant automatisation via critMinAttaque." } ] } },
+              effets: [ { type: "special", note: "Seuil 19-20 (même valeur que Précision létale, fixée par Thomas — le texte d'origine ne chiffrait pas le seuil) déjà codé dans Personnage.critMinAttaque(), limité aux attaques au contact à mains nues ou avec une arme d'id catalogue \"baton*\"." } ] } },
           { rang: 2, nom: null, effet: "Ajoute son Mod. d'INT ou de SAG (au choix à l'acquisition) à l'Initiative et à la DEF",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "bonus", cible: "initiative", valeur: "Mod.SAG", duree: "permanente" },
