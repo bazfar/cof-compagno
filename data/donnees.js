@@ -191,7 +191,8 @@ const CLASSES = {
                 { type: "special", note: "Double aussi la capacité de charge et les tests athlétiques — hors combat, non chiffrable ici." } ] } },
           { rang: 5, nom: "Apogée physique (L, 1x/combat)", effet: "3 tours : double le Mod. de la carac. choisie au Rang 1 pour tous les tests et calculs de dégâts associés",
             mecanique: { type: "limitee", usage: { frequence: "1x/combat" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Double le Mod. de la caractéristique choisie au rang 1 (FOR/DEX/CON) pour tous les tests et dégâts associés pendant 3 tours — multiplicateur de modificateur, non modélisé par un 'bonus' à valeur fixe." } ] } },
+              effets: [ { type: "etat", id: "apogee_physique", duree: "3" },
+                { type: "special", note: "Déjà codé : pose l'état 'apogee_physique' avec un champ 'carac' dynamique (résolu à la pose depuis le choix fait à Spécimen d'élite rang 1, cf. Capacites.resoudreEffet) ; Personnage.mod() double le modificateur de cette carac tant que l'état est actif — tests ET dégâts associés à ce mod sont donc couverts automatiquement (bonusAttaque/reductionDegats/etc. passent tous par mod())." } ] } },
         ],
       },
       {
@@ -355,7 +356,7 @@ const CLASSES = {
                 { type: "special", note: "Condition : uniquement contre un ennemi qui s'est déplacé ce tour. Sur attaque ratée contre lui, déplacement de 3 m en action gratuite — non chiffrable." } ] } },
           { rang: 5, nom: "Liberté d'action", effet: "Immunisé aux effets d'Immobilisation et d'Entrave ; 1x/combat, ignore automatiquement un effet de paralysie sans test",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Immunité aux états 'immobilisee' et 'entravee' ; 1x/combat, ignore automatiquement un effet de 'paralysee' sans test — immunités non modélisées comme un effet appliqué (rien à 'lancer')." } ] } },
+              effets: [ { type: "special", note: "Déjà codé dans Personnage.aImmuniteEtat()/aLiberteAction(), lu aux deux points où un état est posé sur un PJ (Capacites.resoudreEffet et le panneau MJ appliquerMalus côté app.js) : bloque totalement 'immobilisee'/'entravee' à la pose, et consomme automatiquement l'usage 1x/combat (clé 'classe:barde:5') pour ignorer le premier 'paralysee' de chaque combat." } ] } },
         ],
       },
       {
@@ -1099,7 +1100,8 @@ const CLASSES = {
               effets: [ { type: "special", note: "Peut poser 2 pièges au lieu d'1 lors d'une préparation — règle de quantité, pas un effet chiffrable." } ] } },
           { rang: 4, nom: "Détection des pièges adverses (passive)", effet: "+4 à la détection de tout piège, naturel ou fabriqué",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "+4 aux tests de détection de pièges — test hors combat, pas d'action à déclencher." } ] } },
+              effets: [ { type: "bonus", cible: "Perception", valeur: 4, duree: "permanente" },
+                { type: "special", note: "+4 déjà codé dans Personnage.bonusCompetence('Perception') — replié sur Perception faute de compétence 'détection de pièges' dédiée, s'applique donc à tout test de Perception (même simplification que les autres bonus de compétence élargis de l'app)." } ] } },
           { rang: 5, nom: "Piège du grand gibier (L, 1x/scénario)", effet: "Zone 5 m : 4d6 DM + immobilisation, contre une cible de grande taille",
             mecanique: { type: "limitee", usage: { frequence: "1x/scenario" }, cible: "zone", portee: null, zone: 5, jetOppose: null,
               effets: [ { type: "degats", formule: "4d6", elementaire: null }, { type: "etat", id: "immobilisee", duree: "1" } ] } },

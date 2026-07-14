@@ -6113,6 +6113,26 @@ const App = (() => {
       const persos = chargerPersos();
       const p = persos[id];
       if (!p) return;
+      const perso = Personnage.depuisJSON(p);
+      // Barde — Voie du spectacle, rang 5 "Liberté d'action" : même garde
+      // que la branche "etat" de Capacites.resoudreEffet, pour que
+      // l'application MANUELLE d'un état par le MJ respecte aussi
+      // l'immunité/l'ignorance automatique (sinon ce panneau la contournerait).
+      if (perso.aImmuniteEtat(idEtat)) {
+        toast(`${p.nom} est immunisé·e à l'état « ${ETATS[idEtat].nom} » (Liberté d'action) — aucun effet appliqué.`);
+        fermerModalMalus();
+        return;
+      }
+      if (idEtat === "paralysee" && perso.aLiberteAction() && typeof Capacites !== "undefined") {
+        const usage = Capacites.verifierUsage(p, "classe:barde:5", { usage: { frequence: "1x/combat" } });
+        if (usage.ok) {
+          usage.appliquer();
+          sauverPersos(persos);
+          toast(`${p.nom} ignore automatiquement l'état « ${ETATS[idEtat].nom} » (Liberté d'action, 1x/combat — épuisé pour ce combat).`);
+          fermerModalMalus();
+          return;
+        }
+      }
       p.etatsActifs = p.etatsActifs || [];
       p.etatsActifs.push(entree);
       sauverPersos(persos);

@@ -207,15 +207,20 @@ const Capacites = (() => {
   // de la cible tant que l'état dure (cf. decompterEtatsDebutTour) — la
   // formule brute est stockée telle quelle, pas résolue ici, pour relancer
   // les dés à chaque tick plutôt que de figer un total unique à la pose.
-  function appliquerEtatSurPerso(pCible, effet, source, ctx) {
+  // extra (optionnel) : champs additionnels fusionnés dans l'entrée poussée
+  // — ex. { carac: "FOR" } pour Guerrier "Apogée physique" (cf. resoudreEffet),
+  // dont l'état doit se souvenir de QUELLE caractéristique doubler, une
+  // information dynamique (choisie par le joueur à un autre rang) qui ne
+  // peut pas être fixée dans data/donnees.js comme formuleDot l'est.
+  function appliquerEtatSurPerso(pCible, effet, source, ctx, extra) {
     pCible.etatsActifs = pCible.etatsActifs || [];
-    pCible.etatsActifs.push({
+    pCible.etatsActifs.push(Object.assign({
       idEtat: effet.id,
       dureeRestante: Object.assign(resoudreDureeInitiale(effet.duree, ctx), { dureeAffichee: effet.duree }),
       formuleDot: effet.formuleDot || null,
       source,
       poseLe: Date.now(),
-    });
+    }, extra || {}));
   }
 
   // valeurResolue : déjà résolue en nombre par l'appelant (resoudreEffet), pour
@@ -415,7 +420,34 @@ const Capacites = (() => {
       const idEtatCatalogue = /^marquee_.+/.test(effet.id) ? "marquee" : effet.id;
       const etat = getEtat(idEtatCatalogue); // lève si inconnu — l'entrée existe forcément (validée par tools/valider_mecaniques.js)
       if (cible && cible.genre === "perso" && persos[cible.id]) {
-        appliquerEtatSurPerso(persos[cible.id], effet, libelle, { perso, rang });
+        const cibleP = persos[cible.id];
+        const ciblePerso = Personnage.depuisJSON(cibleP);
+        // Barde — Voie du spectacle, rang 5 "Liberté d'action" : immunité
+        // totale aux états 'immobilisee'/'entravee', et ignore
+        // automatiquement le premier 'paralysee' de chaque combat (1x/combat,
+        // clé synthétique "classe:barde:5" — même mécanique que Cœur de
+        // Montagne, ni l'un ni l'autre ne passe par une vraie capacité
+        // Capacites.lancer() propre).
+        if (ciblePerso.aImmuniteEtat(effet.id)) {
+          return `${cible.nom} est immunisé·e à l'état « ${etat.nom} » (Liberté d'action) — aucun effet appliqué.`;
+        }
+        if (effet.id === "paralysee" && ciblePerso.aLiberteAction()) {
+          const usage = verifierUsage(cibleP, "classe:barde:5", { usage: { frequence: "1x/combat" } });
+          if (usage.ok) {
+            usage.appliquer();
+            return `${cible.nom} ignore automatiquement l'état « ${etat.nom} » (Liberté d'action, 1x/combat — épuisé pour ce combat).`;
+          }
+        }
+        // Guerrier — Voie de l'élite, rang 5 "Apogée physique" : l'état porte
+        // la caractéristique choisie au rang 1 (Spécimen d'élite), pour que
+        // Personnage.mod() sache laquelle doubler — donnée dynamique
+        // choisie par le joueur ailleurs, pas fixable dans data/donnees.js.
+        let extra = null;
+        if (effet.id === "apogee_physique") {
+          const capRang1 = ciblePerso.capaciteEntree("Voie de l'élite", 1);
+          extra = capRang1 && capRang1.choix ? { carac: capRang1.choix } : null;
+        }
+        appliquerEtatSurPerso(cibleP, effet, libelle, { perso, rang }, extra);
         return `État « ${etat.nom} » appliqué à ${cible.nom} (${effet.duree}).`;
       }
       return `État « ${etat.nom} » (${effet.duree}) à appliquer manuellement à ${cible ? cible.nom : "la cible"} (pas de suivi d'état automatique pour les monstres).`;

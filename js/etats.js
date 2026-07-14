@@ -68,6 +68,8 @@ const ETATS = {
     description: "Divise par 2 (arrondi inférieur) les dégâts physiques subis tant que l'état dure (Druide, Voie du chaos, rang 5). +4 PV temporaires et attaque naturelle en 2d8 non modélisés — à gérer manuellement." },
   totem_velocite: { nom: "Totem de la vélocité", categorie: "buff",
     description: "Une action de mouvement supplémentaire chaque tour (déplacement doublé) tant que l'état dure (Druide, Voie du shaman, rang 4)." },
+  apogee_physique: { nom: "Apogée physique", categorie: "buff",
+    description: "Double le modificateur de la caractéristique choisie à Spécimen d'élite tant que l'état dure (Guerrier, Voie de l'élite, rang 5)." },
 };
 
 const ORDRE_CATEGORIES_ETATS = ["controle", "malus", "dot", "physique", "buff"];

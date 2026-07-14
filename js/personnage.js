@@ -135,7 +135,14 @@ class Personnage extends Entite {
 
   /* ----- Caractéristiques ----- */
   mod(code) {
-    return Entite.modCarac(this.caracs[code] + this.bonusCaracCapacites(code) + this.bonusCaracDons(code) + this.bonusTemporaire(code));
+    const base = Entite.modCarac(this.caracs[code] + this.bonusCaracCapacites(code) + this.bonusCaracDons(code) + this.bonusTemporaire(code));
+    // Guerrier — Voie de l'élite, rang 5 "Apogée physique" (L, 1x/combat) :
+    // double le MODIFICATEUR (pas la carac brute) de la carac choisie au
+    // rang 1 (Spécimen d'élite), pendant 3 tours — état 'apogee_physique'
+    // posé avec un champ 'carac' dynamique (cf. resoudreEffet côté
+    // capacites.js, qui va chercher le choix fait au rang 1 à la pose).
+    const apogeeActif = (this.etatsActifs || []).some((e) => e.idEtat === "apogee_physique" && e.carac === code);
+    return apogeeActif ? base * 2 : base;
   }
 
   // Bonus permanent à une caractéristique de base, accordé par un choix fixé
@@ -264,6 +271,12 @@ class Personnage extends Entite {
     if (this.race === "demi_orc" && nom === "Intimidation" && this.estChoisieRace(1)) bonus += 2; // Carrure Menaçante
     if (this.race === "demi_gobelin" && nom === "Discrétion" && this.estChoisieRace(1)) bonus += 2; // Petite Taille
     if (this.race === "demi_gobelin" && nom === "Artisanat" && this.estChoisieRace(3)) bonus += 2; // Bricoleur (pièges/mécanismes repliés dessus)
+    // Chasseur — Voie du piège, rang 4 "Détection des pièges adverses" :
+    // +4 à la détection de pièges, repliés sur Perception faute d'une
+    // compétence "détection de pièges" dédiée dans COMPETENCES_PAR_CARAC —
+    // s'applique donc à tout test de Perception, pas seulement aux pièges
+    // (même simplification que les autres bonus de compétence "élargis").
+    if (this.classe === "chasseur" && nom === "Perception" && this.estChoisie("Voie du piège", 4)) bonus += 4;
 
     return bonus;
   }
@@ -622,6 +635,22 @@ class Personnage extends Entite {
   // sont pas des compétences nommées dans COMPETENCES_PAR_CARAC.
   aActeur() {
     return (this.dons || []).includes("acteur");
+  }
+
+  // Barde — Voie du spectacle, rang 5 "Liberté d'action" (passive) :
+  // immunité totale aux états 'immobilisee'/'entravee' — bloque leur
+  // application (cf. resoudreEffet côté capacites.js et appliquerMalus côté
+  // app.js, les deux seuls points où un état est poussé sur un PJ). "Voie du
+  // spectacle" existe aussi côté Enchanteur (voie homonyme, contenu
+  // différent) : le verrou classe === "barde" est donc nécessaire, pas
+  // seulement défensif.
+  aImmuniteEtat(idEtat) {
+    return (idEtat === "immobilisee" || idEtat === "entravee") && this.classe === "barde" && this.estChoisie("Voie du spectacle", 5);
+  }
+  // A-t-il "Liberté d'action" (gate seule, sans le contrôle d'usage 1x/combat
+  // qui reste côté capacites.js/app.js — même principe que aCoeurDeMontagne).
+  aLiberteAction() {
+    return this.classe === "barde" && this.estChoisie("Voie du spectacle", 5);
   }
 
   // Guerrier — Voie de l'élite, rang 2 "Endurance de fer" (passive) :
