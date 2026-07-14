@@ -4441,14 +4441,20 @@ const App = (() => {
     const persos = chargerPersos();
     const p = persos[id];
     if (!p) return;
+    // Prêtre — Voie du chaos, rang 4 "Corruption persistante" (dès CA 5+) :
+    // les soins REÇUS par ce personnage sont réduits de moitié (arrondi
+    // inf.), quelle que soit la source du soin.
+    const perso = Personnage.depuisJSON(p);
+    const montantReduit = perso.aCorruptionPersistante() ? Math.floor(montant / 2) : montant;
     const avant = p.pvActuel;
-    p.pvActuel = Math.max(0, Math.min(p.pvMax, p.pvActuel + montant));
+    p.pvActuel = Math.max(0, Math.min(p.pvMax, p.pvActuel + montantReduit));
     const transition = _majEtatMourant(p, avant);
     sauverPersos(persos);
     _syncPvAffichages(id, p);
     if (transition) _rerendreApresTransitionMourant(id);
     const gain = p.pvActuel - avant;
-    toast(`❤ ${p.nom} récupère ${gain} PV${source ? " (" + source + ")" : ""}.`);
+    const suffixeReduit = montantReduit < montant ? ` (réduit de moitié — Corruption persistante)` : "";
+    toast(`❤ ${p.nom} récupère ${gain} PV${source ? " (" + source + ")" : ""}${suffixeReduit}.`);
   }
 
   // Bouton "Utiliser" : le personnage consomme lui-même l'objet, soin immédiat

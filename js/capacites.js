@@ -181,10 +181,16 @@ const Capacites = (() => {
     return { reduction, degatsNets, pvActuel: pCible.pvActuel };
   }
 
+  // Prêtre — Voie du chaos rang 4 "Corruption persistante" (dès CA 5+) : les
+  // soins REÇUS par la cible sont réduits de moitié (arrondi inf.), quelle
+  // que soit la source — même règle qu'app.js/soigner(), seul autre point
+  // d'application d'un soin à un PJ.
   function appliquerSoinPersoLocal(pCible, montant) {
+    const perso = Personnage.depuisJSON(pCible);
+    const montantReduit = perso.aCorruptionPersistante() ? Math.floor(montant / 2) : montant;
     const avant = pCible.pvActuel;
-    pCible.pvActuel = Math.max(0, Math.min(pCible.pvMax, pCible.pvActuel + montant));
-    return { gain: pCible.pvActuel - avant };
+    pCible.pvActuel = Math.max(0, Math.min(pCible.pvMax, pCible.pvActuel + montantReduit));
+    return { gain: pCible.pvActuel - avant, reduit: montantReduit < montant };
   }
 
   // Résout effet.duree (chaîne brute du catalogue) en une valeur canonique
@@ -397,7 +403,7 @@ const Capacites = (() => {
       App.ajouterHisto(`${libelle} — Soin`, total, false, false, detail);
       if (cible && cible.genre === "perso" && persos[cible.id]) {
         const res = appliquerSoinPersoLocal(persos[cible.id], total);
-        return `${total} PV (${detail}) → ${cible.nom} récupère ${res.gain} PV.`;
+        return `${total} PV (${detail}) → ${cible.nom} récupère ${res.gain} PV${res.reduit ? " (réduit de moitié — Corruption persistante)" : ""}.`;
       }
       return `${total} PV (${detail}) — aucune cible sélectionnée, à appliquer manuellement.`;
     }
@@ -527,6 +533,18 @@ const Capacites = (() => {
     const usage = verifierUsage(p, cle, mecanique);
     if (!usage.ok) return { ok: false, messages: [usage.raison] };
 
+    // Coût en jauge de combat de Voie du chaos (ex. Guerrier "Rage
+    // incontrôlée" : consomme 2 CF, condition 3 CF minimum) — distinct de
+    // mecanique.corruption (un GAIN, jamais un coût) : celui-ci RETRANCHE la
+    // jauge et bloque l'activation si le minimum n'est pas atteint, vérifié
+    // AVANT de résoudre quoi que ce soit (comme verifierUsage juste au-dessus).
+    if (mecanique.corruptionCout) {
+      const seuil = mecanique.corruptionCoutMin || mecanique.corruptionCout;
+      if ((p.corruptionCombat || 0) < seuil) {
+        return { ok: false, messages: [`Pas assez de jauge de combat (${seuil} minimum, ${p.corruptionCombat || 0} actuellement).`] };
+      }
+    }
+
     let cible = null;
     if (cibleId) {
       cible = listeCibles(persoId).find((c) => c.id === cibleId) || null;
@@ -607,6 +625,14 @@ const Capacites = (() => {
       App.ajouterHisto(`${libelle} — Corruption`, p.corruptionCombat, false, false, `+${mecanique.corruption} (jauge de combat, ${p.nom})`);
       messages.push(`Corruption +${mecanique.corruption} (jauge de combat : ${p.corruptionCombat}/${SEUIL_CORRUPTION_MAJEURE}).` +
         (franchi ? ` ⚠️ Seuil dépassé — Corruption d'Âme +1 (total ${p.corruptionMajeure}), risque de mutation.` : ""));
+    }
+    // Coût en jauge de combat (cf. le garde-fou plus haut, déjà vérifié
+    // suffisant à ce stade) : décompté une fois l'activation confirmée,
+    // jamais en cas d'échec du garde-fou (qui a déjà renvoyé plus tôt).
+    if (mecanique.corruptionCout) {
+      p.corruptionCombat = Math.max(0, (p.corruptionCombat || 0) - mecanique.corruptionCout);
+      App.ajouterHisto(`${libelle} — Corruption`, p.corruptionCombat, false, false, `-${mecanique.corruptionCout} (jauge de combat, ${p.nom})`);
+      messages.push(`Corruption -${mecanique.corruptionCout} (jauge de combat : ${p.corruptionCombat}).`);
     }
 
     // Consommé dès le jet d'attaque, même en cas de raté — jamais décalé à

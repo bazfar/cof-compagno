@@ -737,6 +737,16 @@ class Personnage extends Entite {
     return (this.corruptionMajeure || 0) >= 10;
   }
 
+  // Prêtre — Voie du chaos, rang 4 "Corruption persistante" (passive, dès
+  // CA 5+) : contrepartie "soins reçus réduits de moitié" — lu par
+  // soigner() côté app.js et appliquerSoinPersoLocal() côté capacites.js,
+  // les deux seuls points d'application d'un soin à un PJ. La moitié "DOT
+  // résiste à la dissipation" reste hors schéma (Dissipation elle-même
+  // n'annule aucun DOT dans l'app).
+  aCorruptionPersistante() {
+    return this.classe === "pretre" && this.estChoisie("Voie du chaos", 4) && (this.corruptionMajeure || 0) >= 5;
+  }
+
   /* ----- Équipement (slots) -----
      Seuls les items placés dans un slot comptent pour les stats de combat.
      inventaireListe (simple sac) n'a aucun effet mécanique. */
