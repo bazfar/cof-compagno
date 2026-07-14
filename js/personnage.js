@@ -119,6 +119,12 @@ class Personnage extends Entite {
     // Absorbés en priorité par subirDegats côté app.js, avant pvActuel.
     this.pvTemporaires = d.pvTemporaires;
     this.pvTemporairesExpiration = d.pvTemporairesExpiration;
+    // Mutations de la Corruption d'Âme (Voie du chaos, homebrew, cf.
+    // data/mutations.js) : [{ id, palier, d6, nom, effet, obtenueLe }],
+    // permanentes une fois tirées (pas de retrait automatique si la CA
+    // redescend — cf. genererMutation/retirerMutation côté app.js pour la
+    // génération 1d6 et le retrait au choix, onglet "🧬 Mutations").
+    this.mutations = d.mutations;
 
     // Migration douce : l'ancien champ libre `inventaire` (string) devient un
     // item texte libre dans inventaireListe, pour ne rien perdre à la casse
@@ -712,6 +718,25 @@ class Personnage extends Entite {
     return this.classe === "chasseur" && this.estChoisie("Voie du chaos", 1);
   }
 
+  // Nombre de paliers de mutation (cf. data/mutations.js, SEUILS_PALIERS_MUTATION)
+  // atteints par la Corruption d'Âme actuelle — paliers 1 à 3 seulement (le
+  // palier 4 "Rupture" n'a pas de table à tirer, traité à part par l'onglet
+  // Mutations côté app.js). Sert à déterminer si une mutation reste à
+  // générer : cf. genererMutation(), qui compare ce nombre à
+  // (this.mutations || []).length.
+  nombrePaliersMutationAtteints() {
+    const ca = this.corruptionMajeure || 0;
+    if (ca >= 7) return 3;
+    if (ca >= 4) return 2;
+    if (ca >= 1) return 1;
+    return 0;
+  }
+  // La CA a-t-elle atteint le palier 4 "Rupture" (pas de table à tirer,
+  // discussion joueur/MJ) ?
+  aAtteintRupture() {
+    return (this.corruptionMajeure || 0) >= 10;
+  }
+
   /* ----- Équipement (slots) -----
      Seuls les items placés dans un slot comptent pour les stats de combat.
      inventaireListe (simple sac) n'a aucun effet mécanique. */
@@ -1167,6 +1192,7 @@ class Personnage extends Entite {
       etatMort: this.etatMort,
       pvTemporaires: this.pvTemporaires,
       pvTemporairesExpiration: this.pvTemporairesExpiration,
+      mutations: this.mutations,
     };
   }
   static depuisJSON(obj) {

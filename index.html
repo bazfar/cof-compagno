@@ -17,6 +17,7 @@
       <button data-panneau="creation" data-role="joueur">Création</button>
       <button data-panneau="fiche" id="onglet-fiche">Ma fiche</button>
       <button data-panneau="livret">📖 Livret</button>
+      <button data-panneau="mutations">🧬 Mutations</button>
       <button data-panneau="des">Dés</button>
       <button data-panneau="messages" id="onglet-messages">✉️ Messages</button>
       <div class="tab-dropdown" id="tab-dropdown-carte">
@@ -224,6 +225,16 @@
         <select id="select-livret-perso"></select>
       </div>
       <div id="zone-livret"></div>
+    </section>
+
+    <!-- MUTATIONS -->
+    <section class="panneau" id="panneau-mutations">
+      <div class="carte">
+        <h2 class="titre-bandeau">🧬 Mutations de la Corruption d'Âme</h2>
+        <p style="font-size:0.85rem;color:#6a6278;">Voie du Chaos (homebrew). Quand la Corruption d'Âme franchit un palier, une mutation se génère (1d6 sur la table du palier). Le retrait d'une mutation ("purification") reste au choix du joueur/MJ.</p>
+        <select id="select-mutation-perso"></select>
+      </div>
+      <div id="zone-mutations"></div>
     </section>
 
     <!-- DES -->
@@ -665,6 +676,7 @@
   <script src="js/etats.js?v=6"></script>
   <script src="data/donnees.js?v=53"></script>
   <script src="data/dons.js?v=2"></script>
+  <script src="data/mutations.js?v=1"></script>
   <script src="data/bestiaire.js?v=3"></script>
   <script src="data/armes_monstres.js?v=1"></script>
   <script src="data/loot.js?v=10"></script>
@@ -673,7 +685,7 @@
   <script src="js/carte-monde.js?v=9"></script>
   <!-- Modèle OOP (Phase 1) : socle additif, n'altère pas l'app existante -->
   <script src="js/entite.js?v=2"></script>
-  <script src="js/personnage.js?v=40"></script>
+  <script src="js/personnage.js?v=41"></script>
   <!-- Firebase (SDK compat : garde une syntaxe classique, pas de modules/build tool) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -689,6 +701,6 @@
   <script src="js/loot.js?v=10"></script>
   <script src="js/capacites.js?v=11"></script>
   <script src="js/combat.js?v=8"></script>
-  <script src="js/app.js?v=97"></script>
+  <script src="js/app.js?v=98"></script>
 </body>
 </html>

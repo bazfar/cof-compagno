@@ -42,6 +42,7 @@ const App = (() => {
   let _cibleDistanceId = null;  // token cible choisi pour le vérificateur de portée (cf. rendreFicheSidebarBattlemap)
   let _typeAttaquePortee = "contact";  // type d'attaque choisi dans le vérificateur de portée : "contact" | "distance" | "magique"
   let livretPersoId = null;  // id du perso choisi dans l'onglet "📖 Livret"
+  let mutationPersoId = null;  // id du perso choisi dans l'onglet "🧬 Mutations"
   // Sélection courante de l'onglet "🔨 Atelier" (cf. rendrePanneauAtelier) —
   // atelierItemIdx référence un index dans inventaireListe du perso choisi,
   // jamais un id stable (l'inventaire n'a pas d'id par entrée). Partagé entre
@@ -1044,6 +1045,7 @@ const App = (() => {
     });
     if (panneau === "fiche") { rendreListePersos(); _mettreAJourLootFiche(); }
     if (panneau === "livret") rendrePanneauLivret();
+    if (panneau === "mutations") rendrePanneauMutations();
     if (panneau === "messages") { rendreMessages(); _majBadgeMessages(); }
     if (panneau === "loot" && typeof Loot !== "undefined") Loot.rendreCatalogue();
     if (panneau === "atelier") rendrePanneauAtelier();
@@ -2290,6 +2292,145 @@ const App = (() => {
     }
     Object.keys(persos || {}).forEach((pid) => ajouter(persos[pid].proprietaireNom));
     return noms;
+  }
+
+  /* ============================================================
+     MUTATIONS DE LA CORRUPTION D'ÂME (homebrew, cf. data/mutations.js) —
+     même schéma de sélecteur que l'onglet "📖 Livret" (rendrePanneauLivret) :
+     un seul sélecteur de personnage filtré par estProprietaire, partagé par
+     joueur et MJ (le joueur n'y voit que les siens). Les mutations elles-
+     mêmes vivent sur le perso (p.mutations, cf. Personnage.versJSON), pas
+     dans un document SyncStore à part — comme corruptionMajeure, dont elles
+     découlent directement.
+     ============================================================ */
+
+  function _genMutationId() { return "mut" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  function rendrePanneauMutations() {
+    const sel = document.getElementById("select-mutation-perso");
+    const zone = document.getElementById("zone-mutations");
+    if (!sel || !zone) return;
+    const persos = chargerPersos();
+    const ids = Object.keys(persos).filter((id) => estProprietaire(persos[id]));
+    if (!ids.length) {
+      sel.innerHTML = `<option value="">Aucun personnage</option>`;
+      zone.innerHTML = `<div class="carte"><p class="vide">Aucun personnage. Crée-en un dans l'onglet « Création ».</p></div>`;
+      return;
+    }
+    sel.innerHTML = ids.map((id) => `<option value="${id}">${echapper(persos[id].nom)}</option>`).join("");
+    mutationPersoId = ids.includes(mutationPersoId) ? mutationPersoId : (ids.includes(ficheActiveId) ? ficheActiveId : ids[0]);
+    sel.value = mutationPersoId;
+    sel.onchange = () => { mutationPersoId = sel.value; _rendreZoneMutations(); };
+    _rendreZoneMutations();
+  }
+
+  // Génère la mutation manquante au palier `palier` (1 à 3) pour `persoId` :
+  // jette 1d6, journalise le jet (comme tout autre dé de l'app) et ajoute
+  // l'entrée obtenue à p.mutations. Ne vérifie PAS ici que ce palier est
+  // effectivement "dû" — le bouton appelant (cf. _rendreZoneMutations)
+  // n'est affiché que dans ce cas, mais un second appel accidentel resterait
+  // sans risque (ajoute juste une entrée de plus, jamais bloquant).
+  function genererMutation(persoId, palier) {
+    const table = typeof TABLE_MUTATIONS !== "undefined" ? TABLE_MUTATIONS[palier] : null;
+    if (!table) return;
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const d6 = lancerDe(6);
+    const entree = table.mutations.find((m) => m.d6 === d6);
+    ajouterHisto(`Mutation — Palier ${palier} (${table.nom})`, d6, false, false, `d6[${d6}]`);
+    p.mutations = p.mutations || [];
+    p.mutations.push({ id: _genMutationId(), palier, d6, nom: entree.nom, effet: entree.effet, obtenueLe: Date.now() });
+    sauverPersos(persos);
+    toast(`🧬 Nouvelle mutation (Palier ${palier}) : ${entree.nom}.`);
+    _rendreZoneMutations();
+  }
+
+  // Retire une mutation au choix (purification) — jamais automatique, cf.
+  // demande de Thomas ("purification au choix"). Ne touche pas à la CA
+  // elle-même : c'est un geste distinct (typiquement décidé en même temps
+  // qu'une purification de CA ajustée manuellement ailleurs sur la fiche).
+  function retirerMutation(persoId, mutationId) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p || !p.mutations) return;
+    const idx = p.mutations.findIndex((m) => m.id === mutationId);
+    if (idx === -1) return;
+    const nom = p.mutations[idx].nom;
+    p.mutations.splice(idx, 1);
+    sauverPersos(persos);
+    toast(`Mutation retirée : ${nom}.`);
+    _rendreZoneMutations();
+  }
+
+  function _rendreZoneMutations() {
+    const zone = document.getElementById("zone-mutations");
+    if (!zone) return;
+    const persos = chargerPersos();
+    const p = persos[mutationPersoId];
+    if (!p) { zone.innerHTML = ""; return; }
+    const perso = Personnage.depuisJSON(p);
+    const ca = perso.corruptionMajeure || 0;
+    const paliersAtteints = perso.nombrePaliersMutationAtteints();
+    const mutations = p.mutations || [];
+    const peutEditer = role === "mj" || estProprietaire(p);
+
+    let html = `<div class="carte"><h3 style="margin-top:0;">Corruption d'Âme : ${ca}</h3>`;
+
+    if (!paliersAtteints && !perso.aAtteintRupture()) {
+      html += `<p class="vide">Aucune mutation — la Corruption d'Âme n'a pas encore atteint le Palier 1 (CA ${SEUILS_PALIERS_MUTATION[1]}+).</p>`;
+    }
+
+    // Une mutation "due" (palier atteint, pas encore tirée) par palier manquant.
+    const prochainPalier = mutations.length + 1;
+    if (peutEditer && paliersAtteints >= prochainPalier && prochainPalier <= 3) {
+      const table = typeof TABLE_MUTATIONS !== "undefined" ? TABLE_MUTATIONS[prochainPalier] : null;
+      html += `<div class="aide" style="margin-bottom:8px;">
+        <strong>Palier ${prochainPalier} atteint (${table ? table.nom : ""}, ${table ? table.plage : ""})</strong> —
+        une mutation reste à générer.
+        <button class="btn petit or" data-generer-mutation="${prochainPalier}" style="margin-left:8px;">🎲 Générer la mutation</button>
+      </div>`;
+    }
+
+    if (peutEditer && perso.aAtteintRupture()) {
+      html += `<div class="aide" style="margin-bottom:8px;border-left:3px solid var(--chaos);padding-left:8px;">
+        <strong>${PALIER_4_RUPTURE ? PALIER_4_RUPTURE.nom : "Rupture"} (${PALIER_4_RUPTURE ? PALIER_4_RUPTURE.plage : "CA 10"})</strong> —
+        ${PALIER_4_RUPTURE ? echapper(PALIER_4_RUPTURE.texte) : ""}
+      </div>`;
+    }
+
+    html += `</div>`;
+
+    if (mutations.length) {
+      html += `<div class="carte"><h3 style="margin-top:0;">Mutations actives</h3>`;
+      // Groupées par palier, dans l'ordre d'obtention à l'intérieur d'un palier.
+      [1, 2, 3].forEach((palier) => {
+        const dePalier = mutations.filter((m) => m.palier === palier);
+        if (!dePalier.length) return;
+        const table = typeof TABLE_MUTATIONS !== "undefined" ? TABLE_MUTATIONS[palier] : null;
+        html += `<h4 style="margin-bottom:4px;">Palier ${palier} — ${table ? table.nom : ""}</h4>`;
+        dePalier.forEach((m) => {
+          html += `<div class="mutation-ligne" style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--parchemin-fonce);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+              <strong>${echapper(m.nom)}</strong>
+              ${peutEditer ? `<button class="btn petit danger" data-retirer-mutation="${m.id}" title="Retirer (purification)">✕</button>` : ""}
+            </div>
+            <div style="font-size:0.85rem;">${echapper(m.effet)}</div>
+          </div>`;
+        });
+      });
+      html += `</div>`;
+    }
+
+    zone.innerHTML = html;
+    zone.querySelectorAll("[data-generer-mutation]").forEach((el) => {
+      el.onclick = () => genererMutation(mutationPersoId, parseInt(el.dataset.genererMutation, 10));
+    });
+    zone.querySelectorAll("[data-retirer-mutation]").forEach((el) => {
+      el.onclick = () => {
+        if (confirm("Retirer cette mutation (purification) ?")) retirerMutation(mutationPersoId, el.dataset.retirerMutation);
+      };
+    });
   }
 
   /* ============================================================
