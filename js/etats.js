@@ -74,6 +74,8 @@ const ETATS = {
     description: "Une action de mouvement supplémentaire chaque tour (déplacement doublé) tant que l'état dure (Druide, Voie du shaman, rang 4)." },
   apogee_physique: { nom: "Apogée physique", categorie: "buff",
     description: "Double le modificateur de la caractéristique choisie à Spécimen d'élite tant que l'état dure (Guerrier, Voie de l'élite, rang 5)." },
+  maitrise_tactique: { nom: "Maîtrise tactique", categorie: "buff",
+    description: "Double la magnitude de Posture de combat (Guerrier, Voie du soldat rang 5), lu par Capacites.resoudreEffet à chaque activation de Posture de combat tant que l'état dure. N'affecte pas le volet 'Combat en phalange' (bonus par allié au contact), qui reste manuel." },
 };
 
 const ORDRE_CATEGORIES_ETATS = ["controle", "malus", "dot", "physique", "buff"];

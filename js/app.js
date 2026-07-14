@@ -489,6 +489,14 @@ const App = (() => {
     let dmgDistance = formuleDegats(armeDistance);
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
+    // Guerrier — Voie du soldat, rang 1 "Posture de combat" : transfert
+    // temporaire vers "DM" (cf. Capacites.resoudreEffet, choix pairé) —
+    // canal générique, lu ici pour les 3 types d'attaque comme bonusAttaque.
+    const bonusDmTemp = perso.bonusTemporaire("DM");
+    if (bonusDmTemp) {
+      if (dmgContact) dmgContact += (bonusDmTemp >= 0 ? "+" : "") + bonusDmTemp;
+      if (dmgDistance) dmgDistance += (bonusDmTemp >= 0 ? "+" : "") + bonusDmTemp;
+    }
     // Visibilité/doublement des boutons "Dégâts" selon la dernière attaque de
     // ce type (cf. _etatDegatsRapide/_resoudreAttaqueRapide) — masqué
     // seulement sur un raté avéré (cible sélectionnée + DEF connue).
@@ -820,6 +828,13 @@ const App = (() => {
     let dmgDistance = armeDistance ? formuleDegats(armeDistance) : null;
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
+    // Guerrier — Voie du soldat, rang 1 "Posture de combat" : cf. le même
+    // ajout côté rendreFicheSidebarBattlemap plus haut dans ce fichier.
+    const bonusDmTempDock = perso.bonusTemporaire("DM");
+    if (bonusDmTempDock) {
+      if (dmgContact) dmgContact += (bonusDmTempDock >= 0 ? "+" : "") + bonusDmTempDock;
+      if (dmgDistance) dmgDistance += (bonusDmTempDock >= 0 ? "+" : "") + bonusDmTempDock;
+    }
     // Visibilité/doublement des tuiles "Dégâts" — même état de module que la
     // sidebar (cf. _etatDegatsRapide/attaquesRapidesEnAttente) : les deux
     // zones restent synchronisées puisqu'un clic dans l'une re-rend l'autre.
@@ -3901,6 +3916,9 @@ const App = (() => {
     // Chevalier — Voie du chaos rang 4 "Marque du serment brisé", choix
     // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
+    // Guerrier — Voie du soldat, rang 1 "Posture de combat" (contact
+    // uniquement ici : attaque d'opportunité, pas de dmgDistance dans ce bloc).
+    if (dmgContact && perso.bonusTemporaire("DM")) dmgContact += (perso.bonusTemporaire("DM") >= 0 ? "+" : "") + perso.bonusTemporaire("DM");
         const bonus = perso.bonusAttaque("contact");
         const critMin = perso.critMinAttaque("contact");
         const messages = [];

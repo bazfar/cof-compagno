@@ -459,6 +459,33 @@ const Capacites = (() => {
       return `État « ${etat.nom} » (${effet.duree}) à appliquer manuellement à ${cible ? cible.nom : "la cible"} (pas de suivi d'état automatique pour les monstres).`;
     }
     if (effet.type === "bonus") {
+      // Guerrier — Voie du soldat, rang 1 "Posture de combat" : une option de
+      // choix peut représenter un TRANSFERT entre deux stats (ex. "+ Attaque
+      // / − DEF") plutôt qu'une simple substitution de cible à valeur fixe
+      // (cf. Alcool/Toucher flétrissant/Prouesse). Détecté via effet.choix,
+      // encore présent après la substitution de cible faite dans lancer()
+      // (Object.assign ne touche que .cible, jamais .choix) : si l'option
+      // choisie (effet.cible, la valeur choisie par le joueur) porte un
+      // champ `paire`, résolution dédiée ci-dessous plutôt que le chemin
+      // standard à une seule valeur/cible.
+      if (effet.choix && Array.isArray(effet.choix.options)) {
+        const option = effet.choix.options.find((o) => o.valeur === effet.cible);
+        if (option && Array.isArray(option.paire)) {
+          // Magnitude = rang max atteint dans la voie, doublée tant que l'état
+          // 'maitrise_tactique' est actif (rang 5, cf. son mecanique.effets).
+          const doubleActif = (perso.etatsActifs || []).some((e) => e.idEtat === "maitrise_tactique");
+          const magnitude = perso.rangMaxVoie(voie) * (doubleActif ? 2 : 1);
+          const cibleP = cible && cible.genre === "perso" ? persos[cible.id] : null;
+          const details = option.paire.map((p) => {
+            const valeurPaire = p.signe * magnitude;
+            if (cibleP) appliquerBonusSurPerso(cibleP, { cible: p.cible, duree: effet.duree }, libelle, { perso, rang }, valeurPaire);
+            return `${p.cible} ${valeurPaire >= 0 ? "+" : ""}${valeurPaire}`;
+          });
+          return cibleP
+            ? `${option.label} (${details.join(", ")}, ${effet.duree}) appliqué à ${cible.nom}.`
+            : `${option.label} (${details.join(", ")}, ${effet.duree}) — aucune cible sélectionnée, à appliquer manuellement.`;
+        }
+      }
       // effet.valeur peut être un nombre fixe ("2") ou une formule ("Mod.SAG") :
       // résolue une seule fois ici (dés éventuels non relancés), réutilisée pour
       // le message ET le stockage (cf. appliquerBonusSurPerso).
