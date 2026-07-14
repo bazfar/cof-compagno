@@ -228,7 +228,7 @@ const CLASSES = {
         rangs: [
           { rang: 1, nom: "Premier sang (passif)", effet: "Chaque attaque ennemie réussie contre lui : +1 Corruption de Fureur (CF, max 6/combat)",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "+1 point de jauge de Corruption de Fureur (CF) par attaque ennemie réussie contre lui, plafonné à 6/combat — mécanique de jauge non trackée par le schéma standard." } ] } },
+              effets: [ { type: "special", note: "Déjà codé dans subirDegats côté app.js (via Personnage.aPremierSangGuerrier()) : chaque appel avec des dégâts bruts > 0 représente une attaque ennemie réussie dans le modèle de l'app, +1 automatique à la jauge de Corruption de Fureur via Capacites.ajusterCorruptionCombat, plafonné à 6 pour cette source passive spécifiquement (d'autres capacités actives peuvent pousser plus haut)." } ] } },
           { rang: 2, nom: "Frappe vengeresse (activable)", effet: "Dépense 1 CF : +1d6 DM chaotiques à la prochaine attaque réussie. Répétable tant qu'il a des CF",
             mecanique: { type: "activable", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "degats", formule: "1d6", elementaire: "chaos" },
@@ -1137,7 +1137,7 @@ const CLASSES = {
         rangs: [
           { rang: 1, nom: "Premier sang du prédateur (passif)", effet: "Chaque touche réussie à distance ou via un piège : +1 CS (max 6/combat)",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "+1 point de jauge de Chaos (CS) par touche réussie à distance ou via piège, plafonné à 6/combat — mécanique de jauge de Voie du chaos, non trackée par le schéma standard." } ] } },
+              effets: [ { type: "special", note: "Déjà codé dans _gererPremierSangChasseur() côté app.js (via Personnage.aPremierSangChasseur()), appelé après chaque attaque rapide à distance : +1 automatique à la jauge de Chaos sur une touche confirmée, plafonné à 6 pour cette source passive. La moitié 'via piège' reste hors schéma : l'app ne trace aucune pose/déclenchement de piège." } ] } },
           { rang: 2, nom: "Instinct sauvage (passive)", effet: "Force une capacité de Traque ou de la Gâchette en payant +1 CS : +1d6 DM bonus",
             mecanique: { type: "activable", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "degats", formule: "1d6", elementaire: "chaos" },

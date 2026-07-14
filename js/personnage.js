@@ -696,6 +696,22 @@ class Personnage extends Entite {
     return this.race === "demi_elfe" && this.estChoisieRace(5);
   }
 
+  // Guerrier — Voie du chaos, rang 1 "Premier sang" (passif) : +1 point de
+  // jauge de Corruption de Fureur par attaque ennemie réussie contre lui —
+  // gate seule, le gain réel passe par subirDegats côté app.js (chaque appel
+  // avec degatsBruts > 0 représente une attaque réussie dans le modèle de
+  // l'app), via Capacites.ajusterCorruptionCombat comme le reste de la jauge.
+  aPremierSangGuerrier() {
+    return this.classe === "guerrier" && this.estChoisie("Voie du chaos", 1);
+  }
+  // Chasseur — Voie du chaos, rang 1 "Premier sang du prédateur" (passif) :
+  // +1 point de jauge de Chaos par touche réussie à DISTANCE (les pièges ne
+  // sont pas trackés par l'app, seule cette moitié du texte est mécanisable)
+  // — gate seule, déclenché par _resoudreAttaqueRapide côté app.js.
+  aPremierSangChasseur() {
+    return this.classe === "chasseur" && this.estChoisie("Voie du chaos", 1);
+  }
+
   /* ----- Équipement (slots) -----
      Seuls les items placés dans un slot comptent pour les stats de combat.
      inventaireListe (simple sac) n'a aucun effet mécanique. */

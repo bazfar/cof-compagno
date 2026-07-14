@@ -389,6 +389,25 @@ const App = (() => {
     return { touche, critique: jet.crit, echecCritique: jet.echec, totalAttaque: jet.total, defCible };
   }
 
+  // Chasseur — Voie du chaos, rang 1 "Premier sang du prédateur" (passif) :
+  // +1 point de jauge de Chaos par touche RÉUSSIE À DISTANCE (les pièges ne
+  // sont pas trackés par l'app, seule cette moitié du texte est mécanisable)
+  // — appelé par les deux wirings dupliqués (sidebar+dock) après
+  // _resoudreAttaqueRapide, qui ne connaît pas persoId lui-même. Plafonné à
+  // 6 pour cette source passive spécifiquement (même logique que Premier
+  // sang côté Guerrier, cf. subirDegats).
+  function _gererPremierSangChasseur(persoId, type, touche) {
+    if (type !== "distance" || touche !== true) return;
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const perso = Personnage.depuisJSON(p);
+    if (!perso.aPremierSangChasseur() || typeof Capacites === "undefined" || (p.corruptionCombat || 0) >= 6) return;
+    const franchi = Capacites.ajusterCorruptionCombat(p, 1);
+    sauverPersos(persos);
+    if (franchi) toast(`⚠️ ${p.nom} franchit le seuil de Corruption d'Âme (Corruption d'Âme +1, total ${p.corruptionMajeure}).`);
+  }
+
   // Visibilité du bouton "Dégâts" et doublement des dés pour un type
   // d'attaque donné, pour CE personnage (cf. attaquesRapidesEnAttente) —
   // visible=false SEULEMENT si l'attaque a explicitement raté (touche ===
@@ -636,6 +655,7 @@ const App = (() => {
             : resolution.defCible === null ? "DEF de la cible inconnue — à comparer manuellement."
             : (resolution.touche ? `Touché ! (DEF ${resolution.defCible})` : `Raté (DEF ${resolution.defCible}).`));
         }
+        _gererPremierSangChasseur(id, type, resolution.touche);
         if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
         rendreFicheSidebarBattlemap(id);
       };
@@ -955,6 +975,7 @@ const App = (() => {
             : resolution.defCible === null ? "DEF de la cible inconnue — à comparer manuellement."
             : (resolution.touche ? `Touché ! (DEF ${resolution.defCible})` : `Raté (DEF ${resolution.defCible}).`));
         }
+        _gererPremierSangChasseur(id, type, resolution.touche);
         if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
         rendreFicheSidebarBattlemap(id);
       };
@@ -4967,6 +4988,18 @@ const App = (() => {
     const p = persos[id];
     if (!p) return;
     const perso = Personnage.depuisJSON(p);
+
+    // Guerrier — Voie du chaos, rang 1 "Premier sang" (passif) : +1 point de
+    // jauge de Corruption de Fureur par attaque ennemie réussie contre lui —
+    // chaque appel avec degatsBruts > 0 représente une attaque réussie dans
+    // le modèle de l'app (ce formulaire n'est déclenché qu'après un coup
+    // déjà déterminé comme réussi). Plafonné à 6 pour CETTE source passive
+    // spécifiquement (d'autres capacités actives peuvent pousser plus haut,
+    // comme avant ce chantier).
+    if (degatsBruts > 0 && perso.aPremierSangGuerrier() && typeof Capacites !== "undefined" && (p.corruptionCombat || 0) < 6) {
+      const franchi = Capacites.ajusterCorruptionCombat(p, 1);
+      if (franchi) toast(`⚠️ ${p.nom} franchit le seuil de Corruption d'Âme (Corruption d'Âme +1, total ${p.corruptionMajeure}).`);
+    }
 
     let coeurMontagneActif = false;
     if (coeurMontagneArme && perso.aCoeurDeMontagne() && typeof Capacites !== "undefined") {
