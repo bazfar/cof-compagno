@@ -433,6 +433,23 @@ textarea { resize: vertical; min-height: 70px; }
 .stat-box .label { font-size: 0.7rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; }
 .stat-box .valeur { font-size: 1.5rem; font-weight: 700; }
 
+.carac-competences { margin-top: 6px; text-align: left; font-size: 0.72rem; }
+.carac-competences summary { cursor: pointer; opacity: 0.85; list-style: none; text-align: center; }
+.carac-competences summary::-webkit-details-marker { display: none; }
+.carac-competences summary::before { content: "▸ "; }
+.carac-competences[open] summary::before { content: "▾ "; }
+.competences-liste { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; justify-content: center; }
+.competence-btn {
+  background: rgba(255,255,255,0.15);
+  color: var(--parchemin);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+.competence-btn:hover { background: rgba(255,255,255,0.28); }
+
 /* compteur PV */
 .pv-control { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; }
 .pv-control button {

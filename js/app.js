@@ -4098,6 +4098,17 @@ const App = (() => {
                   <div class="label">${cc.code}</div>
                   <div class="valeur">${signe(mods[cc.code])}</div>
                   <div style="font-size:0.65rem;opacity:0.7;">val. ${p.caracs[cc.code]} · 🎲 test</div>
+                  ${COMPETENCES_PAR_CARAC[cc.code] && COMPETENCES_PAR_CARAC[cc.code].length > 0 ? `
+                    <details class="carac-competences" onclick="event.stopPropagation();">
+                      <summary>Compétences</summary>
+                      <div class="competences-liste">
+                        ${COMPETENCES_PAR_CARAC[cc.code].map((nom) => {
+                          const modComp = perso.modCompetence(nom, cc.code);
+                          return `<button type="button" class="competence-btn" data-competence="${echapper(nom)}" data-carac="${cc.code}">${echapper(nom)} ${signe(modComp)}</button>`;
+                        }).join("")}
+                      </div>
+                    </details>
+                  ` : ""}
                 </div>`).join("")}
             </div>
 
@@ -4176,6 +4187,17 @@ const App = (() => {
       el.onclick = () => {
         const code = el.dataset.test;
         lancerTest(`Test de ${code}`, mods[code]);
+        allerVers("des");
+      };
+    });
+    // Tests de compétence (accordéon sous chaque carac)
+    zone.querySelectorAll(".competence-btn").forEach((el) => {
+      el.onclick = (e) => {
+        e.stopPropagation();
+        const nom = el.dataset.competence;
+        const code = el.dataset.carac;
+        const bonus = perso.modCompetence(nom, code);
+        lancerTest(`Test de ${nom}`, bonus);
         allerVers("des");
       };
     });

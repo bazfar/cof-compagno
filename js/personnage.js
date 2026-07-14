@@ -32,6 +32,7 @@ class Personnage extends Entite {
         raceVariante: null,
         caracs: { FOR: 10, DEX: 10, CON: 10, INT: 10, SAG: 10, CHA: 10 },
         caracsLibres: { FOR: 0, DEX: 0, CON: 0, INT: 0, SAG: 0, CHA: 0 },
+        bonusCompetences: {},
         capacites: [],
         capacitesRace: [],
         voiesHorsProfil: [],
@@ -72,6 +73,7 @@ class Personnage extends Entite {
     this.raceVariante = d.raceVariante;
     this.caracs = d.caracs;
     this.caracsLibres = d.caracsLibres;
+    this.bonusCompetences = d.bonusCompetences;
     this.capacites = d.capacites;
     this.capacitesRace = d.capacitesRace;
     this.voiesHorsProfil = d.voiesHorsProfil;
@@ -154,6 +156,20 @@ class Personnage extends Entite {
     // cohérence même si le don ne précise pas de plafond spécifique.
     if (this.donsChoix && this.donsChoix.athlete === code) bonus += 1;
     return bonus;
+  }
+
+  // Bonus fixe accordé à une compétence nommée par un don ou un rang de voie
+  // (ex. futur don "Expert en Intimidation" : perso.bonusCompetences["Intimidation"] = 2
+  // posé côté app.js à l'acquisition, sur le même principe que donsChoix).
+  // Rien n'écrit dans ce champ aujourd'hui — chantier de préparation uniquement.
+  bonusCompetence(nom) {
+    return (this.bonusCompetences && this.bonusCompetences[nom]) || 0;
+  }
+
+  // Modificateur total pour un test de compétence : mod. de la carac porteuse
+  // + bonusCompetence(nom) éventuel.
+  modCompetence(nom, caracCode) {
+    return this.mod(caracCode) + this.bonusCompetence(nom);
   }
 
   get classeDef() {
@@ -694,6 +710,7 @@ class Personnage extends Entite {
       raceVariante: this.raceVariante,
       caracs: this.caracs,
       caracsLibres: this.caracsLibres,
+      bonusCompetences: this.bonusCompetences,
       capacites: this.capacites,
       capacitesRace: this.capacitesRace,
       voiesHorsProfil: this.voiesHorsProfil,
