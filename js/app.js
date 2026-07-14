@@ -25,6 +25,15 @@ const App = (() => {
   // / +4 dégâts) dans le dock de combat — état de session, pas persisté, ne
   // distingue pas les personnages (cf. rendreDockCombat).
   const togglesDons = { frappe_puissante: false, tir_precision: false };
+  // Résolution d'une capacité d'attaque vs DEF qui vient de toucher (ou dont
+  // la DEF cible est inconnue), en attente du clic sur "Lancer les dégâts"
+  // (cf. Capacites.lancer/resoudreDegatsEnAttente, wireCapacitesEtEtats) —
+  // état de module (pas une variable fermée locale) car la sidebar/dock/fiche
+  // sont re-rendues à chaque Combat.onChange, ce qui recréerait une closure
+  // vierge et perdrait l'état. Un seul slot : lancer une nouvelle capacité
+  // avant d'avoir résolu les dégâts de la précédente écrase volontairement
+  // l'état en attente (cf. htmlDegatsCapaciteEnAttente/resoudreCapaciteEtRafraichir).
+  let capaciteDegatsEnAttente = null;
   let _cibleDistanceId = null;  // token cible choisi pour le vérificateur de portée (cf. rendreFicheSidebarBattlemap)
   let _typeAttaquePortee = "contact";  // type d'attaque choisi dans le vérificateur de portée : "contact" | "distance" | "magique"
   let livretPersoId = null;  // id du perso choisi dans l'onglet "📖 Livret"
@@ -502,6 +511,7 @@ const App = (() => {
           <button class="btn petit or btn-confirmer-cible-capacite">Confirmer la cible</button>
           <button class="btn petit secondaire btn-annuler-cible-capacite">Annuler</button>
         </div>
+        ${htmlDegatsCapaciteEnAttente(id)}
         ${htmlCapacitesClasse(p, c)}
       </div>
       ${race ? `<div class="carte"><h3>Capacités raciales — ${race.voie_nom}</h3>${htmlCapacitesRace(p, race)}</div>` : ""}
@@ -799,6 +809,7 @@ const App = (() => {
         <button class="btn petit or btn-confirmer-cible-capacite">Confirmer la cible</button>
         <button class="btn petit secondaire btn-annuler-cible-capacite">Annuler</button>
       </div>
+      ${htmlDegatsCapaciteEnAttente(id)}
     </div>`;
 
     dock.querySelectorAll("[data-bm-attaque]").forEach((el) => {
@@ -2727,6 +2738,21 @@ const App = (() => {
     return `<div class="carte"><h3>États actifs</h3><div class="etats-actifs-liste">${items}</div></div>`;
   }
 
+  // Bouton "🎲 Lancer les dégâts" d'une capacité d'attaque vs DEF qui vient de
+  // toucher (cf. capaciteDegatsEnAttente, wireCapacitesEtEtats) — masqué si
+  // aucune résolution n'est en attente pour CE personnage, ou si l'attaque a
+  // raté (auquel cas capaciteDegatsEnAttente est déjà remis à null, cf.
+  // resoudreCapaciteEtRafraichir).
+  function htmlDegatsCapaciteEnAttente(persoId) {
+    if (!capaciteDegatsEnAttente || capaciteDegatsEnAttente.persoId !== persoId) return "";
+    const r = capaciteDegatsEnAttente;
+    const libelle = r.source.nomCap || "Capacité";
+    const detail = r.critique ? "critique !" : r.defCible === null ? "DEF cible inconnue" : `touché, DEF ${r.defCible}`;
+    return `<div class="capacite-degats-attente">
+      <button class="btn petit or btn-lancer-degats-capacite">🎲 Lancer les dégâts — ${echapper(libelle)} (${detail})</button>
+    </div>`;
+  }
+
   // Bloc "Lancer mon initiative", visible sur la fiche vivante uniquement
   // pendant un combat où ce PJ n'a pas encore jeté (cf. js/combat.js —
   // Combat.lancerInitiativeJoueur, appelé par le joueur lui-même, jamais
@@ -2949,6 +2975,17 @@ const App = (() => {
       // Consomme l'action principale du tour en combat (no-op hors combat) —
       // "compétence" est l'autre exemple type d'action principale.
       if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
+      // Capacité d'attaque vs DEF (cf. Capacites.lancer/resolutionDegats) qui
+      // touche (ou dont la DEF cible est inconnue, donc pas bloquée) ET a
+      // effectivement des dégâts/états à résoudre : garde l'état en attente
+      // pour afficher le bouton "Lancer les dégâts" au prochain rendu. Un
+      // raté (touche === false) ou un jetOppose hors DEF (resolutionDegats
+      // null) efface tout état résiduel d'une capacité précédente non résolue.
+      const rd = res.resolutionDegats;
+      const aEffetsDifferes = rd && (rd.mecanique.effets || []).some((e) => e.type === "degats" || e.type === "etat");
+      capaciteDegatsEnAttente = (rd && rd.touche !== false && aEffetsDifferes)
+        ? Object.assign({ persoId: id }, rd)
+        : null;
       rafraichir();
       // La fiche complète redirige vers l'onglet "Dés" (comportement historique) ;
       // la mini-fiche battlemap reste en place, comme les attaques rapides
@@ -3007,6 +3044,19 @@ const App = (() => {
       };
     }
     if (btnAnnulerCible) btnAnnulerCible.onclick = fermerPickerCibleCapacite;
+
+    // Résolution différée des dégâts/états d'une capacité d'attaque vs DEF qui
+    // a touché (cf. capaciteDegatsEnAttente/htmlDegatsCapaciteEnAttente).
+    racine.querySelectorAll(".btn-lancer-degats-capacite").forEach((el) => {
+      el.onclick = () => {
+        if (!capaciteDegatsEnAttente || capaciteDegatsEnAttente.persoId !== id) return;
+        const res = Capacites.resoudreDegatsEnAttente(capaciteDegatsEnAttente);
+        capaciteDegatsEnAttente = null;
+        toast(res.messages.length ? res.messages.join(" · ") : "Aucun dégât à résoudre.");
+        rafraichir();
+        if (racine.id === "zone-fiche-active") allerVers("des");
+      };
+    });
 
     // Réinitialisation manuelle d'un compteur d'usage (nouvelle période : combat, jour, scénario...)
     racine.querySelectorAll("[data-reset-cle]").forEach((el) => {
@@ -3960,6 +4010,7 @@ const App = (() => {
               <button class="btn petit or btn-confirmer-cible-capacite">Confirmer la cible</button>
               <button class="btn petit secondaire btn-annuler-cible-capacite">Annuler</button>
             </div>
+            ${htmlDegatsCapaciteEnAttente(id)}
             ${capHtml}
           </div>
 
