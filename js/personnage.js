@@ -438,11 +438,13 @@ class Personnage extends Entite {
     // Chasseur — Voie de la gâchette, rang 5 "Tir fatal" (L, 1x/combat en
     // théorie) : critique sur 18-20 au lieu de 20 sur les attaques à distance.
     // Simplification : traité ici comme une capacité passive (toujours
-    // active dès qu'acquise), la limite "1x/combat" et le triplement des
-    // dégâts critiques ne sont PAS mécanisés (cf. data/donnees.js, effet
-    // "special" hors schéma standard — nécessiterait de toucher
-    // js/capacites.js, hors périmètre ici).
-    if (type === "distance" && this.classe === "chasseur" && this.estChoisie("Voie de la gâchette", 5)) {
+    // active dès qu'acquise) — la limite "1x/combat" n'est pas mécanisée
+    // (pas de compteur d'usage pour les attaques rapides, hors du système
+    // usagesCapacites qui ne suit que les capacités lancées via
+    // Capacites.lancer()). Le triplement des dégâts critiques (au lieu du
+    // doublement standard), lui, EST mécanisé — cf. aTirFatal() ci-dessous,
+    // lu par lancerFormule() côté app.js pour les dégâts à distance.
+    if (type === "distance" && this.aTirFatal()) {
       seuil = Math.min(seuil, 18);
     }
     const arme = type === "contact" ? this.armeContactEquipee()
@@ -450,6 +452,13 @@ class Personnage extends Entite {
       : null;
     if (arme && arme.critMin) seuil = Math.min(seuil, arme.critMin);
     return seuil;
+  }
+
+  // A-t-il "Tir fatal" (Chasseur, Voie de la gâchette rang 5) ? Sert au
+  // seuil de critique abaissé ci-dessus ET au triplement des dégâts
+  // critiques à distance (cf. lancerFormule côté app.js).
+  aTirFatal() {
+    return this.classe === "chasseur" && this.estChoisie("Voie de la gâchette", 5);
   }
 
   // Bonus de DEF accordés par certaines capacités passives et permanentes.

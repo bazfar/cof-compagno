@@ -578,7 +578,7 @@ const App = (() => {
         ${(dmgContact && etatDegC.visible) || (dmgDistance && etatDegD.visible) || (dmgMagique && etatDegM.visible) ? `
         <div class="barre-actions" style="margin-top:6px;">
           ${dmgContact && etatDegC.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}" data-bm-critique="${etatDegC.critique ? "1" : "0"}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}">🎲 Dégâts Contact (${dmgContact})${etatDegC.critique ? " CRIT" : ""}</button>` : ""}
-          ${dmgDistance && etatDegD.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}" data-bm-critique="${etatDegD.critique ? "1" : "0"}" title="${echapper(armeDistance ? armeDistance.nom : "")}">🎲 Dégâts Distance (${dmgDistance})${etatDegD.critique ? " CRIT" : ""}</button>` : ""}
+          ${dmgDistance && etatDegD.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}" data-bm-critique="${etatDegD.critique ? "1" : "0"}" data-bm-mult="${perso.aTirFatal() ? "3" : "2"}" title="${echapper(armeDistance ? armeDistance.nom : "")}">🎲 Dégâts Distance (${dmgDistance})${etatDegD.critique ? " CRIT" : ""}</button>` : ""}
           ${dmgMagique && etatDegM.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgMagique}" data-bm-critique="${etatDegM.critique ? "1" : "0"}">🎲 Dégâts Magique (${dmgMagique})${etatDegM.critique ? " CRIT" : ""}</button>` : ""}
         </div>` : ""}
         ${porteeHtml}
@@ -638,12 +638,14 @@ const App = (() => {
       };
     });
     // Dégâts de l'arme équipée (formule figée, pas de bonus au jet ici) —
-    // data-bm-critique="1" double les dés si la dernière attaque de ce type
-    // était un critique (cf. etatDegC/D/M, lancerFormule).
+    // data-bm-critique="1" multiplie les dés (×data-bm-mult, 2 par défaut,
+    // 3 à distance avec Tir fatal) si la dernière attaque de ce type était
+    // un critique (cf. etatDegC/D/M, lancerFormule).
     sidebar.querySelectorAll("[data-bm-degats]").forEach((el) => {
       el.onclick = () => {
         const formule = el.dataset.bmDegats;
-        lancerFormule(formule, `${p.nom} — Dégâts (${formule})`, el.dataset.bmCritique === "1");
+        const estCrit = el.dataset.bmCritique === "1";
+        lancerFormule(formule, `${p.nom} — Dégâts (${formule})`, estCrit ? parseInt(el.dataset.bmMult || "2", 10) : false);
       };
     });
     // Vérificateur de portée : changer de type d'attaque ou de cible re-rend
@@ -824,7 +826,7 @@ const App = (() => {
     if (attDistance !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="distance" data-bonus="${attDistance}"><span class="dock-ic">🏹</span><span class="dock-lbl">Distance ${signe(attDistance)}</span></button>`);
     if (attMagique !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="magique" data-bonus="${attMagique}"><span class="dock-ic">✨</span><span class="dock-lbl">Magique ${signe(attMagique)}</span></button>`);
     if (dmgContact && etatDegC.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}" data-bm-critique="${etatDegC.critique ? "1" : "0"}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}${etatDegC.critique ? " CRIT" : ""}</span></button>`);
-    if (dmgDistance && etatDegD.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgDistance}" data-bm-critique="${etatDegD.critique ? "1" : "0"}" title="${echapper(armeDistance.nom)}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgDistance}${etatDegD.critique ? " CRIT" : ""}</span></button>`);
+    if (dmgDistance && etatDegD.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgDistance}" data-bm-critique="${etatDegD.critique ? "1" : "0"}" data-bm-mult="${perso.aTirFatal() ? "3" : "2"}" title="${echapper(armeDistance.nom)}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgDistance}${etatDegD.critique ? " CRIT" : ""}</span></button>`);
     if (dmgMagique && etatDegM.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgMagique}" data-bm-critique="${etatDegM.critique ? "1" : "0"}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgMagique}${etatDegM.critique ? " CRIT" : ""}</span></button>`);
     // Bascules Frappe puissante / Tir de précision : -2 attaque / +4 dégâts
     // tant qu'actives, visibles seulement si le don est acquis ET l'arme requise
@@ -952,7 +954,10 @@ const App = (() => {
       };
     });
     dock.querySelectorAll("[data-bm-degats]").forEach((el) => {
-      el.onclick = () => lancerFormule(el.dataset.bmDegats, `${p.nom} — Dégâts (${el.dataset.bmDegats})`, el.dataset.bmCritique === "1");
+      el.onclick = () => {
+        const estCrit = el.dataset.bmCritique === "1";
+        lancerFormule(el.dataset.bmDegats, `${p.nom} — Dégâts (${el.dataset.bmDegats})`, estCrit ? parseInt(el.dataset.bmMult || "2", 10) : false);
+      };
     });
     dock.querySelectorAll("[data-toggle-don]").forEach((el) => {
       el.onclick = () => {
@@ -5111,12 +5116,15 @@ const App = (() => {
   // armeCourteSecondaire). label : texte affiché dans le résultat/journal à
   // la place de la formule brute (ex. attaques de monstre, où "1d4" seul ne
   // dit pas de qui/quoi il s'agit) — par défaut la formule elle-même.
-  // `critique` (cf. liaison attaque->dégâts, _resoudreAttaqueRapide) : double
-  // le NOMBRE de dés de chaque terme "NdF" avant de les lancer (1d8 devient
-  // 2d8) plutôt que de relancer une seconde fois et additionner —
-  // mathématiquement équivalent, un seul tirage, plus simple à intégrer ici
-  // que la variante de js/capacites.js (qui, elle, relance deux fois pour
-  // garder le détail "1d8[x]+1d8[y]" affiché par le moteur de capacités).
+  // `critique` (cf. liaison attaque->dégâts, _resoudreAttaqueRapide) :
+  // multiplie le NOMBRE de dés de chaque terme "NdF" avant de les lancer
+  // (1d8 devient 2d8) plutôt que de relancer une seconde fois et
+  // additionner — mathématiquement équivalent, un seul tirage, plus simple
+  // à intégrer ici que la variante de js/capacites.js (qui, elle, relance
+  // deux fois pour garder le détail "1d8[x]+1d8[y]" affiché par le moteur
+  // de capacités). Accepte soit un booléen (true = ×2, comportement
+  // historique), soit un NOMBRE = multiplicateur explicite — cf. Chasseur
+  // "Tir fatal" (×3 sur les dégâts critiques à distance, Personnage.aTirFatal()).
   function lancerFormule(formule, label, critique) {
     formule = (formule || "").trim().toLowerCase().replace(/\s/g, "");
     if (!formule) { toast("Entre une formule, ex. 2d6+3"); return; }
@@ -5137,7 +5145,8 @@ const App = (() => {
         nbTermesDe++;
         const nbBase = parseInt(de[1] || "1", 10);
         const faces = parseInt(de[2], 10);
-        const nb = critique ? nbBase * 2 : nbBase;
+        const multCritique = typeof critique === "number" ? critique : (critique ? 2 : 1);
+        const nb = nbBase * multCritique;
         if (nb < 1 || nb > 50 || faces < 2 || faces > 1000) { horsLimites = true; return; }
         const jets = [];
         for (let i = 0; i < nb; i++) jets.push(lancerDe(faces));

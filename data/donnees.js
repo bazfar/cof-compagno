@@ -1070,7 +1070,7 @@ const CLASSES = {
               effets: [ { type: "special", note: "Ignore les pénalités de couvert partiel et de distance — modificateur de règle situationnel, pas un bonus chiffré fixe." } ] } },
           { rang: 5, nom: "Tir fatal (L, 1x/combat)", effet: "Critique sur 18-20 ; les critiques infligent triple dégâts au lieu de double",
             mecanique: { type: "limitee", usage: { frequence: "1x/combat" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Seuil de critique 18-20 sur les attaques à distance : mécanisé de façon simplifiée dans Personnage.critMinAttaque() (traité comme passif, sans limite 1x/combat). Le triplement des dégâts critiques (au lieu du doublement) N'EST PAS mécanisé — hors des types degats/soin/etat/bonus du schéma standard." } ] } },
+              effets: [ { type: "special", note: "Seuil de critique 18-20 et triplement des dégâts critiques à distance (au lieu du doublement standard) déjà codés — Personnage.aTirFatal()/critMinAttaque() + lancerFormule() côté app.js. Simplification : traité comme passif (toujours actif dès acquis), la limite 1x/combat n'est pas mécanisée (pas de compteur d'usage pour les attaques rapides, hors du système usagesCapacites)." } ] } },
         ],
       },
       {
