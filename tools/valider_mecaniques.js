@@ -67,7 +67,7 @@ if (!RACES) { console.error("❌ RACES introuvable (data/donnees.js n'a pas char
 
 const TYPES_VALIDES = ["activable", "passive", "limitee", "rituel"];
 const CIBLES_VALIDES = ["soi", "allie", "ennemi", "zone", "aucune"];
-const TYPES_EFFET_VALIDES = ["degats", "soin", "etat", "bonus", "special"];
+const TYPES_EFFET_VALIDES = ["degats", "soin", "pvTemp", "etat", "bonus", "special"];
 
 const problemes = []; // { ou: "classe/voie/rang nom", message }
 let totalRangs = 0;

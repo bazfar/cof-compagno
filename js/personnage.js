@@ -111,6 +111,14 @@ class Personnage extends Entite {
     this.mortSucces = d.mortSucces;
     this.mortEchecs = d.mortEchecs;
     this.etatMort = d.etatMort;
+    // PV temporaires (Guerrier Cri du rassemblement, Druide Rempart vivant/
+    // Forme du chaos sauvage) : jamais cumulatifs (une nouvelle source
+    // n'écrase l'ancien total que si elle est plus élevée), expirent avec la
+    // durée de la capacité qui les a posés plutôt que d'être décomptés
+    // séparément — cf. Capacites.appliquerPvTemporaires/decompterEtatsDebutTour.
+    // Absorbés en priorité par subirDegats côté app.js, avant pvActuel.
+    this.pvTemporaires = d.pvTemporaires;
+    this.pvTemporairesExpiration = d.pvTemporairesExpiration;
 
     // Migration douce : l'ancien champ libre `inventaire` (string) devient un
     // item texte libre dans inventaireListe, pour ne rien perdre à la casse
@@ -1095,6 +1103,8 @@ class Personnage extends Entite {
       mortSucces: this.mortSucces,
       mortEchecs: this.mortEchecs,
       etatMort: this.etatMort,
+      pvTemporaires: this.pvTemporaires,
+      pvTemporairesExpiration: this.pvTemporairesExpiration,
     };
   }
   static depuisJSON(obj) {

@@ -4952,8 +4952,16 @@ const App = (() => {
     if (formeChaosActive) degatsNets = Math.floor(degatsNets / 2);
     if (coeurMontagneActif || sanctuaireActif) degatsNets = 0;
 
+    // PV temporaires (cf. Capacites.appliquerPvTemporairesSurPerso) : absorbent
+    // les dégâts en priorité, avant les PV réels — jamais de réduction
+    // d'armure appliquée dessus (déjà comptée dans degatsNets ci-dessus).
+    const pvTempAvant = p.pvTemporaires || 0;
+    const absorbeParPvTemp = Math.min(pvTempAvant, degatsNets);
+    p.pvTemporaires = pvTempAvant - absorbeParPvTemp;
+    const degatsVersPvReels = degatsNets - absorbeParPvTemp;
+
     const pvAvant = p.pvActuel;
-    p.pvActuel = Math.max(0, p.pvActuel - degatsNets);
+    p.pvActuel = Math.max(0, p.pvActuel - degatsVersPvReels);
     const transition = _majEtatMourant(p, pvAvant);
     sauverPersos(persos);
     _syncPvAffichages(id, p);
@@ -4970,9 +4978,10 @@ const App = (() => {
       if (reductionRempart > 0) sources.push("Rempart");
       const suffixeReduction = sources.length ? ` après réduction (${sources.join(" + ")}, −${reductionFlatTotale})` : "";
       const suffixeChaos = formeChaosActive ? " puis divisés par 2 (Forme du chaos sauvage)" : "";
-      message = (sources.length || formeChaosActive)
-        ? `🛡 ${degatsBruts} dégâts subis${suffixeReduction}${suffixeChaos} → ${degatsNets}.`
-        : `${degatsNets} dégâts subis.`;
+      const suffixePvTemp = absorbeParPvTemp > 0 ? ` dont ${absorbeParPvTemp} absorbés par les PV temporaires (${p.pvTemporaires} restants)` : "";
+      message = (sources.length || formeChaosActive || absorbeParPvTemp > 0)
+        ? `🛡 ${degatsBruts} dégâts subis${suffixeReduction}${suffixeChaos} → ${degatsNets}${suffixePvTemp}, ${degatsVersPvReels} sur les PV réels.`
+        : `${degatsVersPvReels} dégâts subis.`;
     }
     toast(message);
   }

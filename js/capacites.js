@@ -231,6 +231,25 @@ const Capacites = (() => {
     });
   }
 
+  // PV temporaires (Guerrier Cri du rassemblement, Druide Rempart vivant/
+  // Forme du chaos sauvage) : JAMAIS cumulatifs — une nouvelle application
+  // n'écrase le total existant que si elle est strictement plus élevée
+  // (contrairement aux etatsActifs "bonus", qui s'additionnent tous). Champ
+  // dédié sur le perso brut (p.pvTemporaires/p.pvTemporairesExpiration),
+  // pas une entrée etatsActifs de plus : la sémantique "remplace, ne
+  // s'additionne pas" ne correspond à aucun des deux mécanismes existants
+  // (etat/bonus). Consommés en priorité par subirDegats côté app.js, avant
+  // pvActuel. Renvoie { montant, remplace } pour le message de resoudreEffet.
+  function appliquerPvTemporairesSurPerso(pCible, montant, dureeExpr, ctx) {
+    const actuel = pCible.pvTemporaires || 0;
+    const remplace = montant > actuel;
+    if (remplace) {
+      pCible.pvTemporaires = montant;
+      pCible.pvTemporairesExpiration = resoudreDureeInitiale(dureeExpr, ctx);
+    }
+    return { montant: pCible.pvTemporaires, remplace };
+  }
+
   // Libellé humain d'une entrée etatsActifs (état ou bonus), utilisé pour les
   // toasts/journal de décompte automatique — même logique que htmlEtatsActifs
   // côté app.js.
@@ -274,6 +293,18 @@ const Capacites = (() => {
       }
       return true;
     });
+    // PV temporaires : décomptés séparément des etatsActifs (champ dédié,
+    // cf. appliquerPvTemporairesSurPerso) — expirent avec leur propre durée,
+    // le reliquat non consommé par des dégâts est simplement perdu.
+    if (p.pvTemporairesExpiration && p.pvTemporairesExpiration.motCle === null
+        && typeof p.pvTemporairesExpiration.tours === "number") {
+      p.pvTemporairesExpiration.tours -= 1;
+      if (p.pvTemporairesExpiration.tours <= 0) {
+        if (p.pvTemporaires) retires.push(`${p.pvTemporaires} PV temporaires (expirés)`);
+        p.pvTemporaires = 0;
+        p.pvTemporairesExpiration = null;
+      }
+    }
     return { retires, degats };
   }
 
@@ -364,6 +395,21 @@ const Capacites = (() => {
         return `${total} PV (${detail}) → ${cible.nom} récupère ${res.gain} PV.`;
       }
       return `${total} PV (${detail}) — aucune cible sélectionnée, à appliquer manuellement.`;
+    }
+    if (effet.type === "pvTemp") {
+      // PV temporaires (distincts des PV normaux, jamais cumulatifs — cf.
+      // appliquerPvTemporairesSurPerso) : formule résolue une seule fois à la
+      // pose, comme "soin", mais stockée dans un champ dédié plutôt
+      // qu'ajoutée à pvActuel.
+      const { total, detail } = resoudreExpression(effet.formule, { perso, rang });
+      App.ajouterHisto(`${libelle} — PV temporaires`, total, false, false, detail);
+      if (cible && cible.genre === "perso" && persos[cible.id]) {
+        const res = appliquerPvTemporairesSurPerso(persos[cible.id], total, effet.duree, { perso, rang });
+        return res.remplace
+          ? `${total} PV temporaires (${detail}) → ${cible.nom} : ${res.montant} PV temp actifs.`
+          : `${total} PV temporaires (${detail}) → ${cible.nom} avait déjà ${res.montant} PV temp, plus élevés — pas de cumul, pas de remplacement.`;
+      }
+      return `${total} PV temporaires (${detail}) — aucune cible sélectionnée, à appliquer manuellement.`;
     }
     if (effet.type === "etat") {
       const idEtatCatalogue = /^marquee_.+/.test(effet.id) ? "marquee" : effet.id;
