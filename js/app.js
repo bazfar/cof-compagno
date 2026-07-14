@@ -576,6 +576,7 @@ const App = (() => {
         ${porteeHtml}
       </div>`}
       ${peutAgir ? htmlBlocActionsDuTour(id) : ""}
+      ${peutAgir ? htmlBlocDesengagement() : ""}
       ${htmlEtatsActifs(p)}
       ${htmlBlocInitiativeJoueur(id)}
       ${htmlBlocChance(p, perso)}
@@ -3027,6 +3028,33 @@ const App = (() => {
     </div>`;
   }
 
+  // Adversaires (tokens monstres) actuellement adjacents à `persoId` (distance
+  // <= 1 case sur la scène dd2vtt active, cf. Carte.distanceCasesEntre) — même
+  // infra que Personnage.bonusDefDuel (Combattant en duel), réutilisée ici pour
+  // l'attaque d'opportunité (cf. htmlBlocDesengagement/tenterDesengagement).
+  function _ennemisAdjacents(persoId) {
+    if (typeof Carte === "undefined" || !Carte.tokenIdPourPerso || !Carte.listeMonstresCombat || !Carte.distanceCasesEntre) return [];
+    const monToken = Carte.tokenIdPourPerso(persoId);
+    if (!monToken) return [];
+    return (Carte.listeMonstresCombat() || []).filter((m) => {
+      const d = Carte.distanceCasesEntre(monToken, m.id);
+      return d !== null && d <= 1;
+    });
+  }
+
+  // Bloc "Désengagement" (homebrew, attaque d'opportunité) — visible en combat
+  // sur une scène dd2vtt uniquement (seule source d'adjacence de l'app). Le
+  // jet de Force (poussée) et sa résolution se font au clic du bouton, cf.
+  // tenterDesengagement dans wireCapacitesEtEtats : pas de pré-calcul ici.
+  function htmlBlocDesengagement() {
+    if (typeof Combat === "undefined" || !Combat.estActif() || typeof Carte === "undefined" || !Carte.distanceCasesEntre) return "";
+    return `<div class="carte">
+      <h3 style="margin-top:0;">🏃 Désengagement</h3>
+      <p class="aide" style="margin:0 0 6px;">Si tu t'éloignes de plus d'une case d'un adversaire adjacent sans te désengager, il obtient une attaque d'opportunité. Pousse-le (jet de FOR vs sa DEF) pour partir sans risque.</p>
+      <button class="btn petit secondaire" data-desengager style="width:100%;">🏃 Tenter de se désengager</button>
+    </div>`;
+  }
+
   // Bloc "Corruption" (Voie du chaos, homebrew) — visible seulement pour un
   // perso ayant pris au moins un rang dans sa Voie du chaos (opt-in, cf.
   // Personnage.aVoieChaosActive). Jauge de combat incrémentée automatiquement
@@ -3425,6 +3453,56 @@ const App = (() => {
         if (!pp) return;
         pp.chancePersonnelle = Math.max(0, (pp.chancePersonnelle || 0) - 1);
         sauverPersos(persos);
+        rafraichir();
+      };
+    });
+    // Désengagement (homebrew, attaque d'opportunité, cf. htmlBlocDesengagement) :
+    // un jet de FOR (poussée) par adversaire actuellement adjacent, opposé à
+    // sa DEF. Réussite = pas d'AO de ce côté-là ; échec = AO immédiate,
+    // résolue avec le même pipeline attaque->dégâts que la Table de combat MJ
+    // (_resoudreAttaqueMonstre/_resoudreAttaqueMonstreVsPJ/subirDegats),
+    // simplement déclenché ici côté joueur plutôt qu'au clic du MJ. Utilise
+    // la première attaque du monstre (m.attaques[0]) — pas de sélection
+    // d'arme pour une réaction hors tour.
+    racine.querySelectorAll("[data-desengager]").forEach((el) => {
+      el.onclick = () => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp) return;
+        const perso = Personnage.depuisJSON(pp);
+        const adjacents = _ennemisAdjacents(id);
+        if (!adjacents.length) { toast("Aucun adversaire adjacent : déplacement libre, pas de jet nécessaire."); return; }
+        const bonusFor = perso.mod("FOR");
+        const messages = [];
+        adjacents.forEach((m) => {
+          const jet = lancerTest(`${perso.nom || "Perso"} — Poussée (désengagement vs ${m.nom})`, bonusFor, 20);
+          const defM = typeof m.def === "number" ? m.def : null;
+          const reussi = defM !== null && jet.total >= defM;
+          if (reussi) {
+            messages.push(`✅ ${m.nom} repoussé (${jet.total} vs DEF ${defM}) — pas d'attaque d'opportunité.`);
+            return;
+          }
+          messages.push(`❌ Poussée ratée sur ${m.nom}${defM !== null ? ` (${jet.total} vs DEF ${defM})` : " (DEF inconnue)"} — attaque d'opportunité !`);
+          const def = typeof BESTIAIRE_INDEX !== "undefined" && m.monstreId ? BESTIAIRE_INDEX[m.monstreId] : null;
+          const attaques = m.attaques || (def && def.attaques);
+          const a = attaques && attaques[0];
+          const r = a && _resoudreAttaqueMonstre(a);
+          if (!r) { messages.push(`  → attaque de ${m.nom} inconnue, à résoudre manuellement.`); return; }
+          const resolution = _resoudreAttaqueMonstreVsPJ(`${m.nom} — ${r.nom} (attaque d'opportunité)`, r.bonusAttaque, r.critMin, id);
+          if (resolution.echecCritique) {
+            messages.push(`  → échec critique automatique (1 naturel), pas de dégâts.`);
+          } else if (resolution.touche === false) {
+            messages.push(`  → raté (DEF ${resolution.defCible}), pas de dégâts.`);
+          } else {
+            const total = lancerFormule(r.degats, `${m.nom} — ${r.nom} (dégâts, attaque d'opportunité)`, resolution.critique);
+            if (typeof total === "number") {
+              const typeDegatsNormalise = r.typedegats && r.typedegats.startsWith("physique") ? "physique" : "magique";
+              subirDegats(id, total, typeDegatsNormalise);
+              messages.push(`  → touché${resolution.critique ? " CRITIQUE" : ""} : ${total} dégâts subis.`);
+            }
+          }
+        });
+        toast(messages.join(" "));
         rafraichir();
       };
     });
