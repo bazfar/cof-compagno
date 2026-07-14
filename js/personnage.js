@@ -1074,9 +1074,23 @@ class Personnage extends Entite {
     const div = (typeof DIVISEUR_ATTAQUE !== "undefined" && DIVISEUR_ATTAQUE[arch]) || 1;
     return Math.floor((this.niveau || 1) / div);
   }
+  // Bonus d'attaque permanents accordés par certaines capacités — même
+  // principe que bonusDefCapacites/bonusInitiativeCapacites ci-dessous.
+  // Barde — Voie de la rapière, rang 1 "Précision" (passive) : +1 en attaque
+  // avec une arme légère (dague, épée courte, rapière). Restriction "armes
+  // légères uniquement" non modélisée (même simplification que Force
+  // herculéenne pour les DM au contact) : appliqué à toute attaque de
+  // contact, pas seulement aux trois armes citées.
+  bonusAttaqueCapacites(type) {
+    let bonus = 0;
+    if (type === "contact" && this.classe === "barde" && this.estChoisie("Voie de la rapière", 1)) {
+      bonus += 1;
+    }
+    return bonus;
+  }
   // type : "contact" (FOR), "distance" (DEX), "magique" (carac de magie de la classe)
   bonusAttaque(type) {
-    const b = this.bonusProgression() + this.bonusTemporaire("attaque") + this.malusCombatDeuxArmes(type);
+    const b = this.bonusProgression() + this.bonusTemporaire("attaque") + this.malusCombatDeuxArmes(type) + this.bonusAttaqueCapacites(type);
     if (type === "contact") return b + this.mod("FOR");
     if (type === "distance") return b + this.mod("DEX");
     if (type === "magique") {
