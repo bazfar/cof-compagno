@@ -276,7 +276,19 @@ const Carte = (() => {
       const attaqueDruide = perso.bonusAttaque("magique") || 0;
       attaqueBonus = inv.id === "creature_corrompue_druide" ? attaqueDruide - 2 : attaqueDruide;
     }
-    return { pvMax, attaqueBonus };
+    // Nécromancien — Voie de l'outre-tombe, rang 4 "Renfort macabre" (passive) :
+    // +2 attaque et +5 PV à tous les morts-vivants contrôlés (seul le Zombie
+    // du catalogue en est un ici) — appliqué automatiquement à l'invocation
+    // dès ce rang acquis. L'arrêt de la dégradation -1 PV/minute promis par
+    // le même rang n'a rien à "arrêter" côté app : cette dégradation n'est
+    // de toute façon trackée par aucun minuteur automatique (aucun jeton n'a
+    // de décompte temps réel), c'est déjà un ajustement manuel de table.
+    let pvMaxFinal = pvMax;
+    if (inv.id === "zombie_necromancien" && perso.capaciteEntree(inv.voie, 4)) {
+      attaqueBonus += 2;
+      pvMaxFinal += 5;
+    }
+    return { pvMax: pvMaxFinal, attaqueBonus };
   }
 
   function ouvrirModalInvocation() {
