@@ -5163,7 +5163,11 @@ const App = (() => {
     // Druide — Voie du chaos, rang 5 "Forme du chaos sauvage" : pendant sa
     // durée (état 'forme_chaos_sauvage'), divise par 2 (arrondi inf.) les
     // dégâts PHYSIQUES uniquement — détection automatique, même principe.
-    const formeChaosActive = typeDegats === "physique" && (p.etatsActifs || []).some((e) => e.idEtat === "forme_chaos_sauvage");
+    // Nécromancien "Avatar du chaos" et Magicien "Avatar du Vide" (même voie,
+    // même rang 5, même texte "divise par 2 les DM physiques subis") partagent
+    // cette mécanique via leurs propres états dédiés.
+    const formeChaosActive = typeDegats === "physique" && (p.etatsActifs || []).some(
+      (e) => e.idEtat === "forme_chaos_sauvage" || e.idEtat === "avatar_du_chaos" || e.idEtat === "avatar_du_vide");
     const rempartActif = !!rempartArme && perso.aRempart();
 
     const reductionLourde = typeDegats === "physique" ? perso.bonusReductionLourdeDons() : 0;
