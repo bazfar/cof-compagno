@@ -463,6 +463,9 @@ const App = (() => {
     // Don Expert en hast : +1 dégâts au contact avec une arme d'allonge
     // qualifiante (cf. Personnage.aExpertHastQualifie).
     if (dmgContact && perso.aExpertHastQualifie()) dmgContact += "+1";
+    // Chevalier — Voie du chaos rang 4 "Marque du serment brisé", choix
+    // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
+    if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     let dmgDistance = formuleDegats(armeDistance);
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
@@ -786,6 +789,9 @@ const App = (() => {
     // Don Expert en hast : +1 dégâts au contact avec une arme d'allonge
     // qualifiante (cf. Personnage.aExpertHastQualifie).
     if (dmgContact && perso.aExpertHastQualifie()) dmgContact += "+1";
+    // Chevalier — Voie du chaos rang 4 "Marque du serment brisé", choix
+    // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
+    if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     let dmgDistance = armeDistance ? formuleDegats(armeDistance) : null;
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
@@ -1791,12 +1797,25 @@ const App = (() => {
         { valeur: "CON", label: "+1 CONSTITUTION" },
       ],
     },
-    "druide|Voie du chaos|4": {
+    // Corrige un bug : cette entrée était keyée "druide" (copié-collé), alors
+    // que le vrai rang 4 de la Voie du chaos du Druide est "Fléau rampant"
+    // (sans choix) — c'est le Nécromancien qui a réellement "Symbiose du
+    // chaos" à ce rang. cf. Personnage.bonusReductionCapacites/
+    // bonusDegatsSortsChaos côté js/personnage.js pour le correctif complet.
+    "necromancien|Voie du chaos|4": {
       titre: "Symbiose du chaos",
       consigne: "Choisis l'effet permanent (contrepartie : détecté comme corrompu) :",
       options: [
         { valeur: "reduction", label: "+2 réduction de dégâts" },
         { valeur: "degats", label: "+1d6 DM à tous les sorts" },
+      ],
+    },
+    "magicien|Voie du chaos|4": {
+      titre: "Esprit fissuré",
+      consigne: "Choisis l'effet permanent (contrepartie : détecté comme instable par les cercles savants) :",
+      options: [
+        { valeur: "degats", label: "+1d6 DM à tous les sorts" },
+        { valeur: "reduction", label: "+2 résistance aux dégâts" },
       ],
     },
   };
@@ -3696,6 +3715,9 @@ const App = (() => {
         };
         let dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
         if (dmgContact && perso.aExpertHastQualifie()) dmgContact += "+1";
+    // Chevalier — Voie du chaos rang 4 "Marque du serment brisé", choix
+    // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
+    if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
         const bonus = perso.bonusAttaque("contact");
         const critMin = perso.critMinAttaque("contact");
         const messages = [];

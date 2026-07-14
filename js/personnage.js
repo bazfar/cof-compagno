@@ -512,10 +512,13 @@ class Personnage extends Entite {
     if (this.classe === "moine" && this.estChoisie("Voie des poings", 3)) {
       bonus += 2;
     }
-    // Chevalier — Voie du chaos, rang 4 "Marque du serment brisé" : choix fixé
-    // à l'acquisition entre +2 DEF permanent et +1d8 DM chaotique (cf.
-    // CAPACITES_A_CHOIX côté app.js) — seul le choix "def" affecte la DEF.
-    if (this.classe === "chevalier") {
+    // Chevalier — Voie du chaos, rang 4 "Marque du serment brisé" (dès CA 5+,
+    // même verrou qu'Enchanteur Réalité fracturée) : choix fixé à
+    // l'acquisition entre +2 DEF permanent et +1d8 DM chaotique (cf.
+    // CAPACITES_A_CHOIX côté app.js, bonusDegatsArmeChaos pour l'autre
+    // choix) — seul "def" affecte la DEF. Manquait le verrou CA 5+ avant ce
+    // correctif : la DEF s'appliquait dès l'acquisition du rang.
+    if (this.classe === "chevalier" && (this.corruptionMajeure || 0) >= 5) {
       const cap = this.capaciteEntree("Voie du chaos", 4);
       if (cap && cap.choix === "def") bonus += 2;
     }
@@ -721,17 +724,50 @@ class Personnage extends Entite {
   reductionDegats() {
     return this._itemsEquipesUniques().reduce((t, it) => t + (it.valeurArmure || 0), 0) + this.bonusReductionCapacites();
   }
-  // Druide — Voie du chaos, rang 4 "Symbiose du chaos" : choix fixé à
-  // l'acquisition entre +2 réduction de dégâts et +1d6 DM à tous les sorts
-  // (cf. CAPACITES_A_CHOIX côté app.js) — seul le choix "reduction" est
-  // automatisable ici, l'autre étant un bonus au jet appliqué manuellement.
+  // Nécromancien "Symbiose du chaos" / Magicien "Esprit fissuré" (Voie du
+  // chaos rang 4, dès CA 5+) : choix fixé à l'acquisition entre +2 réduction
+  // de dégâts et +1d6 DM à tous les sorts (cf. CAPACITES_A_CHOIX côté
+  // app.js) — seul le choix "reduction" est géré ici, l'autre par
+  // bonusDegatsSortsChaos(). Corrige un bug : cette méthode vérifiait
+  // `classe === "druide"` (copié-collé d'un autre chantier) alors que le
+  // rang 4 réel de la Voie du chaos du Druide est "Fléau rampant", sans
+  // choix — un Druide qui prenait ce rang se voyait donc proposer à tort le
+  // choix "Symbiose du chaos", et le Nécromancien (le vrai concerné)
+  // n'avait ni modal ni bonus. Manquait aussi le verrou CA 5+ (comme pour
+  // Enchanteur Réalité fracturée) : les deux classes pouvaient toucher le
+  // bonus avant d'avoir atteint le seuil.
   bonusReductionCapacites() {
     let bonus = 0;
-    if (this.classe === "druide") {
+    if ((this.classe === "necromancien" || this.classe === "magicien") && (this.corruptionMajeure || 0) >= 5) {
       const cap = this.capaciteEntree("Voie du chaos", 4);
       if (cap && cap.choix === "reduction") bonus += 2;
     }
     return bonus;
+  }
+  // Fragment de formule de dégâts (ex. "1d6") à ajouter aux dégâts de TOUS
+  // les sorts (capacités de type "degats") du Nécromancien/Magicien ayant
+  // choisi "degats" à Symbiose du chaos/Esprit fissuré (dès CA 5+, cf.
+  // bonusReductionCapacites pour l'autre choix) — lu par
+  // Capacites.resoudreEffet côté js/capacites.js. null si non applicable.
+  bonusDegatsSortsChaos() {
+    if ((this.classe === "necromancien" || this.classe === "magicien") && (this.corruptionMajeure || 0) >= 5) {
+      const cap = this.capaciteEntree("Voie du chaos", 4);
+      if (cap && cap.choix === "degats") return "1d6";
+    }
+    return null;
+  }
+  // Chevalier "Marque du serment brisé" (Voie du chaos rang 4, dès CA 5+),
+  // choix "degats" : +1d8 DM chaotique sur l'arme de prédilection — lu par
+  // app.js pour ajouter le terme à dmgContact (l'autre choix, "def", est
+  // dans bonusDefCapacites). "Prédilection" = arme de contact équipée,
+  // seule interprétation exploitable (pas de notion de "favorite" distincte
+  // dans l'app).
+  bonusDegatsArmeChaos() {
+    if (this.classe === "chevalier" && (this.corruptionMajeure || 0) >= 5) {
+      const cap = this.capaciteEntree("Voie du chaos", 4);
+      if (cap && cap.choix === "degats") return "1d8";
+    }
+    return null;
   }
   // Don Maître des armures lourdes : -3 dégâts physiques subis, appliqué
   // AVANT valeurArmure (cf. subirDegats côté app.js — pas inclus dans

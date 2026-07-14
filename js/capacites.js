@@ -326,7 +326,13 @@ const Capacites = (() => {
     if (effet.type === "degats") {
       // critique (cf. liaison attaque->dégâts, lancer()/resoudreDegatsEnAttente)
       // double les termes de dés de la formule, pas les modificateurs fixes.
-      const { total, detail } = resoudreExpression(effet.formule, { perso, rang, critique });
+      // Nécromancien/Magicien — Voie du chaos rang 4 (Symbiose du chaos /
+      // Esprit fissuré, choix "degats", dès CA 5+) : +1d6 DM à TOUS les sorts,
+      // cf. Personnage.bonusDegatsSortsChaos() — toutes leurs capacités
+      // "degats" sont des sorts, pas besoin de distinguer par voie/rang.
+      const bonusChaos = perso.bonusDegatsSortsChaos && perso.bonusDegatsSortsChaos();
+      const formuleAjustee = bonusChaos ? `${effet.formule}+${bonusChaos}` : effet.formule;
+      const { total, detail } = resoudreExpression(formuleAjustee, { perso, rang, critique });
       App.ajouterHisto(`${libelle} — Dégâts`, total, false, false, detail);
       if (cible && cible.genre === "monstre" && typeof Carte !== "undefined") {
         const res = Carte.appliquerDegatsCombat(cible.id, total);
