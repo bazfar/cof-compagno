@@ -207,6 +207,46 @@ class Personnage extends Entite {
     let bonus = (this.bonusCompetences && this.bonusCompetences[nom]) || 0;
     const competencesDoue = ["Bluff", "Intimidation", "Représentation", "Persuasion"];
     if ((this.dons || []).includes("doue") && competencesDoue.includes(nom)) bonus += 1;
+
+    // Voies de classe à bonus de compétence progressif ("+2 par rang atteint
+    // dans la voie", cf. rangMaxVoie) — même principe que Doué, mais l'ampleur
+    // dépend du rang le plus haut acquis plutôt que d'être fixe. Le texte des
+    // rangs mentionne parfois plusieurs notions ("vigilance", "pistage") sans
+    // entrée dédiée dans COMPETENCES_PAR_CARAC : repliées sur la compétence la
+    // plus proche (Perception, Survie) plutôt que d'inventer une compétence.
+    if (this.classe === "barde" && nom === "Acrobaties") {
+      bonus += 2 * this.rangMaxVoie("Voie du spectacle"); // Acrobate (équilibre/saut/escalade repliés dessus)
+    }
+    if (this.classe === "pretre" && nom === "Persuasion") {
+      bonus += 2 * this.rangMaxVoie("Voie de la conversion"); // Voix de la persuasion
+    }
+    if (this.classe === "enchanteur" && nom === "Persuasion") {
+      bonus += 2 * this.rangMaxVoie("Voie du spectacle"); // Voix envoûtante
+    }
+    if (this.classe === "enchanteur" && (nom === "Connaissances (histoire)" || nom === "Connaissances (arcanes)")) {
+      bonus += 2 * this.rangMaxVoie("Voie de l'historien"); // Archives vivantes
+    }
+    if (this.classe === "druide" && (nom === "Survie" || nom === "Discrétion" || nom === "Perception")) {
+      bonus += 2 * this.rangMaxVoie("Voie de la nature"); // Survie (vigilance → Perception)
+    }
+    if (this.classe === "chasseur" && (nom === "Survie" || nom === "Discrétion")) {
+      bonus += 2 * this.rangMaxVoie("Voie de la traque"); // Pisteur (pistage replié sur Survie)
+    }
+
+    // Voies raciales à bonus de compétence fixe (cf. estChoisieRace).
+    if (this.race === "elfe" && nom === "Perception" && this.estChoisieRace(1)) bonus += 2; // Sens Affinés
+    if (this.race === "nain" && nom === "Artisanat" && this.estChoisieRace(4)) bonus += 2; // Savoir des Veines
+    if (this.race === "demi_elfe" && this.estChoisieRace(1)) {
+      // Sens Affinés : "+1 aux tests de Perception et de Social" — Social =
+      // les 4 compétences sociales CHA (même groupe que Doué), pas une
+      // compétence nommée à part.
+      if (nom === "Perception") bonus += 1;
+      if (competencesDoue.includes(nom)) bonus += 1;
+    }
+    if (this.race === "demi_orc" && nom === "Intimidation" && this.estChoisieRace(1)) bonus += 2; // Carrure Menaçante
+    if (this.race === "demi_gobelin" && nom === "Discrétion" && this.estChoisieRace(1)) bonus += 2; // Petite Taille
+    if (this.race === "demi_gobelin" && nom === "Artisanat" && this.estChoisieRace(3)) bonus += 2; // Bricoleur (pièges/mécanismes repliés dessus)
+
     return bonus;
   }
 
