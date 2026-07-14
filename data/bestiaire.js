@@ -15,18 +15,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Dague rouillée",
-        "jet": "1d20+2 vs DEF",
-        "degats": "1d4",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "dague_rouillee",
+        "bonusAttaque": 2,
         "effetSpecial": null
       },
       {
         "nom": "Fronde",
-        "jet": "1d20+3 vs DEF",
-        "degats": "1d4",
-        "portee": "moyenne (18m)",
-        "type": "physique",
+        "armeId": "fronde",
+        "bonusAttaque": 3,
         "effetSpecial": null
       }
     ],
@@ -59,18 +55,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Couperet",
-        "jet": "1d20+3 vs DEF",
-        "degats": "1d6+1",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "couperet",
+        "bonusAttaque": 3,
         "effetSpecial": null
       },
       {
         "nom": "Javelot",
-        "jet": "1d20+2 vs DEF",
-        "degats": "1d6",
-        "portee": "courte (6m)",
-        "type": "physique",
+        "armeId": "javelot",
+        "bonusAttaque": 2,
         "effetSpecial": "Une utilisation par combat (stock de 2 javelots)."
       }
     ],
@@ -102,18 +94,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Sabre récupéré",
-        "jet": "1d20+5 vs DEF",
-        "degats": "1d8+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "sabre_recupere",
+        "bonusAttaque": 5,
         "effetSpecial": null
       },
       {
         "nom": "Filet de chasse",
-        "jet": "1d20+3 vs DEF",
-        "degats": "0",
-        "portee": "courte (6m)",
-        "type": "physique",
+        "armeId": "filet_de_chasse",
+        "bonusAttaque": 3,
         "effetSpecial": "Si touché : cible entravée (DEF -2, pas de déplacement). Test FOR diff. 12 à chaque tour pour se libérer. Recharge : 3 rounds."
       },
       {
@@ -158,18 +146,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Bâton noueux",
-        "jet": "1d20+1 vs DEF",
-        "degats": "1d4",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "baton_noueux",
+        "bonusAttaque": 1,
         "effetSpecial": null
       },
       {
         "nom": "Crachat de Sève noire",
-        "jet": "1d20+3 vs DEF (magique)",
-        "degats": "1d6",
-        "portee": "courte (6m)",
-        "type": "magique (Chaos corrompu)",
+        "armeId": "crachat_de_seve_noire",
+        "bonusAttaque": 3,
         "effetSpecial": "Si touché : la cible doit réussir un test CON diff. 12 ou subir -1 en ATK jusqu'à la fin du combat (effet cumulable une fois max)."
       }
     ],
@@ -203,18 +187,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Morsure",
-        "jet": "1d20+3 vs DEF",
-        "degats": "1d6+1",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "morsure",
+        "bonusAttaque": 3,
         "effetSpecial": null
       },
       {
         "nom": "Plaquage",
-        "jet": "1d20+3 vs DEF",
-        "degats": "1d4",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "plaquage",
+        "bonusAttaque": 3,
         "effetSpecial": "Si touché : test FOR diff. 11 ou la cible est renversée (DEF -2 jusqu'à se relever avec une action)."
       }
     ],
@@ -247,18 +227,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Charge",
-        "jet": "1d20+4 vs DEF",
-        "degats": "2d6",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "charge",
+        "bonusAttaque": 4,
         "effetSpecial": "Utilisable seulement si le sanglier se déplace d'au moins 6m en ligne droite avant l'attaque. Si touché : test FOR diff. 13 ou repoussé de 3m et renversé."
       },
       {
         "nom": "Défenses",
-        "jet": "1d20+4 vs DEF",
-        "degats": "1d8+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "defenses",
+        "bonusAttaque": 4,
         "effetSpecial": null
       }
     ],
@@ -294,18 +270,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Toucher glacial",
-        "jet": "1d20+3 vs DEF (magique)",
-        "degats": "1d6",
-        "portee": "contact",
-        "type": "magique (froid)",
+        "armeId": "toucher_glacial",
+        "bonusAttaque": 3,
         "effetSpecial": "Si touché : test CON diff. 11 ou -1 en initiative jusqu'à la fin du combat."
       },
       {
         "nom": "Hurlement du vide",
-        "jet": "1d20+3 vs DEF (magique)",
-        "degats": "1d4",
-        "portee": "courte (6m)",
-        "type": "magique (mental)",
+        "armeId": "hurlement_du_vide",
+        "bonusAttaque": 3,
         "effetSpecial": "Recharge : 3 rounds. Test SAG diff. 12 ou la cible perd son action le prochain tour (paralysie de terreur)."
       }
     ],
@@ -338,18 +310,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Fouet de racine",
-        "jet": "1d20+4 vs DEF",
-        "degats": "1d8",
-        "portee": "courte (6m)",
-        "type": "physique",
+        "armeId": "fouet_de_racine",
+        "bonusAttaque": 4,
         "effetSpecial": null
       },
       {
         "nom": "Emprise",
-        "jet": "1d20+4 vs DEF",
-        "degats": "1d4",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "emprise",
+        "bonusAttaque": 4,
         "effetSpecial": "Si touché : la cible est saisie (ne peut pas se déplacer). Test FOR diff. 13 à chaque tour pour se libérer. La racine peut maintenir et attaquer en même temps."
       }
     ],
@@ -389,18 +357,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Hache de guerre",
-        "jet": "1d20+5 vs DEF",
-        "degats": "1d8+3",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "hache_de_guerre",
+        "bonusAttaque": 5,
         "effetSpecial": null
       },
       {
         "nom": "Lancer de hache",
-        "jet": "1d20+3 vs DEF",
-        "degats": "1d8+1",
-        "portee": "courte (6m)",
-        "type": "physique",
+        "armeId": "lancer_de_hache",
+        "bonusAttaque": 3,
         "effetSpecial": "1 utilisation (récupère la hache si il ne subit pas de dégâts ce tour)."
       }
     ],
@@ -433,18 +397,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Liane de corruption",
-        "jet": "1d20+6 vs DEF (magique)",
-        "degats": "1d10+2",
-        "portee": "courte (6m)",
-        "type": "magique (Chaos végétal)",
+        "armeId": "liane_de_corruption",
+        "bonusAttaque": 6,
         "effetSpecial": "Si touché : test CON diff. 14 ou la cible est empoisonnée (1d4 dégâts par round, 3 rounds). L'antidote est de la Sève pure appliquée par un Druide ou Prêtre."
       },
       {
         "nom": "Explosion de spores",
-        "jet": "1d20+5 vs DEF (magique, zone 4m)",
-        "degats": "2d6",
-        "portee": "courte (6m)",
-        "type": "magique (Chaos végétal)",
+        "armeId": "explosion_de_spores",
+        "bonusAttaque": 5,
         "effetSpecial": "Recharge : 4 rounds. Toutes les créatures dans la zone sont affectées. Test CON diff. 13 ou aveuglées pendant 1 round."
       }
     ],
@@ -481,18 +441,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Épée longue solaire",
-        "jet": "1d20+5 vs DEF",
-        "degats": "1d8+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "epee_longue_solaire",
+        "bonusAttaque": 5,
         "effetSpecial": "L'arme est bénie par Aethar. Elle inflige +1d4 dégâts supplémentaires contre les créatures du Chaos."
       },
       {
         "nom": "Bouclier-frappe",
-        "jet": "1d20+4 vs DEF",
-        "degats": "1d4+1",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "bouclier_frappe",
+        "bonusAttaque": 4,
         "effetSpecial": "Test FOR diff. 12 ou la cible est repoussée de 1,5m et perd son action de déplacement."
       }
     ],
@@ -528,18 +484,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Poing de granit",
-        "jet": "1d20+6 vs DEF",
-        "degats": "2d8+4",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "poing_de_granit",
+        "bonusAttaque": 6,
         "effetSpecial": "Si dégâts ≥ 10 en une frappe : test FOR diff. 15 ou la cible est projetée à 3m et renversée."
       },
       {
         "nom": "Piétinement",
-        "jet": "1d20+5 vs DEF",
-        "degats": "2d6",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "pietinement",
+        "bonusAttaque": 5,
         "effetSpecial": "Cible au sol uniquement. Les dégâts ignorent les armures légères."
       }
     ],
@@ -579,18 +531,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Lame d'ombre",
-        "jet": "1d20+6 vs DEF",
-        "degats": "1d6+2",
-        "portee": "contact",
-        "type": "physique + magique",
+        "armeId": "lame_d_ombre",
+        "bonusAttaque": 6,
         "effetSpecial": "En lumière faible ou obscurité : +1d4 dégâts supplémentaires."
       },
       {
         "nom": "Flèche de Sève noire",
-        "jet": "1d20+5 vs DEF (magique)",
-        "degats": "1d8",
-        "portee": "longue (36m)",
-        "type": "magique (Chaos)",
+        "armeId": "fleche_de_seve_noire",
+        "bonusAttaque": 5,
         "effetSpecial": "Si touché : test SAG diff. 13 ou la cible est désorientée (-2 en ATK et DEF) pendant 1 round."
       },
       {
@@ -636,10 +584,8 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Morsure",
-        "jet": "1d20+2 vs DEF",
-        "degats": "1d6",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "morsure_2",
+        "bonusAttaque": 2,
         "effetSpecial": null
       }
     ],
@@ -682,18 +628,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Morsure",
-        "jet": "1d20+4 vs DEF",
-        "degats": "1d6+1",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "morsure",
+        "bonusAttaque": 4,
         "effetSpecial": null
       },
       {
         "nom": "Plaquage",
-        "jet": "1d20+3 vs DEF",
-        "degats": "1d4",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "plaquage",
+        "bonusAttaque": 3,
         "effetSpecial": "Test FOR diff. 11 ou cible renversée (DEF -2 jusqu'à se relever)."
       }
     ],
@@ -745,18 +687,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Morsure empoisonnée",
-        "jet": "1d20+5 vs DEF",
-        "degats": "1d6+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "morsure_empoisonnee",
+        "bonusAttaque": 5,
         "effetSpecial": "Test CON diff. 12 ou -1 DEF pendant 3 rounds (Sève corrompue dans les crocs)."
       },
       {
         "nom": "Plaquage",
-        "jet": "1d20+4 vs DEF",
-        "degats": "1d4+1",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "plaquage_2",
+        "bonusAttaque": 4,
         "effetSpecial": "Test FOR diff. 12 ou renversé."
       }
     ],
@@ -831,18 +769,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Morsure déchirante",
-        "jet": "1d20+7 vs DEF",
-        "degats": "2d6+3",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "morsure_dechirante",
+        "bonusAttaque": 7,
         "effetSpecial": "Saignement : 1d4 dégâts/round pendant 3 rounds (test CON diff. 13 pour stopper)."
       },
       {
         "nom": "Plaquage brutal",
-        "jet": "1d20+6 vs DEF",
-        "degats": "1d6+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "plaquage_brutal",
+        "bonusAttaque": 6,
         "effetSpecial": "Test FOR diff. 15 ou renversé + désarmé."
       },
       {
@@ -892,18 +826,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Griffes",
-        "jet": "1d20+4 vs DEF",
-        "degats": "1d8+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "griffes",
+        "bonusAttaque": 4,
         "effetSpecial": null
       },
       {
         "nom": "Morsure",
-        "jet": "1d20+4 vs DEF",
-        "degats": "1d6+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "morsure_3",
+        "bonusAttaque": 4,
         "effetSpecial": null
       }
     ],
@@ -949,18 +879,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Griffes lacérantes",
-        "jet": "1d20+5 vs DEF",
-        "degats": "1d8+3",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "griffes_lacerantes",
+        "bonusAttaque": 5,
         "effetSpecial": "Saignement : 1d4/round pendant 2 rounds (test CON diff. 11 pour stopper)."
       },
       {
         "nom": "Étreinte",
-        "jet": "1d20+5 vs DEF",
-        "degats": "1d6+3",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "etreinte",
+        "bonusAttaque": 5,
         "effetSpecial": "Si touché : cible saisie. Test FOR diff. 14 par tour pour se libérer. L'ours inflige 1d6+3 dégâts automatiques à chaque tour sur une cible saisie."
       }
     ],
@@ -1015,26 +941,20 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Griffes de guerre",
-        "jet": "1d20+6 vs DEF",
-        "degats": "2d6+3",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "griffes_de_guerre",
+        "bonusAttaque": 6,
         "effetSpecial": null
       },
       {
         "nom": "Étreinte écrasante",
-        "jet": "1d20+6 vs DEF",
-        "degats": "1d8+4",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "etreinte_ecrasante",
+        "bonusAttaque": 6,
         "effetSpecial": "Si touché : saisi. Test FOR diff. 16. L'ours inflige 1d8+4 dégâts auto par tour. Une cible saisie ne peut pas lancer de sorts."
       },
       {
         "nom": "Charge bélier",
-        "jet": "1d20+5 vs DEF",
-        "degats": "2d8",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "charge_belier",
+        "bonusAttaque": 5,
         "effetSpecial": "Seulement si déplacement en ligne droite ≥ 6m. Test FOR diff. 15 ou repoussé 3m + renversé."
       }
     ],
@@ -1109,26 +1029,20 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Griffes dévastatrices",
-        "jet": "1d20+8 vs DEF",
-        "degats": "2d8+5",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "griffes_devastatrices",
+        "bonusAttaque": 8,
         "effetSpecial": "Ignore 3 points de DEF (armure naturelle dépassée)."
       },
       {
         "nom": "Morsure broyante",
-        "jet": "1d20+7 vs DEF",
-        "degats": "2d6+5",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "morsure_broyante",
+        "bonusAttaque": 7,
         "effetSpecial": "Si dégâts ≥ 12 : brise une armure (DEF réduite de 2 de façon permanente pour le combat)."
       },
       {
         "nom": "Dévastation (Voie Puissance r.3)",
-        "jet": "1d20+8 vs DEF",
-        "degats": "2d6+5",
-        "portee": "contact (zone adjacente)",
-        "type": "physique",
+        "armeId": "devastation_voie_puissance_r_3",
+        "bonusAttaque": 8,
         "effetSpecial": "1 fois/combat. Attaque tous les ennemis adjacents (jet d'ATK séparé pour chacun)."
       },
       {
@@ -1182,18 +1096,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Hache",
-        "jet": "1d20+4 vs DEF",
-        "degats": "1d8+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "hache",
+        "bonusAttaque": 4,
         "effetSpecial": null
       },
       {
         "nom": "Lancer de hache",
-        "jet": "1d20+2 vs DEF",
-        "degats": "1d8",
-        "portee": "courte (6m)",
-        "type": "physique",
+        "armeId": "lancer_de_hache_2",
+        "bonusAttaque": 2,
         "effetSpecial": "1 utilisation."
       }
     ],
@@ -1244,18 +1154,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Hache de guerre",
-        "jet": "1d20+6 vs DEF",
-        "degats": "1d10+3",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "hache_de_guerre_2",
+        "bonusAttaque": 6,
         "effetSpecial": null
       },
       {
         "nom": "Bouclier-frappe",
-        "jet": "1d20+5 vs DEF",
-        "degats": "1d4+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "bouclier_frappe_2",
+        "bonusAttaque": 5,
         "effetSpecial": "Test FOR diff. 12 ou repoussé 1,5m."
       }
     ],
@@ -1330,18 +1236,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Hache double",
-        "jet": "1d20+7 vs DEF",
-        "degats": "1d12+4",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "hache_double",
+        "bonusAttaque": 7,
         "effetSpecial": null
       },
       {
         "nom": "Double frappe (Voie des Armes r.3)",
-        "jet": "1d20+7 vs DEF (x2)",
-        "degats": "1d12+4 (x2)",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "double_frappe_voie_des_armes_r_3",
+        "bonusAttaque": 7,
         "effetSpecial": "1 fois/round. Deux jets d'attaque séparés en une action."
       }
     ],
@@ -1430,18 +1332,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Masse de guerre runique",
-        "jet": "1d20+9 vs DEF",
-        "degats": "2d8+5",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "masse_de_guerre_runique",
+        "bonusAttaque": 9,
         "effetSpecial": "L'arme est liée à Khoreth. Contre les Elfes et créatures de la Sève pure : +1d6 dégâts supplémentaires."
       },
       {
         "nom": "Double frappe",
-        "jet": "1d20+9 vs DEF (x2)",
-        "degats": "2d8+5 (x2)",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "double_frappe",
+        "bonusAttaque": 9,
         "effetSpecial": "1 fois/round."
       },
       {
@@ -1507,18 +1405,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Épée courte",
-        "jet": "1d20+2 vs DEF",
-        "degats": "1d6",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "epee_courte",
+        "bonusAttaque": 2,
         "effetSpecial": null
       },
       {
         "nom": "Arc court",
-        "jet": "1d20+2 vs DEF",
-        "degats": "1d6",
-        "portee": "moyenne (18m)",
-        "type": "physique",
+        "armeId": "arc_court",
+        "bonusAttaque": 2,
         "effetSpecial": null
       }
     ],
@@ -1561,18 +1455,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Épée bâtarde",
-        "jet": "1d20+4 vs DEF",
-        "degats": "1d8+1",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "epee_batarde",
+        "bonusAttaque": 4,
         "effetSpecial": null
       },
       {
         "nom": "Dague dans le dos",
-        "jet": "1d20+5 vs DEF",
-        "degats": "1d4+1d6",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "dague_dans_le_dos",
+        "bonusAttaque": 5,
         "effetSpecial": "Requiert flanquement ou cible surprise. Le 1d6 est l'Attaque sournoise."
       }
     ],
@@ -1643,26 +1533,20 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Sabre de capitaine",
-        "jet": "1d20+6 vs DEF",
-        "degats": "1d8+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "sabre_de_capitaine",
+        "bonusAttaque": 6,
         "effetSpecial": null
       },
       {
         "nom": "Pistolet d'arçon",
-        "jet": "1d20+5 vs DEF",
-        "degats": "1d10",
-        "portee": "courte (6m)",
-        "type": "physique",
+        "armeId": "pistolet_d_arcon",
+        "bonusAttaque": 5,
         "effetSpecial": "1 utilisation/combat. Ignoré par les armures légères."
       },
       {
         "nom": "Attaque sournoise",
-        "jet": "1d20+7 vs DEF",
-        "degats": "1d8+2+2d6",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "attaque_sournoise",
+        "bonusAttaque": 7,
         "effetSpecial": "Requiert flanquement. Les 2d6 viennent du rang 1 + rang 2 de la Voie de l'Ombre."
       }
     ],
@@ -1761,34 +1645,26 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Épée longue enchantée +1",
-        "jet": "1d20+8 vs DEF",
-        "degats": "1d8+4",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "epee_longue_enchantee_1",
+        "bonusAttaque": 8,
         "effetSpecial": "Le +1 vaut +1 dégât fixe (système d'enchantement COF)."
       },
       {
         "nom": "Double frappe",
-        "jet": "1d20+8 vs DEF (x2)",
-        "degats": "1d8+4 (x2)",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "double_frappe_2",
+        "bonusAttaque": 8,
         "effetSpecial": "1 fois/round."
       },
       {
         "nom": "Riposte (Voie du Duel r.2)",
-        "jet": "1d20+8 vs DEF",
-        "degats": "1d8+4",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "riposte_voie_du_duel_r_2",
+        "bonusAttaque": 8,
         "effetSpecial": "Réaction si une attaque rate le Fléau. Gratuite, hors tour."
       },
       {
         "nom": "Pistolets jumelés",
-        "jet": "1d20+6 vs DEF (x2)",
-        "degats": "1d10 (x2)",
-        "portee": "courte (6m)",
-        "type": "physique",
+        "armeId": "pistolets_jumeles",
+        "bonusAttaque": 6,
         "effetSpecial": "2 utilisations/combat. Les deux tirs comptent comme une action."
       }
     ],
@@ -1838,18 +1714,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Épée courte",
-        "jet": "1d20+3 vs DEF",
-        "degats": "1d6+1",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "epee_courte_2",
+        "bonusAttaque": 3,
         "effetSpecial": null
       },
       {
         "nom": "Arbalète légère",
-        "jet": "1d20+2 vs DEF",
-        "degats": "1d8",
-        "portee": "moyenne (18m)",
-        "type": "physique",
+        "armeId": "arbalete_legere",
+        "bonusAttaque": 2,
         "effetSpecial": "Recharge : 1 round."
       }
     ],
@@ -1900,18 +1772,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Épée longue",
-        "jet": "1d20+5 vs DEF",
-        "degats": "1d8+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "epee_longue",
+        "bonusAttaque": 5,
         "effetSpecial": null
       },
       {
         "nom": "Bouclier-frappe",
-        "jet": "1d20+4 vs DEF",
-        "degats": "1d4+1",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "bouclier_frappe",
+        "bonusAttaque": 4,
         "effetSpecial": "Test FOR diff. 11 ou repoussé 1,5m."
       }
     ],
@@ -1991,18 +1859,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Épée longue de maître",
-        "jet": "1d20+7 vs DEF",
-        "degats": "1d8+3",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "epee_longue_de_maitre",
+        "bonusAttaque": 7,
         "effetSpecial": null
       },
       {
         "nom": "Bouclier héraldique",
-        "jet": "1d20+6 vs DEF",
-        "degats": "1d6+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "bouclier_heraldique",
+        "bonusAttaque": 6,
         "effetSpecial": "Test FOR diff. 14 ou renversé. L'emblème de faction sur le bouclier peut intimider (test SAG diff. 10 ou -1 ATK)."
       }
     ],
@@ -2092,10 +1956,8 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Épée de la Couronne (enchantée +2)",
-        "jet": "1d20+9 vs DEF",
-        "degats": "1d8+5",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "epee_de_la_couronne_enchantee_2",
+        "bonusAttaque": 9,
         "effetSpecial": "+2 dégâts fixes (enchantement). Contre les créatures du Chaos : +1d6 dégâts supplémentaires."
       },
       {
@@ -2165,18 +2027,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Lance",
-        "jet": "1d20+3 vs DEF",
-        "degats": "1d8+1",
-        "portee": "contact +1 case (3m)",
-        "type": "physique",
+        "armeId": "lance",
+        "bonusAttaque": 3,
         "effetSpecial": "Peut attaquer une cible distante d'1 case supplémentaire. Si la cible charge vers lui, +1d4 dégâts supplémentaires (arme d'arrêt)."
       },
       {
         "nom": "Dague de ceinture",
-        "jet": "1d20+1 vs DEF",
-        "degats": "1d4",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "dague_de_ceinture",
+        "bonusAttaque": 1,
         "effetSpecial": "Repli : utilisée si la cible est au contact direct et que la lance ne peut pas être maniée."
       }
     ],
@@ -2230,18 +2088,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Lance de guerre",
-        "jet": "1d20+5 vs DEF",
-        "degats": "1d8+2",
-        "portee": "contact +1 case (3m)",
-        "type": "physique",
+        "armeId": "lance_de_guerre",
+        "bonusAttaque": 5,
         "effetSpecial": "Portée allongée. Si cible charge : +1d4 dégâts. Si 2 lanciers ciblent la même créature : elle doit tester FOR diff. 12 ou être repoussée de 1,5m."
       },
       {
         "nom": "Frappe de hampe",
-        "jet": "1d20+4 vs DEF",
-        "degats": "1d4+1",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "frappe_de_hampe",
+        "bonusAttaque": 4,
         "effetSpecial": "Utilise l'extrémité de la lance au contact. Test FOR diff. 11 ou cible déséquilibrée (-1 DEF ce round)."
       }
     ],
@@ -2315,18 +2169,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Lance longue renforcée",
-        "jet": "1d20+7 vs DEF",
-        "degats": "1d10+3",
-        "portee": "contact +1 case (3m)",
-        "type": "physique",
+        "armeId": "lance_longue_renforcee",
+        "bonusAttaque": 7,
         "effetSpecial": "Portée allongée. Charge ennemie : +1d6 dégâts. Peut cibler 2 créatures en ligne derrière l'autre (jet d'ATK séparé pour la seconde à -2)."
       },
       {
         "nom": "Frappe de hampe lourde",
-        "jet": "1d20+6 vs DEF",
-        "degats": "1d6+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "frappe_de_hampe_lourde",
+        "bonusAttaque": 6,
         "effetSpecial": "Test FOR diff. 13 ou renversé."
       }
     ],
@@ -2414,18 +2264,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Lance de primus (enchantée +1)",
-        "jet": "1d20+9 vs DEF",
-        "degats": "1d10+4",
-        "portee": "contact +1 case (3m)",
-        "type": "physique",
+        "armeId": "lance_de_primus_enchantee_1",
+        "bonusAttaque": 9,
         "effetSpecial": "Portée allongée. Charge : +1d8 dégâts. Percée : cible jusqu'à 2 créatures alignées (second jet à -1 ATK). +1 dégât fixe (enchantement)."
       },
       {
         "nom": "Balayage de hampe",
-        "jet": "1d20+8 vs DEF",
-        "degats": "1d6+3",
-        "portee": "contact (arc frontal)",
-        "type": "physique",
+        "armeId": "balayage_de_hampe",
+        "bonusAttaque": 8,
         "effetSpecial": "1 fois/round. Frappe toutes les créatures dans l'arc frontal (3m, 180°). Jet d'ATK séparé pour chacune."
       },
       {
@@ -2484,18 +2330,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Pique improvisée",
-        "jet": "1d20+2 vs DEF",
-        "degats": "1d8",
-        "portee": "contact +1 case (3m)",
-        "type": "physique",
+        "armeId": "pique_improvisee",
+        "bonusAttaque": 2,
         "effetSpecial": "Portée allongée. Maladroit au contact direct : -2 ATK si la cible est à moins d'1 case."
       },
       {
         "nom": "Couteau",
-        "jet": "1d20+1 vs DEF",
-        "degats": "1d4",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "couteau",
+        "bonusAttaque": 1,
         "effetSpecial": "Repli d'urgence si désarmé ou au contact direct."
       }
     ],
@@ -2545,26 +2387,20 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Lance de chasse",
-        "jet": "1d20+4 vs DEF",
-        "degats": "1d8+1",
-        "portee": "contact +1 case (3m)",
-        "type": "physique",
+        "armeId": "lance_de_chasse",
+        "bonusAttaque": 4,
         "effetSpecial": "Portée allongée. Peut lancer la lance (portée courte 6m, 1d8+1, 1 utilisation — récupérable)."
       },
       {
         "nom": "Lance jetée",
-        "jet": "1d20+3 vs DEF",
-        "degats": "1d8+1",
-        "portee": "courte (6m)",
-        "type": "physique",
+        "armeId": "lance_jetee",
+        "bonusAttaque": 3,
         "effetSpecial": "1 utilisation/combat (récupérable si pas de combat à portée). Après lancer, combat au couteau."
       },
       {
         "nom": "Couteau de chasse",
-        "jet": "1d20+3 vs DEF",
-        "degats": "1d4+1",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "couteau_de_chasse",
+        "bonusAttaque": 3,
         "effetSpecial": null
       }
     ],
@@ -2634,18 +2470,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Fauchard de bande",
-        "jet": "1d20+6 vs DEF",
-        "degats": "1d10+2",
-        "portee": "contact +1 case (3m)",
-        "type": "physique",
+        "armeId": "fauchard_de_bande",
+        "bonusAttaque": 6,
         "effetSpecial": "Portée allongée. Charge : +1d6 dégâts. Peut effectuer une feinte (test CHA diff. 11 : cible perd sa DEF de bouclier ce round)."
       },
       {
         "nom": "Balayage bas",
-        "jet": "1d20+5 vs DEF",
-        "degats": "1d6+1",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "balayage_bas",
+        "bonusAttaque": 5,
         "effetSpecial": "Test DEX diff. 12 ou cible renversée. Utilisable 1 fois/combat."
       }
     ],
@@ -2733,26 +2565,20 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Hallebarde de guerre",
-        "jet": "1d20+8 vs DEF",
-        "degats": "1d12+3",
-        "portee": "contact +1 case (3m)",
-        "type": "physique",
+        "armeId": "hallebarde_de_guerre",
+        "bonusAttaque": 8,
         "effetSpecial": "Portée allongée. Charge : +1d8 dégâts. Tranchant : si dégâts totaux ≥ 12, saignement (1d4/round, 3 rounds, CON diff. 12 pour stopper)."
       },
       {
         "nom": "Double frappe (Voie des Armes r.3)",
-        "jet": "1d20+8 vs DEF (x2)",
-        "degats": "1d12+3 (x2)",
-        "portee": "contact +1 case (3m)",
-        "type": "physique",
+        "armeId": "double_frappe_voie_des_armes_r_3_2",
+        "bonusAttaque": 8,
         "effetSpecial": "1 fois/round. Peut cibler deux créatures différentes si dans la portée."
       },
       {
         "nom": "Riposte (Voie du Duel r.2)",
-        "jet": "1d20+8 vs DEF",
-        "degats": "1d12+3",
-        "portee": "contact +1 case",
-        "type": "physique",
+        "armeId": "riposte_voie_du_duel_r_2_2",
+        "bonusAttaque": 8,
         "effetSpecial": "Réaction si attaque rate La Pointe. Gratuite, hors tour."
       }
     ],
@@ -2816,10 +2642,8 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Épée de jugement",
-        "jet": "1d20+6 vs DEF",
-        "degats": "1d8+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "epee_de_jugement",
+        "bonusAttaque": 6,
         "effetSpecial": "+1d6 dégâts contre les créatures du Chaos ou les personnages ayant atteint le palier Marque/Fracture."
       },
       {
@@ -2888,18 +2712,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Épée de jugement (bénie)",
-        "jet": "1d20+8 vs DEF",
-        "degats": "1d8+3",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "epee_de_jugement_benie",
+        "bonusAttaque": 8,
         "effetSpecial": "+1d6 dégâts contre les créatures du Chaos ou les personnages en Marque/Fracture."
       },
       {
         "nom": "Jugement",
-        "jet": "1d20+8 vs DEF",
-        "degats": "2d8",
-        "portee": "courte (6m)",
-        "type": "magique (sacré)",
+        "armeId": "jugement",
+        "bonusAttaque": 8,
         "effetSpecial": "Touche automatiquement une cible ayant atteint le palier Fracture de corruption. 1 fois/combat."
       }
     ],
@@ -2965,18 +2785,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Épée du Concile (enchantée +2)",
-        "jet": "1d20+10 vs DEF",
-        "degats": "1d8+5",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "epee_du_concile_enchantee_2",
+        "bonusAttaque": 10,
         "effetSpecial": "+2 dégâts fixes (enchantement). +1d6 contre les créatures du Chaos ou personnages en Marque/Fracture."
       },
       {
         "nom": "Bûcher purificateur",
-        "jet": "1d20+9 vs DEF",
-        "degats": "3d6",
-        "portee": "moyenne (18m)",
-        "type": "magique (feu sacré)",
+        "armeId": "bucher_purificateur",
+        "bonusAttaque": 9,
         "effetSpecial": "Zone de 3m. Ignore la moitié de l'armure des créatures du Chaos. 1 fois/combat."
       }
     ],
@@ -3014,10 +2830,8 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Bâton béni",
-        "jet": "1d20+3 vs DEF",
-        "degats": "1d4",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "baton_beni",
+        "bonusAttaque": 3,
         "effetSpecial": null
       },
       {
@@ -3063,10 +2877,8 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Bâton béni (renforcé)",
-        "jet": "1d20+5 vs DEF",
-        "degats": "1d6+1",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "baton_beni_renforce",
+        "bonusAttaque": 5,
         "effetSpecial": null
       },
       {
@@ -3134,18 +2946,14 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Épée du serment",
-        "jet": "1d20+6 vs DEF",
-        "degats": "1d8+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "epee_du_serment",
+        "bonusAttaque": 6,
         "effetSpecial": null
       },
       {
         "nom": "Bouclier du Pont",
-        "jet": "1d20+5 vs DEF",
-        "degats": "1d4+1",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "bouclier_du_pont",
+        "bonusAttaque": 5,
         "effetSpecial": "Test FOR diff. 12 ou la cible est repoussée de 1,5m."
       }
     ],
@@ -3210,10 +3018,8 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Épée du Serment (héritage de l'Ordre)",
-        "jet": "1d20+9 vs DEF",
-        "degats": "1d8+4",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "epee_du_serment_heritage_de_l_ordre",
+        "bonusAttaque": 9,
         "effetSpecial": "+1d6 dégâts contre toute cible ayant porté un coup à un allié tombé à terre ce combat."
       },
       {
@@ -3258,10 +3064,8 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Hache à deux mains (trop grande pour lui)",
-        "jet": "1d20+5 vs DEF",
-        "degats": "1d8+1",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "hache_a_deux_mains_trop_grande_pour_lui",
+        "bonusAttaque": 5,
         "effetSpecial": null
       }
     ],
@@ -3298,10 +3102,8 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Hache à deux mains",
-        "jet": "1d20+8 vs DEF",
-        "degats": "1d10+3",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "hache_a_deux_mains",
+        "bonusAttaque": 8,
         "effetSpecial": null
       }
     ],
@@ -3356,10 +3158,8 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Hache à deux mains",
-        "jet": "1d20+6 vs DEF",
-        "degats": "1d10+2",
-        "portee": "contact",
-        "type": "physique",
+        "armeId": "hache_a_deux_mains_2",
+        "bonusAttaque": 6,
         "effetSpecial": null
       }
     ],
