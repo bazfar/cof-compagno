@@ -82,13 +82,47 @@ const Combat = (() => {
     return `d20[${d20}]${mod >= 0 ? "+" : ""}${mod}`;
   }
 
-  // Déplacement max d'un tour pour ce perso — DEPLACEMENT_BASE + 1 avec le
-  // don Mobile (cf. _reinitialiserActionsEntree/estImmobile, qui doivent
-  // s'accorder sur la même valeur : Combat.estImmobile ne peut pas comparer
-  // à la constante DEPLACEMENT_BASE brute pour un perso Mobile, sous peine
-  // de ne jamais le détecter immobile).
+  // Déplacement max d'un tour pour ce perso — DEPLACEMENT_BASE + bonus (don
+  // Mobile, Barde "Grâce féline", Druide "Totem de la vélocité" — cf.
+  // _reinitialiserActionsEntree/estImmobile, qui doivent s'accorder sur la
+  // même valeur : Combat.estImmobile ne peut pas comparer à la constante
+  // DEPLACEMENT_BASE brute pour un perso bonus, sous peine de ne jamais le
+  // détecter immobile). `p` est l'objet perso BRUT (pas une instance
+  // Personnage) : lecture directe des champs, même convention que le don
+  // Mobile ci-dessous.
   function _deplacementMax(p) {
-    return DEPLACEMENT_BASE + (p && (p.dons || []).includes("mobile") ? 1 : 0);
+    if (!p) return DEPLACEMENT_BASE;
+    let bonus = 0;
+    if ((p.dons || []).includes("mobile")) bonus += 1;
+    // Barde — Voie du spectacle, rang 2 "Grâce féline" (passive) : +2 m de
+    // déplacement par tour dans le texte d'origine, converti en +1 case
+    // (même ordre de grandeur que le don Mobile, faute de conversion
+    // mètres/cases établie ailleurs dans l'app — décision de Thomas).
+    if (p.classe === "barde" && (p.capacites || []).some((c) => c.voie === "Voie du spectacle" && c.rang === 2)) bonus += 1;
+    // Druide — Voie du shaman, rang 4 "Totem de la vélocité" (sort, cible
+    // allié) : "une action de mouvement supplémentaire chaque tour" pendant
+    // la durée de l'état 'totem_velocite' — modélisé comme un doublement du
+    // déplacement de base (une seconde action de mouvement complète), tant
+    // que l'état est actif sur CE perso (posé par Capacites.lancer côté
+    // Druide, décompté comme tout autre état).
+    if ((p.etatsActifs || []).some((e) => e.idEtat === "totem_velocite")) bonus += DEPLACEMENT_BASE;
+    return DEPLACEMENT_BASE + bonus;
+  }
+
+  // Barde — Voie de la rapière, rang 4 "Enchaînement" (L) : accorde une
+  // attaque supplémentaire ce tour — remet le flag actionPrincipaleUtilisee
+  // à false (l'app ne bloque de toute façon jamais les boutons d'attaque
+  // dessus, c'est un indicateur d'honnêteté de table, cf. dock-chip "A") de
+  // sorte que le joueur puisse re-déclarer une action principale ce tour.
+  // Le malus -2 aux DEUX attaques est géré séparément par un effet "bonus"
+  // temporaire (cible: "attaque", 1 tour) posé par Capacites.lancer, comme
+  // n'importe quel autre bonus/malus d'attaque temporaire.
+  function accorderActionPrincipaleBonus(persoId) {
+    const etat = _lire();
+    const entree = etat.ordre.find((e) => e.id === persoId && e.type === "pj");
+    if (!entree) return;
+    entree.actionPrincipaleUtilisee = false;
+    _sauver(etat);
   }
 
   // Remet à zéro l'économie d'action d'une entrée PJ — appelé à sa création
@@ -397,6 +431,7 @@ const Combat = (() => {
     estImmobile,
     ajusterDeplacement,
     utiliserActionPrincipale,
+    accorderActionPrincipaleBonus,
     sprint,
     utiliserActionSecondaire,
     reinitialiserActions,

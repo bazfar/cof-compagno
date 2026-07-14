@@ -66,6 +66,8 @@ const ETATS = {
     description: "Immunité totale aux dégâts d'origine magique tant que l'état dure (Magicien, Voie de la magie protectrice, rang 5)." },
   forme_chaos_sauvage: { nom: "Forme du chaos sauvage", categorie: "buff",
     description: "Divise par 2 (arrondi inférieur) les dégâts physiques subis tant que l'état dure (Druide, Voie du chaos, rang 5). +4 PV temporaires et attaque naturelle en 2d8 non modélisés — à gérer manuellement." },
+  totem_velocite: { nom: "Totem de la vélocité", categorie: "buff",
+    description: "Une action de mouvement supplémentaire chaque tour (déplacement doublé) tant que l'état dure (Druide, Voie du shaman, rang 4)." },
 };
 
 const ORDRE_CATEGORIES_ETATS = ["controle", "malus", "dot", "physique", "buff"];

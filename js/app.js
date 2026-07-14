@@ -3388,10 +3388,11 @@ const App = (() => {
       lancerCapaciteEnAttente = null;
     }
     function resoudreCapaciteEtRafraichir(cibleId) {
+      const mecaniqueLancee = lancerCapaciteEnAttente.mecanique;
       const res = Capacites.lancer({
         persoId: id,
         source: lancerCapaciteEnAttente.source,
-        mecanique: lancerCapaciteEnAttente.mecanique,
+        mecanique: mecaniqueLancee,
         cibleId,
         choixEffet: lancerCapaciteEnAttente.choixEffet,
       });
@@ -3400,6 +3401,12 @@ const App = (() => {
       // Consomme l'action principale du tour en combat (no-op hors combat) —
       // "compétence" est l'autre exemple type d'action principale.
       if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
+      // mecanique.actionBonus (champ générique, ex. Barde "Enchaînement") :
+      // la capacité ACCORDE une action principale bonus plutôt que d'en
+      // consommer une — annule immédiatement la consommation ci-dessus.
+      if (mecaniqueLancee.actionBonus && typeof Combat !== "undefined" && Combat.accorderActionPrincipaleBonus) {
+        Combat.accorderActionPrincipaleBonus(id);
+      }
       // Capacité d'attaque vs DEF (cf. Capacites.lancer/resolutionDegats) qui
       // touche (ou dont la DEF cible est inconnue, donc pas bloquée) ET a
       // effectivement des dégâts/états à résoudre : garde l'état en attente
