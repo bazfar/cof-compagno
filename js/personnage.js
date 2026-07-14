@@ -452,6 +452,14 @@ class Personnage extends Entite {
       const cap = this.capaciteEntree("Voie de l'élévation", 2);
       if (cap && (cap.choix === "INT" || cap.choix === "SAG")) bonus += this.mod(cap.choix);
     }
+    // Chasseur — Voie de la traque, rang 4 "Sens du danger" (passive) : +2
+    // Initiative. Gap corrigé : ce bonus était déclaré dans les données mais
+    // jamais lu par aucune fonction (même famille de bug que Précision côté
+    // Barde). "Ne peut pas être surpris" reste non modélisé (pas de mécanique
+    // de surprise dans l'app).
+    if (this.classe === "chasseur" && this.estChoisie("Voie de la traque", 4)) {
+      bonus += 2;
+    }
     return bonus;
   }
   // Don Alerte : +5 Initiative. ("Ne peut jamais être surpris" reste descriptif,
@@ -651,7 +659,14 @@ class Personnage extends Entite {
   // différent) : le verrou classe === "barde" est donc nécessaire, pas
   // seulement défensif.
   aImmuniteEtat(idEtat) {
-    return (idEtat === "immobilisee" || idEtat === "entravee") && this.classe === "barde" && this.estChoisie("Voie du spectacle", 5);
+    if ((idEtat === "immobilisee" || idEtat === "entravee") && this.classe === "barde" && this.estChoisie("Voie du spectacle", 5)) return true;
+    // Chevalier — Voie du commandant, rang 1 (passive) : immunisé à la Peur.
+    // Gap corrigé : cette immunité était déclarée dans les données ("special")
+    // mais jamais câblée, contrairement à Liberté d'action ci-dessus (même
+    // mécanisme). L'extension du bonus de résistance aux alliés proches (même
+    // rang) reste non chiffrée/non modélisée.
+    if (idEtat === "effrayee" && this.classe === "chevalier" && this.estChoisie("Voie du commandant", 1)) return true;
+    return false;
   }
   // A-t-il "Liberté d'action" (gate seule, sans le contrôle d'usage 1x/combat
   // qui reste côté capacites.js/app.js — même principe que aCoeurDeMontagne).
@@ -1098,6 +1113,12 @@ class Personnage extends Entite {
   bonusAttaqueCapacites(type) {
     let bonus = 0;
     if (type === "contact" && this.classe === "barde" && this.estChoisie("Voie de la rapière", 1)) {
+      bonus += 1;
+    }
+    // Chasseur — Voie de la gâchette, rang 1 "Tir ajusté" (passive) : +1 en
+    // attaque à distance. Même gap que Précision ci-dessus : déclaré dans les
+    // données mais jamais lu par aucune fonction.
+    if (type === "distance" && this.classe === "chasseur" && this.estChoisie("Voie de la gâchette", 1)) {
       bonus += 1;
     }
     return bonus;

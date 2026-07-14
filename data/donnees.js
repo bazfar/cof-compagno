@@ -1058,7 +1058,7 @@ const CLASSES = {
           { rang: 4, nom: "Sens du danger (passive)", effet: "Ne peut pas être surpris ; +2 Initiative",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "bonus", cible: "initiative", valeur: 2, duree: "permanente" },
-                { type: "special", note: "Ne peut pas être surprise (immunité, non trackée automatiquement)." } ] } },
+                { type: "special", note: "Corrige un gap de donnée : ce bonus permanent était déclaré ici mais jamais lu par aucune fonction (même famille de bug que Précision côté Barde). Ajouté et câblé dans Personnage.bonusInitiativeCapacites(). Ne peut pas être surprise (immunité, non trackée automatiquement)." } ] } },
           { rang: 5, nom: "Prédateur silencieux (L, 1x/combat)", effet: "+4 attaque sur la première attaque du combat, sans déclencher d'alerte",
             mecanique: { type: "limitee", usage: { frequence: "1x/combat" }, cible: "soi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "bonus", cible: "attaque", valeur: 4, duree: "prochaineAttaque" } ] } },
@@ -1071,7 +1071,8 @@ const CLASSES = {
         rangs: [
           { rang: 1, nom: "Tir ajusté (passive)", effet: "+1 en attaque à distance",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "bonus", cible: "attaque", valeur: 1, duree: "permanente" } ] } },
+              effets: [ { type: "bonus", cible: "attaque", valeur: 1, duree: "permanente" },
+                { type: "special", note: "Corrige un gap de donnée : ce bonus permanent était déclaré ici mais jamais lu par aucune fonction (même famille de bug que Précision côté Barde). Ajouté et câblé dans Personnage.bonusAttaqueCapacites('distance')." } ] } },
           { rang: 2, nom: "Cadence affûtée (passive)", effet: "Recharger devient une action gratuite",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "special", note: "Recharger une arme à distance devient une action gratuite — règle d'économie d'action, pas un effet chiffrable." } ] } },
@@ -1209,7 +1210,7 @@ const CLASSES = {
         rangs: [
           { rang: 1, nom: null, effet: "Immunisé à la Peur ; étend un bonus de résistance à la Peur à ses alliés proches",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "zone", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Immunité à l'état 'effrayee' pour le Chevalier ; bonus de résistance (non chiffré) à la Peur étendu aux alliés proches." } ] } },
+              effets: [ { type: "special", note: "Corrige un gap de donnée : l'immunité à l'état 'effrayee' pour le Chevalier lui-même n'était jamais câblée, contrairement à Liberté d'action (Barde, même mécanisme) déjà branché sur aImmuniteEtat(). Ajoutée dans Personnage.aImmuniteEtat(), lue aux deux points où un état est posé sur un PJ (Capacites.resoudreEffet et le panneau MJ appliquerMalus). Le bonus de résistance étendu aux alliés proches reste non chiffré/non modélisé." } ] } },
           { rang: 2, nom: null, effet: "Une fois par tour, peut encaisser un coup à la place d'un allié à son contact",
             mecanique: { type: "activable", usage: { frequence: "1x/tour" }, cible: "allie", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "special", note: "Encaisse un coup à la place d'un allié à son contact (redirection défensive) — non modélisé par le schéma standard." } ] } },
