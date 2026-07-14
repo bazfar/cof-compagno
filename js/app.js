@@ -3510,6 +3510,13 @@ const App = (() => {
         const bonusFor = perso.mod("FOR");
         const messages = [];
         adjacents.forEach((m) => {
+          // Don Mobile : jamais d'attaque d'opportunité en se désengageant
+          // (simplifié — s'applique à tout adversaire adjacent, cf.
+          // Personnage.aMobile) — pas de jet, sortie automatique.
+          if (perso.aMobile()) {
+            messages.push(`✅ ${m.nom} : pas d'attaque d'opportunité (don Mobile).`);
+            return;
+          }
           const jet = lancerTest(`${perso.nom || "Perso"} — Poussée (désengagement vs ${m.nom})`, bonusFor, 20);
           const defM = typeof m.def === "number" ? m.def : null;
           const reussi = defM !== null && jet.total >= defM;
@@ -4505,14 +4512,19 @@ const App = (() => {
         allerVers("des");
       };
     });
-    // Tests de compétence (accordéon sous chaque carac)
+    // Tests de compétence (accordéon sous chaque carac). Don Acteur :
+    // avantage sur Bluff/Représentation (tromperie/imitation, cf.
+    // Personnage.aActeur) — modeForce impose l'avantage sur CE jet précis,
+    // indépendamment du sélecteur global mode-d20.
+    const COMPETENCES_ACTEUR = ["Bluff", "Représentation"];
     zone.querySelectorAll(".competence-btn").forEach((el) => {
       el.onclick = (e) => {
         e.stopPropagation();
         const nom = el.dataset.competence;
         const code = el.dataset.carac;
         const bonus = perso.modCompetence(nom, code);
-        lancerTest(`Test de ${nom}`, bonus);
+        const modeForce = perso.aActeur() && COMPETENCES_ACTEUR.includes(nom) ? "avantage" : null;
+        lancerTest(`Test de ${nom}`, bonus, null, modeForce);
         allerVers("des");
       };
     });

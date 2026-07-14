@@ -566,6 +566,24 @@ class Personnage extends Entite {
     return !!(arme && armesHast.includes(arme.id));
   }
 
+  // A-t-il le don Mobile ? +1 case de déplacement (cf. Combat._deplacementMax
+  // côté combat.js) et jamais d'attaque d'opportunité en se désengageant
+  // (cf. htmlBlocDesengagement côté app.js, qui saute le jet de Force et
+  // déclare directement la réussite pour tout adversaire adjacent — simplifié
+  // par Thomas par rapport au texte d'origine, qui limitait l'immunité à la
+  // seule cible que le perso vient de frapper ce tour, non trackée ici).
+  aMobile() {
+    return (this.dons || []).includes("mobile");
+  }
+
+  // A-t-il le don Acteur ? Avantage (2d20, garde le plus haut, cf.
+  // lancerTest/modeForce côté app.js) sur les tests de Bluff et Représentation
+  // — correspondance avec "tromperie"/"imitation" du texte du don, qui ne
+  // sont pas des compétences nommées dans COMPETENCES_PAR_CARAC.
+  aActeur() {
+    return (this.dons || []).includes("acteur");
+  }
+
   /* ----- Équipement (slots) -----
      Seuls les items placés dans un slot comptent pour les stats de combat.
      inventaireListe (simple sac) n'a aucun effet mécanique. */
@@ -929,6 +947,8 @@ class Personnage extends Entite {
       capacitesRace: this.capacitesRace,
       capacitesRaceChoix: this.capacitesRaceChoix,
       voiesHorsProfil: this.voiesHorsProfil,
+      dons: this.dons,
+      donsChoix: this.donsChoix,
       portrait: this.portrait,
       pvMax: this.pvMax,
       pvActuel: this.pvActuel,
@@ -943,6 +963,9 @@ class Personnage extends Entite {
       corruptionCombat: this.corruptionCombat,
       corruptionMajeure: this.corruptionMajeure,
       corruptionSeuilFranchi: this.corruptionSeuilFranchi,
+      mortSucces: this.mortSucces,
+      mortEchecs: this.mortEchecs,
+      etatMort: this.etatMort,
     };
   }
   static depuisJSON(obj) {

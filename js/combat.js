@@ -82,10 +82,22 @@ const Combat = (() => {
     return `d20[${d20}]${mod >= 0 ? "+" : ""}${mod}`;
   }
 
+  // Déplacement max d'un tour pour ce perso — DEPLACEMENT_BASE + 1 avec le
+  // don Mobile (cf. _reinitialiserActionsEntree/estImmobile, qui doivent
+  // s'accorder sur la même valeur : Combat.estImmobile ne peut pas comparer
+  // à la constante DEPLACEMENT_BASE brute pour un perso Mobile, sous peine
+  // de ne jamais le détecter immobile).
+  function _deplacementMax(p) {
+    return DEPLACEMENT_BASE + (p && (p.dons || []).includes("mobile") ? 1 : 0);
+  }
+
   // Remet à zéro l'économie d'action d'une entrée PJ — appelé à sa création
   // (premier tour) et à chaque fois que tourSuivant() la rend active.
-  function _reinitialiserActionsEntree(e) {
-    e.deplacementRestant = DEPLACEMENT_BASE;
+  // `p` (objet perso brut, optionnel) : sert à _deplacementMax (don Mobile) ;
+  // les appelants sans perso sous la main (aucun aujourd'hui) retombent sur
+  // DEPLACEMENT_BASE.
+  function _reinitialiserActionsEntree(e, p) {
+    e.deplacementRestant = _deplacementMax(p);
     e.actionPrincipaleUtilisee = false;
     e.actionSecondaireUtilisee = false;
   }
@@ -129,7 +141,7 @@ const Combat = (() => {
       if (ids.has(persoId)) return;
       const nom = (persos[persoId] && persos[persoId].nom) || tok.nom;
       const entree = { id: persoId, type: "pj", nom, initiative: null, detail: null, koTourCourant: false };
-      _reinitialiserActionsEntree(entree);
+      _reinitialiserActionsEntree(entree, persos[persoId]);
       etat.ordre.push(entree);
       ids.add(persoId);
     });
@@ -248,9 +260,9 @@ const Combat = (() => {
 
     const actif = etat.ordre[etat.indexActuel];
     if (actif && actif.type === "pj") {
-      _reinitialiserActionsEntree(actif);
       const persos = App.chargerPersos();
       const p = persos[actif.id];
+      _reinitialiserActionsEntree(actif, p);
       if (p) {
         const { retires, degats } = Capacites.decompterEtatsDebutTour(p);
         App.sauverPersos(persos);
@@ -279,7 +291,8 @@ const Combat = (() => {
     const etat = _lire();
     if (!etat.actif) return false;
     const entree = etat.ordre.find((e) => e.id === persoId && e.type === "pj");
-    return !!(entree && entree.deplacementRestant === DEPLACEMENT_BASE);
+    if (!entree) return false;
+    return entree.deplacementRestant === _deplacementMax(App.chargerPersos()[persoId]);
   }
 
   function ajusterDeplacement(persoId, delta) {
@@ -327,7 +340,7 @@ const Combat = (() => {
     const etat = _lire();
     const entree = etat.ordre.find((e) => e.id === persoId && e.type === "pj");
     if (!entree) return;
-    _reinitialiserActionsEntree(entree);
+    _reinitialiserActionsEntree(entree, App.chargerPersos()[persoId]);
     _sauver(etat);
   }
 
