@@ -196,9 +196,18 @@ class Personnage extends Entite {
   // Bonus fixe accordé à une compétence nommée par un don ou un rang de voie
   // (ex. futur don "Expert en Intimidation" : perso.bonusCompetences["Intimidation"] = 2
   // posé côté app.js à l'acquisition, sur le même principe que donsChoix).
-  // Rien n'écrit dans ce champ aujourd'hui — chantier de préparation uniquement.
+  // Don Doué : +1 CHA "lors des conversations" sur Bluff/Intimidation/
+  // Représentation/Persuasion (les 4 compétences sociales de
+  // COMPETENCES_PAR_CARAC.CHA) — pas un bonus de caractéristique générique
+  // (n'affecte ni l'attaque magique CHA ni la DEF/initiative), donc modélisé
+  // ici plutôt que via bonusCaracDons. Fixe et sans choix : calculé à la
+  // volée comme bonusPvDons/bonusCaracDons, jamais écrit dans
+  // this.bonusCompetences (réservé aux futurs dons/voies à choix explicite).
   bonusCompetence(nom) {
-    return (this.bonusCompetences && this.bonusCompetences[nom]) || 0;
+    let bonus = (this.bonusCompetences && this.bonusCompetences[nom]) || 0;
+    const competencesDoue = ["Bluff", "Intimidation", "Représentation", "Persuasion"];
+    if ((this.dons || []).includes("doue") && competencesDoue.includes(nom)) bonus += 1;
+    return bonus;
   }
 
   // Modificateur total pour un test de compétence : mod. de la carac porteuse
