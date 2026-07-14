@@ -52,6 +52,12 @@ const App = (() => {
   // "alchimie:soin_seve:2", "alchimie:util:antidote") — un seul bouton MJ
   // "Nouveau jour" réinitialise les deux systèmes d'un coup.
   const STORAGE_ATELIER_TENTATIVES = "atelier:tentatives";
+  // Chance d'équipe (don Chanceux, cf. data/dons.js) : pool PARTAGÉ, visible et
+  // modifiable par tout le monde (contrairement à la Chance personnelle, propre
+  // à chaque perso ayant le don, cf. p.chancePersonnelle dans htmlBlocChance) —
+  // valeur de base nb_joueurs/2 tant que personne n'a encore ajusté le compteur,
+  // purement manuel ensuite (pas de reset automatique/périodique).
+  const STORAGE_CHANCE_EQUIPE = "chance:equipe";
   let livreOuvertId = null;  // id du livre ouvert dans l'étagère du perso (null = vue étagère)
   let livreOuvertPersoId = null; // id du perso auquel appartient le livre ouvert (le mien, ou celui d'un livre partagé avec moi)
   let role = null;           // "joueur" | "mj" | null (pas encore choisi)
@@ -573,6 +579,7 @@ const App = (() => {
       ${peutAgir ? htmlBlocActionsDuTour(id) : ""}
       ${htmlEtatsActifs(p)}
       ${htmlBlocInitiativeJoueur(id)}
+      ${htmlBlocChance(p, perso)}
       ${htmlBlocCorruption(p, perso)}
       ${htmlBlocIllusions(p, perso)}
       ${htmlBlocAmes(p, perso)}
@@ -2979,6 +2986,48 @@ const App = (() => {
     </div>`;
   }
 
+  // Chance d'équipe (don Chanceux) : pool partagé (SyncStore), valeur de base
+  // nb_joueurs/2 (arrondi à l'inférieur) tant que personne n'y a touché — dès
+  // le premier ajustement manuel, la valeur stockée fait foi indéfiniment (pas
+  // de recalcul ni de reset automatique).
+  function chanceEquipe() {
+    const v = SyncStore.get(STORAGE_CHANCE_EQUIPE);
+    if (typeof v === "number") return v;
+    return Math.floor(Object.keys(chargerPersos()).length / 2);
+  }
+  function ajusterChanceEquipe(delta) {
+    SyncStore.set(STORAGE_CHANCE_EQUIPE, Math.max(0, chanceEquipe() + delta));
+  }
+
+  // Bloc "Chance" : ligne "Chance d'équipe" toujours visible (pool partagé, à
+  // dépenser après concertation du groupe) + ligne "Chance personnelle"
+  // seulement pour un joueur ayant le don Chanceux (cf. Personnage.aChanceux) —
+  // ses 3 points à lui, dépensables sans discussion. Deux compteurs manuels
+  // indépendants, aucun lien automatique entre les deux.
+  function htmlBlocChance(p, perso) {
+    const equipe = chanceEquipe();
+    return `<div class="carte corruption-bloc">
+      <h3 style="margin-top:0;">🍀 Chance</h3>
+      <div class="corruption-ligne">
+        <span>Chance d'équipe (usage collectif, à discuter)</span>
+        <div class="corruption-control">
+          <button data-chance-equipe-moins title="Dépenser un point de chance d'équipe">−</button>
+          <span class="corruption-valeur">${equipe}</span>
+          <button data-chance-equipe-plus title="Ajouter un point de chance d'équipe">+</button>
+        </div>
+      </div>
+      ${perso.aChanceux() ? `
+      <div class="corruption-ligne">
+        <span>Chance personnelle (don Chanceux — dépensable sans concertation)</span>
+        <div class="corruption-control">
+          <button data-chance-perso-moins title="Dépenser un point de chance personnelle">−</button>
+          <span class="corruption-valeur">${p.chancePersonnelle || 0}</span>
+          <button data-chance-perso-plus title="Ajouter un point de chance personnelle">+</button>
+        </div>
+      </div>` : ""}
+    </div>`;
+  }
+
   // Bloc "Corruption" (Voie du chaos, homebrew) — visible seulement pour un
   // perso ayant pris au moins un rang dans sa Voie du chaos (opt-in, cf.
   // Personnage.aVoieChaosActive). Jauge de combat incrémentée automatiquement
@@ -3346,6 +3395,36 @@ const App = (() => {
         const pp = persos[id];
         if (!pp) return;
         pp.amesCapturees = Math.max(0, (pp.amesCapturees || 0) - 1);
+        sauverPersos(persos);
+        rafraichir();
+      };
+    });
+    // Chance d'équipe (cf. htmlBlocChance) : pool PARTAGÉ (SyncStore, pas
+    // persos) — le +/- ne touche jamais un perso en particulier.
+    racine.querySelectorAll("[data-chance-equipe-plus]").forEach((el) => {
+      el.onclick = () => { ajusterChanceEquipe(1); rafraichir(); };
+    });
+    racine.querySelectorAll("[data-chance-equipe-moins]").forEach((el) => {
+      el.onclick = () => { ajusterChanceEquipe(-1); rafraichir(); };
+    });
+    // Chance personnelle (don Chanceux) : propre à CE perso, même mécanique que
+    // illusionsActives/amesCapturees ci-dessus.
+    racine.querySelectorAll("[data-chance-perso-plus]").forEach((el) => {
+      el.onclick = () => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp) return;
+        pp.chancePersonnelle = (pp.chancePersonnelle || 0) + 1;
+        sauverPersos(persos);
+        rafraichir();
+      };
+    });
+    racine.querySelectorAll("[data-chance-perso-moins]").forEach((el) => {
+      el.onclick = () => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp) return;
+        pp.chancePersonnelle = Math.max(0, (pp.chancePersonnelle || 0) - 1);
         sauverPersos(persos);
         rafraichir();
       };
@@ -4199,6 +4278,7 @@ const App = (() => {
 
           ${htmlEtatsActifs(p)}
           ${htmlBlocInitiativeJoueur(id)}
+          ${htmlBlocChance(p, perso)}
           ${htmlBlocCorruption(p, perso)}
           ${htmlBlocIllusions(p, perso)}
           ${htmlBlocAmes(p, perso)}
@@ -5387,6 +5467,13 @@ const App = (() => {
         if (ficheSidebarActiveId && chargerPersos()[ficheSidebarActiveId]) rendreFicheSidebarBattlemap(ficheSidebarActiveId);
       });
     }
+
+    // Chance d'équipe (cf. htmlBlocChance) : pool partagé, re-rendu temps réel
+    // dès qu'un autre client (MJ ou joueur) l'ajuste.
+    SyncStore.subscribe(STORAGE_CHANCE_EQUIPE, () => {
+      if (ficheActiveId && chargerPersos()[ficheActiveId]) afficherFiche(ficheActiveId);
+      if (ficheSidebarActiveId && chargerPersos()[ficheSidebarActiveId]) rendreFicheSidebarBattlemap(ficheSidebarActiveId);
+    });
 
     // Loot — fermeture modals
     const btnFermerLoot = document.getElementById("btn-fermer-modal-loot");

@@ -494,6 +494,14 @@ class Personnage extends Entite {
     return this.classe === "necromancien" && !!this.capaciteEntree("Voie des âmes", 2);
   }
 
+  // A-t-il le don Chanceux ? Sert à n'afficher le compteur de Chance
+  // personnelle (fiche/mini-fiche battlemap) qu'aux joueurs l'ayant pris —
+  // distinct de la Chance d'équipe (partagée, visible de tous, cf. htmlBlocChance
+  // côté app.js), que ce don complète sans la remplacer.
+  aChanceux() {
+    return (this.dons || []).includes("chanceux");
+  }
+
   /* ----- Équipement (slots) -----
      Seuls les items placés dans un slot comptent pour les stats de combat.
      inventaireListe (simple sac) n'a aucun effet mécanique. */
