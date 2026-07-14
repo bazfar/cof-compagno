@@ -1548,8 +1548,8 @@ const CLASSES = {
 
           { rang: 2, nom: "Résistance arcanique", effet: "Passif : +2 aux jets de sauvegarde contre la magie. Bouclier arcanique passe à +3 DEF",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "+2 aux jets de sauvegarde contre la magie — bonus de test hors combat." },
-                { type: "special", note: "Modifie Bouclier arcanique (rang 1) : le bonus passe de +2 à +3 DEF, durée inchangée (2 tours)." } ] } },
+              effets: [ { type: "special", note: "+2 aux jets de sauvegarde contre la magie — l'app ne modélise aucun jet de sauvegarde côté PJ (les attaques de sorts ennemis se résolvent par comparaison à la DEF, jamais par un jet du joueur) : même limitation structurelle que race Élfe de sang 'Sang Divin'/Demi-Elfe 'Sang Mêlé', bonus de test hors combat non câblable ici." },
+                { type: "special", note: "Corrige un gap de donnée : modifie Bouclier arcanique (rang 1), le bonus passe de +2 à +3 DEF — n'était pas câblé (contrairement à Refrain lancinant/Intensité élémentaire, même principe). Ajouté dans Capacites.resoudreEffet (branche 'bonus'), identifié via voie+rang, durée inchangée (2 tours)." } ] } },
 
           { rang: 3, nom: "Dissipation (L)", effet: "Test d'INT opposé contre le lanceur d'un effet magique ciblant le Magicien ou un allié à 10 m : succès = annule l'effet",
             mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "allie", portee: 10, zone: null,
@@ -1558,8 +1558,7 @@ const CLASSES = {
 
           { rang: 4, nom: "Renvoi partiel", effet: "1x/combat, quand le Magicien encaisse un sort qui le ciblait directement (test d'attaque magique réussi contre lui), renvoie la moitié des dégâts (arrondi inf.) à l'attaquant, si celui-ci est en vue",
             mecanique: { type: "limitee", usage: { frequence: "1x/combat" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "degats", formule: "moitieRecue" },
-                { type: "special", note: "Déclenché uniquement par un sort ciblé ayant réussi son test d'attaque magique contre le Magicien — ne s'applique pas aux dégâts de zone/AoE. Nécessite que l'attaquant soit en ligne de vue." } ] } },
+              effets: [ { type: "special", note: "Corrige un bug de donnée : portait un effet 'degats' avec formule 'moitieRecue', un token que resoudreExpression() ne reconnaît pas (il tombe dans la branche 'terme non reconnu', compte pour 0) — le bouton Lancer semblait fonctionnel mais renvoyait toujours 0 dégâts. Passé en 'special' : calculer le montant réel exigerait de tracer l'attaquant et les dégâts encaissés à travers tout le pipeline (subirDegats ne connaît pas l'identité de l'attaquant), hors de portée d'un simple hook — à appliquer manuellement (moitié des dégâts du sort qui vient de toucher, arrondi inf.). Déclenché uniquement par un sort ciblé ayant réussi son test d'attaque magique contre le Magicien — ne s'applique pas aux dégâts de zone/AoE. Nécessite que l'attaquant soit en ligne de vue." } ] } },
 
           { rang: 5, nom: "Sanctuaire (L, 1x/scénario)", effet: "Pendant [2 + Mod. d'INT] tours : immunité totale aux dégâts magiques",
             mecanique: { type: "limitee", usage: { frequence: "1x/scenario" }, cible: "soi", portee: null, zone: null, jetOppose: null,

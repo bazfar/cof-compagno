@@ -470,6 +470,15 @@ const Capacites = (() => {
           && perso.rangMaxVoie("Voie du chant") >= 2 && effet.valeur === -2) {
         valeurBrute = -3;
       }
+      // Magicien — Voie de la magie protectrice, rang 2 "Résistance
+      // arcanique" (passive) : le bonus de Bouclier arcanique (rang 1) passe
+      // de +2 à +3 DEF dès le rang 2 acquis — même principe que Refrain
+      // lancinant ci-dessus. Gap corrigé : cette modification était
+      // documentée dans data/donnees.js mais jamais câblée.
+      if (voie === "Voie de la magie protectrice" && rang === 1 && effet.cible === "DEF" && perso.classe === "magicien"
+          && perso.rangMaxVoie("Voie de la magie protectrice") >= 2 && effet.valeur === 2) {
+        valeurBrute = 3;
+      }
       const { total: valeurResolue } = resoudreExpression(valeurBrute, { perso, rang });
       if (effet.duree === "permanente") {
         return `Bonus permanent (${effet.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}) — normalement fixé une fois pour toutes à l'acquisition de la capacité, pas à relancer ici.`;
