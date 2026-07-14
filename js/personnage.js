@@ -231,6 +231,18 @@ class Personnage extends Entite {
     if (this.classe === "guerrier" && this.estChoisie("Voie de l'élite", 2)) {
       bonus += this.niveau || 1;
     }
+    // Nain — "Résistance de Pierre" (rang 1 racial, acquis automatiquement à
+    // la sélection de la race) : +2 PV par niveau, rétroactif — même modèle
+    // que le don Robuste (bonusPvDons).
+    if (this.race === "nain" && this.estChoisieRace(1)) {
+      bonus += 2 * (this.niveau || 1);
+    }
+    // Demi-Orc — "Sang de Guerre" (rang 2 racial) : +2 PV par niveau,
+    // rétroactif, en plus du bonus de caractéristique déjà mécanisé
+    // (cf. bonusCaracCapacites, même rang).
+    if (this.race === "demi_orc" && this.estChoisieRace(2)) {
+      bonus += 2 * (this.niveau || 1);
+    }
     return bonus;
   }
   // Don Robuste : +2 PV par niveau, rétroactif sur tous les niveaux déjà acquis.

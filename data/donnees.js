@@ -1650,7 +1650,7 @@ const RACES = {
     rangs: [
       { rang: 1, nom: "Résistance de Pierre", effet: "+2 PV par niveau (rétroactif à la création). Résistance aux poisons : +4 aux jets de sauvegarde.",
         mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-          effets: [ { type: "special", note: "+2 PV par niveau (modifie le calcul de pvMax, pas un effet de combat ponctuel). +4 aux jets de sauvegarde contre les poisons — bonus de test hors combat." } ] } },
+          effets: [ { type: "special", note: "+2 PV par niveau déjà codé dans Personnage.bonusPvCapacites() (modifie pvMax, pas un effet ponctuel). +4 aux jets de sauvegarde contre les poisons — bonus de test hors combat." } ] } },
       { rang: 2, nom: "Vision des Profondeurs", effet: "Vision dans le noir total jusqu'à 18m. Tu sens instinctivement si un tunnel est stable ou sur le point de s'effondrer.",
         mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
           effets: [ { type: "special", note: "Vision dans le noir total jusqu'à 18m ; détection instinctive de la stabilité d'un tunnel — capacités de perception hors combat, non chiffrables." } ] } },
@@ -1707,7 +1707,7 @@ const RACES = {
       { rang: 2, nom: "Sang de Guerre", effet: "+1 en FOR ou CON (choix définitif). +2 PV par niveau (rétroactif).",
         mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
           effets: [ { type: "bonus", cible: "caracteristique", valeur: 1, duree: "permanente" },
-            { type: "special", note: "Choix entre FOR et CON déjà géré via RACE_CAPACITES_A_CHOIX côté app.js. +2 PV par niveau (modifie pvMax, pas un effet ponctuel) — PAS mécanisé, contrairement au bonus de caractéristique." } ] } },
+            { type: "special", note: "Choix entre FOR et CON déjà géré via RACE_CAPACITES_A_CHOIX côté app.js. +2 PV par niveau déjà codé dans Personnage.bonusPvCapacites() (modifie pvMax, pas un effet ponctuel)." } ] } },
       { rang: 3, nom: "Résistance Instinctive", effet: "Quand tu subis des dégâts qui t'amèneraient en dessous de la moitié de tes PV max, tu réduis ces dégâts de 3.",
         mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
           effets: [ { type: "special", note: "Réduction de 3 points de dégâts, active uniquement quand l'attaque ferait passer sous 50% PV max — réduction conditionnelle non modélisée par le schéma standard." } ] } },
