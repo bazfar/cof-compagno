@@ -232,6 +232,16 @@ class Personnage extends Entite {
     if (this.classe === "chasseur" && (nom === "Survie" || nom === "Discrétion")) {
       bonus += 2 * this.rangMaxVoie("Voie de la traque"); // Pisteur (pistage replié sur Survie)
     }
+    if (this.classe === "magicien" && ["Connaissances (arcanes)", "Connaissances (histoire)", "Connaissances (nature)"].includes(nom)) {
+      // Voie de la magie universitaire : +2/+4/+6/+8 par rang (remplacé, pas
+      // cumulé — rangMaxVoie donne directement la bonne valeur). "Érudition"
+      // repliée sur les 3 compétences Connaissances, pas Investigation ni
+      // Artisanat (plus proches de la pratique que du savoir livresque).
+      bonus += 2 * this.rangMaxVoie("Voie de la magie universitaire");
+    }
+    if (this.classe === "druide" && nom === "Dressage") {
+      bonus += 2 * this.rangMaxVoie("Voie des compagnons"); // Communication animale
+    }
 
     // Voies raciales à bonus de compétence fixe (cf. estChoisieRace).
     if (this.race === "elfe" && nom === "Perception" && this.estChoisieRace(1)) bonus += 2; // Sens Affinés
