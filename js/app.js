@@ -554,7 +554,7 @@ const App = (() => {
               <button id="bm-pv-plus">+</button>
             </div>
             <div class="barre-pv"><div class="rempli" id="bm-barre-pv-rempli"></div></div>
-            ${blocDegatsSubisHtml("bm-")}
+            ${blocDegatsSubisHtml("bm-", perso, p)}
           </div>
           <div class="stat-box"><div class="label">DEF</div><div class="valeur">${perso.calculerDEF()}</div></div>
           <div class="stat-box"><div class="label">Init.</div><div class="valeur">${signe(init)}</div></div>
@@ -923,7 +923,7 @@ const App = (() => {
         <div class="dock-tuiles">${objetTiles}</div>
       </div>` : ""}
       <div class="dock-zone dock-degats">
-        ${blocDegatsSubisHtml("dock-")}
+        ${blocDegatsSubisHtml("dock-", perso, p)}
       </div>
       <div class="cible-capacite-form" style="display:none;">
         <select class="cible-capacite-select"></select>
@@ -4550,7 +4550,7 @@ const App = (() => {
                   <button id="pv-plus">+</button>
                 </div>
                 <div class="barre-pv"><div class="rempli" id="barre-pv-rempli"></div></div>
-                ${blocDegatsSubisHtml("")}
+                ${blocDegatsSubisHtml("", perso, p)}
               </div>
               <div class="stat-box"><div class="label">DEF</div><div class="valeur">${perso.calculerDEF()}</div></div>
               <div class="stat-box"><div class="label">Initiative</div><div class="valeur">${signe(init)}</div></div>
@@ -4882,17 +4882,37 @@ const App = (() => {
   // ("physique"/"magique", cf. blocDegatsSubisHtml) détermine si le don
   // Maître des armures lourdes (-3 dégâts physiques, avant valeurArmure)
   // s'applique — sans effet sur des dégâts magiques.
-  function subirDegats(id, degatsBruts, typeDegats) {
+  // coeurMontagneArme (optionnel) : case cochée sur le formulaire (cf.
+  // blocDegatsSubisHtml/wireDegatsSubisGenerique) — Nain "Cœur de Montagne"
+  // (rang racial 5, 1x/jour) annule intégralement ces dégâts. Consomme
+  // l'usage du jour via Capacites.verifierUsage (même mécanique que les
+  // capacités à fréquence limitée, appelée à la volée puisque Cœur de
+  // Montagne ne passe jamais par Capacites.lancer()) ; si déjà utilisé
+  // aujourd'hui, prévient et applique les dégâts normalement.
+  function subirDegats(id, degatsBruts, typeDegats, coeurMontagneArme) {
     degatsBruts = parseInt(degatsBruts, 10);
     if (isNaN(degatsBruts) || degatsBruts < 0) { toast("Entre un nombre de dégâts valide."); return; }
     const persos = chargerPersos();
     const p = persos[id];
     if (!p) return;
     const perso = Personnage.depuisJSON(p);
+
+    let coeurMontagneActif = false;
+    if (coeurMontagneArme && perso.aCoeurDeMontagne() && typeof Capacites !== "undefined") {
+      const res = Capacites.verifierUsage(p, "race:nain:5", { usage: { frequence: "1x/jour" } });
+      if (res.ok) { res.appliquer(); coeurMontagneActif = true; }
+      else toast(res.raison);
+    }
+
     const reductionLourde = typeDegats === "physique" ? perso.bonusReductionLourdeDons() : 0;
     const apresLourde = Math.max(0, degatsBruts - reductionLourde);
     const reduction = perso.reductionDegats();
-    const degatsNets = Math.max(0, apresLourde - reduction);
+    let degatsNets = Math.max(0, apresLourde - reduction);
+    // Demi-Orc — Résistance Instinctive (rang racial 3) : -3 dégâts quand le
+    // résultat passerait sous la moitié des PV max.
+    degatsNets = Math.max(0, degatsNets - perso.reductionSeuilBasPv(degatsNets));
+    if (coeurMontagneActif) degatsNets = 0;
+
     const pvAvant = p.pvActuel;
     p.pvActuel = Math.max(0, p.pvActuel - degatsNets);
     const transition = _majEtatMourant(p, pvAvant);
@@ -4900,17 +4920,26 @@ const App = (() => {
     _syncPvAffichages(id, p);
     if (transition) _rerendreApresTransitionMourant(id);
     const reductionTotale = reductionLourde + reduction;
-    toast(reductionTotale > 0
-      ? `🛡 ${degatsBruts} dégâts subis → ${degatsNets} après réduction d'armure${reductionLourde > 0 ? " + don" : ""} (−${reductionTotale}).`
-      : `${degatsNets} dégâts subis.`);
+    toast(coeurMontagneActif
+      ? `🏔 Cœur de Montagne : ${degatsBruts} dégâts encaissés sans dommage.`
+      : reductionTotale > 0
+        ? `🛡 ${degatsBruts} dégâts subis → ${degatsNets} après réduction d'armure${reductionLourde > 0 ? " + don" : ""} (−${reductionTotale}).`
+        : `${degatsNets} dégâts subis.`);
   }
 
   // HTML + câblage du petit formulaire "Subir des dégâts", réutilisé par la
   // fiche complète, la mini-fiche battlemap et la table de combat (monstres) —
   // prefixe distingue les ids. Le sélecteur de type (physique/magique) sert
   // au don Maître des armures lourdes (cf. subirDegats) ; ignoré côté monstre,
-  // qui n'a pas cette mécanique.
-  function blocDegatsSubisHtml(prefixe) {
+  // qui n'a pas cette mécanique. `perso`/`p` (optionnels, absents côté
+  // monstre) : affiche la case Cœur de Montagne (Nain, rang racial 5,
+  // 1x/jour) si le perso l'a et ne l'a pas déjà utilisée aujourd'hui (cf.
+  // Capacites.verifierUsage, même mécanique que les capacités à fréquence
+  // limitée, appelée ici avec une mecanique construite à la volée puisque
+  // Cœur de Montagne ne passe jamais par Capacites.lancer()).
+  function blocDegatsSubisHtml(prefixe, perso, p) {
+    const coeurMontagneDispo = !!(perso && perso.aCoeurDeMontagne() && typeof Capacites !== "undefined" &&
+      Capacites.verifierUsage(p || {}, "race:nain:5", { usage: { frequence: "1x/jour" } }).ok);
     return `
       <button class="btn petit danger btn-toggle-degats" id="${prefixe}btn-toggle-degats" style="width:100%;">🛡 Subir des dégâts</button>
       <div class="degats-subis" id="${prefixe}degats-subis-form" style="display:none;">
@@ -4919,28 +4948,34 @@ const App = (() => {
           <option value="physique" selected>Physique</option>
           <option value="magique">Magique</option>
         </select>
+        ${coeurMontagneDispo ? `<label style="display:flex;align-items:center;gap:4px;font-size:0.78rem;"><input type="checkbox" id="${prefixe}coeur-montagne" /> 🏔 Cœur de Montagne (annule ces dégâts, 1x/jour)</label>` : ""}
         <button class="btn petit or" id="${prefixe}btn-appliquer-degats">Appliquer</button>
       </div>`;
   }
   function wireDegatsSubis(id, prefixe) {
-    wireDegatsSubisGenerique(prefixe, (val, typeDegats) => subirDegats(id, val, typeDegats));
+    wireDegatsSubisGenerique(prefixe, (val, typeDegats, coeurMontagneArme) => subirDegats(id, val, typeDegats, coeurMontagneArme));
   }
 
   // Câblage générique du petit formulaire "Subir des dégâts" (toggle + input +
   // bouton + Entrée) : `appliquer(valeurBrute, typeDegats)` porte la logique
   // propre à l'appelant (joueur via subirDegats, monstre de la table de
-  // combat, etc. — ce dernier ignore simplement le 2e argument).
+  // combat, etc. — ce dernier ignore simplement les arguments en trop).
   function wireDegatsSubisGenerique(prefixe, appliquer) {
     const btnToggle = document.getElementById(`${prefixe}btn-toggle-degats`);
     const form = document.getElementById(`${prefixe}degats-subis-form`);
     const champ = document.getElementById(`${prefixe}champ-degats-bruts`);
     const selType = document.getElementById(`${prefixe}type-degats-subis`);
+    const caseCoeurMontagne = document.getElementById(`${prefixe}coeur-montagne`);
     if (!btnToggle || !form || !champ) return;
     btnToggle.onclick = () => {
       form.style.display = form.style.display === "none" ? "flex" : "none";
       if (form.style.display === "flex") champ.focus();
     };
-    const appliquerEtVider = () => { appliquer(champ.value, selType ? selType.value : "physique"); champ.value = ""; };
+    const appliquerEtVider = () => {
+      appliquer(champ.value, selType ? selType.value : "physique", !!(caseCoeurMontagne && caseCoeurMontagne.checked));
+      champ.value = "";
+      if (caseCoeurMontagne) caseCoeurMontagne.checked = false;
+    };
     document.getElementById(`${prefixe}btn-appliquer-degats`).onclick = appliquerEtVider;
     champ.addEventListener("keydown", (e) => { if (e.key === "Enter") appliquerEtVider(); });
   }

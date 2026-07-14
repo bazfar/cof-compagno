@@ -724,6 +724,23 @@ class Personnage extends Entite {
   reductionDegats() {
     return this._itemsEquipesUniques().reduce((t, it) => t + (it.valeurArmure || 0), 0) + this.bonusReductionCapacites();
   }
+  // Demi-Orc — "Résistance Instinctive" (rang racial 3) : réduit de 3 les
+  // dégâts qui feraient passer sous la moitié des PV max — évalué sur
+  // degatsNets (après les autres réductions), pas sur le montant brut. Lu
+  // par subirDegats côté app.js, seul point d'application des dégâts à un PJ.
+  reductionSeuilBasPv(degatsNets) {
+    if (this.race === "demi_orc" && this.estChoisieRace(3) && (this.pvActuel - degatsNets) < this.pvMax / 2) {
+      return Math.min(3, degatsNets);
+    }
+    return 0;
+  }
+  // A-t-il "Cœur de Montagne" (Nain, rang racial 5) ? Le contrôle d'usage
+  // (1x/jour) se fait côté app.js sur l'objet perso brut via
+  // Capacites.verifierUsage — pas ici, pour ne pas faire dépendre
+  // Personnage de Capacites (sens inverse de la dépendance habituelle).
+  aCoeurDeMontagne() {
+    return this.race === "nain" && this.estChoisieRace(5);
+  }
   // Nécromancien "Symbiose du chaos" / Magicien "Esprit fissuré" (Voie du
   // chaos rang 4, dès CA 5+) : choix fixé à l'acquisition entre +2 réduction
   // de dégâts et +1d6 DM à tous les sorts (cf. CAPACITES_A_CHOIX côté

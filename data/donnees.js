@@ -1690,7 +1690,7 @@ const RACES = {
             { type: "special", note: "+2 Artisanat déjà codé dans Personnage.bonusCompetence('Artisanat') (géologie/mécanismes repliées dessus). Estimation exacte de valeur au regard : non chiffrable." } ] } },
       { rang: 5, nom: "Cœur de Montagne", effet: "1x/jour, tu encaisses sans dommage les dégâts d'une seule attaque (annonce après que les dés sont lancés mais avant application).",
         mecanique: { type: "limitee", usage: { frequence: "1x/jour" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-          effets: [ { type: "special", note: "Annule intégralement les dégâts d'une attaque après le jet mais avant application — mécanique de négation totale, non modélisée par degats/soin/etat/bonus." } ] } },
+          effets: [ { type: "special", note: "Déjà codé : Personnage.aCoeurDeMontagne() (verrou race+rang) + Capacites.verifierUsage/appliquer côté app.js (clé 'race:nain:5', 1x/jour) — case à cocher sur le formulaire 'Subir des dégâts', n'apparaît que si l'usage est encore disponible ; annule intégralement les dégâts saisis avant application." } ] } },
     ],
   },
 
@@ -1740,7 +1740,8 @@ const RACES = {
             { type: "special", note: "Choix entre FOR et CON déjà géré via RACE_CAPACITES_A_CHOIX côté app.js. +2 PV par niveau déjà codé dans Personnage.bonusPvCapacites() (modifie pvMax, pas un effet ponctuel)." } ] } },
       { rang: 3, nom: "Résistance Instinctive", effet: "Quand tu subis des dégâts qui t'amèneraient en dessous de la moitié de tes PV max, tu réduis ces dégâts de 3.",
         mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-          effets: [ { type: "special", note: "Réduction de 3 points de dégâts, active uniquement quand l'attaque ferait passer sous 50% PV max — réduction conditionnelle non modélisée par le schéma standard." } ] } },
+          effets: [ { type: "bonus", cible: "reduction_degats", valeur: 3, duree: "permanente" },
+            { type: "special", note: "Déjà codé dans Personnage.reductionSeuilBasPv(degatsNets), lu par subirDegats côté app.js : réduit de 3 (dans la limite des dégâts nets) uniquement quand le résultat ferait passer sous 50% des PV max." } ] } },
       { rang: 4, nom: "Frénésie Contenue", effet: "1x/combat, tu peux déclencher une rage : +2 aux jets d'attaque et de dégâts pendant 3 tours. À la fin, test CON DD 12 ou tu es Fatigué (-2 à tout) jusqu'au prochain repos.",
         mecanique: { type: "limitee", usage: { frequence: "1x/combat" }, cible: "soi", portee: null, zone: null, jetOppose: null,
           effets: [ { type: "bonus", cible: "attaque", valeur: 2, duree: "3" },
