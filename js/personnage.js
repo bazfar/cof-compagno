@@ -127,7 +127,7 @@ class Personnage extends Entite {
 
   /* ----- Caractéristiques ----- */
   mod(code) {
-    return Entite.modCarac(this.caracs[code] + this.bonusCaracCapacites(code) + this.bonusCaracDons(code));
+    return Entite.modCarac(this.caracs[code] + this.bonusCaracCapacites(code) + this.bonusCaracDons(code) + this.bonusTemporaire(code));
   }
 
   // Bonus permanent à une caractéristique de base, accordé par un choix fixé
@@ -260,13 +260,14 @@ class Personnage extends Entite {
   }
 
   // Somme des bonus temporaires actuellement actifs (sorts/capacités posés via
-  // js/capacites.js — Bouclier arcanique, Faveur sombre, etc. — cf. etatsActifs)
-  // pour une cible donnée ("DEF", "attaque", "initiative"). Distinct des bonus
-  // permanents hardcodés ci-dessous (bonusDefCapacites, etc.), qui restent la
-  // seule source pour les bonus fixés à l'acquisition d'une capacité (les
-  // entrées "permanente" ne sont jamais poussées dans etatsActifs, cf.
-  // Capacites.lancer). Les bonus "caracteristique" (cible non précisée par le
-  // schéma de données) ne sont pas repris ici, cf. bonusCaracCapacites.
+  // js/capacites.js — Bouclier arcanique, Faveur sombre, Voie de l'alcoolisme,
+  // Toucher flétrissant, etc. — cf. etatsActifs) pour une cible donnée : "DEF",
+  // "attaque", "initiative", ou un code de caractéristique ("FOR".."CHA", lu
+  // par mod() ci-dessus — cf. effet.cible: "choix" côté données, résolu à
+  // l'activation par Capacites.lancer). Distinct des bonus permanents
+  // hardcodés ci-dessous (bonusDefCapacites, etc.), qui restent la seule
+  // source pour les bonus fixés à l'acquisition d'une capacité (les entrées
+  // "permanente" ne sont jamais poussées dans etatsActifs, cf. Capacites.lancer).
   bonusTemporaire(cible) {
     return (this.etatsActifs || []).reduce((total, e) => {
       if (e.bonus && e.bonus.cible === cible && typeof e.bonus.valeur === "number") return total + e.bonus.valeur;

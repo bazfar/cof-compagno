@@ -3139,6 +3139,7 @@ const App = (() => {
         source: lancerCapaciteEnAttente.source,
         mecanique: lancerCapaciteEnAttente.mecanique,
         cibleId,
+        choixEffet: lancerCapaciteEnAttente.choixEffet,
       });
       fermerPickerCibleCapacite();
       toast(res.messages.join(" · "));
@@ -3189,18 +3190,36 @@ const App = (() => {
           source.code = d.lancerCode;
         }
         if (!mecanique) { toast("Capacité introuvable."); return; }
-        if (mecanique.cible === "allie" || mecanique.cible === "ennemi") {
-          lancerCapaciteEnAttente = { source, mecanique };
-          const cibles = Capacites.listeCibles(id).filter((cc) =>
-            mecanique.cible === "allie" ? cc.genre === "perso" : cc.genre === "monstre"
-          );
-          pickerSelect.innerHTML = cibles.length
-            ? cibles.map((cc) => `<option value="${cc.id}">${echapper(cc.nom)}${cc.soi ? " (soi-même)" : ""}</option>`).join("")
-            : `<option value="">Aucune cible disponible</option>`;
-          pickerForme.style.display = "flex";
+
+        function procederCiblage() {
+          if (mecanique.cible === "allie" || mecanique.cible === "ennemi") {
+            const cibles = Capacites.listeCibles(id).filter((cc) =>
+              mecanique.cible === "allie" ? cc.genre === "perso" : cc.genre === "monstre"
+            );
+            pickerSelect.innerHTML = cibles.length
+              ? cibles.map((cc) => `<option value="${cc.id}">${echapper(cc.nom)}${cc.soi ? " (soi-même)" : ""}</option>`).join("")
+              : `<option value="">Aucune cible disponible</option>`;
+            pickerForme.style.display = "flex";
+          } else {
+            resoudreCapaciteEtRafraichir(null);
+          }
+        }
+
+        lancerCapaciteEnAttente = { source, mecanique };
+        // Effet à choix d'activation (ex. Barde Voie de l'alcoolisme : quelle
+        // caractéristique boostée ; Nécromancien Toucher flétrissant : attaque
+        // ou DEF pénalisée) — distinct du choix fixé à l'acquisition
+        // (CAPACITES_A_CHOIX/RACE_CAPACITES_A_CHOIX), redemandé à chaque lancer
+        // puisqu'il peut varier d'une utilisation à l'autre. Réutilise le même
+        // modal générique que les choix d'acquisition (ouvrirModalChoixCapacite).
+        const effetChoix = (mecanique.effets || []).find((e) => e.cible === "choix" && e.choix);
+        if (effetChoix) {
+          ouvrirModalChoixCapacite(effetChoix.choix, (valeurChoisie) => {
+            lancerCapaciteEnAttente.choixEffet = valeurChoisie;
+            procederCiblage();
+          });
         } else {
-          lancerCapaciteEnAttente = { source, mecanique };
-          resoudreCapaciteEtRafraichir(null);
+          procederCiblage();
         }
       };
     });

@@ -384,8 +384,13 @@ const Capacites = (() => {
   // capacités d'attaque vs DEF, jusqu'à confirmation que l'attaque touche.
   const TYPES_EFFETS_DIFFERES = ["degats", "etat"];
 
-  // { persoId, source, mecanique, cibleId? }
+  // { persoId, source, mecanique, cibleId?, choixEffet? }
   // source : { origine: "classe"|"race"|"variante", cle, voie?, rang?, code?, nomCap }
+  // choixEffet : valeur choisie par le joueur à l'activation pour un effet
+  // dont effet.cible === "choix" (ex. Barde Voie de l'alcoolisme : quelle
+  // caractéristique ; Nécromancien Toucher flétrissant : "attaque" ou "DEF")
+  // — récoltée en amont par le modal générique côté app.js (cf.
+  // ouvrirModalChoixCapacite, réutilisé pour l'activation), pas mémorisée ici.
   //
   // Pour une capacité dont jetOppose.caracDefenseur === "DEF" (attaque de
   // contact/distance/magique ciblant la DEF adverse), le jet d'attaque est
@@ -402,9 +407,12 @@ const Capacites = (() => {
   // le malus de DEF à la réussite). Comme seuls degats/etat sont conditionnés
   // à la touche, ces capacités continuent d'appliquer leur bonus même sur un
   // raté — à traiter séparément si besoin.
-  function lancer({ persoId, source, mecanique, cibleId }) {
+  function lancer({ persoId, source, mecanique, cibleId, choixEffet }) {
     if (!mecanique || mecanique.type === "passive") {
       return { ok: false, messages: ["Cette capacité est passive : rien à lancer."] };
+    }
+    if (!choixEffet && (mecanique.effets || []).some((e) => e.cible === "choix")) {
+      return { ok: false, messages: ["Cette capacité demande un choix à l'activation — relance-la depuis la fiche."] };
     }
 
     const persos = App.chargerPersos();
@@ -480,7 +488,11 @@ const Capacites = (() => {
       // Différé : résolu plus tard par resoudreDegatsEnAttente(), une fois la
       // touche confirmée (cf. resolutionDegats ci-dessus).
       if (attaqueVsDef && TYPES_EFFETS_DIFFERES.includes(effet.type)) return;
-      const msg = resoudreEffet(effet, { perso, rang: source.rang, cible, libelle, persos });
+      // effet.cible === "choix" : substitue la vraie cible choisie à l'activation
+      // (copie superficielle — ne jamais muter l'objet effet d'origine, partagé
+      // par tous les personnages via data/donnees.js).
+      const effetResolu = (effet.cible === "choix" && choixEffet) ? Object.assign({}, effet, { cible: choixEffet }) : effet;
+      const msg = resoudreEffet(effetResolu, { perso, rang: source.rang, cible, libelle, persos });
       if (msg) messages.push(msg);
     });
 
