@@ -324,6 +324,67 @@ const App = (() => {
     return a + (b.startsWith("-") ? "" : "+") + b;
   }
 
+  // État "dégâts en attente" des attaques rapides à l'arme (Contact/Distance/
+  // Magique, boutons data-bm-attaque/data-bm-degats, sidebar ET dock — cf.
+  // _resoudreAttaqueRapide/_etatDegatsRapide) — état de MODULE par type
+  // d'attaque (pas une seule variable globale : cliquer "Contact" puis
+  // "Distance" sans lancer les dégâts du premier ne doit pas écraser le
+  // contexte du second), et pas une closure locale au rendu (sidebar/dock
+  // sont re-rendus à chaque Combat.onChange, ce qui recréerait une closure
+  // vierge — même contrainte que capaciteDegatsEnAttente). Sidebar et dock
+  // partagent ce même état : un clic dans l'une des deux zones met à jour
+  // l'autre automatiquement (rendreFicheSidebarBattlemap re-rend toujours
+  // aussi le dock, cf. sa dernière ligne).
+  let attaquesRapidesEnAttente = { contact: null, distance: null, magique: null };
+
+  // Résout une attaque rapide à l'arme : lance le jet (réutilise lancerTest,
+  // ne duplique jamais le tirage de dés/le journal). Si `cibleId` (id de
+  // TOKEN dd2vtt, cf. _cibleDistanceId/_ciblesPortee — PAS un id de
+  // personnage) est fourni, détermine touché/raté/critique/échec critique
+  // selon les mêmes règles que le moteur de capacités (cf. Capacites.lancer,
+  // js/capacites.js) : 1 naturel = toujours raté, seuil de critique (déjà
+  // intégré au `critMin` passé par l'appelant, cf. Personnage.critMinAttaque)
+  // = toujours touché, sinon touché si le total >= DEF de la cible. Sans
+  // cible (ou DEF cible inconnue), `touche` vaut null : ne bloque jamais,
+  // comportement d'avant ce chantier (jet brut, bouton dégâts disponible).
+  // Un token PJ n'a pas de champ `def` direct (contrairement à un token
+  // monstre) : il faut recalculer Personnage.calculerDEF() via son `ref`
+  // ("pj-"+persoId), cf. _ciblesPortee/ajouterMonPersoBattlemap.
+  function _resoudreAttaqueRapide(label, bonus, critMin, cibleId) {
+    const jet = lancerTest(label, bonus, critMin);
+    let defCible = null;
+    if (cibleId && typeof Carte !== "undefined") {
+      const monstre = (Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : []).find((t) => t.id === cibleId);
+      if (monstre) {
+        defCible = typeof monstre.def === "number" ? monstre.def : null;
+      } else {
+        const pjTok = (Carte.listeTokensJoueursCombat ? Carte.listeTokensJoueursCombat() : []).find((t) => t.id === cibleId);
+        if (pjTok && pjTok.ref && pjTok.ref.startsWith("pj-")) {
+          const cibleP = chargerPersos()[pjTok.ref.slice(3)];
+          if (cibleP) defCible = Personnage.depuisJSON(cibleP).calculerDEF();
+        }
+      }
+    }
+    let touche = null;
+    if (cibleId) {
+      if (jet.echec) touche = false;
+      else if (jet.crit) touche = true;
+      else if (defCible !== null) touche = jet.total >= defCible;
+    }
+    return { touche, critique: jet.crit, echecCritique: jet.echec, totalAttaque: jet.total, defCible };
+  }
+
+  // Visibilité du bouton "Dégâts" et doublement des dés pour un type
+  // d'attaque donné, pour CE personnage (cf. attaquesRapidesEnAttente) —
+  // visible=false SEULEMENT si l'attaque a explicitement raté (touche ===
+  // false) ; jamais si aucune cible n'a été sélectionnée ou si sa DEF est
+  // inconnue (touche === null, comportement d'avant ce chantier).
+  function _etatDegatsRapide(persoId, type) {
+    const e = attaquesRapidesEnAttente[type];
+    if (!e || e.persoId !== persoId) return { visible: true, critique: false };
+    return { visible: e.touche !== false, critique: e.touche === true && !!e.critique };
+  }
+
   // Mini-fiche affichée en permanence à gauche de la battlemap (joueur
   // uniquement) : suit le personnage sélectionné dans "Mon personnage",
   // le même que celui dont le jeton est posé sur la scène.
@@ -387,6 +448,12 @@ const App = (() => {
     let dmgDistance = formuleDegats(armeDistance);
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
+    // Visibilité/doublement des boutons "Dégâts" selon la dernière attaque de
+    // ce type (cf. _etatDegatsRapide/_resoudreAttaqueRapide) — masqué
+    // seulement sur un raté avéré (cible sélectionnée + DEF connue).
+    const etatDegC = _etatDegatsRapide(id, "contact");
+    const etatDegD = _etatDegatsRapide(id, "distance");
+    const etatDegM = _etatDegatsRapide(id, "magique");
     // État Mourant(e)/Mort (cf. rendreDockCombat) : plus aucune action tant que
     // peutAgir est faux, seul le jet de mort reste disponible (à son tour).
     const pv = p.pvActuel || 0;
@@ -490,11 +557,11 @@ const App = (() => {
           ${attMagique !== null ? `<button class="btn petit" data-bm-attaque="magique" data-bonus="${attMagique}">✨ Magique (${signe(attMagique)})</button>` : ""}
         </div>
         ${attDistance === null ? `<p class="aide" style="font-size:0.72rem;margin:6px 0 0;">Équipe un arc ou une arbalète pour débloquer l'attaque à distance.</p>` : ""}
-        ${dmgContact || dmgDistance || dmgMagique ? `
+        ${(dmgContact && etatDegC.visible) || (dmgDistance && etatDegD.visible) || (dmgMagique && etatDegM.visible) ? `
         <div class="barre-actions" style="margin-top:6px;">
-          ${dmgContact ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}">🎲 Dégâts Contact (${dmgContact})</button>` : ""}
-          ${dmgDistance ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}" title="${echapper(armeDistance ? armeDistance.nom : "")}">🎲 Dégâts Distance (${dmgDistance})</button>` : ""}
-          ${dmgMagique ? `<button class="btn petit secondaire" data-bm-degats="${dmgMagique}">🎲 Dégâts Magique (${dmgMagique})</button>` : ""}
+          ${dmgContact && etatDegC.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}" data-bm-critique="${etatDegC.critique ? "1" : "0"}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}">🎲 Dégâts Contact (${dmgContact})${etatDegC.critique ? " CRIT" : ""}</button>` : ""}
+          ${dmgDistance && etatDegD.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}" data-bm-critique="${etatDegD.critique ? "1" : "0"}" title="${echapper(armeDistance ? armeDistance.nom : "")}">🎲 Dégâts Distance (${dmgDistance})${etatDegD.critique ? " CRIT" : ""}</button>` : ""}
+          ${dmgMagique && etatDegM.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgMagique}" data-bm-critique="${etatDegM.critique ? "1" : "0"}">🎲 Dégâts Magique (${dmgMagique})${etatDegM.critique ? " CRIT" : ""}</button>` : ""}
         </div>` : ""}
         ${porteeHtml}
       </div>`}
@@ -527,19 +594,35 @@ const App = (() => {
     // Jet d'attaque sans quitter la battlemap — l'overlay de jet est visible
     // sur tous les onglets (cf. #overlay-jet), pas besoin de rejoindre "Dés".
     // Consomme l'action principale du tour (no-op hors combat, cf. Combat.utiliserActionPrincipale).
+    // Réutilise la cible du vérificateur de portée SEULEMENT si son type
+    // correspond à cette attaque (sinon elle n'a pas été validée à portée
+    // pour CE type, cf. _typeAttaquePortee/_cibleDistanceId) — sans cible,
+    // touche vaut null et le bouton de dégâts reste disponible (cf.
+    // _resoudreAttaqueRapide).
     sidebar.querySelectorAll("[data-bm-attaque]").forEach((el) => {
       el.onclick = () => {
+        const type = el.dataset.bmAttaque;
         const bonus = parseInt(el.dataset.bonus, 10);
-        lancerTest(`Attaque ${el.dataset.bmAttaque}`, bonus, perso.critMinAttaque(el.dataset.bmAttaque));
+        const cibleId = (_typeAttaquePortee === type) ? _cibleDistanceId : null;
+        const resolution = _resoudreAttaqueRapide(`Attaque ${type}`, bonus, perso.critMinAttaque(type), cibleId);
+        attaquesRapidesEnAttente[type] = Object.assign({ persoId: id }, resolution);
+        if (cibleId) {
+          toast(resolution.echecCritique ? "1 naturel — échec critique automatique."
+            : resolution.critique ? `CRITIQUE !${resolution.defCible !== null ? ` (DEF cible ${resolution.defCible})` : ""}`
+            : resolution.defCible === null ? "DEF de la cible inconnue — à comparer manuellement."
+            : (resolution.touche ? `Touché ! (DEF ${resolution.defCible})` : `Raté (DEF ${resolution.defCible}).`));
+        }
         if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
         rendreFicheSidebarBattlemap(id);
       };
     });
-    // Dégâts de l'arme équipée (formule figée, pas de bonus au jet ici)
+    // Dégâts de l'arme équipée (formule figée, pas de bonus au jet ici) —
+    // data-bm-critique="1" double les dés si la dernière attaque de ce type
+    // était un critique (cf. etatDegC/D/M, lancerFormule).
     sidebar.querySelectorAll("[data-bm-degats]").forEach((el) => {
       el.onclick = () => {
         const formule = el.dataset.bmDegats;
-        lancerFormule(formule, `${p.nom} — Dégâts (${formule})`);
+        lancerFormule(formule, `${p.nom} — Dégâts (${formule})`, el.dataset.bmCritique === "1");
       };
     });
     // Vérificateur de portée : changer de type d'attaque ou de cible re-rend
@@ -680,6 +763,12 @@ const App = (() => {
     let dmgDistance = armeDistance ? formuleDegats(armeDistance) : null;
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
+    // Visibilité/doublement des tuiles "Dégâts" — même état de module que la
+    // sidebar (cf. _etatDegatsRapide/attaquesRapidesEnAttente) : les deux
+    // zones restent synchronisées puisqu'un clic dans l'une re-rend l'autre.
+    const etatDegC = _etatDegatsRapide(id, "contact");
+    const etatDegD = _etatDegatsRapide(id, "distance");
+    const etatDegM = _etatDegatsRapide(id, "magique");
 
     const pv = p.pvActuel || 0, pvMax = p.pvMax || 1;
     const pct = Math.max(0, Math.min(100, Math.round((pv / pvMax) * 100)));
@@ -710,9 +799,9 @@ const App = (() => {
     ];
     if (attDistance !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="distance" data-bonus="${attDistance}"><span class="dock-ic">🏹</span><span class="dock-lbl">Distance ${signe(attDistance)}</span></button>`);
     if (attMagique !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="magique" data-bonus="${attMagique}"><span class="dock-ic">✨</span><span class="dock-lbl">Magique ${signe(attMagique)}</span></button>`);
-    if (dmgContact) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}</span></button>`);
-    if (dmgDistance) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgDistance}" title="${echapper(armeDistance.nom)}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgDistance}</span></button>`);
-    if (dmgMagique) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgMagique}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgMagique}</span></button>`);
+    if (dmgContact && etatDegC.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}" data-bm-critique="${etatDegC.critique ? "1" : "0"}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}${etatDegC.critique ? " CRIT" : ""}</span></button>`);
+    if (dmgDistance && etatDegD.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgDistance}" data-bm-critique="${etatDegD.critique ? "1" : "0"}" title="${echapper(armeDistance.nom)}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgDistance}${etatDegD.critique ? " CRIT" : ""}</span></button>`);
+    if (dmgMagique && etatDegM.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgMagique}" data-bm-critique="${etatDegM.critique ? "1" : "0"}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgMagique}${etatDegM.critique ? " CRIT" : ""}</span></button>`);
     // Bascules Frappe puissante / Tir de précision : -2 attaque / +4 dégâts
     // tant qu'actives, visibles seulement si le don est acquis ET l'arme requise
     // équipée (cf. peutFrappePuissante/peutTirPrecision ci-dessus).
@@ -812,15 +901,34 @@ const App = (() => {
       ${htmlDegatsCapaciteEnAttente(id)}
     </div>`;
 
+    // Le dock n'a pas son propre sélecteur de portée/cible (contrairement à
+    // la sidebar, cf. porteeHtml dans rendreFicheSidebarBattlemap) — réutilise
+    // tel quel _typeAttaquePortee/_cibleDistanceId (état de module partagé) :
+    // un joueur mobile pur (dock seul, pas de sidebar visible) n'a donc pas
+    // de gating (touche reste null, bouton dégâts toujours disponible), ce
+    // qui reste le comportement d'avant ce chantier plutôt qu'un blocage.
+    // Dupliquer le petit bloc porteeHtml dans le dock demanderait de le
+    // factoriser en fonction commune ; laissé pour un chantier ultérieur si
+    // Thomas le demande.
     dock.querySelectorAll("[data-bm-attaque]").forEach((el) => {
       el.onclick = () => {
-        lancerTest(`Attaque ${el.dataset.bmAttaque}`, parseInt(el.dataset.bonus, 10), perso.critMinAttaque(el.dataset.bmAttaque));
+        const type = el.dataset.bmAttaque;
+        const bonus = parseInt(el.dataset.bonus, 10);
+        const cibleId = (_typeAttaquePortee === type) ? _cibleDistanceId : null;
+        const resolution = _resoudreAttaqueRapide(`Attaque ${type}`, bonus, perso.critMinAttaque(type), cibleId);
+        attaquesRapidesEnAttente[type] = Object.assign({ persoId: id }, resolution);
+        if (cibleId) {
+          toast(resolution.echecCritique ? "1 naturel — échec critique automatique."
+            : resolution.critique ? `CRITIQUE !${resolution.defCible !== null ? ` (DEF cible ${resolution.defCible})` : ""}`
+            : resolution.defCible === null ? "DEF de la cible inconnue — à comparer manuellement."
+            : (resolution.touche ? `Touché ! (DEF ${resolution.defCible})` : `Raté (DEF ${resolution.defCible}).`));
+        }
         if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
         rendreFicheSidebarBattlemap(id);
       };
     });
     dock.querySelectorAll("[data-bm-degats]").forEach((el) => {
-      el.onclick = () => lancerFormule(el.dataset.bmDegats, `${p.nom} — Dégâts (${el.dataset.bmDegats})`);
+      el.onclick = () => lancerFormule(el.dataset.bmDegats, `${p.nom} — Dégâts (${el.dataset.bmDegats})`, el.dataset.bmCritique === "1");
     });
     dock.querySelectorAll("[data-toggle-don]").forEach((el) => {
       el.onclick = () => {
@@ -4493,6 +4601,9 @@ const App = (() => {
   // Test = 1d20 + bonus, gère avantage/désavantage. critMin : seuil de
   // critique (20 par défaut, abaissé par certaines capacités — cf.
   // Personnage.critMinAttaque, ex. Guerrier "Précision létale" à 19).
+  // Renvoie { total, de, crit, echec } — lu par _resoudreAttaqueRapide pour
+  // gater le bouton de dégâts sans dupliquer le tirage de dés/le journal ;
+  // les appelants historiques (ne regardant pas le retour) ne sont pas affectés.
   function lancerTest(label, bonus, critMin) {
     bonus = bonus || 0;
     critMin = critMin || 20;
@@ -4506,6 +4617,7 @@ const App = (() => {
     const detail = `${detailDes} ${signe(bonus)}`;
     afficherResultat(label, total, detail, crit, echec);
     ajouterHisto(label + " " + signe(bonus), total, crit, echec, detail);
+    return { total, de, crit, echec };
   }
 
   function lancerDeSimple(faces) {
@@ -4521,7 +4633,13 @@ const App = (() => {
   // armeCourteSecondaire). label : texte affiché dans le résultat/journal à
   // la place de la formule brute (ex. attaques de monstre, où "1d4" seul ne
   // dit pas de qui/quoi il s'agit) — par défaut la formule elle-même.
-  function lancerFormule(formule, label) {
+  // `critique` (cf. liaison attaque->dégâts, _resoudreAttaqueRapide) : double
+  // le NOMBRE de dés de chaque terme "NdF" avant de les lancer (1d8 devient
+  // 2d8) plutôt que de relancer une seconde fois et additionner —
+  // mathématiquement équivalent, un seul tirage, plus simple à intégrer ici
+  // que la variante de js/capacites.js (qui, elle, relance deux fois pour
+  // garder le détail "1d8[x]+1d8[y]" affiché par le moteur de capacités).
+  function lancerFormule(formule, label, critique) {
     formule = (formule || "").trim().toLowerCase().replace(/\s/g, "");
     if (!formule) { toast("Entre une formule, ex. 2d6+3"); return; }
     const termes = formule.match(/[+-]?[^+-]+/g) || [];
@@ -4539,14 +4657,15 @@ const App = (() => {
       const de = /^(\d*)d(\d+)$/.exec(brut);
       if (de) {
         nbTermesDe++;
-        const nb = parseInt(de[1] || "1", 10);
+        const nbBase = parseInt(de[1] || "1", 10);
         const faces = parseInt(de[2], 10);
+        const nb = critique ? nbBase * 2 : nbBase;
         if (nb < 1 || nb > 50 || faces < 2 || faces > 1000) { horsLimites = true; return; }
         const jets = [];
         for (let i = 0; i < nb; i++) jets.push(lancerDe(faces));
         const somme = jets.reduce((a, b) => a + b, 0);
         total += negatif ? -somme : somme;
-        detailParts.push(`${negatif ? "-" : detailParts.length ? "+" : ""}${brut}[${jets.join(",")}]`);
+        detailParts.push(`${negatif ? "-" : detailParts.length ? "+" : ""}${nb}d${faces}[${jets.join(",")}]`);
         if (nb === 1 && faces === 20) jetD20Unique = jets[0];
       } else {
         const v = parseInt(brut, 10);
