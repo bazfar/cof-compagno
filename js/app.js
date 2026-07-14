@@ -987,8 +987,18 @@ const App = (() => {
     };
     // Jets de caractéristique (d20 + mod) — sans quitter la battlemap
     // (l'overlay de jet est visible sur tous les onglets, cf. #overlay-jet).
+    // Avantage automatique (cf. même logique dans afficherFiche, chantier
+    // groupe 7 initialement oublié ici — le dock a son propre wiring
+    // dupliqué du [data-test] de la fiche complète) : Endurance de fer/
+    // résistance mentale. Les cases "avantage 1x/jour" (INT héroïque/Double
+    // Héritage) restent réservées à la fiche complète, pas dupliquées ici.
     dock.querySelectorAll("[data-test]").forEach((el) => {
-      el.onclick = () => lancerTest(`Test de ${el.dataset.test}`, mods[el.dataset.test]);
+      el.onclick = () => {
+        const code = el.dataset.test;
+        const modeForce = (code === "CON" && perso.aEnduranceDeFer()) || (code === "SAG" && perso.aAvantageResistanceMentale())
+          ? "avantage" : null;
+        lancerTest(`Test de ${code}`, mods[code], null, modeForce);
+      };
     });
     // Objets : boire/utiliser un consommable de soin sur soi (réutilise
     // utiliserConsommable, qui marque aussi l'action secondaire consommée),
@@ -4513,6 +4523,16 @@ const App = (() => {
     const perso = Personnage.depuisJSON(p); // modèle OOP : règles centralisées
     const mods = {};
     CARACS.forEach((cc) => (mods[cc.code] = perso.mod(cc.code)));
+    // Magicien "INT héroïque" (Voie de la magie universitaire rang 5) et
+    // Demi-Elfe "Double Héritage" (race rang 5) : 1x/jour, avantage sur le
+    // PROCHAIN test concerné (INT pour le premier ; Perception/Social/INT
+    // pour le second) — case à cocher "armée" avant de cliquer un bouton de
+    // test, consommée à ce clic (cf. wiring plus bas), même mécanique
+    // d'usage que Cœur de Montagne (Capacites.verifierUsage).
+    const intHeroiqueDispo = !!(perso.aIntHeroique() && typeof Capacites !== "undefined" &&
+      Capacites.verifierUsage(p, "classe:magicien:univ5", { usage: { frequence: "1x/jour" } }).ok);
+    const doubleHeritageDispo = !!(perso.aDoubleHeritage() && typeof Capacites !== "undefined" &&
+      Capacites.verifierUsage(p, "race:demi_elfe:5", { usage: { frequence: "1x/jour" } }).ok);
 
     // Bonus d'attaque (jet uniquement) via le modèle Personnage
     const attContact = perso.bonusAttaque("contact");
@@ -4566,6 +4586,12 @@ const App = (() => {
             ${perso.estMort() ? `<p class="aide" style="color:#c0392b;font-weight:700;">💀 Mort.</p>`
               : perso.estMourant() ? `<p class="aide" style="color:#c0392b;font-weight:700;">🩸 Mourant(e) — Succès ${p.mortSucces || 0}/3 · Échecs ${p.mortEchecs || 0}/3. Jet de mort à son tour (onglet Battlemap) ou stabilisation via « Relever un allié ».</p>` : ""}
 
+            ${(intHeroiqueDispo || doubleHeritageDispo) ? `
+              <div class="aide" style="margin-bottom:8px;display:flex;flex-direction:column;gap:4px;">
+                ${intHeroiqueDispo ? `<label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="arme-int-heroique" /> 🎓 INT héroïque (1x/jour) : avantage sur le prochain test d'INT</label>` : ""}
+                ${doubleHeritageDispo ? `<label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="arme-double-heritage" /> 🧬 Double Héritage (1x/jour) : avantage sur le prochain test de Perception/Social/INT</label>` : ""}
+              </div>
+            ` : ""}
             <div class="stats-rapides">
               ${CARACS.map((cc) =>
                 `<div class="stat-box" style="cursor:pointer;" data-test="${cc.code}" title="Lancer un test de ${cc.nom}">
@@ -4665,11 +4691,29 @@ const App = (() => {
     // qu'un bouton par caractéristique brute, pas de sous-catégorie
     // "fatigue"/"peur"/"tromperie" distincte : même simplification assumée
     // que pour Acteur (avantage sur le test brut entier).
+    // Consomme une case "avantage 1x/jour" armée (INT héroïque/Double
+    // Héritage) si elle est cochée — décrémente l'usage réel et décoche,
+    // renvoie true si consommée (pour forcer modeForce="avantage" ce jet).
+    const _armerAvantageJournalier = (checkboxId, cle) => {
+      const cb = document.getElementById(checkboxId);
+      if (!cb || !cb.checked || typeof Capacites === "undefined") return false;
+      const persosFrais = chargerPersos();
+      const pFrais = persosFrais[id];
+      if (!pFrais) return false;
+      const res = Capacites.verifierUsage(pFrais, cle, { usage: { frequence: "1x/jour" } });
+      if (!res.ok) { toast(res.raison); cb.checked = false; return false; }
+      res.appliquer();
+      sauverPersos(persosFrais);
+      cb.checked = false;
+      return true;
+    };
     zone.querySelectorAll("[data-test]").forEach((el) => {
       el.onclick = () => {
         const code = el.dataset.test;
-        const modeForce = (code === "CON" && perso.aEnduranceDeFer()) || (code === "SAG" && perso.aAvantageResistanceMentale())
+        let modeForce = (code === "CON" && perso.aEnduranceDeFer()) || (code === "SAG" && perso.aAvantageResistanceMentale())
           ? "avantage" : null;
+        if (code === "INT" && _armerAvantageJournalier("arme-int-heroique", "classe:magicien:univ5")) modeForce = "avantage";
+        else if (code === "INT" && _armerAvantageJournalier("arme-double-heritage", "race:demi_elfe:5")) modeForce = "avantage";
         lancerTest(`Test de ${code}`, mods[code], null, modeForce);
         allerVers("des");
       };
@@ -4677,15 +4721,19 @@ const App = (() => {
     // Tests de compétence (accordéon sous chaque carac). Don Acteur :
     // avantage sur Bluff/Représentation (tromperie/imitation, cf.
     // Personnage.aActeur) — modeForce impose l'avantage sur CE jet précis,
-    // indépendamment du sélecteur global mode-d20.
+    // indépendamment du sélecteur global mode-d20. Demi-Elfe Double
+    // Héritage : même principe sur Perception + les 4 compétences "Social"
+    // (même groupe que Doué/Sens Affinés, cf. Personnage.bonusCompetence).
     const COMPETENCES_ACTEUR = ["Bluff", "Représentation"];
+    const COMPETENCES_DOUBLE_HERITAGE = ["Perception", "Bluff", "Intimidation", "Représentation", "Persuasion"];
     zone.querySelectorAll(".competence-btn").forEach((el) => {
       el.onclick = (e) => {
         e.stopPropagation();
         const nom = el.dataset.competence;
         const code = el.dataset.carac;
         const bonus = perso.modCompetence(nom, code);
-        const modeForce = perso.aActeur() && COMPETENCES_ACTEUR.includes(nom) ? "avantage" : null;
+        let modeForce = perso.aActeur() && COMPETENCES_ACTEUR.includes(nom) ? "avantage" : null;
+        if (COMPETENCES_DOUBLE_HERITAGE.includes(nom) && _armerAvantageJournalier("arme-double-heritage", "race:demi_elfe:5")) modeForce = "avantage";
         lancerTest(`Test de ${nom}`, bonus, null, modeForce);
         allerVers("des");
       };

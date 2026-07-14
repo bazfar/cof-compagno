@@ -1480,7 +1480,7 @@ const CLASSES = {
               effets: [ { type: "special", note: "+8 (remplace le +6 du rang 3, passif, hors de la limite 1x/jour) déjà codé, cf. rang 1. Invisibilité temporaire 1x/jour — aucun état 'invisible' dans le catalogue actuel." } ] } },
           { rang: 5, nom: null, effet: "INT héroïque : une fois par jour, relance un test d'INT raté et garde le meilleur résultat",
             mecanique: { type: "limitee", usage: { frequence: "1x/jour" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Relance un test d'INT raté et garde le meilleur résultat — mécanique de relance, pas un effet degats/soin/etat/bonus classique." } ] } },
+              effets: [ { type: "special", note: "Déjà codé dans Personnage.aIntHeroique() : case à cocher 'INT héroïque' sur la fiche complète (1x/jour, clé 'classe:magicien:univ5'), force l'avantage (2d20 garde le plus haut) sur le prochain Test d'INT — 'relance si raté, garde le meilleur' est mathématiquement équivalent à l'avantage." } ] } },
         ],
       },
       {
@@ -1728,7 +1728,7 @@ const RACES = {
           effets: [ { type: "special", note: "Rang de voie supplémentaire — choix de construction de personnage, pas un effet de combat à lancer." } ] } },
       { rang: 5, nom: "Double Héritage", effet: "1x/jour, tu peux relancer un test raté de Perception, Social ou INT. Tu gardes le second résultat.",
         mecanique: { type: "limitee", usage: { frequence: "1x/jour" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-          effets: [ { type: "special", note: "Relance un test raté de Perception/Social/INT, garde le second résultat — mécanique de relance, pas un effet degats/soin/etat/bonus classique." } ] } },
+          effets: [ { type: "special", note: "Déjà codé dans Personnage.aDoubleHeritage() : case à cocher 'Double Héritage' sur la fiche complète (1x/jour, clé 'race:demi_elfe:5'), force l'avantage sur le prochain Test de Perception ou d'INT, ou sur les 4 compétences 'Social' (Bluff/Intimidation/Représentation/Persuasion) — même équivalence relance/avantage qu'INT héroïque." } ] } },
     ],
   },
 

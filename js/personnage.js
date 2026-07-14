@@ -679,6 +679,23 @@ class Personnage extends Entite {
     return false;
   }
 
+  // Magicien — Voie de la magie universitaire, rang 5 "INT héroïque"
+  // (1x/jour) : gate seule, le contrôle d'usage réel vit côté app.js
+  // (Capacites.verifierUsage, clé "classe:magicien:univ5") puisqu'il s'agit
+  // d'une case à cocher "armée" avant un clic de test, pas d'une capacité
+  // Capacites.lancer() classique — même principe que Cœur de Montagne.
+  // "Relance un test raté, garde le meilleur" ≡ "avantage" (2d20 garde le
+  // plus haut) en termes de distribution de probabilité : même simplification
+  // que le reste de la famille avantage de l'app.
+  aIntHeroique() {
+    return this.classe === "magicien" && this.estChoisie("Voie de la magie universitaire", 5);
+  }
+  // Demi-Elfe — "Double Héritage" (rang racial 5, 1x/jour) : même principe,
+  // sur Perception/Social(4 compétences CHA)/INT — cf. app.js.
+  aDoubleHeritage() {
+    return this.race === "demi_elfe" && this.estChoisieRace(5);
+  }
+
   /* ----- Équipement (slots) -----
      Seuls les items placés dans un slot comptent pour les stats de combat.
      inventaireListe (simple sac) n'a aucun effet mécanique. */
