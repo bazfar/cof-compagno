@@ -616,6 +616,32 @@ class Personnage extends Entite {
     return (this.dons || []).includes("acteur");
   }
 
+  // Guerrier — Voie de l'élite, rang 2 "Endurance de fer" (passive) :
+  // avantage automatique aux tests de CON contre la fatigue — lu par
+  // lancerTest/modeForce côté app.js sur le bouton "Test de CON" brut (pas
+  // de sous-catégorie "fatigue" distincte côté app, même simplification que
+  // pour Acteur : avantage sur le test brut plutôt que sur un sous-cas
+  // précis non trackable). Le +1 PV/niveau du même rang est mécanisé à part
+  // dans bonusPvCapacites().
+  aEnduranceDeFer() {
+    return this.classe === "guerrier" && this.estChoisie("Voie de l'élite", 2);
+  }
+
+  // Avantage automatique aux tests de résistance MENTALE (SAG) — regroupe 3
+  // capacités au texte quasi identique : Chevalier "Verdict inébranlable"
+  // (tromperie/illusion/manipulation), Moine "Vœu inébranlable" (corruption/
+  // possession/manipulation), Moine "Esprit fendu" (Peur/Charme, dès CA 5+).
+  // Comme pour Acteur/Endurance de fer, approximé par un avantage sur TOUT
+  // test de SAG brut plutôt que sur la sous-catégorie précise (l'app n'a pas
+  // de bouton "Test de Volonté vs Peur" distinct d'un "Test de SAG" — même
+  // simplification assumée que pour les autres avantages automatiques).
+  aAvantageResistanceMentale() {
+    if (this.classe === "chevalier" && this.estChoisie("Voie du paladin (justicier)", 4)) return true;
+    if (this.classe === "moine" && this.estChoisie("Voie de l'ascétisme", 4)) return true;
+    if (this.classe === "moine" && this.estChoisie("Voie du chaos", 4) && (this.corruptionMajeure || 0) >= 5) return true;
+    return false;
+  }
+
   /* ----- Équipement (slots) -----
      Seuls les items placés dans un slot comptent pour les stats de combat.
      inventaireListe (simple sac) n'a aucun effet mécanique. */

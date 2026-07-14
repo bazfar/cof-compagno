@@ -4650,11 +4650,20 @@ const App = (() => {
     _wireBourse("bourse-or", "piecesOr");
     _wireBourse("bourse-argent", "piecesArgent");
     _wireBourse("bourse-bronze", "piecesBronze");
-    // Tests de carac
+    // Tests de carac. Avantage automatique (modeForce, même mécanisme
+    // qu'Acteur ci-dessous) : Guerrier "Endurance de fer" sur le Test de CON
+    // (contre la fatigue) ; Chevalier "Verdict inébranlable"/Moine "Vœu
+    // inébranlable"/"Esprit fendu" sur le Test de SAG (résistance mentale) —
+    // cf. Personnage.aEnduranceDeFer/aAvantageResistanceMentale. L'app n'a
+    // qu'un bouton par caractéristique brute, pas de sous-catégorie
+    // "fatigue"/"peur"/"tromperie" distincte : même simplification assumée
+    // que pour Acteur (avantage sur le test brut entier).
     zone.querySelectorAll("[data-test]").forEach((el) => {
       el.onclick = () => {
         const code = el.dataset.test;
-        lancerTest(`Test de ${code}`, mods[code]);
+        const modeForce = (code === "CON" && perso.aEnduranceDeFer()) || (code === "SAG" && perso.aAvantageResistanceMentale())
+          ? "avantage" : null;
+        lancerTest(`Test de ${code}`, mods[code], null, modeForce);
         allerVers("des");
       };
     });
