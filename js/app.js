@@ -307,9 +307,8 @@ const App = (() => {
   // null s'il n'a pas (encore) de jeton posé — sert de point de référence
   // pour le vérificateur de portée (cf. Carte.distanceCasesEntre).
   function _monTokenId(persoId) {
-    if (typeof Carte === "undefined" || !Carte.listeTokensJoueursCombat) return null;
-    const tok = Carte.listeTokensJoueursCombat().find((t) => t.ref === "pj-" + persoId);
-    return tok ? tok.id : null;
+    if (typeof Carte === "undefined" || !Carte.tokenIdPourPerso) return null;
+    return Carte.tokenIdPourPerso(persoId);
   }
 
   // Cibles possibles pour le vérificateur de portée : tous les tokens de la

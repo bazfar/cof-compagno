@@ -497,6 +497,15 @@ const Carte = (() => {
   // utilitaire partagé (Worldmap + DD2VTT) pour en extraire l'id personnage.
   function idPersoDepuisRef(ref) { return (ref || "").replace(/^pj-/, ""); }
 
+  // Sens inverse d'idPersoDepuisRef : id du token (scène de combat active) du
+  // perso `persoId`, ou null s'il n'a pas (encore) de jeton posé — sert de
+  // point de référence pour distanceCasesEntre (cf. Personnage.bonusDefDuel,
+  // même recherche que _monTokenId côté app.js).
+  function tokenIdPourPerso(persoId) {
+    const tok = listeTokensJoueursCombat().find((t) => t.ref === "pj-" + persoId);
+    return tok ? tok.id : null;
+  }
+
   // Résout {pvActuel, pvMax} pour la barre de PV au-dessus d'un jeton/token :
   // - monstre : pvMax/pvActuel déjà portés par le jeton lui-même (cf. ajouterMonstre)
   // - PJ : le jeton ne stocke pas ses PV, résolus depuis la fiche vivante (seule
@@ -3083,7 +3092,7 @@ const Carte = (() => {
     listeMonstresCombat, listeTokensJoueursCombat, appliquerDegatsCombat, definirPvCombat, ajusterPvCombat,
     ajouterEtatCombat, retirerEtatCombat, distanceCasesEntre,
     supprimerMonstreCombat, onMonstresChange, definirModeCarte,
-    onMonstreDevientVisible, reinitialiserDetectionVisibilite, idPersoDepuisRef, monstreEstVisible,
+    onMonstreDevientVisible, reinitialiserDetectionVisibilite, idPersoDepuisRef, tokenIdPourPerso, monstreEstVisible,
     initiales,
   };
 })();

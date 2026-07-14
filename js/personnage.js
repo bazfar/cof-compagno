@@ -318,7 +318,7 @@ class Personnage extends Entite {
   /* ----- Défense ----- */
   calculerDEF() {
     const dex = Math.min(this.mod("DEX"), this.plafondDex());
-    return 10 + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusTemporaire("DEF") + this.bonusDefImmobile();
+    return 10 + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusTemporaire("DEF") + this.bonusDefImmobile() + this.bonusDefDuel();
   }
 
   // Chasseur — Voie de la traque, rang 2 "Camouflage naturel" (passive) :
@@ -335,6 +335,24 @@ class Personnage extends Entite {
       return 4;
     }
     return 0;
+  }
+
+  // Don Combattant en duel : +2 DEF tant qu'une seule arme à une main est
+  // équipée (armeUniqueMainLibre) ET qu'exactement un adversaire est adjacent
+  // (distance <= 1 case, cf. Carte.distanceCasesEntre) — nécessite une scène
+  // de combat dd2vtt active (seul mode où l'app connaît une distance en
+  // cases) ; renvoie 0 sans Carte chargée, hors combat sur grille, ou si le
+  // perso n'a pas (encore) de jeton posé.
+  bonusDefDuel() {
+    if (!(this.dons || []).includes("combattant_duel") || !this.armeUniqueMainLibre()) return 0;
+    if (typeof Carte === "undefined" || !Carte.tokenIdPourPerso || !Carte.listeMonstresCombat || !Carte.distanceCasesEntre) return 0;
+    const monToken = Carte.tokenIdPourPerso(this.id);
+    if (!monToken) return 0;
+    const adjacents = (Carte.listeMonstresCombat() || []).filter((m) => {
+      const d = Carte.distanceCasesEntre(monToken, m.id);
+      return d !== null && d <= 1;
+    });
+    return adjacents.length === 1 ? 2 : 0;
   }
 
   // Plafond de bonus DEX à la DEF selon le poids de l'armure équipée (aucun
@@ -699,6 +717,18 @@ class Personnage extends Entite {
     const d = this.equipement && this.equipement.main_droite;
     const g = this.equipement && this.equipement.main_gauche;
     return !!(d && g && d !== g && Personnage._estArmeContact(d) && Personnage._estArmeContact(g) && !d.deuxMains && !g.deuxMains);
+  }
+
+  // Don Combattant en duel : condition d'équipement — une seule arme à une
+  // main équipée, l'autre main strictement vide (donc ni bouclier ni seconde
+  // arme, qui occuperaient cette main). Une arme deuxMains ne laisse aucune
+  // main libre, donc exclue. Cf. bonusDefDuel pour la condition d'adjacence.
+  armeUniqueMainLibre() {
+    const d = this.equipement && this.equipement.main_droite;
+    const g = this.equipement && this.equipement.main_gauche;
+    const armeD = !!(d && d.type === "arme" && !d.deuxMains);
+    const armeG = !!(g && g.type === "arme" && !g.deuxMains);
+    return (armeD && !g) || (armeG && !d);
   }
 
   // Malus/bonus d'attaque du combat à deux armes, uniquement au contact (la
