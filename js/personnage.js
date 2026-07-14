@@ -318,7 +318,7 @@ class Personnage extends Entite {
   /* ----- Défense ----- */
   calculerDEF() {
     const dex = Math.min(this.mod("DEX"), this.plafondDex());
-    return 10 + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusTemporaire("DEF") + this.bonusDefImmobile() + this.bonusDefDuel();
+    return 10 + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusTemporaire("DEF") + this.bonusDefImmobile() + this.bonusDefDuel() + this.bonusDefBouclierExpert();
   }
 
   // Chasseur — Voie de la traque, rang 2 "Camouflage naturel" (passive) :
@@ -353,6 +353,27 @@ class Personnage extends Entite {
       return d !== null && d <= 1;
     });
     return adjacents.length === 1 ? 2 : 0;
+  }
+
+  // Don Expert du bouclier (simplifié par Thomas par rapport au texte
+  // d'origine "+2 Réflexes ; réaction 1x/tour réduire de moitié des dégâts",
+  // ni l'un ni l'autre trackés dans l'app) : +1 DEF si un bouclier est
+  // équipé. Le second volet ("l'attaquant est désavantagé") n'est pas un
+  // bonus de CE perso : cf. Personnage.aExpertBouclier(), lu directement par
+  // _resoudreAttaqueMonstreVsPJ côté app.js pour forcer le désavantage sur le
+  // jet de l'ATTAQUANT (monstre) — hors de portée de calculerDEF().
+  bonusDefBouclierExpert() {
+    if (!(this.dons || []).includes("expert_bouclier")) return 0;
+    return this._itemsEquipesUniques().some((it) => it.type === "bouclier") ? 1 : 0;
+  }
+
+  // A-t-il Expert du bouclier ET un bouclier réellement équipé ? Cf.
+  // bonusDefBouclierExpert (gagne le +1 DEF ici) — cette méthode sert
+  // uniquement à app.js pour savoir si l'ATTAQUANT de ce perso doit lancer en
+  // désavantage (monstre vs PJ uniquement, cf. _resoudreAttaqueMonstreVsPJ ;
+  // pas les capacités, dont le jet d'attaque ne passe pas par lancerTest).
+  aExpertBouclier() {
+    return (this.dons || []).includes("expert_bouclier") && this._itemsEquipesUniques().some((it) => it.type === "bouclier");
   }
 
   // Plafond de bonus DEX à la DEF selon le poids de l'armure équipée (aucun
@@ -520,6 +541,31 @@ class Personnage extends Entite {
     return (this.dons || []).includes("chanceux");
   }
 
+  // A-t-il Sentinelle ? Déclenche une attaque d'opportunité contre TOUTE
+  // cible qui quitte son contact, même via un retrait organisé (donc jamais
+  // évitable par la cible, contrairement à l'attaque d'opportunité "reçue"
+  // du désengagement, cf. htmlBlocDesengagement). Sert de bouton
+  // "Attaque d'opportunité" côté app.js — partagé avec aExpertHastQualifie
+  // ci-dessous, le déclenchement/résolution étant identique (une attaque de
+  // contact bonus contre un adversaire adjacent), seule la condition change.
+  aSentinelle() {
+    return (this.dons || []).includes("sentinelle");
+  }
+
+  // Don Expert en hast : arme deux_mains à allonge (lance, hallebarde,
+  // pique, glaive de guerre) — liste d'ids explicite plutôt que déduite du
+  // champ deuxMains, car le catalogue (data/loot.js) modélise la lance en
+  // une main (categorieArme "longue"), alors que le texte du don la liste
+  // aux côtés d'armes authentiquement deuxMains. Conditionne le +1 dégâts
+  // (cf. dmgContact côté app.js, même schéma que Frappe puissante) ET
+  // l'attaque d'opportunité bonus (cf. aSentinelle ci-dessus).
+  aExpertHastQualifie() {
+    if (!(this.dons || []).includes("expert_hast")) return false;
+    const armesHast = ["lance", "hallebarde", "pique", "glaive_guerre"];
+    const arme = this.armeContactEquipee();
+    return !!(arme && armesHast.includes(arme.id));
+  }
+
   /* ----- Équipement (slots) -----
      Seuls les items placés dans un slot comptent pour les stats de combat.
      inventaireListe (simple sac) n'a aucun effet mécanique. */
@@ -546,7 +592,12 @@ class Personnage extends Entite {
   // reste hors du périmètre décrit par la table, donc refusé. Repose sur la
   // convention d'id du catalogue ("arc_*"/"arbalete_*") pour distinguer arc
   // court et arbalète courte, qui n'ont pas de champ dédié.
-  static _estArmeContact(it) { return !!it && it.type === "arme" && it.portee === "contact"; }
+  // "contact" couvre aussi les armes d'allonge dont la portée précise une
+  // extension ("contact +1 case", "contact étendu", "contact/lancer") —
+  // toujours des armes de mêlée avant tout, cf. Expert en hast (lance,
+  // hallebarde, pique, glaive de guerre) qui ne s'affichaient plus du tout
+  // en armeContactEquipee() avec une comparaison stricte à "contact".
+  static _estArmeContact(it) { return !!it && it.type === "arme" && typeof it.portee === "string" && it.portee.startsWith("contact"); }
   static _estArmeContactCourte(it) { return Personnage._estArmeContact(it) && it.categorieArme === "courte"; }
   static _estArbaleteCourte(it) { return !!it && it.type === "arme" && it.portee !== "contact" && (it.id || "").startsWith("arbalete"); }
   static _estArcCourt(it) { return !!it && it.type === "arme" && it.portee !== "contact" && (it.id || "").startsWith("arc"); }
@@ -654,11 +705,12 @@ class Personnage extends Entite {
   }
   // Arme à portée (arc, arbalète...) équipée dans une main, ou null. Sert à
   // n'afficher l'attaque à distance (battlemap) que si le perso a de quoi
-  // la faire — une arme de "contact" ne compte pas.
+  // la faire — une arme de "contact" (y compris à allonge, cf.
+  // _estArmeContact) ne compte pas.
   armeDistanceEquipee() {
     for (const main of ["main_droite", "main_gauche"]) {
       const arme = this.armeEquipee(main);
-      if (arme && arme.portee && arme.portee !== "contact") return arme;
+      if (arme && arme.portee && !Personnage._estArmeContact(arme)) return arme;
     }
     return null;
   }

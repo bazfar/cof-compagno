@@ -455,6 +455,9 @@ const App = (() => {
     const armeCourteSecondaire = perso.armeCourteSecondaire();
     let dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
     if (dmgContact && actifFrappePuissante) dmgContact += "+4";
+    // Don Expert en hast : +1 dégâts au contact avec une arme d'allonge
+    // qualifiante (cf. Personnage.aExpertHastQualifie).
+    if (dmgContact && perso.aExpertHastQualifie()) dmgContact += "+1";
     let dmgDistance = formuleDegats(armeDistance);
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
@@ -577,6 +580,7 @@ const App = (() => {
       </div>`}
       ${peutAgir ? htmlBlocActionsDuTour(id) : ""}
       ${peutAgir ? htmlBlocDesengagement() : ""}
+      ${peutAgir ? htmlBlocAttaqueOpportunite(perso) : ""}
       ${htmlEtatsActifs(p)}
       ${htmlBlocInitiativeJoueur(id)}
       ${htmlBlocChance(p, perso)}
@@ -772,6 +776,9 @@ const App = (() => {
     const armeCourteSecondaire = perso.armeCourteSecondaire();
     let dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
     if (dmgContact && actifFrappePuissante) dmgContact += "+4";
+    // Don Expert en hast : +1 dégâts au contact avec une arme d'allonge
+    // qualifiante (cf. Personnage.aExpertHastQualifie).
+    if (dmgContact && perso.aExpertHastQualifie()) dmgContact += "+1";
     let dmgDistance = armeDistance ? formuleDegats(armeDistance) : null;
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
@@ -1952,10 +1959,20 @@ const App = (() => {
   }
 
   // Coût d'ouverture d'une voie hors profil : 2 points (même famille de caractéristique), 4 points (famille différente)
+  // Don Initié aux arcanes (simplifié par Thomas par rapport au texte
+  // d'origine "rang 1 seul, n'importe quelle classe" : débloque gratuitement
+  // UNE voie liée à l'intelligence) — restreint aux classes utilisant l'INT
+  // pour leur magie (CARAC_MAGIE : magicien, necromancien), coût 0 pour le
+  // PREMIER déblocage hors profil éligible, normal ensuite. Pas de champ
+  // dédié pour marquer "jeton déjà consommé" : un déblocage à cout 0 déjà
+  // présent dans voiesHorsProfil suffit à le savoir.
   function coutDeblocageHorsProfil(classeCible) {
     const familleActuelle = FAMILLE_CLASSE[creation.classe];
     const familleCible = FAMILLE_CLASSE[classeCible];
-    return familleActuelle && familleActuelle === familleCible ? 2 : 4;
+    const coutNormal = familleActuelle && familleActuelle === familleCible ? 2 : 4;
+    const eligibleInitieArcanes = (creation.dons || []).includes("initie_arcanes") && CARAC_MAGIE[classeCible] === "INT";
+    const dejaUtilise = (creation.voiesHorsProfil || []).some((hp) => hp.cout === 0);
+    return eligibleInitieArcanes && !dejaUtilise ? 0 : coutNormal;
   }
 
   function rendreVoiesHorsProfil() {
@@ -1966,7 +1983,8 @@ const App = (() => {
     if (aide) {
       aide.innerHTML =
         `<strong>Voies hors profil :</strong> débloque une voie d'une autre classe en payant son coût d'ouverture ` +
-        `(2 points si même famille de caractéristique, 4 points sinon), puis achète ses rangs normalement.`;
+        `(2 points si même famille de caractéristique, 4 points sinon), puis achète ses rangs normalement. ` +
+        `Le don Initié aux arcanes débloque gratuitement la première voie liée à l'intelligence (Magicien, Nécromancien).`;
     }
 
     const pointsRestants = pointsVoieRestants();
@@ -1986,7 +2004,7 @@ const App = (() => {
             `<div class="voie-entete"><h4>${voie.nom} <span class="badge-chaos">${cls.nom_affiche}</span></h4>` +
             `<div class="desc">${voie.description}</div></div>` +
             `<button type="button" class="btn petit ${verrou ? "secondaire" : "or"}" ${verrou ? "disabled" : ""} ` +
-            `data-classe="${codeClasse}" data-voie="${encodeURIComponent(voie.nom)}">Débloquer (coût ${cout} pt${cout > 1 ? "s" : ""})</button>`;
+            `data-classe="${codeClasse}" data-voie="${encodeURIComponent(voie.nom)}">${cout === 0 ? "Débloquer (gratuit — Initié aux arcanes)" : `Débloquer (coût ${cout} pt${cout > 1 ? "s" : ""})`}</button>`;
           zone.appendChild(div);
         });
       });
@@ -2004,7 +2022,7 @@ const App = (() => {
     }
     if (!creation.voiesHorsProfil) creation.voiesHorsProfil = [];
     creation.voiesHorsProfil.push({ classe: classeCible, voie: voieNom, cout });
-    toast(`Voie "${voieNom}" débloquée (${cout} pts).`);
+    toast(cout === 0 ? `Voie "${voieNom}" débloquée gratuitement (Initié aux arcanes).` : `Voie "${voieNom}" débloquée (${cout} pts).`);
     rendreVoies();
     recalculerDerives();
   }
@@ -3055,6 +3073,23 @@ const App = (() => {
     </div>`;
   }
 
+  // Bloc "Attaque d'opportunité" (homebrew, dons Sentinelle/Expert en hast) :
+  // même trigger manuel que le désengagement (pas de détection de mouvement),
+  // mais dans l'autre sens — CE perso attaque un adversaire adjacent qui
+  // tente de fuir (Sentinelle, inconditionnel) ou vient d'entrer à son
+  // contact (Expert en hast, seulement avec une arme d'allonge qualifiante,
+  // cf. Personnage.aExpertHastQualifie). Résolution identique dans les deux
+  // cas (une attaque de contact bonus), donc un seul bouton/handler partagé.
+  function htmlBlocAttaqueOpportunite(perso) {
+    if (typeof Combat === "undefined" || !Combat.estActif() || typeof Carte === "undefined" || !Carte.distanceCasesEntre) return "";
+    if (!perso.aSentinelle() && !perso.aExpertHastQualifie()) return "";
+    return `<div class="carte">
+      <h3 style="margin-top:0;">⚔️ Attaque d'opportunité</h3>
+      <p class="aide" style="margin:0 0 6px;">Quand un adversaire adjacent tente de fuir ou vient d'entrer à ton contact : déclenche ton attaque bonus (jet de contact normal vs sa DEF).</p>
+      <button class="btn petit secondaire" data-attaque-opportunite style="width:100%;">⚔️ Attaque d'opportunité</button>
+    </div>`;
+  }
+
   // Bloc "Corruption" (Voie du chaos, homebrew) — visible seulement pour un
   // perso ayant pris au moins un rang dans sa Voie du chaos (opt-in, cf.
   // Personnage.aVoieChaosActive). Jauge de combat incrémentée automatiquement
@@ -3499,6 +3534,53 @@ const App = (() => {
               const typeDegatsNormalise = r.typedegats && r.typedegats.startsWith("physique") ? "physique" : "magique";
               subirDegats(id, total, typeDegatsNormalise);
               messages.push(`  → touché${resolution.critique ? " CRITIQUE" : ""} : ${total} dégâts subis.`);
+            }
+          }
+        });
+        toast(messages.join(" "));
+        rafraichir();
+      };
+    });
+    // Attaque d'opportunité (Sentinelle/Expert en hast, cf.
+    // htmlBlocAttaqueOpportunite) : CE perso attaque un adversaire adjacent,
+    // jet de contact normal (arme équipée, y compris le +1 dégâts Expert en
+    // hast déjà intégré à la formule via dmgContact plus haut dans ce
+    // fichier — recalculé ici à l'identique, pas de duplication de règle,
+    // juste de la formule).
+    racine.querySelectorAll("[data-attaque-opportunite]").forEach((el) => {
+      el.onclick = () => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp) return;
+        const perso = Personnage.depuisJSON(pp);
+        const adjacents = _ennemisAdjacents(id);
+        if (!adjacents.length) { toast("Aucun adversaire adjacent."); return; }
+        const armeContact = perso.armeContactEquipee();
+        const armeCourteSecondaire = perso.armeCourteSecondaire();
+        const formuleDegats = (arme) => {
+          if (!arme) return null;
+          const bonus = arme.bonusDegatsTotal !== undefined ? arme.bonusDegatsTotal : (arme.enchantement || 0);
+          const base = arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
+          return arme.bonusDegatsAffixe ? base + "+" + arme.bonusDegatsAffixe : base;
+        };
+        let dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
+        if (dmgContact && perso.aExpertHastQualifie()) dmgContact += "+1";
+        const bonus = perso.bonusAttaque("contact");
+        const critMin = perso.critMinAttaque("contact");
+        const messages = [];
+        adjacents.forEach((m) => {
+          const resolution = _resoudreAttaqueRapide(`${perso.nom || "Perso"} — Attaque d'opportunité vs ${m.nom}`, bonus, critMin, m.id);
+          if (resolution.echecCritique) {
+            messages.push(`❌ Échec critique automatique sur ${m.nom} (1 naturel), pas de dégâts.`);
+          } else if (resolution.touche === false) {
+            messages.push(`❌ Raté sur ${m.nom}${resolution.defCible !== null ? ` (DEF ${resolution.defCible})` : ""}.`);
+          } else if (!dmgContact) {
+            messages.push(`✅ Touché ${m.nom}, mais aucune arme/formule de dégâts au contact.`);
+          } else {
+            const total = lancerFormule(dmgContact, `${perso.nom || "Perso"} — Dégâts (attaque d'opportunité vs ${m.nom})`, resolution.critique);
+            if (typeof total === "number") {
+              const res = Carte.appliquerDegatsCombat(m.id, total);
+              messages.push(`✅ Touché${resolution.critique ? " CRITIQUE" : ""} ${m.nom} : ${total} dégâts${res ? ` → ${res.pvActuel} PV restants` : ""}.`);
             }
           }
         });
@@ -4862,13 +4944,17 @@ const App = (() => {
   // Test = 1d20 + bonus, gère avantage/désavantage. critMin : seuil de
   // critique (20 par défaut, abaissé par certaines capacités — cf.
   // Personnage.critMinAttaque, ex. Guerrier "Précision létale" à 19).
+  // modeForce (optionnel) : impose "avantage"/"desavantage" indépendamment du
+  // sélecteur global mode-d20 — sert à Expert du bouclier (cf.
+  // _resoudreAttaqueMonstreVsPJ), qui désavantage l'ATTAQUANT d'une cible
+  // précise plutôt que de dépendre du réglage manuel de qui lance le dé.
   // Renvoie { total, de, crit, echec } — lu par _resoudreAttaqueRapide pour
   // gater le bouton de dégâts sans dupliquer le tirage de dés/le journal ;
   // les appelants historiques (ne regardant pas le retour) ne sont pas affectés.
-  function lancerTest(label, bonus, critMin) {
+  function lancerTest(label, bonus, critMin, modeForce) {
     bonus = bonus || 0;
     critMin = critMin || 20;
-    const mode = modeD20();
+    const mode = modeForce || modeD20();
     let d1 = lancerDe(20), d2 = lancerDe(20), de, detailDes;
     if (mode === "avantage") { de = Math.max(d1, d2); detailDes = `2d20 av. [${d1}, ${d2}] → ${de}`; }
     else if (mode === "desavantage") { de = Math.min(d1, d2); detailDes = `2d20 dés. [${d1}, ${d2}] → ${de}`; }
@@ -5841,13 +5927,16 @@ const App = (() => {
   // _resoudreAttaqueRapide côté joueur, avec une DEF cible directement issue
   // de calculerDEF() (pas de token dd2vtt à résoudre ici, la cible est
   // choisie par id de personnage directement).
+  // Don Expert du bouclier (cf. Personnage.aExpertBouclier) : force le
+  // désavantage sur CE jet précis, indépendamment du sélecteur global
+  // mode-d20 — ne couvre que les attaques de monstre résolues ici (pas les
+  // capacités, dont le jet d'attaque ne passe pas par lancerTest).
   function _resoudreAttaqueMonstreVsPJ(label, bonus, critMin, pjId) {
-    const jet = lancerTest(label, bonus, critMin);
-    let defCible = null;
-    if (pjId) {
-      const cibleP = chargerPersos()[pjId];
-      if (cibleP) defCible = Personnage.depuisJSON(cibleP).calculerDEF();
-    }
+    const cibleP = pjId ? chargerPersos()[pjId] : null;
+    const cible = cibleP ? Personnage.depuisJSON(cibleP) : null;
+    const modeForce = cible && cible.aExpertBouclier() ? "desavantage" : null;
+    const jet = lancerTest(label, bonus, critMin, modeForce);
+    const defCible = cible ? cible.calculerDEF() : null;
     const touche = _toucheVsDef(jet, !!pjId, defCible);
     return { touche, critique: jet.crit, echecCritique: jet.echec, totalAttaque: jet.total, defCible };
   }

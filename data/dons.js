@@ -39,7 +39,7 @@ const DONS = [
     effet: "Armure équipée avec valeurArmure 5+ : réduit de 3 les dégâts physiques subis, avant application de valeurArmure." },
 
   { id: "expert_bouclier", nom: "Expert du bouclier", categorie: "defense",
-    effet: "Bouclier équipé : +2 aux jets de résistance Réflexes ; 1 fois par tour, réaction pour réduire de moitié des dégâts subis." },
+    effet: "Bouclier équipé : +1 DEF supplémentaire. Les adversaires qui vous attaquent au contact ou à distance sont désavantagés (2d20, gardent le plus bas)." },
 
   { id: "alerte", nom: "Alerte", categorie: "perception",
     effet: "+5 Initiative. Ne peut jamais être surpris." },
@@ -60,7 +60,7 @@ const DONS = [
     effet: "Avantage sur les jets de CHA liés à l'imitation ou la tromperie. Peut imiter une voix déjà entendue." },
 
   { id: "initie_arcanes", nom: "Initié aux arcanes", categorie: "magie",
-    effet: "Apprend la capacité de rang 1 d'une Voie d'une autre classe, au choix. Ne progresse jamais au-delà de ce rang 1 via ce don." },
+    effet: "Débloque gratuitement une voie hors profil liée à l'intelligence (Magicien ou Nécromancien), au choix. Ses rangs s'achètent ensuite normalement avec les points de capacité." },
 
   { id: "chanceux", nom: "Chanceux", categorie: "utilitaire",
     effet: "3 points de chance par jour. Dépenser un point pour relancer un jet raté (le sien, ou imposer la relance d'un jet qu'un ennemi vient de réussir contre lui)." },
