@@ -322,7 +322,7 @@ const Capacites = (() => {
   // texte destiné au joueur (toast) — ne journalise PAS lui-même dans
   // l'historique partagé pour les effets sans jet de dé (etat/bonus/special).
   function resoudreEffet(effet, ctx) {
-    const { perso, rang, cible, libelle, persos, critique } = ctx;
+    const { perso, rang, voie, cible, libelle, persos, critique } = ctx;
     if (effet.type === "degats") {
       // critique (cf. liaison attaque->dégâts, lancer()/resoudreDegatsEnAttente)
       // double les termes de dés de la formule, pas les modificateurs fixes.
@@ -331,7 +331,17 @@ const Capacites = (() => {
       // cf. Personnage.bonusDegatsSortsChaos() — toutes leurs capacités
       // "degats" sont des sorts, pas besoin de distinguer par voie/rang.
       const bonusChaos = perso.bonusDegatsSortsChaos && perso.bonusDegatsSortsChaos();
-      const formuleAjustee = bonusChaos ? `${effet.formule}+${bonusChaos}` : effet.formule;
+      let formuleAjustee = bonusChaos ? `${effet.formule}+${bonusChaos}` : effet.formule;
+      // Magicien — Voie de la magie élémentaire, rang 2 "Intensité
+      // élémentaire" (passive) : remplace le 1d6 initial du Trio élémentaire
+      // (rang 1, seule formule "degats" représentée sur les 3 sorts au choix,
+      // cf. sa note) par un 1d8 dès que le rang 2 est acquis — modifie une
+      // AUTRE capacité déjà mécanisée, identifiée ici par voie+rang (ctx.voie
+      // vient de source.voie côté lancer()/resoudreDegatsEnAttente).
+      if (voie === "Voie de la magie élémentaire" && rang === 1 && perso.classe === "magicien"
+          && perso.rangMaxVoie("Voie de la magie élémentaire") >= 2 && /^1d6\b/.test(formuleAjustee)) {
+        formuleAjustee = formuleAjustee.replace(/^1d6/, "1d8");
+      }
       const { total, detail } = resoudreExpression(formuleAjustee, { perso, rang, critique });
       App.ajouterHisto(`${libelle} — Dégâts`, total, false, false, detail);
       if (cible && cible.genre === "monstre" && typeof Carte !== "undefined") {
@@ -368,7 +378,15 @@ const Capacites = (() => {
       // effet.valeur peut être un nombre fixe ("2") ou une formule ("Mod.SAG") :
       // résolue une seule fois ici (dés éventuels non relancés), réutilisée pour
       // le message ET le stockage (cf. appliquerBonusSurPerso).
-      const { total: valeurResolue } = resoudreExpression(effet.valeur, { perso, rang });
+      let valeurBrute = effet.valeur;
+      // Barde — Voie du chant, rang 2 "Refrain lancinant" (passive) : le
+      // malus de Note discordante (rang 1) passe de -2 à -3 dès que le rang 2
+      // est acquis — même principe qu'Intensité élémentaire ci-dessus.
+      if (voie === "Voie du chant" && rang === 1 && effet.cible === "attaque" && perso.classe === "barde"
+          && perso.rangMaxVoie("Voie du chant") >= 2 && effet.valeur === -2) {
+        valeurBrute = -3;
+      }
+      const { total: valeurResolue } = resoudreExpression(valeurBrute, { perso, rang });
       if (effet.duree === "permanente") {
         return `Bonus permanent (${effet.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}) — normalement fixé une fois pour toutes à l'acquisition de la capacité, pas à relancer ici.`;
       }
@@ -498,7 +516,7 @@ const Capacites = (() => {
       // (copie superficielle — ne jamais muter l'objet effet d'origine, partagé
       // par tous les personnages via data/donnees.js).
       const effetResolu = (effet.cible === "choix" && choixEffet) ? Object.assign({}, effet, { cible: choixEffet }) : effet;
-      const msg = resoudreEffet(effetResolu, { perso, rang: source.rang, cible, libelle, persos });
+      const msg = resoudreEffet(effetResolu, { perso, rang: source.rang, voie: source.voie, cible, libelle, persos });
       if (msg) messages.push(msg);
     });
 
@@ -541,7 +559,7 @@ const Capacites = (() => {
     const messages = [];
     (mecanique.effets || []).forEach((effet) => {
       if (!TYPES_EFFETS_DIFFERES.includes(effet.type)) return;
-      const msg = resoudreEffet(effet, { perso, rang: source.rang, cible, libelle, persos, critique });
+      const msg = resoudreEffet(effet, { perso, rang: source.rang, voie: source.voie, cible, libelle, persos, critique });
       if (msg) messages.push(msg);
     });
 
