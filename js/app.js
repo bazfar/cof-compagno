@@ -774,7 +774,11 @@ const App = (() => {
     }
     const perso = Personnage.depuisJSON(p);
     const mods = {};
-    CARACS.forEach((cc) => (mods[cc.code] = perso.mod(cc.code)));
+    // + bonusTestCaracCapacites : bonus additif sur un test de caractéristique
+    // brut (ex. Moine "Discipline du corps") — jamais mélangé à mod() lui-même
+    // pour ne pas fausser attaque/DEF ailleurs, seulement lu par les boutons
+    // [data-test] plus bas.
+    CARACS.forEach((cc) => (mods[cc.code] = perso.mod(cc.code) + perso.bonusTestCaracCapacites(cc.code)));
 
     const armeDistance = perso.armeDistanceEquipee();
     const attMagique = perso.bonusAttaque("magique");
@@ -4690,7 +4694,8 @@ const App = (() => {
     const niveau = p.niveau;
     const perso = Personnage.depuisJSON(p); // modèle OOP : règles centralisées
     const mods = {};
-    CARACS.forEach((cc) => (mods[cc.code] = perso.mod(cc.code)));
+    // + bonusTestCaracCapacites : cf. même ajout côté rendreDockCombat().
+    CARACS.forEach((cc) => (mods[cc.code] = perso.mod(cc.code) + perso.bonusTestCaracCapacites(cc.code)));
     // Magicien "INT héroïque" (Voie de la magie universitaire rang 5) et
     // Demi-Elfe "Double Héritage" (race rang 5) : 1x/jour, avantage sur le
     // PROCHAIN test concerné (INT pour le premier ; Perception/Social/INT

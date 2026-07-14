@@ -1379,7 +1379,7 @@ const CLASSES = {
         rangs: [
           { rang: 1, nom: "Discipline du corps (passive)", effet: "Renonce à un confort (silence, jeûne, dénuement matériel — trait de personnage). En échange : +2 à tous les tests de Volonté (SAG) contre la Peur et l'Intimidation",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "+2 aux tests de Volonté (SAG) contre la Peur et l'Intimidation, en échange d'un renoncement roleplay (trait de personnage) — bonus de test hors combat conditionné à un choix narratif." } ] } },
+              effets: [ { type: "special", note: "Corrige un gap de donnée : ce bonus n'était lu par aucune fonction, contrairement à Vœu inébranlable (rang 4, même voie) déjà câblé via aAvantageResistanceMentale(). Ajouté et câblé dans Personnage.bonusTestCaracCapacites('SAG'), lu par les boutons de test de caractéristique — approximé en bonus additif sur TOUT test de SAG brut (même simplification de sous-catégorie déjà assumée pour Endurance de fer/Acteur/Résistance mentale, l'app n'ayant pas de bouton 'Test de Volonté vs Peur' séparé). Renoncement roleplay (trait de personnage) non vérifié au-delà de l'acquisition du rang." } ] } },
           { rang: 2, nom: "Poing béni (activable, 1x/combat)", effet: "La prochaine attaque inflige +1d6 DM sacrés, qui passent à +2d6 contre les morts-vivants, démons ou créatures corrompues",
             mecanique: { type: "activable", usage: { frequence: "1x/combat" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "degats", formule: "1d6", elementaire: "sacre" },

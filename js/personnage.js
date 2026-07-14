@@ -685,6 +685,20 @@ class Personnage extends Entite {
     return false;
   }
 
+  // Moine — Voie de l'ascétisme, rang 1 "Discipline du corps" (passive) : +2
+  // à tous les tests de Volonté (SAG) contre la Peur et l'Intimidation.
+  // N'était lu par aucune fonction (contrairement à aAvantageResistanceMentale
+  // ci-dessus pour des capacités au texte presque identique) — approximé en
+  // bonus additif sur TOUT test de SAG brut (même simplification de
+  // sous-catégorie déjà assumée pour Endurance de fer/Acteur/Résistance
+  // mentale), lu uniquement par les boutons [data-test], jamais par mod()
+  // directement (pour ne pas fausser l'attaque magique du Moine, qui utilise
+  // aussi SAG).
+  bonusTestCaracCapacites(code) {
+    if (code === "SAG" && this.classe === "moine" && this.estChoisie("Voie de l'ascétisme", 1)) return 2;
+    return 0;
+  }
+
   // Magicien — Voie de la magie universitaire, rang 5 "INT héroïque"
   // (1x/jour) : gate seule, le contrôle d'usage réel vit côté app.js
   // (Capacites.verifierUsage, clé "classe:magicien:univ5") puisqu'il s'agit
