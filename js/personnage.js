@@ -35,6 +35,7 @@ class Personnage extends Entite {
         bonusCompetences: {},
         capacites: [],
         capacitesRace: [],
+        capacitesRaceChoix: {},
         voiesHorsProfil: [],
         dons: [],
         donsChoix: {},
@@ -76,6 +77,7 @@ class Personnage extends Entite {
     this.bonusCompetences = d.bonusCompetences;
     this.capacites = d.capacites;
     this.capacitesRace = d.capacitesRace;
+    this.capacitesRaceChoix = d.capacitesRaceChoix;
     this.voiesHorsProfil = d.voiesHorsProfil;
     // Dons (niveaux 4/8/12, cf. data/dons.js) : tableau d'ids. La plupart restent
     // des bonus descriptifs appliqués manuellement par le joueur, mais certains
@@ -138,6 +140,39 @@ class Personnage extends Entite {
     if (this.classe === "guerrier") {
       const cap = this.capaciteEntree("Voie de l'élite", 1);
       if (cap && cap.choix === code) bonus += 1;
+    }
+    // Enchanteur — Voie du chaos, rang 4 "Réalité fracturée" (passive, dès
+    // Corruption d'Âme 5+) : -2 SAG permanent, contrepartie fixe (pas de
+    // choix) tant que corruptionMajeure n'a pas atteint 5 — ne redescend
+    // jamais en-dessous une fois franchi (corruptionMajeure ne diminue jamais).
+    if (code === "SAG" && this.classe === "enchanteur" && this.estChoisie("Voie du chaos", 4) && (this.corruptionMajeure || 0) >= 5) {
+      bonus -= 2;
+    }
+    // Voies raciales (homebrew) à bonus de caractéristique permanent — cf.
+    // estChoisieRace/choixCapaciteRace, RACE_CAPACITES_A_CHOIX côté app.js
+    // pour les rangs à choix.
+    if (this.race === "humain" && this.estChoisieRace(4) && code === this.choixCapaciteRace(4)) {
+      // Ambition : +2 à n'importe quelle caractéristique, fixée à l'acquisition.
+      bonus += 2;
+    }
+    if (this.race === "elfe" && code === "DEX" && this.estChoisieRace(2)) {
+      // Grâce de la Sève : +2 DEX fixe (pas de choix).
+      bonus += 2;
+    }
+    if (this.race === "demi_elfe" && this.estChoisieRace(2) && code === this.choixCapaciteRace(2)) {
+      // Sang Mêlé : +1 DEX ou CHA au choix, fixé à l'acquisition.
+      bonus += 1;
+    }
+    if (this.race === "demi_orc" && this.estChoisieRace(2) && code === this.choixCapaciteRace(2)) {
+      // Sang de Guerre : +1 FOR ou CON au choix. Le "+2 PV par niveau
+      // (rétroactif)" associé à ce même rang n'est PAS mécanisé ici — hors
+      // scope (bonus de caractéristique uniquement), cf. bonusPvDons pour
+      // le modèle si mécanisé séparément plus tard.
+      bonus += 1;
+    }
+    if (this.race === "demi_gobelin" && code === "DEX" && this.estChoisieRace(2)) {
+      // Instinct de Fuite : +1 DEX fixe (pas de choix).
+      bonus += 1;
     }
     return bonus;
   }
@@ -698,6 +733,17 @@ class Personnage extends Entite {
     const rangs = (this.capacites || []).filter((c) => c.voie === voieNom).map((c) => c.rang);
     return rangs.length ? Math.max(...rangs) : 0;
   }
+  // Équivalents estChoisie/capaciteEntree pour la voie RACIALE (this.capacitesRace,
+  // simple tableau de numéros de rang — contrairement aux voies de classe,
+  // aucun objet {voie, rang} par entrée) : le choix éventuel (ex. Humain
+  // "Ambition") est stocké à part, dans this.capacitesRaceChoix[rang], posé
+  // côté app.js à l'acquisition (cf. RACE_CAPACITES_A_CHOIX).
+  estChoisieRace(rang) {
+    return (this.capacitesRace || []).includes(rang);
+  }
+  choixCapaciteRace(rang) {
+    return (this.capacitesRaceChoix && this.capacitesRaceChoix[rang]) || null;
+  }
 
   /* ----- Sérialisation (même forme que le localStorage actuel) ----- */
   versJSON() {
@@ -713,6 +759,7 @@ class Personnage extends Entite {
       bonusCompetences: this.bonusCompetences,
       capacites: this.capacites,
       capacitesRace: this.capacitesRace,
+      capacitesRaceChoix: this.capacitesRaceChoix,
       voiesHorsProfil: this.voiesHorsProfil,
       portrait: this.portrait,
       pvMax: this.pvMax,

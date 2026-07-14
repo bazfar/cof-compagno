@@ -1017,6 +1017,7 @@ const App = (() => {
       caracsLibres: { FOR: 0, DEX: 0, CON: 0, INT: 0, SAG: 0, CHA: 0 }, // points libres répartis (point-buy)
       capacites: [], // [{voie, rang}]
       capacitesRace: [], // [rang] — capacités de la voie raciale (rang 1 gratuit, 2-5 sur le pool de points partagé)
+      capacitesRaceChoix: {}, // { [rang]: valeurChoisie } — choix fixé à l'acquisition d'un rang racial (cf. RACE_CAPACITES_A_CHOIX)
       voiesHorsProfil: [], // [{classe, voie, cout}] — voies débloquées hors du profil de classe
       portrait: null, // data URL (optionnel)
       pvMax: null,
@@ -1255,13 +1256,16 @@ const App = (() => {
       const verrou = verrouOrdre || verrouNiveau || verrouPoints;
 
       const { nom, effet } = texteRangRace(r, rg, creation.raceVariante);
+      // Rappel du choix permanent fait à l'acquisition (cf. RACE_CAPACITES_A_CHOIX)
+      const choixValeur = creation.capacitesRaceChoix && creation.capacitesRaceChoix[rg.rang];
+      const choixLabel = choixValeur ? _labelChoixCapaciteRace(rg.rang, choixValeur) : null;
 
       html +=
         `<div class="rang ${choisi ? "choisi" : ""} ${verrou ? "verrou" : ""}">` +
         `<div class="num">${rg.rang}</div>` +
         `<div class="contenu">` +
         (nom ? `<div class="nom-cap">${nom}</div>` : "") +
-        `<div class="effet">${effet}</div></div>` +
+        `<div class="effet">${effet}${choixLabel ? ` — <strong>Choix : ${choixLabel}</strong>` : ""}</div></div>` +
         (auto ? "" : `<div class="cout-rang">${cout} pt${cout > 1 ? "s" : ""}</div>`) +
         `<div class="check">` +
         (auto
@@ -1296,6 +1300,7 @@ const App = (() => {
         return;
       }
       creation.capacitesRace.splice(idx, 1);
+      if (creation.capacitesRaceChoix) delete creation.capacitesRaceChoix[rang];
     } else {
       // Rang 1 excepté (acquis automatiquement à la sélection de race, cf.
       // choisirRace) : les rangs 2-5 puisent dans le même pool de points de
@@ -1304,6 +1309,22 @@ const App = (() => {
       if (cout > pointsVoieRestants()) {
         toast("Pas assez de points de capacité.");
         rendreVoieRaciale();
+        return;
+      }
+      // Certains rangs raciaux fixent un choix permanent de caractéristique
+      // à l'acquisition (ex. Humain "Ambition") — même principe que
+      // CAPACITES_A_CHOIX côté classe, cf. RACE_CAPACITES_A_CHOIX.
+      const choixDef = RACE_CAPACITES_A_CHOIX[creation.race + "|" + rang];
+      if (choixDef) {
+        rendreVoieRaciale(); // remet la case dans son état réel en attendant le choix
+        ouvrirModalChoixCapacite(choixDef, (valeurChoisie) => {
+          if (!creation.capacitesRaceChoix) creation.capacitesRaceChoix = {};
+          creation.capacitesRaceChoix[rang] = valeurChoisie;
+          creation.capacitesRace.push(rang);
+          rendreVoieRaciale();
+          if (creation.classe) rendreVoies();
+          recalculerDerives();
+        });
         return;
       }
       creation.capacitesRace.push(rang);
@@ -1755,6 +1776,36 @@ const App = (() => {
     },
   };
 
+  // Rangs de voie RACIALE dont l'acquisition fixe un choix permanent de
+  // caractéristique (clé "race|rang") — même principe que CAPACITES_A_CHOIX,
+  // mais le choix est mémorisé à part (creation.capacitesRaceChoix[rang],
+  // cf. basculerCapaciteRace) car this.capacitesRace est un simple tableau de
+  // numéros de rang, sans objet {rang, choix} par entrée comme les voies de
+  // classe. Exploité par Personnage.choixCapaciteRace/bonusCaracCapacites.
+  const RACE_CAPACITES_A_CHOIX = {
+    "humain|4": {
+      titre: "Ambition",
+      consigne: "Choisis la caractéristique qui gagne +2 permanent (définitif) :",
+      options: CARACS.map((c) => ({ valeur: c.code, label: `+2 ${c.nom.toUpperCase()}` })),
+    },
+    "demi_elfe|2": {
+      titre: "Sang Mêlé",
+      consigne: "Choisis la caractéristique qui gagne +1 permanent (définitif) :",
+      options: [
+        { valeur: "DEX", label: "+1 DEXTÉRITÉ" },
+        { valeur: "CHA", label: "+1 CHARISME" },
+      ],
+    },
+    "demi_orc|2": {
+      titre: "Sang de Guerre",
+      consigne: "Choisis la caractéristique qui gagne +1 permanent (définitif) :",
+      options: [
+        { valeur: "FOR", label: "+1 FORCE" },
+        { valeur: "CON", label: "+1 CONSTITUTION" },
+      ],
+    },
+  };
+
   function ouvrirModalChoixCapacite(config, onChoisi) {
     const modal = document.getElementById("modal-choix-capacite");
     if (!modal) { onChoisi(config.options[0].valeur); return; } // filet de sécurité si le DOM manque
@@ -1883,6 +1934,12 @@ const App = (() => {
   // pour le rappeler sur la fiche de création une fois le choix fait.
   function _labelChoixCapacite(voieNom, rang, valeur) {
     const cfg = CAPACITES_A_CHOIX[creation.classe + "|" + voieNom + "|" + rang];
+    const opt = cfg && cfg.options.find((o) => o.valeur === valeur);
+    return opt ? opt.label : valeur;
+  }
+  // Équivalent pour un rang de voie RACIALE (cf. RACE_CAPACITES_A_CHOIX).
+  function _labelChoixCapaciteRace(rang, valeur) {
+    const cfg = RACE_CAPACITES_A_CHOIX[creation.race + "|" + rang];
     const opt = cfg && cfg.options.find((o) => o.valeur === valeur);
     return opt ? opt.label : valeur;
   }
@@ -4480,6 +4537,7 @@ const App = (() => {
     creation = JSON.parse(JSON.stringify(p)); // copie
     if (!creation.capacitesRace) creation.capacitesRace = []; // compat fiches créées avant les voies raciales
     if (creation.race && !creation.capacitesRace.includes(1)) creation.capacitesRace.unshift(1); // rang 1 toujours acquis
+    if (!creation.capacitesRaceChoix) creation.capacitesRaceChoix = {}; // compat fiches créées avant les rangs raciaux à choix
     if (!creation.caracsLibres) {
       // compat fiches créées avant le point-buy : on déduit les points libres déjà investis
       creation.caracsLibres = {};
