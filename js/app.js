@@ -5513,10 +5513,40 @@ const App = (() => {
     rendreTableCombat(targetId);
   }
 
-  // Extrait le bonus d'un jet de monstre du bestiaire, ex. "1d20+3 vs DEF" -> +3.
+  // Extrait le bonus d'un jet de monstre en texte libre, ex. "1d20+3 vs DEF"
+  // -> +3 — utilisé uniquement pour l'ANCIEN format inline (invocations, cf.
+  // _resoudreAttaqueMonstre) ; le bestiaire migré porte bonusAttaque en clair.
   function extraireBonusJetMonstre(jet) {
     const m = /1d20\s*([+-]\s*\d+)/i.exec(jet || "");
     return m ? parseInt(m[1].replace(/\s/g, ""), 10) : 0;
+  }
+
+  // Résout une entrée m.attaques[] dans un format commun, quelle que soit sa
+  // source : le bestiaire migré (data/bestiaire.json + data/armes_monstres.js,
+  // cf. armeId+bonusAttaque) OU une invocation de joueur (js/carte.js,
+  // _resoudreInvocation/confirmerInvocation, qui génère encore l'ANCIEN format
+  // inline jet/degats/portee/type — pas de migration prévue pour ces jetons
+  // dynamiques). Renvoie null si l'armeId référencé est introuvable dans le
+  // catalogue (ne devrait pas arriver, cf. tools/valider_mecaniques.js).
+  function _resoudreAttaqueMonstre(a) {
+    if (!a) return null;
+    if (a.armeId !== undefined) {
+      const arme = typeof ArmesMonstres !== "undefined" ? ArmesMonstres.trouver(a.armeId) : null;
+      if (!arme) return null;
+      const bonusAttaque = a.bonusAttaque || 0;
+      return {
+        nom: a.nom, bonusAttaque,
+        degats: arme.degats, portee: arme.portee, typedegats: arme.typedegats,
+        jetTexte: `1d20${signe(bonusAttaque)} vs DEF`,
+        effetSpecial: a.effetSpecial,
+      };
+    }
+    return {
+      nom: a.nom, bonusAttaque: extraireBonusJetMonstre(a.jet),
+      degats: a.degats, portee: a.portee, typedegats: a.type,
+      jetTexte: a.jet,
+      effetSpecial: a.effetSpecial,
+    };
   }
 
   // Boutons d'attaque rapide pour un monstre de la table de combat : une ligne
@@ -5530,10 +5560,11 @@ const App = (() => {
     const attaques = m.attaques || (def && def.attaques);
     if (!attaques || !attaques.length) return "";
     return `<div class="cm-attaques">${attaques.map((a, i) => {
-      const bonus = extraireBonusJetMonstre(a.jet);
+      const r = _resoudreAttaqueMonstre(a);
+      if (!r) return "";
       return `<div class="cm-attaque-ligne">
-        <button class="btn petit secondaire" data-monstre-jet="${m.id}" data-idx-attaque="${i}" title="${echapper(a.jet || "")}">⚔ ${echapper(a.nom)} (${signe(bonus)})</button>
-        <button class="btn-de-cap" data-monstre-degats="${m.id}" data-idx-attaque="${i}" title="Dégâts : ${echapper(a.degats || "")}">🎲</button>
+        <button class="btn petit secondaire" data-monstre-jet="${m.id}" data-idx-attaque="${i}" title="${echapper(r.jetTexte || "")}">⚔ ${echapper(r.nom)} (${signe(r.bonusAttaque)})</button>
+        <button class="btn-de-cap" data-monstre-degats="${m.id}" data-idx-attaque="${i}" title="Dégâts : ${echapper(r.degats || "")}">🎲</button>
       </div>`;
     }).join("")}</div>`;
   }
@@ -5699,8 +5730,9 @@ const App = (() => {
         const def = m && typeof BESTIAIRE_INDEX !== "undefined" ? BESTIAIRE_INDEX[m.monstreId] : null;
         const attaques = m && (m.attaques || (def && def.attaques));
         const a = attaques && attaques[parseInt(btn.dataset.idxAttaque, 10)];
-        if (!a) return;
-        lancerTest(`${m.nom} — ${a.nom}`, extraireBonusJetMonstre(a.jet));
+        const r = _resoudreAttaqueMonstre(a);
+        if (!r) return;
+        lancerTest(`${m.nom} — ${r.nom}`, r.bonusAttaque);
       };
     });
     zone.querySelectorAll("[data-monstre-degats]").forEach((btn) => {
@@ -5709,8 +5741,9 @@ const App = (() => {
         const def = m && typeof BESTIAIRE_INDEX !== "undefined" ? BESTIAIRE_INDEX[m.monstreId] : null;
         const attaques = m && (m.attaques || (def && def.attaques));
         const a = attaques && attaques[parseInt(btn.dataset.idxAttaque, 10)];
-        if (!a) return;
-        lancerFormule(a.degats, `${m.nom} — ${a.nom} (dégâts)`);
+        const r = _resoudreAttaqueMonstre(a);
+        if (!r) return;
+        lancerFormule(r.degats, `${m.nom} — ${r.nom} (dégâts)`);
       };
     });
     zone.querySelectorAll("[data-pv-moins]").forEach((btn) => {
@@ -5828,9 +5861,11 @@ const App = (() => {
     </div>`;
 
     const atqHtml = m.attaques && m.attaques.length
-      ? `<div class="monstre-section"><strong>Attaques</strong><ul>${m.attaques.map(a =>
-          `<li><em>${echapper(a.nom)}</em> — ${echapper(a.jet)} · Dégâts ${echapper(a.degats)}${a.portee ? ` (${echapper(a.portee)})` : ""}${a.effetSpecial ? ` · ${echapper(a.effetSpecial)}` : ""}</li>`
-        ).join("")}</ul></div>`
+      ? `<div class="monstre-section"><strong>Attaques</strong><ul>${m.attaques.map((a) => {
+          const r = _resoudreAttaqueMonstre(a);
+          if (!r) return `<li><em>${echapper(a.nom)}</em> — arme introuvable (armeId « ${echapper(a.armeId || "")} »)</li>`;
+          return `<li><em>${echapper(r.nom)}</em> — ${echapper(r.jetTexte || "")} · Dégâts ${echapper(r.degats || "")}${r.portee ? ` (${echapper(r.portee)})` : ""}${r.effetSpecial ? ` · ${echapper(r.effetSpecial)}` : ""}</li>`;
+        }).join("")}</ul></div>`
       : "";
 
     const capHtml = m.capacitesSpeciales && m.capacitesSpeciales.length
