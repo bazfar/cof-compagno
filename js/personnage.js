@@ -278,7 +278,23 @@ class Personnage extends Entite {
   /* ----- Défense ----- */
   calculerDEF() {
     const dex = Math.min(this.mod("DEX"), this.plafondDex());
-    return 10 + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusTemporaire("DEF");
+    return 10 + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusTemporaire("DEF") + this.bonusDefImmobile();
+  }
+
+  // Chasseur — Voie de la traque, rang 2 "Camouflage naturel" (passive) :
+  // +4 DEF tant qu'il reste immobile en milieu naturel. "Immobile" = n'a pas
+  // encore entamé son déplacement ce tour (cf. Combat.estImmobile, basé sur
+  // deplacementRestant) — dépendance optionnelle (comme Carte pour les
+  // capacités), false si Combat n'est pas chargé ou aucun combat actif. La
+  // condition "milieu naturel" reste hors périmètre (pas de notion de terrain
+  // dans l'app) : le bonus s'applique dès que le PJ est immobile, à ajuster
+  // manuellement par la table si la scène ne s'y prête pas.
+  bonusDefImmobile() {
+    if (this.classe === "chasseur" && this.estChoisie("Voie de la traque", 2) &&
+        typeof Combat !== "undefined" && Combat.estImmobile && Combat.estImmobile(this.id)) {
+      return 4;
+    }
+    return 0;
   }
 
   // Plafond de bonus DEX à la DEF selon le poids de l'armure équipée (aucun

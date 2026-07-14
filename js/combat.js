@@ -269,6 +269,19 @@ const Combat = (() => {
   // négatif. Le joueur décrémente lui-même en déplaçant son jeton, comme les
   // compteurs manuels du reste de l'app (PV...) : pas de calcul automatique
   // à partir de la distance parcourue sur la carte.
+  // Un PJ est "immobile" ce tour s'il n'a pas encore entamé son déplacement
+  // (deplacementRestant intact, cf. _reinitialiserActionsEntree/ajusterDeplacement)
+  // — utilisé par Personnage.bonusDefImmobile() (Chasseur "Camouflage naturel",
+  // Voie de la traque rang 2 : +4 DEF tant qu'immobile). Faux hors combat
+  // (l'économie d'action n'existe pas hors combat) ou si le PJ n'a pas
+  // (encore) d'entrée dans l'ordre.
+  function estImmobile(persoId) {
+    const etat = _lire();
+    if (!etat.actif) return false;
+    const entree = etat.ordre.find((e) => e.id === persoId && e.type === "pj");
+    return !!(entree && entree.deplacementRestant === DEPLACEMENT_BASE);
+  }
+
   function ajusterDeplacement(persoId, delta) {
     const etat = _lire();
     const entree = etat.ordre.find((e) => e.id === persoId && e.type === "pj");
@@ -368,6 +381,7 @@ const Combat = (() => {
     onChange,
     DEPLACEMENT_BASE,
     SPRINT_BONUS,
+    estImmobile,
     ajusterDeplacement,
     utiliserActionPrincipale,
     sprint,
