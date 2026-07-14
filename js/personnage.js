@@ -722,7 +722,28 @@ class Personnage extends Entite {
     return items;
   }
   reductionDegats() {
-    return this._itemsEquipesUniques().reduce((t, it) => t + (it.valeurArmure || 0), 0) + this.bonusReductionCapacites();
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.valeurArmure || 0), 0) + this.bonusReductionCapacites()
+      + this.bonusTemporaire("reduction_degats");
+  }
+  // Druide — Voie de la nature, rang 4 "Résistance naturelle" : réduction
+  // égale à 2×rangMaxVoie contre les dégâts "naturels" (froid/chaleur/chute/
+  // poison/animal — nouveau 3e type de dégâts au sélecteur "Subir des
+  // dégâts" côté app.js, en plus de physique/magique). Verrou explicite
+  // rangMaxVoie >= 4 : sans lui, un Druide n'ayant que les rangs 1-3 de la
+  // voie (donc PAS encore Résistance naturelle) toucherait quand même
+  // 2×rangMaxVoie au lieu de 0.
+  reductionDegatsNaturels() {
+    const rangMax = this.rangMaxVoie("Voie de la nature");
+    return (this.classe === "druide" && rangMax >= 4) ? 2 * rangMax : 0;
+  }
+  // Guerrier — Voie du peuple, rang 3 "Rempart" (passive, fréquence libre) :
+  // réduit de 2 les dégâts subis "lorsqu'il protège activement un allié" —
+  // condition non trackable automatiquement (qui protège qui n'est pas une
+  // donnée de l'app), donc case à cocher manuelle sur le formulaire "Subir
+  // des dégâts" (cf. subirDegats côté app.js), réutilisable à volonté (pas
+  // de suivi d'usage, contrairement à Cœur de Montagne).
+  aRempart() {
+    return this.classe === "guerrier" && this.estChoisie("Voie du peuple", 3);
   }
   // Demi-Orc — "Résistance Instinctive" (rang racial 3) : réduit de 3 les
   // dégâts qui feraient passer sous la moitié des PV max — évalué sur

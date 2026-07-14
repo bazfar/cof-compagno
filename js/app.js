@@ -4892,7 +4892,11 @@ const App = (() => {
   // (Magicien) n'a pas de paramètre dédié : détecté automatiquement via
   // l'état 'sanctuaire_magicien' posé par Capacites.lancer(), tant qu'il
   // est actif tout dégât typeDegats === "magique" est intégralement annulé.
-  function subirDegats(id, degatsBruts, typeDegats, coeurMontagneArme) {
+  // rempartArme (optionnel) : case cochée pour Guerrier "Rempart" (Voie du
+  // peuple rang 3, cf. Personnage.aRempart()) — condition "protège
+  // activement un allié" non trackable automatiquement, déclarée par le
+  // joueur à chaque jet, réduit de 2 les dégâts (tout type confondu).
+  function subirDegats(id, degatsBruts, typeDegats, coeurMontagneArme, rempartArme) {
     degatsBruts = parseInt(degatsBruts, 10);
     if (isNaN(degatsBruts) || degatsBruts < 0) { toast("Entre un nombre de dégâts valide."); return; }
     const persos = chargerPersos();
@@ -4912,14 +4916,24 @@ const App = (() => {
     // dégâts marqués "magique" — détection automatique, pas de case à
     // cocher (même principe que l'état 'renversee' ailleurs dans l'app).
     const sanctuaireActif = typeDegats === "magique" && (p.etatsActifs || []).some((e) => e.idEtat === "sanctuaire_magicien");
+    // Druide — Voie du chaos, rang 5 "Forme du chaos sauvage" : pendant sa
+    // durée (état 'forme_chaos_sauvage'), divise par 2 (arrondi inf.) les
+    // dégâts PHYSIQUES uniquement — détection automatique, même principe.
+    const formeChaosActive = typeDegats === "physique" && (p.etatsActifs || []).some((e) => e.idEtat === "forme_chaos_sauvage");
+    const rempartActif = !!rempartArme && perso.aRempart();
 
     const reductionLourde = typeDegats === "physique" ? perso.bonusReductionLourdeDons() : 0;
-    const apresLourde = Math.max(0, degatsBruts - reductionLourde);
-    const reduction = perso.reductionDegats();
-    let degatsNets = Math.max(0, apresLourde - reduction);
+    // Druide — Voie de la nature, rang 4 "Résistance naturelle" : uniquement
+    // sur le type "naturel" (froid/chaleur/chute/poison/animal).
+    const reductionNaturelle = typeDegats === "naturel" ? perso.reductionDegatsNaturels() : 0;
+    const reductionArmure = perso.reductionDegats(); // inclut désormais Écorce partagée (bonusTemporaire)
+    const reductionRempart = rempartActif ? 2 : 0;
+    const reductionFlatTotale = reductionLourde + reductionNaturelle + reductionArmure + reductionRempart;
+    let degatsNets = Math.max(0, degatsBruts - reductionFlatTotale);
     // Demi-Orc — Résistance Instinctive (rang racial 3) : -3 dégâts quand le
     // résultat passerait sous la moitié des PV max.
     degatsNets = Math.max(0, degatsNets - perso.reductionSeuilBasPv(degatsNets));
+    if (formeChaosActive) degatsNets = Math.floor(degatsNets / 2);
     if (coeurMontagneActif || sanctuaireActif) degatsNets = 0;
 
     const pvAvant = p.pvActuel;
@@ -4928,29 +4942,42 @@ const App = (() => {
     sauverPersos(persos);
     _syncPvAffichages(id, p);
     if (transition) _rerendreApresTransitionMourant(id);
-    const reductionTotale = reductionLourde + reduction;
-    toast(coeurMontagneActif
-      ? `🏔 Cœur de Montagne : ${degatsBruts} dégâts encaissés sans dommage.`
-      : sanctuaireActif
-        ? `✨ Sanctuaire : ${degatsBruts} dégâts magiques encaissés sans dommage.`
-        : reductionTotale > 0
-          ? `🛡 ${degatsBruts} dégâts subis → ${degatsNets} après réduction d'armure${reductionLourde > 0 ? " + don" : ""} (−${reductionTotale}).`
-          : `${degatsNets} dégâts subis.`);
+
+    let message;
+    if (coeurMontagneActif) message = `🏔 Cœur de Montagne : ${degatsBruts} dégâts encaissés sans dommage.`;
+    else if (sanctuaireActif) message = `✨ Sanctuaire : ${degatsBruts} dégâts magiques encaissés sans dommage.`;
+    else {
+      const sources = [];
+      if (reductionArmure > 0) sources.push("armure");
+      if (reductionLourde > 0) sources.push("don");
+      if (reductionNaturelle > 0) sources.push("résistance naturelle");
+      if (reductionRempart > 0) sources.push("Rempart");
+      const suffixeReduction = sources.length ? ` après réduction (${sources.join(" + ")}, −${reductionFlatTotale})` : "";
+      const suffixeChaos = formeChaosActive ? " puis divisés par 2 (Forme du chaos sauvage)" : "";
+      message = (sources.length || formeChaosActive)
+        ? `🛡 ${degatsBruts} dégâts subis${suffixeReduction}${suffixeChaos} → ${degatsNets}.`
+        : `${degatsNets} dégâts subis.`;
+    }
+    toast(message);
   }
 
   // HTML + câblage du petit formulaire "Subir des dégâts", réutilisé par la
   // fiche complète, la mini-fiche battlemap et la table de combat (monstres) —
-  // prefixe distingue les ids. Le sélecteur de type (physique/magique) sert
-  // au don Maître des armures lourdes (cf. subirDegats) ; ignoré côté monstre,
-  // qui n'a pas cette mécanique. `perso`/`p` (optionnels, absents côté
-  // monstre) : affiche la case Cœur de Montagne (Nain, rang racial 5,
-  // 1x/jour) si le perso l'a et ne l'a pas déjà utilisée aujourd'hui (cf.
-  // Capacites.verifierUsage, même mécanique que les capacités à fréquence
-  // limitée, appelée ici avec une mecanique construite à la volée puisque
-  // Cœur de Montagne ne passe jamais par Capacites.lancer()).
+  // prefixe distingue les ids. Le sélecteur de type (physique/magique/
+  // naturel) sert au don Maître des armures lourdes et à Résistance
+  // naturelle (cf. subirDegats) ; ignoré côté monstre, qui n'a pas ces
+  // mécaniques. `perso`/`p` (optionnels, absents côté monstre) : affiche la
+  // case Cœur de Montagne (Nain, rang racial 5, 1x/jour) si le perso l'a et
+  // ne l'a pas déjà utilisée aujourd'hui (cf. Capacites.verifierUsage, même
+  // mécanique que les capacités à fréquence limitée, appelée ici avec une
+  // mecanique construite à la volée puisque Cœur de Montagne ne passe jamais
+  // par Capacites.lancer()), et la case Rempart (Guerrier, Voie du peuple
+  // rang 3, fréquence libre — pas de suivi d'usage, juste une déclaration
+  // manuelle à chaque jet).
   function blocDegatsSubisHtml(prefixe, perso, p) {
     const coeurMontagneDispo = !!(perso && perso.aCoeurDeMontagne() && typeof Capacites !== "undefined" &&
       Capacites.verifierUsage(p || {}, "race:nain:5", { usage: { frequence: "1x/jour" } }).ok);
+    const rempartDispo = !!(perso && perso.aRempart());
     return `
       <button class="btn petit danger btn-toggle-degats" id="${prefixe}btn-toggle-degats" style="width:100%;">🛡 Subir des dégâts</button>
       <div class="degats-subis" id="${prefixe}degats-subis-form" style="display:none;">
@@ -4958,13 +4985,15 @@ const App = (() => {
         <select id="${prefixe}type-degats-subis">
           <option value="physique" selected>Physique</option>
           <option value="magique">Magique</option>
+          <option value="naturel">Naturel (froid/chaleur/chute/poison/animal)</option>
         </select>
         ${coeurMontagneDispo ? `<label style="display:flex;align-items:center;gap:4px;font-size:0.78rem;"><input type="checkbox" id="${prefixe}coeur-montagne" /> 🏔 Cœur de Montagne (annule ces dégâts, 1x/jour)</label>` : ""}
+        ${rempartDispo ? `<label style="display:flex;align-items:center;gap:4px;font-size:0.78rem;"><input type="checkbox" id="${prefixe}rempart" /> 🛡️ Rempart (protège activement un allié, −2)</label>` : ""}
         <button class="btn petit or" id="${prefixe}btn-appliquer-degats">Appliquer</button>
       </div>`;
   }
   function wireDegatsSubis(id, prefixe) {
-    wireDegatsSubisGenerique(prefixe, (val, typeDegats, coeurMontagneArme) => subirDegats(id, val, typeDegats, coeurMontagneArme));
+    wireDegatsSubisGenerique(prefixe, (val, typeDegats, coeurMontagneArme, rempartArme) => subirDegats(id, val, typeDegats, coeurMontagneArme, rempartArme));
   }
 
   // Câblage générique du petit formulaire "Subir des dégâts" (toggle + input +
@@ -4977,15 +5006,17 @@ const App = (() => {
     const champ = document.getElementById(`${prefixe}champ-degats-bruts`);
     const selType = document.getElementById(`${prefixe}type-degats-subis`);
     const caseCoeurMontagne = document.getElementById(`${prefixe}coeur-montagne`);
+    const caseRempart = document.getElementById(`${prefixe}rempart`);
     if (!btnToggle || !form || !champ) return;
     btnToggle.onclick = () => {
       form.style.display = form.style.display === "none" ? "flex" : "none";
       if (form.style.display === "flex") champ.focus();
     };
     const appliquerEtVider = () => {
-      appliquer(champ.value, selType ? selType.value : "physique", !!(caseCoeurMontagne && caseCoeurMontagne.checked));
+      appliquer(champ.value, selType ? selType.value : "physique", !!(caseCoeurMontagne && caseCoeurMontagne.checked), !!(caseRempart && caseRempart.checked));
       champ.value = "";
       if (caseCoeurMontagne) caseCoeurMontagne.checked = false;
+      if (caseRempart) caseRempart.checked = false;
     };
     document.getElementById(`${prefixe}btn-appliquer-degats`).onclick = appliquerEtVider;
     champ.addEventListener("keydown", (e) => { if (e.key === "Enter") appliquerEtVider(); });
