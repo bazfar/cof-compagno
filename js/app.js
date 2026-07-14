@@ -337,19 +337,29 @@ const App = (() => {
   // aussi le dock, cf. sa dernière ligne).
   let attaquesRapidesEnAttente = { contact: null, distance: null, magique: null };
 
+  // Détermine touché/raté à partir d'un jet déjà résolu (cf. lancerTest) et
+  // d'une DEF cible déjà connue (ou null) — cœur de règle partagé par
+  // _resoudreAttaqueRapide (joueur, armes rapides) ET la table de combat MJ
+  // (attaques de monstre vs PJ, cf. _resoudreAttaqueMonstreVsPJ) : 1 naturel
+  // = toujours raté, seuil de critique (déjà intégré à critMin passé à
+  // lancerTest) = toujours touché, sinon touché si total >= DEF. Sans cible
+  // sélectionnée ou DEF inconnue, renvoie null : ne bloque jamais (comportement
+  // d'avant ce chantier, jet brut, bouton dégâts disponible).
+  function _toucheVsDef(jet, cibleSelectionnee, defCible) {
+    if (!cibleSelectionnee) return null;
+    if (jet.echec) return false;
+    if (jet.crit) return true;
+    if (defCible === null) return null;
+    return jet.total >= defCible;
+  }
+
   // Résout une attaque rapide à l'arme : lance le jet (réutilise lancerTest,
   // ne duplique jamais le tirage de dés/le journal). Si `cibleId` (id de
   // TOKEN dd2vtt, cf. _cibleDistanceId/_ciblesPortee — PAS un id de
-  // personnage) est fourni, détermine touché/raté/critique/échec critique
-  // selon les mêmes règles que le moteur de capacités (cf. Capacites.lancer,
-  // js/capacites.js) : 1 naturel = toujours raté, seuil de critique (déjà
-  // intégré au `critMin` passé par l'appelant, cf. Personnage.critMinAttaque)
-  // = toujours touché, sinon touché si le total >= DEF de la cible. Sans
-  // cible (ou DEF cible inconnue), `touche` vaut null : ne bloque jamais,
-  // comportement d'avant ce chantier (jet brut, bouton dégâts disponible).
-  // Un token PJ n'a pas de champ `def` direct (contrairement à un token
-  // monstre) : il faut recalculer Personnage.calculerDEF() via son `ref`
-  // ("pj-"+persoId), cf. _ciblesPortee/ajouterMonPersoBattlemap.
+  // personnage) est fourni, détermine touché/raté/critique/échec critique via
+  // _toucheVsDef. Un token PJ n'a pas de champ `def` direct (contrairement à
+  // un token monstre) : il faut recalculer Personnage.calculerDEF() via son
+  // `ref` ("pj-"+persoId), cf. _ciblesPortee/ajouterMonPersoBattlemap.
   function _resoudreAttaqueRapide(label, bonus, critMin, cibleId) {
     const jet = lancerTest(label, bonus, critMin);
     let defCible = null;
@@ -365,12 +375,7 @@ const App = (() => {
         }
       }
     }
-    let touche = null;
-    if (cibleId) {
-      if (jet.echec) touche = false;
-      else if (jet.crit) touche = true;
-      else if (defCible !== null) touche = jet.total >= defCible;
-    }
+    const touche = _toucheVsDef(jet, !!cibleId, defCible);
     return { touche, critique: jet.crit, echecCritique: jet.echec, totalAttaque: jet.total, defCible };
   }
 
@@ -4681,6 +4686,7 @@ const App = (() => {
     label = label || formule;
     afficherResultat(label, total, detail, crit, echec);
     ajouterHisto(label, total, crit, echec, detail);
+    return total;
   }
 
   function afficherResultat(label, total, detail, crit, echec) {
@@ -5539,6 +5545,10 @@ const App = (() => {
         degats: arme.degats, portee: arme.portee, typedegats: arme.typedegats,
         jetTexte: `1d20${signe(bonusAttaque)} vs DEF`,
         effetSpecial: a.effetSpecial,
+        // Aucune arme de monstre n'a de seuil de critique abaissé aujourd'hui
+        // (pas d'affixe "Aiguisé" sur le catalogue armes_monstres) — point
+        // d'extension si une arme spécifique en reçoit un jour un.
+        critMin: arme.critMin || 20,
       };
     }
     return {
@@ -5546,7 +5556,46 @@ const App = (() => {
       degats: a.degats, portee: a.portee, typedegats: a.type,
       jetTexte: a.jet,
       effetSpecial: a.effetSpecial,
+      critMin: 20,
     };
+  }
+
+  // Cible PJ actuellement choisie par monstre (table de combat MJ, cf.
+  // rendreTableCombat/_resoudreAttaqueMonstreVsPJ) — monstreId -> persoId,
+  // état de MODULE (pas une closure locale) car la table de combat est
+  // re-rendue indépendamment dans l'onglet "⚔ Combat" ET le panneau
+  // battlemap MJ (peuvent être montés simultanément, cf. rendreTableCombat).
+  let ciblesMonstres = {};
+  // État "dégâts en attente" des attaques de monstre, par monstre ET par
+  // index d'attaque (un monstre a souvent 2-3 armes distinctes) — même
+  // contrainte de module que ciblesMonstres.
+  let attaquesMonstresEnAttente = {};
+
+  // Résout une attaque de monstre contre une cible PJ (table de combat MJ) :
+  // lance le jet (réutilise lancerTest), détermine touché/raté/critique/échec
+  // critique via _toucheVsDef si un PJ cible est choisi. Sans cible, touche
+  // vaut null (jamais bloquant, jet brut) — même logique que
+  // _resoudreAttaqueRapide côté joueur, avec une DEF cible directement issue
+  // de calculerDEF() (pas de token dd2vtt à résoudre ici, la cible est
+  // choisie par id de personnage directement).
+  function _resoudreAttaqueMonstreVsPJ(label, bonus, critMin, pjId) {
+    const jet = lancerTest(label, bonus, critMin);
+    let defCible = null;
+    if (pjId) {
+      const cibleP = chargerPersos()[pjId];
+      if (cibleP) defCible = Personnage.depuisJSON(cibleP).calculerDEF();
+    }
+    const touche = _toucheVsDef(jet, !!pjId, defCible);
+    return { touche, critique: jet.crit, echecCritique: jet.echec, totalAttaque: jet.total, defCible };
+  }
+
+  // Visibilité du bouton "Dégâts" et doublement des dés pour une attaque de
+  // monstre donnée — mêmes règles que _etatDegatsRapide (visible=false
+  // SEULEMENT sur un raté avéré, jamais sans cible ou DEF inconnue).
+  function _etatDegatsMonstre(monstreId, idxAttaque) {
+    const e = attaquesMonstresEnAttente[`${monstreId}:${idxAttaque}`];
+    if (!e) return { visible: true, critique: false };
+    return { visible: e.touche !== false, critique: e.touche === true && !!e.critique };
   }
 
   // Boutons d'attaque rapide pour un monstre de la table de combat : une ligne
@@ -5562,9 +5611,10 @@ const App = (() => {
     return `<div class="cm-attaques">${attaques.map((a, i) => {
       const r = _resoudreAttaqueMonstre(a);
       if (!r) return "";
+      const etatDeg = _etatDegatsMonstre(m.id, i);
       return `<div class="cm-attaque-ligne">
         <button class="btn petit secondaire" data-monstre-jet="${m.id}" data-idx-attaque="${i}" title="${echapper(r.jetTexte || "")}">⚔ ${echapper(r.nom)} (${signe(r.bonusAttaque)})</button>
-        <button class="btn-de-cap" data-monstre-degats="${m.id}" data-idx-attaque="${i}" title="Dégâts : ${echapper(r.degats || "")}">🎲</button>
+        ${etatDeg.visible ? `<button class="btn-de-cap" data-monstre-degats="${m.id}" data-idx-attaque="${i}" data-monstre-critique="${etatDeg.critique ? "1" : "0"}" title="Dégâts : ${echapper(r.degats || "")}">🎲${etatDeg.critique ? " CRIT" : ""}</button>` : ""}
       </div>`;
     }).join("")}</div>`;
   }
@@ -5685,6 +5735,9 @@ const App = (() => {
       return;
     }
 
+    const persos = chargerPersos();
+    const pjsDispo = Object.keys(persos).map((pid) => ({ id: pid, nom: persos[pid].nom }));
+
     zone.innerHTML = `<div class="grille-table-combat">${monstres.map((m) => {
       const prefixe = `cm-${m.id}-`;
       const pvMax = m.pvMax || 0;
@@ -5692,6 +5745,16 @@ const App = (() => {
       const morEnCombat = pvActuel <= 0;
       const etoiles = m.dangerosite ? "★".repeat(Math.min(m.dangerosite, 5)) : "";
       const badgeBoss = m.boss ? ' <span class="badge-boss">BOSS</span>' : "";
+      const cibleActuelle = ciblesMonstres[m.id] || "";
+      // Cible PJ de l'attaque (cf. _resoudreAttaqueMonstreVsPJ) — pas de
+      // gating possible sans elle (comportement d'avant ce chantier, jamais
+      // bloquant), donc omise s'il n'y a aucun PJ enregistré.
+      const cibleHtml = pjsDispo.length ? `<label class="cm-cible" style="font-size:0.78rem;display:block;margin:4px 0;">🎯 Cible
+        <select data-cible-monstre="${m.id}" style="width:100%;margin-top:2px;">
+          <option value="">— Aucune —</option>
+          ${pjsDispo.map((p) => `<option value="${p.id}" ${p.id === cibleActuelle ? "selected" : ""}>${echapper(p.nom)}</option>`).join("")}
+        </select>
+      </label>` : "";
       return `
         <div class="combat-monstre${morEnCombat ? " hors-combat" : ""}" data-id="${m.id}">
           <div class="cm-entete">
@@ -5703,6 +5766,7 @@ const App = (() => {
             <span>Armure ${m.armure || 0}</span>
             ${etoiles ? `<span>${etoiles}</span>` : ""}
           </div>
+          ${cibleHtml}
           ${attaquesMonstreHtml(m)}
           <div class="pv-control">
             <button data-pv-moins="${m.id}">−</button>
@@ -5720,19 +5784,43 @@ const App = (() => {
     monstres.forEach((m) => {
       wireDegatsSubisGenerique(`cm-${m.id}-`, (val) => subirDegatsMonstre(m.id, val, targetId));
     });
+    zone.querySelectorAll("[data-cible-monstre]").forEach((sel) => {
+      sel.onchange = () => {
+        ciblesMonstres[sel.dataset.cibleMonstre] = sel.value || null;
+        // Changer de cible invalide le gating dégâts en cours pour ce monstre
+        // (une nouvelle attaque contre une autre cible doit repartir à zéro).
+        Object.keys(attaquesMonstresEnAttente).forEach((cle) => {
+          if (cle.startsWith(`${sel.dataset.cibleMonstre}:`)) delete attaquesMonstresEnAttente[cle];
+        });
+        rendreTableCombat(targetId);
+      };
+    });
     // Attaques rapides du monstre (jet à gauche, dégâts via 🎲 à droite) —
     // reste sur l'onglet courant (Battlemap ou Table de combat), comme les
-    // attaques rapides du joueur.
+    // attaques rapides du joueur. Si une cible PJ est choisie (cf.
+    // ciblesMonstres), le jet est comparé à sa DEF (_resoudreAttaqueMonstreVsPJ) ;
+    // sans cible, comportement inchangé (jet brut, dégâts toujours dispo).
     // m.attaques (invocation, cf. attaquesMonstreHtml) prime sur BESTIAIRE_INDEX.
     zone.querySelectorAll("[data-monstre-jet]").forEach((btn) => {
       btn.onclick = () => {
         const m = monstres.find((mm) => mm.id === btn.dataset.monstreJet);
         const def = m && typeof BESTIAIRE_INDEX !== "undefined" ? BESTIAIRE_INDEX[m.monstreId] : null;
         const attaques = m && (m.attaques || (def && def.attaques));
-        const a = attaques && attaques[parseInt(btn.dataset.idxAttaque, 10)];
+        const idx = parseInt(btn.dataset.idxAttaque, 10);
+        const a = attaques && attaques[idx];
         const r = _resoudreAttaqueMonstre(a);
         if (!r) return;
-        lancerTest(`${m.nom} — ${r.nom}`, r.bonusAttaque);
+        const pjId = ciblesMonstres[m.id] || null;
+        const resolution = _resoudreAttaqueMonstreVsPJ(`${m.nom} — ${r.nom}`, r.bonusAttaque, r.critMin, pjId);
+        attaquesMonstresEnAttente[`${m.id}:${idx}`] = resolution;
+        if (pjId) {
+          const nomCible = (persos[pjId] && persos[pjId].nom) || "la cible";
+          toast(resolution.echecCritique ? "1 naturel — échec critique automatique."
+            : resolution.critique ? `CRITIQUE sur ${nomCible} !${resolution.defCible !== null ? ` (DEF ${resolution.defCible})` : ""}`
+            : resolution.defCible === null ? "DEF de la cible inconnue — à comparer manuellement."
+            : (resolution.touche ? `Touché ${nomCible} ! (DEF ${resolution.defCible})` : `Raté sur ${nomCible} (DEF ${resolution.defCible}).`));
+        }
+        rendreTableCombat(targetId);
       };
     });
     zone.querySelectorAll("[data-monstre-degats]").forEach((btn) => {
@@ -5743,7 +5831,17 @@ const App = (() => {
         const a = attaques && attaques[parseInt(btn.dataset.idxAttaque, 10)];
         const r = _resoudreAttaqueMonstre(a);
         if (!r) return;
-        lancerFormule(r.degats, `${m.nom} — ${r.nom} (dégâts)`);
+        const critique = btn.dataset.monstreCritique === "1";
+        const total = lancerFormule(r.degats, `${m.nom} — ${r.nom} (dégâts)`, critique);
+        // Applique automatiquement les dégâts à la cible PJ choisie (celle du
+        // moment, pas forcément celle du jet d'attaque si changée entre-temps)
+        // — c'est précisément l'intérêt d'avoir désigné une cible : éviter à
+        // la table de reporter le total à la main sur la fiche du joueur.
+        const pjId = ciblesMonstres[m.id] || null;
+        if (pjId && typeof total === "number") {
+          const typeDegatsNormalise = r.typedegats && r.typedegats.startsWith("physique") ? "physique" : "magique";
+          subirDegats(pjId, total, typeDegatsNormalise);
+        }
       };
     });
     zone.querySelectorAll("[data-pv-moins]").forEach((btn) => {
