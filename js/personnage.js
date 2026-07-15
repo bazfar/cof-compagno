@@ -355,7 +355,7 @@ class Personnage extends Entite {
   /* ----- Défense ----- */
   calculerDEF() {
     const dex = Math.min(this.mod("DEX"), this.plafondDex());
-    return 10 + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusTemporaire("DEF") + this.bonusDefImmobile() + this.bonusDefDuel() + this.bonusDefBouclierExpert();
+    return 10 + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusTemporaire("DEF") + this.bonusDefImmobile() + this.bonusDefDuel() + this.bonusDefBouclierExpert() + this.bonusDefPhalange();
   }
 
   // Chasseur — Voie de la traque, rang 2 "Camouflage naturel" (passive) :
@@ -390,6 +390,26 @@ class Personnage extends Entite {
       return d !== null && d <= 1;
     });
     return adjacents.length === 1 ? 2 : 0;
+  }
+
+  // Guerrier — Voie du soldat, rang 2 "Combat en phalange" (passive) : +1 DEF
+  // par PJ à son contact (distance <= 1 case, cf. Carte.distanceCasesEntre) —
+  // simplifié par rapport au texte d'origine (validé avec Thomas : plus de
+  // bonus d'attaque, plus de condition "même cible"), pas de plafond
+  // contrairement à bonusDefDuel (ici PLUSIEURS alliés adjacents cumulent).
+  // Même garde-fou que bonusDefDuel : 0 sans Carte chargée, hors combat sur
+  // grille, ou si le perso n'a pas (encore) de jeton posé.
+  bonusDefPhalange() {
+    if (!(this.classe === "guerrier" && this.estChoisie("Voie du soldat", 2))) return 0;
+    if (typeof Carte === "undefined" || !Carte.tokenIdPourPerso || !Carte.listeTokensJoueursCombat || !Carte.distanceCasesEntre) return 0;
+    const monToken = Carte.tokenIdPourPerso(this.id);
+    if (!monToken) return 0;
+    const adjacents = (Carte.listeTokensJoueursCombat() || []).filter((t) => {
+      if (t.id === monToken) return false;
+      const d = Carte.distanceCasesEntre(monToken, t.id);
+      return d !== null && d <= 1;
+    });
+    return adjacents.length;
   }
 
   // Don Expert du bouclier (simplifié par Thomas par rapport au texte

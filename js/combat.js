@@ -400,6 +400,12 @@ const Combat = (() => {
         p.corruptionSeuilFranchi = false;
         modifie = true;
       }
+      // Pool de réactions (cf. mecanique.reactionCout, js/capacites.js) : remis
+      // à zéro en fin de combat, comme la jauge de corruption ci-dessus.
+      if (p.reactionsUtilisees) {
+        p.reactionsUtilisees = 0;
+        modifie = true;
+      }
     });
     if (modifie) App.sauverPersos(persos);
     if (typeof Carte !== "undefined" && Carte.reinitialiserDetectionVisibilite) Carte.reinitialiserDetectionVisibilite();

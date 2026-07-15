@@ -349,6 +349,18 @@ const App = (() => {
   // aussi le dock, cf. sa dernière ligne).
   let attaquesRapidesEnAttente = { contact: null, distance: null, magique: null };
 
+  // DEF d'un PJ + aura Guerrier "L'exemple" (Voie du peuple rang 2, cf.
+  // Capacites.bonusDefAuraPeuple) : cette aura dépend d'AUTRES personnages
+  // (position/immobilité d'un Guerrier proche), elle ne peut donc pas vivre
+  // dans Personnage.calculerDEF() (auto-contenu à `this`) — appelée ici à
+  // chaque affichage ET résolution de DEF de PJ, pour ne jamais désynchroniser
+  // la valeur affichée de la valeur réellement opposée à une attaque.
+  function _defPjAvecAura(perso, persoId) {
+    const def = perso.calculerDEF();
+    if (typeof Capacites === "undefined" || !Capacites.bonusDefAuraPeuple) return def;
+    return def + Capacites.bonusDefAuraPeuple(persoId);
+  }
+
   // Détermine touché/raté à partir d'un jet déjà résolu (cf. lancerTest) et
   // d'une DEF cible déjà connue (ou null) — cœur de règle partagé par
   // _resoudreAttaqueRapide (joueur, armes rapides) ET la table de combat MJ
@@ -382,8 +394,9 @@ const App = (() => {
       } else {
         const pjTok = (Carte.listeTokensJoueursCombat ? Carte.listeTokensJoueursCombat() : []).find((t) => t.id === cibleId);
         if (pjTok && pjTok.ref && pjTok.ref.startsWith("pj-")) {
-          const cibleP = chargerPersos()[pjTok.ref.slice(3)];
-          if (cibleP) defCible = Personnage.depuisJSON(cibleP).calculerDEF();
+          const cibleId2 = pjTok.ref.slice(3);
+          const cibleP = chargerPersos()[cibleId2];
+          if (cibleP) defCible = _defPjAvecAura(Personnage.depuisJSON(cibleP), cibleId2);
         }
       }
     }
@@ -585,7 +598,7 @@ const App = (() => {
             <div class="barre-pv"><div class="rempli" id="bm-barre-pv-rempli"></div></div>
             ${blocDegatsSubisHtml("bm-", perso, p)}
           </div>
-          <div class="stat-box"><div class="label">DEF</div><div class="valeur">${perso.calculerDEF()}</div></div>
+          <div class="stat-box"><div class="label">DEF</div><div class="valeur">${_defPjAvecAura(perso, id)}</div></div>
           <div class="stat-box"><div class="label">Init.</div><div class="valeur">${signe(init)}</div></div>
         </div>
         <button class="btn petit secondaire" id="bm-voir-fiche-complete" style="width:100%;margin-top:6px;">Voir la fiche complète</button>
@@ -917,7 +930,7 @@ const App = (() => {
             <span class="dock-hp-val">${pv}/${pvMax}</span>
           </div>
           <div class="dock-chips">
-            <span class="dock-chip" title="Défense">🛡 ${perso.calculerDEF()}</span>
+            <span class="dock-chip" title="Défense">🛡 ${_defPjAvecAura(perso, id)}</span>
             ${reduction > 0 ? `<span class="dock-chip" title="Réduction de dégâts (armure)">🪖 ${reduction}</span>` : ""}
             <span class="dock-chip" title="Initiative">⚡ ${signe(perso.calculerInitiative())}</span>
             ${aChaos ? `<span class="dock-chip chaos">${p.corruptionCombat || 0} CS</span>` : ""}
@@ -3241,6 +3254,13 @@ const App = (() => {
       html += ` <span class="usage-cap">${n}/${freq.max} (${freq.periode}) ` +
         `<button class="btn-reset-usage" data-reset-cle="${cle}" title="Réinitialiser ce compteur d'usage">↺</button></span>`;
     }
+    // Pool générique de réactions (3/combat, cf. mecanique.reactionCout,
+    // js/capacites.js) — ex. Guerrier "Fils du village". Affiché seulement
+    // pendant un combat actif : hors combat, le pool n'a pas de sens.
+    if (mecanique.reactionCout && typeof Combat !== "undefined" && Combat.estActif && Combat.estActif()) {
+      const restantes = Capacites.reactionsRestantes(p);
+      html += ` <span class="usage-cap">${restantes}/${Capacites.REACTIONS_MAX} réaction(s)</span>`;
+    }
     return html;
   }
 
@@ -3591,8 +3611,14 @@ const App = (() => {
       fermerPickerCibleCapacite();
       toast(res.messages.join(" · "));
       // Consomme l'action principale du tour en combat (no-op hors combat) —
-      // "compétence" est l'autre exemple type d'action principale.
-      if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
+      // "compétence" est l'autre exemple type d'action principale. Une
+      // réaction (mecanique.reactionCout, ex. Guerrier "Fils du village") ne
+      // consomme jamais l'action principale : par définition, une réaction se
+      // déclenche hors de son propre tour, sur une autre économie (le pool de
+      // réactions), jamais sur celle du tour en cours.
+      if (!mecaniqueLancee.reactionCout && typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) {
+        Combat.utiliserActionPrincipale(id);
+      }
       // mecanique.actionBonus (champ générique, ex. Barde "Enchaînement") :
       // la capacité ACCORDE une action principale bonus plutôt que d'en
       // consommer une — annule immédiatement la consommation ci-dessus.
@@ -4017,7 +4043,7 @@ const App = (() => {
         <h3 class="titre-bandeau" style="font-size:1rem;">🛡️ Équipement</h3>
         <div class="slots-equipement">${casesHtml}</div>
         <div class="recap-equipement">
-          <div>DEF totale : <strong>${perso.calculerDEF()}</strong> (dont +${perso.bonusDefEquipement()} équipement)</div>
+          <div>DEF totale : <strong>${_defPjAvecAura(perso, perso.id)}</strong> (dont +${perso.bonusDefEquipement()} équipement)</div>
           <div>Réduction de dégâts : <strong>${perso.reductionDegats()}</strong></div>
         </div>
         <div class="selecteur-slot" id="selecteur-slot-equip" style="display:none;"></div>
@@ -4771,7 +4797,7 @@ const App = (() => {
                 <div class="barre-pv"><div class="rempli" id="barre-pv-rempli"></div></div>
                 ${blocDegatsSubisHtml("", perso, p)}
               </div>
-              <div class="stat-box"><div class="label">DEF</div><div class="valeur">${perso.calculerDEF()}</div></div>
+              <div class="stat-box"><div class="label">DEF</div><div class="valeur">${_defPjAvecAura(perso, id)}</div></div>
               <div class="stat-box"><div class="label">Initiative</div><div class="valeur">${signe(init)}</div></div>
             </div>
 
@@ -6604,7 +6630,7 @@ const App = (() => {
     const cible = cibleP ? Personnage.depuisJSON(cibleP) : null;
     const modeForce = cible && cible.aExpertBouclier() ? "desavantage" : null;
     const jet = lancerTest(label, bonus, critMin, modeForce);
-    const defCible = cible ? cible.calculerDEF() : null;
+    const defCible = cible ? _defPjAvecAura(cible, pjId) : null;
     const touche = _toucheVsDef(jet, !!pjId, defCible);
     return { touche, critique: jet.crit, echecCritique: jet.echec, totalAttaque: jet.total, defCible };
   }

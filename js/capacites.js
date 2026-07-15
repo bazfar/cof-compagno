@@ -152,13 +152,43 @@ const Capacites = (() => {
     if (!cible) return null;
     if (cible.genre === "perso") {
       const p = persos[cible.id];
-      return p ? Personnage.depuisJSON(p).calculerDEF() : null;
+      return p ? Personnage.depuisJSON(p).calculerDEF() + bonusDefAuraPeuple(cible.id) : null;
     }
     if (cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
       const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
       return tok && typeof tok.def === "number" ? tok.def : null;
     }
     return null;
+  }
+
+  // Guerrier — Voie du peuple, rang 2 "L'exemple" (passive) : +1 DEF à tout PJ
+  // à 2 cases (cf. Carte.distanceCasesEntre) d'un Guerrier possédant ce rang,
+  // tant que ce Guerrier reste immobile ce tour (Combat.estImmobile, même
+  // mécanique que Chasseur "Camouflage naturel"). Dépend d'AUTRES personnages
+  // (contrairement aux bonus DEF de Personnage.calculerDEF(), auto-contenus à
+  // `this`) : vit ici plutôt que dans personnage.js, et doit être appelé à la
+  // fois par obtenirDefCible() ci-dessus (résolution d'attaque) ET par app.js
+  // (affichage de la fiche), pour ne jamais désynchroniser la DEF affichée de
+  // la DEF réellement opposée à une attaque. Pas de cumul si plusieurs
+  // Guerriers qualifient à la fois (+1 fixe, pas +1 par Guerrier).
+  function bonusDefAuraPeuple(persoId) {
+    if (typeof Carte === "undefined" || !Carte.tokenIdPourPerso || !Carte.listeTokensJoueursCombat ||
+        !Carte.distanceCasesEntre || !Carte.idPersoDepuisRef) return 0;
+    if (typeof Combat === "undefined" || !Combat.estImmobile) return 0;
+    const monToken = Carte.tokenIdPourPerso(persoId);
+    if (!monToken) return 0;
+    const persos = App.chargerPersos();
+    const qualifie = (Carte.listeTokensJoueursCombat() || []).some((t) => {
+      if (t.id === monToken || !t.ref) return false;
+      const guerrierId = Carte.idPersoDepuisRef(t.ref);
+      const pg = persos[guerrierId];
+      if (!pg) return false;
+      const guerrier = Personnage.depuisJSON(pg);
+      if (!(guerrier.classe === "guerrier" && guerrier.estChoisie("Voie du peuple", 2))) return false;
+      const d = Carte.distanceCasesEntre(t.id, monToken);
+      return d !== null && d <= 2 && Combat.estImmobile(guerrierId);
+    });
+    return qualifie ? 1 : 0;
   }
 
   /* ---------- Application des effets ----------
@@ -338,6 +368,12 @@ const Capacites = (() => {
      des mécaniques de jauge déjà marquées "non trackée par le schéma standard"
      dans les données. */
   const SEUIL_CORRUPTION_MAJEURE = 6;
+
+  // Pool générique de réactions par personnage, remis à zéro par
+  // Combat.terminerCombat() (comme corruptionCombat) — cf. mecanique.reactionCout
+  // dans lancer(). Plusieurs capacités de classes différentes peuvent piocher
+  // dans ce même pool ; rien de spécifique au Guerrier dans ce compteur.
+  const REACTIONS_MAX = 3;
 
   // Mute p.corruptionMajeure une seule fois par combat (corruptionSeuilFranchi,
   // remis à false par Combat.terminerCombat) quand la jauge dépasse le seuil —
@@ -581,6 +617,19 @@ const Capacites = (() => {
       }
     }
 
+    // Pool générique de réactions (3 par combat et par personnage, ex.
+    // Guerrier — Voie du peuple rang 1 "Fils du village") — même principe que
+    // corruptionCout : bloque AVANT résolution si le pool est épuisé, décompte
+    // seulement une fois l'activation confirmée (cf. plus bas). Distinct des
+    // compteurs usage.frequence (1x/tour, 1x/combat...) : plusieurs capacités
+    // différentes peuvent piocher dans le MÊME pool de 3 réactions.
+    if (mecanique.reactionCout) {
+      const reactionsRestantes = REACTIONS_MAX - (p.reactionsUtilisees || 0);
+      if (reactionsRestantes < mecanique.reactionCout) {
+        return { ok: false, messages: [`Plus assez de réactions ce combat (${reactionsRestantes}/${REACTIONS_MAX} restantes).`] };
+      }
+    }
+
     let cible = null;
     if (cibleId) {
       cible = listeCibles(persoId).find((c) => c.id === cibleId) || null;
@@ -670,6 +719,14 @@ const Capacites = (() => {
       App.ajouterHisto(`${libelle} — Corruption`, p.corruptionCombat, false, false, `-${mecanique.corruptionCout} (jauge de combat, ${p.nom})`);
       messages.push(`Corruption -${mecanique.corruptionCout} (jauge de combat : ${p.corruptionCombat}).`);
     }
+    // Coût en réactions (cf. le garde-fou plus haut) : décompté une fois
+    // l'activation confirmée, même logique que corruptionCout ci-dessus.
+    if (mecanique.reactionCout) {
+      p.reactionsUtilisees = (p.reactionsUtilisees || 0) + mecanique.reactionCout;
+      const restantes = REACTIONS_MAX - p.reactionsUtilisees;
+      App.ajouterHisto(`${libelle} — Réaction`, restantes, false, false, `-${mecanique.reactionCout} réaction(s) (${p.nom}, ${restantes}/${REACTIONS_MAX} restantes)`);
+      messages.push(`Réaction(s) -${mecanique.reactionCout} (${restantes}/${REACTIONS_MAX} restantes ce combat).`);
+    }
 
     // Consommé dès le jet d'attaque, même en cas de raté — jamais décalé à
     // resoudreDegatsEnAttente(), qui ne revérifie/redécompte pas l'usage.
@@ -707,6 +764,12 @@ const Capacites = (() => {
     return { ok: true, messages };
   }
 
+  // Réactions restantes d'un perso brut ce combat (cf. mecanique.reactionCout) —
+  // lu par app.js pour afficher/griser les boutons de réaction.
+  function reactionsRestantes(p) {
+    return REACTIONS_MAX - ((p && p.reactionsUtilisees) || 0);
+  }
+
   return {
     resoudreExpression,
     resoudreDureeInitiale,
@@ -714,12 +777,15 @@ const Capacites = (() => {
     retirerEtatsFinCombat,
     ajusterCorruptionCombat,
     SEUIL_CORRUPTION_MAJEURE,
+    REACTIONS_MAX,
+    reactionsRestantes,
     cleCapacite,
     parserFrequence,
     verifierUsage,
     reinitialiserUsage,
     listeCibles,
     obtenirDefCible,
+    bonusDefAuraPeuple,
     lancer,
     resoudreDegatsEnAttente,
   };
