@@ -110,6 +110,20 @@ const INVOCATIONS = [
     pvMax: null, def: 10, armure: 0, init: null, attaqueBonus: null, degats: "1d8",
     description: "PV = niveau × 2, Att = attaque du Druide − 2, DM 1d8. Ne dure que [1d4+1] tours — retire le jeton manuellement à expiration.",
   },
+  {
+    id: "barricade_guerrier",
+    nom: "Barricade improvisée",
+    classe: "guerrier", voie: "Voie de l'ingénieur", rangRequis: 3,
+    // pvMaxFormule (résolue via Capacites.resoudreExpression, comme les
+    // formules de dégâts/soin) plutôt que le fallback "pvMax null = niveau×2"
+    // déjà câblé pour Créature corrompue — la barricade suit sa propre
+    // formule (10 + Niveau, texte d'origine de Fortification de fortune).
+    pvMax: null, pvMaxFormule: "10+niveau", def: 10, armure: 0, init: null, attaqueBonus: null, degats: null,
+    // sansAttaque : token posé sans capacité d'attaque — bloque une case,
+    // n'apparaît jamais dans le sélecteur de cible d'attaque des monstres.
+    sansAttaque: true,
+    description: "10 PV + Niveau, DEF 10. N'attaque jamais — bloque une case du champ de bataille (Fortification de fortune, Voie de l'ingénieur rang 3). Le bonus +2 DEF aux alliés abrités est accordé séparément, pas par ce jeton.",
+  },
 ];
 
 const CLASSES = {
@@ -228,7 +242,7 @@ const CLASSES = {
           { rang: 3, nom: "Fortification de fortune (L)", effet: "Barricade improvisée sur 3 m (10 PV + Niveau). Alliés abrités : +4 DEF à distance, +2 au contact",
             mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "zone", portee: null, zone: 3, jetOppose: null,
               effets: [ { type: "bonus", cible: "DEF", valeur: 2, duree: "finCombat" },
-                { type: "special", note: "Approximation validée avec Thomas : le schéma ne distingue pas un bonus de DEF contre les attaques à distance d'un bonus contre les attaques au contact (un seul type 'bonus'/'DEF') — retenu la valeur basse (+2, celle du contact) plutôt que +4, pour ne jamais sur-évaluer la protection réelle. Comme Bastion improvisé (rang 5, même voie) : jet résolu et affiché, application manuelle allié par allié (mecanique.cible = 'zone'). La barricade elle-même (10 PV + Niveau, objet destructible) reste non modélisée." } ] } },
+                { type: "special", note: "Approximation validée avec Thomas : le schéma ne distingue pas un bonus de DEF contre les attaques à distance d'un bonus contre les attaques au contact (un seul type 'bonus'/'DEF') — retenu la valeur basse (+2, celle du contact) plutôt que +4, pour ne jamais sur-évaluer la protection réelle. Comme Bastion improvisé (rang 5, même voie) : jet résolu et affiché, application manuelle allié par allié (mecanique.cible = 'zone'). La barricade elle-même (10 PV + Niveau, objet destructible) est désormais posée comme un jeton via le catalogue INVOCATIONS (entrée 'barricade_guerrier', cf. Carte.ouvrirModalInvocation/confirmerInvocation), au même titre que les invocations de Nécromancien/Druide — pvMaxFormule '10+niveau', sansAttaque:true (bloque une case mais n'attaque jamais). Le blocage de mouvement/LoS à travers la barricade (obstacle opaque) reste hors périmètre du système d'invocation, non comblé ici." } ] } },
           { rang: 4, nom: "Champ de pièges (L)", effet: "Pose jusqu'à 3 pièges en une action limitée ; dégâts des pièges passent à 2d6, diff. de DEX 14",
             mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
               jetOppose: { caracAttaquant: null, caracDefenseur: "DEX", difficulteFixe: 14 },

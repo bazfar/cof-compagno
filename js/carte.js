@@ -269,10 +269,19 @@ const Carte = (() => {
 
   // pvMax/attaqueBonus === null dans le catalogue => valeur dynamique (cf.
   // commentaire de INVOCATIONS) résolue ici à partir du personnage invocateur.
+  // pvMaxFormule (ex. Barricade improvisée, "10+niveau") : résolue via le même
+  // moteur de formules que les dégâts/soins des capacités (Capacites.
+  // resoudreExpression, gère "niveau"/"rang"/"Mod.XXX"/dés), plutôt que
+  // d'ajouter un cas spécial de plus au fallback pvMax===null ci-dessous.
   function _resoudreInvocation(inv, perso, p) {
-    const pvMax = inv.pvMax !== null ? inv.pvMax : (p.niveau || 1) * 2;
-    let attaqueBonus = inv.attaqueBonus;
-    if (attaqueBonus === null) {
+    const pvMax = inv.pvMaxFormule && typeof Capacites !== "undefined"
+      ? Capacites.resoudreExpression(inv.pvMaxFormule, { perso }).total
+      : (inv.pvMax !== null ? inv.pvMax : (p.niveau || 1) * 2);
+    // sansAttaque (ex. Barricade improvisée) : jeton posé sans capacité
+    // d'attaque, attaqueBonus toujours 0, jamais résolu dynamiquement (les
+    // deux branches ci-dessous ne concernent que les invocations combattantes).
+    let attaqueBonus = inv.sansAttaque ? 0 : inv.attaqueBonus;
+    if (!inv.sansAttaque && attaqueBonus === null) {
       const attaqueDruide = perso.bonusAttaque("magique") || 0;
       attaqueBonus = inv.id === "creature_corrompue_druide" ? attaqueDruide - 2 : attaqueDruide;
     }
@@ -340,7 +349,9 @@ const Carte = (() => {
       pvMax, pvActuel: pvMax,
       def: inv.def, armure: inv.armure || 0,
       init: (typeof inv.init === "number") ? inv.init : 0,
-      attaques: [{ nom: "Attaque", jet: jetTxt, degats: inv.degats }],
+      // sansAttaque (ex. Barricade improvisée) : aucune entrée d'attaque —
+      // n'apparaît jamais dans le sélecteur de cible d'attaque des monstres.
+      attaques: inv.sansAttaque ? [] : [{ nom: "Attaque", jet: jetTxt, degats: inv.degats }],
     });
     if (ok) {
       toastCarte(`« ${inv.nom} » invoqué(e) !`);
