@@ -987,6 +987,16 @@ class Personnage extends Entite {
     }
     return null;
   }
+  // Guerrier — Voie du chaos, rang 5 "Déchaînement" : +2d6 DM à toutes les
+  // attaques au contact tant que l'état 'dechainement' reste actif (posé par
+  // Capacites.lancer/decompterEtatsDebutTour, cf. js/etats.js) — même canal
+  // que bonusDegatsArmeChaos ci-dessus (câblé aux mêmes 3 sites app.js), mais
+  // déclenché par un etatsActifs temporaire plutôt qu'un choix fixé à
+  // l'acquisition (Déchaînement est une capacité limitée, pas un choix permanent).
+  bonusDegatsDechainement() {
+    if (this.classe === "guerrier" && (this.etatsActifs || []).some((e) => e.idEtat === "dechainement")) return "2d6";
+    return null;
+  }
   // Don Maître des armures lourdes : -3 dégâts physiques subis, appliqué
   // AVANT valeurArmure (cf. subirDegats côté app.js — pas inclus dans
   // reductionDegats(), qui n'a pas connaissance du type de dégâts). Actif

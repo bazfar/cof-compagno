@@ -344,12 +344,33 @@ const Capacites = (() => {
   function decompterEtatsDebutTour(p) {
     const retires = [];
     const degats = [];
+    const testsVolonte = [];
     p.etatsActifs = (p.etatsActifs || []).filter((e) => {
       if (!e.dureeRestante || e.dureeRestante.motCle !== null || typeof e.dureeRestante.tours !== "number") return true;
       if (e.formuleDot) {
         const { total, detail } = resoudreExpression(e.formuleDot, {});
         p.pvActuel = Math.max(0, (p.pvActuel || 0) - total);
         degats.push({ libelle: _libelleEtatActif(e), total, detail, pvApres: p.pvActuel });
+      }
+      // Test de Volonté par tour (ex. Guerrier "Déchaînement" — e.testVolonte
+      // porté par l'entrée elle-même, cf. resoudreEffet/appliquerEtatSurPerso
+      // ci-dessus) : contrairement à mecanique.testVolonte (une seule fois, à
+      // l'activation, cf. lancer()), re-testé à CHAQUE tick tant que l'état
+      // reste actif. Même limite que le reste des redirections non
+      // modélisées : la cible forcée est calculée et nommée, son application
+      // reste manuelle.
+      if (e.testVolonte) {
+        const { carac, difficulteFixe } = e.testVolonte;
+        const perso = Personnage.depuisJSON(p);
+        const modCarac = perso.mod(carac);
+        const d20v = App.lancerDe(20);
+        const totalV = d20v + modCarac;
+        const reussite = totalV >= difficulteFixe;
+        const forcee = reussite ? null : cibleCreaturePlusProche(p.id);
+        testsVolonte.push({
+          libelle: _libelleEtatActif(e), carac, totalV, difficulteFixe, reussite,
+          cibleForcee: forcee ? forcee.nom : null,
+        });
       }
       e.dureeRestante.tours -= 1;
       if (e.dureeRestante.tours <= 0) {
@@ -370,7 +391,7 @@ const Capacites = (() => {
         p.pvTemporairesExpiration = null;
       }
     }
-    return { retires, degats };
+    return { retires, degats, testsVolonte };
   }
 
   // Retire uniquement les entrées motCle === "finCombat" (appelé à la fin du combat).
@@ -513,6 +534,14 @@ const Capacites = (() => {
           const capRang1 = ciblePerso.capaciteEntree("Voie de l'élite", 1);
           extra = capRang1 && capRang1.choix ? { carac: capRang1.choix } : null;
         }
+        // Test de Volonté par tour (ex. Guerrier "Déchaînement", Voie du
+        // chaos rang 5) : effet.testVolonte (déclaré directement dans
+        // data/donnees.js, même schéma que mecanique.testVolonte mais porté
+        // par l'effet 'etat' lui-même) est recopié dans l'entrée etatsActifs
+        // — relu à chaque tick par decompterEtatsDebutTour tant que l'état
+        // reste actif, contrairement à mecanique.testVolonte qui ne teste
+        // qu'une fois, à l'activation.
+        if (effet.testVolonte) extra = Object.assign({}, extra, { testVolonte: effet.testVolonte });
         appliquerEtatSurPerso(cibleP, effet, libelle, { perso, rang }, extra);
         return `État « ${etat.nom} » appliqué à ${cible.nom} (${effet.duree}).`;
       }
@@ -765,6 +794,22 @@ const Capacites = (() => {
     // tant que ce marqueur reste actif. Remis à zéro par Combat.terminerCombat().
     if (source.voie === "Voie de l'ingénieur" && source.rang === 5 && perso.classe === "guerrier") {
       p.bastionActifFinCombat = true;
+    }
+
+    // Guerrier — Voie du chaos, rang 5 "Déchaînement" : consomme TOUTE la
+    // jauge de Corruption de Fureur actuelle (pas un coût fixe connu à
+    // l'avance, contrairement à corruptionCout/corruptionCoutMin ci-dessous)
+    // et la convertit intégralement en Corruption d'Âme — mécanique propre à
+    // ce rang, hors du schéma générique.
+    if (source.voie === "Voie du chaos" && source.rang === 5 && perso.classe === "guerrier") {
+      const cfConsommees = p.corruptionCombat || 0;
+      if (cfConsommees > 0) {
+        p.corruptionCombat = 0;
+        p.corruptionMajeure = (p.corruptionMajeure || 0) + cfConsommees;
+        App.ajouterHisto(`${libelle} — Conversion CF→CA`, p.corruptionMajeure, false, false,
+          `${cfConsommees} CF convertis en CA (${p.nom}, total CA : ${p.corruptionMajeure})`);
+        messages.push(`Déchaînement : ${cfConsommees} CF convertis en Corruption d'Âme (total CA : ${p.corruptionMajeure}).`);
+      }
     }
 
     // Voie du chaos : gain de corruption sur le LANCEUR (jamais la cible),

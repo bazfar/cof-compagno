@@ -500,6 +500,7 @@ const App = (() => {
     // Chevalier — Voie du chaos rang 4 "Marque du serment brisé", choix
     // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
+    if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     let dmgDistance = formuleDegats(armeDistance);
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
@@ -839,6 +840,7 @@ const App = (() => {
     // Chevalier — Voie du chaos rang 4 "Marque du serment brisé", choix
     // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
+    if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     let dmgDistance = armeDistance ? formuleDegats(armeDistance) : null;
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
@@ -3958,6 +3960,7 @@ const App = (() => {
     // Chevalier — Voie du chaos rang 4 "Marque du serment brisé", choix
     // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
+    if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     // Guerrier — Voie du soldat, rang 1 "Posture de combat" (contact
     // uniquement ici : attaque d'opportunité, pas de dmgDistance dans ce bloc).
     if (dmgContact && perso.bonusTemporaire("DM")) dmgContact += (perso.bonusTemporaire("DM") >= 0 ? "+" : "") + perso.bonusTemporaire("DM");

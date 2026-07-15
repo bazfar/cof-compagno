@@ -76,6 +76,8 @@ const ETATS = {
     description: "Double le modificateur de la caractéristique choisie à Spécimen d'élite tant que l'état dure (Guerrier, Voie de l'élite, rang 5)." },
   maitrise_tactique: { nom: "Maîtrise tactique", categorie: "buff",
     description: "Double la magnitude de Posture de combat (Guerrier, Voie du soldat rang 5), lu par Capacites.resoudreEffet à chaque activation de Posture de combat tant que l'état dure. N'affecte pas le volet 'Combat en phalange' (bonus par allié au contact), qui reste manuel." },
+  dechainement: { nom: "Déchaînement", categorie: "buff",
+    description: "+4 attaque (posé séparément), +2d6 DM à toutes les attaques au contact (cf. Personnage.bonusDegatsDechainement) tant que l'état dure (Guerrier, Voie du chaos rang 5). Chaque tour, test de Volonté (SAG) diff. 14 ou attaque redirigée vers la créature la plus proche, allié compris (cf. Capacites.decompterEtatsDebutTour/cibleCreaturePlusProche) — application de la redirection manuelle, comme le reste des redirections d'attaque non modélisées." },
 };
 
 const ORDRE_CATEGORIES_ETATS = ["controle", "malus", "dot", "physique", "buff"];

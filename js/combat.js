@@ -298,13 +298,21 @@ const Combat = (() => {
       const p = persos[actif.id];
       _reinitialiserActionsEntree(actif, p);
       if (p) {
-        const { retires, degats } = Capacites.decompterEtatsDebutTour(p);
+        const { retires, degats, testsVolonte } = Capacites.decompterEtatsDebutTour(p);
         App.sauverPersos(persos);
         degats.forEach((d) => App.ajouterHisto(
           `${d.libelle} — Dégâts de début de tour`, d.total, false, false,
           `${d.detail} → ${actif.nom} : ${d.pvApres} PV restants.`
         ));
         retires.forEach((libelle) => App.ajouterHisto(`${libelle} s'est dissipée sur ${actif.nom}`, 0, false, false, ""));
+        // Test de Volonté par tour (ex. Guerrier "Déchaînement", cf.
+        // Capacites.decompterEtatsDebutTour) : journalisé comme n'importe
+        // quel autre jet, cible forcée nommée en cas d'échec — application
+        // manuelle par la table, comme le reste des redirections d'attaque.
+        (testsVolonte || []).forEach((t) => App.ajouterHisto(
+          `${t.libelle} — Test de Volonté (${t.carac})`, t.totalV, false, false,
+          `vs ${t.difficulteFixe} — ${t.reussite ? `réussi (${actif.nom})` : `échec (${actif.nom}) : attaque redirigée vers ${t.cibleForcee || "la créature la plus proche (aucune détectée)"}`}`
+        ));
       }
     }
 
