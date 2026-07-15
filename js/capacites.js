@@ -581,10 +581,25 @@ const Capacites = (() => {
       let valeurBrute = effet.valeur;
       // Barde — Voie du chant, rang 2 "Refrain lancinant" (passive) : le
       // malus de Note discordante (rang 1) passe de -2 à -3 dès que le rang 2
-      // est acquis — même principe qu'Intensité élémentaire ci-dessus.
+      // est acquis — même principe qu'Intensité élémentaire ci-dessus. Rang 4
+      // "Dissonance profonde" (simplifié — validé avec Thomas — en "double
+      // les malus" plutôt que la règle de cumul/durée d'origine, non
+      // chiffrable) : double la valeur déjà obtenue ci-dessus (donc -3 → -6
+      // avec le rang 2, ou -2 → -4 sans, mais l'acquisition séquentielle des
+      // rangs — cf. creation, "impossible de prendre le rang 3 sans avoir les
+      // rangs 1 et 2" — garantit que le rang 4 a toujours aussi le rang 2).
       if (voie === "Voie du chant" && rang === 1 && effet.cible === "attaque" && perso.classe === "barde"
-          && perso.rangMaxVoie("Voie du chant") >= 2 && effet.valeur === -2) {
-        valeurBrute = -3;
+          && effet.valeur === -2) {
+        if (perso.rangMaxVoie("Voie du chant") >= 2) valeurBrute = -3;
+        if (perso.rangMaxVoie("Voie du chant") >= 4) valeurBrute = valeurBrute * 2;
+      }
+      // Barde — Voie du chant, rang 3 "Chant brisant" (attaque ET DEF, -2
+      // chacun) : même doublement par le rang 4 "Dissonance profonde", sans
+      // palier intermédiaire (Refrain lancinant, rang 2, ne concerne QUE
+      // Note discordante d'après son propre texte).
+      if (voie === "Voie du chant" && rang === 3 && perso.classe === "barde"
+          && perso.rangMaxVoie("Voie du chant") >= 4 && effet.valeur === -2) {
+        valeurBrute = -4;
       }
       // Magicien — Voie de la magie protectrice, rang 2 "Résistance
       // arcanique" (passive) : le bonus de Bouclier arcanique (rang 1) passe
@@ -738,7 +753,16 @@ const Capacites = (() => {
 
         resolutionDegats = { touche, critique, echecCritique, totalAttaque: total, defCible, persoId, source, mecanique, cible };
       } else {
-        messages.push(`Jet d'attaque : ${total} (d20 ${d20} ${bonus >= 0 ? "+" : ""}${bonus}) — à comparer à la défense/DD de la cible.`);
+        // caracDefenseur ≠ "DEF" (ex. "CHA"/"SAG" pour les tests opposés de
+        // séduction/Chaos du Barde, "Volonte" pour Requiem du silence) :
+        // jamais automatisable côté monstre — le bestiaire (data/bestiaire.
+        // json) n'expose que pv/def/init/atk, aucun modificateur de
+        // caractéristique individuel (CHA/SAG/...) à opposer. Le jet de
+        // l'activateur est donc affiché seul ; on nomme au moins la
+        // caractéristique à comparer, pour éviter au MJ de rouvrir la donnée.
+        const cd = mecanique.jetOppose.caracDefenseur;
+        messages.push(`Jet d'attaque : ${total} (d20 ${d20} ${bonus >= 0 ? "+" : ""}${bonus}) — à comparer au jet de résistance` +
+          (cd ? ` de ${cd}` : "") + ` de la cible (non automatisable : le bestiaire ne porte pas ses modificateurs de caractéristiques).`);
       }
     }
 

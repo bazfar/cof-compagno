@@ -283,6 +283,13 @@ class Personnage extends Entite {
     // s'applique donc à tout test de Perception, pas seulement aux pièges
     // (même simplification que les autres bonus de compétence "élargis").
     if (this.classe === "chasseur" && nom === "Perception" && this.estChoisie("Voie du piège", 4)) bonus += 4;
+    // Barde — Voie du chaos, rang 4 "Voix qui corrompt" (passive, dès CA 5+) :
+    // +2 aux 3 compétences de manipulation sociale (Représentation exclue,
+    // plus proche de la performance artistique que de la séduction).
+    if (this.classe === "barde" && this.estChoisie("Voie du chaos", 4) && (this.corruptionMajeure || 0) >= 5
+        && ["Persuasion", "Bluff", "Intimidation"].includes(nom)) {
+      bonus += 2;
+    }
 
     return bonus;
   }
