@@ -1117,6 +1117,32 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .overlay-jet.echec .overlay-jet-d20 { color: var(--chaos); }
 .overlay-jet.echec .overlay-jet-badge { color: var(--chaos); }
 
+/* Duo avantage/désavantage (cf. afficherOverlayJet) : les 2 d20 individuels
+   affichés côte à côte pendant le "moment de suspense", avant de fusionner
+   sur le dé unique (masqué entre-temps via display:none, pas opacity, pour
+   ne pas laisser un total vide prendre de la place dans la mise en page). */
+.overlay-jet-duo {
+  display: none;
+  justify-content: center; align-items: center; gap: 14px;
+  margin: 0 auto 12px;
+}
+.overlay-jet-duo.visible { display: flex; }
+.overlay-jet-duo.visible ~ .overlay-jet-d20 { display: none; }
+.overlay-jet-d20.mini { width: 64px; height: 64px; margin: 0; transition: opacity 0.35s, transform 0.35s; }
+.overlay-jet-d20.mini span { font-size: 1.3rem; }
+.overlay-jet-d20.mini.perdant { opacity: 0.3; transform: scale(0.82); }
+.overlay-jet-d20.mini.gagnant { transform: scale(1.08); }
+
+/* Jet caché (cf. jauge #jet-cache) : pour un spectateur qui n'est ni l'auteur
+   ni le MJ, l'overlay ne révèle jamais rien — juste le dé qui tourne, sans
+   nom/label/détail/total, avant de disparaître comme un jet normal. */
+.overlay-jet.masque .overlay-jet-auteur,
+.overlay-jet.masque .overlay-jet-label,
+.overlay-jet.masque .overlay-jet-detail,
+.overlay-jet.masque .overlay-jet-badge,
+.overlay-jet.masque .overlay-jet-duo { display: none; }
+.overlay-jet.masque .overlay-jet-boite { padding: 22px 34px 8px; }
+
 @media (max-width: 600px) {
   header h1 { font-size: 1.2rem; }
   #zone-resultat .total { font-size: 2.2rem; }

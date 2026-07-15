@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=58" />
+  <link rel="stylesheet" href="css/style.css?v=59" />
 </head>
 <body>
   <header>
@@ -251,6 +251,9 @@
           <label><input type="radio" name="mode-d20" value="normal" checked /> Normal</label>
           <label><input type="radio" name="mode-d20" value="avantage" /> Avantage</label>
           <label><input type="radio" name="mode-d20" value="desavantage" /> Désavantage</label>
+        </div>
+        <div class="options-de">
+          <label title="Les autres joueurs ne voient qu'un dé qui roule (sans nom ni valeur) ; toi et le MJ voyez le résultat normalement."><input type="checkbox" id="jet-cache" /> 🙈 Jet caché (visible seulement de toi et du MJ)</label>
         </div>
 
         <h3>Dés simples</h3>
@@ -541,6 +544,34 @@
     <div class="overlay-jet-boite">
       <div class="overlay-jet-auteur" id="overlay-jet-auteur"></div>
       <div class="overlay-jet-label" id="overlay-jet-label"></div>
+      <!-- Duo (avantage/désavantage) : les 2 d20 individuels, affichés un instant
+           avant de fusionner sur le dé unique ci-dessous — cf. afficherOverlayJet. -->
+      <div class="overlay-jet-duo" id="overlay-jet-duo">
+        <div class="overlay-jet-d20 mini" id="overlay-jet-d20-a">
+          <svg class="overlay-jet-d20-svg" viewBox="0 0 100 100" aria-hidden="true">
+            <polygon class="d20-face" points="50,4 93,28 93,72 50,96 7,72 7,28" />
+            <g class="d20-aretes">
+              <path d="M50,4 L50,24" /><path d="M7,28 L50,24" /><path d="M93,28 L50,24" />
+              <path d="M50,24 L30,76" /><path d="M50,24 L70,76" /><path d="M30,76 L50,96" />
+              <path d="M70,76 L50,96" /><path d="M7,50 L50,24" /><path d="M93,50 L50,24" />
+              <path d="M7,50 L30,76" /><path d="M93,50 L70,76" />
+            </g>
+          </svg>
+          <span id="overlay-jet-val-a"></span>
+        </div>
+        <div class="overlay-jet-d20 mini" id="overlay-jet-d20-b">
+          <svg class="overlay-jet-d20-svg" viewBox="0 0 100 100" aria-hidden="true">
+            <polygon class="d20-face" points="50,4 93,28 93,72 50,96 7,72 7,28" />
+            <g class="d20-aretes">
+              <path d="M50,4 L50,24" /><path d="M7,28 L50,24" /><path d="M93,28 L50,24" />
+              <path d="M50,24 L30,76" /><path d="M50,24 L70,76" /><path d="M30,76 L50,96" />
+              <path d="M70,76 L50,96" /><path d="M7,50 L50,24" /><path d="M93,50 L50,24" />
+              <path d="M7,50 L30,76" /><path d="M93,50 L70,76" />
+            </g>
+          </svg>
+          <span id="overlay-jet-val-b"></span>
+        </div>
+      </div>
       <div class="overlay-jet-d20" id="overlay-jet-d20">
         <svg class="overlay-jet-d20-svg" viewBox="0 0 100 100" aria-hidden="true">
           <polygon class="d20-face" points="50,4 93,28 93,72 50,96 7,72 7,28" />
@@ -701,6 +732,6 @@
   <script src="js/loot.js?v=10"></script>
   <script src="js/capacites.js?v=12"></script>
   <script src="js/combat.js?v=8"></script>
-  <script src="js/app.js?v=99"></script>
+  <script src="js/app.js?v=100"></script>
 </body>
 </html>

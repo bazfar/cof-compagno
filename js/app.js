@@ -84,6 +84,7 @@ const App = (() => {
   let histoOverlayInitialise = false;
   let overlayJetTimer = null;
   let overlayJetRevealTimer = null;
+  let overlayJetDuoTimer = null; // phase "2 dés visibles" avant fusion, cf. afficherOverlayJet (avantage/désavantage)
   let _sonDe = null; // instance Audio réutilisée (évite de la recréer à chaque jet)
 
   /* ---------- Utilitaires ---------- */
@@ -5478,7 +5479,7 @@ const App = (() => {
     const crit = (de >= critMin), echec = (de === 1);
     const detail = `${detailDes} ${signe(bonus)}`;
     afficherResultat(label, total, detail, crit, echec);
-    ajouterHisto(label + " " + signe(bonus), total, crit, echec, detail);
+    ajouterHisto(label + " " + signe(bonus), total, crit, echec, detail, { mode, d1, d2 });
     return { total, de, crit, echec };
   }
 
@@ -5573,20 +5574,50 @@ const App = (() => {
   }
 
   function chargerHisto() { return SyncStore.get(STORAGE_HISTO) || []; }
-  function ajouterHisto(label, total, crit, echec, detail) {
+  // opts (optionnel) : { mode, d1, d2 } — pour un jet 2d20 (avantage/
+  // désavantage, cf. lancerTest), permet à l'overlay de rejouer l'animation
+  // "2 dés qui se lancent puis fusionnent" côté afficherOverlayJet, y compris
+  // pour les AUTRES clients (l'info voyage dans l'entrée synchronisée).
+  // cache (checkbox #jet-cache, cf. panneau Dés) : lu ici plutôt que passé
+  // par chaque appelant — un seul endroit à vérifier, comme modeD20() lit le
+  // sélecteur global directement. joueurId permet à un AUTRE client de
+  // reconnaître "c'est moi l'auteur" malgré le masquage (cf. afficherOverlayJet/
+  // rendreHisto), sans dépendre du nom affiché (auteur), qui peut être un nom
+  // de personnage partagé par plusieurs joueurs en théorie.
+  function ajouterHisto(label, total, crit, echec, detail, opts) {
+    opts = opts || {};
+    const caseCache = document.getElementById("jet-cache");
+    const cache = !!(caseCache && caseCache.checked);
     const h = chargerHisto();
-    h.unshift({ label, total, crit, echec, detail: detail || "", auteur: nomLanceur(), horodatage: Date.now() });
+    h.unshift({
+      label, total, crit, echec, detail: detail || "", auteur: nomLanceur(), horodatage: Date.now(),
+      joueurId, cache,
+      mode: opts.mode || null, d1: typeof opts.d1 === "number" ? opts.d1 : null, d2: typeof opts.d2 === "number" ? opts.d2 : null,
+    });
     if (h.length > 40) h.pop();
     SyncStore.set(STORAGE_HISTO, h);
     rendreHisto();
+  }
+  // Un jet caché reste illisible pour tout le monde SAUF son auteur (même
+  // joueurId, cf. ajouterHisto) et le MJ (accès total, comme partout ailleurs
+  // dans l'app) — cf. afficherOverlayJet pour le même principe côté overlay.
+  function _jetVisibleEnClair(x) {
+    return !x.cache || role === "mj" || (!!x.joueurId && x.joueurId === joueurId);
   }
   function rendreHisto() {
     const h = chargerHisto();
     const zone = document.getElementById("historique");
     if (!h.length) { zone.innerHTML = `<div class="vide">Aucun lancer pour l'instant.</div>`; return; }
-    zone.innerHTML = h.map((x) =>
-      `<div class="ligne-histo"><span>${x.auteur ? `<strong>${echapper(x.auteur)}</strong> — ` : ""}${echapper(x.label)}</span>` +
-      `<span class="res ${x.crit ? "crit" : x.echec ? "echec" : ""}">${x.total}</span></div>`).join("");
+    zone.innerHTML = h.map((x) => {
+      if (!_jetVisibleEnClair(x)) {
+        // Ni nom ni valeur, même standard que l'overlay masqué (cf.
+        // afficherOverlayJet) — la simple présence d'une ligne suffit à
+        // signaler qu'un jet a eu lieu, sans révéler qui ni quoi.
+        return `<div class="ligne-histo"><span>🙈 <em>Jet caché</em></span><span class="res"></span></div>`;
+      }
+      return `<div class="ligne-histo"><span>${x.auteur ? `<strong>${echapper(x.auteur)}</strong> — ` : ""}${echapper(x.label)}</span>` +
+        `<span class="res ${x.crit ? "crit" : x.echec ? "echec" : ""}">${x.total}</span></div>`;
+    }).join("");
   }
   function viderHisto() {
     SyncStore.set(STORAGE_HISTO, []);
@@ -5607,39 +5638,93 @@ const App = (() => {
   // Remplit et affiche l'overlay de jet de dé (visible sur n'importe quel
   // onglet). entree suit le même format que les entrées de des:histo. Le dé
   // "roule" (son + rotation CSS) le temps du roulement, puis révèle le total.
+  //
+  // Masquage (jet caché, cf. #jet-cache/ajouterHisto) : pour un spectateur
+  // qui n'est ni l'auteur (entree.joueurId) ni le MJ, l'overlay ne révèle
+  // JAMAIS rien — juste le dé qui tourne (+ son), sans nom/label/détail/
+  // total, avant de disparaître comme un jet normal (cf. classe CSS
+  // "masque"). L'auteur et le MJ voient l'overlay complet, normalement.
+  //
+  // Duo avantage/désavantage (entree.mode + d1/d2, cf. lancerTest) : pour un
+  // jet visible en clair, affiche d'abord les 2 d20 individuels côte à côte
+  // un instant, puis les fusionne sur le dé unique en ne gardant que la
+  // valeur retenue (la plus haute en avantage, la plus basse en
+  // désavantage) — cf. classes "gagnant"/"perdant" côté CSS.
   function afficherOverlayJet(entree) {
     const overlay = document.getElementById("overlay-jet");
     const d20 = document.getElementById("overlay-jet-d20");
     if (!overlay || !d20 || !entree) return;
-    document.getElementById("overlay-jet-auteur").textContent = entree.auteur || "";
-    document.getElementById("overlay-jet-label").textContent = entree.label;
-    document.getElementById("overlay-jet-detail").textContent = entree.detail || "";
+
+    const estAuteur = !!(entree.joueurId && entree.joueurId === joueurId);
+    const masque = !!entree.cache && role !== "mj" && !estAuteur;
+
+    document.getElementById("overlay-jet-auteur").textContent = masque ? "" : (entree.auteur || "");
+    document.getElementById("overlay-jet-label").textContent = masque ? "" : (entree.label || "");
+    document.getElementById("overlay-jet-detail").textContent = masque ? "" : (entree.detail || "");
     document.getElementById("overlay-jet-total").textContent = "";
     document.getElementById("overlay-jet-badge").textContent = "";
     overlay.classList.remove("cache", "crit", "echec");
+    overlay.classList.toggle("masque", masque);
     overlay.classList.add("visible");
+
+    const duo = !masque && (entree.mode === "avantage" || entree.mode === "desavantage")
+      && typeof entree.d1 === "number" && typeof entree.d2 === "number";
+    const zoneDuo = document.getElementById("overlay-jet-duo");
+    const d20a = document.getElementById("overlay-jet-d20-a");
+    const d20b = document.getElementById("overlay-jet-d20-b");
+    const valA = document.getElementById("overlay-jet-val-a");
+    const valB = document.getElementById("overlay-jet-val-b");
+    if (valA) valA.textContent = "";
+    if (valB) valB.textContent = "";
+    if (d20a) d20a.classList.remove("gagnant", "perdant");
+    if (d20b) d20b.classList.remove("gagnant", "perdant");
+    if (zoneDuo) zoneDuo.classList.toggle("visible", duo);
 
     if (overlayJetTimer) clearTimeout(overlayJetTimer);
     if (overlayJetRevealTimer) clearTimeout(overlayJetRevealTimer);
+    if (overlayJetDuoTimer) clearTimeout(overlayJetDuoTimer);
     // Relance l'animation même si un jet précédent tournait encore (retirer
     // puis reflow forcé, sinon le navigateur ignore un ré-ajout à l'identique).
-    d20.classList.remove("en-cours");
+    [d20, d20a, d20b].forEach((el) => { if (el) { el.classList.remove("en-cours"); } });
     void d20.offsetWidth;
     d20.classList.add("en-cours");
+    if (duo) { if (d20a) d20a.classList.add("en-cours"); if (d20b) d20b.classList.add("en-cours"); }
     _jouerSonDe();
 
     overlayJetRevealTimer = setTimeout(() => {
-      d20.classList.remove("en-cours");
-      document.getElementById("overlay-jet-total").textContent = entree.total;
-      document.getElementById("overlay-jet-badge").textContent =
-        entree.crit ? "CRITIQUE ! 🎉" : entree.echec ? "Échec critique 💀" : "";
-      if (entree.crit) overlay.classList.add("crit");
-      else if (entree.echec) overlay.classList.add("echec");
+      [d20, d20a, d20b].forEach((el) => { if (el) el.classList.remove("en-cours"); });
       overlayJetRevealTimer = null;
-      overlayJetTimer = setTimeout(() => {
-        overlay.classList.remove("visible");
-        overlayJetTimer = null;
-      }, 5000);
+
+      const finPhaseRoulement = () => {
+        if (masque) {
+          // Rien à révéler : juste laisser le dé visible un instant avant de disparaître.
+          overlayJetTimer = setTimeout(() => { overlay.classList.remove("visible"); overlayJetTimer = null; }, 1400);
+          return;
+        }
+        document.getElementById("overlay-jet-total").textContent = entree.total;
+        document.getElementById("overlay-jet-badge").textContent =
+          entree.crit ? "CRITIQUE ! 🎉" : entree.echec ? "Échec critique 💀" : "";
+        if (entree.crit) overlay.classList.add("crit");
+        else if (entree.echec) overlay.classList.add("echec");
+        overlayJetTimer = setTimeout(() => { overlay.classList.remove("visible"); overlayJetTimer = null; }, 5000);
+      };
+
+      if (duo) {
+        // Révèle les 2 valeurs individuelles, les garde visibles un moment,
+        // puis fusionne sur le dé unique (masque === false ici, cf. calcul de `duo`).
+        if (valA) valA.textContent = entree.d1;
+        if (valB) valB.textContent = entree.d2;
+        const gagnantA = entree.mode === "avantage" ? entree.d1 >= entree.d2 : entree.d1 <= entree.d2;
+        if (d20a) d20a.classList.add(gagnantA ? "gagnant" : "perdant");
+        if (d20b) d20b.classList.add(gagnantA ? "perdant" : "gagnant");
+        overlayJetDuoTimer = setTimeout(() => {
+          if (zoneDuo) zoneDuo.classList.remove("visible");
+          overlayJetDuoTimer = null;
+          finPhaseRoulement();
+        }, 900);
+      } else {
+        finPhaseRoulement();
+      }
     }, 620);
   }
 
