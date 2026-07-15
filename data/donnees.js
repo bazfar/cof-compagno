@@ -2224,17 +2224,34 @@ const REGLES_GENERALES = [
   },
   {
     titre: "Dons (niveaux 4, 8 et 12)",
+    html: true,
     contenu:
-      "Aux niveaux 4, 8 et 12 (soit 1, 2 et 3 voies de classe complètes, cf. pointsVoieTotal), chaque personnage obtient un Don gratuit au choix parmi la liste ci-dessous, en plus des points de voie habituels — aucune réduction de ceux-ci. Un personnage déjà à ces niveaux avant l'introduction de cette règle peut rattraper ses Dons manquants depuis sa fiche. Les Dons sont des bonus descriptifs, appliqués manuellement par le joueur en jeu, comme les effets d'accessoires ou les capacités textuelles — aucune automatisation de calcul de dégâts/DEF.\n\n" +
-      "Combat : Frappe puissante (arme deux_mains : -2 attaque / +4 dégâts au choix) · Tir de précision (arme à distance : -2 attaque / +4 dégâts, ignore couverture partielle) · Combattant en duel (arme unique, main libre, un seul adversaire adjacent : +2 DEF) · Ambidextre (permet deux armes à une main, malus de combat à deux armes réduit à -2) · Maître d'armes doubles (retire ce malus, autorise une arme longue en main secondaire) · Expert en hast (arme deux_mains à allonge : +1 dégâts, attaque d'opportunité bonus au contact) · Sentinelle (attaque d'opportunité même sur retrait organisé, réduit le déplacement de la cible à 0).\n\n" +
-      "Défense : Robuste (+2 PV par niveau, rétroactif) · Maître des armures moyennes (valeurArmure 3-4 : aucun malus de Discrétion, plafond DEX +3) · Maître des armures lourdes (valeurArmure 5+ : -3 dégâts physiques subis avant valeurArmure) · Expert du bouclier (bouclier équipé : +2 Réflexes, 1x/tour réduit de moitié des dégâts subis).\n\n" +
-      "Perception : Alerte (+5 Initiative, jamais surpris).\n\n" +
-      "Mobilité : Mobile (+1 case de déplacement, ignore terrain difficile après avoir attaqué au contact, jamais d'attaque d'opportunité en s'éloignant d'une cible frappée).\n\n" +
-      "Exploration : Fouilleur de donjon (avantage Perception sur pièges et passages secrets) · Athlète (+1 FOR ou DEX au choix, aucun malus au premier mètre d'escalade/saut/nage).\n\n" +
-      "Social : Doué (+1 CHA en conversation hors combat) · Acteur (avantage CHA imitation/tromperie, peut imiter une voix entendue).\n\n" +
-      "Magie : Initié aux arcanes (apprend le rang 1 d'une Voie d'une autre classe, plafonné à ce rang).\n\n" +
-      "Utilitaire : Chanceux (3 points de chance/jour, relance un jet raté ou impose la relance d'un jet ennemi réussi).\n\n" +
-      "Caractéristique : Amélioration de caractéristique (+1 à deux caractéristiques, plafond 18, ou 20 pour l'affinité raciale : Elfe INT/DEX, Nain/Demi-orc CON/FOR, Demi-gobelin DEX/INT).",
+      `<p>Aux niveaux 4, 8 et 12 (soit 1, 2 et 3 voies de classe complètes, cf. pointsVoieTotal), chaque personnage obtient un Don gratuit au choix parmi la liste ci-dessous, en plus des points de voie habituels — aucune réduction de ceux-ci. Un personnage déjà à ces niveaux avant l'introduction de cette règle peut rattraper ses Dons manquants depuis sa fiche. Les Dons sont des bonus descriptifs, appliqués manuellement par le joueur en jeu, comme les effets d'accessoires ou les capacités textuelles — aucune automatisation de calcul de dégâts/DEF.</p>
+      <div class="tableau-regle-scroll"><table class="tableau-regle">
+        <thead><tr><th>Catégorie</th><th>Don</th><th>Effet</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="7">Combat</td><td>Frappe puissante</td><td>Arme deux_mains : -2 attaque / +4 dégâts au choix</td></tr>
+          <tr><td>Tir de précision</td><td>Arme à distance : -2 attaque / +4 dégâts, ignore couverture partielle</td></tr>
+          <tr><td>Combattant en duel</td><td>Arme unique, main libre, un seul adversaire adjacent : +2 DEF</td></tr>
+          <tr><td>Ambidextre</td><td>Permet deux armes à une main, malus de combat à deux armes réduit à -2</td></tr>
+          <tr><td>Maître d'armes doubles</td><td>Retire ce malus, autorise une arme longue en main secondaire</td></tr>
+          <tr><td>Expert en hast</td><td>Arme deux_mains à allonge : +1 dégâts, attaque d'opportunité bonus au contact</td></tr>
+          <tr><td>Sentinelle</td><td>Attaque d'opportunité même sur retrait organisé, réduit le déplacement de la cible à 0</td></tr>
+          <tr><td rowspan="4">Défense</td><td>Robuste</td><td>+2 PV par niveau, rétroactif</td></tr>
+          <tr><td>Maître des armures moyennes</td><td>ValeurArmure 3-4 : aucun malus de Discrétion, plafond DEX +3</td></tr>
+          <tr><td>Maître des armures lourdes</td><td>ValeurArmure 5+ : -3 dégâts physiques subis avant valeurArmure</td></tr>
+          <tr><td>Expert du bouclier</td><td>Bouclier équipé : +2 Réflexes, 1x/tour réduit de moitié des dégâts subis</td></tr>
+          <tr><td>Perception</td><td>Alerte</td><td>+5 Initiative, jamais surpris</td></tr>
+          <tr><td>Mobilité</td><td>Mobile</td><td>+1 case de déplacement, ignore terrain difficile après avoir attaqué au contact, jamais d'attaque d'opportunité en s'éloignant d'une cible frappée</td></tr>
+          <tr><td rowspan="2">Exploration</td><td>Fouilleur de donjon</td><td>Avantage Perception sur pièges et passages secrets</td></tr>
+          <tr><td>Athlète</td><td>+1 FOR ou DEX au choix, aucun malus au premier mètre d'escalade/saut/nage</td></tr>
+          <tr><td rowspan="2">Social</td><td>Doué</td><td>+1 CHA en conversation hors combat</td></tr>
+          <tr><td>Acteur</td><td>Avantage CHA imitation/tromperie, peut imiter une voix entendue</td></tr>
+          <tr><td>Magie</td><td>Initié aux arcanes</td><td>Apprend le rang 1 d'une Voie d'une autre classe, plafonné à ce rang</td></tr>
+          <tr><td>Utilitaire</td><td>Chanceux</td><td>3 points de chance/jour, relance un jet raté ou impose la relance d'un jet ennemi réussi</td></tr>
+          <tr><td>Caractéristique</td><td>Amélioration de caractéristique</td><td>+1 à deux caractéristiques, plafond 18, ou 20 pour l'affinité raciale (Elfe INT/DEX, Nain/Demi-orc CON/FOR, Demi-gobelin DEX/INT)</td></tr>
+        </tbody>
+      </table></div>`,
   },
   {
     titre: "Défense et initiative",
@@ -2248,13 +2265,48 @@ const REGLES_GENERALES = [
   },
   {
     titre: "Enchantement à risque (Atelier)",
+    html: true,
     contenu:
-      "Craft magique risqué sur une arme ou une armure déjà en inventaire (onglet Atelier) : le jet est 1d20 + bonus d'artisan, contre la difficulté du palier visé. La destruction se vérifie sur le d20 BRUT seul (avant bonus), indépendamment de la réussite du test — un jet bas peut détruire l'objet même si le bonus aurait suffi à réussir. Une tentative (succès, échec ou destruction) consomme toujours les matériaux ET compte pour le quota du jour, quel que soit le résultat ; seul un échec laisse l'objet intact. Le MJ réinitialise les compteurs de tous les joueurs via le bouton « Nouveau jour » de l'Atelier.\n\nEnchantement générique (arme, +1 à +5 dégâts) : +1 diff. 12 (3 tentatives/j, 1 Poussière de fer, aucune destruction) ; +2 diff. 14 (3/j, 1 Poussière d'acier, aucune) ; +3 diff. 16 (2/j, 1 Gemme magique, détruit si jet ≤2) ; +4 diff. 18 (1/j, 2 Gemmes magiques, détruit si jet ≤5) ; +5 diff. 20 (1/j, 3 Gemmes magiques + 1 Diamant, détruit si jet ≤10, ignore en permanence 2 points de valeurArmure de la cible).\n\nEnchantement de feu (arme, rangs 1-3, jamais de risque de destruction) : rang 1 « enflammée » diff. 12 (3/j, 1 Poussière de rubis, 1d4 dégâts de feu) ; rang 2 « ardente » diff. 14 (2/j, 2 Poussières de rubis, 1d6) ; rang 3 « incandescente » diff. 16 (1/j, 3 Poussières de rubis, 1d8).\n\nEnchantement de protection (armure, +1 à +3 valeurArmure) : +1 diff. 12 (3/j, 1 Poussière de diamant, aucune destruction) ; +2 diff. 14 (2/j, 2 Poussières de diamant, aucune) ; +3 diff. 16 (1/j, 3 Poussières de diamant, détruit si jet ≤5).",
+      `<p>Craft magique risqué sur une arme ou une armure déjà en inventaire (onglet Atelier) : le jet est 1d20 + bonus d'artisan, contre la difficulté du palier visé. La destruction se vérifie sur le d20 BRUT seul (avant bonus), indépendamment de la réussite du test — un jet bas peut détruire l'objet même si le bonus aurait suffi à réussir. Une tentative (succès, échec ou destruction) consomme toujours les matériaux ET compte pour le quota du jour, quel que soit le résultat ; seul un échec laisse l'objet intact. Le MJ réinitialise les compteurs de tous les joueurs via le bouton « Nouveau jour » de l'Atelier.</p>
+      <div class="tableau-regle-scroll"><table class="tableau-regle">
+        <thead><tr><th>Type</th><th>Palier</th><th>Difficulté</th><th>Tentatives/j</th><th>Matériaux</th><th>Risque / effet</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="5">Générique (arme, dégâts)</td><td>+1</td><td>12</td><td>3</td><td>1 Poussière de fer</td><td>Aucune destruction</td></tr>
+          <tr><td>+2</td><td>14</td><td>3</td><td>1 Poussière d'acier</td><td>Aucune destruction</td></tr>
+          <tr><td>+3</td><td>16</td><td>2</td><td>1 Gemme magique</td><td>Détruit si jet ≤2</td></tr>
+          <tr><td>+4</td><td>18</td><td>1</td><td>2 Gemmes magiques</td><td>Détruit si jet ≤5</td></tr>
+          <tr><td>+5</td><td>20</td><td>1</td><td>3 Gemmes magiques + 1 Diamant</td><td>Détruit si jet ≤10 ; ignore en permanence 2 points de valeurArmure de la cible</td></tr>
+          <tr><td rowspan="3">Feu (arme, jamais de destruction)</td><td>Rang 1 « enflammée »</td><td>12</td><td>3</td><td>1 Poussière de rubis</td><td>1d4 dégâts de feu</td></tr>
+          <tr><td>Rang 2 « ardente »</td><td>14</td><td>2</td><td>2 Poussières de rubis</td><td>1d6 dégâts de feu</td></tr>
+          <tr><td>Rang 3 « incandescente »</td><td>16</td><td>1</td><td>3 Poussières de rubis</td><td>1d8 dégâts de feu</td></tr>
+          <tr><td rowspan="3">Protection (armure, valeurArmure)</td><td>+1</td><td>12</td><td>3</td><td>1 Poussière de diamant</td><td>Aucune destruction</td></tr>
+          <tr><td>+2</td><td>14</td><td>2</td><td>2 Poussières de diamant</td><td>Aucune destruction</td></tr>
+          <tr><td>+3</td><td>16</td><td>1</td><td>3 Poussières de diamant</td><td>Détruit si jet ≤5</td></tr>
+        </tbody>
+      </table></div>`,
   },
   {
     titre: "Alchimie à risque (Atelier)",
+    html: true,
     contenu:
-      "Brassage de potions (onglet Atelier, sous-onglet Alchimie) : le jet est 1d20 + bonus d'artisan, contre la difficulté du palier/recette visé. Contrairement à l'enchantement, rien n'est jamais détruit — il n'y a pas d'objet de départ à perdre, seulement des ingrédients. Un jet catastrophique (d20 BRUT seul, avant bonus, ≤ seuil du palier) ne produit pas d'échec sec : il produit une Potion ratée à la place de la potion visée. Un palier/recette compte toujours comme une tentative consommée pour la journée, quel que soit le résultat (réussite, échec ou ratée). Le MJ réinitialise les compteurs de tous les joueurs via le même bouton « Nouveau jour » de l'Atelier.\n\nPotions de soin — filière Sève (Druide) : palier 1 « Potion de soin mineure » diff. 10 (5/j, 1 Fleur de sève naissante) ; palier 2 « Potion de soin » diff. 12 (4/j, 1 Fleur de sève éclose) ; palier 3 « Potion de soin supérieure » diff. 14 (3/j, 2 Fleurs de sève ancienne, ratée si jet ≤2).\nPotions de soin — filière Flambeau (Prêtre) : palier 4 « Potion de soin bénie » diff. 16 (2/j, 1 Fleur-flambeau, ratée si jet ≤3) ; palier 5 « Potion de soin majeure » diff. 18 (1/j, 2 Fleurs-flambeau embrasées, ratée si jet ≤5) ; palier 6 « Potion de soin majeure bénie » diff. 20 (1/j, 1 Fleur d'aurore éternelle + 1 Diamant, ratée si jet ≤8).\n\nPotions utilitaires (aucun risque de ratée) : Antidote diff. 10 (5/j, 2 Herbes médicinales) ; Huile sainte diff. 12 (3/j, 1 Fleur-flambeau) ; Élixir de vision nocturne diff. 12 (3/j, 1 Fleur de lune) ; Fumigène diff. 10 (4/j, 1 Poussière de fer + 1 Herbe médicinale) ; Élixir de force diff. 14 (2/j, 2 Fleurs rugissantes) ; Bombe alchimique diff. 14 (2/j, 2 Herbes de feu).",
+      `<p>Brassage de potions (onglet Atelier, sous-onglet Alchimie) : le jet est 1d20 + bonus d'artisan, contre la difficulté du palier/recette visé. Contrairement à l'enchantement, rien n'est jamais détruit — il n'y a pas d'objet de départ à perdre, seulement des ingrédients. Un jet catastrophique (d20 BRUT seul, avant bonus, ≤ seuil du palier) ne produit pas d'échec sec : il produit une Potion ratée à la place de la potion visée. Un palier/recette compte toujours comme une tentative consommée pour la journée, quel que soit le résultat (réussite, échec ou ratée). Le MJ réinitialise les compteurs de tous les joueurs via le même bouton « Nouveau jour » de l'Atelier.</p>
+      <div class="tableau-regle-scroll"><table class="tableau-regle">
+        <thead><tr><th>Filière</th><th>Palier / potion</th><th>Difficulté</th><th>Tentatives/j</th><th>Ingrédients</th><th>Risque</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="3">Soin — Sève (Druide)</td><td>Palier 1 « Potion de soin mineure »</td><td>10</td><td>5</td><td>1 Fleur de sève naissante</td><td>—</td></tr>
+          <tr><td>Palier 2 « Potion de soin »</td><td>12</td><td>4</td><td>1 Fleur de sève éclose</td><td>—</td></tr>
+          <tr><td>Palier 3 « Potion de soin supérieure »</td><td>14</td><td>3</td><td>2 Fleurs de sève ancienne</td><td>Ratée si jet ≤2</td></tr>
+          <tr><td rowspan="3">Soin — Flambeau (Prêtre)</td><td>Palier 4 « Potion de soin bénie »</td><td>16</td><td>2</td><td>1 Fleur-flambeau</td><td>Ratée si jet ≤3</td></tr>
+          <tr><td>Palier 5 « Potion de soin majeure »</td><td>18</td><td>1</td><td>2 Fleurs-flambeau embrasées</td><td>Ratée si jet ≤5</td></tr>
+          <tr><td>Palier 6 « Potion de soin majeure bénie »</td><td>20</td><td>1</td><td>1 Fleur d'aurore éternelle + 1 Diamant</td><td>Ratée si jet ≤8</td></tr>
+          <tr><td rowspan="6">Utilitaires (aucune ratée)</td><td>Antidote</td><td>10</td><td>5</td><td>2 Herbes médicinales</td><td>—</td></tr>
+          <tr><td>Huile sainte</td><td>12</td><td>3</td><td>1 Fleur-flambeau</td><td>—</td></tr>
+          <tr><td>Élixir de vision nocturne</td><td>12</td><td>3</td><td>1 Fleur de lune</td><td>—</td></tr>
+          <tr><td>Fumigène</td><td>10</td><td>4</td><td>1 Poussière de fer + 1 Herbe médicinale</td><td>—</td></tr>
+          <tr><td>Élixir de force</td><td>14</td><td>2</td><td>2 Fleurs rugissantes</td><td>—</td></tr>
+          <tr><td>Bombe alchimique</td><td>14</td><td>2</td><td>2 Herbes de feu</td><td>—</td></tr>
+        </tbody>
+      </table></div>`,
   },
   {
     titre: "Portée en cases, rechargement et catégories d'armes",
@@ -2263,8 +2315,18 @@ const REGLES_GENERALES = [
   },
   {
     titre: "Équipement des mains (une main / deux mains, bi-arme)",
+    html: true,
     contenu:
-      "Un arc long (ou une arbalète normale/lourde) occupe les DEUX mains, comme n'importe quelle arme à deux mains — rien d'autre ne peut être équipé en même temps. Un arc court ou une arbalète courte n'occupe qu'UNE main : l'autre reste libre pour une arme courte de corps à corps (dague, masse, épée courte...).\n\nUne arme de corps à corps (courte ou longue, une main) peut être équipée avec, dans l'autre main : un bouclier (comme avant), une arbalète courte, ou une arme courte de corps à corps. Une arme longue ou à deux mains ne peut PAS être combinée avec une autre arme de corps à corps dans l'autre main — seule une arme courte complète une arme courte ou longue.\n\nBi-arme : si l'autre main porte une arme courte de corps à corps, les dégâts de contact combinent le jet de l'arme principale ET celui de l'arme courte (les deux formules s'additionnent, ex. \"1d8+1d4\") — un seul jet d'attaque, mais deux dés de dégâts cumulés.",
+      `<p>Bi-arme : si la main secondaire porte une arme courte de corps à corps, les dégâts de contact combinent le jet de l'arme principale ET celui de l'arme courte (les deux formules s'additionnent, ex. « 1d8+1d4 ») — un seul jet d'attaque, mais deux dés de dégâts cumulés.</p>
+      <div class="tableau-regle-scroll"><table class="tableau-regle">
+        <thead><tr><th>Main principale</th><th>Main secondaire possible</th><th>Effet</th></tr></thead>
+        <tbody>
+          <tr><td>Arc long / Arbalète normale ou lourde</td><td>Aucune (arme à deux mains)</td><td>Occupe les deux mains, rien d'autre ne peut être équipé en même temps</td></tr>
+          <tr><td>Arc court / Arbalète courte</td><td>Arme courte de corps à corps</td><td>N'occupe qu'une main : l'autre reste libre (dague, masse, épée courte...)</td></tr>
+          <tr><td>Arme de corps à corps courte ou longue (une main)</td><td>Bouclier, arbalète courte, ou arme courte de corps à corps</td><td>Combinaison possible dans la main secondaire</td></tr>
+          <tr><td>Arme longue ou à deux mains</td><td>Aucune autre arme de corps à corps</td><td>Seule une arme courte peut compléter une arme courte ou longue</td></tr>
+        </tbody>
+      </table></div>`,
   },
 ];
 

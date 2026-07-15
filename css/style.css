@@ -936,6 +936,15 @@ textarea { resize: vertical; min-height: 70px; }
 .lore-section h3 { border-bottom: 2px solid var(--or); padding-bottom: 4px; }
 .lore-section .contenu { white-space: pre-wrap; font-size: 0.9rem; color: #3a3348; }
 
+/* ---------- Règles > Général : tableaux (dons, alchimie, enchantement, équipement) ---------- */
+.regle-generale-contenu p { font-size: 0.9rem; color: #3a3348; margin: 0 0 10px; }
+.tableau-regle-scroll { overflow-x: auto; margin: 6px 0 16px; }
+.tableau-regle { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.tableau-regle caption { text-align: left; font-weight: 700; color: var(--violet); padding: 4px 0; }
+.tableau-regle th, .tableau-regle td { border: 1px solid var(--parchemin-fonce); padding: 6px 10px; text-align: left; vertical-align: top; }
+.tableau-regle th { background: var(--violet); color: var(--parchemin); font-weight: 600; }
+.tableau-regle tbody tr:nth-child(even) { background: rgba(184, 146, 74, 0.1); }
+
 /* ---------- Lore > PNJ clés ---------- */
 .pnj-carte .contenu { white-space: pre-wrap; font-size: 0.9rem; color: #3a3348; }
 .pnj-entete { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
