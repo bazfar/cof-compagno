@@ -2268,19 +2268,15 @@ const Carte = (() => {
     let ctxFog2 = null;
     let fogRevele = null;   // ImageData du brouillard persistant
 
-    // Polygones de vision (référentiel canvas-image) des tokens PJ, recalculés
-    // à chaque appel de calculerEtRendreLoS — sert à savoir quels monstres
-    // montrer aux joueurs (cf. _monstreVisiblePourJoueurs / rendreTokensDD).
+    // Polygones de vision (unités natives de la scène, scene.px) des tokens
+    // PJ, recalculés à chaque appel de calculerEtRendreLoS — sert à savoir
+    // quels monstres montrer aux joueurs (cf. _monstreVisiblePourJoueurs /
+    // rendreTokensDD / estMonstreVisible). Toujours en unités natives : plus
+    // aucune dépendance à la largeur affichée de #carte-image, donc valide
+    // même appelé depuis un autre onglet (ex. Table de combat) ou suite à une
+    // mise à jour distante (Firestore) reçue pendant que l'onglet Carte
+    // n'était pas affiché.
     let _polygonsVisionJoueurs = [];
-    // Échelle case->pixel utilisée pour construire _polygonsVisionJoueurs ci-dessus.
-    // estMonstreVisible() doit reconvertir la position d'un token dans ce même
-    // référentiel — jamais recalculer sa propre échelle via tailleCase(), qui
-    // dépend de la largeur affichée de #carte-image : nulle dès que l'onglet
-    // Carte n'est pas affiché (ex. depuis l'onglet Table de combat, où
-    // Combat.demarrer() appelle justement cette fonction). Une échelle
-    // différente de celle du polygone fait tomber le point hors champ même
-    // pour un monstre juste à côté d'un PJ.
-    let _dernierTC = null;
 
     // Notifie js/combat.js quand un monstre pré-placé par le MJ (planqué
     // derrière du brouillard) entre dans le champ de vision d'au moins un PJ —
@@ -2302,14 +2298,12 @@ const Carte = (() => {
       const tok = tokensDD.find(t => t.id === id);
       const scene = scenes[sceneActive];
       if (!tok || !scene) return false;
-      // _dernierTC (échelle du dernier calcul de _polygonsVisionJoueurs) plutôt
-      // que tailleCase(scene) : cette dernière dépend de la largeur affichée de
-      // #carte-image, nulle depuis l'onglet Table de combat — recalculer sa
-      // propre échelle ici desynchronise ce point du polygone de référence.
-      const tc = _dernierTC || tailleCase(scene);
-      const px = (tok.cx + 0.5) * tc;
-      const py = (tok.cy + 0.5) * tc;
-      return _monstreVisiblePourJoueurs(px, py);
+      // scene.px (unité native) : _polygonsVisionJoueurs est maintenant
+      // toujours construit dans ce même référentiel, qu'il ait été recalculé
+      // pendant que l'onglet Carte était affiché ou non (cf. calculerEtRendreLoS).
+      const posX = (tok.cx + 0.5) * scene.px;
+      const posY = (tok.cy + 0.5) * scene.px;
+      return _monstreVisiblePourJoueurs(posX, posY);
     }
 
     function _pointDansPolygone(pt, poly) {
@@ -2384,8 +2378,12 @@ const Carte = (() => {
         const py = tok.cy * tc + tc/2;
         // Côté joueur, un monstre reste caché tant qu'aucun token PJ n'a
         // actuellement ce point dans son champ de vision (cf. calculerEtRendreLoS).
-        // Le MJ voit toujours tous les tokens.
-        if (role === 'joueur' && !tok.pj && !_monstreVisiblePourJoueurs(px, py)) return;
+        // Le MJ voit toujours tous les tokens. Vérifié en unités natives de la
+        // scène (scene.px) — le même référentiel que _polygonsVisionJoueurs,
+        // jamais celui (dépendant de l'affichage) de px/py ci-dessus.
+        const posXNatif = (tok.cx + 0.5) * scene.px;
+        const posYNatif = (tok.cy + 0.5) * scene.px;
+        if (role === 'joueur' && !tok.pj && !_monstreVisiblePourJoueurs(posXNatif, posYNatif)) return;
         el.style.left   = px + 'px';
         el.style.top    = py + 'px';
         el.style.width  = (tc * 0.85) + 'px';
@@ -2664,20 +2662,19 @@ const Carte = (() => {
     }
 
     // ── Init brouillard persistant ───────────────────────────
+    // canvasFog2 marque en NOIR OPAQUE les zones déjà explorées (transparent =
+    // jamais vu) — UN SEUL canvas partagé par toutes les scènes (créé une fois
+    // dans init()), en résolution NATIVE de la scène (scene.largeur/hauteur) :
+    // indépendant de la largeur affichée de #carte-image, donc jamais périmé
+    // selon l'onglet actif ou la taille de fenêtre. Affecter width/height vide
+    // TOUJOURS un canvas (comportement standard), y compris à valeur
+    // inchangée : on force cette (ré)affectation sans condition, sinon deux
+    // scènes de mêmes dimensions natives gardaient le brouillard déjà exploré
+    // de la scène précédente au lieu de repartir de zéro (cf. activerScene, qui
+    // appelle reinitFog2 à chaque activation, y compris un changement de scène).
     function reinitFog2(scene) {
-      const imgEl = document.getElementById('carte-image');
-      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
-      if (!rect || rect.width === 0) return;
-      // canvasFog2 marque en NOIR OPAQUE les zones déjà explorées (transparent =
-      // jamais vu) — UN SEUL canvas partagé par toutes les scènes (créé une fois
-      // dans init()). Affecter width/height vide TOUJOURS un canvas (comportement
-      // standard), y compris à valeur inchangée : on force cette (ré)affectation
-      // sans condition, sinon deux scènes affichées à la même taille de conteneur
-      // (cas courant, ex. même fenêtre) gardaient le brouillard déjà exploré de
-      // la scène précédente au lieu de repartir de zéro (cf. activerScene, qui
-      // appelle reinitFog2 à chaque activation, y compris un changement de scène).
-      canvasFog2.width  = Math.round(rect.width);
-      canvasFog2.height = Math.round(rect.height);
+      canvasFog2.width  = scene.largeur;
+      canvasFog2.height = scene.hauteur;
     }
 
     // Bouton "Réinitialiser" côté MJ, quand une battlemap est active : ne
@@ -2700,34 +2697,122 @@ const Carte = (() => {
     // segmentsObjets (arbres, rochers...) bloquent la vue ici, mais ne sont
     // volontairement PAS repris dans _deplacementBloque : contrairement à un
     // mur, on peut marcher à travers.
-    function _segmentsBloquants(scene, sx, sy) {
-      const segs = scene.segments.map(seg => [
-        [seg[0][0] * sx, seg[0][1] * sy],
-        [seg[1][0] * sx, seg[1][1] * sy]
-      ]);
+    // Toujours en unités natives de la scène (mêmes unités que scene.segments/
+    // portails.bounds) : la mise à l'échelle d'affichage est appliquée
+    // seulement au moment du rendu visuel du brouillard, jamais dans le calcul
+    // de géométrie/visibilité lui-même (cf. calculerEtRendreLoS).
+    function _segmentsBloquants(scene) {
+      const segs = scene.segments.map(seg => [seg[0], seg[1]]);
       if (scene.segmentsObjets) {
-        for (const seg of scene.segmentsObjets) {
-          segs.push([[seg[0][0] * sx, seg[0][1] * sy], [seg[1][0] * sx, seg[1][1] * sy]]);
-        }
+        for (const seg of scene.segmentsObjets) segs.push([seg[0], seg[1]]);
       }
       if (scene.segmentsObjetsManuels) {
-        for (const seg of scene.segmentsObjetsManuels) {
-          segs.push([[seg[0][0] * sx, seg[0][1] * sy], [seg[1][0] * sx, seg[1][1] * sy]]);
-        }
+        for (const seg of scene.segmentsObjetsManuels) segs.push([seg[0], seg[1]]);
       }
       for (const p of scene.portails) {
         if (p.ouvert) continue;
         const b = p.bounds;
         if (!b || b.length < 2) continue;
-        segs.push([[b[0].x * sx, b[0].y * sy], [b[1].x * sx, b[1].y * sy]]);
+        segs.push([[b[0].x, b[0].y], [b[1].x, b[1].y]]);
       }
       return segs;
     }
 
-    // ── LoS + brouillard ─────────────────────────────────────
-    function calculerEtRendreLoS(scene) {
-      if (!canvasLoS || !ctxLoS) return;
+    // Recadre chaque sommet d'un polygone de vision à une distance max du
+    // token (les murs/objets ont déjà découpé le polygone avant cet appel,
+    // ça ne fait que couper court une ligne de vue dégagée trop longue).
+    function _plafonnerPortee(poly, posX, posY, maxDist) {
+      return poly.map(([px2, py2]) => {
+        const dx = px2 - posX, dy = py2 - posY;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= maxDist) return [px2, py2];
+        const scale = maxDist / dist;
+        return [posX + dx * scale, posY + dy * scale];
+      });
+    }
+    function _remplirChemin(ctx, poly) {
+      ctx.beginPath();
+      ctx.moveTo(poly[0][0], poly[0][1]);
+      for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i][0], poly[i][1]);
+      ctx.closePath();
+      ctx.fill();
+    }
 
+    // ── LoS + brouillard ─────────────────────────────────────
+    // Géométrie et portée de vision : toujours calculées en unités NATIVES de
+    // la scène (scene.px), jamais recalculées depuis la largeur d'affichage
+    // courante de #carte-image. Avant, tout (segments, positions, portée)
+    // était mis à l'échelle d'affichage à chaque appel : un token déplacé
+    // (drag local, ou mise à jour distante d'un autre client via Firestore)
+    // pendant que l'onglet Carte n'était pas affiché (rect.width === 0, ex.
+    // depuis « Ma fiche » ou la Table de combat) faisait sortir la fonction
+    // en échec AVANT même de recalculer _polygonsVisionJoueurs : un monstre
+    // pourtant à portée restait caché jusqu'à ce qu'un évènement resize (ex.
+    // retour sur l'onglet Carte, qui en déclenche un via _appliquerCarteMode)
+    // relance tout le calcul. La géométrie ne dépendant plus d'aucune mesure
+    // d'affichage, elle est désormais toujours à jour ; seul le dessin visuel
+    // du brouillard (cosmétique) a encore besoin d'une taille d'affichage
+    // valide, et peut donc légitimement attendre le prochain rendu visible.
+    function calculerEtRendreLoS(scene) {
+      const px = scene.px;
+      const segsAff = _segmentsBloquants(scene);
+
+      // Seuls les tokens joueurs dissipent le brouillard (LoS individuelle) et
+      // déterminent quels monstres sont montrés aux joueurs (cf. rendreTokensDD).
+      const tokensVision = tokensDD.filter(t => t.pj);
+      const maxDistClaire = PORTEE_VISION_CLAIRE * px;
+      const maxDistAlteree = (PORTEE_VISION_CLAIRE + PORTEE_VISION_ALTEREE) * px;
+
+      // Polygones par token (unités natives), gardés pour le dessin visuel
+      // ci-dessous sans avoir à relancer VisibilityPolygon.compute.
+      const polysParToken = [];
+      for (const tok of tokensVision) {
+        const posX = (tok.cx + 0.5) * px;
+        const posY = (tok.cy + 0.5) * px;
+        let poly;
+        try {
+          poly = VisibilityPolygon.compute([posX, posY], segsAff, [0, 0, scene.largeur, scene.hauteur], 32);
+        } catch(e) { console.error('[LoS] erreur compute:', e); continue; }
+        if (!poly || poly.length < 3) continue;
+
+        // Deux polygones emboîtés : vision nette (claire) et vision altérée
+        // (plus large, assombrie plutôt que masquée). La détection des
+        // monstres (cf. rendreTokensDD) utilise la version altérée : on
+        // perçoit une présence même en vision trouble, juste moins nettement.
+        const polyAlteree = _plafonnerPortee(poly, posX, posY, maxDistAlteree);
+        const polyClaire = _plafonnerPortee(poly, posX, posY, maxDistClaire);
+        polysParToken.push({ polyAlteree, polyClaire });
+      }
+
+      _polygonsVisionJoueurs = polysParToken.map(p => p.polyAlteree);
+
+      // Détection des monstres qui viennent d'entrer dans le champ de vision
+      // d'un PJ (cf. onMonstreDevientVisible ci-dessus) — un seul appel par
+      // monstre tant qu'il reste visible en continu.
+      if (_onMonstreDevientVisible) {
+        for (const tok of tokensMonstres()) {
+          if (_monstresDejaNotifiesVisibles.has(tok.id)) continue;
+          const posX = (tok.cx + 0.5) * px;
+          const posY = (tok.cy + 0.5) * px;
+          if (_monstreVisiblePourJoueurs(posX, posY)) {
+            _monstresDejaNotifiesVisibles.add(tok.id);
+            _onMonstreDevientVisible(tok);
+          }
+        }
+      }
+
+      rendreTokensDD(scene); // ré-applique la visibilité des monstres avec la LoS à jour
+      _dessinerFogVisuel(scene, polysParToken);
+    }
+
+    // Dessin visuel du brouillard (cosmétique) : marque en clair les zones
+    // vues, atténue celles déjà explorées mais plus visibles. Nécessite une
+    // taille d'affichage valide (onglet Carte visible) ; sans ça, on attend
+    // simplement le prochain appel (resize/retour sur l'onglet) pour
+    // rafraîchir l'affichage — la géométrie/le gating ci-dessus, eux, sont
+    // déjà à jour dans tous les cas.
+    function _dessinerFogVisuel(scene, polysParToken) {
+      if (!canvasLoS || !ctxLoS) return;
       const imgEl = document.getElementById('carte-image');
       const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
       if (!rect || rect.width === 0) return;
@@ -2751,83 +2836,30 @@ const Carte = (() => {
       canvasLoS.style.left   = offX + 'px';
       canvasLoS.style.top    = offY + 'px';
 
-      // Segments bloquants dans le référentiel du canvas (= référentiel image) :
-      // murs + portails fermés (porte ou fenêtre — un portail ouvert ne bloque rien).
-      const segsAff = _segmentsBloquants(scene, sx, sy);
-
-      const tc = tailleCase(scene);
-      _dernierTC = tc;
-
       // Remplir le brouillard opaque (zone jamais vue = totalement cachée)
       ctxLoS.clearRect(0, 0, affW, affH);
       ctxLoS.fillStyle = 'rgba(0,0,0,0.92)';
       ctxLoS.fillRect(0, 0, affW, affH);
 
-      // Alléger le brouillard sur tout ce qui a déjà été exploré (canvasFog2 =
-      // marque opaque là où déjà vu). Passe faite AVANT les trous de vision
-      // courante ci-dessous, pour qu'ils puissent ensuite passer par-dessus en
-      // clair total — sinon un "trou" transparent dessiné en source-over sur un
-      // fond déjà opaque ne fait rien (c'était le bug : la zone déjà explorée
-      // mais plus visible retombait à l'opacité max au lieu de rester grisée).
+      // Alléger le brouillard sur tout ce qui a déjà été exploré (canvasFog2,
+      // en résolution native → mis à l'échelle d'affichage ici uniquement).
+      // Passe faite AVANT les trous de vision courante ci-dessous, pour
+      // qu'ils puissent ensuite passer par-dessus en clair total — sinon un
+      // "trou" transparent dessiné en source-over sur un fond déjà opaque ne
+      // fait rien (c'était le bug : la zone déjà explorée mais plus visible
+      // retombait à l'opacité max au lieu de rester grisée).
       ctxLoS.globalCompositeOperation = 'destination-out';
       ctxLoS.globalAlpha = 0.5; // 0.92 * (1 - 0.5) ≈ 0.46 → brouillard semi-transparent
-      ctxLoS.drawImage(canvasFog2, 0, 0);
+      ctxLoS.drawImage(canvasFog2, 0, 0, canvasFog2.width, canvasFog2.height, 0, 0, affW, affH);
       ctxLoS.globalAlpha = 1.0;
       ctxLoS.globalCompositeOperation = 'source-over';
 
-      // Seuls les tokens joueurs dissipent le brouillard (LoS individuelle) et
-      // déterminent quels monstres sont montrés aux joueurs (cf. rendreTokensDD).
-      const tokensVision = tokensDD.filter(t => t.pj);
-      if (tokensVision.length === 0) {
-        _polygonsVisionJoueurs = [];
-        rendreTokensDD(scene); // aucun PJ sur la carte -> aucun monstre visible
-        return;
-      }
+      const enAffichage = (poly) => poly.map(([x, y]) => [x * sx, y * sy]);
 
-      const maxDistClaire = PORTEE_VISION_CLAIRE * tc;
-      const maxDistAlteree = (PORTEE_VISION_CLAIRE + PORTEE_VISION_ALTEREE) * tc;
-      // Recadre chaque sommet d'un polygone de vision à une distance max du
-      // token (les murs/objets ont déjà découpé le polygone avant cet appel,
-      // ça ne fait que couper court une ligne de vue dégagée trop longue).
-      function _plafonnerPortee(poly, posX, posY, maxDist) {
-        return poly.map(([px2, py2]) => {
-          const dx = px2 - posX, dy = py2 - posY;
-          const dist = Math.hypot(dx, dy);
-          if (dist <= maxDist) return [px2, py2];
-          const scale = maxDist / dist;
-          return [posX + dx * scale, posY + dy * scale];
-        });
-      }
-      function _remplirChemin(ctx, poly) {
-        ctx.beginPath();
-        ctx.moveTo(poly[0][0], poly[0][1]);
-        for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i][0], poly[i][1]);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      const nouveauxPolygones = [];
-      for (const tok of tokensVision) {
-        // Position dans le référentiel du canvas (= référentiel image)
-        const posX = (tok.cx + 0.5) * tc;
-        const posY = (tok.cy + 0.5) * tc;
-
-        let poly;
-        try {
-          poly = VisibilityPolygon.compute([posX, posY], segsAff, [0, 0, affW, affH], 32);
-        } catch(e) { console.error('[LoS] erreur compute:', e); continue; }
-        if (!poly || poly.length < 3) continue;
-
-        // Deux polygones emboîtés : vision nette (claire) et vision altérée
-        // (plus large, assombrie plutôt que masquée). La détection des
-        // monstres (cf. rendreTokensDD) utilise la version altérée : on
-        // perçoit une présence même en vision trouble, juste moins nettement.
-        const polyAlteree = _plafonnerPortee(poly, posX, posY, maxDistAlteree);
-        const polyClaire = _plafonnerPortee(poly, posX, posY, maxDistClaire);
-        nouveauxPolygones.push(polyAlteree);
-
+      for (const { polyAlteree, polyClaire } of polysParToken) {
         // Marquer la zone (jusqu'à la portée altérée) comme explorée pour
-        // toujours (marque opaque, union naturelle des passages successifs)
+        // toujours (marque opaque, union naturelle des passages successifs) —
+        // sur canvasFog2, en unités natives (pas de mise à l'échelle ici).
         ctxFog2.globalCompositeOperation = 'source-over';
         ctxFog2.fillStyle = '#000';
         _remplirChemin(ctxFog2, polyAlteree);
@@ -2837,30 +2869,11 @@ const Carte = (() => {
         // passe faite après l'atténuation "déjà exploré" pour la remplacer.
         ctxLoS.globalCompositeOperation = 'destination-out';
         ctxLoS.globalAlpha = 0.5;
-        _remplirChemin(ctxLoS, polyAlteree);
+        _remplirChemin(ctxLoS, enAffichage(polyAlteree));
         ctxLoS.globalAlpha = 1.0;
-        _remplirChemin(ctxLoS, polyClaire);
+        _remplirChemin(ctxLoS, enAffichage(polyClaire));
         ctxLoS.globalCompositeOperation = 'source-over';
       }
-
-      _polygonsVisionJoueurs = nouveauxPolygones;
-
-      // Détection des monstres qui viennent d'entrer dans le champ de vision
-      // d'un PJ (cf. onMonstreDevientVisible ci-dessus) — un seul appel par
-      // monstre tant qu'il reste visible en continu.
-      if (_onMonstreDevientVisible) {
-        for (const tok of tokensMonstres()) {
-          if (_monstresDejaNotifiesVisibles.has(tok.id)) continue;
-          const px = (tok.cx + 0.5) * tc;
-          const py = (tok.cy + 0.5) * tc;
-          if (_monstreVisiblePourJoueurs(px, py)) {
-            _monstresDejaNotifiesVisibles.add(tok.id);
-            _onMonstreDevientVisible(tok);
-          }
-        }
-      }
-
-      rendreTokensDD(scene); // ré-applique la visibilité des monstres avec la LoS à jour
     }
 
 
