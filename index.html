@@ -253,7 +253,11 @@
           <label><input type="radio" name="mode-d20" value="desavantage" /> Désavantage</label>
         </div>
         <div class="options-de">
-          <label title="Les autres joueurs ne voient qu'un dé qui roule (sans nom ni valeur) ; toi et le MJ voyez le résultat normalement."><input type="checkbox" id="jet-cache" /> 🙈 Jet caché (visible seulement de toi et du MJ)</label>
+          <label>
+            <input type="checkbox" id="jet-cache" /> 🙈 Jet caché
+            <span data-role="joueur" title="Les autres joueurs ne voient qu'un dé qui roule (sans nom ni valeur) ; toi et le MJ voyez le résultat normalement.">(visible seulement de toi et du MJ)</span>
+            <span data-role="mj" title="Les joueurs ne voient qu'un dé qui roule (sans nom ni valeur) ; toi seul vois le résultat normalement.">(visible seulement de toi)</span>
+          </label>
         </div>
 
         <h3>Dés simples</h3>
@@ -732,6 +736,6 @@
   <script src="js/loot.js?v=10"></script>
   <script src="js/capacites.js?v=12"></script>
   <script src="js/combat.js?v=8"></script>
-  <script src="js/app.js?v=100"></script>
+  <script src="js/app.js?v=101"></script>
 </body>
 </html>

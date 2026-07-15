@@ -5457,6 +5457,19 @@ const App = (() => {
     return el ? el.value : "normal";
   }
 
+  // Lance 1 ou 2d20 selon le mode (normal/avantage/désavantage) — factorisé
+  // entre lancerTest (tests avec bonus) et lancerDeSimple (bouton "d20" brut
+  // de la section Dés simples), pour que le sélecteur global mode-d20
+  // s'applique identiquement aux deux et alimente la même animation duo
+  // côté overlay (cf. afficherOverlayJet).
+  function _lancerD20SelonMode(mode) {
+    let d1 = lancerDe(20), d2 = lancerDe(20), de, detailDes;
+    if (mode === "avantage") { de = Math.max(d1, d2); detailDes = `2d20 av. [${d1}, ${d2}] → ${de}`; }
+    else if (mode === "desavantage") { de = Math.min(d1, d2); detailDes = `2d20 dés. [${d1}, ${d2}] → ${de}`; }
+    else { de = d1; detailDes = `d20 → ${de}`; }
+    return { de, d1, d2, detailDes };
+  }
+
   // Test = 1d20 + bonus, gère avantage/désavantage. critMin : seuil de
   // critique (20 par défaut, abaissé par certaines capacités — cf.
   // Personnage.critMinAttaque, ex. Guerrier "Précision létale" à 19).
@@ -5471,10 +5484,7 @@ const App = (() => {
     bonus = bonus || 0;
     critMin = critMin || 20;
     const mode = modeForce || modeD20();
-    let d1 = lancerDe(20), d2 = lancerDe(20), de, detailDes;
-    if (mode === "avantage") { de = Math.max(d1, d2); detailDes = `2d20 av. [${d1}, ${d2}] → ${de}`; }
-    else if (mode === "desavantage") { de = Math.min(d1, d2); detailDes = `2d20 dés. [${d1}, ${d2}] → ${de}`; }
-    else { de = d1; detailDes = `d20 → ${de}`; }
+    const { de, d1, d2, detailDes } = _lancerD20SelonMode(mode);
     const total = de + bonus;
     const crit = (de >= critMin), echec = (de === 1);
     const detail = `${detailDes} ${signe(bonus)}`;
@@ -5483,12 +5493,24 @@ const App = (() => {
     return { total, de, crit, echec };
   }
 
+  // d20 "simple" (section Dés simples) : respecte quand même le mode
+  // avantage/désavantage global juste au-dessus (modeD20) — sinon ce bouton
+  // ignorerait silencieusement le sélecteur qu'il jouxte. Les autres faces
+  // (d4/d6/d8/d10/d12/d100) n'ont pas de notion d'avantage en COF, elles
+  // restent un jet unique, inchangé.
   function lancerDeSimple(faces) {
+    if (faces === 20) {
+      const mode = modeD20();
+      const { de, d1, d2, detailDes } = _lancerD20SelonMode(mode);
+      const crit = de === 20, echec = de === 1;
+      afficherResultat("d20", de, detailDes, crit, echec);
+      ajouterHisto("d20", de, crit, echec, detailDes, { mode, d1, d2 });
+      return;
+    }
     const v = lancerDe(faces);
-    const crit = (faces === 20 && v === 20), echec = (faces === 20 && v === 1);
     const detail = `1d${faces}`;
-    afficherResultat(`d${faces}`, v, detail, crit, echec);
-    ajouterHisto(`d${faces}`, v, crit, echec, detail);
+    afficherResultat(`d${faces}`, v, detail, false, false);
+    ajouterHisto(`d${faces}`, v, false, false, detail);
   }
 
   // Parse une formule type "2d6+3", "1d20-1" ou "1d8+1d4+2" (plusieurs
