@@ -5728,11 +5728,17 @@ const App = (() => {
           entree.crit ? "CRITIQUE ! 🎉" : entree.echec ? "Échec critique 💀" : "";
         if (entree.crit) overlay.classList.add("crit");
         else if (entree.echec) overlay.classList.add("echec");
-        overlayJetTimer = setTimeout(() => { overlay.classList.remove("visible"); overlayJetTimer = null; }, 5000);
+        // Durée d'affichage du total final : 5s pour un jet normal, 2s pour
+        // un duo (cf. DUREE_DUO_MS ci-dessous) — la lecture des 2 dés a déjà
+        // pris son temps, pas besoin de laisser le total affiché aussi
+        // longtemps qu'un jet simple.
+        overlayJetTimer = setTimeout(() => { overlay.classList.remove("visible"); overlayJetTimer = null; }, duo ? 2000 : 5000);
       };
 
       if (duo) {
-        // Révèle les 2 valeurs individuelles, les garde visibles un moment,
+        // Révèle les 2 valeurs individuelles, les garde visibles un moment
+        // (DUREE_DUO_MS, cf. plus haut : 5s de fenêtre totale post-roulement
+        // pour un duo, dont 3s de suspense ici + 2s de total final ensuite),
         // puis fusionne sur le dé unique (masque === false ici, cf. calcul de `duo`).
         if (valA) valA.textContent = entree.d1;
         if (valB) valB.textContent = entree.d2;
@@ -5743,7 +5749,7 @@ const App = (() => {
           if (zoneDuo) zoneDuo.classList.remove("visible");
           overlayJetDuoTimer = null;
           finPhaseRoulement();
-        }, 900);
+        }, 3000);
       } else {
         finPhaseRoulement();
       }
