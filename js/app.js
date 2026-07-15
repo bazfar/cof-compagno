@@ -3416,6 +3416,15 @@ const App = (() => {
     if (!monToken) return [];
     const r = rayon || 1;
     return (Carte.listeMonstresCombat() || []).filter((m) => {
+      // Exclut les invocations (m.invocateur) : Carte.listeMonstresCombat()
+      // regroupe monstres du bestiaire ET invocations de joueurs (nécessaire
+      // pour l'ordre d'initiative, cf. Carte.tokensMonstres), mais une
+      // invocation (zombie, compagnon animal, Barricade improvisée du
+      // Guerrier lui-même...) n'est jamais un adversaire valide pour une
+      // attaque d'opportunité — sans ce filtre, le Bastion improvisé (rayon
+      // élargi à 3 cases) déclenchait le bouton contre la propre barricade
+      // du Guerrier qui la pose juste à côté de lui.
+      if (m.invocateur) return false;
       const d = Carte.distanceCasesEntre(monToken, m.id);
       return d !== null && d <= r;
     });
