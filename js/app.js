@@ -3703,6 +3703,19 @@ const App = (() => {
               ? cibles.map((cc) => `<option value="${cc.id}">${echapper(cc.nom)}${cc.soi ? " (soi-même)" : ""}</option>`).join("")
               : `<option value="">Aucune cible disponible</option>`;
             pickerForme.style.display = "flex";
+          } else if (mecanique.cible === "zone" && mecanique.jetOppose) {
+            // Capacité de zone AVEC jet opposé (ex. Barde "Mélopée de la
+            // Folie"/"Requiem du silence", Voie du chant/chaos) : le moteur
+            // ne cible jamais automatiquement toute une zone à la fois (même
+            // limite que les zones à bonus, ex. Cri du rassemblement — "à
+            // appliquer manuellement allié par allié"), mais on permet ici de
+            // choisir UN monstre de la zone pour que le jet vs DEF se résolve
+            // automatiquement contre lui ; relancer pour la cible suivante.
+            const cibles = Capacites.listeCibles(id).filter((cc) => cc.genre === "monstre");
+            pickerSelect.innerHTML = cibles.length
+              ? cibles.map((cc) => `<option value="${cc.id}">${echapper(cc.nom)}</option>`).join("")
+              : `<option value="">Aucune cible disponible</option>`;
+            pickerForme.style.display = "flex";
           } else {
             resoudreCapaciteEtRafraichir(null);
           }
