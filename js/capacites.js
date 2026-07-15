@@ -191,6 +191,30 @@ const Capacites = (() => {
     return qualifie ? 1 : 0;
   }
 
+  // Guerrier — Voie du chaos, rang 3/5 "Rage incontrôlée"/"Déchaînement" (cf.
+  // mecanique.testVolonte) : cible forcée en cas d'échec du test de Volonté —
+  // la créature la plus proche du lanceur sur la table de combat active, PJ
+  // ou monstre confondu ("allié compris", texte d'origine), tie-break
+  // aléatoire en cas d'égalité de distance. null hors battlemap dd2vtt (pas
+  // de distance en cases) ou si aucune autre créature n'a de token posé.
+  function cibleCreaturePlusProche(persoId) {
+    if (typeof Carte === "undefined" || !Carte.tokenIdPourPerso || !Carte.listeMonstresCombat ||
+        !Carte.listeTokensJoueursCombat || !Carte.distanceCasesEntre) return null;
+    const monToken = Carte.tokenIdPourPerso(persoId);
+    if (!monToken) return null;
+    const autres = (Carte.listeMonstresCombat() || [])
+      .concat((Carte.listeTokensJoueursCombat() || []).filter((t) => t.id !== monToken));
+    let minDist = Infinity;
+    let candidats = [];
+    autres.forEach((t) => {
+      const d = Carte.distanceCasesEntre(monToken, t.id);
+      if (d === null) return;
+      if (d < minDist) { minDist = d; candidats = [t]; }
+      else if (d === minDist) candidats.push(t);
+    });
+    return candidats.length ? candidats[Math.floor(Math.random() * candidats.length)] : null;
+  }
+
   /* ---------- Application des effets ----------
      Toutes les mutations d'un même appel à lancer() se font sur UNE seule
      map `persos` chargée une fois, sauvegardée une seule fois à la fin —
@@ -689,6 +713,34 @@ const Capacites = (() => {
       }
     }
 
+    // Test de Volonté générique (mecanique.testVolonte : { carac,
+    // difficulteFixe }, ex. Guerrier "Rage incontrôlée"/"Déchaînement", Voie
+    // du chaos) — contrairement à jetOppose ci-dessus (toujours un jet de
+    // L'ACTIVATEUR contre la DEF/DD d'UNE CIBLE), ceci est un jet de
+    // résistance du LANCEUR sur lui-même, sans cible : mecanique.
+    // jetOppose.difficulteFixe existe dans les données depuis longtemps
+    // (pièges de l'Ingénieur) mais n'a jamais été lu par le moteur — ce champ
+    // dédié évite de surcharger jetOppose d'une sémantique qu'il ne gérait
+    // pas. Un échec ne bloque/gate aucun effet automatiquement (contrairement
+    // à attaqueVsDef) : seule la cible forcée est calculée et nommée dans le
+    // message, son application reste manuelle (cf. note de donnée).
+    if (mecanique.testVolonte) {
+      const { carac, difficulteFixe } = mecanique.testVolonte;
+      const modCarac = perso.mod(carac);
+      const d20v = App.lancerDe(20);
+      const totalV = d20v + modCarac;
+      const reussite = totalV >= difficulteFixe;
+      App.ajouterHisto(`${libelle} — Test de Volonté (${carac})`, totalV, false, false,
+        `d20[${d20v}] ${modCarac >= 0 ? "+" : ""}${modCarac} vs ${difficulteFixe}`);
+      if (reussite) {
+        messages.push(`Test de Volonté (${carac}) : ${totalV} vs ${difficulteFixe} — réussi, pas de redirection.`);
+      } else {
+        const forcee = cibleCreaturePlusProche(persoId);
+        messages.push(`Test de Volonté (${carac}) : ${totalV} vs ${difficulteFixe} — échec, l'attaque doit cibler ` +
+          (forcee ? `${forcee.nom} (le plus proche).` : `la créature la plus proche (aucune détectée sur la table de combat).`));
+      }
+    }
+
     (mecanique.effets || []).forEach((effet) => {
       // Différé : résolu plus tard par resoudreDegatsEnAttente(), une fois la
       // touche confirmée (cf. resolutionDegats ci-dessus).
@@ -800,6 +852,7 @@ const Capacites = (() => {
     listeCibles,
     obtenirDefCible,
     bonusDefAuraPeuple,
+    cibleCreaturePlusProche,
     lancer,
     resoudreDegatsEnAttente,
   };
