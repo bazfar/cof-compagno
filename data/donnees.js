@@ -248,10 +248,10 @@ const CLASSES = {
               jetOppose: { caracAttaquant: null, caracDefenseur: "DEX", difficulteFixe: 14 },
               effets: [ { type: "degats", formule: "2d6", elementaire: null },
                 { type: "special", note: "Pose jusqu'à 3 pièges en une seule action limitée — un seul jet de dégâts représenté ici par piège déclenché." } ] } },
-          { rang: 5, nom: "Bastion improvisé (L, 1x/combat)", effet: "Zone 6 m en bastion pour le reste du combat : alliés +2 DEF en continu ; ennemis y pénétrant : DEX diff. 14 ou 2d6 DM",
+          { rang: 5, nom: "Bastion improvisé (L, 1x/combat)", effet: "Zone 6 m (~3 cases) en bastion pour le reste du combat : alliés +2 DEF en continu ; tout monstre y pénétrant subit une attaque d'opportunité au contact",
             mecanique: { type: "limitee", usage: { frequence: "1x/combat" }, cible: "zone", portee: null, zone: 6, jetOppose: null,
               effets: [ { type: "bonus", cible: "DEF", valeur: 2, duree: "finCombat" },
-                { type: "special", note: "Bonus de DEF pour les alliés dans la zone. Tout ennemi y pénétrant : test de DEX diff. 14 ou 2d6 DM — déclenchement au mouvement, non modélisé par le schéma standard (orienté sur l'activation du lanceur)." } ] } },
+                { type: "special", note: "Bonus de DEF pour les alliés dans la zone (application manuelle allié par allié, mecanique.cible='zone' sans cibleId — même limite que Fortification de fortune, même voie). Reformulé (validé avec Thomas) par rapport au texte d'origine (DEX diff. 14 ou 2d6 DM, non modélisable par le schéma standard) : tout monstre entrant dans la zone (~3 cases, conversion 2m/case déjà utilisée pour le don Mobile/Grâce féline) déclenche une VRAIE attaque d'opportunité du Guerrier (jetOppose vs DEF, bonusAttaque('contact'), dégâts d'arme normaux) — même moteur que n'importe quelle attaque de capacité. Détection faite côté app.js (calcul live à chaque rendu de fiche, pas d'évènement 'jeton déplacé' dans le moteur), tant que le marqueur p.bastionActifFinCombat (posé par Capacites.lancer, remis à zéro par Combat.terminerCombat) reste actif." } ] } },
         ],
       },
       {

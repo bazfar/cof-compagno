@@ -406,6 +406,13 @@ const Combat = (() => {
         p.reactionsUtilisees = 0;
         modifie = true;
       }
+      // Marqueur Bastion improvisé (Guerrier, Voie de l'ingénieur rang 5,
+      // cf. Capacites.lancer) : remis à zéro en fin de combat, comme le reste
+      // des marqueurs de combat ci-dessus.
+      if (p.bastionActifFinCombat) {
+        p.bastionActifFinCombat = false;
+        modifie = true;
+      }
     });
     if (modifie) App.sauverPersos(persos);
     if (typeof Carte !== "undefined" && Carte.reinitialiserDetectionVisibilite) Carte.reinitialiserDetectionVisibilite();

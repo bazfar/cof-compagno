@@ -630,7 +630,7 @@ const App = (() => {
       </div>`}
       ${peutAgir ? htmlBlocActionsDuTour(id) : ""}
       ${peutAgir ? htmlBlocDesengagement() : ""}
-      ${peutAgir ? htmlBlocAttaqueOpportunite(perso) : ""}
+      ${peutAgir ? htmlBlocAttaqueOpportunite(perso, p) : ""}
       ${htmlEtatsActifs(p)}
       ${htmlBlocInitiativeJoueur(id)}
       ${htmlBlocChance(p, perso)}
@@ -3401,17 +3401,21 @@ const App = (() => {
     </div>`;
   }
 
-  // Adversaires (tokens monstres) actuellement adjacents à `persoId` (distance
-  // <= 1 case sur la scène dd2vtt active, cf. Carte.distanceCasesEntre) — même
-  // infra que Personnage.bonusDefDuel (Combattant en duel), réutilisée ici pour
-  // l'attaque d'opportunité (cf. htmlBlocDesengagement/tenterDesengagement).
-  function _ennemisAdjacents(persoId) {
+  // Adversaires (tokens monstres) actuellement à `rayon` cases ou moins de
+  // `persoId` sur la scène dd2vtt active (défaut 1 = adjacent, cf.
+  // Carte.distanceCasesEntre) — même infra que Personnage.bonusDefDuel
+  // (Combattant en duel), réutilisée ici pour l'attaque d'opportunité (cf.
+  // htmlBlocDesengagement/tenterDesengagement) et, avec un rayon élargi à 3
+  // cases (~6 m, conversion déjà utilisée pour Mobile/Grâce féline), pour le
+  // Bastion improvisé du Guerrier (Voie de l'ingénieur rang 5).
+  function _ennemisAdjacents(persoId, rayon) {
     if (typeof Carte === "undefined" || !Carte.tokenIdPourPerso || !Carte.listeMonstresCombat || !Carte.distanceCasesEntre) return [];
     const monToken = Carte.tokenIdPourPerso(persoId);
     if (!monToken) return [];
+    const r = rayon || 1;
     return (Carte.listeMonstresCombat() || []).filter((m) => {
       const d = Carte.distanceCasesEntre(monToken, m.id);
-      return d !== null && d <= 1;
+      return d !== null && d <= r;
     });
   }
 
@@ -3435,12 +3439,21 @@ const App = (() => {
   // contact (Expert en hast, seulement avec une arme d'allonge qualifiante,
   // cf. Personnage.aExpertHastQualifie). Résolution identique dans les deux
   // cas (une attaque de contact bonus), donc un seul bouton/handler partagé.
-  function htmlBlocAttaqueOpportunite(perso) {
+  // `p` (perso brut, optionnel) : sert à détecter le marqueur Bastion
+  // improvisé (p.bastionActifFinCombat, cf. Capacites.lancer/js/combat.js
+  // terminerCombat) — Guerrier, Voie de l'ingénieur rang 5 : élargit le rayon
+  // de déclenchement de 1 (adjacent, Sentinelle/Expert en hast) à 3 cases
+  // (~6 m, la zone du Bastion), sans dupliquer le bouton/handler existant.
+  function htmlBlocAttaqueOpportunite(perso, p) {
     if (typeof Combat === "undefined" || !Combat.estActif() || typeof Carte === "undefined" || !Carte.distanceCasesEntre) return "";
-    if (!perso.aSentinelle() && !perso.aExpertHastQualifie()) return "";
+    const aBastion = !!(p && p.bastionActifFinCombat);
+    if (!perso.aSentinelle() && !perso.aExpertHastQualifie() && !aBastion) return "";
+    const aide = aBastion
+      ? "Quand un adversaire adjacent tente de fuir ou vient d'entrer à ton contact, OU quand un monstre pénètre ta zone de Bastion improvisé (~3 cases) : déclenche ton attaque bonus (jet de contact normal vs sa DEF)."
+      : "Quand un adversaire adjacent tente de fuir ou vient d'entrer à ton contact : déclenche ton attaque bonus (jet de contact normal vs sa DEF).";
     return `<div class="carte">
       <h3 style="margin-top:0;">⚔️ Attaque d'opportunité</h3>
-      <p class="aide" style="margin:0 0 6px;">Quand un adversaire adjacent tente de fuir ou vient d'entrer à ton contact : déclenche ton attaque bonus (jet de contact normal vs sa DEF).</p>
+      <p class="aide" style="margin:0 0 6px;">${aide}</p>
       <button class="btn petit secondaire" data-attaque-opportunite style="width:100%;">⚔️ Attaque d'opportunité</button>
     </div>`;
   }
@@ -3916,11 +3929,13 @@ const App = (() => {
         rafraichir();
       };
     });
-    // Attaque d'opportunité (Sentinelle/Expert en hast, cf.
-    // htmlBlocAttaqueOpportunite) : CE perso attaque un adversaire adjacent,
-    // jet de contact normal (arme équipée, y compris le +1 dégâts Expert en
-    // hast déjà intégré à la formule via dmgContact plus haut dans ce
-    // fichier — recalculé ici à l'identique, pas de duplication de règle,
+    // Attaque d'opportunité (Sentinelle/Expert en hast, rayon 1 = adjacent ;
+    // Bastion improvisé, Guerrier Voie de l'ingénieur rang 5, rayon élargi à
+    // 3 cases tant que p.bastionActifFinCombat est actif — cf.
+    // htmlBlocAttaqueOpportunite) : CE perso attaque tous les monstres dans
+    // ce rayon, jet de contact normal (arme équipée, y compris le +1 dégâts
+    // Expert en hast déjà intégré à la formule via dmgContact plus haut dans
+    // ce fichier — recalculé ici à l'identique, pas de duplication de règle,
     // juste de la formule).
     racine.querySelectorAll("[data-attaque-opportunite]").forEach((el) => {
       el.onclick = () => {
@@ -3928,8 +3943,8 @@ const App = (() => {
         const pp = persos[id];
         if (!pp) return;
         const perso = Personnage.depuisJSON(pp);
-        const adjacents = _ennemisAdjacents(id);
-        if (!adjacents.length) { toast("Aucun adversaire adjacent."); return; }
+        const adjacents = _ennemisAdjacents(id, pp.bastionActifFinCombat ? 3 : 1);
+        if (!adjacents.length) { toast(pp.bastionActifFinCombat ? "Aucun monstre à portée du Bastion." : "Aucun adversaire adjacent."); return; }
         const armeContact = perso.armeContactEquipee();
         const armeCourteSecondaire = perso.armeCourteSecondaire();
         const formuleDegats = (arme) => {

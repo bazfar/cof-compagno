@@ -701,6 +701,20 @@ const Capacites = (() => {
       if (msg) messages.push(msg);
     });
 
+    // Guerrier — Voie de l'ingénieur, rang 5 "Bastion improvisé" : le bonus
+    // DEF de zone (effets[] ci-dessus) reste, comme documenté, une
+    // application manuelle allié par allié (mecanique.cible = 'zone', jamais
+    // résolu automatiquement faute de cibleId). Un marqueur dédié, distinct
+    // de cette zone, est posé directement sur le perso brut (même approche
+    // que corruptionCombat ci-dessous, PAS un etatsActifs "etat"/"bonus" —
+    // ces deux mécanismes exigent une cible résolue, ce que 'zone' sans
+    // cibleId ne fournit pas) : lu par app.js pour proposer l'attaque
+    // d'opportunité (jetOppose vs DEF) dès qu'un monstre entre dans la zone,
+    // tant que ce marqueur reste actif. Remis à zéro par Combat.terminerCombat().
+    if (source.voie === "Voie de l'ingénieur" && source.rang === 5 && perso.classe === "guerrier") {
+      p.bastionActifFinCombat = true;
+    }
+
     // Voie du chaos : gain de corruption sur le LANCEUR (jamais la cible),
     // uniquement pour les rangs dont le gain est univoque (cf. commentaire
     // au-dessus de SEUIL_CORRUPTION_MAJEURE).
