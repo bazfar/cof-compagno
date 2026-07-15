@@ -867,39 +867,54 @@ const Carte = (() => {
     }
 
     // ── Rendu ────────────────────────────────────────────────
+    // Repositionne/redimensionne (CSS uniquement) les overlays sur l'image
+    // affichée. Appelé à chaque rendu ET sur resize/observation de taille :
+    // ne dépend d'aucun calcul géométrique, juste de l'alignement visuel.
+    function positionnerOverlaysDD(scene) {
+      const imgEl = document.getElementById('carte-image');
+      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
+      if (!rect || rect.width === 0) return;
+      const sceneEl = document.getElementById('carte-scene');
+      const sceneRect = sceneEl ? sceneEl.getBoundingClientRect() : null;
+      const offX = sceneRect ? Math.round(rect.left - sceneRect.left) : 0;
+      const offY = sceneRect ? Math.round(rect.top  - sceneRect.top)  : 0;
+      const w = Math.round(rect.width), h = Math.round(rect.height);
+      [canvasMurs, canvasLoS].forEach(cv => {
+        if (!cv) return;
+        cv.style.width  = w + 'px';
+        cv.style.height = h + 'px';
+        cv.style.left   = offX + 'px';
+        cv.style.top    = offY + 'px';
+      });
+      const conteneur = document.getElementById('dd2vtt-tokens');
+      if (conteneur) {
+        conteneur.style.position = 'absolute';
+        conteneur.style.left   = offX + 'px';
+        conteneur.style.top    = offY + 'px';
+        conteneur.style.width  = w + 'px';
+        conteneur.style.height = h + 'px';
+        conteneur.style.pointerEvents = 'none';
+      }
+    }
+
+    // Dessine les murs/portails dans la résolution native de la scène
+    // (indépendante de l'écran du joueur) — seul l'affichage (CSS) varie.
     function rendreScene(scene) {
       if (!canvasMurs || !ctxMurs) return;
 
-      const imgEl = document.getElementById('carte-image');
-      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
-      const affW  = (rect && rect.width  > 0) ? Math.round(rect.width)  : scene.largeur;
-      const affH  = (rect && rect.height > 0) ? Math.round(rect.height) : scene.hauteur;
-
-      // Offset image dans carte-scene
-      const sceneEl = document.getElementById('carte-scene');
-      const sceneRect = sceneEl ? sceneEl.getBoundingClientRect() : null;
-      const offX2 = sceneRect ? Math.round(rect.left - sceneRect.left) : 0;
-      const offY2 = sceneRect ? Math.round(rect.top  - sceneRect.top)  : 0;
-
-      // Canvas murs calé sur l'image exactement
-      canvasMurs.width  = affW;
-      canvasMurs.height = affH;
-      canvasMurs.style.width  = affW + 'px';
-      canvasMurs.style.height = affH + 'px';
-      canvasMurs.style.left   = offX2 + 'px';
-      canvasMurs.style.top    = offY2 + 'px';
-
-      const sx = affW / scene.largeur;
-      const sy = affH / scene.hauteur;
-
-      ctxMurs.clearRect(0, 0, affW, affH);
-      rendreMurs(scene, sx, sy);
-      rendrePortails(scene, sx, sy);
+      if (canvasMurs.width !== scene.largeur || canvasMurs.height !== scene.hauteur) {
+        canvasMurs.width  = scene.largeur;
+        canvasMurs.height = scene.hauteur;
+      }
+      ctxMurs.clearRect(0, 0, scene.largeur, scene.hauteur);
+      rendreMurs(scene);
+      rendrePortails(scene);
+      positionnerOverlaysDD(scene);
     }
 
-    function rendreMurs(scene, sx, sy, offX=0, offY=0) {
+    function rendreMurs(scene) {
       ctxMurs.strokeStyle = 'rgba(220, 80, 0, 0.9)';
-      ctxMurs.lineWidth   = Math.max(1.5, scene.px * sx / 60);
+      ctxMurs.lineWidth   = Math.max(1.5, scene.px / 60);
       ctxMurs.lineCap     = 'round';
       ctxMurs.lineJoin    = 'round';
       ctxMurs.shadowColor = '#ff6600';
@@ -908,27 +923,27 @@ const Carte = (() => {
       for (const poly of scene.polylignes) {
         if (poly.length < 2) continue;
         ctxMurs.beginPath();
-        ctxMurs.moveTo(offX + poly[0].x * sx, offY + poly[0].y * sy);
+        ctxMurs.moveTo(poly[0].x, poly[0].y);
         for (let i = 1; i < poly.length; i++) {
-          ctxMurs.lineTo(offX + poly[i].x * sx, offY + poly[i].y * sy);
+          ctxMurs.lineTo(poly[i].x, poly[i].y);
         }
         ctxMurs.stroke();
       }
       ctxMurs.shadowBlur = 0;
     }
 
-    function rendrePortails(scene, sx, sy, offX=0, offY=0) {
+    function rendrePortails(scene) {
       for (const p of scene.portails) {
         const b = p.bounds;
         if (b.length < 2) continue;
         ctxMurs.strokeStyle = p.ouvert ? '#44ff88' : '#ffcc00';
-        ctxMurs.lineWidth   = Math.max(2, scene.px * sx / 50);
+        ctxMurs.lineWidth   = Math.max(2, scene.px / 50);
         ctxMurs.setLineDash(p.ouvert ? [6, 4] : []);
         ctxMurs.shadowColor = p.ouvert ? '#44ff88' : '#ffcc00';
         ctxMurs.shadowBlur  = 6;
         ctxMurs.beginPath();
-        ctxMurs.moveTo(offX + b[0].x * sx, offY + b[0].y * sy);
-        ctxMurs.lineTo(offX + b[1].x * sx, offY + b[1].y * sy);
+        ctxMurs.moveTo(b[0].x, b[0].y);
+        ctxMurs.lineTo(b[1].x, b[1].y);
         ctxMurs.stroke();
         ctxMurs.setLineDash([]);
         ctxMurs.shadowBlur = 0;
@@ -955,42 +970,28 @@ const Carte = (() => {
     }
 
     // ── Rendu tokens dd2vtt ──────────────────────────────────
+    // Positions en % de la scène (indépendantes de la résolution du joueur) :
+    // seule la taille de police (cosmétique) utilise la taille de case affichée.
     function rendreTokensDD(scene) {
       const conteneur = document.getElementById('dd2vtt-tokens');
       if (!conteneur) return;
       conteneur.innerHTML = '';
 
-      const tc = tailleCase(scene);
-      const imgEl = document.getElementById('carte-image');
-      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
-      if (!rect || rect.width === 0) return;
-
-      // Le conteneur couvre toute la carte-scene (position:absolute 0/0 100%/100%)
-      // Les tokens sont positionnés en % de l'image dans la scene
-      const sceneEl = document.getElementById('carte-scene');
-      const sceneRect = sceneEl ? sceneEl.getBoundingClientRect() : null;
-      const offX = sceneRect ? Math.round(rect.left - sceneRect.left) : 0;
-      const offY = sceneRect ? Math.round(rect.top  - sceneRect.top)  : 0;
-      conteneur.style.position = 'absolute';
-      conteneur.style.left   = offX + 'px';
-      conteneur.style.top    = offY + 'px';
-      conteneur.style.width  = rect.width  + 'px';
-      conteneur.style.height = rect.height + 'px';
-      conteneur.style.pointerEvents = 'none';
+      positionnerOverlaysDD(scene);
+      const tc = tailleCase(scene); // uniquement pour la taille de police
 
       tokensDD.forEach(tok => {
         const el = document.createElement('div');
         el.className = 'dd-token' + (tokenSelectionne === tok.id ? ' selectionne' : '');
         el.dataset.id = tok.id;
         el.style.pointerEvents = 'all';
+        el.style.position = 'absolute';
 
-        // Position en pixels depuis le coin haut-gauche de la scene (pas de l'image)
-        const px = tok.cx * tc + tc/2;
-        const py = tok.cy * tc + tc/2;
-        el.style.left   = px + 'px';
-        el.style.top    = py + 'px';
-        el.style.width  = (tc * 0.85) + 'px';
-        el.style.height = (tc * 0.85) + 'px';
+        // Position/taille en % de la scène → identique quelle que soit la résolution
+        el.style.left   = ((tok.cx + 0.5) / scene.lc * 100) + '%';
+        el.style.top    = ((tok.cy + 0.5) / scene.hc * 100) + '%';
+        el.style.width  = (0.85 / scene.lc * 100) + '%';
+        el.style.height = (0.85 / scene.hc * 100) + '%';
         el.style.borderColor = tok.couleur;
         el.style.fontSize = Math.max(8, tc * 0.35) + 'px';
         el.textContent = tok.nom.charAt(0).toUpperCase();
@@ -1076,71 +1077,49 @@ const Carte = (() => {
     }
 
     // ── Init brouillard persistant ───────────────────────────
+    // Buffer en résolution native de la scène : le brouillard exploré ne
+    // dépend jamais de la taille d'écran du joueur qui l'a révélé.
     function reinitFog2(scene) {
-      const imgEl = document.getElementById('carte-image');
-      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
-      if (!rect || rect.width === 0) return;
-      if (canvasFog2.width !== Math.round(rect.width) || canvasFog2.height !== Math.round(rect.height)) {
-        canvasFog2.width  = Math.round(rect.width);
-        canvasFog2.height = Math.round(rect.height);
+      if (canvasFog2.width !== scene.largeur || canvasFog2.height !== scene.hauteur) {
+        canvasFog2.width  = scene.largeur;
+        canvasFog2.height = scene.hauteur;
         ctxFog2.fillStyle = 'rgba(0,0,0,0.92)';
-        ctxFog2.fillRect(0, 0, canvasFog2.width, canvasFog2.height);
+        ctxFog2.fillRect(0, 0, scene.largeur, scene.hauteur);
       }
     }
 
     // ── LoS + brouillard ─────────────────────────────────────
+    // Calculé entièrement en résolution native de la scène (segments et
+    // positions de tokens sont déjà en pixels natifs) : le résultat est
+    // identique pour tous les joueurs, indépendamment de leur écran/fenêtre.
+    // L'affichage (taille/position CSS) est géré à part par positionnerOverlaysDD.
     function calculerEtRendreLoS(scene) {
       if (!canvasLoS || !ctxLoS) return;
 
-      const imgEl = document.getElementById('carte-image');
-      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
-      if (!rect || rect.width === 0) return;
-
-      const affW = Math.round(rect.width);
-      const affH = Math.round(rect.height);
-      const sx   = affW / scene.largeur;
-      const sy   = affH / scene.hauteur;
-
-      // Offset du canvas par rapport à carte-scene
-      const sceneEl = document.getElementById('carte-scene');
-      const sceneRect = sceneEl ? sceneEl.getBoundingClientRect() : null;
-      const offX = sceneRect ? Math.round(rect.left - sceneRect.left) : 0;
-      const offY = sceneRect ? Math.round(rect.top  - sceneRect.top)  : 0;
-
-      // Redimensionner et repositionner le canvas LoS sur l'image exactement
-      canvasLoS.width  = affW;
-      canvasLoS.height = affH;
-      canvasLoS.style.width  = affW + 'px';
-      canvasLoS.style.height = affH + 'px';
-      canvasLoS.style.left   = offX + 'px';
-      canvasLoS.style.top    = offY + 'px';
-
-      // Segments dans le référentiel du canvas (= référentiel image)
-      const segsAff = scene.segments.map(seg => [
-        [seg[0][0]*sx, seg[0][1]*sy],
-        [seg[1][0]*sx, seg[1][1]*sy]
-      ]);
-
-      const tc = tailleCase(scene);
+      reinitFog2(scene);
+      if (canvasLoS.width !== scene.largeur || canvasLoS.height !== scene.hauteur) {
+        canvasLoS.width  = scene.largeur;
+        canvasLoS.height = scene.hauteur;
+      }
+      positionnerOverlaysDD(scene);
 
       // Remplir le brouillard opaque
-      ctxLoS.clearRect(0, 0, affW, affH);
+      ctxLoS.clearRect(0, 0, scene.largeur, scene.hauteur);
       ctxLoS.fillStyle = 'rgba(0,0,0,0.92)';
-      ctxLoS.fillRect(0, 0, affW, affH);
+      ctxLoS.fillRect(0, 0, scene.largeur, scene.hauteur);
 
       if (tokensDD.length === 0) return;
 
       for (const tok of tokensDD) {
-        // Position dans le référentiel du canvas (= référentiel image)
-        const posX = (tok.cx + 0.5) * tc;
-        const posY = (tok.cy + 0.5) * tc;
+        // Position dans le référentiel natif de la scène
+        const posX = (tok.cx + 0.5) * scene.px;
+        const posY = (tok.cy + 0.5) * scene.px;
 
         let poly;
         try {
-          poly = VisibilityPolygon.compute([posX, posY], segsAff);
-          console.log('[LoS] token', tok.nom, 'pos:', posX, posY, 'poly points:', poly ? poly.length : 0);
+          poly = VisibilityPolygon.compute([posX, posY], scene.segments);
         } catch(e) { console.error('[LoS] erreur compute:', e); continue; }
-        if (!poly || poly.length < 3) { console.warn('[LoS] polygone invalide'); continue; }
+        if (!poly || poly.length < 3) continue;
 
         // Révéler dans le brouillard persistant
         ctxFog2.globalCompositeOperation = 'destination-out';
@@ -1217,6 +1196,17 @@ const Carte = (() => {
           const sc = scenes[sceneActive];
           if (sc) ajouterTokenDD(sc);
         });
+      }
+
+      // Filet de sécurité : tout changement de mise en page de l'image
+      // (redimensionnement fenêtre, retour sur l'onglet Carte, police qui
+      // finit de charger...) réaligne murs/LoS/tokens sans action manuelle.
+      const imgEl = document.getElementById('carte-image');
+      if (imgEl && typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(() => {
+          const sc = scenes[sceneActive];
+          if (sc) { positionnerOverlaysDD(sc); rendreTokensDD(sc); calculerEtRendreLoS(sc); }
+        }).observe(imgEl);
       }
     }
 
