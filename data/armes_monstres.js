@@ -854,6 +854,62 @@ const ARMES_MONSTRES = [
     "degats": "2d6+2",
     "portee": "contact",
     "typedegats": "physique"
+  },
+  {
+    "id": "goule_griffes",
+    "nom": "Griffes voraces",
+    "type": "arme",
+    "degats": "1d6+1",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "goule_morsure",
+    "nom": "Morsure paralysante",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "faucheur_faux",
+    "nom": "Faux spectrale",
+    "type": "arme",
+    "degats": "1d10",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "coeurpourri_etreinte",
+    "nom": "Étreinte racinaire",
+    "type": "arme",
+    "degats": "1d8+2",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "coeurpourri_epines",
+    "nom": "Volée d'épines osseuses",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "courte (6m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "vestige_toucher",
+    "nom": "Toucher de dissolution",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "seigneur_lame",
+    "nom": "Lame de la Gangrène",
+    "type": "arme",
+    "degats": "2d8+4",
+    "portee": "contact",
+    "typedegats": "physique"
   }
 ];
 

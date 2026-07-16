@@ -3659,6 +3659,269 @@
       "lore": "Plusieurs cadavres fusionnés en une seule masse difforme par la corruption la plus dense — ce que devient une charogne qui n'a jamais cessé de se nourrir.",
       "armure": null,
       "emoji": "🧟"
+    },
+    {
+      "id": "goule_des_cendres",
+      "nom": "Goule des Cendres",
+      "categorie": "Bestiaire général — Morts-vivants",
+      "faction": "La Gangrène du Chaos",
+      "race": [
+        "mort-vivant",
+        "corrompu"
+      ],
+      "pv": 22,
+      "def": 11,
+      "init": 6,
+      "atk": 5,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "moyenne",
+      "attaques": [
+        {
+          "nom": "Griffes voraces",
+          "armeId": "goule_griffes",
+          "bonusAttaque": 5,
+          "effetSpecial": null
+        },
+        {
+          "nom": "Morsure paralysante",
+          "armeId": "goule_morsure",
+          "bonusAttaque": 5,
+          "effetSpecial": "Si touché : test CON diff. 12 ou paralysé 1 round (sans effet contre les morts-vivants et les constructs)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Chasse en meute",
+          "description": "+1 ATK par Goule des Cendres alliée adjacente à la même cible (max +3)."
+        },
+        {
+          "nom": "Odorat de charognard",
+          "description": "Ne peut pas être surprise par une créature déjà blessée."
+        }
+      ],
+      "lore": "Plus rusées que les charognes, les goules chassent en petits groupes autour des zones de corruption, se disputant les dépouilles fraîches avec une intelligence rampante et cruelle.",
+      "armure": null,
+      "emoji": "👹"
+    },
+    {
+      "id": "faucheur_de_brume",
+      "nom": "Faucheur de Brume",
+      "categorie": "Bestiaire général — Morts-vivants",
+      "faction": "La Gangrène du Chaos",
+      "race": [
+        "mort-vivant",
+        "corrompu"
+      ],
+      "pv": 30,
+      "def": 13,
+      "init": 7,
+      "atk": 6,
+      "dangerosite": 3,
+      "boss": false,
+      "taille": "moyenne",
+      "attaques": [
+        {
+          "nom": "Faux spectrale",
+          "armeId": "faucheur_faux",
+          "bonusAttaque": 6,
+          "effetSpecial": "Si touché : test CON diff. 13 ou -2 PV maximum temporaires jusqu'à la fin du combat (vol de vitalité)."
+        },
+        {
+          "nom": "Voile de brume",
+          "jet": null,
+          "degats": null,
+          "portee": "zone (9m)",
+          "type": "controle",
+          "effetSpecial": "Action, 1 fois par combat : un brouillard opaque bloque toute ligne de vue dans la zone pendant 2 rounds."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Incorporel partiel",
+          "description": "Les armes non-magiques ne lui infligent que la moitié des dégâts (arrondi à l'inférieur)."
+        },
+        {
+          "nom": "Glissement",
+          "description": "Ignore le terrain difficile et les petits obstacles."
+        },
+        {
+          "nom": "Aura de froid mortel",
+          "description": "Les créatures adjacentes au Faucheur subissent -1 ATK."
+        }
+      ],
+      "lore": "Il glisse sans bruit dans les brumes des zones corrompues, faux à la main, moissonnant la vitalité de tout ce qui approche. Certains disent que ce sont les Spectres de ruine les plus anciens, achevés par le temps.",
+      "armure": null,
+      "emoji": "👻"
+    },
+    {
+      "id": "coeur_pourri",
+      "nom": "Cœur-Pourri",
+      "categorie": "Bestiaire général — Morts-vivants",
+      "faction": "La Gangrène du Chaos",
+      "race": [
+        "monstres",
+        "corrompu",
+        "mort-vivant"
+      ],
+      "pv": 44,
+      "def": 12,
+      "init": 0,
+      "atk": 6,
+      "dangerosite": 3,
+      "boss": false,
+      "taille": "très grande",
+      "attaques": [
+        {
+          "nom": "Étreinte racinaire",
+          "armeId": "coeurpourri_etreinte",
+          "bonusAttaque": 6,
+          "effetSpecial": "Si touché : test FOR diff. 14 ou cible saisie ; 1d6 dégâts automatiques par round tant que la cible reste saisie (absorption de vitalité)."
+        },
+        {
+          "nom": "Volée d'épines osseuses",
+          "armeId": "coeurpourri_epines",
+          "bonusAttaque": 5,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Ancrage terrestre",
+          "description": "Immunisé aux effets de poussée et de renversement. Ne peut pas être déplacé de force."
+        },
+        {
+          "nom": "Cœur nécrotique",
+          "description": "Récupère 2 PV au début de son tour s'il est en contact avec un cadavre ou une zone de terre corrompue."
+        },
+        {
+          "nom": "Vulnérabilité au feu sacré",
+          "description": "Subit +2 dégâts par dé de tous les effets de feu ou de dégâts sacrés."
+        }
+      ],
+      "lore": "Là où une fosse commune a nourri un arbre déjà touché par le Chaos, quelque chose de pire qu'une Racine éveillée a pu germer : un tronc hérissé d'os, dont les racines se nourrissent autant de sève que de chair morte. Ni tout à fait plante, ni tout à fait mort-vivant — un pont vivant entre les deux visages de la Gangrène.",
+      "armure": {
+        "valeur": 3,
+        "description": "Écorce et os fusionnés — réduit 3 points de dégâts physiques. Pas d'effet contre le feu."
+      },
+      "emoji": "🌳"
+    },
+    {
+      "id": "vestige_hallucine",
+      "nom": "Vestige Halluciné",
+      "categorie": "Bestiaire général — Morts-vivants",
+      "faction": "La Gangrène du Chaos",
+      "race": [
+        "humanoïdes",
+        "mort-vivant",
+        "corrompu"
+      ],
+      "pv": 38,
+      "def": 13,
+      "init": 4,
+      "atk": 6,
+      "dangerosite": 4,
+      "boss": false,
+      "taille": "moyenne",
+      "attaques": [
+        {
+          "nom": "Toucher de dissolution",
+          "armeId": "vestige_toucher",
+          "bonusAttaque": 6,
+          "effetSpecial": "Si touché : test SAG diff. 14 ou la cible est hallucinée 1 round (attaque au hasard une créature adjacente, y compris un allié, s'il y en a une)."
+        },
+        {
+          "nom": "Éclat de folie corrompue",
+          "jet": null,
+          "degats": "2d6",
+          "portee": "moyenne (18m)",
+          "type": "magique",
+          "effetSpecial": "Recharge : 2 rounds. Test SAG diff. 14 : échec = dégâts pleins et hallucination 1 round ; réussite = dégâts de moitié, pas d'hallucination."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Résidu de savoir",
+          "description": "Action bonus, 1 fois par combat : soigne un allié mort-vivant/corrompu de 2d6 PV — reliquat de sorts pratiqués de son vivant."
+        },
+        {
+          "nom": "Esprit fracturé",
+          "description": "Immunisé au charme et aux hallucinations provoquées par d'autres créatures."
+        },
+        {
+          "nom": "Incorporel partiel",
+          "description": "Les armes non-magiques ne lui infligent que la moitié des dégâts (arrondi à l'inférieur)."
+        }
+      ],
+      "lore": "Ce qui reste d'un lanceur de sorts — Druide ou Nécromancien, on ne sait plus — dont l'esprit a cédé sous la corruption sans que le corps ne meure vraiment. Il marmonne des fragments de sorts oubliés, et parfois l'un d'eux fonctionne encore.",
+      "armure": null,
+      "emoji": "🔮"
+    },
+    {
+      "id": "seigneur_gangrene",
+      "nom": "Le Seigneur de la Gangrène",
+      "categorie": "Bestiaire général — Morts-vivants",
+      "faction": "La Gangrène du Chaos",
+      "race": [
+        "humanoïdes",
+        "mort-vivant",
+        "corrompu"
+      ],
+      "pv": 90,
+      "def": 16,
+      "init": 5,
+      "atk": 10,
+      "dangerosite": 5,
+      "boss": true,
+      "taille": "grande",
+      "attaques": [
+        {
+          "nom": "Lame de la Gangrène",
+          "armeId": "seigneur_lame",
+          "bonusAttaque": 10,
+          "effetSpecial": "Critique sur 19-20. Si touché : la cible est marquée par la corruption (conséquence narrative, à la discrétion du MJ)."
+        },
+        {
+          "nom": "Appel de la Gangrène",
+          "jet": null,
+          "degats": null,
+          "portee": "zone (30m)",
+          "type": "invocation",
+          "effetSpecial": "Action, 1 fois par combat : invoque 1d4 Charognes du Chaos ou 1d4 Squelettes corrompus (au choix du MJ), qui rejoignent le combat en 2 rounds."
+        },
+        {
+          "nom": "Vague nécrotique",
+          "jet": null,
+          "degats": "3d6",
+          "portee": "zone (9m)",
+          "type": "magique",
+          "effetSpecial": "Recharge : 3 rounds. Test CON diff. 15 pour ne subir que la moitié des dégâts. Le Seigneur récupère la moitié des dégâts infligés en PV."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Incorporel partiel",
+          "description": "Les armes non-magiques ne lui infligent que la moitié des dégâts (arrondi à l'inférieur)."
+        },
+        {
+          "nom": "Régénération de Gangrène",
+          "description": "Récupère 4 PV au début de son tour tant qu'il reste dans une zone corrompue. Cet effet cesse définitivement si le cœur de corruption de la zone est détruit (élément narratif/scénaristique)."
+        },
+        {
+          "nom": "Volonté brisée mais intacte",
+          "description": "Immunisé à la peur et au charme."
+        },
+        {
+          "nom": "Commandement funeste",
+          "description": "Tous les morts-vivants et créatures corrompues alliés dans la zone gagnent +1 ATK."
+        }
+      ],
+      "lore": "Un héros ou un seigneur de guerre déchu, corrompu jusqu'à devenir le cœur battant — ou plutôt, le cœur pourrissant — de toute une zone de Gangrène. Le vaincre ne suffit pas toujours à purifier les terres qu'il a corrompues ; il n'en est que le symptôme le plus visible.",
+      "armure": {
+        "valeur": 3,
+        "description": "Armure noircie fusionnée à la chair corrompue — réduit 3 points de dégâts physiques."
+      },
+      "emoji": "☠️"
     }
   ],
   "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide.",
