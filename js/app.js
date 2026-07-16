@@ -501,6 +501,10 @@ const App = (() => {
     // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
+    // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
+    // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
+    // 'arme_enchantee' reste actif.
+    if (dmgContact && perso.bonusDegatsArmeEnchantee()) dmgContact += "+" + perso.bonusDegatsArmeEnchantee();
     let dmgDistance = formuleDegats(armeDistance);
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
@@ -841,6 +845,10 @@ const App = (() => {
     // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
+    // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
+    // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
+    // 'arme_enchantee' reste actif.
+    if (dmgContact && perso.bonusDegatsArmeEnchantee()) dmgContact += "+" + perso.bonusDegatsArmeEnchantee();
     let dmgDistance = armeDistance ? formuleDegats(armeDistance) : null;
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
@@ -3987,6 +3995,10 @@ const App = (() => {
     // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
+    // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
+    // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
+    // 'arme_enchantee' reste actif.
+    if (dmgContact && perso.bonusDegatsArmeEnchantee()) dmgContact += "+" + perso.bonusDegatsArmeEnchantee();
     // Guerrier — Voie du soldat, rang 1 "Posture de combat" (contact
     // uniquement ici : attaque d'opportunité, pas de dmgDistance dans ce bloc).
     if (dmgContact && perso.bonusTemporaire("DM")) dmgContact += (perso.bonusTemporaire("DM") >= 0 ? "+" : "") + perso.bonusTemporaire("DM");

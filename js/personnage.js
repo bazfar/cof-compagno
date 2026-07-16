@@ -1004,6 +1004,15 @@ class Personnage extends Entite {
     if (this.classe === "guerrier" && (this.etatsActifs || []).some((e) => e.idEtat === "dechainement")) return "2d6";
     return null;
   }
+  // Enchanteur — Voie de la transfiguration, rang 3 "Arme enchantée" (cible :
+  // allié, pas nécessairement l'Enchanteur) : +1d6 DM magiques tant que
+  // l'état 'arme_enchantee' reste actif sur LE BÉNÉFICIAIRE de cette
+  // fonction — donc AUCUN verrou de classe ici, contrairement à
+  // bonusDegatsArmeChaos/Dechainement (des buffs sur soi-même) : n'importe
+  // quel allié équipé de l'arme visée peut porter cet état.
+  bonusDegatsArmeEnchantee() {
+    return (this.etatsActifs || []).some((e) => e.idEtat === "arme_enchantee") ? "1d6" : null;
+  }
   // Don Maître des armures lourdes : -3 dégâts physiques subis, appliqué
   // AVANT valeurArmure (cf. subirDegats côté app.js — pas inclus dans
   // reductionDegats(), qui n'a pas connaissance du type de dégâts). Actif

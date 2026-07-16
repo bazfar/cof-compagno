@@ -80,6 +80,8 @@ const ETATS = {
     description: "+4 attaque (posé séparément), +2d6 DM à toutes les attaques au contact (cf. Personnage.bonusDegatsDechainement) tant que l'état dure (Guerrier, Voie du chaos rang 5). Chaque tour, test de Volonté (SAG) diff. 14 ou attaque redirigée vers la créature la plus proche, allié compris (cf. Capacites.decompterEtatsDebutTour/cibleCreaturePlusProche) — application de la redirection manuelle, comme le reste des redirections d'attaque non modélisées." },
   element_actif: { nom: "Élément actif", categorie: "buff",
     description: "Élément choisi à l'activation de Poing élémentaire (Moine, Voie des éléments rang 1), porté dans un champ 'element' dédié (feu/glace/terre/air) — lu par Capacites.resoudreEffet à la prochaine attaque à mains nues touchée : Feu ajoute des dégâts, Glace/Terre/Air appliquent respectivement Gelée/Renversée/-2 attaque à la cible." },
+  arme_enchantee: { nom: "Arme enchantée", categorie: "buff",
+    description: "+2 attaque (posé séparément) et +1d6 DM magiques (cf. Personnage.bonusDegatsArmeEnchantee) sur l'arme du porteur tant que l'état dure (Enchanteur, Voie de la transfiguration rang 3). Peut être posé sur n'importe quel allié, pas seulement l'Enchanteur." },
 };
 
 const ORDRE_CATEGORIES_ETATS = ["controle", "malus", "dot", "physique", "buff"];
