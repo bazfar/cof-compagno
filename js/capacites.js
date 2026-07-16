@@ -317,6 +317,35 @@ const Capacites = (() => {
     return race.includes("mort-vivant") || race.includes("démon");
   }
 
+  // Table de mutation Palier 1 (data/mutations.js, fournie par Thomas) : au
+  // moins 7 capacités rang 3 de "Voie du chaos", toutes classes confondues,
+  // déclenchent un jet forcé sur cette table (indépendamment du palier de
+  // Corruption d'Âme réellement atteint) sur un jet d'attaque exceptionnel.
+  // Le seuil de déclenchement diffère selon le texte propre à chaque
+  // capacité (pas le seuil de critique de l'arme, ex. Aiguisé) :
+  // "critique" = critique standard (seuil d'arme, toujours vrai sur 20
+  // naturel) ; "naturel18"/"naturel19" = seuil fixe propre au texte,
+  // indépendant de l'arme ; "echecCritique" = 1 naturel (Prêtre "Peste
+  // rampante" : "échec catastrophique du lanceur", pas une réussite).
+  // Chasseur "Hurlement du prédateur" (même rang, même voie) est exclu :
+  // mecanique.jetOppose === null, donc aucun jet de dé n'existe à observer —
+  // reste manuel, cf. sa note de donnée.
+  const MUTATION_PALIER1_TRIGGERS = {
+    barde: "critique", pretre: "echecCritique", necromancien: "naturel18",
+    enchanteur: "critique", chevalier: "naturel19", magicien: "naturel18",
+  };
+  function _rollMutationPalier1(p, libelle) {
+    if (typeof TABLE_MUTATIONS === "undefined" || !p) return "";
+    const table = TABLE_MUTATIONS[1];
+    const d6 = App.lancerDe(6);
+    const entree = table.mutations.find((m) => m.d6 === d6);
+    App.ajouterHisto(`${libelle} — Mutation (Palier 1, ${table.nom})`, d6, false, false, `d6[${d6}]`);
+    p.mutations = p.mutations || [];
+    p.mutations.push({ id: "mut" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      palier: 1, d6, nom: entree.nom, effet: entree.effet, obtenueLe: Date.now() });
+    return ` 🧬 Mutation déclenchée (Palier 1) : ${entree.nom} — ${entree.effet}.`;
+  }
+
   // Nécromancien — Voie du sang, rangs 1/3/5 (Morsure du sang : moitié ;
   // Vol de vitalité/Étreinte exsangue : intégralité) : vol de vie, soigne le
   // LANCEUR d'une fraction des dégâts RÉELLEMENT infligés (après réduction/
@@ -1367,6 +1396,20 @@ const Capacites = (() => {
           messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) — DEF de la cible inconnue, à comparer manuellement.`);
         } else {
           messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) vs DEF ${defCible} — ${touche ? "Touché !" : "Raté."}`);
+        }
+
+        // Table de mutation Palier 1 (cf. MUTATION_PALIER1_TRIGGERS/
+        // _rollMutationPalier1 plus haut) : déclenché sur le jet de dé
+        // lui-même (indépendant de touché/raté), donc résolu ici plutôt que
+        // dans resoudreDegatsEnAttente.
+        if (source.voie === "Voie du chaos" && source.rang === 3 && MUTATION_PALIER1_TRIGGERS[perso.classe]) {
+          const modeMutation = MUTATION_PALIER1_TRIGGERS[perso.classe];
+          const declencheMutation = modeMutation === "critique" ? critique
+            : modeMutation === "echecCritique" ? echecCritique
+            : modeMutation === "naturel18" ? d20 >= 18
+            : modeMutation === "naturel19" ? d20 >= 19
+            : false;
+          if (declencheMutation) messages.push(_rollMutationPalier1(p, libelle).trim());
         }
 
         resolutionDegats = { touche, critique, echecCritique, totalAttaque: total, defCible, persoId, source, mecanique, cible, choixEffet };
