@@ -790,6 +790,46 @@ const ARMES_MONSTRES = [
     "degats": "1d10+2",
     "portee": "contact",
     "typedegats": "physique"
+  },
+  {
+    "id": "squelette_lame_ebrechee",
+    "nom": "Lame ébréchée",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "squelette_estoc_rouille",
+    "nom": "Estoc rouillé",
+    "type": "arme",
+    "degats": "1d8+1",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "ossuaire_fauchage",
+    "nom": "Fauchage d'os",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "ossuaire_esquilles",
+    "nom": "Projection d'esquilles",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "courte (6m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "connetable_lame",
+    "nom": "Lame du serment brisé",
+    "type": "arme",
+    "degats": "1d10+3",
+    "portee": "contact",
+    "typedegats": "physique"
   }
 ];
 

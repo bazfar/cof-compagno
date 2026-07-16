@@ -3341,6 +3341,192 @@
         "description": "Cuir renforcé de chasse — réduit 4 points de dégâts physiques."
       },
       "emoji": "🐻🪓"
+    },
+    {
+      "id": "squelette_corrompu_basique",
+      "nom": "Squelette corrompu",
+      "famille": "squelette_corrompu",
+      "tier": "basique",
+      "categorie": "Bestiaire général — Morts-vivants",
+      "faction": "La Gangrène du Chaos",
+      "race": [
+        "mort-vivant",
+        "corrompu"
+      ],
+      "pv": 14,
+      "def": 11,
+      "init": 3,
+      "atk": 3,
+      "dangerosite": 1,
+      "boss": false,
+      "taille": "moyenne",
+      "attaques": [
+        {
+          "nom": "Lame ébréchée",
+          "armeId": "squelette_lame_ebrechee",
+          "bonusAttaque": 3,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Ossature récalcitrante",
+          "description": "Immunisé au poison, à la maladie et à la peur. Insensible aux effets qui ciblent spécifiquement la chair vivante."
+        },
+        {
+          "nom": "Fragilité osseuse",
+          "description": "Les armes contondantes (masse, gourdin, marteau) infligent +1d4 dégâts supplémentaires."
+        }
+      ],
+      "lore": "Ossements de champs de bataille oubliés, relevés lorsque la Sève corrompue par le Chaos s'infiltre dans la terre gorgée de sang. Ils frappent avec la mémoire mécanique d'un dernier combat, sans plus de volonté qu'un réflexe.",
+      "armure": null,
+      "emoji": "💀"
+    },
+    {
+      "id": "squelette_lame",
+      "nom": "Squelette-lame",
+      "famille": "squelette_corrompu",
+      "tier": "veteran",
+      "categorie": "Bestiaire général — Morts-vivants",
+      "faction": "La Gangrène du Chaos",
+      "race": [
+        "mort-vivant",
+        "corrompu"
+      ],
+      "pv": 24,
+      "def": 13,
+      "init": 4,
+      "atk": 5,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "moyenne",
+      "attaques": [
+        {
+          "nom": "Estoc rouillé",
+          "armeId": "squelette_estoc_rouille",
+          "bonusAttaque": 5,
+          "effetSpecial": "1 fois par round : peut refuser une attaque de contact reçue (test d'ATK de l'attaquant vs DEF+2 du Squelette-lame ; échec = attaque annulée)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Ossature récalcitrante",
+          "description": "Immunisé au poison, à la maladie et à la peur. Insensible aux effets qui ciblent spécifiquement la chair vivante."
+        },
+        {
+          "nom": "Discipline du fer",
+          "description": "+1 DEF tant qu'au moins 2 autres morts-vivants de La Gangrène sont adjacents."
+        }
+      ],
+      "lore": "Une conscience martiale résiduelle habite encore ces ossements — le dernier réflexe d'un soldat qui a passé sa vie à parer et frapper. Il garde encore la posture d'une garde qu'il ne quittera jamais.",
+      "armure": null,
+      "emoji": "💀"
+    },
+    {
+      "id": "ossuaire_ambulant",
+      "nom": "Ossuaire ambulant",
+      "famille": "squelette_corrompu",
+      "tier": "elite",
+      "categorie": "Bestiaire général — Morts-vivants",
+      "faction": "La Gangrène du Chaos",
+      "race": [
+        "mort-vivant",
+        "corrompu"
+      ],
+      "pv": 36,
+      "def": 12,
+      "init": 3,
+      "atk": 6,
+      "dangerosite": 3,
+      "boss": false,
+      "taille": "grande",
+      "attaques": [
+        {
+          "nom": "Fauchage d'os",
+          "armeId": "ossuaire_fauchage",
+          "bonusAttaque": 6,
+          "effetSpecial": "Touche jusqu'à 2 cibles adjacentes en un seul jet."
+        },
+        {
+          "nom": "Projection d'esquilles",
+          "armeId": "ossuaire_esquilles",
+          "bonusAttaque": 5,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Ossature récalcitrante",
+          "description": "Immunisé au poison, à la maladie et à la peur. Insensible aux effets qui ciblent spécifiquement la chair vivante."
+        },
+        {
+          "nom": "Masse chaotique",
+          "description": "Agrégat de dizaines d'ossements : ne peut pas être renversé ni désarmé."
+        },
+        {
+          "nom": "Vulnérabilité tranchante",
+          "description": "Les armes tranchantes infligent +1d6 dégâts supplémentaires."
+        }
+      ],
+      "lore": "Ce ne sont plus des ossements isolés mais un amas grouillant de squelettes fusionnés par la corruption, une masse informe qui se déplace comme un seul organisme aux dizaines de membres.",
+      "armure": null,
+      "emoji": "💀"
+    },
+    {
+      "id": "connetable_cendre",
+      "nom": "Le Connétable Cendre",
+      "famille": "squelette_corrompu",
+      "tier": "champion",
+      "categorie": "Bestiaire général — Morts-vivants",
+      "faction": "La Gangrène du Chaos",
+      "race": [
+        "mort-vivant",
+        "corrompu",
+        "humanoïdes"
+      ],
+      "pv": 55,
+      "def": 15,
+      "init": 5,
+      "atk": 8,
+      "dangerosite": 4,
+      "boss": true,
+      "taille": "grande",
+      "attaques": [
+        {
+          "nom": "Lame du serment brisé",
+          "armeId": "connetable_lame",
+          "bonusAttaque": 8,
+          "effetSpecial": "Critique sur 19-20 (au lieu de 20 seul)."
+        },
+        {
+          "nom": "Cri de commandement des os",
+          "jet": null,
+          "degats": null,
+          "portee": "zone (18m)",
+          "type": "moral",
+          "effetSpecial": "Action bonus, 1 fois par combat : tous les morts-vivants de La Gangrène dans la zone gagnent +2 ATK pendant 2 rounds."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Ossature récalcitrante",
+          "description": "Immunisé au poison, à la maladie et à la peur. Insensible aux effets qui ciblent spécifiquement la chair vivante."
+        },
+        {
+          "nom": "Aura du Connétable",
+          "description": "+1 ATK à tous les morts-vivants alliés adjacents."
+        },
+        {
+          "nom": "Volonté brisée mais intacte",
+          "description": "Immunisé à la peur et au charme."
+        }
+      ],
+      "lore": "Autrefois connétable d'une garnison oubliée avant la Fracture, il a juré de tenir sa position jusqu'à la mort — un serment que la Gangrène a pris au pied de la lettre. Il commande encore ses troupes d'ossements avec la même discipline glaciale.",
+      "armure": {
+        "valeur": 2,
+        "description": "Fragments d'armure de plaques fusionnés à l'os — réduit 2 points de dégâts physiques."
+      },
+      "emoji": "💀"
     }
   ],
   "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide.",
