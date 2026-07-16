@@ -3527,6 +3527,138 @@
         "description": "Fragments d'armure de plaques fusionnés à l'os — réduit 2 points de dégâts physiques."
       },
       "emoji": "💀"
+    },
+    {
+      "id": "charogne_du_chaos",
+      "nom": "Charogne du Chaos",
+      "famille": "charogne_du_chaos",
+      "tier": "basique",
+      "categorie": "Bestiaire général — Morts-vivants",
+      "faction": "La Gangrène du Chaos",
+      "race": [
+        "mort-vivant",
+        "corrompu"
+      ],
+      "pv": 16,
+      "def": 9,
+      "init": 1,
+      "atk": 3,
+      "dangerosite": 1,
+      "boss": false,
+      "taille": "moyenne",
+      "attaques": [
+        {
+          "nom": "Morsure putride",
+          "armeId": "charogne_morsure",
+          "bonusAttaque": 3,
+          "effetSpecial": "Si touché : test CON diff. 10 ou -1 aux tests physiques pendant 1 round (infection mineure)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Lenteur cadavérique",
+          "description": "-2 à l'initiative. Ne peut jamais agir avant les créatures vivantes dans le même round."
+        },
+        {
+          "nom": "Ne ressent pas la douleur",
+          "description": "Immunisée aux effets de peur. Agit normalement même sous 25% de ses PV maximum, sans malus."
+        }
+      ],
+      "lore": "Chair et Sève corrompue au même rythme : ces cadavres relevés par la Gangrène errent lentement, poussés par une faim qui ne s'éteint jamais vraiment.",
+      "armure": null,
+      "emoji": "🧟"
+    },
+    {
+      "id": "charogne_enragee",
+      "nom": "Charogne enragée",
+      "famille": "charogne_du_chaos",
+      "tier": "veteran",
+      "categorie": "Bestiaire général — Morts-vivants",
+      "faction": "La Gangrène du Chaos",
+      "race": [
+        "mort-vivant",
+        "corrompu"
+      ],
+      "pv": 26,
+      "def": 10,
+      "init": 2,
+      "atk": 5,
+      "dangerosite": 2,
+      "boss": false,
+      "taille": "moyenne",
+      "attaques": [
+        {
+          "nom": "Griffures frénétiques",
+          "armeId": "charogne_griffures",
+          "bonusAttaque": 5,
+          "effetSpecial": "2 attaques par round contre une cible déjà infectée par la Morsure putride ou une capacité similaire."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Lenteur cadavérique",
+          "description": "-2 à l'initiative. Ne peut jamais agir avant les créatures vivantes dans le même round."
+        },
+        {
+          "nom": "Ne ressent pas la douleur",
+          "description": "Immunisée aux effets de peur. Agit normalement même sous 25% de ses PV maximum, sans malus."
+        },
+        {
+          "nom": "Régénération corrompue",
+          "description": "Récupère 2 PV au début de son tour si elle est dans une zone de corruption ambiante (ruines pré-Fracture, arbre-cicatrice, présence d'un autre mort-vivant de la Gangrène)."
+        }
+      ],
+      "lore": "La corruption progresse plus vite chez certaines charognes, qui se déchirent presque elles-mêmes à force de frénésie. Leur odeur seule suffit à faire fuir le gibier sur des kilomètres.",
+      "armure": null,
+      "emoji": "🧟"
+    },
+    {
+      "id": "colosse_charognard",
+      "nom": "Colosse charognard",
+      "famille": "charogne_du_chaos",
+      "tier": "elite",
+      "categorie": "Bestiaire général — Morts-vivants",
+      "faction": "La Gangrène du Chaos",
+      "race": [
+        "mort-vivant",
+        "corrompu"
+      ],
+      "pv": 40,
+      "def": 11,
+      "init": 1,
+      "atk": 6,
+      "dangerosite": 3,
+      "boss": false,
+      "taille": "grande",
+      "attaques": [
+        {
+          "nom": "Poigne broyeuse",
+          "armeId": "colosse_poigne",
+          "bonusAttaque": 6,
+          "effetSpecial": "Si touché : test FOR diff. 14 ou cible saisie (ne peut pas se déplacer, dégâts automatiques 1d6 au round suivant si toujours saisie)."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Lenteur cadavérique",
+          "description": "-2 à l'initiative. Ne peut jamais agir avant les créatures vivantes dans le même round."
+        },
+        {
+          "nom": "Ne ressent pas la douleur",
+          "description": "Immunisée aux effets de peur. Agit normalement même sous 25% de ses PV maximum, sans malus."
+        },
+        {
+          "nom": "Régénération corrompue amplifiée",
+          "description": "Récupère 3 PV au début de son tour dans une zone de corruption ambiante."
+        },
+        {
+          "nom": "Masse difforme",
+          "description": "Résiste à la moitié des dégâts (arrondi à l'inférieur) infligés par des armes légères (dégâts de base 1d6 ou moins)."
+        }
+      ],
+      "lore": "Plusieurs cadavres fusionnés en une seule masse difforme par la corruption la plus dense — ce que devient une charogne qui n'a jamais cessé de se nourrir.",
+      "armure": null,
+      "emoji": "🧟"
     }
   ],
   "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide.",

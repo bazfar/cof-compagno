@@ -830,6 +830,30 @@ const ARMES_MONSTRES = [
     "degats": "1d10+3",
     "portee": "contact",
     "typedegats": "physique"
+  },
+  {
+    "id": "charogne_morsure",
+    "nom": "Morsure putride",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "charogne_griffures",
+    "nom": "Griffures frénétiques",
+    "type": "arme",
+    "degats": "1d8+1",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "colosse_poigne",
+    "nom": "Poigne broyeuse",
+    "type": "arme",
+    "degats": "2d6+2",
+    "portee": "contact",
+    "typedegats": "physique"
   }
 ];
 
