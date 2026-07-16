@@ -53,6 +53,10 @@ class Personnage extends Entite {
         corruptionCombat: 0,
         corruptionMajeure: 0,
         corruptionSeuilFranchi: false,
+        // Nécromancien "Voie des âmes" : réceptacle d'âmes stockées (0 à 3,
+        // cf. Capacites.lancer — mecanique.ameGain/ameCout, "Capture d'âme"/
+        // "Libération vengeresse"). Lu par bonusSavoirVole() ci-dessous.
+        amesStockees: 0,
         // État Mourant(e) (0 PV, cf. REGLES_GENERALES "Mort et stabilisation") :
         // compteurs du jet de mort en cours, remis à zéro à chaque franchissement
         // du seuil de 0 PV (cf. js/app.js _majEtatMourant). etatMort=true une
@@ -107,6 +111,7 @@ class Personnage extends Entite {
     this.corruptionCombat = d.corruptionCombat;
     this.corruptionMajeure = d.corruptionMajeure;
     this.corruptionSeuilFranchi = d.corruptionSeuilFranchi;
+    this.amesStockees = d.amesStockees;
     // État Mourant(e) — cf. estMourant()/estMort() ci-dessous.
     this.mortSucces = d.mortSucces;
     this.mortEchecs = d.mortEchecs;
@@ -1000,6 +1005,16 @@ class Personnage extends Entite {
     }
     return termes.length ? termes.join("+") : null;
   }
+  // Nécromancien "Savoir volé" (Voie des âmes rang 4, passive) : +1 par âme
+  // stockée (p.amesStockees, cf. Capacites.lancer — ameGain/ameCout) à un
+  // Test d'INT au choix, plafonné à +3 (= le stock max de 3 âmes simultanées,
+  // cf. Capture d'âme). Ressource propre au perso (auto-contenu, pas besoin
+  // de lire d'autres personnages) — câblé dans app.js uniquement sur le
+  // bouton "Test de INT" (les autres caracs n'en bénéficient pas).
+  bonusSavoirVole() {
+    if (this.classe !== "necromancien" || this.rangMaxVoie("Voie des âmes") < 4) return 0;
+    return Math.min(this.amesStockees || 0, 3);
+  }
   // Chevalier "Marque du serment brisé" (Voie du chaos rang 4, dès CA 5+),
   // choix "degats" : +1d8 DM chaotique sur l'arme de prédilection — lu par
   // app.js pour ajouter le terme à dmgContact (l'autre choix, "def", est
@@ -1329,6 +1344,7 @@ class Personnage extends Entite {
       corruptionCombat: this.corruptionCombat,
       corruptionMajeure: this.corruptionMajeure,
       corruptionSeuilFranchi: this.corruptionSeuilFranchi,
+      amesStockees: this.amesStockees,
       mortSucces: this.mortSucces,
       mortEchecs: this.mortEchecs,
       etatMort: this.etatMort,

@@ -318,11 +318,15 @@ const Combat = (() => {
       const p = persos[actif.id];
       _reinitialiserActionsEntree(actif, p);
       if (p) {
-        const { retires, degats, testsVolonte } = Capacites.decompterEtatsDebutTour(p);
+        const { retires, degats, testsVolonte, soins } = Capacites.decompterEtatsDebutTour(p);
         App.sauverPersos(persos);
         degats.forEach((d) => App.ajouterHisto(
           `${d.libelle} — Dégâts de début de tour`, d.total, false, false,
           `${d.detail} → ${actif.nom} : ${d.pvApres} PV restants.`
+        ));
+        (soins || []).forEach((s) => App.ajouterHisto(
+          `${s.libelle} — Soin de début de tour`, s.total, false, false,
+          `${s.detail} → ${actif.nom} : ${s.pvApres} PV.`
         ));
         retires.forEach((libelle) => App.ajouterHisto(`${libelle} s'est dissipée sur ${actif.nom}`, 0, false, false, ""));
         // Test de Volonté par tour (ex. Guerrier "Déchaînement", cf.

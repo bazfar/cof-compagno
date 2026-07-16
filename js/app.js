@@ -1090,7 +1090,8 @@ const App = (() => {
         const code = el.dataset.test;
         const modeForce = (code === "CON" && perso.aEnduranceDeFer()) || (code === "SAG" && perso.aAvantageResistanceMentale())
           ? "avantage" : null;
-        lancerTest(`Test de ${code}`, mods[code], null, modeForce);
+        const bonusAmes = code === "INT" ? perso.bonusSavoirVole() : 0;
+        lancerTest(`Test de ${code}`, mods[code] + bonusAmes, null, modeForce);
       };
     });
     // Objets : boire/utiliser un consommable de soin sur soi (réutilise
@@ -5045,7 +5046,8 @@ const App = (() => {
           ? "avantage" : null;
         if (code === "INT" && _armerAvantageJournalier("arme-int-heroique", "classe:magicien:univ5")) modeForce = "avantage";
         else if (code === "INT" && _armerAvantageJournalier("arme-double-heritage", "race:demi_elfe:5")) modeForce = "avantage";
-        lancerTest(`Test de ${code}`, mods[code], null, modeForce);
+        const bonusAmes = code === "INT" ? perso.bonusSavoirVole() : 0;
+        lancerTest(`Test de ${code}`, mods[code] + bonusAmes, null, modeForce);
         allerVers("des");
       };
     });

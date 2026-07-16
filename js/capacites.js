@@ -321,17 +321,31 @@ const Capacites = (() => {
   // Vol de vitalité/Étreinte exsangue : intégralité) : vol de vie, soigne le
   // LANCEUR d'une fraction des dégâts RÉELLEMENT infligés (après réduction/
   // armure, degatsNets) — mécanique propre au résultat du jet, sans
-  // jugement narratif contrairement au reste des conditions "non vérifiées
-  // automatiquement" déjà documentées pour cette voie (Régénération
-  // sanguine/Sang impie).
-  function _appliquerVolDeVie(persos, perso, rang, degatsNets) {
+  // jugement narratif. Regroupe aussi ici deux mécaniques de la même voie,
+  // déclenchées par le même événement (une attaque de cette voie a touché) :
+  // - rang 2 "Régénération sanguine" : pose un drapeau consommé par
+  //   Capacites.decompterEtatsDebutTour au tour SUIVANT (1d4 PV si le drapeau
+  //   est resté true, cf. son commentaire) — posé ici quelle que soit
+  //   l'acquisition du rang 2, sans effet s'il n'est jamais lu.
+  // - rang 4 "Sang impie" : si la cible est réduite à 0 PV (pvApres), régénère
+  //   immédiatement 2d6 PV bonus — condition désormais vérifiable (PV connus
+  //   après résolution), remplace l'ancienne capacité à activer manuellement.
+  function _appliquerVolDeVie(persos, perso, rang, degatsNets, pvApres) {
+    let note = "";
     const fraction = rang === 1 ? 0.5 : 1;
     const gain = Math.floor(degatsNets * fraction);
-    if (gain <= 0) return "";
     const pCaster = persos[perso.id];
-    if (!pCaster) return "";
-    const res = appliquerSoinPersoLocal(pCaster, gain);
-    return ` Vol de vie : ${perso.nom} récupère ${res.gain} PV.`;
+    if (gain > 0 && pCaster) {
+      const res = appliquerSoinPersoLocal(pCaster, gain);
+      note += ` Vol de vie : ${perso.nom} récupère ${res.gain} PV.`;
+    }
+    if (pCaster) pCaster.aInfligeDegatsSang = true;
+    if (pCaster && typeof pvApres === "number" && pvApres <= 0 && perso.rangMaxVoie("Voie du sang") >= 4) {
+      const { total: bonus, detail } = resoudreExpression("2d6", { perso, rang });
+      const res = appliquerSoinPersoLocal(pCaster, bonus);
+      note += ` Sang impie : cible réduite à 0 PV, ${perso.nom} régénère ${res.gain} PV bonus (${detail}).`;
+    }
+    return note;
   }
 
   // Chasseur — Voie de la grande chasse rang 4 "Coup de grâce" (condition
@@ -546,6 +560,20 @@ const Capacites = (() => {
     const retires = [];
     const degats = [];
     const testsVolonte = [];
+    const soins = [];
+    // Régénération sanguine (Nécromancien, Voie du sang rang 2) : le flag
+    // p.aInfligeDegatsSang est posé par _appliquerVolDeVie dès qu'une capacité
+    // de la Voie du sang inflige des dégâts (tour précédent) — consommé ici,
+    // au tour suivant, pour régénérer 1d4 PV automatiquement.
+    if (p.aInfligeDegatsSang) {
+      const perso = Personnage.depuisJSON(p);
+      if (perso.classe === "necromancien" && perso.rangMaxVoie("Voie du sang") >= 2) {
+        const { total, detail } = resoudreExpression("1d4", {});
+        p.pvActuel = Math.max(0, Math.min(p.pvMax, (p.pvActuel || 0) + total));
+        soins.push({ libelle: "Régénération sanguine", total, detail, pvApres: p.pvActuel });
+      }
+      p.aInfligeDegatsSang = false;
+    }
     p.etatsActifs = (p.etatsActifs || []).filter((e) => {
       if (!e.dureeRestante || e.dureeRestante.motCle !== null || typeof e.dureeRestante.tours !== "number") return true;
       if (e.formuleDot) {
@@ -592,7 +620,7 @@ const Capacites = (() => {
         p.pvTemporairesExpiration = null;
       }
     }
-    return { retires, degats, testsVolonte };
+    return { retires, degats, testsVolonte, soins };
   }
 
   // Retire uniquement les entrées motCle === "finCombat" (appelé à la fin du combat).
@@ -620,6 +648,13 @@ const Capacites = (() => {
   // dans lancer(). Plusieurs capacités de classes différentes peuvent piocher
   // dans ce même pool ; rien de spécifique au Guerrier dans ce compteur.
   const REACTIONS_MAX = 3;
+
+  // Nécromancien — Voie des âmes : réceptacle d'âmes stockées (p.amesStockees,
+  // 0 à 3, cf. mecanique.ameGain/ameCout dans lancer() ci-dessous). Pas remis
+  // à zéro par Combat.terminerCombat (contrairement à corruptionCombat/
+  // reactionsUtilisees) : les âmes stockées persistent d'un combat à l'autre,
+  // conformément au texte ("réceptacle").
+  const AMES_MAX = 3;
 
   // Moine — Voie des éléments, rang 4 "Fusion élémentaire" (1x/combat) :
   // table des 6 combos de paires fournie par Thomas, lue par lancer() selon
@@ -781,14 +816,14 @@ const Capacites = (() => {
       const volDeVieActif = perso.classe === "necromancien" && voie === "Voie du sang" && [1, 3, 5].includes(rang);
       if (cible && cible.genre === "monstre" && typeof Carte !== "undefined") {
         const res = Carte.appliquerDegatsCombat(cible.id, total);
-        const noteVol = (res && volDeVieActif) ? _appliquerVolDeVie(persos, perso, rang, res.degatsNets) : "";
+        const noteVol = (res && volDeVieActif) ? _appliquerVolDeVie(persos, perso, rang, res.degatsNets, res.pvActuel) : "";
         return res
           ? `${total} dégâts (${detail}) → ${res.nom} : ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}${noteVol}`
           : `${total} dégâts (${detail}) — cible introuvable sur la table de combat.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}`;
       }
       if (cible && cible.genre === "perso" && persos[cible.id]) {
         const res = appliquerDegatsPersoLocal(persos[cible.id], total);
-        const noteVol = volDeVieActif ? _appliquerVolDeVie(persos, perso, rang, res.degatsNets) : "";
+        const noteVol = volDeVieActif ? _appliquerVolDeVie(persos, perso, rang, res.degatsNets, res.pvActuel) : "";
         return `${total} dégâts (${detail}) → ${cible.nom} : -${res.degatsNets} après réduction (${res.reduction}), ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}${noteVol}`;
       }
       return `${total} dégâts (${detail}) — aucune cible sélectionnée, à appliquer manuellement.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}`;
@@ -1050,6 +1085,13 @@ const Capacites = (() => {
       if (reactionsRestantes < mecanique.reactionCout) {
         return { ok: false, messages: [`Plus assez de réactions ce combat (${reactionsRestantes}/${REACTIONS_MAX} restantes).`] };
       }
+    }
+
+    // Nécromancien — Voie des âmes, "Libération vengeresse" : coût en âme
+    // stockée (cf. AMES_MAX ci-dessus), bloque AVANT résolution si le
+    // réceptacle est vide.
+    if (mecanique.ameCout && (p.amesStockees || 0) < mecanique.ameCout) {
+      return { ok: false, messages: [`Pas assez d'âmes stockées (${mecanique.ameCout} requise(s), ${p.amesStockees || 0} en réserve).`] };
     }
 
     let cible = null;
@@ -1428,6 +1470,18 @@ const Capacites = (() => {
       const restantes = REACTIONS_MAX - p.reactionsUtilisees;
       App.ajouterHisto(`${libelle} — Réaction`, restantes, false, false, `-${mecanique.reactionCout} réaction(s) (${p.nom}, ${restantes}/${REACTIONS_MAX} restantes)`);
       messages.push(`Réaction(s) -${mecanique.reactionCout} (${restantes}/${REACTIONS_MAX} restantes ce combat).`);
+    }
+    // Gain/coût en âmes stockées (cf. AMES_MAX plus haut) : décompté une fois
+    // l'activation confirmée, même logique que corruptionCout/reactionCout.
+    if (mecanique.ameGain) {
+      p.amesStockees = Math.min(AMES_MAX, (p.amesStockees || 0) + mecanique.ameGain);
+      App.ajouterHisto(`${libelle} — Âme capturée`, p.amesStockees, false, false, `+${mecanique.ameGain} âme(s) (${p.nom}, ${p.amesStockees}/${AMES_MAX} en réserve)`);
+      messages.push(`Âme(s) capturée(s) +${mecanique.ameGain} (${p.amesStockees}/${AMES_MAX} en réserve).`);
+    }
+    if (mecanique.ameCout) {
+      p.amesStockees = Math.max(0, (p.amesStockees || 0) - mecanique.ameCout);
+      App.ajouterHisto(`${libelle} — Âme libérée`, p.amesStockees, false, false, `-${mecanique.ameCout} âme(s) (${p.nom}, ${p.amesStockees}/${AMES_MAX} en réserve)`);
+      messages.push(`Âme(s) libérée(s) -${mecanique.ameCout} (${p.amesStockees}/${AMES_MAX} en réserve).`);
     }
 
     // Consommé dès le jet d'attaque, même en cas de raté — jamais décalé à
