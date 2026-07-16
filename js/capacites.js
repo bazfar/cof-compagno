@@ -815,6 +815,56 @@ const Capacites = (() => {
 
     const messages = [];
     let resolutionDegats = null;
+
+    // Moine — Voie de l'élévation, rang 4 "Avalanche de coups" (1x/combat) :
+    // hors du schéma mecanique.jetOppose standard (celui-ci ne résout qu'UN
+    // seul jet d'attaque) — boucle de jets d'attaque au contact vs DEF de la
+    // MÊME cible jusqu'au premier raté (1 naturel = raté automatique, comme
+    // le reste du moteur ; critique = touche et continue), puis inflige
+    // autant de dés de dégâts que d'attaques touchées, taille du dé lue sur
+    // le rang de Voie des poings le plus haut acquis (d4 par défaut si non
+    // investie — assomption, à valider avec Thomas). Retourne tôt : ne passe
+    // jamais par le bloc jetOppose générique ci-dessous.
+    if (source.voie === "Voie de l'élévation" && source.rang === 4 && perso.classe === "moine") {
+      if (!cible) return { ok: false, messages: ["Choisis une cible avant d'activer Avalanche de coups."] };
+      const defCible = obtenirDefCible(cible, persos);
+      const bonusAtk = perso.bonusAttaque("contact");
+      const critMin = perso.critMinAttaque("contact");
+      const MAX_JETS = 20; // garde-fou : au-delà, un 1 naturel est quasi certain
+      const detailsJets = [];
+      let touches = 0;
+      let arreteParRate = false;
+      for (let i = 0; i < MAX_JETS; i++) {
+        const d20 = App.lancerDe(20);
+        const total = d20 + bonusAtk;
+        const critique = d20 === 20 || (critMin && d20 >= critMin);
+        const rate = d20 === 1 || (!critique && defCible !== null && total < defCible);
+        detailsJets.push(`${total}${critique ? "!" : ""}`);
+        if (rate) { arreteParRate = true; break; }
+        touches++;
+      }
+      App.ajouterHisto(`${libelle} — Jets d'attaque`, touches, false, false, detailsJets.join(", "));
+      messages.push(`Avalanche de coups : ${detailsJets.length} jet(s) [${detailsJets.join(", ")}]` +
+        (defCible !== null ? ` vs DEF ${defCible}` : " — DEF cible inconnue, comparaison manuelle") +
+        (arreteParRate ? ` — ${touches} touché(s) avant le premier raté.` : ` — ${touches} touché(s), plafond de ${MAX_JETS} jets atteint sans raté (garde-fou).`));
+      if (touches > 0) {
+        const rangPoings = perso.rangMaxVoie("Voie des poings");
+        const voiePoings = perso.classeDef && perso.classeDef.voies.find((v) => v.nom === "Voie des poings");
+        const rgPoings = rangPoings && voiePoings && voiePoings.rangs.find((r) => r.rang === rangPoings);
+        const effetPoings = rgPoings && rgPoings.mecanique.effets.find((e) => e.type === "degats");
+        const mFaces = effetPoings && /^\d*d(\d+)/.exec(effetPoings.formule);
+        const faces = mFaces ? parseInt(mFaces[1], 10) : 4;
+        const msg = resoudreEffet({ type: "degats", formule: `${touches}d${faces}`, elementaire: null },
+          { perso, rang: source.rang, voie: source.voie, cible, libelle, persos });
+        if (msg) messages.push(msg);
+      } else {
+        messages.push("Aucune touche : pas de dégâts.");
+      }
+      usage.appliquer();
+      App.sauverPersos(persos);
+      return { ok: true, messages };
+    }
+
     const attaqueVsDef = !!(mecanique.jetOppose && mecanique.jetOppose.caracDefenseur === "DEF");
 
     if (mecanique.jetOppose) {
