@@ -546,7 +546,7 @@ const CLASSES = {
             mecanique: { type: "activable", usage: { frequence: "libre" }, cible: "ennemi", portee: 10, zone: null,
               jetOppose: { caracAttaquant: "attaqueMagique", caracDefenseur: "DEF", difficulteFixe: null },
               effets: [ { type: "etat", id: "repoussee", duree: "1" },
-                { type: "special", note: "Repousse de 6 m ; la cible ne peut s'approcher à moins de 3 m pendant 1 tour (restriction additionnelle non capturée par l'état seul). Réservé aux cibles démoniaques/mortes-vivantes." } ] } },
+                { type: "special", note: "Mécanisé (validé avec Thomas) : l'éligibilité de la cible (démoniaque/morte-vivante) est désormais vérifiée automatiquement via le champ 'race' du bestiaire (_cibleEstDemonOuMortVivant, capacites.js) — bloque l'activation avec un message clair si la cible ne correspond pas, plutôt que de laisser un jet se dérouler pour rien. Repousse de 6 m ; la cible ne peut s'approcher à moins de 3 m pendant 1 tour (restriction additionnelle non capturée par l'état seul)." } ] } },
           { rang: 2, nom: "Rite de bannissement (L)", effet: "Attaque magique : échec → Immobilisée [1+Mod. de SAG] tours. Si invoquée et niveau inférieur : bannissement complet immédiat",
             mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
               jetOppose: { caracAttaquant: "attaqueMagique", caracDefenseur: "DEF", difficulteFixe: null },

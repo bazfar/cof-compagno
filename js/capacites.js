@@ -285,21 +285,36 @@ const Capacites = (() => {
     return { reduction, degatsNets, pvActuel: pCible.pvActuel };
   }
 
-  // Moine — Voie de l'ascétisme rang 2 "Poing béni" ; Chevalier — Voie du
-  // paladin rang 5 "Sentence finale" (et toute future capacité "doublé si
-  // mort-vivant/démon/corrompu") : détecte le type de la cible MONSTRE via
-  // le champ 'race' (tableau) ajouté par Thomas sur les entrées du bestiaire
-  // (data/bestiaire.js, BESTIAIRE_INDEX) — jamais copié sur le token en jeu
-  // (contrairement à pv/def/armure), donc relu ici via tok.monstreId à
-  // chaque résolution plutôt que mis en cache. Renvoie toujours false pour
-  // une cible PJ (this.race sur un Personnage est une race JOUEUR, sans
-  // rapport) ou un token hors-bestiaire (monstreId absent/inconnu).
-  function _cibleEstMortVivantDemonCorrompu(cible) {
-    if (!cible || cible.genre !== "monstre" || typeof Carte === "undefined" || !Carte.listeMonstresCombat) return false;
+  // Détecte le tableau 'race' (tags) d'une cible MONSTRE via le champ
+  // ajouté par Thomas sur les entrées du bestiaire (data/bestiaire.js,
+  // BESTIAIRE_INDEX) — jamais copié sur le token en jeu (contrairement à
+  // pv/def/armure), donc relu ici via tok.monstreId à chaque résolution
+  // plutôt que mis en cache. [] pour une cible PJ (this.race sur un
+  // Personnage est une race JOUEUR, sans rapport) ou un token hors-bestiaire
+  // (monstreId absent/inconnu) — jamais null, pour éviter un check .length
+  // partout chez les appelants.
+  function _raceMonstreCible(cible) {
+    if (!cible || cible.genre !== "monstre" || typeof Carte === "undefined" || !Carte.listeMonstresCombat) return [];
     const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
     const entree = tok && tok.monstreId && typeof BESTIAIRE_INDEX !== "undefined" && BESTIAIRE_INDEX[tok.monstreId];
-    const race = (entree && Array.isArray(entree.race)) ? entree.race : [];
+    return (entree && Array.isArray(entree.race)) ? entree.race : [];
+  }
+
+  // Moine — Voie de l'ascétisme rang 2 "Poing béni" ; Chevalier — Voie du
+  // paladin rang 5 "Sentence finale" (et toute future capacité "doublé si
+  // mort-vivant/démon/corrompu") — critère large (inclut 'corrompu').
+  function _cibleEstMortVivantDemonCorrompu(cible) {
+    const race = _raceMonstreCible(cible);
     return race.includes("mort-vivant") || race.includes("démon") || race.includes("corrompu");
+  }
+
+  // Prêtre — Voie de l'exorcisme rang 1 "Symbole sacré" (et toute future
+  // capacité réservée aux mêmes cibles) — critère plus étroit que ci-dessus
+  // (n'inclut PAS 'corrompu', le texte source ne parle que de démoniaque/
+  // morte-vivante).
+  function _cibleEstDemonOuMortVivant(cible) {
+    const race = _raceMonstreCible(cible);
+    return race.includes("mort-vivant") || race.includes("démon");
   }
 
   // Double le nombre de dés d'une formule de dégâts simple ("1d6" -> "2d6"),
@@ -957,6 +972,17 @@ const Capacites = (() => {
       cible = listeCibles(persoId).find((c) => c.id === cibleId) || null;
     } else if (mecanique.cible === "soi") {
       cible = { id: persoId, nom: p.nom, genre: "perso", soi: true };
+    }
+
+    // Prêtre — Voie de l'exorcisme, rang 1 "Symbole sacré" : réservé aux
+    // cibles démoniaques/mortes-vivantes (cf. _cibleEstDemonOuMortVivant,
+    // champ 'race' du bestiaire) — bloque AVANT résolution si la cible ne
+    // correspond pas, plutôt que de laisser un jet se dérouler pour rien.
+    // DEF inconnue (cible === null via cibleId manquant) : laissé passer,
+    // rien à vérifier automatiquement.
+    if (source.voie === "Voie de l'exorcisme" && source.rang === 1 && perso.classe === "pretre" &&
+        cible && !_cibleEstDemonOuMortVivant(cible)) {
+      return { ok: false, messages: [`${cible.nom} n'est ni démoniaque ni morte-vivante — Symbole sacré n'a aucun effet sur cette cible.`] };
     }
 
     const messages = [];
