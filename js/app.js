@@ -3654,8 +3654,12 @@ const App = (() => {
       // mecanique.actionBonus (champ générique, ex. Barde "Enchaînement") :
       // la capacité ACCORDE une action principale bonus plutôt que d'en
       // consommer une — annule immédiatement la consommation ci-dessus.
+      // Cible du bonus : le lanceur lui-même par défaut (Enchaînement, cible
+      // "soi"), OU l'allié choisi si mecanique.cible === "allie" (Chevalier —
+      // Voie du commandant rang 4 : donne une action principale à un allié).
       if (mecaniqueLancee.actionBonus && typeof Combat !== "undefined" && Combat.accorderActionPrincipaleBonus) {
-        Combat.accorderActionPrincipaleBonus(id);
+        const cibleActionBonus = (mecaniqueLancee.cible === "allie" && cibleId) ? cibleId : id;
+        Combat.accorderActionPrincipaleBonus(cibleActionBonus);
       }
       // Capacité d'attaque vs DEF (cf. Capacites.lancer/resolutionDegats) qui
       // touche (ou dont la DEF cible est inconnue, donc pas bloquée) ET a

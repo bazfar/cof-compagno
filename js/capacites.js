@@ -122,6 +122,23 @@ const Capacites = (() => {
     else p.usagesCapacites = {};
   }
 
+  // Remet à zéro tous les compteurs d'usage d'une PÉRIODE donnée (ex. "tour"),
+  // toutes capacités confondues — appelée par Combat.tourSuivant() (cf.
+  // _reinitialiserActionsEntree) à chaque fois qu'un PJ redevient actif.
+  // Corrige un gap générique : jusqu'ici, aucune capacité "1x/tour" (Guerrier
+  // Posture de combat, Chevalier Voie du commandant rang 2...) n'était
+  // remise à zéro automatiquement — seul un bouton manuel "Réinitialiser"
+  // sur la fiche existait (cf. reinitialiserUsage ci-dessus). Contrairement à
+  // reinitialiserUsage, ne supprime pas les clés : remet juste utilisations
+  // à 0 pour celles dont la période enregistrée correspond.
+  function reinitialiserUsagesPeriode(p, periode) {
+    if (!p.usagesCapacites) return;
+    Object.keys(p.usagesCapacites).forEach((cle) => {
+      const entree = p.usagesCapacites[cle];
+      if (entree && entree.periode === periode) entree.utilisations = 0;
+    });
+  }
+
   /* ---------- Cibles ---------- */
 
   // Combine les PJ (chargerPersos) et les monstres de la table de combat (Carte)
@@ -1139,6 +1156,23 @@ const Capacites = (() => {
       else if (source.rang === 5) p.submersionArcaniqueActif = true;
     }
 
+    // Chevalier — Voie du commandant, rang 5 "Charge collective" : en plus
+    // de la marque posée sur l'ennemi choisi (effets[] ci-dessus, etat
+    // 'marquee_chevalier'), accorde +5 cases de déplacement à TOUS les PJ
+    // actuellement en combat (l'app ne gère pas "en vue" — simplification
+    // assumée, comme les autres zones/auras de groupe déjà acceptées) : pose
+    // l'état 'elan_commandant' (1 tour, cf. Combat._deplacementMax) sur
+    // chaque perso brut, remplaçant toute pose précédente.
+    if (source.voie === "Voie du commandant" && source.rang === 5 && perso.classe === "chevalier") {
+      Object.keys(persos).forEach((pid) => {
+        const pAllie = persos[pid];
+        if (!pAllie) return;
+        pAllie.etatsActifs = (pAllie.etatsActifs || []).filter((e) => e.idEtat !== "elan_commandant");
+        appliquerEtatSurPerso(pAllie, { id: "elan_commandant", duree: "1" }, libelle, { perso, rang: source.rang });
+      });
+      messages.push("Charge collective : +5 cases de déplacement pour tous les PJ ce tour.");
+    }
+
     // Guerrier — Voie du chaos, rang 5 "Déchaînement" : consomme TOUTE la
     // jauge de Corruption de Fureur actuelle (pas un coût fixe connu à
     // l'avance, contrairement à corruptionCout/corruptionCoutMin ci-dessous)
@@ -1237,6 +1271,7 @@ const Capacites = (() => {
     parserFrequence,
     verifierUsage,
     reinitialiserUsage,
+    reinitialiserUsagesPeriode,
     listeCibles,
     obtenirDefCible,
     bonusDefAuraPeuple,

@@ -106,6 +106,11 @@ const Combat = (() => {
     // que l'état est actif sur CE perso (posé par Capacites.lancer côté
     // Druide, décompté comme tout autre état).
     if ((p.etatsActifs || []).some((e) => e.idEtat === "totem_velocite")) bonus += DEPLACEMENT_BASE;
+    // Chevalier — Voie du commandant, rang 5 "Charge collective" (posé sur
+    // TOUS les PJ via Capacites.lancer, cf. son commentaire) : même principe
+    // que Totem de la vélocité ci-dessus, +5 cases (DEPLACEMENT_BASE) tant
+    // que l'état 'elan_commandant' reste actif (1 tour).
+    if ((p.etatsActifs || []).some((e) => e.idEtat === "elan_commandant")) bonus += DEPLACEMENT_BASE;
     return DEPLACEMENT_BASE + bonus;
   }
 
@@ -134,6 +139,13 @@ const Combat = (() => {
     e.deplacementRestant = _deplacementMax(p);
     e.actionPrincipaleUtilisee = false;
     e.actionSecondaireUtilisee = false;
+    // Compteurs d'usage "1x/tour" (periode "tour", ex. Guerrier Posture de
+    // combat, Chevalier Voie du commandant rang 2) : remis à zéro ici même,
+    // à chaque fois que ce PJ redevient actif (cf. Capacites.
+    // reinitialiserUsagesPeriode) — jusqu'ici jamais automatisé.
+    if (p && typeof Capacites !== "undefined" && Capacites.reinitialiserUsagesPeriode) {
+      Capacites.reinitialiserUsagesPeriode(p, "tour");
+    }
   }
 
   // `indexActuel` est un index brut dans `ordre` : insérer une entrée qui se
