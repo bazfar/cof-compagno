@@ -3656,7 +3656,7 @@ const App = (() => {
       // raté (touche === false) ou un jetOppose hors DEF (resolutionDegats
       // null) efface tout état résiduel d'une capacité précédente non résolue.
       const rd = res.resolutionDegats;
-      const aEffetsDifferes = rd && (rd.mecanique.effets || []).some((e) => e.type === "degats" || e.type === "etat");
+      const aEffetsDifferes = rd && (rd.mecanique.effets || []).some((e) => e.type === "degats" || e.type === "etat" || e.differe);
       capaciteDegatsEnAttente = (rd && rd.touche !== false && aEffetsDifferes)
         ? Object.assign({ persoId: id }, rd)
         : null;

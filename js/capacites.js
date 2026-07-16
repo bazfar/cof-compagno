@@ -542,6 +542,15 @@ const Capacites = (() => {
           && perso.rangMaxVoie("Voie de la magie élémentaire") >= 2 && /^1d6\b/.test(formuleAjustee)) {
         formuleAjustee = formuleAjustee.replace(/^1d6/, "1d8");
       }
+      // Moine — Voie des éléments, rang 2 "Maîtrise élémentaire" (passive) :
+      // même principe qu'Intensité élémentaire ci-dessus, remplace le 1d4
+      // initial de l'option Feu de Poing élémentaire (rang 1, seule option
+      // des 4 représentée par un effet "degats") par un 1d6 dès que le rang 2
+      // est acquis.
+      if (voie === "Voie des éléments" && rang === 1 && perso.classe === "moine"
+          && perso.rangMaxVoie("Voie des éléments") >= 2 && /^1d4\b/.test(formuleAjustee)) {
+        formuleAjustee = formuleAjustee.replace(/^1d4/, "1d6");
+      }
       // Magicien — Voie de la magie sauvage, rang 1 "Mutation Sauvage" :
       // s'applique à TOUT sort offensif du Magicien (cf. _rollMutationSauvage),
       // pas seulement aux capacités de cette voie.
@@ -819,6 +828,10 @@ const Capacites = (() => {
       if (ca === "attaqueMagique") { bonus = perso.bonusAttaque("magique") || 0; typeAttaque = "magique"; }
       else if (ca === "attaqueContact") { bonus = perso.bonusAttaque("contact"); typeAttaque = "contact"; }
       else if (ca === "attaqueDistance") { bonus = perso.bonusAttaque("distance"); typeAttaque = "distance"; }
+      // Moine — Voie de l'élévation, rang 3 : test de Perception (SAG + comp.)
+      // vs DEF, pas une attaque — pas de seuil de critique dédié (typeAttaque
+      // reste null, critMin retombe sur 20 plus bas).
+      else if (ca === "Perception") bonus = perso.modCompetence("Perception", "SAG");
       else if (ca) bonus = perso.mod(ca.replace(/^Mod\./i, "").toUpperCase());
       const d20 = App.lancerDe(20);
       const total = d20 + bonus;
@@ -908,8 +921,16 @@ const Capacites = (() => {
 
     (mecanique.effets || []).forEach((effet) => {
       // Différé : résolu plus tard par resoudreDegatsEnAttente(), une fois la
-      // touche confirmée (cf. resolutionDegats ci-dessus).
-      if (attaqueVsDef && TYPES_EFFETS_DIFFERES.includes(effet.type)) return;
+      // touche confirmée (cf. resolutionDegats ci-dessus). effet.differe :
+      // marqueur PAR EFFET (pas par type) pour un cas ponctuel où un effet
+      // normalement non différé (ex. 'bonus') doit l'être quand même — ex.
+      // Moine "Précision instinctive" (Voie de l'élévation rang 3, test de
+      // Perception vs DEF) : le +2 à la prochaine attaque ne doit s'appliquer
+      // QUE si le test touche, contrairement au comportement standard des
+      // effets 'bonus' (toujours appliqués, cf. Requiem du silence du Barde,
+      // documenté plus haut) — sans changer ce comportement par défaut pour
+      // toutes les autres capacités 'bonus' déjà en jeu.
+      if (attaqueVsDef && (TYPES_EFFETS_DIFFERES.includes(effet.type) || effet.differe)) return;
       // effet.cible === "choix" : substitue la vraie cible choisie à l'activation
       // (copie superficielle — ne jamais muter l'objet effet d'origine, partagé
       // par tous les personnages via data/donnees.js).
@@ -1014,7 +1035,7 @@ const Capacites = (() => {
 
     const messages = [];
     (mecanique.effets || []).forEach((effet) => {
-      if (!TYPES_EFFETS_DIFFERES.includes(effet.type)) return;
+      if (!TYPES_EFFETS_DIFFERES.includes(effet.type) && !effet.differe) return;
       const msg = resoudreEffet(effet, { perso, rang: source.rang, voie: source.voie, cible, libelle, persos, critique });
       if (msg) messages.push(msg);
     });
