@@ -421,6 +421,16 @@ const Combat = (() => {
         p.bastionActifFinCombat = false;
         modifie = true;
       }
+      // Instinct Chaotique (Magicien, Voie de la magie sauvage rang 2,
+      // cf. Capacites.lancer/_rollMutationSauvage) : usage 1x/combat, remis
+      // à zéro comme le reste des marqueurs ci-dessus. maitriseChaosGarantieActif
+      // et submersionArcaniqueActif (rangs 4/5, usage 1x/jour) ne sont PAS
+      // remis à zéro ici : leur drapeau doit persister jusqu'au prochain sort,
+      // même si celui-ci est lancé dans un combat ultérieur.
+      if (p.instinctChaotiqueActif) {
+        p.instinctChaotiqueActif = false;
+        modifie = true;
+      }
     });
     if (modifie) App.sauverPersos(persos);
     if (typeof Carte !== "undefined" && Carte.reinitialiserDetectionVisibilite) Carte.reinitialiserDetectionVisibilite();

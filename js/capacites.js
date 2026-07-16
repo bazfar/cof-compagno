@@ -296,6 +296,63 @@ const Capacites = (() => {
     });
   }
 
+  // Magicien — Voie de la magie sauvage (mini-système à 5 rangs) : rang 1
+  // "Mutation Sauvage" applique un modificateur aléatoire 2d4-4 (-2 à +4) à
+  // CHAQUE sort offensif (tout effet 'degats', cf. son appel dans
+  // resoudreEffet). Les rangs 2/4/5 modifient ce jet via des drapeaux
+  // 1x/combat ou 1x/jour posés par leurs propres capacités (lancer(),
+  // identifiées par voie+rang) et consommés ici une seule fois — lus/effacés
+  // directement sur le perso BRUT (persos[perso.id]), jamais sur la copie
+  // Personnage passée en lecture seule à resoudreEffet. Rang 2 "Instinct
+  // Chaotique" : le texte source dit "relancez et gardez le nouveau résultat",
+  // mais un vrai reroll RÉACTIF (après avoir vu un mauvais jet) impliquerait
+  // de rejouer une résolution de dégâts déjà appliquée — hors de portée du
+  // pipeline actuel (lancer() est une passe unique). Simplifié (à valider
+  // avec Thomas) en avantage PROACTIF : active avant le prochain sort, roule
+  // deux fois, garde le meilleur. Rang 3 "Canalisation Profonde" (jet +3/+4)
+  // reste un choix narratif signalé dans le message, jamais appliqué
+  // automatiquement (comme Trio élémentaire/Cataclysme élémentaire, même
+  // principe des "3 options au choix").
+  function _rollMutationSauvage(persos, perso, rang, libelle) {
+    const pRaw = persos[perso.id];
+    let modif;
+    let note = "";
+    if (pRaw && pRaw.maitriseChaosGarantieActif) {
+      modif = 4;
+      pRaw.maitriseChaosGarantieActif = false;
+      note = " (Maîtrise du Chaos : +4 garanti, sans jet)";
+    } else {
+      const jet = () => App.lancerDe(4) + App.lancerDe(4) - 4;
+      if (pRaw && pRaw.instinctChaotiqueActif) {
+        const a = jet(), b = jet();
+        modif = Math.max(a, b);
+        pRaw.instinctChaotiqueActif = false;
+        note = ` (Instinct Chaotique : ${a} / ${b}, meilleur gardé)`;
+      } else {
+        modif = jet();
+      }
+    }
+    let doublage = false;
+    if (pRaw && pRaw.submersionArcaniqueActif) {
+      modif *= 2;
+      doublage = true;
+      pRaw.submersionArcaniqueActif = false;
+      note += " (Submersion Arcanique : modificateur doublé)";
+    }
+    if (perso.rangMaxVoie("Voie de la magie sauvage") >= 3 && modif >= 3) {
+      note += " — Canalisation Profonde : effet mineur au choix (repousse 1,5 m / embrase légèrement / Aveuglée 1 tour), à appliquer manuellement.";
+    }
+    if (doublage && modif < 0 && pRaw) {
+      const { total: dmgSelf, detail: detailSelf } = resoudreExpression("1d4", { perso, rang });
+      appliquerDegatsPersoLocal(pRaw, dmgSelf);
+      appliquerEtatSurPerso(pRaw, { id: "etourdie", duree: "1" }, libelle, { perso, rang });
+      note += ` — contrecoup : ${dmgSelf} DM (${detailSelf}) + Étourdie au lanceur.`;
+    } else if (doublage && modif > 0) {
+      note += " — effet spectaculaire (au choix/appréciation du MJ).";
+    }
+    return { modif, note };
+  }
+
   // PV temporaires (Guerrier Cri du rassemblement, Druide Rempart vivant/
   // Forme du chaos sauvage) : JAMAIS cumulatifs — une nouvelle application
   // n'écrase le total existant que si elle est strictement plus élevée
@@ -465,19 +522,28 @@ const Capacites = (() => {
           && perso.rangMaxVoie("Voie de la magie élémentaire") >= 2 && /^1d6\b/.test(formuleAjustee)) {
         formuleAjustee = formuleAjustee.replace(/^1d6/, "1d8");
       }
+      // Magicien — Voie de la magie sauvage, rang 1 "Mutation Sauvage" :
+      // s'applique à TOUT sort offensif du Magicien (cf. _rollMutationSauvage),
+      // pas seulement aux capacités de cette voie.
+      let noteMutationSauvage = "";
+      if (perso.classe === "magicien" && perso.rangMaxVoie("Voie de la magie sauvage") >= 1) {
+        const { modif, note } = _rollMutationSauvage(persos, perso, rang, libelle);
+        formuleAjustee = `${formuleAjustee}${modif >= 0 ? "+" : ""}${modif}`;
+        noteMutationSauvage = ` [Mutation Sauvage : ${modif >= 0 ? "+" : ""}${modif}${note}]`;
+      }
       const { total, detail } = resoudreExpression(formuleAjustee, { perso, rang, critique });
       App.ajouterHisto(`${libelle} — Dégâts`, total, false, false, detail);
       if (cible && cible.genre === "monstre" && typeof Carte !== "undefined") {
         const res = Carte.appliquerDegatsCombat(cible.id, total);
         return res
-          ? `${total} dégâts (${detail}) → ${res.nom} : ${res.pvActuel} PV restants.`
-          : `${total} dégâts (${detail}) — cible introuvable sur la table de combat.`;
+          ? `${total} dégâts (${detail}) → ${res.nom} : ${res.pvActuel} PV restants.${noteMutationSauvage}`
+          : `${total} dégâts (${detail}) — cible introuvable sur la table de combat.${noteMutationSauvage}`;
       }
       if (cible && cible.genre === "perso" && persos[cible.id]) {
         const res = appliquerDegatsPersoLocal(persos[cible.id], total);
-        return `${total} dégâts (${detail}) → ${cible.nom} : -${res.degatsNets} après réduction (${res.reduction}), ${res.pvActuel} PV restants.`;
+        return `${total} dégâts (${detail}) → ${cible.nom} : -${res.degatsNets} après réduction (${res.reduction}), ${res.pvActuel} PV restants.${noteMutationSauvage}`;
       }
-      return `${total} dégâts (${detail}) — aucune cible sélectionnée, à appliquer manuellement.`;
+      return `${total} dégâts (${detail}) — aucune cible sélectionnée, à appliquer manuellement.${noteMutationSauvage}`;
     }
     if (effet.type === "soin") {
       const { total, detail } = resoudreExpression(effet.formule, { perso, rang });
@@ -831,6 +897,18 @@ const Capacites = (() => {
     // tant que ce marqueur reste actif. Remis à zéro par Combat.terminerCombat().
     if (source.voie === "Voie de l'ingénieur" && source.rang === 5 && perso.classe === "guerrier") {
       p.bastionActifFinCombat = true;
+    }
+
+    // Magicien — Voie de la magie sauvage, rangs 2/4/5 : posent chacun un
+    // drapeau consommé une seule fois par le PROCHAIN jet de Mutation
+    // Sauvage (rang 1, cf. _rollMutationSauvage) — même approche que
+    // bastionActifFinCombat ci-dessus (marqueur direct sur le perso brut,
+    // pas un etatsActifs classique, puisqu'il n'y a ni cible ni durée en
+    // tours à suivre, juste "s'applique à la prochaine résolution").
+    if (source.voie === "Voie de la magie sauvage" && perso.classe === "magicien") {
+      if (source.rang === 2) p.instinctChaotiqueActif = true;
+      else if (source.rang === 4) p.maitriseChaosGarantieActif = true;
+      else if (source.rang === 5) p.submersionArcaniqueActif = true;
     }
 
     // Guerrier — Voie du chaos, rang 5 "Déchaînement" : consomme TOUTE la
