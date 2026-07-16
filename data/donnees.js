@@ -886,7 +886,8 @@ const CLASSES = {
           { rang: 5, nom: "Sanctuaire du gardien (L, 1x/scénario, 10 m)", effet: "[5+Mod. de SAG] tours : alliés +4 DEF, régénèrent 1d4 PV/tour ; terrain difficile pour les ennemis uniquement",
             mecanique: { type: "limitee", usage: { frequence: "1x/scenario" }, cible: "zone", portee: 10, zone: 10, jetOppose: null,
               effets: [ { type: "bonus", cible: "DEF", valeur: 4, duree: "5+Mod.SAG" },
-                { type: "special", note: "Les alliés régénèrent aussi 1d4 PV/tour pendant la durée (soin récurrent, non modélisé par un effet 'soin' ponctuel). Terrain difficile pour les ennemis uniquement dans la zone." } ] } },
+                { type: "etat", id: "sanctuaire_gardien", duree: "5+Mod.SAG", formuleSoin: "1d4" },
+                { type: "special", note: "Mécanisé (validé avec Thomas) : le soin de 1d4 PV/tour est désormais un vrai HOT — nouveau champ générique formuleSoin (symétrique de formuleDot, ex. Brûlure/Maudite), relancé à chaque début de tour par Capacites.decompterEtatsDebutTour, journalisé comme tout autre soin de début de tour. mecanique.cible = 'zone' sans cibleId automatique : comme le bonus de DEF, application manuelle allié par allié (chaque allié reçoit sa propre entrée d'état, décomptée indépendamment). Terrain difficile pour les ennemis uniquement dans la zone reste narratif/non modélisé." } ] } },
         ],
       },
       {

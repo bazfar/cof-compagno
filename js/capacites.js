@@ -445,6 +445,7 @@ const Capacites = (() => {
       idEtat: effet.id,
       dureeRestante: Object.assign(resoudreDureeInitiale(effet.duree, ctx), { dureeAffichee: effet.duree }),
       formuleDot: effet.formuleDot || null,
+      formuleSoin: effet.formuleSoin || null,
       source,
       poseLe: Date.now(),
     }, extra || {}));
@@ -583,8 +584,12 @@ const Capacites = (() => {
   // résistance "CON pour moitié" mentionné par certaines capacités : reste
   // un ajustement manuel de table, comme le reste des nuances non chiffrées
   // par le schéma standard.
-  // Renvoie { retires, degats } : libellés des entrées retirées, et détail
-  // des dégâts de DOT infligés à ce tick (pour un toast/journal).
+  // Symétrique pour formuleSoin (ex. Druide "Sanctuaire du gardien") : même
+  // tick, mais soigne p.pvActuel (plafonné à pvMax) au lieu d'infliger des
+  // dégâts.
+  // Renvoie { retires, degats, testsVolonte, soins } : libellés des entrées
+  // retirées, détail des dégâts de DOT et des soins de HOT infligés à ce
+  // tick, et résultats des tests de Volonté par tour (pour un toast/journal).
   function decompterEtatsDebutTour(p) {
     const retires = [];
     const degats = [];
@@ -609,6 +614,15 @@ const Capacites = (() => {
         const { total, detail } = resoudreExpression(e.formuleDot, {});
         p.pvActuel = Math.max(0, (p.pvActuel || 0) - total);
         degats.push({ libelle: _libelleEtatActif(e), total, detail, pvApres: p.pvActuel });
+      }
+      // Soin par tick, symétrique de formuleDot ci-dessus (ex. Druide
+      // "Sanctuaire du gardien", Voie du protecteur rang 5 : "régénèrent
+      // 1d4 PV/tour") — même tick de début de tour, mais soigne au lieu
+      // d'infliger des dégâts. Plafonné à pvMax comme tout autre soin.
+      if (e.formuleSoin) {
+        const { total, detail } = resoudreExpression(e.formuleSoin, {});
+        p.pvActuel = Math.max(0, Math.min(p.pvMax, (p.pvActuel || 0) + total));
+        soins.push({ libelle: _libelleEtatActif(e), total, detail, pvApres: p.pvActuel });
       }
       // Test de Volonté par tour (ex. Guerrier "Déchaînement" — e.testVolonte
       // porté par l'entrée elle-même, cf. resoudreEffet/appliquerEtatSurPerso
