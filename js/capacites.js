@@ -778,7 +778,7 @@ const Capacites = (() => {
     // à attaqueVsDef) : seule la cible forcée est calculée et nommée dans le
     // message, son application reste manuelle (cf. note de donnée).
     if (mecanique.testVolonte) {
-      const { carac, difficulteFixe } = mecanique.testVolonte;
+      const { carac, difficulteFixe, echecEffets } = mecanique.testVolonte;
       const modCarac = perso.mod(carac);
       const d20v = App.lancerDe(20);
       const totalV = d20v + modCarac;
@@ -786,7 +786,20 @@ const Capacites = (() => {
       App.ajouterHisto(`${libelle} — Test de Volonté (${carac})`, totalV, false, false,
         `d20[${d20v}] ${modCarac >= 0 ? "+" : ""}${modCarac} vs ${difficulteFixe}`);
       if (reussite) {
-        messages.push(`Test de Volonté (${carac}) : ${totalV} vs ${difficulteFixe} — réussi, pas de redirection.`);
+        messages.push(`Test de Volonté (${carac}) : ${totalV} vs ${difficulteFixe} — réussi, aucun contrecoup.`);
+      } else if (echecEffets) {
+        // Contrecoup direct sur le lanceur (ex. Magicien "Avatar du Vide") :
+        // contrairement à la redirection d'attaque du Guerrier ci-dessous,
+        // l'échec applique ici un ou plusieurs effets (etat/degats/...) sur
+        // le lanceur lui-même — réutilise resoudreEffet tel quel avec une
+        // cible "soi" synthétique, même construction que mecanique.cible ===
+        // "soi" plus haut dans lancer().
+        const cibleSoi = { id: persoId, nom: p.nom, genre: "perso", soi: true };
+        messages.push(`Test de Volonté (${carac}) : ${totalV} vs ${difficulteFixe} — échec, contrecoup :`);
+        echecEffets.forEach((effet) => {
+          const msg = resoudreEffet(effet, { perso, rang: source.rang, voie: source.voie, cible: cibleSoi, libelle, persos });
+          if (msg) messages.push(msg);
+        });
       } else {
         const forcee = cibleCreaturePlusProche(persoId);
         messages.push(`Test de Volonté (${carac}) : ${totalV} vs ${difficulteFixe} — échec, l'attaque doit cibler ` +
