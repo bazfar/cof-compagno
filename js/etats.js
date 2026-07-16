@@ -85,6 +85,8 @@ const ETATS = {
     description: "+2 attaque (posé séparément) et +1d6 DM magiques (cf. Personnage.bonusDegatsArmeEnchantee) sur l'arme du porteur tant que l'état dure (Enchanteur, Voie de la transfiguration rang 3). Peut être posé sur n'importe quel allié, pas seulement l'Enchanteur." },
   elan_commandant: { nom: "Élan du commandant", categorie: "buff",
     description: "+5 cases de déplacement ce tour (cf. Combat._deplacementMax), tant que l'état dure (Chevalier, Voie du commandant rang 5 « Charge collective ») — posé sur TOUS les PJ en combat, pas seulement les alliés en vue (simplification assumée)." },
+  avatar_du_pacte: { nom: "Avatar du pacte", categorie: "buff",
+    description: "+2d6 DM à toutes les attaques au contact (cf. Personnage.bonusDegatsAvatarPacte) et immunité à la Peur (cf. Personnage.aImmuniteEtat) tant que l'état dure (Chevalier, Voie du chaos rang 5). Le +4 DEF est posé séparément. Contrecoup (perd son action de mouvement au tour suivant) non modélisé." },
 };
 
 const ORDRE_CATEGORIES_ETATS = ["controle", "malus", "dot", "physique", "buff"];

@@ -356,9 +356,13 @@ const App = (() => {
   // chaque affichage ET résolution de DEF de PJ, pour ne jamais désynchroniser
   // la valeur affichée de la valeur réellement opposée à une attaque.
   function _defPjAvecAura(perso, persoId) {
-    const def = perso.calculerDEF();
-    if (typeof Capacites === "undefined" || !Capacites.bonusDefAuraPeuple) return def;
-    return def + Capacites.bonusDefAuraPeuple(persoId);
+    let def = perso.calculerDEF();
+    if (typeof Capacites === "undefined") return def;
+    if (Capacites.bonusDefAuraPeuple) def += Capacites.bonusDefAuraPeuple(persoId);
+    // Chevalier — Voie du protecteur rang 1 "Bouclier partagé" : même
+    // principe que l'aura ci-dessus, cf. Capacites.bonusDefAuraBouclierChevalier.
+    if (Capacites.bonusDefAuraBouclierChevalier) def += Capacites.bonusDefAuraBouclierChevalier(persoId);
+    return def;
   }
 
   // Détermine touché/raté à partir d'un jet déjà résolu (cf. lancerTest) et
@@ -505,6 +509,9 @@ const App = (() => {
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
     if (dmgContact && perso.bonusDegatsArmeEnchantee()) dmgContact += "+" + perso.bonusDegatsArmeEnchantee();
+    // Chevalier — Voie du chaos rang 5 "Avatar du pacte" : +2d6 DM tant que
+    // l'état 'avatar_du_pacte' reste actif.
+    if (dmgContact && perso.bonusDegatsAvatarPacte()) dmgContact += "+" + perso.bonusDegatsAvatarPacte();
     let dmgDistance = formuleDegats(armeDistance);
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
@@ -849,6 +856,9 @@ const App = (() => {
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
     if (dmgContact && perso.bonusDegatsArmeEnchantee()) dmgContact += "+" + perso.bonusDegatsArmeEnchantee();
+    // Chevalier — Voie du chaos rang 5 "Avatar du pacte" : +2d6 DM tant que
+    // l'état 'avatar_du_pacte' reste actif.
+    if (dmgContact && perso.bonusDegatsAvatarPacte()) dmgContact += "+" + perso.bonusDegatsAvatarPacte();
     let dmgDistance = armeDistance ? formuleDegats(armeDistance) : null;
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
@@ -4003,6 +4013,9 @@ const App = (() => {
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
     if (dmgContact && perso.bonusDegatsArmeEnchantee()) dmgContact += "+" + perso.bonusDegatsArmeEnchantee();
+    // Chevalier — Voie du chaos rang 5 "Avatar du pacte" : +2d6 DM tant que
+    // l'état 'avatar_du_pacte' reste actif.
+    if (dmgContact && perso.bonusDegatsAvatarPacte()) dmgContact += "+" + perso.bonusDegatsAvatarPacte();
     // Guerrier — Voie du soldat, rang 1 "Posture de combat" (contact
     // uniquement ici : attaque d'opportunité, pas de dmgDistance dans ce bloc).
     if (dmgContact && perso.bonusTemporaire("DM")) dmgContact += (perso.bonusTemporaire("DM") >= 0 ? "+" : "") + perso.bonusTemporaire("DM");

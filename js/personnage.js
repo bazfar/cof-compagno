@@ -699,6 +699,10 @@ class Personnage extends Entite {
     // mécanisme). L'extension du bonus de résistance aux alliés proches (même
     // rang) reste non chiffrée/non modélisée.
     if (idEtat === "effrayee" && this.classe === "chevalier" && this.estChoisie("Voie du commandant", 1)) return true;
+    // Chevalier — Voie du chaos, rang 5 "Avatar du pacte" : immunité
+    // temporaire à la Peur tant que l'état 'avatar_du_pacte' reste actif
+    // (indépendante du choix de la Voie du commandant ci-dessus).
+    if (idEtat === "effrayee" && this.classe === "chevalier" && (this.etatsActifs || []).some((e) => e.idEtat === "avatar_du_pacte")) return true;
     return false;
   }
   // A-t-il "Liberté d'action" (gate seule, sans le contrôle d'usage 1x/combat
@@ -1018,6 +1022,13 @@ class Personnage extends Entite {
   // quel allié équipé de l'arme visée peut porter cet état.
   bonusDegatsArmeEnchantee() {
     return (this.etatsActifs || []).some((e) => e.idEtat === "arme_enchantee") ? "1d6" : null;
+  }
+  // Chevalier — Voie du chaos, rang 5 "Avatar du pacte" : +2d6 DM à toutes
+  // les attaques au contact tant que l'état 'avatar_du_pacte' reste actif —
+  // même canal que bonusDegatsDechainement (câblé aux mêmes 3 sites app.js).
+  bonusDegatsAvatarPacte() {
+    if (this.classe === "chevalier" && (this.etatsActifs || []).some((e) => e.idEtat === "avatar_du_pacte")) return "2d6";
+    return null;
   }
   // Don Maître des armures lourdes : -3 dégâts physiques subis, appliqué
   // AVANT valeurArmure (cf. subirDegats côté app.js — pas inclus dans

@@ -169,7 +169,7 @@ const Capacites = (() => {
     if (!cible) return null;
     if (cible.genre === "perso") {
       const p = persos[cible.id];
-      return p ? Personnage.depuisJSON(p).calculerDEF() + bonusDefAuraPeuple(cible.id) : null;
+      return p ? Personnage.depuisJSON(p).calculerDEF() + bonusDefAuraPeuple(cible.id) + bonusDefAuraBouclierChevalier(cible.id) : null;
     }
     if (cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
       const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
@@ -206,6 +206,39 @@ const Capacites = (() => {
       return d !== null && d <= 2 && Combat.estImmobile(guerrierId);
     });
     return qualifie ? 1 : 0;
+  }
+
+  // Chevalier — Voie du protecteur, rang 1 "Bouclier partagé" (passive) : un
+  // allié au contact (distance <= 1 case) d'un Chevalier ayant ce rang ET un
+  // bouclier équipé gagne le bonus DEF de CE bouclier — valeur lue sur
+  // Personnage._itemsEquipesUniques() (champ bonusDEF), la même que celle
+  // déjà comptée dans la propre DEF du Chevalier via bonusDefEquipement().
+  // Même schéma que bonusDefAuraPeuple ci-dessus (dépend d'un AUTRE
+  // personnage, vit ici plutôt que dans personnage.js — appelé à la fois par
+  // obtenirDefCible() et par app.js/_defPjAvecAura à l'affichage). Pas de
+  // cumul si plusieurs Chevaliers qualifient à la fois : garde la valeur la
+  // plus haute, pas la somme.
+  function bonusDefAuraBouclierChevalier(persoId) {
+    if (typeof Carte === "undefined" || !Carte.tokenIdPourPerso || !Carte.listeTokensJoueursCombat ||
+        !Carte.distanceCasesEntre || !Carte.idPersoDepuisRef) return 0;
+    const monToken = Carte.tokenIdPourPerso(persoId);
+    if (!monToken) return 0;
+    const persos = App.chargerPersos();
+    let meilleur = 0;
+    (Carte.listeTokensJoueursCombat() || []).forEach((t) => {
+      if (t.id === monToken || !t.ref) return;
+      const chevalierId = Carte.idPersoDepuisRef(t.ref);
+      const pc = persos[chevalierId];
+      if (!pc) return;
+      const chevalier = Personnage.depuisJSON(pc);
+      if (!(chevalier.classe === "chevalier" && chevalier.estChoisie("Voie du protecteur", 1))) return;
+      const d = Carte.distanceCasesEntre(t.id, monToken);
+      if (d === null || d > 1) return;
+      const bouclier = chevalier._itemsEquipesUniques().find((it) => it.type === "bouclier");
+      const valeur = (bouclier && bouclier.bonusDEF) || 0;
+      if (valeur > meilleur) meilleur = valeur;
+    });
+    return meilleur;
   }
 
   // Guerrier — Voie du chaos, rang 3/5 "Rage incontrôlée"/"Déchaînement" (cf.
@@ -1275,6 +1308,7 @@ const Capacites = (() => {
     listeCibles,
     obtenirDefCible,
     bonusDefAuraPeuple,
+    bonusDefAuraBouclierChevalier,
     cibleCreaturePlusProche,
     lancer,
     resoudreDegatsEnAttente,
