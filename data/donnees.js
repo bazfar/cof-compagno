@@ -124,6 +124,16 @@ const INVOCATIONS = [
     sansAttaque: true,
     description: "10 PV + Niveau, DEF 10. N'attaque jamais — bloque une case du champ de bataille (Fortification de fortune, Voie de l'ingénieur rang 3). Le bonus +2 DEF aux alliés abrités est accordé séparément, pas par ce jeton.",
   },
+  {
+    id: "cauchemar_enchanteur",
+    nom: "Cauchemar incarné",
+    classe: "enchanteur", voie: "Voie du chaos", rangRequis: 5,
+    // pvMax: null sans pvMaxFormule -> repli générique "niveau × 2" déjà câblé
+    // dans _resoudreInvocation (même défaut que Créature corrompue du
+    // Druide) : le texte source ne chiffre aucun PV pour cette illusion.
+    pvMax: null, def: 10, armure: 0, init: null, attaqueBonus: null, degats: "1d6",
+    description: "PV = niveau × 2 (par défaut, non chiffré par le texte source), Att = attaque magique de l'Enchanteur, DM 1d6 (assumé, à ajuster avec Thomas si besoin). Ne dure que [Mod. de CHA] tours — retire le jeton manuellement à expiration, comme Créature corrompue (Druide).",
+  },
 ];
 
 const CLASSES = {
@@ -993,10 +1003,10 @@ const CLASSES = {
           { rang: 2, nom: "Lecture d'aura (sort, L, 5 m)", effet: "Révèle la nature magique d'un objet ou créature (école de magie, niveau approximatif, malédictions actives)",
             mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "aucune", portee: 5, zone: null, jetOppose: null,
               effets: [ { type: "special", note: "Révèle la nature magique d'un objet/créature (école, niveau approximatif, malédictions actives) — information narrative, pas un effet chiffré." } ] } },
-          // Pressentiment : mecanique null (cf. étape 2bis) — effet purement
-          // informatif/narratif pour le MJ, pas de bouton d'action direct.
           { rang: 3, nom: "Pressentiment (passive)", effet: "Ne peut pas être surpris ; +2 Initiative ; une fois par combat, demande au MJ un indice sur les intentions d'une cible",
-            mecanique: null },
+            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "bonus", cible: "initiative", valeur: 2, duree: "permanente" },
+                { type: "special", note: "Mécanisé (validé avec Thomas) : +2 Initiative ajouté (mentionné à l'origine, absent du texte de donnees.js jusqu'ici), câblé dans Personnage.bonusInitiativeCapacites() — même schéma/valeur que Chasseur 'Sens du danger' (Voie de la traque rang 4). 'Ne peut pas être surpris' et l'indice du MJ 1x/combat restent non modélisés (pas de mécanique de surprise dans l'app)." } ] } },
           { rang: 4, nom: "Vision du passé (sort, L, rituel 10 min)", effet: "En touchant un objet ou lieu, perçoit les événements marquants qui s'y sont déroulés (jusqu'à [niveau×10] ans)",
             mecanique: { type: "rituel", usage: { frequence: "libre" }, cible: "aucune", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "special", note: "Perçoit les événements marquants d'un objet/lieu (jusqu'à [niveau×10] ans) — information narrative, pas un effet chiffré." } ] } },
@@ -1060,7 +1070,7 @@ const CLASSES = {
                 { type: "special", note: "Contrepartie -2 SAG permanent (dès Corruption d'Âme 5+) déjà codée dans Personnage.bonusCaracCapacites(). Ses illusions deviennent indiscernables de la réalité pour les cibles non-magiques — effet offensif non chiffrable." } ] } },
           { rang: 5, nom: "Cauchemar incarné (L, 1x/scénario)", effet: "Une illusion prend forme physique [Mod. de CHA] tours : peut attaquer, bloquer, interagir. +3 CS immédiat",
             mecanique: { type: "limitee", corruption: 3, usage: { frequence: "1x/scenario" }, cible: "aucune", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Une illusion prend forme physique pendant [Mod.CHA] tours (peut attaquer/bloquer/interagir comme un pantin autonome) — invocation non modélisée par degats/soin/etat/bonus. +3 CS (jauge de Chaos) immédiat." } ] } },
+              effets: [ { type: "special", note: "Mécanisé (validé avec Thomas) : l'illusion physique est désormais posée comme un jeton via le catalogue INVOCATIONS (entrée 'cauchemar_enchanteur', cf. Carte.ouvrirModalInvocation/confirmerInvocation), au même titre que les invocations de Nécromancien/Druide/Guerrier — PV = niveau×2 (par défaut, non chiffré par le texte source), attaque = attaque magique de l'Enchanteur, DM 1d6 (assumé). Ne dure que [Mod.CHA] tours — retirer le jeton manuellement à expiration, comme Créature corrompue (Druide). +3 CS (jauge de Chaos) immédiat, déjà tracké via mecanique.corruption." } ] } },
         ],
       },
     ],

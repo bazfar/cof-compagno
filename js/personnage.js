@@ -487,6 +487,12 @@ class Personnage extends Entite {
     if (this.classe === "chasseur" && this.estChoisie("Voie de la traque", 4)) {
       bonus += 2;
     }
+    // Enchanteur — Voie de l'historien, rang 3 "Pressentiment" (passive) :
+    // même bonus fixe que Sens du danger ci-dessus (+2 Initiative). "Ne peut
+    // pas être surpris" et l'indice du MJ 1x/combat restent non modélisés.
+    if (this.classe === "enchanteur" && this.estChoisie("Voie de l'historien", 3)) {
+      bonus += 2;
+    }
     return bonus;
   }
   // Don Alerte : +5 Initiative. ("Ne peut jamais être surpris" reste descriptif,
