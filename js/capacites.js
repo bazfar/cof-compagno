@@ -235,6 +235,31 @@ const Capacites = (() => {
     return { reduction, degatsNets, pvActuel: pCible.pvActuel };
   }
 
+  // Moine — Voie de l'ascétisme rang 2 "Poing béni" ; Chevalier — Voie du
+  // paladin rang 5 "Sentence finale" (et toute future capacité "doublé si
+  // mort-vivant/démon/corrompu") : détecte le type de la cible MONSTRE via
+  // le champ 'race' (tableau) ajouté par Thomas sur les entrées du bestiaire
+  // (data/bestiaire.js, BESTIAIRE_INDEX) — jamais copié sur le token en jeu
+  // (contrairement à pv/def/armure), donc relu ici via tok.monstreId à
+  // chaque résolution plutôt que mis en cache. Renvoie toujours false pour
+  // une cible PJ (this.race sur un Personnage est une race JOUEUR, sans
+  // rapport) ou un token hors-bestiaire (monstreId absent/inconnu).
+  function _cibleEstMortVivantDemonCorrompu(cible) {
+    if (!cible || cible.genre !== "monstre" || typeof Carte === "undefined" || !Carte.listeMonstresCombat) return false;
+    const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
+    const entree = tok && tok.monstreId && typeof BESTIAIRE_INDEX !== "undefined" && BESTIAIRE_INDEX[tok.monstreId];
+    const race = (entree && Array.isArray(entree.race)) ? entree.race : [];
+    return race.includes("mort-vivant") || race.includes("démon") || race.includes("corrompu");
+  }
+
+  // Double le nombre de dés d'une formule de dégâts simple ("1d6" -> "2d6"),
+  // même convention que le doublement sur critique (resoudreExpression) —
+  // ne gère qu'un terme de dé en tête de formule, suffisant pour les 2
+  // capacités qui l'utilisent (formules à un seul terme, sans modificateur).
+  function _doublerFormuleDegats(formule) {
+    return formule.replace(/^(\d*)d(\d+)/, (_, nb, faces) => `${parseInt(nb || "1", 10) * 2}d${faces}`);
+  }
+
   // Prêtre — Voie du chaos rang 4 "Corruption persistante" (dès CA 5+) : les
   // soins REÇUS par la cible sont réduits de moitié (arrondi inf.), quelle
   // que soit la source — même règle qu'app.js/soigner(), seul autre point
@@ -605,6 +630,19 @@ const Capacites = (() => {
           noteElementActif = " " + (resoudreEffet({ type: "bonus", cible: "attaque", valeur: -2, duree: "1" }, { perso, rang, voie, cible, libelle, persos }) || "");
         }
       }
+      // Moine — Voie de l'ascétisme rang 2 "Poing béni" ; Chevalier — Voie du
+      // paladin rang 5 "Sentence finale" : dégâts doublés si la cible est
+      // mort-vivante/démoniaque/corrompue (cf. _cibleEstMortVivantDemonCorrompu,
+      // champ 'race' du bestiaire ajouté par Thomas). Ne couvre pas
+      // "Illumination du juste" (Moine rang 5, même voie) : cible "zone" SANS
+      // jetOppose, donc jamais de cibleId résolu (cf. app.js) — reste manuel.
+      let noteTypeCreature = "";
+      if (((voie === "Voie de l'ascétisme" && rang === 2 && perso.classe === "moine") ||
+           (voie === "Voie du paladin (justicier)" && rang === 5 && perso.classe === "chevalier")) &&
+          _cibleEstMortVivantDemonCorrompu(cible)) {
+        formuleAjustee = _doublerFormuleDegats(formuleAjustee);
+        noteTypeCreature = " (dégâts doublés : cible morte-vivante/démoniaque/corrompue)";
+      }
       // Magicien — Voie de la magie sauvage, rang 1 "Mutation Sauvage" :
       // s'applique à TOUT sort offensif du Magicien (cf. _rollMutationSauvage),
       // pas seulement aux capacités de cette voie.
@@ -619,14 +657,14 @@ const Capacites = (() => {
       if (cible && cible.genre === "monstre" && typeof Carte !== "undefined") {
         const res = Carte.appliquerDegatsCombat(cible.id, total);
         return res
-          ? `${total} dégâts (${detail}) → ${res.nom} : ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}`
-          : `${total} dégâts (${detail}) — cible introuvable sur la table de combat.${noteMutationSauvage}${noteElementActif}`;
+          ? `${total} dégâts (${detail}) → ${res.nom} : ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}`
+          : `${total} dégâts (${detail}) — cible introuvable sur la table de combat.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}`;
       }
       if (cible && cible.genre === "perso" && persos[cible.id]) {
         const res = appliquerDegatsPersoLocal(persos[cible.id], total);
-        return `${total} dégâts (${detail}) → ${cible.nom} : -${res.degatsNets} après réduction (${res.reduction}), ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}`;
+        return `${total} dégâts (${detail}) → ${cible.nom} : -${res.degatsNets} après réduction (${res.reduction}), ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}`;
       }
-      return `${total} dégâts (${detail}) — aucune cible sélectionnée, à appliquer manuellement.${noteMutationSauvage}${noteElementActif}`;
+      return `${total} dégâts (${detail}) — aucune cible sélectionnée, à appliquer manuellement.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}`;
     }
     if (effet.type === "soin") {
       const { total, detail } = resoudreExpression(effet.formule, { perso, rang });

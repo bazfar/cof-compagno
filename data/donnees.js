@@ -1314,7 +1314,7 @@ const CLASSES = {
           { rang: 5, nom: "Sentence finale (L, 1x/scénario)", effet: "Contre une cible jugée coupable (Rang 3 confirmé) : l'attaque réussie suivante inflige +6d6 DM sacrés, doublés contre démons/morts-vivants/corrompus",
             mecanique: { type: "limitee", usage: { frequence: "1x/scenario" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "degats", formule: "6d6", elementaire: "sacre" },
-                { type: "special", note: "Condition : la cible doit avoir été jugée coupable au rang 3. Dégâts doublés contre démons/morts-vivants/corrompus — conditions non vérifiées automatiquement." } ] } },
+                { type: "special", note: "Mécanisé (validé avec Thomas) : le doublement contre démon/mort-vivant/corrompu est désormais automatique (champ 'race' du bestiaire, cf. _cibleEstMortVivantDemonCorrompu dans capacites.js). Condition restante non vérifiée automatiquement : la cible doit avoir été jugée coupable au rang 3." } ] } },
         ],
       },
       {
@@ -1429,7 +1429,7 @@ const CLASSES = {
           { rang: 2, nom: "Poing béni (activable, 1x/combat)", effet: "La prochaine attaque inflige +1d6 DM sacrés, qui passent à +2d6 contre les morts-vivants, démons ou créatures corrompues",
             mecanique: { type: "activable", usage: { frequence: "1x/combat" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "degats", formule: "1d6", elementaire: "sacre" },
-                { type: "special", note: "Passe à 2d6 si la cible est morte-vivante, démoniaque ou corrompue — condition non vérifiée automatiquement." } ] } },
+                { type: "special", note: "Mécanisé (validé avec Thomas) : passe automatiquement à 2d6 si la cible est morte-vivante, démoniaque ou corrompue (champ 'race' du bestiaire, cf. _cibleEstMortVivantDemonCorrompu dans capacites.js)." } ] } },
           { rang: 3, nom: "Jeûne purificateur (L, 1x/jour)", effet: "Par le toucher, enlève un malus présent (état néfaste actif) sur lui-même ou un allié au contact",
             mecanique: { type: "limitee", usage: { frequence: "1x/jour" }, cible: "allie", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "retraitEtat" },
@@ -1440,7 +1440,7 @@ const CLASSES = {
           { rang: 5, nom: "Illumination du juste (L, 1x/scénario)", effet: "Éclat sacré en zone de 3 m : 3d6 DM (6d6 contre morts-vivants / démons / corrompus), et soigne 1d6 + Mod. de SAG à lui-même et ses alliés dans la zone",
             mecanique: { type: "limitee", usage: { frequence: "1x/scenario" }, cible: "zone", portee: null, zone: 3, jetOppose: null,
               effets: [ { type: "degats", formule: "3d6", elementaire: "sacre" }, { type: "soin", formule: "1d6+Mod.SAG" },
-                { type: "special", note: "Dégâts doublés (6d6) contre morts-vivants/démons/corrompus — condition non vérifiée automatiquement. Le soin touche le Moine et ses alliés dans la zone, les dégâts les ennemis." } ] } },
+                { type: "special", note: "Dégâts doublés (6d6) contre morts-vivants/démons/corrompus toujours non automatisé, à la différence de Poing béni/Sentence finale (même condition, cf. _cibleEstMortVivantDemonCorrompu) : cible = 'zone' SANS jetOppose, donc jamais de cibleId résolu par le sélecteur de cible (app.js) — pas de cible ferme à interroger. Le soin touche le Moine et ses alliés dans la zone, les dégâts les ennemis." } ] } },
         ],
       },
       {
