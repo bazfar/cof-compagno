@@ -317,6 +317,23 @@ const Capacites = (() => {
     return race.includes("mort-vivant") || race.includes("démon");
   }
 
+  // Chasseur — Voie de la grande chasse rang 4 "Coup de grâce" (condition
+  // "cible sous 50% PV") : PV actuels/max d'une cible PJ ou monstre, ou null
+  // si indéterminable (ex. monstre hors table de combat) — ne jamais bloquer
+  // sur une valeur inconnue, cf. l'appelant.
+  function _pvActuelEtMax(cible, persos) {
+    if (!cible) return null;
+    if (cible.genre === "perso") {
+      const p = persos[cible.id];
+      return p ? { actuel: p.pvActuel || 0, max: p.pvMax || 0 } : null;
+    }
+    if (cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
+      const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
+      return tok ? { actuel: tok.pvActuel ?? tok.pvMax ?? 0, max: tok.pvMax || 0 } : null;
+    }
+    return null;
+  }
+
   // Double le nombre de dés d'une formule de dégâts simple ("1d6" -> "2d6"),
   // même convention que le doublement sur critique (resoudreExpression) —
   // ne gère qu'un terme de dé en tête de formule, suffisant pour les 2
@@ -719,6 +736,31 @@ const Capacites = (() => {
       }
       const { total, detail } = resoudreExpression(formuleAjustee, { perso, rang, critique });
       App.ajouterHisto(`${libelle} — Dégâts`, total, false, false, detail);
+      // Chasseur — Voie de la grande chasse, rang 5 "Trophée ultime" :
+      // ignore la moitié de la RD (armure) de la cible pour CETTE attaque —
+      // calcul dédié (PAS Carte.appliquerDegatsCombat/appliquerDegatsPersoLocal,
+      // qui appliquent toujours la réduction complète) : PV nets calculés
+      // manuellement puis écrits directement (Carte.definirPvCombat / mutation
+      // directe de pvActuel pour un PJ).
+      if (perso.classe === "chasseur" && voie === "Voie de la grande chasse" && rang === 5) {
+        if (cible && cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat && Carte.definirPvCombat) {
+          const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
+          if (!tok) return `${total} dégâts (${detail}) — cible introuvable sur la table de combat.`;
+          const reduction = Math.floor((tok.armure || 0) / 2);
+          const degatsNets = Math.max(0, total - reduction);
+          const pvApres = Math.max(0, (tok.pvActuel ?? tok.pvMax ?? 0) - degatsNets);
+          Carte.definirPvCombat(cible.id, pvApres);
+          return `${total} dégâts (${detail}) → ${tok.nom} : -${degatsNets} après demi-RD (${reduction}), ${pvApres} PV restants.`;
+        }
+        if (cible && cible.genre === "perso" && persos[cible.id]) {
+          const pCible = persos[cible.id];
+          const reduction = Math.floor(Personnage.depuisJSON(pCible).reductionDegats() / 2);
+          const degatsNets = Math.max(0, total - reduction);
+          pCible.pvActuel = Math.max(0, (pCible.pvActuel || 0) - degatsNets);
+          return `${total} dégâts (${detail}) → ${cible.nom} : -${degatsNets} après demi-RD (${reduction}), ${pCible.pvActuel} PV restants.`;
+        }
+        return `${total} dégâts (${detail}) — aucune cible sélectionnée, à appliquer manuellement.`;
+      }
       if (cible && cible.genre === "monstre" && typeof Carte !== "undefined") {
         const res = Carte.appliquerDegatsCombat(cible.id, total);
         return res
@@ -985,8 +1027,53 @@ const Capacites = (() => {
       return { ok: false, messages: [`${cible.nom} n'est ni démoniaque ni morte-vivante — Symbole sacré n'a aucun effet sur cette cible.`] };
     }
 
+    // Chasseur — Voie de la traque, rang 3 "Premier coup" : condition unique
+    // ("cible qui n'a pas encore agi ce combat") entièrement vérifiable via
+    // le tracker d'initiative (cf. Combat.aDejaAgiCeCombat) — bloque avant
+    // résolution si la cible a déjà agi, plutôt qu'un jet pour rien.
+    if (source.voie === "Voie de la traque" && source.rang === 3 && perso.classe === "chasseur" &&
+        cible && typeof Combat !== "undefined" && Combat.aDejaAgiCeCombat && Combat.aDejaAgiCeCombat(cible.id)) {
+      return { ok: false, messages: [`${cible.nom} a déjà agi ce combat — Premier coup ne s'applique qu'à une cible qui n'a pas encore agi.`] };
+    }
+
+    // Chasseur — Voie de la grande chasse, rang 4 "Coup de grâce" : condition
+    // "cible sous 50% PV" vérifiable (PV actuels/max connus pour PJ et
+    // monstre) — bloque si au-dessus du seuil. La condition "cible déjà
+    // Marquée" (marquee_chasseur) reste non vérifiable (pas de suivi d'état
+    // automatique pour les monstres, même limite que Frappe purificatrice/
+    // Confession forcée du Prêtre) : laissée à la table.
+    if (source.voie === "Voie de la grande chasse" && source.rang === 4 && perso.classe === "chasseur" && cible) {
+      const pv = _pvActuelEtMax(cible, persos);
+      if (pv && pv.max > 0 && pv.actuel > pv.max / 2) {
+        return { ok: false, messages: [`${cible.nom} n'est pas sous 50% PV (${pv.actuel}/${pv.max}) — Coup de grâce ne s'applique pas.`] };
+      }
+    }
+
     const messages = [];
     let resolutionDegats = null;
+
+    // Chasseur — Voie de la gâchette, rang 3 "Tir mortel" : condition à
+    // deux branches ("cible immobile OU n'a pas encore agi") — contrairement
+    // à Premier coup (une seule condition, entièrement vérifiable), un OU
+    // ne peut pas être bloquant sur une seule branche vérifiable (l'autre,
+    // "immobile" côté monstre, n'est pas trackée). Informe seulement, sans
+    // bloquer, via Combat.aDejaAgiCeCombat.
+    if (source.voie === "Voie de la gâchette" && source.rang === 3 && perso.classe === "chasseur" &&
+        cible && typeof Combat !== "undefined" && Combat.aDejaAgiCeCombat) {
+      messages.push(Combat.aDejaAgiCeCombat(cible.id)
+        ? `${cible.nom} a déjà agi ce combat — vérifie qu'elle est immobile pour que Tir mortel s'applique quand même.`
+        : `${cible.nom} n'a pas encore agi ce combat — condition de Tir mortel remplie.`);
+    }
+
+    // Chasseur — Voie du chaos, rang 5 "Chasse ultime" : contrecoup garanti
+    // (pas un test comme mecanique.testVolonte) — affiche la créature la
+    // plus proche (cf. cibleCreaturePlusProche, même helper que Guerrier
+    // Rage incontrôlée) pour que la redirection soit appliquée manuellement,
+    // même limite que le reste des redirections d'attaque non modélisées.
+    if (source.voie === "Voie du chaos" && source.rang === 5 && perso.classe === "chasseur") {
+      const forcee = cibleCreaturePlusProche(persoId);
+      messages.push(`Contrecoup : la prochaine attaque doit viser ${forcee ? forcee.nom : "la créature la plus proche (aucune détectée sur la table de combat)"}, allié compris.`);
+    }
 
     // Prêtre — Voie de la guérison, rang 4 "Bénédiction", choix
     // "soin_partage" : jusqu'à 3 cibles indépendantes (cibleIds), chacune

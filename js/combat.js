@@ -296,6 +296,14 @@ const Combat = (() => {
 
     etat.ordre.forEach((e) => { e.koTourCourant = _estKO(e); });
 
+    // Chasseur — Voie de la traque rang 3 "Premier coup" / Voie de la
+    // gâchette rang 3 "Tir mortel" : marque le combattant dont le tour vient
+    // de se terminer comme "a déjà agi ce combat" (cf. aDejaAgiCeCombat) —
+    // jamais réinitialisé avant un nouveau combat (les entrées fraîches
+    // créées par _fusionnerCombattants/_ajouterMonstreAvecJet démarrent à
+    // aDejaAgi undefined/false).
+    if (etat.ordre[etat.indexActuel]) etat.ordre[etat.indexActuel].aDejaAgi = true;
+
     let index = etat.indexActuel;
     for (let i = 0; i < etat.ordre.length; i++) {
       index = (index + 1) % etat.ordre.length;
@@ -347,6 +355,17 @@ const Combat = (() => {
     const entree = etat.ordre.find((e) => e.id === persoId && e.type === "pj");
     if (!entree) return false;
     return entree.deplacementRestant === _deplacementMax(App.chargerPersos()[persoId]);
+  }
+
+  // Chasseur — Voie de la traque rang 3 "Premier coup" / Voie de la
+  // gâchette rang 3 "Tir mortel" (cf. Capacites.lancer) : id peut être un PJ
+  // ou un monstre, tous deux présents dans etat.ordre. false hors combat ou
+  // si l'id n'a pas (encore) d'entrée (ex. monstre pas encore visible/ajouté).
+  function aDejaAgiCeCombat(id) {
+    const etat = _lire();
+    if (!etat.actif) return false;
+    const entree = etat.ordre.find((e) => e.id === id);
+    return !!(entree && entree.aDejaAgi);
   }
 
   function ajusterDeplacement(persoId, delta) {
@@ -472,6 +491,7 @@ const Combat = (() => {
     DEPLACEMENT_BASE,
     SPRINT_BONUS,
     estImmobile,
+    aDejaAgiCeCombat,
     ajusterDeplacement,
     utiliserActionPrincipale,
     accorderActionPrincipaleBonus,
