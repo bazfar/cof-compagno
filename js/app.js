@@ -3728,7 +3728,11 @@ const App = (() => {
         // (CAPACITES_A_CHOIX/RACE_CAPACITES_A_CHOIX), redemandé à chaque lancer
         // puisqu'il peut varier d'une utilisation à l'autre. Réutilise le même
         // modal générique que les choix d'acquisition (ouvrirModalChoixCapacite).
-        const effetChoix = (mecanique.effets || []).find((e) => e.cible === "choix" && e.choix);
+        // e.choix seul suffit (pas besoin de e.cible === "choix", qui ne
+        // concerne que la substitution de cible des effets "bonus", cf.
+        // resoudreEffet) : un effet "etat" comme Poing élémentaire (Moine)
+        // peut aussi porter un choix d'activation sans passer par ce chemin.
+        const effetChoix = (mecanique.effets || []).find((e) => e.choix);
         if (effetChoix) {
           ouvrirModalChoixCapacite(effetChoix.choix, (valeurChoisie) => {
             lancerCapaciteEnAttente.choixEffet = valeurChoisie;

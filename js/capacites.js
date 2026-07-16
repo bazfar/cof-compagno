@@ -497,6 +497,37 @@ const Capacites = (() => {
   // dans ce même pool ; rien de spécifique au Guerrier dans ce compteur.
   const REACTIONS_MAX = 3;
 
+  // Moine — Voie des éléments, rang 4 "Fusion élémentaire" (1x/combat) :
+  // table des 6 combos de paires fournie par Thomas, lue par lancer() selon
+  // le choix fait à l'activation (choixEffet, ex. "feu_glace") — substituée
+  // dans mecanique.effets AVANT le bloc jetOppose générique, qui déroule
+  // ensuite normalement (attaque au contact vs DEF, résolution différée
+  // degats/etat comme toute autre capacité). Les entrées "bonus" portent
+  // differe:true : sans lui, resoudreDegatsEnAttente() les ignorerait (seuls
+  // degats/etat sont différés par défaut, cf. TYPES_EFFETS_DIFFERES).
+  const FUSIONS_ELEMENTAIRES_MOINE = {
+    feu_glace: { nom: "Choc thermique (Vapeur)", effets: [
+      { type: "degats", formule: "1d6", elementaire: null },
+      { type: "special", note: "-2 DEF à toute créature adjacente à la cible (vapeur brûlante) — effet de zone secondaire non modélisé (géométrie non automatisée pour ce cas), à appliquer manuellement." } ] },
+    feu_terre: { nom: "Éruption (Magma)", effets: [
+      { type: "degats", formule: "1d6", elementaire: null },
+      { type: "etat", id: "etourdie", duree: "1" } ] },
+    feu_air: { nom: "Tempête de braises", effets: [
+      { type: "degats", formule: "1d6", elementaire: null },
+      { type: "bonus", cible: "attaque", valeur: -2, duree: "1", differe: true } ] },
+    glace_terre: { nom: "Permafrost", effets: [
+      { type: "etat", id: "gelee", duree: "1" },
+      { type: "bonus", cible: "DEF", valeur: -4, duree: "1", differe: true },
+      { type: "etat", id: "etourdie", duree: "1" } ] },
+    glace_air: { nom: "Blizzard", effets: [
+      { type: "etat", id: "gelee", duree: "1" },
+      { type: "bonus", cible: "DEF", valeur: -4, duree: "1", differe: true },
+      { type: "bonus", cible: "attaque", valeur: -2, duree: "1", differe: true } ] },
+    terre_air: { nom: "Tempête de sable", effets: [
+      { type: "etat", id: "etourdie", duree: "1" },
+      { type: "bonus", cible: "attaque", valeur: -2, duree: "1", differe: true } ] },
+  };
+
   // Mute p.corruptionMajeure une seule fois par combat (corruptionSeuilFranchi,
   // remis à false par Combat.terminerCombat) quand la jauge dépasse le seuil —
   // rester au-dessus ne la fait pas grimper indéfiniment dans le même combat.
@@ -551,6 +582,29 @@ const Capacites = (() => {
           && perso.rangMaxVoie("Voie des éléments") >= 2 && /^1d4\b/.test(formuleAjustee)) {
         formuleAjustee = formuleAjustee.replace(/^1d4/, "1d6");
       }
+      // Moine — Voie des poings : si un élément actif (Poing élémentaire,
+      // Voie des éléments rang 1, posé via son propre cas particulier dans
+      // lancer()) est présent sur le lanceur, applique son effet secondaire
+      // à CETTE attaque à mains nues touchée. Feu ajoute des dégâts à la
+      // formule (déjà upgradée 1d4→1d6 par Maîtrise élémentaire ci-dessus,
+      // indépendant de ce bloc) ; Glace/Terre/Air posent respectivement
+      // Gelée/Renversée/-2 attaque sur la cible, résolu via un second appel
+      // à resoudreEffet (même message standard "à appliquer manuellement"
+      // pour un monstre que n'importe quel autre etat/bonus du jeu).
+      let noteElementActif = "";
+      if (perso.classe === "moine" && voie === "Voie des poings") {
+        const etatElement = (perso.etatsActifs || []).find((e) => e.idEtat === "element_actif");
+        const element = etatElement && etatElement.element;
+        if (element === "feu") {
+          formuleAjustee = `${formuleAjustee}+${perso.rangMaxVoie("Voie des éléments") >= 2 ? "1d6" : "1d4"}`;
+        } else if (element === "glace") {
+          noteElementActif = " " + (resoudreEffet({ type: "etat", id: "gelee", duree: "1" }, { perso, rang, voie, cible, libelle, persos }) || "");
+        } else if (element === "terre") {
+          noteElementActif = " " + (resoudreEffet({ type: "etat", id: "renversee", duree: "1" }, { perso, rang, voie, cible, libelle, persos }) || "");
+        } else if (element === "air") {
+          noteElementActif = " " + (resoudreEffet({ type: "bonus", cible: "attaque", valeur: -2, duree: "1" }, { perso, rang, voie, cible, libelle, persos }) || "");
+        }
+      }
       // Magicien — Voie de la magie sauvage, rang 1 "Mutation Sauvage" :
       // s'applique à TOUT sort offensif du Magicien (cf. _rollMutationSauvage),
       // pas seulement aux capacités de cette voie.
@@ -565,14 +619,14 @@ const Capacites = (() => {
       if (cible && cible.genre === "monstre" && typeof Carte !== "undefined") {
         const res = Carte.appliquerDegatsCombat(cible.id, total);
         return res
-          ? `${total} dégâts (${detail}) → ${res.nom} : ${res.pvActuel} PV restants.${noteMutationSauvage}`
-          : `${total} dégâts (${detail}) — cible introuvable sur la table de combat.${noteMutationSauvage}`;
+          ? `${total} dégâts (${detail}) → ${res.nom} : ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}`
+          : `${total} dégâts (${detail}) — cible introuvable sur la table de combat.${noteMutationSauvage}${noteElementActif}`;
       }
       if (cible && cible.genre === "perso" && persos[cible.id]) {
         const res = appliquerDegatsPersoLocal(persos[cible.id], total);
-        return `${total} dégâts (${detail}) → ${cible.nom} : -${res.degatsNets} après réduction (${res.reduction}), ${res.pvActuel} PV restants.${noteMutationSauvage}`;
+        return `${total} dégâts (${detail}) → ${cible.nom} : -${res.degatsNets} après réduction (${res.reduction}), ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}`;
       }
-      return `${total} dégâts (${detail}) — aucune cible sélectionnée, à appliquer manuellement.${noteMutationSauvage}`;
+      return `${total} dégâts (${detail}) — aucune cible sélectionnée, à appliquer manuellement.${noteMutationSauvage}${noteElementActif}`;
     }
     if (effet.type === "soin") {
       const { total, detail } = resoudreExpression(effet.formule, { perso, rang });
@@ -816,6 +870,26 @@ const Capacites = (() => {
     const messages = [];
     let resolutionDegats = null;
 
+    // Moine — Voie des éléments, rang 1 "Poing élémentaire" (1x/tour) :
+    // choix à l'activation entre 4 éléments (feu/glace/terre/air, via
+    // mecanique.effets[].choix — modal générique déjà utilisé par Toucher
+    // flétrissant/Posture de combat), posé comme état 'element_actif' sur
+    // le lanceur avec le choix mémorisé dans un champ extra.element. Résolu
+    // ici plutôt que par resoudreEffet générique car le choix détermine un
+    // ÉTAT DIFFÉRENT à poser, pas seulement une valeur alternative. Lu à la
+    // prochaine attaque à mains nues touchée (Voie des poings, cf. le hook
+    // dans la branche "degats" de resoudreEffet ci-dessous). Un seul élément
+    // actif à la fois : remplace toute entrée précédente.
+    if (source.voie === "Voie des éléments" && source.rang === 1 && perso.classe === "moine") {
+      const element = choixEffet || "feu";
+      p.etatsActifs = (p.etatsActifs || []).filter((e) => e.idEtat !== "element_actif");
+      appliquerEtatSurPerso(p, { id: "element_actif", duree: "1" }, libelle, { perso, rang: source.rang }, { element });
+      messages.push(`Élément actif : ${element} (jusqu'au tour suivant).`);
+      usage.appliquer();
+      App.sauverPersos(persos);
+      return { ok: true, messages };
+    }
+
     // Moine — Voie de l'élévation, rang 4 "Avalanche de coups" (1x/combat) :
     // hors du schéma mecanique.jetOppose standard (celui-ci ne résout qu'UN
     // seul jet d'attaque) — boucle de jets d'attaque au contact vs DEF de la
@@ -863,6 +937,18 @@ const Capacites = (() => {
       usage.appliquer();
       App.sauverPersos(persos);
       return { ok: true, messages };
+    }
+
+    // Moine — Voie des éléments, rang 4 "Fusion élémentaire" (1x/combat) :
+    // substitue mecanique.effets par le combo choisi (cf.
+    // FUSIONS_ELEMENTAIRES_MOINE) puis laisse le reste de lancer() dérouler
+    // normalement (attaque au contact vs DEF déjà déclarée dans la donnée,
+    // résolution différée degats/etat comme toute autre capacité) — pas de
+    // retour anticipé ici, contrairement à Poing élémentaire/Avalanche.
+    if (source.voie === "Voie des éléments" && source.rang === 4 && perso.classe === "moine") {
+      const combo = FUSIONS_ELEMENTAIRES_MOINE[choixEffet] || FUSIONS_ELEMENTAIRES_MOINE.feu_glace;
+      mecanique = Object.assign({}, mecanique, { effets: combo.effets });
+      messages.push(`Fusion élémentaire : ${combo.nom}.`);
     }
 
     const attaqueVsDef = !!(mecanique.jetOppose && mecanique.jetOppose.caracDefenseur === "DEF");
