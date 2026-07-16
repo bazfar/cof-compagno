@@ -317,6 +317,23 @@ const Capacites = (() => {
     return race.includes("mort-vivant") || race.includes("démon");
   }
 
+  // Nécromancien — Voie du sang, rangs 1/3/5 (Morsure du sang : moitié ;
+  // Vol de vitalité/Étreinte exsangue : intégralité) : vol de vie, soigne le
+  // LANCEUR d'une fraction des dégâts RÉELLEMENT infligés (après réduction/
+  // armure, degatsNets) — mécanique propre au résultat du jet, sans
+  // jugement narratif contrairement au reste des conditions "non vérifiées
+  // automatiquement" déjà documentées pour cette voie (Régénération
+  // sanguine/Sang impie).
+  function _appliquerVolDeVie(persos, perso, rang, degatsNets) {
+    const fraction = rang === 1 ? 0.5 : 1;
+    const gain = Math.floor(degatsNets * fraction);
+    if (gain <= 0) return "";
+    const pCaster = persos[perso.id];
+    if (!pCaster) return "";
+    const res = appliquerSoinPersoLocal(pCaster, gain);
+    return ` Vol de vie : ${perso.nom} récupère ${res.gain} PV.`;
+  }
+
   // Chasseur — Voie de la grande chasse rang 4 "Coup de grâce" (condition
   // "cible sous 50% PV") : PV actuels/max d'une cible PJ ou monstre, ou null
   // si indéterminable (ex. monstre hors table de combat) — ne jamais bloquer
@@ -761,15 +778,18 @@ const Capacites = (() => {
         }
         return `${total} dégâts (${detail}) — aucune cible sélectionnée, à appliquer manuellement.`;
       }
+      const volDeVieActif = perso.classe === "necromancien" && voie === "Voie du sang" && [1, 3, 5].includes(rang);
       if (cible && cible.genre === "monstre" && typeof Carte !== "undefined") {
         const res = Carte.appliquerDegatsCombat(cible.id, total);
+        const noteVol = (res && volDeVieActif) ? _appliquerVolDeVie(persos, perso, rang, res.degatsNets) : "";
         return res
-          ? `${total} dégâts (${detail}) → ${res.nom} : ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}`
+          ? `${total} dégâts (${detail}) → ${res.nom} : ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}${noteVol}`
           : `${total} dégâts (${detail}) — cible introuvable sur la table de combat.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}`;
       }
       if (cible && cible.genre === "perso" && persos[cible.id]) {
         const res = appliquerDegatsPersoLocal(persos[cible.id], total);
-        return `${total} dégâts (${detail}) → ${cible.nom} : -${res.degatsNets} après réduction (${res.reduction}), ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}`;
+        const noteVol = volDeVieActif ? _appliquerVolDeVie(persos, perso, rang, res.degatsNets) : "";
+        return `${total} dégâts (${detail}) → ${cible.nom} : -${res.degatsNets} après réduction (${res.reduction}), ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}${noteVol}`;
       }
       return `${total} dégâts (${detail}) — aucune cible sélectionnée, à appliquer manuellement.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}`;
     }
@@ -869,10 +889,23 @@ const Capacites = (() => {
             : `${option.label} (${details.join(", ")}, ${effet.duree}) — aucune cible sélectionnée, à appliquer manuellement.`;
         }
       }
+      // Nécromancien — Voie de la sombre magie, rang 4 "Malédiction
+      // profonde" (simplifié — validé avec Thomas — en upgrade numérique des
+      // rangs 1/2, remplace le texte d'origine "double la durée", non
+      // chiffrable) : Œil mauvais (rang 1) passe de -2 attaque à -3 DEF —
+      // change à la fois la cible ET la valeur, donc une copie ajustée de
+      // l'effet (jamais l'objet d'origine, partagé via data/donnees.js) est
+      // utilisée pour tout le reste de cette branche.
+      let effetAjuste = effet;
+      if (voie === "Voie de la sombre magie" && rang === 1 && perso.classe === "necromancien"
+          && effet.cible === "attaque" && effet.valeur === -2
+          && perso.rangMaxVoie("Voie de la sombre magie") >= 4) {
+        effetAjuste = Object.assign({}, effet, { cible: "DEF", valeur: -3 });
+      }
       // effet.valeur peut être un nombre fixe ("2") ou une formule ("Mod.SAG") :
       // résolue une seule fois ici (dés éventuels non relancés), réutilisée pour
       // le message ET le stockage (cf. appliquerBonusSurPerso).
-      let valeurBrute = effet.valeur;
+      let valeurBrute = effetAjuste.valeur;
       // Barde — Voie du chant, rang 2 "Refrain lancinant" (passive) : le
       // malus de Note discordante (rang 1) passe de -2 à -3 dès que le rang 2
       // est acquis — même principe qu'Intensité élémentaire ci-dessus. Rang 4
@@ -904,15 +937,25 @@ const Capacites = (() => {
           && perso.rangMaxVoie("Voie de la magie protectrice") >= 2 && effet.valeur === 2) {
         valeurBrute = 3;
       }
+      // Nécromancien — Voie de la sombre magie, rang 4 "Malédiction
+      // profonde" (suite) : Toucher flétrissant (rang 2, choix attaque/DEF)
+      // passe de -1d4 à -1d6 — ce rang n'utilise jamais la branche
+      // choix+paire ci-dessus (ses options n'ont pas de champ .paire), donc
+      // .valeur atteint bien ce point, encore "-1d4" (le swap de cible fait
+      // par lancer() via effetResolu ne touche jamais .valeur).
+      if (voie === "Voie de la sombre magie" && rang === 2 && perso.classe === "necromancien"
+          && effet.valeur === "-1d4" && perso.rangMaxVoie("Voie de la sombre magie") >= 4) {
+        valeurBrute = "-1d6";
+      }
       const { total: valeurResolue } = resoudreExpression(valeurBrute, { perso, rang });
-      if (effet.duree === "permanente") {
-        return `Bonus permanent (${effet.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}) — normalement fixé une fois pour toutes à l'acquisition de la capacité, pas à relancer ici.`;
+      if (effetAjuste.duree === "permanente") {
+        return `Bonus permanent (${effetAjuste.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}) — normalement fixé une fois pour toutes à l'acquisition de la capacité, pas à relancer ici.`;
       }
       if (cible && cible.genre === "perso" && persos[cible.id]) {
-        appliquerBonusSurPerso(persos[cible.id], effet, libelle, { perso, rang }, valeurResolue);
-        return `Bonus (${effet.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}, ${effet.duree}) appliqué à ${cible.nom}.`;
+        appliquerBonusSurPerso(persos[cible.id], effetAjuste, libelle, { perso, rang }, valeurResolue);
+        return `Bonus (${effetAjuste.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}, ${effetAjuste.duree}) appliqué à ${cible.nom}.`;
       }
-      return `Bonus (${effet.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}, ${effet.duree}) — aucune cible sélectionnée, à appliquer manuellement.`;
+      return `Bonus (${effetAjuste.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}, ${effetAjuste.duree}) — aucune cible sélectionnée, à appliquer manuellement.`;
     }
     if (effet.type === "retraitEtat") {
       // Moine — Voie de l'ascétisme, rang 3 "Jeûne purificateur" : retire UN

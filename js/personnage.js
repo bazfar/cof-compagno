@@ -985,11 +985,20 @@ class Personnage extends Entite {
   // bonusReductionCapacites pour l'autre choix) — lu par
   // Capacites.resoudreEffet côté js/capacites.js. null si non applicable.
   bonusDegatsSortsChaos() {
+    const termes = [];
     if ((this.classe === "necromancien" || this.classe === "magicien") && (this.corruptionMajeure || 0) >= 5) {
       const cap = this.capaciteEntree("Voie du chaos", 4);
-      if (cap && cap.choix === "degats") return "1d6";
+      if (cap && cap.choix === "degats") termes.push("1d6");
     }
-    return null;
+    // Nécromancien "Avatar du chaos" / Magicien "Avatar du Vide" (Voie du
+    // chaos rang 5) : +2d6 DM à tous les sorts tant que l'état temporaire
+    // reste actif. Gap corrigé : cette méthode ne vérifiait jusqu'ici que le
+    // choix permanent CA 5+ ci-dessus, jamais ce buff temporaire du rang 5 —
+    // les deux peuvent se cumuler (rangs différents, indépendants).
+    if ((this.etatsActifs || []).some((e) => e.idEtat === "avatar_du_chaos" || e.idEtat === "avatar_du_vide")) {
+      termes.push("2d6");
+    }
+    return termes.length ? termes.join("+") : null;
   }
   // Chevalier "Marque du serment brisé" (Voie du chaos rang 4, dès CA 5+),
   // choix "degats" : +1d8 DM chaotique sur l'arme de prédilection — lu par
