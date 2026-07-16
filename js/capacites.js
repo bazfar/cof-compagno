@@ -813,6 +813,32 @@ const Capacites = (() => {
         }
         return `${total} dégâts (${detail}) — aucune cible sélectionnée, à appliquer manuellement.`;
       }
+      // Barde — Voie de la rapière, rang 5 "Botte mortelle" : ignore 2 points
+      // fixes de RD (armure) de la cible — même calcul dédié que Trophée
+      // ultime du Chasseur ci-dessus (RD-2 au lieu de RD/2), PAS
+      // Carte.appliquerDegatsCombat/appliquerDegatsPersoLocal (réduction
+      // complète). Le bonus "+2d6 si cible déjà affaiblie" reste manuel (pas
+      // de suivi d'état créature pour un monstre, même limite documentée
+      // ailleurs) — cette formule "2d6" est déjà le bonus, appliqué tel quel.
+      if (perso.classe === "barde" && voie === "Voie de la rapière" && rang === 5) {
+        if (cible && cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat && Carte.definirPvCombat) {
+          const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
+          if (!tok) return `${total} dégâts (${detail}) — cible introuvable sur la table de combat.`;
+          const reduction = Math.max(0, (tok.armure || 0) - 2);
+          const degatsNets = Math.max(0, total - reduction);
+          const pvApres = Math.max(0, (tok.pvActuel ?? tok.pvMax ?? 0) - degatsNets);
+          Carte.definirPvCombat(cible.id, pvApres);
+          return `${total} dégâts (${detail}) → ${tok.nom} : -${degatsNets} après RD-2 (${reduction}), ${pvApres} PV restants.`;
+        }
+        if (cible && cible.genre === "perso" && persos[cible.id]) {
+          const pCible = persos[cible.id];
+          const reduction = Math.max(0, Personnage.depuisJSON(pCible).reductionDegats() - 2);
+          const degatsNets = Math.max(0, total - reduction);
+          pCible.pvActuel = Math.max(0, (pCible.pvActuel || 0) - degatsNets);
+          return `${total} dégâts (${detail}) → ${cible.nom} : -${degatsNets} après RD-2 (${reduction}), ${pCible.pvActuel} PV restants.`;
+        }
+        return `${total} dégâts (${detail}) — aucune cible sélectionnée, à appliquer manuellement.`;
+      }
       const volDeVieActif = perso.classe === "necromancien" && voie === "Voie du sang" && [1, 3, 5].includes(rang);
       if (cible && cible.genre === "monstre" && typeof Carte !== "undefined") {
         const res = Carte.appliquerDegatsCombat(cible.id, total);
@@ -950,8 +976,7 @@ const Capacites = (() => {
       // avec le rang 2, ou -2 → -4 sans, mais l'acquisition séquentielle des
       // rangs — cf. creation, "impossible de prendre le rang 3 sans avoir les
       // rangs 1 et 2" — garantit que le rang 4 a toujours aussi le rang 2).
-      if (voie === "Voie du chant" && rang === 1 && effet.cible === "attaque" && perso.classe === "barde"
-          && effet.valeur === -2) {
+      if (voie === "Voie du chant" && rang === 1 && perso.classe === "barde" && effet.valeur === -2) {
         if (perso.rangMaxVoie("Voie du chant") >= 2) valeurBrute = -3;
         if (perso.rangMaxVoie("Voie du chant") >= 4) valeurBrute = valeurBrute * 2;
       }
@@ -1262,6 +1287,40 @@ const Capacites = (() => {
       messages.push(`Fusion élémentaire : ${combo.nom}.`);
     }
 
+    // Barde — Voie de l'alcoolisme (rangs 1 à 5, "Premier brassage" →
+    // "Nectar ultime") : chaque dose impose un test de CON à DD fixe
+    // (12/14/16/18/20 selon le rang) — échec → le bonus (choisi via
+    // effet.choix, cf. données) est divisé par 2 (arrondi inférieur, même
+    // convention que le demi-RD du Chasseur "Trophée ultime") et le Barde
+    // gagne 1 point d'état Ivresse. Ivresse cumulable : chaque échec pose une
+    // NOUVELLE entrée etatsActifs distincte (jamais fusionnée, comme tout
+    // autre état du catalogue) — le total de points = nombre d'entrées
+    // actives. Le malus global qui en découle ("-1 à tous les tests par
+    // point") reste non automatisé : aucun malus "tous les tests" n'est câblé
+    // nulle part dans l'app (Fatiguée/Halluciné ont le même statut, retrait
+    // manuel comme le reste des états qui n'expirent pas seuls) — pas une
+    // limite propre au Barde.
+    if (source.voie === "Voie de l'alcoolisme" && perso.classe === "barde" && [1, 2, 3, 4, 5].includes(source.rang)) {
+      const DD_ALCOOL = { 1: 12, 2: 14, 3: 16, 4: 18, 5: 20 };
+      const dd = DD_ALCOOL[source.rang];
+      const modCON = perso.mod("CON");
+      const d20 = App.lancerDe(20);
+      const totalCON = d20 + modCON;
+      const reussite = totalCON >= dd;
+      App.ajouterHisto(`${libelle} — Test de CON`, totalCON, false, false, `d20[${d20}] ${modCON >= 0 ? "+" : ""}${modCON} vs ${dd}`);
+      if (reussite) {
+        messages.push(`Test de CON : ${totalCON} vs ${dd} — réussi, dose pleine.`);
+      } else {
+        mecanique = Object.assign({}, mecanique, {
+          effets: mecanique.effets.map((e) => (e.type === "bonus" && e.cible === "choix")
+            ? Object.assign({}, e, { valeur: Math.floor(e.valeur / 2) }) : e),
+        });
+        const msgIvresse = resoudreEffet({ type: "etat", id: "ivresse", duree: "permanente" },
+          { perso, rang: source.rang, voie: source.voie, cible, libelle, persos });
+        messages.push(`Test de CON : ${totalCON} vs ${dd} — échec, bonus divisé par 2. ${msgIvresse || ""}`);
+      }
+    }
+
     const attaqueVsDef = !!(mecanique.jetOppose && mecanique.jetOppose.caracDefenseur === "DEF");
 
     if (mecanique.jetOppose) {
@@ -1310,7 +1369,7 @@ const Capacites = (() => {
           messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) vs DEF ${defCible} — ${touche ? "Touché !" : "Raté."}`);
         }
 
-        resolutionDegats = { touche, critique, echecCritique, totalAttaque: total, defCible, persoId, source, mecanique, cible };
+        resolutionDegats = { touche, critique, echecCritique, totalAttaque: total, defCible, persoId, source, mecanique, cible, choixEffet };
       } else {
         // caracDefenseur ≠ "DEF" (ex. "CHA"/"SAG" pour les tests opposés de
         // séduction/Chaos du Barde, "Volonte" pour Requiem du silence) :
@@ -1502,7 +1561,7 @@ const Capacites = (() => {
     if (!resolutionDegats || resolutionDegats.touche === false) {
       return { ok: false, messages: ["Cette attaque n'a pas touché — aucun dégât à résoudre."] };
     }
-    const { persoId, source, mecanique, cible, critique } = resolutionDegats;
+    const { persoId, source, mecanique, cible, critique, choixEffet } = resolutionDegats;
     const persos = App.chargerPersos();
     const p = persos[persoId];
     if (!p) return { ok: false, messages: ["Personnage introuvable."] };
@@ -1512,7 +1571,11 @@ const Capacites = (() => {
     const messages = [];
     (mecanique.effets || []).forEach((effet) => {
       if (!TYPES_EFFETS_DIFFERES.includes(effet.type) && !effet.differe) return;
-      const msg = resoudreEffet(effet, { perso, rang: source.rang, voie: source.voie, cible, libelle, persos, critique });
+      // effet.cible === "choix" différé (ex. Barde "Note discordante") : même
+      // substitution que dans lancer() ci-dessus, à partir du choix capturé
+      // au moment du jet d'attaque (resolutionDegats.choixEffet).
+      const effetResolu = (effet.cible === "choix" && choixEffet) ? Object.assign({}, effet, { cible: choixEffet }) : effet;
+      const msg = resoudreEffet(effetResolu, { perso, rang: source.rang, voie: source.voie, cible, libelle, persos, critique });
       if (msg) messages.push(msg);
     });
 
