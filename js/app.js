@@ -6972,6 +6972,7 @@ const App = (() => {
 
   let _bestFamille = "";
   let _bestDang = "";
+  let _bestRace = "";
 
   function rendreBestiaire() {
     if (typeof BESTIAIRE === "undefined") return;
@@ -6988,6 +6989,12 @@ const App = (() => {
       });
       selFam.value = _bestFamille;
       selFam.onchange = () => { _bestFamille = selFam.value; _afficherMonstres(); };
+    }
+
+    const selRace = document.getElementById("filtre-race");
+    if (selRace) {
+      selRace.value = _bestRace;
+      selRace.onchange = (e) => { _bestRace = e.target.value; _afficherMonstres(); };
     }
 
     // Filtres dangérosité
@@ -7011,6 +7018,7 @@ const App = (() => {
     const monstres = BESTIAIRE.filter(m => {
       if (_bestFamille && m.famille !== _bestFamille) return false;
       if (_bestDang && String(m.dangerosite) !== _bestDang) return false;
+      if (_bestRace && !(Array.isArray(m.race) && m.race.includes(_bestRace))) return false;
       return true;
     });
 
@@ -7039,6 +7047,9 @@ const App = (() => {
     const tier = m.tier ? `<span class="badge-tier badge-tier-${echapper(m.tier)}">${echapper(TIER_LABELS[m.tier] || m.tier)}</span>` : "";
     const taille = m.taille ? `<span class="badge-taille">${echapper(m.taille)}</span>` : "";
     const dang = `<span class="badge-dang dang-${m.dangerosite}" title="Dangérosité">${_etoiles(m.dangerosite || 0)}</span>`;
+    const race = Array.isArray(m.race) && m.race.length
+      ? m.race.map(r => `<span class="badge-race">${echapper(r)}</span>`).join("")
+      : "";
 
     const statsHtml = `<div class="monstre-stats">
       <span title="Points de Vie"><strong>PV</strong> ${m.pv ?? "—"}</span>
@@ -7067,7 +7078,7 @@ const App = (() => {
     return `<div class="carte carte-monstre">
       <div class="monstre-header">
         <div class="monstre-nom">${emoji} ${echapper(m.nom)} ${boss}${tier}</div>
-        <div class="monstre-meta">${dang} ${taille}</div>
+        <div class="monstre-meta">${dang} ${taille}${race}</div>
       </div>
       ${m.categorie || m.faction ? `<div class="monstre-sous">${[m.categorie, m.faction].filter(Boolean).map(echapper).join(" · ")}</div>` : ""}
       ${statsHtml}

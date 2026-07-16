@@ -1525,6 +1525,15 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
   border-radius: 4px;
 }
 
+.badge-race {
+  background: var(--parchemin-fonce);
+  color: var(--encre);
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 3px;
+}
+
 .badge-dang {
   font-size: 0.72rem;
   letter-spacing: 1px;
