@@ -111,6 +111,12 @@ const Combat = (() => {
     // que Totem de la vélocité ci-dessus, +5 cases (DEPLACEMENT_BASE) tant
     // que l'état 'elan_commandant' reste actif (1 tour).
     if ((p.etatsActifs || []).some((e) => e.idEtat === "elan_commandant")) bonus += DEPLACEMENT_BASE;
+    // Druide — Voie des compagnons, rang 5 "Forme animale" (choix "loup",
+    // dex/crit) : +2 cases de déplacement (agilité du loup) tant que l'état
+    // 'forme_loup' reste actif — plus modeste que Totem de la vélocité
+    // (doublement complet), cohérent avec un bonus parmi d'autres de la même
+    // capacité plutôt qu'une capacité dédiée au déplacement.
+    if ((p.etatsActifs || []).some((e) => e.idEtat === "forme_loup")) bonus += 2;
     return DEPLACEMENT_BASE + bonus;
   }
 

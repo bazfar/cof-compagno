@@ -5348,6 +5348,10 @@ const App = (() => {
     // cette mécanique via leurs propres états dédiés.
     const formeChaosActive = typeDegats === "physique" && (p.etatsActifs || []).some(
       (e) => e.idEtat === "forme_chaos_sauvage" || e.idEtat === "avatar_du_chaos" || e.idEtat === "avatar_du_vide");
+    // Druide — Voie des compagnons, rang 5 "Forme animale" (choix "ours",
+    // tank) : même principe que Forme du chaos sauvage ci-dessus, divise par
+    // 2 (arrondi inf.) les dégâts PHYSIQUES uniquement pendant sa durée.
+    const formeOursActive = typeDegats === "physique" && (p.etatsActifs || []).some((e) => e.idEtat === "forme_ours");
     const rempartActif = !!rempartArme && perso.aRempart();
 
     const reductionLourde = typeDegats === "physique" ? perso.bonusReductionLourdeDons() : 0;
@@ -5361,7 +5365,7 @@ const App = (() => {
     // Demi-Orc — Résistance Instinctive (rang racial 3) : -3 dégâts quand le
     // résultat passerait sous la moitié des PV max.
     degatsNets = Math.max(0, degatsNets - perso.reductionSeuilBasPv(degatsNets));
-    if (formeChaosActive) degatsNets = Math.floor(degatsNets / 2);
+    if (formeChaosActive || formeOursActive) degatsNets = Math.floor(degatsNets / 2);
     if (coeurMontagneActif || sanctuaireActif) degatsNets = 0;
 
     // PV temporaires (cf. Capacites.appliquerPvTemporairesSurPerso) : absorbent
@@ -5389,9 +5393,10 @@ const App = (() => {
       if (reductionNaturelle > 0) sources.push("résistance naturelle");
       if (reductionRempart > 0) sources.push("Rempart");
       const suffixeReduction = sources.length ? ` après réduction (${sources.join(" + ")}, −${reductionFlatTotale})` : "";
-      const suffixeChaos = formeChaosActive ? " puis divisés par 2 (Forme du chaos sauvage)" : "";
+      const suffixeChaos = formeChaosActive ? " puis divisés par 2 (Forme du chaos sauvage)"
+        : formeOursActive ? " puis divisés par 2 (Forme animale — Ours)" : "";
       const suffixePvTemp = absorbeParPvTemp > 0 ? ` dont ${absorbeParPvTemp} absorbés par les PV temporaires (${p.pvTemporaires} restants)` : "";
-      message = (sources.length || formeChaosActive || absorbeParPvTemp > 0)
+      message = (sources.length || formeChaosActive || formeOursActive || absorbeParPvTemp > 0)
         ? `🛡 ${degatsBruts} dégâts subis${suffixeReduction}${suffixeChaos} → ${degatsNets}${suffixePvTemp}, ${degatsVersPvReels} sur les PV réels.`
         : `${degatsVersPvReels} dégâts subis.`;
     }

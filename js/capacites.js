@@ -730,6 +730,29 @@ const Capacites = (() => {
       { type: "bonus", cible: "attaque", valeur: -2, duree: "1", differe: true } ] },
   };
 
+  // Druide — Voie des compagnons, rang 5 "Forme animale" : le texte d'origine
+  // ("transformation complète, stats remplacées par celles de l'animal")
+  // n'a pas d'équivalent dans le moteur (pas de stat-block alternatif pour
+  // un PJ) — modélisé à la place (validé avec Thomas) comme un buff temporaire
+  // à choisir à l'activation entre deux profils, même principe que
+  // FUSIONS_ELEMENTAIRES_MOINE ci-dessus : "ours" (tank — DEF, PV temp,
+  // réduction de dégâts, dégâts de griffes) et "loup" (dex/crit — DEF plus
+  // modeste, Initiative, déplacement, seuil de critique abaissé, dégâts de
+  // crocs). Durée 5+Mod.SAG tours, alignée sur Masque du prédateur (même
+  // classe/voie, rang 4).
+  const FORMES_ANIMALES_DRUIDE = {
+    ours: { nom: "Ours (tank)", effets: [
+      { type: "bonus", cible: "DEF", valeur: 4, duree: "5+Mod.SAG" },
+      { type: "pvTemp", formule: "2d6", duree: "5+Mod.SAG" },
+      { type: "bonus", cible: "degats", valeur: "1d6", duree: "5+Mod.SAG" },
+      { type: "etat", id: "forme_ours", duree: "5+Mod.SAG" } ] },
+    loup: { nom: "Loup (dex/crit)", effets: [
+      { type: "bonus", cible: "DEF", valeur: 2, duree: "5+Mod.SAG" },
+      { type: "bonus", cible: "initiative", valeur: "Mod.DEX", duree: "5+Mod.SAG" },
+      { type: "bonus", cible: "degats", valeur: "1d4", duree: "5+Mod.SAG" },
+      { type: "etat", id: "forme_loup", duree: "5+Mod.SAG" } ] },
+  };
+
   // Mute p.corruptionMajeure une seule fois par combat (corruptionSeuilFranchi,
   // remis à false par Combat.terminerCombat) quand la jauge dépasse le seuil —
   // rester au-dessus ne la fait pas grimper indéfiniment dans le même combat.
@@ -1377,6 +1400,17 @@ const Capacites = (() => {
       const combo = FUSIONS_ELEMENTAIRES_MOINE[choixEffet] || FUSIONS_ELEMENTAIRES_MOINE.feu_glace;
       mecanique = Object.assign({}, mecanique, { effets: combo.effets });
       messages.push(`Fusion élémentaire : ${combo.nom}.`);
+    }
+
+    // Druide — Voie des compagnons, rang 5 "Forme animale" : substitue
+    // mecanique.effets par le profil choisi (cf. FORMES_ANIMALES_DRUIDE),
+    // même principe que Fusion élémentaire ci-dessus — pas de jetOppose ici
+    // (cible: "soi"), les effets s'appliquent directement via la boucle
+    // standard plus bas, sans retour anticipé.
+    if (source.voie === "Voie des compagnons" && source.rang === 5 && perso.classe === "druide") {
+      const forme = FORMES_ANIMALES_DRUIDE[choixEffet] || FORMES_ANIMALES_DRUIDE.ours;
+      mecanique = Object.assign({}, mecanique, { effets: forme.effets });
+      messages.push(`Forme animale : ${forme.nom}.`);
     }
 
     // Barde — Voie de l'alcoolisme (rangs 1 à 5, "Premier brassage" →

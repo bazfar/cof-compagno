@@ -540,6 +540,13 @@ class Personnage extends Entite {
     if (type === "distance" && this.aTirFatal()) {
       seuil = Math.min(seuil, 18);
     }
+    // Druide — Voie des compagnons, rang 5 "Forme animale" (choix "loup",
+    // dex/crit) : critique sur 18-20 au lieu de 20, uniquement sur les
+    // attaques au contact (crocs), tant que l'état temporaire 'forme_loup'
+    // reste actif.
+    if (type === "contact" && (this.etatsActifs || []).some((e) => e.idEtat === "forme_loup")) {
+      seuil = Math.min(seuil, 18);
+    }
     const arme = type === "contact" ? this.armeContactEquipee()
       : type === "distance" ? this.armeDistanceEquipee()
       : null;
