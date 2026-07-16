@@ -2535,16 +2535,22 @@ const App = (() => {
       .sort((a, b) => b.envoyeLe - a.envoyeLe);
   }
 
+  // Sentinelle pour "Tous les joueurs" dans le select destinataire — jamais
+  // un vrai prénom (aucun joueur ne peut s'appeler "__tous__"), reconnue par
+  // envoyerMessage() ci-dessous pour diffuser au lieu de cibler un seul nom.
+  const DESTINATAIRE_TOUS = "__tous__";
+
   function _rendreOptionsDestinatairesMessage() {
     const sel = document.getElementById("msg-destinataire");
     if (!sel) return;
     const persos = chargerPersos();
     const noms = _rosterJoueurs(persos);
     const valeurAvant = sel.value;
+    const optionTous = `<option value="${DESTINATAIRE_TOUS}">📢 Tous les joueurs</option>`;
     sel.innerHTML = noms.length
-      ? noms.map((n) => `<option value="${echapper(n)}">${echapper(n)}</option>`).join("")
+      ? optionTous + noms.map((n) => `<option value="${echapper(n)}">${echapper(n)}</option>`).join("")
       : `<option value="">Aucun joueur connu</option>`;
-    if (noms.includes(valeurAvant)) sel.value = valeurAvant;
+    if (valeurAvant === DESTINATAIRE_TOUS || noms.includes(valeurAvant)) sel.value = valeurAvant;
   }
 
   function envoyerMessage() {
@@ -2556,7 +2562,22 @@ const App = (() => {
     if (!destinataireNom) { toast("Choisis un destinataire."); return; }
     if (!texte) { toast("Écris un message avant d'envoyer."); return; }
     const messages = _messages();
-    messages.push({ id: _genMessageId(), destinataireNom, texte, envoyeLe: Date.now(), lu: false });
+    const envoyeLe = Date.now();
+    if (destinataireNom === DESTINATAIRE_TOUS) {
+      // Diffusion : un message individuel par joueur connu (même roster que
+      // le select), plutôt qu'un seul enregistrement partagé — évite que le
+      // statut "lu" d'un joueur (marquerMessageLu, cf. plus bas) rejaillisse
+      // sur les autres, puisque m.lu est un champ partagé par message.
+      const noms = _rosterJoueurs(chargerPersos());
+      if (!noms.length) { toast("Aucun joueur connu à qui diffuser."); return; }
+      noms.forEach((nom) => messages.push({ id: _genMessageId(), destinataireNom: nom, texte, envoyeLe, lu: false }));
+      SyncStore.set(STORAGE_MESSAGES, messages);
+      champ.value = "";
+      toast(`Message diffusé à ${noms.length} joueur(s).`);
+      rendreMessages();
+      return;
+    }
+    messages.push({ id: _genMessageId(), destinataireNom, texte, envoyeLe, lu: false });
     SyncStore.set(STORAGE_MESSAGES, messages);
     champ.value = "";
     toast(`Message envoyé à ${destinataireNom}.`);
@@ -2582,11 +2603,36 @@ const App = (() => {
     if (role === "mj") {
       _rendreOptionsDestinatairesMessage();
       const envoyes = _messages().slice().sort((a, b) => b.envoyeLe - a.envoyeLe);
-      zone.innerHTML = envoyes.length
-        ? envoyes.map((m) => `<div class="message-ligne${m.lu ? "" : " message-non-lu"}">
-            <div class="message-entete"><strong>${echapper(m.destinataireNom)}</strong> · ${_formatDateMessage(m.envoyeLe)}${m.lu ? " · lu" : " · pas encore lu"}</div>
-            <div class="message-texte">${echapper(m.texte)}</div>
-          </div>`).join("")
+      // Une diffusion "Tous les joueurs" (envoyerMessage) crée un message
+      // PAR joueur (même texte, même envoyeLe) — regroupés ici en une seule
+      // ligne "📢 Tous les joueurs (N)" côté MJ, pour ne pas noyer la liste
+      // envoyée d'autant de lignes que de joueurs à la table.
+      const groupes = [];
+      const dejaGroupe = new Set();
+      envoyes.forEach((m) => {
+        if (dejaGroupe.has(m.id)) return;
+        const memeEnvoi = envoyes.filter((mm) => mm.envoyeLe === m.envoyeLe && mm.texte === m.texte);
+        if (memeEnvoi.length > 1) {
+          memeEnvoi.forEach((mm) => dejaGroupe.add(mm.id));
+          groupes.push({ diffusion: true, envoyeLe: m.envoyeLe, texte: m.texte, membres: memeEnvoi });
+        } else {
+          dejaGroupe.add(m.id);
+          groupes.push({ diffusion: false, envoyeLe: m.envoyeLe, texte: m.texte, membres: [m] });
+        }
+      });
+      zone.innerHTML = groupes.length
+        ? groupes.map((g) => {
+            const nomLabel = g.diffusion ? `📢 Tous les joueurs (${g.membres.length})` : echapper(g.membres[0].destinataireNom);
+            const nbLus = g.membres.filter((mm) => mm.lu).length;
+            const statutLabel = g.diffusion
+              ? ` · ${nbLus}/${g.membres.length} lu(s)`
+              : g.membres[0].lu ? " · lu" : " · pas encore lu";
+            const nonLu = nbLus < g.membres.length;
+            return `<div class="message-ligne${nonLu ? " message-non-lu" : ""}">
+              <div class="message-entete"><strong>${nomLabel}</strong> · ${_formatDateMessage(g.envoyeLe)}${statutLabel}</div>
+              <div class="message-texte">${echapper(g.texte)}</div>
+            </div>`;
+          }).join("")
         : `<div class="vide">Aucun message envoyé pour l'instant.</div>`;
       return;
     }
