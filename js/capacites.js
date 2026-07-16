@@ -1304,6 +1304,55 @@ const Capacites = (() => {
       return { ok: true, messages };
     }
 
+    // Druide — Voie de la nature, rang 3 "Combat au bâton" : DEUX attaques de
+    // contact FIXES contre la DEF de la même cible (contrairement à Avalanche
+    // de coups du Moine ci-dessus, qui boucle jusqu'au premier raté) — hors
+    // du schéma mecanique.jetOppose standard (celui-ci ne résout qu'UN seul
+    // jet). Chacune 1d6+Mod.FOR ou 1d6+Mod.DEX selon le choix fait à
+    // l'activation (choixEffet, cf. données) — même caractéristique pour les
+    // deux attaques (assomption documentée dans la donnée). Retourne tôt.
+    if (source.voie === "Voie de la nature" && source.rang === 3 && perso.classe === "druide") {
+      if (!cible) return { ok: false, messages: ["Choisis une cible avant d'activer Combat au bâton."] };
+      const statChoisie = choixEffet === "DEX" ? "DEX" : "FOR";
+      const defCible = obtenirDefCible(cible, persos);
+      const bonusAtk = perso.bonusAttaque("contact");
+      const critMin = perso.critMinAttaque("contact");
+      let totalDegats = 0;
+      const detailsAttaques = [];
+      for (let i = 0; i < 2; i++) {
+        const d20 = App.lancerDe(20);
+        const totalAtk = d20 + bonusAtk;
+        const critique = d20 === 20 || (critMin && d20 >= critMin);
+        const echecCritique = d20 === 1;
+        const touche = !echecCritique && (critique || defCible === null || totalAtk >= defCible);
+        let detail = `${totalAtk}${critique ? "!" : ""}`;
+        if (touche) {
+          const { total: deg, detail: detDeg } = resoudreExpression(`1d6+Mod.${statChoisie}`, { perso, rang: source.rang, critique });
+          totalDegats += deg;
+          detail += ` touché (${deg} DM : ${detDeg})`;
+        } else {
+          detail += echecCritique ? " raté (1 naturel)" : " raté";
+        }
+        detailsAttaques.push(detail);
+      }
+      App.ajouterHisto(`${libelle} — Attaques (Mod.${statChoisie})`, totalDegats, false, false, detailsAttaques.join(" | "));
+      messages.push(`Combat au bâton (Mod.${statChoisie}) : ${detailsAttaques.join(" | ")}` +
+        (defCible !== null ? ` vs DEF ${defCible}` : " — DEF cible inconnue, comparaison manuelle") +
+        ` — ${totalDegats} DM au total.`);
+      if (totalDegats > 0) {
+        if (cible.genre === "monstre" && typeof Carte !== "undefined") {
+          const res = Carte.appliquerDegatsCombat(cible.id, totalDegats);
+          if (res) messages.push(`→ ${res.nom} : ${res.pvActuel} PV restants.`);
+        } else if (cible.genre === "perso" && persos[cible.id]) {
+          const res = appliquerDegatsPersoLocal(persos[cible.id], totalDegats);
+          messages.push(`→ ${cible.nom} : ${res.pvActuel} PV restants.`);
+        }
+      }
+      usage.appliquer();
+      App.sauverPersos(persos);
+      return { ok: true, messages };
+    }
+
     // Moine — Voie des éléments, rang 4 "Fusion élémentaire" (1x/combat) :
     // substitue mecanique.effets par le combo choisi (cf.
     // FUSIONS_ELEMENTAIRES_MOINE) puis laisse le reste de lancer() dérouler

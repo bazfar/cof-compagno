@@ -519,6 +519,11 @@ const App = (() => {
     // Chevalier — Voie du chaos rang 5 "Avatar du pacte" : +2d6 DM tant que
     // l'état 'avatar_du_pacte' reste actif.
     if (dmgContact && perso.bonusDegatsAvatarPacte()) dmgContact += "+" + perso.bonusDegatsAvatarPacte();
+    // Bonus de dégâts générique posé par une capacité "bonus cible:degats"
+    // (ex. Druide "Masque du prédateur"/"Totem de la force sauvage") — dés
+    // déjà résolus une seule fois à l'activation (cf. appliquerBonusSurPerso),
+    // stockés comme un nombre fixe, lu génériquement via bonusTemporaire.
+    if (dmgContact && perso.bonusTemporaire("degats")) dmgContact += "+" + perso.bonusTemporaire("degats");
     let dmgDistance = formuleDegats(armeDistance);
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
@@ -872,6 +877,11 @@ const App = (() => {
     // Chevalier — Voie du chaos rang 5 "Avatar du pacte" : +2d6 DM tant que
     // l'état 'avatar_du_pacte' reste actif.
     if (dmgContact && perso.bonusDegatsAvatarPacte()) dmgContact += "+" + perso.bonusDegatsAvatarPacte();
+    // Bonus de dégâts générique posé par une capacité "bonus cible:degats"
+    // (ex. Druide "Masque du prédateur"/"Totem de la force sauvage") — dés
+    // déjà résolus une seule fois à l'activation (cf. appliquerBonusSurPerso),
+    // stockés comme un nombre fixe, lu génériquement via bonusTemporaire.
+    if (dmgContact && perso.bonusTemporaire("degats")) dmgContact += "+" + perso.bonusTemporaire("degats");
     let dmgDistance = armeDistance ? formuleDegats(armeDistance) : null;
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
@@ -4057,6 +4067,11 @@ const App = (() => {
     // Chevalier — Voie du chaos rang 5 "Avatar du pacte" : +2d6 DM tant que
     // l'état 'avatar_du_pacte' reste actif.
     if (dmgContact && perso.bonusDegatsAvatarPacte()) dmgContact += "+" + perso.bonusDegatsAvatarPacte();
+    // Bonus de dégâts générique posé par une capacité "bonus cible:degats"
+    // (ex. Druide "Masque du prédateur"/"Totem de la force sauvage") — dés
+    // déjà résolus une seule fois à l'activation (cf. appliquerBonusSurPerso),
+    // stockés comme un nombre fixe, lu génériquement via bonusTemporaire.
+    if (dmgContact && perso.bonusTemporaire("degats")) dmgContact += "+" + perso.bonusTemporaire("degats");
     // Guerrier — Voie du soldat, rang 1 "Posture de combat" (contact
     // uniquement ici : attaque d'opportunité, pas de dmgDistance dans ce bloc).
     if (dmgContact && perso.bonusTemporaire("DM")) dmgContact += (perso.bonusTemporaire("DM") >= 0 ? "+" : "") + perso.bonusTemporaire("DM");
