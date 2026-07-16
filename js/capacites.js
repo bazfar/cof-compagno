@@ -296,6 +296,26 @@ const Capacites = (() => {
     });
   }
 
+  // Moine — Voie de l'ascétisme, rang 3 "Jeûne purificateur" (et toute
+  // future capacité de "purge") : retire UN SEUL état actif de catégorie non
+  // "buff" (le plus ancien posé), simplifié (validé avec Thomas) par rapport
+  // au texte d'origine ("purge un effet néfaste (poison, maladie, peur,
+  // charme)") — l'app n'a pas de sous-catégorie poison/maladie séparée,
+  // "un malus présent" est traité comme n'importe quel état non-buff actif.
+  // Nouveau type d'effet générique 'retraitEtat' (cf. resoudreEffet), premier
+  // du genre — réutilisable par d'autres capacités de soin/purge à venir.
+  function _retirerUnMalus(pCible) {
+    const liste = pCible.etatsActifs || [];
+    const idx = liste.findIndex((e) => {
+      if (!e.idEtat) return false; // entrée "bonus" pure (pas d'état nommé), jamais ciblée par une purge
+      const idCatalogue = /^marquee_.+/.test(e.idEtat) ? "marquee" : e.idEtat;
+      const def = ETATS[idCatalogue];
+      return def && def.categorie !== "buff";
+    });
+    if (idx === -1) return null;
+    return liste.splice(idx, 1)[0];
+  }
+
   // Magicien — Voie de la magie sauvage (mini-système à 5 rangs) : rang 1
   // "Mutation Sauvage" applique un modificateur aléatoire 2d4-4 (-2 à +4) à
   // CHAQUE sort offensif (tout effet 'degats', cf. son appel dans
@@ -685,6 +705,19 @@ const Capacites = (() => {
         return `Bonus (${effet.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}, ${effet.duree}) appliqué à ${cible.nom}.`;
       }
       return `Bonus (${effet.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}, ${effet.duree}) — aucune cible sélectionnée, à appliquer manuellement.`;
+    }
+    if (effet.type === "retraitEtat") {
+      // Moine — Voie de l'ascétisme, rang 3 "Jeûne purificateur" : retire UN
+      // SEUL état non-buff actif de la cible (cf. _retirerUnMalus), le plus
+      // ancien posé. Type d'effet générique, réutilisable par d'autres
+      // capacités de purge/soin.
+      if (cible && cible.genre === "perso" && persos[cible.id]) {
+        const retire = _retirerUnMalus(persos[cible.id]);
+        if (!retire) return `${cible.nom} ne porte aucun effet néfaste actif à purger.`;
+        const idCatalogue = /^marquee_.+/.test(retire.idEtat) ? "marquee" : retire.idEtat;
+        return `État « ${getEtat(idCatalogue).nom} » retiré de ${cible.nom}.`;
+      }
+      return `Purge un effet néfaste — aucune cible sélectionnée, à appliquer manuellement (pas de suivi d'état automatique pour les monstres).`;
     }
     if (effet.type === "special") {
       return `ℹ️ ${effet.note}`;
