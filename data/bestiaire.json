@@ -8,6 +8,9 @@
       "nom": "Gobelin éclaireur",
       "categorie": "Session 1",
       "faction": "Tribu Rochedent",
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 6,
       "def": 11,
       "init": 4,
@@ -48,6 +51,9 @@
       "nom": "Gobelin garde",
       "categorie": "Session 1",
       "faction": "Tribu Rochedent",
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 12,
       "def": 13,
       "init": 2,
@@ -87,6 +93,9 @@
       "nom": "Kratz, chef de la tribu Rochedent",
       "categorie": "Session 1",
       "faction": "Tribu Rochedent",
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 28,
       "def": 14,
       "init": 3,
@@ -139,6 +148,9 @@
       "nom": "Gobelin chaman",
       "categorie": "Session 1",
       "faction": "Tribu Rochedent",
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 8,
       "def": 10,
       "init": 3,
@@ -180,6 +192,9 @@
       "nom": "Loup des bois",
       "categorie": "Bestiaire général — Tier 1",
       "faction": null,
+      "race": [
+        "monstres"
+      ],
       "pv": 14,
       "def": 12,
       "init": 5,
@@ -220,6 +235,9 @@
       "nom": "Sanglier de rage",
       "categorie": "Bestiaire général — Tier 1",
       "faction": null,
+      "race": [
+        "monstres"
+      ],
       "pv": 20,
       "def": 11,
       "init": 2,
@@ -263,6 +281,9 @@
       "nom": "Spectre de ruine",
       "categorie": "Bestiaire général — Tier 1",
       "faction": "Échos du Chaos",
+      "race": [
+        "corrompu"
+      ],
       "pv": 10,
       "def": 13,
       "init": 4,
@@ -303,6 +324,10 @@
       "nom": "Racine éveillée",
       "categorie": "Bestiaire général — Tier 1",
       "faction": "Gardiens corrompus de la Sève",
+      "race": [
+        "monstres",
+        "corrompu"
+      ],
       "pv": 18,
       "def": 12,
       "init": 1,
@@ -350,6 +375,9 @@
       "nom": "Orc pillard",
       "categorie": "Bestiaire général — Tier 1",
       "faction": "Tribus orques libres",
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 22,
       "def": 13,
       "init": 2,
@@ -390,6 +418,10 @@
       "nom": "Fragment de Sylvath",
       "categorie": "Bestiaire général — Tier 2",
       "faction": "Dieux du Chaos (Enfants de la Sève)",
+      "race": [
+        "monstres",
+        "corrompu"
+      ],
       "pv": 35,
       "def": 15,
       "init": 4,
@@ -434,6 +466,9 @@
       "nom": "Garde impérial de Solvarn",
       "categorie": "Bestiaire général — Tier 2",
       "faction": "Empire de Solvarn",
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 26,
       "def": 16,
       "init": 1,
@@ -477,6 +512,9 @@
       "nom": "Golem de pierre (artisanat nain)",
       "categorie": "Bestiaire général — Tier 2",
       "faction": "Khazrak Dûm (variante)",
+      "race": [
+        "monstres"
+      ],
       "pv": 45,
       "def": 17,
       "init": 0,
@@ -524,6 +562,9 @@
       "nom": "Elfe du Crépuscule renégat",
       "categorie": "Bestiaire général — Tier 2",
       "faction": "Mordanel (renégats)",
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 20,
       "def": 14,
       "init": 5,
@@ -575,6 +616,9 @@
       "nom": "Loup",
       "famille": "loup",
       "tier": "basique",
+      "race": [
+        "monstres"
+      ],
       "categorie": "Bestiaire général — Faune",
       "pv": 12,
       "def": 11,
@@ -607,6 +651,9 @@
       "nom": "Loup vétéran",
       "famille": "loup",
       "tier": "veteran",
+      "race": [
+        "monstres"
+      ],
       "categorie": "Bestiaire général — Faune",
       "pv": 20,
       "def": 12,
@@ -661,6 +708,9 @@
       "nom": "Loup de Sève",
       "famille": "loup",
       "tier": "elite",
+      "race": [
+        "monstres"
+      ],
       "categorie": "Bestiaire général — Faune",
       "pv": 28,
       "def": 13,
@@ -727,6 +777,9 @@
       "nom": "Seigneur des meutes",
       "famille": "loup",
       "tier": "champion",
+      "race": [
+        "monstres"
+      ],
       "categorie": "Bestiaire général — Faune",
       "pv": 42,
       "def": 15,
@@ -817,6 +870,9 @@
       "nom": "Ours des bois",
       "famille": "ours",
       "tier": "basique",
+      "race": [
+        "monstres"
+      ],
       "categorie": "Bestiaire général — Faune",
       "pv": 30,
       "def": 12,
@@ -858,6 +914,9 @@
       "nom": "Ours des cavernes",
       "famille": "ours",
       "tier": "veteran",
+      "race": [
+        "monstres"
+      ],
       "categorie": "Bestiaire général — Faune",
       "pv": 44,
       "def": 13,
@@ -915,6 +974,9 @@
       "nom": "Ours de guerre (dressé)",
       "famille": "ours",
       "tier": "elite",
+      "race": [
+        "monstres"
+      ],
       "categorie": "Bestiaire général — Faune / Créatures dressées",
       "pv": 55,
       "def": 14,
@@ -987,6 +1049,9 @@
       "nom": "Urskar, l'Éveillé",
       "famille": "ours",
       "tier": "champion",
+      "race": [
+        "monstres"
+      ],
       "categorie": "Bestiaire général — Faune / Créatures légendaires",
       "pv": 80,
       "def": 16,
@@ -1087,6 +1152,9 @@
       "nom": "Orc guerrier",
       "famille": "orc",
       "tier": "basique",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes",
       "pv": 18,
       "def": 12,
@@ -1128,6 +1196,9 @@
       "nom": "Orc vétéran",
       "famille": "orc",
       "tier": "veteran",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes",
       "pv": 32,
       "def": 14,
@@ -1194,6 +1265,9 @@
       "nom": "Orc berserker",
       "famille": "orc",
       "tier": "elite",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes",
       "pv": 48,
       "def": 13,
@@ -1280,6 +1354,9 @@
       "nom": "Warchief orque",
       "famille": "orc",
       "tier": "champion",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes",
       "pv": 70,
       "def": 16,
@@ -1396,6 +1473,9 @@
       "nom": "Bandit de grand chemin",
       "famille": "bandit",
       "tier": "basique",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes",
       "pv": 10,
       "def": 11,
@@ -1434,6 +1514,9 @@
       "nom": "Brigand",
       "famille": "bandit",
       "tier": "veteran",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes",
       "pv": 20,
       "def": 13,
@@ -1491,6 +1574,9 @@
       "nom": "Chef de bande",
       "famille": "bandit",
       "tier": "elite",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes",
       "pv": 34,
       "def": 15,
@@ -1587,6 +1673,9 @@
       "nom": "Le Fléau — seigneur hors-la-loi",
       "famille": "bandit",
       "tier": "champion",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes",
       "pv": 55,
       "def": 16,
@@ -1705,6 +1794,9 @@
       "nom": "Garde de ville",
       "famille": "garde",
       "tier": "basique",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
       "pv": 14,
       "def": 13,
@@ -1746,6 +1838,9 @@
       "nom": "Garde vétéran",
       "famille": "garde",
       "tier": "veteran",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
       "pv": 26,
       "def": 15,
@@ -1812,6 +1907,9 @@
       "nom": "Capitaine de garde",
       "famille": "garde",
       "tier": "elite",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
       "pv": 40,
       "def": 17,
@@ -1899,6 +1997,9 @@
       "nom": "Maréchal de la Couronne",
       "famille": "garde",
       "tier": "champion",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
       "pv": 65,
       "def": 19,
@@ -2014,6 +2115,9 @@
       "nom": "Garde lancier",
       "famille": "garde_lancier",
       "tier": "basique",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
       "pv": 14,
       "def": 12,
@@ -2063,6 +2167,9 @@
       "nom": "Garde lancier vétéran",
       "famille": "garde_lancier",
       "tier": "veteran",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
       "pv": 24,
       "def": 14,
@@ -2128,6 +2235,9 @@
       "nom": "Lancier d'élite",
       "famille": "garde_lancier",
       "tier": "elite",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
       "pv": 38,
       "def": 16,
@@ -2213,6 +2323,9 @@
       "nom": "Primus — maître des lignes",
       "famille": "garde_lancier",
       "tier": "champion",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
       "pv": 60,
       "def": 18,
@@ -2320,6 +2433,9 @@
       "nom": "Pillard à la pique",
       "famille": "bandit_lancier",
       "tier": "basique",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes",
       "pv": 10,
       "def": 10,
@@ -2362,6 +2478,9 @@
       "nom": "Rôdeur à la lance",
       "famille": "bandit_lancier",
       "tier": "veteran",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes",
       "pv": 19,
       "def": 12,
@@ -2429,6 +2548,9 @@
       "nom": "Capitaine des piquiers",
       "famille": "bandit_lancier",
       "tier": "elite",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes",
       "pv": 32,
       "def": 14,
@@ -2514,6 +2636,9 @@
       "nom": "La Pointe — commandant hors-la-loi",
       "famille": "bandit_lancier",
       "tier": "champion",
+      "race": [
+        "humanoïdes"
+      ],
       "categorie": "Bestiaire général — Humanoïdes",
       "pv": 50,
       "def": 15,
@@ -2617,6 +2742,9 @@
       "tier": "veteran",
       "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
       "faction": "Église de Solvarn — Sacerdoce Solaire",
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 30,
       "def": 16,
       "init": 3,
@@ -2682,6 +2810,9 @@
       "tier": "elite",
       "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
       "faction": "Église de Solvarn — Sacerdoce Solaire",
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 44,
       "def": 18,
       "init": 3,
@@ -2750,6 +2881,9 @@
       "tier": "champion",
       "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
       "faction": "Église de Solvarn — Sacerdoce Solaire",
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 68,
       "def": 20,
       "init": 3,
@@ -2823,6 +2957,9 @@
       "tier": "basique",
       "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
       "faction": "Église de Solvarn — Sacerdoce Solaire",
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 16,
       "def": 12,
       "init": 1,
@@ -2870,6 +3007,9 @@
       "tier": "veteran",
       "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
       "faction": "Église de Solvarn — Sacerdoce Solaire",
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 26,
       "def": 14,
       "init": 2,
@@ -2921,6 +3061,9 @@
       "tier": "veteran",
       "categorie": "Bestiaire général — Humanoïdes / Valdorne (Ordre du Pont)",
       "faction": "Valdorne — Ordre du Pont",
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 30,
       "def": 16,
       "init": 3,
@@ -2988,6 +3131,9 @@
       "tier": "champion",
       "categorie": "Bestiaire général — Humanoïdes / Valdorne (Ordre du Pont)",
       "faction": "Valdorne — Ordre du Pont",
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 62,
       "def": 19,
       "init": 4,
@@ -3057,6 +3203,9 @@
       "famille": "maitre_betes",
       "categorie": "Bestiaire général — Humanoïdes / Factions sauvages",
       "faction": null,
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 22,
       "def": 13,
       "init": 5,
@@ -3095,6 +3244,9 @@
       "famille": "maitre_betes",
       "categorie": "Bestiaire général — Humanoïdes / Factions sauvages",
       "faction": null,
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 40,
       "def": 15,
       "init": 3,
@@ -3133,6 +3285,9 @@
       "famille": "maitre_betes",
       "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
       "faction": null,
+      "race": [
+        "humanoïdes"
+      ],
       "pv": 28,
       "def": 14,
       "init": 4,
@@ -3188,5 +3343,6 @@
       "emoji": "🐻🪓"
     }
   ],
-  "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide."
+  "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide.",
+  "note_race": "race (tableau) : tags de catégorie de créature, indépendants de famille/categorie/faction. Valeurs possibles : humanoïdes, monstres, mort-vivant, corrompu. Un monstre peut cumuler plusieurs tags (ex: une créature autrefois humaine et relevée par la corruption est à la fois humanoïdes, mort-vivant et corrompu). Distinct du concept Race des Personnages joueurs (elfe, nain, humain...)."
 }

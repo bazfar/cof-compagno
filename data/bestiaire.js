@@ -5,6 +5,9 @@ const BESTIAIRE = [
     "nom": "Gobelin éclaireur",
     "categorie": "Session 1",
     "faction": "Tribu Rochedent",
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 6,
     "def": 11,
     "init": 4,
@@ -45,6 +48,9 @@ const BESTIAIRE = [
     "nom": "Gobelin garde",
     "categorie": "Session 1",
     "faction": "Tribu Rochedent",
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 12,
     "def": 13,
     "init": 2,
@@ -84,6 +90,9 @@ const BESTIAIRE = [
     "nom": "Kratz, chef de la tribu Rochedent",
     "categorie": "Session 1",
     "faction": "Tribu Rochedent",
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 28,
     "def": 14,
     "init": 3,
@@ -136,6 +145,9 @@ const BESTIAIRE = [
     "nom": "Gobelin chaman",
     "categorie": "Session 1",
     "faction": "Tribu Rochedent",
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 8,
     "def": 10,
     "init": 3,
@@ -177,6 +189,9 @@ const BESTIAIRE = [
     "nom": "Loup des bois",
     "categorie": "Bestiaire général — Tier 1",
     "faction": null,
+    "race": [
+      "monstres"
+    ],
     "pv": 14,
     "def": 12,
     "init": 5,
@@ -217,6 +232,9 @@ const BESTIAIRE = [
     "nom": "Sanglier de rage",
     "categorie": "Bestiaire général — Tier 1",
     "faction": null,
+    "race": [
+      "monstres"
+    ],
     "pv": 20,
     "def": 11,
     "init": 2,
@@ -260,6 +278,9 @@ const BESTIAIRE = [
     "nom": "Spectre de ruine",
     "categorie": "Bestiaire général — Tier 1",
     "faction": "Échos du Chaos",
+    "race": [
+      "corrompu"
+    ],
     "pv": 10,
     "def": 13,
     "init": 4,
@@ -300,6 +321,10 @@ const BESTIAIRE = [
     "nom": "Racine éveillée",
     "categorie": "Bestiaire général — Tier 1",
     "faction": "Gardiens corrompus de la Sève",
+    "race": [
+      "monstres",
+      "corrompu"
+    ],
     "pv": 18,
     "def": 12,
     "init": 1,
@@ -347,6 +372,9 @@ const BESTIAIRE = [
     "nom": "Orc pillard",
     "categorie": "Bestiaire général — Tier 1",
     "faction": "Tribus orques libres",
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 22,
     "def": 13,
     "init": 2,
@@ -387,6 +415,10 @@ const BESTIAIRE = [
     "nom": "Fragment de Sylvath",
     "categorie": "Bestiaire général — Tier 2",
     "faction": "Dieux du Chaos (Enfants de la Sève)",
+    "race": [
+      "monstres",
+      "corrompu"
+    ],
     "pv": 35,
     "def": 15,
     "init": 4,
@@ -431,6 +463,9 @@ const BESTIAIRE = [
     "nom": "Garde impérial de Solvarn",
     "categorie": "Bestiaire général — Tier 2",
     "faction": "Empire de Solvarn",
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 26,
     "def": 16,
     "init": 1,
@@ -474,6 +509,9 @@ const BESTIAIRE = [
     "nom": "Golem de pierre (artisanat nain)",
     "categorie": "Bestiaire général — Tier 2",
     "faction": "Khazrak Dûm (variante)",
+    "race": [
+      "monstres"
+    ],
     "pv": 45,
     "def": 17,
     "init": 0,
@@ -521,6 +559,9 @@ const BESTIAIRE = [
     "nom": "Elfe du Crépuscule renégat",
     "categorie": "Bestiaire général — Tier 2",
     "faction": "Mordanel (renégats)",
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 20,
     "def": 14,
     "init": 5,
@@ -572,6 +613,9 @@ const BESTIAIRE = [
     "nom": "Loup",
     "famille": "loup",
     "tier": "basique",
+    "race": [
+      "monstres"
+    ],
     "categorie": "Bestiaire général — Faune",
     "pv": 12,
     "def": 11,
@@ -604,6 +648,9 @@ const BESTIAIRE = [
     "nom": "Loup vétéran",
     "famille": "loup",
     "tier": "veteran",
+    "race": [
+      "monstres"
+    ],
     "categorie": "Bestiaire général — Faune",
     "pv": 20,
     "def": 12,
@@ -658,6 +705,9 @@ const BESTIAIRE = [
     "nom": "Loup de Sève",
     "famille": "loup",
     "tier": "elite",
+    "race": [
+      "monstres"
+    ],
     "categorie": "Bestiaire général — Faune",
     "pv": 28,
     "def": 13,
@@ -724,6 +774,9 @@ const BESTIAIRE = [
     "nom": "Seigneur des meutes",
     "famille": "loup",
     "tier": "champion",
+    "race": [
+      "monstres"
+    ],
     "categorie": "Bestiaire général — Faune",
     "pv": 42,
     "def": 15,
@@ -814,6 +867,9 @@ const BESTIAIRE = [
     "nom": "Ours des bois",
     "famille": "ours",
     "tier": "basique",
+    "race": [
+      "monstres"
+    ],
     "categorie": "Bestiaire général — Faune",
     "pv": 30,
     "def": 12,
@@ -855,6 +911,9 @@ const BESTIAIRE = [
     "nom": "Ours des cavernes",
     "famille": "ours",
     "tier": "veteran",
+    "race": [
+      "monstres"
+    ],
     "categorie": "Bestiaire général — Faune",
     "pv": 44,
     "def": 13,
@@ -912,6 +971,9 @@ const BESTIAIRE = [
     "nom": "Ours de guerre (dressé)",
     "famille": "ours",
     "tier": "elite",
+    "race": [
+      "monstres"
+    ],
     "categorie": "Bestiaire général — Faune / Créatures dressées",
     "pv": 55,
     "def": 14,
@@ -984,6 +1046,9 @@ const BESTIAIRE = [
     "nom": "Urskar, l'Éveillé",
     "famille": "ours",
     "tier": "champion",
+    "race": [
+      "monstres"
+    ],
     "categorie": "Bestiaire général — Faune / Créatures légendaires",
     "pv": 80,
     "def": 16,
@@ -1084,6 +1149,9 @@ const BESTIAIRE = [
     "nom": "Orc guerrier",
     "famille": "orc",
     "tier": "basique",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes",
     "pv": 18,
     "def": 12,
@@ -1125,6 +1193,9 @@ const BESTIAIRE = [
     "nom": "Orc vétéran",
     "famille": "orc",
     "tier": "veteran",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes",
     "pv": 32,
     "def": 14,
@@ -1191,6 +1262,9 @@ const BESTIAIRE = [
     "nom": "Orc berserker",
     "famille": "orc",
     "tier": "elite",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes",
     "pv": 48,
     "def": 13,
@@ -1277,6 +1351,9 @@ const BESTIAIRE = [
     "nom": "Warchief orque",
     "famille": "orc",
     "tier": "champion",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes",
     "pv": 70,
     "def": 16,
@@ -1393,6 +1470,9 @@ const BESTIAIRE = [
     "nom": "Bandit de grand chemin",
     "famille": "bandit",
     "tier": "basique",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes",
     "pv": 10,
     "def": 11,
@@ -1431,6 +1511,9 @@ const BESTIAIRE = [
     "nom": "Brigand",
     "famille": "bandit",
     "tier": "veteran",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes",
     "pv": 20,
     "def": 13,
@@ -1488,6 +1571,9 @@ const BESTIAIRE = [
     "nom": "Chef de bande",
     "famille": "bandit",
     "tier": "elite",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes",
     "pv": 34,
     "def": 15,
@@ -1584,6 +1670,9 @@ const BESTIAIRE = [
     "nom": "Le Fléau — seigneur hors-la-loi",
     "famille": "bandit",
     "tier": "champion",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes",
     "pv": 55,
     "def": 16,
@@ -1702,6 +1791,9 @@ const BESTIAIRE = [
     "nom": "Garde de ville",
     "famille": "garde",
     "tier": "basique",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 14,
     "def": 13,
@@ -1743,6 +1835,9 @@ const BESTIAIRE = [
     "nom": "Garde vétéran",
     "famille": "garde",
     "tier": "veteran",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 26,
     "def": 15,
@@ -1809,6 +1904,9 @@ const BESTIAIRE = [
     "nom": "Capitaine de garde",
     "famille": "garde",
     "tier": "elite",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 40,
     "def": 17,
@@ -1896,6 +1994,9 @@ const BESTIAIRE = [
     "nom": "Maréchal de la Couronne",
     "famille": "garde",
     "tier": "champion",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 65,
     "def": 19,
@@ -2011,6 +2112,9 @@ const BESTIAIRE = [
     "nom": "Garde lancier",
     "famille": "garde_lancier",
     "tier": "basique",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 14,
     "def": 12,
@@ -2060,6 +2164,9 @@ const BESTIAIRE = [
     "nom": "Garde lancier vétéran",
     "famille": "garde_lancier",
     "tier": "veteran",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 24,
     "def": 14,
@@ -2125,6 +2232,9 @@ const BESTIAIRE = [
     "nom": "Lancier d'élite",
     "famille": "garde_lancier",
     "tier": "elite",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 38,
     "def": 16,
@@ -2210,6 +2320,9 @@ const BESTIAIRE = [
     "nom": "Primus — maître des lignes",
     "famille": "garde_lancier",
     "tier": "champion",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 60,
     "def": 18,
@@ -2317,6 +2430,9 @@ const BESTIAIRE = [
     "nom": "Pillard à la pique",
     "famille": "bandit_lancier",
     "tier": "basique",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes",
     "pv": 10,
     "def": 10,
@@ -2359,6 +2475,9 @@ const BESTIAIRE = [
     "nom": "Rôdeur à la lance",
     "famille": "bandit_lancier",
     "tier": "veteran",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes",
     "pv": 19,
     "def": 12,
@@ -2426,6 +2545,9 @@ const BESTIAIRE = [
     "nom": "Capitaine des piquiers",
     "famille": "bandit_lancier",
     "tier": "elite",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes",
     "pv": 32,
     "def": 14,
@@ -2511,6 +2633,9 @@ const BESTIAIRE = [
     "nom": "La Pointe — commandant hors-la-loi",
     "famille": "bandit_lancier",
     "tier": "champion",
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Bestiaire général — Humanoïdes",
     "pv": 50,
     "def": 15,
@@ -2614,6 +2739,9 @@ const BESTIAIRE = [
     "tier": "veteran",
     "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
     "faction": "Église de Solvarn — Sacerdoce Solaire",
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 30,
     "def": 16,
     "init": 3,
@@ -2679,6 +2807,9 @@ const BESTIAIRE = [
     "tier": "elite",
     "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
     "faction": "Église de Solvarn — Sacerdoce Solaire",
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 44,
     "def": 18,
     "init": 3,
@@ -2747,6 +2878,9 @@ const BESTIAIRE = [
     "tier": "champion",
     "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
     "faction": "Église de Solvarn — Sacerdoce Solaire",
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 68,
     "def": 20,
     "init": 3,
@@ -2820,6 +2954,9 @@ const BESTIAIRE = [
     "tier": "basique",
     "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
     "faction": "Église de Solvarn — Sacerdoce Solaire",
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 16,
     "def": 12,
     "init": 1,
@@ -2867,6 +3004,9 @@ const BESTIAIRE = [
     "tier": "veteran",
     "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
     "faction": "Église de Solvarn — Sacerdoce Solaire",
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 26,
     "def": 14,
     "init": 2,
@@ -2918,6 +3058,9 @@ const BESTIAIRE = [
     "tier": "veteran",
     "categorie": "Bestiaire général — Humanoïdes / Valdorne (Ordre du Pont)",
     "faction": "Valdorne — Ordre du Pont",
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 30,
     "def": 16,
     "init": 3,
@@ -2985,6 +3128,9 @@ const BESTIAIRE = [
     "tier": "champion",
     "categorie": "Bestiaire général — Humanoïdes / Valdorne (Ordre du Pont)",
     "faction": "Valdorne — Ordre du Pont",
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 62,
     "def": 19,
     "init": 4,
@@ -3054,6 +3200,9 @@ const BESTIAIRE = [
     "famille": "maitre_betes",
     "categorie": "Bestiaire général — Humanoïdes / Factions sauvages",
     "faction": null,
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 22,
     "def": 13,
     "init": 5,
@@ -3092,6 +3241,9 @@ const BESTIAIRE = [
     "famille": "maitre_betes",
     "categorie": "Bestiaire général — Humanoïdes / Factions sauvages",
     "faction": null,
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 40,
     "def": 15,
     "init": 3,
@@ -3130,6 +3282,9 @@ const BESTIAIRE = [
     "famille": "maitre_betes",
     "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "faction": null,
+    "race": [
+      "humanoïdes"
+    ],
     "pv": 28,
     "def": 14,
     "init": 4,
