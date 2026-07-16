@@ -3922,6 +3922,149 @@
         "description": "Armure noircie fusionnée à la chair corrompue — réduit 3 points de dégâts physiques."
       },
       "emoji": "☠️"
+    },
+    {
+      "id": "cupide_recrue",
+      "nom": "Hors-la-loi",
+      "famille": "cupide",
+      "tier": "recrue",
+      "race": [
+        "humanoïdes"
+      ],
+      "categorie": "Bestiaire général — Humanoïdes",
+      "pv": 10,
+      "def": 11,
+      "init": 3,
+      "atk": 2,
+      "dangerosite": 1,
+      "boss": false,
+      "taille": "moyenne",
+      "voies": [],
+      "attaques": [
+        {
+          "nom": "Épée courte",
+          "armeId": "epee_courte",
+          "bonusAttaque": 2,
+          "effetSpecial": null
+        },
+        {
+          "nom": "Arc court",
+          "armeId": "arc_court",
+          "bonusAttaque": 2,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Loyauté achetée",
+          "description": "Note MJ : si on lui propose plus d'or que ce qu'il gagne à se battre, il se rend ou change de camp au lieu de fuir ou de combattre. Levier RP, pas de jet requis."
+        },
+        {
+          "nom": "Reddition",
+          "description": "Si le groupe est réduit à moins de 50%, ces hors-la-loi testent le moral (SAG diff. 8) ou se rendent / fuient."
+        }
+      ],
+      "lore": "Recrue récente, appâtée par la promesse d'un gain facile. Rien ne la distingue encore d'un bandit ou d'un pirate ordinaire — la corruption qui l'anime n'est pas encore assez ancrée pour se manifester. Selon le contexte, rebaptiser 'Bandit' (route) ou 'Pirate' (mer), sans changer les statistiques.",
+      "armure": null,
+      "emoji": "🗡️"
+    },
+    {
+      "id": "cupide_meneur",
+      "nom": "Meneur avide",
+      "famille": "cupide",
+      "tier": "meneur",
+      "race": [
+        "humanoïdes"
+      ],
+      "categorie": "Bestiaire général — Humanoïdes",
+      "pv": 34,
+      "def": 14,
+      "init": 5,
+      "atk": 5,
+      "dangerosite": 3,
+      "boss": false,
+      "taille": "moyenne",
+      "voies": [],
+      "attaques": [
+        {
+          "nom": "Sabre courbé",
+          "armeId": "epee_batarde",
+          "bonusAttaque": 5,
+          "effetSpecial": null
+        },
+        {
+          "nom": "Pistolet usé",
+          "armeId": "pistolet_d_arcon",
+          "bonusAttaque": 4,
+          "effetSpecial": "1 utilisation/combat. Ignoré par les armures légères."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Avidité dévorante",
+          "description": "Chaque fois qu'il inflige des dégâts à une cible portant un objet de valeur visible (arme ornée, bijou, bourse en évidence), il regagne 1d6 PV."
+        },
+        {
+          "nom": "Ne recule jamais devant un trésor",
+          "description": "Insensible aux tests de moral tant qu'un butin est visible sur le champ de bataille. Peut être détourné en jetant de l'or ou un objet précieux loin de lui (action du groupe, pas de jet requis)."
+        },
+        {
+          "nom": "Signe (note MJ)",
+          "description": "Regard qui s'attarde une fraction de seconde de trop sur l'or, un sceau ou un chiffre ; tic de la main qui compte ou soupèse sans objet réel. Premier indice tangible pour des PJ attentifs — ne pas surligner, juste décrire."
+        }
+      ],
+      "lore": "Corrompu depuis plus longtemps que ses hommes, il dirige sa bande avec un mélange de charisme et d'appétit insatiable. Selon le contexte, rebaptiser 'Chef de bande' (route) ou 'Capitaine corsaire' (mer), sans changer les statistiques.",
+      "armure": {
+        "valeur": 1,
+        "description": "Cuir renforcé cloué d'or — réduit 1 point de dégâts physiques."
+      },
+      "emoji": "🗡️"
+    },
+    {
+      "id": "cupide_grand_hote",
+      "nom": "Grand hôte de la Cupidité",
+      "famille": "cupide",
+      "tier": "grand_hote",
+      "race": [
+        "humanoïdes"
+      ],
+      "categorie": "Bestiaire général — Humanoïdes",
+      "pv": 75,
+      "def": 18,
+      "init": 6,
+      "atk": 8,
+      "dangerosite": 4,
+      "boss": true,
+      "taille": "moyenne",
+      "voies": [],
+      "attaques": [
+        {
+          "nom": "Lame dorée",
+          "armeId": "epee_longue",
+          "bonusAttaque": 8,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Regard doré",
+          "description": "1 fois par combat, désigne une cible qui le regarde : jet de Volonté (SAG) diff. 14 ou fascination 1 round (la cible n'agit pas, hypnotisée par l'or qu'il exhibe)."
+        },
+        {
+          "nom": "Nourri par l'or",
+          "description": "Gagne +2 DEF et 1d6 PV temporaires chaque fois qu'il vole ou détruit un objet de valeur en combat (butin des PJ ou trésor présent sur la carte)."
+        },
+        {
+          "nom": "Révélation (note MJ — jamais lue aux joueurs)",
+          "description": "À sa mort, une phrase suggère que la soif ne meurt pas avec l'hôte : elle cherche déjà un nouveau visage. Sert d'accroche pour la suite de l'arc de la Cupidité. Ne pas expliciter la nature métaphysique — laisser planer le doute."
+        }
+      ],
+      "lore": "Ici, la corruption ne se cache plus. Un hôte de longue date, dévoré par ce qu'il croyait maîtriser — richesse, pouvoir, ou toute autre obsession qui l'a consumé. Boss de campagne, révélation tardive : c'est la première fois que les PJ voient la vraie nature de la menace qu'ils traquaient depuis le début. Selon le contexte, rebaptiser 'Seigneur hors-la-loi' (route) ou 'Amiral corsaire' (mer), sans changer les statistiques.",
+      "armure": {
+        "valeur": 3,
+        "description": "Cuirasse sertie d'or et de gemmes volées — réduit 3 points de dégâts physiques."
+      },
+      "emoji": "👑"
     }
   ],
   "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide.",
