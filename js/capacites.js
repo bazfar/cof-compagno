@@ -905,7 +905,11 @@ const Capacites = (() => {
   // le malus de DEF à la réussite). Comme seuls degats/etat sont conditionnés
   // à la touche, ces capacités continuent d'appliquer leur bonus même sur un
   // raté — à traiter séparément si besoin.
-  function lancer({ persoId, source, mecanique, cibleId, choixEffet }) {
+  // cibleIds (optionnel) : Prêtre — Voie de la guérison rang 4 "Bénédiction",
+  // choix "soin_partage" — jusqu'à 3 cibles indépendantes, chacune avec son
+  // propre jet de soin. Seul cas actuel hors du schéma standard "une seule
+  // cible résolue par cibleId" (cf. son cas particulier plus bas).
+  function lancer({ persoId, source, mecanique, cibleId, cibleIds, choixEffet }) {
     if (!mecanique || mecanique.type === "passive") {
       return { ok: false, messages: ["Cette capacité est passive : rien à lancer."] };
     }
@@ -957,6 +961,27 @@ const Capacites = (() => {
 
     const messages = [];
     let resolutionDegats = null;
+
+    // Prêtre — Voie de la guérison, rang 4 "Bénédiction", choix
+    // "soin_partage" : jusqu'à 3 cibles indépendantes (cibleIds), chacune
+    // reçoit son propre jet de soin (1d8+Mod.SAG) — hors du schéma standard
+    // (lancer() ne résout normalement qu'UNE cible via cibleId). L'autre
+    // choix ("grand_soin", 1 cible, 3d8+niveau) traverse le reste de
+    // lancer() sans changement (cible déjà résolue ci-dessus via cibleId).
+    // Usage consommé UNE SEULE FOIS pour l'activation entière, pas par
+    // cible soignée.
+    if (source.voie === "Voie de la guérison" && source.rang === 4 && perso.classe === "pretre" && choixEffet === "soin_partage") {
+      if (!cibleIds || !cibleIds.length) return { ok: false, messages: ["Choisis au moins un allié pour le Soin partagé."] };
+      const ciblesPartage = cibleIds.slice(0, 3).map((cid) => listeCibles(persoId).find((c) => c.id === cid)).filter(Boolean);
+      if (!ciblesPartage.length) return { ok: false, messages: ["Cible(s) introuvable(s)."] };
+      ciblesPartage.forEach((c) => {
+        const msg = resoudreEffet({ type: "soin", formule: "1d8+Mod.SAG" }, { perso, rang: source.rang, voie: source.voie, cible: c, libelle, persos });
+        if (msg) messages.push(msg);
+      });
+      usage.appliquer();
+      App.sauverPersos(persos);
+      return { ok: true, messages };
+    }
 
     // Moine — Voie des éléments, rang 1 "Poing élémentaire" (1x/tour) :
     // choix à l'activation entre 4 éléments (feu/glace/terre/air, via

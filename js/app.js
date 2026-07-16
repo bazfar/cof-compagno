@@ -3657,15 +3657,23 @@ const App = (() => {
 
     function fermerPickerCibleCapacite() {
       if (pickerForme) pickerForme.style.display = "none";
+      // Reset du <select multiple> (cf. Bénédiction "soin_partage" ci-dessous)
+      // pour ne jamais laisser un picker en mode multi-sélection pour la
+      // capacité suivante.
+      if (pickerSelect) { pickerSelect.multiple = false; pickerSelect.size = 1; }
       lancerCapaciteEnAttente = null;
     }
-    function resoudreCapaciteEtRafraichir(cibleId) {
+    // cibleIds (optionnel) : Prêtre — Voie de la guérison rang 4 "Bénédiction",
+    // choix "soin_partage" (jusqu'à 3 cibles indépendantes) — seul cas actuel
+    // à ne pas se résoudre sur UNE cible unique, cf. Capacites.lancer.
+    function resoudreCapaciteEtRafraichir(cibleId, cibleIds) {
       const mecaniqueLancee = lancerCapaciteEnAttente.mecanique;
       const res = Capacites.lancer({
         persoId: id,
         source: lancerCapaciteEnAttente.source,
         mecanique: mecaniqueLancee,
         cibleId,
+        cibleIds,
         choixEffet: lancerCapaciteEnAttente.choixEffet,
       });
       fermerPickerCibleCapacite();
@@ -3735,6 +3743,13 @@ const App = (() => {
         if (!mecanique) { toast("Capacité introuvable."); return; }
 
         function procederCiblage() {
+          // Prêtre — Voie de la guérison rang 4 "Bénédiction", choix
+          // "soin_partage" : jusqu'à 3 cibles indépendantes plutôt qu'une
+          // seule — réutilise pickerSelect en <select multiple> (aucun
+          // nouveau composant), plutôt qu'un ciblage classique à une cible.
+          const soinPartage = mecanique.cible === "allie" && lancerCapaciteEnAttente.choixEffet === "soin_partage";
+          pickerSelect.multiple = soinPartage;
+          pickerSelect.size = soinPartage ? 5 : 1;
           if (mecanique.cible === "allie" || mecanique.cible === "ennemi") {
             const cibles = Capacites.listeCibles(id).filter((cc) =>
               mecanique.cible === "allie" ? cc.genre === "perso" : cc.genre === "monstre"
@@ -3742,6 +3757,7 @@ const App = (() => {
             pickerSelect.innerHTML = cibles.length
               ? cibles.map((cc) => `<option value="${cc.id}">${echapper(cc.nom)}${cc.soi ? " (soi-même)" : ""}</option>`).join("")
               : `<option value="">Aucune cible disponible</option>`;
+            if (soinPartage) toast("Sélectionne jusqu'à 3 alliés (Ctrl/Cmd + clic).");
             pickerForme.style.display = "flex";
           } else if (mecanique.cible === "zone" && mecanique.jetOppose) {
             // Capacité de zone AVEC jet opposé (ex. Barde "Mélopée de la
@@ -3787,6 +3803,12 @@ const App = (() => {
     const btnAnnulerCible = racine.querySelector(".btn-annuler-cible-capacite");
     if (btnConfirmerCible) {
       btnConfirmerCible.onclick = () => {
+        if (pickerSelect.multiple) {
+          const ids = Array.from(pickerSelect.selectedOptions).map((o) => o.value).filter(Boolean).slice(0, 3);
+          if (!ids.length) { toast("Choisis au moins un allié."); return; }
+          resoudreCapaciteEtRafraichir(null, ids);
+          return;
+        }
         const cibleId = pickerSelect.value;
         if (!cibleId) { toast("Choisis une cible."); return; }
         resoudreCapaciteEtRafraichir(cibleId);
