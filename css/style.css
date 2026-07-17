@@ -480,6 +480,13 @@ textarea { resize: vertical; min-height: 70px; }
 .party-origine { font-size: 0.85rem; color: var(--encre); display: flex; flex-direction: column; gap: 3px; }
 .party-lbl { color: #6a6278; font-size: 0.78rem; margin-right: 4px; }
 .party-lore { font-size: 0.85rem; color: #4a4358; line-height: 1.5; font-style: italic; border-left: 3px solid var(--or); padding-left: 8px; white-space: pre-wrap; }
+.party-vitals { display: flex; gap: 8px; flex-wrap: wrap; }
+.party-vitals span { background: var(--parchemin-fonce); color: var(--encre); border-radius: 6px; padding: 2px 8px; font-size: 0.8rem; }
+.party-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.party-stat { background: var(--violet); color: var(--parchemin); border-radius: 6px; padding: 4px 2px; text-align: center; display: flex; flex-direction: column; align-items: center; line-height: 1.15; }
+.party-stat-code { font-size: 0.62rem; opacity: 0.8; letter-spacing: 0.3px; }
+.party-stat b { font-size: 0.95rem; }
+.party-stat-mod { font-size: 0.68rem; color: var(--or); }
 .party-editer { align-self: flex-start; }
 .party-form { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
 .party-form input, .party-form textarea {
