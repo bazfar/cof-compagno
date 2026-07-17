@@ -2337,8 +2337,8 @@ const App = (() => {
         <div class="party-origine">
           <div><span class="party-lbl">📍 Ville</span> ${p.villeOrigine ? echapper(p.villeOrigine) : "<em>—</em>"}</div>
           <div><span class="party-lbl">🏴 Nation</span> ${p.nationOrigine ? echapper(p.nationOrigine) : "<em>—</em>"}</div>
-          ${p.age ? `<div><span class="party-lbl">🎂 Âge</span> ${echapper(String(p.age))}</div>` : ""}
-          ${p.hobbies ? `<div><span class="party-lbl">🎨 Loisirs</span> ${echapper(p.hobbies)}</div>` : ""}
+          <div><span class="party-lbl">🎂 Âge</span> ${p.age ? echapper(String(p.age)) : "<em>—</em>"}</div>
+          <div><span class="party-lbl">🎨 Loisirs</span> ${p.hobbies ? echapper(p.hobbies) : "<em>—</em>"}</div>
         </div>
         ${p.bio ? `<div class="party-lore">${echapper(p.bio)}</div>` : ""}
         ${editable ? `<button class="btn petit secondaire party-editer" data-party-id="${id}">✎ Compléter</button>
