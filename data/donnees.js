@@ -2280,24 +2280,28 @@ const FACTIONS = [
       {
         nom: "Maison Ashe — Le Glaive",
         devise: "Un ordre, une lame.",
+        blason: "assets/blasons/blason_ashe.png",
         description:
           "Chef actuel : Grand Maréchal Théodren Ashe, arrière-petit-fils du Haut-Maréchal Corvain Ashe (Siège de Mornhaven). Rigide, incorruptible en apparence — use la doctrine de son aïeul comme un dogme figé plutôt qu'une conviction vivante.\nBlason : soleil noir sur bronze, deux lames croisées. Commande l'armée impériale régulière, forme les officiers, supervise (sans les diriger) les Chevaliers-Inquisiteurs.\nFracture interne : son fils cadet Ilyan Ashe doute depuis Mornhaven — pas de la cause, de la méthode — et a été écarté du commandement plutôt que réduit au silence publiquement.\nMiroir : Valdorne, la chevalerie sincère devenue discipline totale.",
       },
       {
         nom: "Maison Solenne — La Flamme",
         devise: "La lumière ne négocie pas.",
+        blason: "assets/blasons/blason_solenne.png",
         description:
           "Cheffe actuelle : Grande Sacerdotesse Yvelle Solenne, charismatique, absolument sincère dans sa foi — ce qui la rend plus dangereuse qu'une cynique.\nBlason : flamme dorée à sept pointes sur pourpre. Tient le Temple-Mère, légitime la lignée impériale, supervise doctrinalement les Chevaliers-Inquisiteurs.\nFracture interne : les \"Cendres Blanches\", faction jeune du clergé, prônent une purification encore plus radicale — tolérées comme bras armé idéologique, elles commencent à échapper à son contrôle.\nMiroir : aucun miroir sécessionniste direct — Solenne est le cœur idéologique de l'Empire.",
       },
       {
         nom: "Maison Vosgard — La Bourse",
         devise: "Ce qui se compte, se gouverne.",
+        blason: "assets/blasons/blason_vosgard.png",
         description:
           "Chef actuel : Intendant Général Bastian Vosgard, administrateur brillant, sans conviction religieuse réelle.\nBlason : balance dorée sur gris-bleu. Trésorerie impériale, impôts provinciaux, logistique militaire — Ashe dépend de lui autant que de ses propres officiers.\nFracture interne : certains agents Vosgard vendent des renseignements économiques à Mornac, par intérêt commercial plus que par trahison idéologique.\nMiroir : Mornac, le pragmatisme marchand devenu corruption structurelle.",
       },
       {
         nom: "Maison Kestrel — Les Marches",
         devise: "La peur tient mieux qu'un traité.",
+        blason: "assets/blasons/blason_kestrel.png",
         description:
           "Cheffe actuelle : Margravine Sélène Kestrel, dure, pragmatique, façonnée par des décennies de guerre frontalière contre Aetharion et les passes disputées avec Khazrak Dûm.\nBlason : faucon gris plongeant sur blanc glacé. Défend les Marches orientales, gère les garnisons frontalières et un réseau d'éclaireurs au-delà des lignes.\nFracture interne : maquille ses rapports envoyés à Ashe pour cacher l'épuisement réel de ses garnisons sous-équipées.\nMiroir : Serval, même géographie montagnarde, logique opposée (alliance vs domination par la peur).",
       },
@@ -2348,7 +2352,7 @@ const FACTIONS = [
     // de nommage — absent tant que le fichier n'a pas été déposé (repli
     // silencieux côté rendreFactions(), pas d'icône cassée). D'autres
     // factions pourront porter leur propre blason de la même façon.
-    blason: "assets/blasons/liberra.png",
+    blason: "assets/blasons/blason_liberra.png",
     intro:
       "Contrairement à l'Empire, la République ne repose pas sur une noblesse mais sur une Assemblée de citoyens divisée en cinq blocs politiques, reflétant fidèlement ses fractures internes déjà connues : marchands, idéalistes, militaires, communautés non-humaines — auxquelles s'ajoute un cinquième bloc né du ressentiment, les Fils de Libris.\n\nDevise inscrite au fronton de l'Assemblée fondatrice : « La liberté ne s'hérite pas, elle se gagne. » Rarement brandi avec fierté unanime — chaque bloc préfère son propre insigne — le sceau d'État n'apparaît que sur les actes officiels, les frontières et la monnaie.",
     entites: [
