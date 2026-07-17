@@ -2307,8 +2307,13 @@ const App = (() => {
     const couleur = couleurClasse(p.classe);
     const genre = p.genre === "femme" ? "Femme" : "Homme";
     const editable = estProprietaire(p);
-    const illus = p.illustration
-      ? `<img class="party-illus" src="${p.illustration}" alt="illustration de ${echapper(p.nom)}" />`
+    // Image de la carte : l'illustration en priorité, sinon le portrait uploadé
+    // à la création — les deux sont de vraies images du perso, affichées en
+    // grand. On ne retombe sur l'icône (avatar/token/emblème) que si le joueur
+    // n'a AUCUNE image.
+    const imageCarte = p.illustration || p.portrait;
+    const illus = imageCarte
+      ? `<img class="party-illus" src="${imageCarte}" alt="illustration de ${echapper(p.nom)}" />`
       : `<div class="party-illus-vide">${avatarHtml(p, 88)}</div>`;
     return `<div class="party-carte" style="border-top:4px solid ${couleur};">
       <div class="party-illus-wrap">${illus}</div>
