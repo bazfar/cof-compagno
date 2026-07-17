@@ -40,7 +40,8 @@ const App = (() => {
   // l'état en attente (cf. htmlDegatsCapaciteEnAttente/resoudreCapaciteEtRafraichir).
   let capaciteDegatsEnAttente = null;
   let _cibleDistanceId = null;  // token cible choisi pour le vérificateur de portée (cf. rendreFicheSidebarBattlemap)
-  let _typeAttaquePortee = "contact";  // type d'attaque choisi dans le vérificateur de portée : "contact" | "distance" | "magique"
+  let _typeAttaquePortee = "contact";  // type d'attaque choisi dans le vérificateur de portée : "contact" | "distance" | "magique" | "lancer"
+  let _objetLanceIdx = null;  // index dans objetsJetables (PAS p.inventaireListe) de l'objet choisi pour 🎯 Lancer
   let livretPersoId = null;  // id du perso choisi dans l'onglet "📖 Livret"
   let mutationPersoId = null;  // id du perso choisi dans l'onglet "🧬 Mutations"
   // Sélection courante de l'onglet "🔨 Atelier" (cf. rendrePanneauAtelier) —
@@ -428,6 +429,51 @@ const App = (() => {
     if (franchi) toast(`⚠️ ${p.nom} franchit le seuil de Corruption d'Âme (Corruption d'Âme +1, total ${p.corruptionMajeure}).`);
   }
 
+  // Résout un token de battlemap (cibleId, cf. _ciblesPortee) vers la clé
+  // composite attendue par ouvrirModalMalus/appliquerMalus ("pj:id" ou
+  // "monstre:id") — même logique de résolution que _resoudreAttaqueRapide.
+  function _cibleRawDepuisToken(cibleId) {
+    if (!cibleId || typeof Carte === "undefined") return null;
+    const monstre = (Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : []).find((t) => t.id === cibleId);
+    if (monstre) return `monstre:${monstre.id}`;
+    const pjTok = (Carte.listeTokensJoueursCombat ? Carte.listeTokensJoueursCombat() : []).find((t) => t.id === cibleId);
+    if (pjTok && pjTok.ref && pjTok.ref.startsWith("pj-")) return `pj:${pjTok.ref.slice(3)}`;
+    return null;
+  }
+
+  // Action de Lancer (data-bm-attaque="lancer", cf. rendreFicheSidebarBattlemap/
+  // rendreDockCombat) : consomme l'objet choisi (_objetLanceIdx) que le jet
+  // touche ou non — jeté/perdu dans tous les cas, comme n'importe quelle
+  // munition. Si l'objet porte un formuleDot (poison) ET que le jet a touché
+  // une cible identifiée, ouvre la modale Malus déjà pré-remplie (empoisonnee)
+  // — le MJ garde la main pour confirmer via "Appliquer" ou annuler. Sinon
+  // (objet non-poison, raté, ou cible inconnue) : toast informatif standard.
+  function _resoudreConsommationLancer(persoId, cibleId, resolution, resultatMsg) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const objetsJetables = (p.inventaireListe || []).filter((it) => it.jetable && (it.quantite || 1) > 0);
+    const item = objetsJetables[_objetLanceIdx];
+    if (!item) return;
+    _consommerUnite(p, p.inventaireListe.indexOf(item));
+    sauverPersos(persos);
+    _objetLanceIdx = null;
+
+    if (item.formuleDot && resolution.touche === true && cibleId) {
+      const cibleRaw = _cibleRawDepuisToken(cibleId);
+      if (cibleRaw) {
+        ouvrirModalMalus({
+          cibleRaw, idEtat: "empoisonnee",
+          dureeAffichee: item.dureeEtat ? `${item.dureeEtat} tours` : "",
+          formuleDot: item.formuleDot,
+        });
+        if (resultatMsg) toast(resultatMsg);
+        return;
+      }
+    }
+    toast(`${item.nom} lancé et consommé.${resultatMsg ? " " + resultatMsg : ""}`);
+  }
+
   // Visibilité du bouton "Dégâts" et doublement des dés pour un type
   // d'attaque donné, pour CE personnage (cf. attaquesRapidesEnAttente) —
   // visible=false SEULEMENT si l'attaque a explicitement raté (touche ===
@@ -470,6 +516,12 @@ const App = (() => {
     const armeContact = perso.armeContactEquipee();
     const armeDistance = perso.armeDistanceEquipee();
     const attMagique = perso.bonusAttaque("magique");
+    // 4e type d'attaque rapide : lance n'importe quel objet d'inventaire
+    // marqué jetable: true (dard empoisonné en premier lieu, mais générique —
+    // cf. bombe_alchimique). Portée calculée dynamiquement (2m + Mod.FOR),
+    // pas une constante comme PORTEE_CONTACT/PORTEE_MAGIQUE_BASE plus bas.
+    const objetsJetables = (p.inventaireListe || []).filter((it) => it.jetable && (it.quantite || 1) > 0);
+    const attLancer = objetsJetables.length ? perso.bonusAttaque("lancer") : null;
     // Dégâts = formule de l'arme réellement équipée (même bonus que
     // badgeEffetItem : bonusDegatsTotal posé par une rareté prime sur
     // enchantement seul) ; si aucune arme de contact n'est équipée, repli sur
@@ -565,6 +617,9 @@ const App = (() => {
       porteesParType.distance = { min: armeDistance.porteeMinCases || 0, max: armeDistance.porteeMaxCases };
     }
     if (attMagique !== null) porteesParType.magique = PORTEE_MAGIQUE_BASE;
+    if (objetsJetables.length) {
+      porteesParType.lancer = { min: 0, max: 2 + perso.mod("FOR") };
+    }
 
     let porteeHtml = "";
     if (typeof Combat !== "undefined" && Combat.estActif() &&
@@ -572,7 +627,7 @@ const App = (() => {
       const monTokenId = _monTokenId(id);
       const toutesLesCibles = monTokenId ? _ciblesPortee(monTokenId) : [];
       if (monTokenId && toutesLesCibles.length) {
-        const TYPE_LABELS = { contact: "⚔️ Contact", distance: "🏹 Distance", magique: "✨ Magique" };
+        const TYPE_LABELS = { contact: "⚔️ Contact", distance: "🏹 Distance", magique: "✨ Magique", lancer: "🎯 Lancer" };
         const typesDispo = Object.keys(porteesParType);
         if (!typesDispo.includes(_typeAttaquePortee)) _typeAttaquePortee = typesDispo[0];
         const portee = porteesParType[_typeAttaquePortee];
@@ -583,6 +638,13 @@ const App = (() => {
           _cibleDistanceId = ciblesEnPortee.length ? ciblesEnPortee[0].id : null;
         }
         const cibleActuelle = ciblesEnPortee.find((cc) => cc.id === _cibleDistanceId);
+        // Sélecteur d'objet à lancer, visible seulement pour ce type — même
+        // emplacement que le sélecteur de cible (cf. _objetLanceIdx).
+        if (_typeAttaquePortee === "lancer") {
+          if (_objetLanceIdx === null || _objetLanceIdx < 0 || _objetLanceIdx >= objetsJetables.length) {
+            _objetLanceIdx = objetsJetables.length ? 0 : null;
+          }
+        }
         porteeHtml = `
         <div style="margin-top:8px;">
           <label style="font-size:0.78rem;display:block;">📏 Portée
@@ -590,6 +652,11 @@ const App = (() => {
               ${typesDispo.map((t) => `<option value="${t}" ${t === _typeAttaquePortee ? "selected" : ""}>${TYPE_LABELS[t]} (${porteesParType[t].min}-${porteesParType[t].max} cases)</option>`).join("")}
             </select>
           </label>
+          ${_typeAttaquePortee === "lancer" && objetsJetables.length ? `
+          <select id="bm-objet-lancer" style="width:100%;margin-top:4px;">
+            ${objetsJetables.map((it, i) => `<option value="${i}" ${i === _objetLanceIdx ? "selected" : ""}>${echapper(it.nom)} (${it.quantite || 1})</option>`).join("")}
+          </select>
+          ` : ""}
           ${ciblesEnPortee.length ? `
           <select id="bm-cible-portee" style="width:100%;margin-top:4px;">
             ${ciblesEnPortee.map((cc) => `<option value="${cc.id}" ${cc.id === _cibleDistanceId ? "selected" : ""}>${echapper(cc.nom)} (${cc._distance} case${cc._distance === 1 ? "" : "s"})</option>`).join("")}
@@ -643,6 +710,7 @@ const App = (() => {
           <button class="btn petit" data-bm-attaque="contact" data-bonus="${attContact}">⚔️ Contact (${signe(attContact)})</button>
           ${attDistance !== null ? `<button class="btn petit" data-bm-attaque="distance" data-bonus="${attDistance}">🏹 Distance (${signe(attDistance)})</button>` : ""}
           ${attMagique !== null ? `<button class="btn petit" data-bm-attaque="magique" data-bonus="${attMagique}">✨ Magique (${signe(attMagique)})</button>` : ""}
+          ${attLancer !== null ? `<button class="btn petit" data-bm-attaque="lancer" data-bonus="${attLancer}">🎯 Lancer (${signe(attLancer)})</button>` : ""}
         </div>
         ${attDistance === null ? `<p class="aide" style="font-size:0.72rem;margin:6px 0 0;">Équipe un arc ou une arbalète pour débloquer l'attaque à distance.</p>` : ""}
         ${(dmgContact && etatDegC.visible) || (dmgDistance && etatDegD.visible) || (dmgMagique && etatDegM.visible) ? `
@@ -697,11 +765,20 @@ const App = (() => {
         const cibleId = (_typeAttaquePortee === type) ? _cibleDistanceId : null;
         const resolution = _resoudreAttaqueRapide(`Attaque ${type}`, bonus, perso.critMinAttaque(type), cibleId);
         attaquesRapidesEnAttente[type] = Object.assign({ persoId: id }, resolution);
-        if (cibleId) {
-          toast(resolution.echecCritique ? "1 naturel — échec critique automatique."
+        const resultatMsg = cibleId
+          ? (resolution.echecCritique ? "1 naturel — échec critique automatique."
             : resolution.critique ? `CRITIQUE !${resolution.defCible !== null ? ` (DEF cible ${resolution.defCible})` : ""}`
             : resolution.defCible === null ? "DEF de la cible inconnue — à comparer manuellement."
-            : (resolution.touche ? `Touché ! (DEF ${resolution.defCible})` : `Raté (DEF ${resolution.defCible}).`));
+            : (resolution.touche ? `Touché ! (DEF ${resolution.defCible})` : `Raté (DEF ${resolution.defCible}).`))
+          : "";
+        // Action de Lancer : consomme l'objet choisi que le jet touche ou
+        // non, puis ouvre la modale Malus pré-remplie si l'objet est un
+        // poison (formuleDot) et que le jet a touché — cf.
+        // _resoudreConsommationLancer.
+        if (type === "lancer") {
+          _resoudreConsommationLancer(id, cibleId, resolution, resultatMsg);
+        } else if (resultatMsg) {
+          toast(resultatMsg);
         }
         _gererPremierSangChasseur(id, type, resolution.touche);
         if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
@@ -726,6 +803,13 @@ const App = (() => {
       selTypePortee.onchange = () => {
         _typeAttaquePortee = selTypePortee.value;
         _cibleDistanceId = null; // la cible précédente peut ne plus être à portée pour ce type
+        rendreFicheSidebarBattlemap(id);
+      };
+    }
+    const selObjetLancer = document.getElementById("bm-objet-lancer");
+    if (selObjetLancer) {
+      selObjetLancer.onchange = () => {
+        _objetLanceIdx = parseInt(selObjetLancer.value, 10);
         rendreFicheSidebarBattlemap(id);
       };
     }
@@ -830,6 +914,11 @@ const App = (() => {
     const armeDistance = perso.armeDistanceEquipee();
     const attMagique = perso.bonusAttaque("magique");
     const armeContact = perso.armeContactEquipee();
+    // Cf. rendreFicheSidebarBattlemap pour le détail — même calcul, dupliqué
+    // ici faute de factorisation commune entre sidebar et dock (comme le
+    // reste de ce fichier).
+    const objetsJetables = (p.inventaireListe || []).filter((it) => it.jetable && (it.quantite || 1) > 0);
+    const attLancer = objetsJetables.length ? perso.bonusAttaque("lancer") : null;
     // bonusDegatsAffixe : bonus de dégâts fixe de l'affixe de loot "Folie"
     // (js/affixes.js), mécanisé ici comme un terme additionnel de la formule
     // (au même titre que l'enchantement/bonusDegatsTotal), à la différence du
@@ -929,6 +1018,7 @@ const App = (() => {
     ];
     if (attDistance !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="distance" data-bonus="${attDistance}"><span class="dock-ic">🏹</span><span class="dock-lbl">Distance ${signe(attDistance)}</span></button>`);
     if (attMagique !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="magique" data-bonus="${attMagique}"><span class="dock-ic">✨</span><span class="dock-lbl">Magique ${signe(attMagique)}</span></button>`);
+    if (attLancer !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="lancer" data-bonus="${attLancer}"><span class="dock-ic">🎯</span><span class="dock-lbl">Lancer ${signe(attLancer)}</span></button>`);
     if (dmgContact && etatDegC.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}" data-bm-critique="${etatDegC.critique ? "1" : "0"}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}${etatDegC.critique ? " CRIT" : ""}</span></button>`);
     if (dmgDistance && etatDegD.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgDistance}" data-bm-critique="${etatDegD.critique ? "1" : "0"}" data-bm-mult="${perso.aTirFatal() ? "3" : "2"}" title="${echapper(armeDistance.nom)}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgDistance}${etatDegD.critique ? " CRIT" : ""}</span></button>`);
     if (dmgMagique && etatDegM.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgMagique}" data-bm-critique="${etatDegM.critique ? "1" : "0"}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgMagique}${etatDegM.critique ? " CRIT" : ""}</span></button>`);
@@ -1036,15 +1126,17 @@ const App = (() => {
       ${htmlDegatsCapaciteEnAttente(id)}
     </div>`;
 
-    // Le dock n'a pas son propre sélecteur de portée/cible (contrairement à
-    // la sidebar, cf. porteeHtml dans rendreFicheSidebarBattlemap) — réutilise
-    // tel quel _typeAttaquePortee/_cibleDistanceId (état de module partagé) :
-    // un joueur mobile pur (dock seul, pas de sidebar visible) n'a donc pas
-    // de gating (touche reste null, bouton dégâts toujours disponible), ce
-    // qui reste le comportement d'avant ce chantier plutôt qu'un blocage.
-    // Dupliquer le petit bloc porteeHtml dans le dock demanderait de le
-    // factoriser en fonction commune ; laissé pour un chantier ultérieur si
-    // Thomas le demande.
+    // Le dock n'a pas son propre sélecteur de portée/cible/objet à lancer
+    // (contrairement à la sidebar, cf. porteeHtml dans
+    // rendreFicheSidebarBattlemap) — réutilise tel quel
+    // _typeAttaquePortee/_cibleDistanceId/_objetLanceIdx (état de module
+    // partagé) : un joueur mobile pur (dock seul, pas de sidebar visible)
+    // n'a donc pas de gating (touche reste null, bouton dégâts toujours
+    // disponible ; pour Lancer, doit avoir ouvert la sidebar au moins une
+    // fois pour choisir son objet), ce qui reste le compromis assumé
+    // d'avant ce chantier plutôt qu'un blocage. Dupliquer le petit bloc
+    // porteeHtml dans le dock demanderait de le factoriser en fonction
+    // commune ; laissé pour un chantier ultérieur si Thomas le demande.
     dock.querySelectorAll("[data-bm-attaque]").forEach((el) => {
       el.onclick = () => {
         const type = el.dataset.bmAttaque;
@@ -1052,11 +1144,16 @@ const App = (() => {
         const cibleId = (_typeAttaquePortee === type) ? _cibleDistanceId : null;
         const resolution = _resoudreAttaqueRapide(`Attaque ${type}`, bonus, perso.critMinAttaque(type), cibleId);
         attaquesRapidesEnAttente[type] = Object.assign({ persoId: id }, resolution);
-        if (cibleId) {
-          toast(resolution.echecCritique ? "1 naturel — échec critique automatique."
+        const resultatMsg = cibleId
+          ? (resolution.echecCritique ? "1 naturel — échec critique automatique."
             : resolution.critique ? `CRITIQUE !${resolution.defCible !== null ? ` (DEF cible ${resolution.defCible})` : ""}`
             : resolution.defCible === null ? "DEF de la cible inconnue — à comparer manuellement."
-            : (resolution.touche ? `Touché ! (DEF ${resolution.defCible})` : `Raté (DEF ${resolution.defCible}).`));
+            : (resolution.touche ? `Touché ! (DEF ${resolution.defCible})` : `Raté (DEF ${resolution.defCible}).`))
+          : "";
+        if (type === "lancer") {
+          _resoudreConsommationLancer(id, cibleId, resolution, resultatMsg);
+        } else if (resultatMsg) {
+          toast(resultatMsg);
         }
         _gererPremierSangChasseur(id, type, resolution.touche);
         if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
@@ -6810,7 +6907,12 @@ const App = (() => {
      PJ ou un monstre en combat, sans passer par une capacité mécanisée.
      ============================================================ */
 
-  function ouvrirModalMalus() {
+  // prefill (optionnel) : { cibleRaw, idEtat, dureeAffichee, formuleDot } —
+  // utilisé par l'action de Lancer (cf. _resoudreConsommationLancer) pour
+  // pré-sélectionner la cible touchée, l'état "empoisonnee" et les valeurs
+  // du poison lancé. Le MJ garde la main : rien n'est appliqué tant qu'il
+  // ne clique pas sur "Appliquer".
+  function ouvrirModalMalus(prefill) {
     const modal = document.getElementById("modal-malus");
     if (!modal || typeof ETATS === "undefined") return;
 
@@ -6827,6 +6929,9 @@ const App = (() => {
     if (!optionsJoueurs && !optionsMonstres) {
       selCible.innerHTML = `<option value="">Aucune cible disponible</option>`;
     }
+    if (prefill && prefill.cibleRaw && [...selCible.options].some((o) => o.value === prefill.cibleRaw)) {
+      selCible.value = prefill.cibleRaw;
+    }
 
     const selEtat = document.getElementById("modal-malus-etat");
     selEtat.innerHTML = ORDRE_CATEGORIES_ETATS.map((cat) => {
@@ -6835,11 +6940,12 @@ const App = (() => {
       const options = ids.map((id) => `<option value="${id}">${echapper(ETATS[id].nom)}</option>`).join("");
       return `<optgroup label="${LIBELLES_CATEGORIES_ETATS[cat] || cat}">${options}</optgroup>`;
     }).join("");
+    if (prefill && prefill.idEtat && ETATS[prefill.idEtat]) selEtat.value = prefill.idEtat;
 
-    document.getElementById("modal-malus-duree").value = "";
+    document.getElementById("modal-malus-duree").value = (prefill && prefill.dureeAffichee) || "";
     const champDot = document.getElementById("modal-malus-dot");
     const labelDot = document.getElementById("modal-malus-dot-label");
-    champDot.value = "";
+    champDot.value = (prefill && prefill.formuleDot) || "";
     const majChampDot = () => {
       labelDot.style.display = ETATS[selEtat.value] && ETATS[selEtat.value].categorie === "dot" ? "block" : "none";
     };

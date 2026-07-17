@@ -1228,11 +1228,12 @@ class Personnage extends Entite {
     }
     return bonus;
   }
-  // type : "contact" (FOR), "distance" (DEX), "magique" (carac de magie de la classe)
+  // type : "contact" (FOR), "distance" (DEX), "magique" (carac de magie de la classe), "lancer" (FOR, objet jeté)
   bonusAttaque(type) {
     const b = this.bonusProgression() + this.bonusTemporaire("attaque") + this.malusCombatDeuxArmes(type) + this.bonusAttaqueCapacites(type);
     if (type === "contact") return b + this.mod("FOR");
     if (type === "distance") return b + this.mod("DEX");
+    if (type === "lancer") return b + this.mod("FOR");
     if (type === "magique") {
       const cm = typeof CARAC_MAGIE !== "undefined" ? CARAC_MAGIE[this.classe] : null;
       if (!cm) return null;
