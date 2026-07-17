@@ -2252,39 +2252,39 @@ const FACTIONS = [
   {
     groupe: "Royaumes Coalisés",
     intro:
-      "Quatre grandes maisons ont fait sécession lors de la Rupture pour fonder les Royaumes Coalisés — chevaleresques, féodaux, hypocrites. Contrairement à l'Empire, aucun blason unique ne les rassemble : chaque royaume porte le sien, hérité de son propre miroir sécessionniste.",
+      "Contrairement à l'Empire (un trône, huit maisons) ou à la République (une Assemblée fracturée en blocs), les Royaumes Coalisés ne partagent qu'une alliance militaire née de la Rupture, jamais une couronne commune — quatre royaumes féodaux indépendants (Seigneurs → Chevaliers → Paysans), liés par l'Armistice des Quatre Sceaux et par la nécessité de tenir face à Solvarn plus que par une identité partagée. L'idéal chevaleresque affiché en public cohabite, à des degrés variables selon le royaume, avec un pragmatisme politique que la Coalition préfère ne pas trop regarder en face.",
     entites: [
       {
-        nom: "Valdorne",
+        nom: "Valdorne — le berceau sincère",
         devise: "Un seul suffit.",
         blason: "assets/blasons/blason_valdorne.png",
         description:
-          "Le plus ancien des Royaumes Coalisés, berceau de la sécession, chevalerie sincère.\nBlason : un pont brisé surmonté d'une épée dressée, sur azur — écho direct à Pont-Rompu et au sacrifice d'Alaric.",
+          "Souverain actuel : Roi Baldwin IV de Valdorne, porte l'héritage d'Alaric comme une conviction vivante, pas un folklore — capitale Valdcourt.\nBlason : un pont brisé surmonté d'une épée dressée, sur azur — écho direct à Pont-Rompu.\nMage attitrée : Minerva Sarelle, conseillère arcanique de la couronne pendant des décennies, morte récemment — officiellement d'une \"défaillance rituelle\", en réalité assassinée par un agent solvarien. Un secret que seule une poignée de personnes soupçonne, que personne ne peut prouver, et que Baldwin lui-même ignore (cf. PNJ clés).\nFracture interne : plus la realpolitik gagne du terrain ailleurs dans la Coalition (Arveth en tête), plus Baldwin s'isole dans un idéalisme que certains courtisans jugent naïf face à la menace réelle — et il vient de perdre, sans le savoir, son conseil arcanique le plus fiable au pire moment possible.\nMiroir : la maison Ashe de Solvarn, la même chevalerie sincère devenue discipline totale sous la doctrine impériale.",
       },
       {
-        nom: "Arveth",
+        nom: "Arveth — le vacillant",
         devise: "Nous tenons la ligne.",
         blason: "assets/blasons/blason_arveth.png",
         description:
-          "Frontalier de Solvarn, sous pression constante — le vacillant de la coalition.\nBlason : une flamme vacillante entre deux lances croisées, sur fond cendré.",
+          "Seigneur actuel : Lord Ranulf d'Arvenfall (cf. PNJ clés), négocie en secret avec Solvarn par peur sincère pour son peuple plus que par ambition — capitale Arvenfall, frontière directe avec l'Empire.\nBlason : une flamme vacillante entre deux lances croisées, sur fond cendré.\nMage attitré : Aldous Ferren, un des derniers praticiens de la foi libre des Gardiens encore toléré à la cour — de plus en plus regardé de travers par le culte solvarien qui s'infiltre dans les temples d'Arveth, tension religieuse qui se superpose à la tension politique du palais (cf. PNJ clés).\nFracture interne : le culte solvarien s'infiltre déjà dans ses temples — si Arveth bascule religieusement avant de basculer militairement, la Coalition perd son ciment moral avant même sa force armée.\nMiroir : aucun miroir loyaliste direct côté Solvarn — Arveth est le seul royaume dont le retour dans le giron impérial reste une possibilité concrète plutôt qu'une trahison de principe.",
       },
       {
-        nom: "Mornac",
+        nom: "Mornac — le pragmatique",
         devise: "Le vent tourne, le profit reste.",
         blason: "assets/blasons/blason_mornac.png",
         description:
-          "Maritime et commerçant, chevalerie de façade, pragmatique.\nBlason : une ancre couronnée sur des vagues, sur vert-de-mer.",
+          "Souveraine actuelle : Comtesse Yselde Maren, dynastie marchande devenue dynastie régnante après le Siège de Mornhaven — la chevalerie y est un décorum de cour plus qu'une conviction — capitale Mornhaven, traversée par la Lisdane.\nBlason : une ancre couronnée sur des vagues, sur vert-de-mer.\nMage attitrée : Corvina Aldren, magie de route commerciale et de divination — instrument discret, à l'occasion, d'opérations moins avouables (cf. PNJ clés).\nFracture interne : Mornac a déjà des intérêts implantés dans la République de Liberra, mais voit d'un mauvais œil la flotte marchande grandissante de la République et cherche activement à déstabiliser sa guilde marchande — un fil qui pourrait recouper, sans s'y réduire, le complot de guilde déjà en germe côté Liberra (Le Comptoir, Maître Aurèle Ferrand, le médaillon). Commerce ouvertement avec Liberra et, discrètement, avec Solvarn si le prix est bon — pratique tolérée tant qu'elle finance la Coalition, mais qui deviendrait un scandale politique si rendue publique en pleine guerre.\nMiroir : la maison Vosgard de Solvarn, le même pragmatisme marchand devenu corruption structurelle sous la discipline impériale.",
       },
       {
-        nom: "Serval",
+        nom: "Serval — l'indépendant",
         devise: "La roche encaisse mais ne se brise pas.",
         blason: "assets/blasons/blason_serval.png",
         description:
-          "Montagnard, allié des Nains de l'Ordre, le plus indépendant des Royaumes Coalisés.\nBlason : une enclume sur un pic montagneux, sur gris-pierre.",
+          "Margrave actuel : Torvald Sten, montagnard austère, doit sa légitimité autant à l'alliance avec les Nains de l'Ordre qu'à son sang — capitale Serval, dans les Contreforts.\nBlason : une enclume sur un pic montagneux, sur gris-pierre.\nMage attitré : Kettil Rhennar, Enchanteur qui travaille main dans la main avec les maîtres-forgerons nains — au contact étroit des Nains de l'Ordre, Serval a développé des techniques de forge inédites hors des terres naines, en avance sur le reste des Royaumes (et probablement sur l'Empire) en métallurgie et développement d'armes. Rhennar en est le gardien discret (cf. PNJ clés).\nFracture interne : une frange jeune de la noblesse servaline pousse pour un désengagement pur et simple de la Coalition — \"nous tenons nos propres cols, pourquoi mourir pour Arvenfall ?\" — tension que Torvald contient pour l'instant par autorité personnelle plus que par consensus. Cette avance technologique jalousement gardée est autant un atout stratégique qu'une source de convoitise étrangère.\nMiroir : la maison Kestrel de Solvarn, même géographie montagnarde, logique inversée — alliance loyale face à la peur plutôt que domination par la peur.",
       },
     ],
     synthese:
-      "Structure féodale (Seigneurs → Chevaliers → Paysans). Point de rupture : si Arveth tombe, la coalition se fracture.",
+      "Rapports de force au sein de la Coalition (contexte : pression croissante de Solvarn sur la frontière d'Arveth)\n\n1. Valdorne — autorité morale, faiblesse militaire relative : Baldwin est écouté par respect pour l'héritage d'Alaric, mais Valdorne n'a plus la puissance martiale de ses origines, et vient de perdre son conseil arcanique sans même le savoir.\n2. Mornac — poumon financier de la Coalition : sans son commerce (et ses compromissions), l'effort de guerre s'effondre — position similaire à celle du Comptoir côté Liberra, avec ses propres jeux d'influence à l'extérieur de la Coalition.\n3. Serval — allié fiable mais à la loyauté de plus en plus conditionnelle : la frange isolationniste grandit à mesure que la guerre s'éternise sans bénéfice direct pour les cols, malgré (ou à cause de) son avance technologique qui lui donne les moyens de son indépendance.\n4. Arveth — le maillon fragile assumé : chacun sait qu'Arveth plie sous la pression, personne n'ose encore l'admettre publiquement.\n\nAxes de tension : Valdorne ↔ Mornac (l'idéal chevaleresque méprise ouvertement, mais dépend financièrement, du pragmatisme marchand) ; Serval ↔ Arveth (indifférence mutuelle : Serval, isolé dans ses montagnes et sa forge, ne comprend pas l'urgence d'Arveth, qui le lui reproche) ; Mornac ↔ Arveth (Mornac verrait presque d'un bon œil un accord Arveth-Solvarn qui stabiliserait les routes commerciales, tant que ça ne devient pas un précédent) ; tous ↔ Solvarn (unité de façade qui masque des intérêts de plus en plus divergents à mesure que la guerre dure).\n\nCe qui pourrait faire basculer l'équilibre : la révélation publique des négociations de Ranulf forcerait un choix binaire — expulser Arveth ou le couvrir, les deux options fracturant la Coalition ; une défection ouverte de la frange isolationniste servaline priverait la Coalition de son flanc montagnard et de son avance en armement ; la découverte de l'assassinat de Minerva Sarelle (et de son commanditaire solvarien) pourrait autant unir Valdorne dans la colère que le déstabiliser s'il révèle que Baldwin l'ignorait ; un scandale sur le commerce Mornac-Solvarn, ou sur le sabotage de la guilde marchande de Liberra, au pire moment de la guerre pourrait forcer une purge politique à Mornhaven.",
   },
   {
     groupe: "République de Liberra",
