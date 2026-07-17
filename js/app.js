@@ -1127,6 +1127,7 @@ const App = (() => {
     });
     if (panneau === "fiche") { rendreListePersos(); _mettreAJourLootFiche(); }
     if (panneau === "livret") rendrePanneauLivret();
+    if (panneau === "party") rendrePartyPanneau();
     if (panneau === "mutations") rendrePanneauMutations();
     if (panneau === "messages") { rendreMessages(); _majBadgeMessages(); }
     if (panneau === "loot" && typeof Loot !== "undefined") Loot.rendreCatalogue();
@@ -2282,6 +2283,108 @@ const App = (() => {
       if (b.dataset.act === "exporter") b.onclick = () => exporterPerso(id);
       if (b.dataset.act === "supprimer") b.onclick = () => supprimerPerso(id);
       if (b.dataset.act === "reclamer") b.onclick = () => { reclamerPerso(id); toast("Personnage réclamé ✔"); rendreListePersos(); };
+    });
+  }
+
+  /* ---------- Onglet "🎭 Party" : cartes de tous les personnages de la table ---------- */
+
+  // Libellé de race (+ variante/nation elfique) d'un perso.
+  function _labelRaceParty(p) {
+    const race = p.race ? RACES[p.race] : null;
+    let label = race ? race.nom_affiche : (p.race || "—");
+    if (race && p.raceVariante && race.variantes) {
+      const v = race.variantes.find((vv) => vv.code === p.raceVariante);
+      if (v) label += ` (${v.nom_affiche})`;
+    }
+    return label;
+  }
+
+  // Carte "party" d'un personnage : image (illustration ou avatar), classe
+  // (teinte de classe), race, genre, ville/nation d'origine, lore. Le
+  // propriétaire (ou le MJ) peut compléter ville/nation/lore.
+  function _htmlCartePartyPerso(p, id) {
+    const c = CLASSES[p.classe];
+    const couleur = couleurClasse(p.classe);
+    const genre = p.genre === "femme" ? "Femme" : "Homme";
+    const editable = estProprietaire(p);
+    // Image de la carte : l'illustration en priorité, sinon le portrait uploadé
+    // à la création — les deux sont de vraies images du perso, affichées en
+    // grand. On ne retombe sur l'icône (avatar/token/emblème) que si le joueur
+    // n'a AUCUNE image.
+    const imageCarte = p.illustration || p.portrait;
+    const illus = imageCarte
+      ? `<img class="party-illus" src="${imageCarte}" alt="illustration de ${echapper(p.nom)}" />`
+      : `<div class="party-illus-vide">${avatarHtml(p, 120)}</div>`;
+    const perso = Personnage.depuisJSON(p);
+    const vitalsHtml = `<div class="party-vitals">
+      <span title="Niveau">Niv ${p.niveau || 1}</span>
+      <span title="Points de vie">❤ ${p.pvActuel != null ? p.pvActuel : (p.pvMax || 0)}/${p.pvMax || 0}</span>
+      <span title="Défense">🛡 ${perso.calculerDEF()}</span>
+    </div>`;
+    const statsHtml = `<div class="party-stats">${CARACS.map((cc) =>
+      `<div class="party-stat"><span class="party-stat-code">${cc.code}</span><b>${(p.caracs && p.caracs[cc.code] != null) ? p.caracs[cc.code] : 10}</b><span class="party-stat-mod">${signe(perso.mod(cc.code))}</span></div>`).join("")}</div>`;
+    return `<div class="party-carte" style="border-top:4px solid ${couleur};">
+      <div class="party-illus-wrap">${illus}</div>
+      <div class="party-corps">
+        <div class="party-nom">${echapper(p.nom)}</div>
+        <div class="party-tags">
+          <span class="party-tag" style="background:${couleur};">${c ? echapper(c.nom_affiche) : echapper(p.classe || "")}</span>
+          <span class="party-tag-sec">${echapper(_labelRaceParty(p))}</span>
+          <span class="party-tag-sec">${genre}</span>
+        </div>
+        ${vitalsHtml}
+        ${statsHtml}
+        <div class="party-origine">
+          <div><span class="party-lbl">📍 Ville</span> ${p.villeOrigine ? echapper(p.villeOrigine) : "<em>—</em>"}</div>
+          <div><span class="party-lbl">🏴 Nation</span> ${p.nationOrigine ? echapper(p.nationOrigine) : "<em>—</em>"}</div>
+          <div><span class="party-lbl">🎂 Âge</span> ${p.age ? echapper(String(p.age)) : "<em>—</em>"}</div>
+          <div><span class="party-lbl">🎨 Loisirs</span> ${p.hobbies ? echapper(p.hobbies) : "<em>—</em>"}</div>
+        </div>
+        ${p.bio ? `<div class="party-lore">${echapper(p.bio)}</div>` : ""}
+        ${editable ? `<button class="btn petit secondaire party-editer" data-party-id="${id}">✎ Compléter</button>
+        <div class="party-form" id="party-form-${id}" style="display:none;">
+          <input type="text" id="party-ville-${id}" placeholder="Ville d'origine" maxlength="60" value="${echapper(p.villeOrigine || "")}" />
+          <input type="text" id="party-nation-${id}" placeholder="Nation d'origine" maxlength="60" value="${echapper(p.nationOrigine || "")}" />
+          <input type="text" id="party-age-${id}" placeholder="Âge" maxlength="20" value="${echapper(p.age != null ? String(p.age) : "")}" />
+          <input type="text" id="party-hobbies-${id}" placeholder="Loisirs / hobbies" maxlength="120" value="${echapper(p.hobbies || "")}" />
+          <textarea id="party-bio-${id}" placeholder="Lore / bio courte de ton personnage" rows="3">${echapper(p.bio || "")}</textarea>
+          <button class="btn petit or" data-party-save="${id}">Enregistrer</button>
+        </div>` : ""}
+      </div>
+    </div>`;
+  }
+
+  function rendrePartyPanneau() {
+    const zone = document.getElementById("zone-party");
+    if (!zone) return;
+    const persos = chargerPersos();
+    const ids = Object.keys(persos).filter((id) => persos[id] && persos[id].classe);
+    if (!ids.length) {
+      zone.innerHTML = `<div class="carte"><p class="vide">Aucun personnage dans la compagnie pour l'instant.</p></div>`;
+      return;
+    }
+    zone.innerHTML = `<div class="party-grille">${ids.map((id) => _htmlCartePartyPerso(persos[id], id)).join("")}</div>`;
+    zone.querySelectorAll(".party-editer").forEach((b) => {
+      b.onclick = () => {
+        const f = document.getElementById("party-form-" + b.dataset.partyId);
+        if (f) f.style.display = f.style.display === "none" ? "flex" : "none";
+      };
+    });
+    zone.querySelectorAll("[data-party-save]").forEach((b) => {
+      b.onclick = () => {
+        const pid = b.dataset.partySave;
+        const pers = chargerPersos();
+        const pp = pers[pid];
+        if (!pp) return;
+        pp.villeOrigine = (document.getElementById("party-ville-" + pid).value || "").trim();
+        pp.nationOrigine = (document.getElementById("party-nation-" + pid).value || "").trim();
+        pp.age = (document.getElementById("party-age-" + pid).value || "").trim();
+        pp.hobbies = (document.getElementById("party-hobbies-" + pid).value || "").trim();
+        pp.bio = (document.getElementById("party-bio-" + pid).value || "").trim();
+        sauverPersos(pers);
+        toast("Infos enregistrées ✔");
+        rendrePartyPanneau();
+      };
     });
   }
 
