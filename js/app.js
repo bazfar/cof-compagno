@@ -2314,7 +2314,7 @@ const App = (() => {
     const imageCarte = p.illustration || p.portrait;
     const illus = imageCarte
       ? `<img class="party-illus" src="${imageCarte}" alt="illustration de ${echapper(p.nom)}" />`
-      : `<div class="party-illus-vide">${avatarHtml(p, 88)}</div>`;
+      : `<div class="party-illus-vide">${avatarHtml(p, 120)}</div>`;
     return `<div class="party-carte" style="border-top:4px solid ${couleur};">
       <div class="party-illus-wrap">${illus}</div>
       <div class="party-corps">
