@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=59" />
+  <link rel="stylesheet" href="css/style.css?v=60" />
 </head>
 <body>
   <header>
@@ -17,6 +17,7 @@
       <button data-panneau="creation" data-role="joueur">Création</button>
       <button data-panneau="fiche" id="onglet-fiche">Ma fiche</button>
       <button data-panneau="livret">📖 Livret</button>
+      <button data-panneau="party">🎭 Party</button>
       <button data-panneau="mutations">🧬 Mutations</button>
       <button data-panneau="des">Dés</button>
       <button data-panneau="messages" id="onglet-messages">✉️ Messages</button>
@@ -225,6 +226,15 @@
         <select id="select-livret-perso"></select>
       </div>
       <div id="zone-livret"></div>
+    </section>
+
+    <!-- PARTY -->
+    <section class="panneau" id="panneau-party">
+      <div class="carte">
+        <h2 class="titre-bandeau">🎭 La compagnie</h2>
+        <p style="font-size:0.85rem;color:#6a6278;">Les cartes de tous les aventuriers de la table — image, classe, race, genre, origines et lore. Chacun peut compléter les infos de son propre personnage.</p>
+      </div>
+      <div id="zone-party"></div>
     </section>
 
     <!-- MUTATIONS -->
@@ -743,6 +753,6 @@
   <script src="js/loot.js?v=10"></script>
   <script src="js/capacites.js?v=33"></script>
   <script src="js/combat.js?v=14"></script>
-  <script src="js/app.js?v=116"></script>
+  <script src="js/app.js?v=117"></script>
 </body>
 </html>
