@@ -51,8 +51,9 @@ const App = (() => {
   let atelierItemIdx = null;
   let atelierSystemeId = null;
   // Sélection courante du sous-onglet Alchimie (cf. _rendreAlchimieType et suite).
-  let alchimieType = null;      // "soin" | "utilitaires"
+  let alchimieType = null;      // "soin" | "utilitaires" | "poisons"
   let alchimieFiliereId = null; // "seve" | "flambeau" (si alchimieType === "soin")
+  let alchimieFamilleId = null; // "enduit" | "dard" | "piege" (si alchimieType === "poisons")
   // Compteur de tentatives/jour partagé enchantement + alchimie (clé composite
   // "categorie:sousId:palierOuRecetteId", ex. "enchantement:generique:3",
   // "alchimie:soin_seve:2", "alchimie:util:antidote") — un seul bouton MJ
@@ -2939,7 +2940,7 @@ const App = (() => {
     sel.onchange = () => {
       atelierPersoId = sel.value;
       atelierItemIdx = null; atelierSystemeId = null;
-      alchimieType = null; alchimieFiliereId = null;
+      alchimieType = null; alchimieFiliereId = null; alchimieFamilleId = null;
       _rendreAtelierItems();
       _rendreAlchimieType();
     };
@@ -3109,8 +3110,9 @@ const App = (() => {
   // sont re-générés à chaque rendu, autant relire depuis ALCHIMIE à chaque
   // clic pour ne jamais dépendre d'un état capturé périmé.
   function _recetteDepuisCle(cle) {
-    const parts = cle.split(":"); // ["alchimie", "soin_<filiere>" | "util", <palierId> | <recetteId>]
+    const parts = cle.split(":"); // ["alchimie", "soin_<filiere>" | "util" | "poison_<famille>", <palierId> | <recetteId>]
     if (parts[1] === "util") return Alchimie.trouverRecetteUtilitaire(parts[2]);
+    if (parts[1].startsWith("poison_")) return Alchimie.trouverRecettePoison(parts[1].replace(/^poison_/, ""), parseInt(parts[2], 10));
     const filiereId = parts[1].replace(/^soin_/, "");
     return Alchimie.trouverRecetteSoin(filiereId, parseInt(parts[2], 10));
   }
@@ -3125,6 +3127,7 @@ const App = (() => {
         <select id="select-alchimie-type">
           <option value="soin">${echapper(ALCHIMIE.soin.label)}</option>
           <option value="utilitaires">${echapper(ALCHIMIE.utilitaires.label)}</option>
+          <option value="poisons">${echapper(ALCHIMIE.poisons.label)}</option>
         </select>
       </label>
       <label style="margin-left:12px;">Bonus au jet
@@ -3135,12 +3138,13 @@ const App = (() => {
     const sel = document.getElementById("select-alchimie-type");
     alchimieType = alchimieType || "soin";
     sel.value = alchimieType;
-    sel.onchange = () => { alchimieType = sel.value; alchimieFiliereId = null; _rendreAlchimieDetail(); };
+    sel.onchange = () => { alchimieType = sel.value; alchimieFiliereId = null; alchimieFamilleId = null; _rendreAlchimieDetail(); };
     _rendreAlchimieDetail();
   }
 
   function _rendreAlchimieDetail() {
     if (alchimieType === "utilitaires") _rendreAlchimieUtilitaires();
+    else if (alchimieType === "poisons") _rendreAlchimiePoisons();
     else _rendreAlchimieSoin();
   }
 
@@ -3171,6 +3175,37 @@ const App = (() => {
     _rendreCartesRecettes(zone, filiere.paliers.map((palier) => ({ recette: palier, cle: `alchimie:soin_${alchimieFiliereId}:${palier.id}` })));
   }
 
+  // Copie quasi conforme de _rendreAlchimieSoin/_rendreAlchimiePaliersSoin,
+  // mais sur ALCHIMIE.poisons.familles — variable de module dédiée
+  // (alchimieFamilleId) pour ne pas mélanger les deux systèmes si jamais
+  // leurs clés se recoupent.
+  function _rendreAlchimiePoisons() {
+    const zone = document.getElementById("zone-alchimie-detail");
+    if (!zone) return;
+    const familles = Object.keys(ALCHIMIE.poisons.familles);
+    alchimieFamilleId = familles.includes(alchimieFamilleId) ? alchimieFamilleId : familles[0];
+    zone.innerHTML = `
+      <label>Famille
+        <select id="select-alchimie-famille">
+          ${familles.map((fid) => `<option value="${fid}">${echapper(ALCHIMIE.poisons.familles[fid].label)}</option>`).join("")}
+        </select>
+      </label>
+      <div id="zone-alchimie-paliers" style="margin-top:10px;"></div>
+    `;
+    const sel = document.getElementById("select-alchimie-famille");
+    sel.value = alchimieFamilleId;
+    sel.onchange = () => { alchimieFamilleId = sel.value; _rendreAlchimiePaliersPoisons(); };
+    _rendreAlchimiePaliersPoisons();
+  }
+
+  function _rendreAlchimiePaliersPoisons() {
+    const zone = document.getElementById("zone-alchimie-paliers");
+    if (!zone) return;
+    const famille = ALCHIMIE.poisons.familles[alchimieFamilleId];
+    if (!famille) { zone.innerHTML = ""; return; }
+    _rendreCartesRecettes(zone, famille.paliers.map((palier) => ({ recette: palier, cle: `alchimie:poison_${alchimieFamilleId}:${palier.id}` })));
+  }
+
   function _rendreAlchimieUtilitaires() {
     const zone = document.getElementById("zone-alchimie-detail");
     if (!zone) return;
@@ -3197,8 +3232,10 @@ const App = (() => {
         return `<span${manque ? ' style="color:var(--chaos);font-weight:700;"' : ""}>${c.qte}× ${echapper(_nomCatalogueLoot(c.id))} (${dispo} en stock)</span>`;
       }).join(", ");
       const desactive = restantes <= 0 || !materiauxOk;
+      const nomItemRate = _nomCatalogueLoot(recette.itemRateId || "potion_ratee");
       return `<div class="carte" style="margin-top:10px;">
-        <div><strong>${echapper(nomPotion)}</strong> — diff. ${recette.diff}${recette.rateCritiqueSi > 0 ? ` · <span style="color:var(--chaos);">rate si jet brut ≤ ${recette.rateCritiqueSi} (Potion ratée)</span>` : ""}</div>
+        <div><strong>${echapper(nomPotion)}</strong> — diff. ${recette.diff}${recette.rateCritiqueSi > 0 ? ` · <span style="color:var(--chaos);">rate si jet brut ≤ ${recette.rateCritiqueSi} (${echapper(nomItemRate)})</span>` : ""}</div>
+        ${recette.formuleDot ? `<div>Dégâts par tour : ${echapper(recette.formuleDot)}${recette.dureeEtat ? ` pendant ${recette.dureeEtat} tours` : ""}</div>` : ""}
         <div>Coût : ${coutTxt}</div>
         <div>Tentatives aujourd'hui : ${tentatives}/${recette.tentativesJour}${restantes <= 0 ? " — épuisées" : ""}</div>
         <button class="btn or" data-cle-recette="${echapper(cle)}" ${desactive ? "disabled" : ""} style="margin-top:6px;">Brasser</button>
