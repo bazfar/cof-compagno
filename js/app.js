@@ -66,6 +66,7 @@ const App = (() => {
   // valeur de base nb_joueurs/2 tant que personne n'a encore ajusté le compteur,
   // purement manuel ensuite (pas de reset automatique/périodique).
   const STORAGE_CHANCE_EQUIPE = "chance:equipe";
+  const STORAGE_PNJ_REVELES = "pnj:reveles"; // via SyncStore (Firestore) : ids des PNJ secrets révélés aux joueurs — irréversible
   let livreOuvertId = null;  // id du livre ouvert dans l'étagère du perso (null = vue étagère)
   let livreOuvertPersoId = null; // id du perso auquel appartient le livre ouvert (le mien, ou celui d'un livre partagé avec moi)
   let role = null;           // "joueur" | "mj" | null (pas encore choisi)
@@ -6438,9 +6439,25 @@ const App = (() => {
     return PNJ_PALETTE_FACTIONS[idx % PNJ_PALETTE_FACTIONS.length];
   }
 
+  // PNJ secrets (cf. p.secret dans PNJ_CLES, data/donnees.js) : nom/titre/faction
+  // toujours visibles, contenu (résumé/description/accroches) verrouillé côté joueur
+  // tant que le MJ ne l'a pas explicitement révélé. Révélation permanente et partagée
+  // (SyncStore) — pas de re-masquage, cf. décision validée.
+  function _pnjReveles() { return SyncStore.get(STORAGE_PNJ_REVELES) || []; }
+  function _pnjEstRevele(id) { return _pnjReveles().includes(id); }
+  function _reveleerPnj(id) {
+    if (role !== "mj") return;
+    const reveles = _pnjReveles();
+    if (reveles.includes(id)) return;
+    reveles.push(id);
+    SyncStore.set(STORAGE_PNJ_REVELES, reveles);
+  }
+
   // Onglet "PNJ" du panneau Lore — une carte par entrée de PNJ_CLES
-  // (data/donnees.js), purement statique/local pour l'instant (comme le
-  // reste du Lore — pas de synchro Firestore). Filtre par faction optionnel.
+  // (data/donnees.js). Statique/local pour l'essentiel (comme le reste du
+  // Lore — pas de synchro Firestore), sauf l'état de révélation des PNJ
+  // secrets (cf. STORAGE_PNJ_REVELES ci-dessus), partagé en temps réel.
+  // Filtre par faction optionnel.
   let _pnjFactionFiltre = "";
   function rendrePnjCles() {
     const zone = document.getElementById("zone-lore-pnj");
@@ -6454,23 +6471,55 @@ const App = (() => {
       `</div>`;
     const cartesHtml = PNJ_CLES
       .filter((p) => !_pnjFactionFiltre || p.faction === _pnjFactionFiltre)
-      .map((p) => `<div class="carte pnj-carte">
-        <div class="pnj-entete">
-          <div>
-            <div class="pnj-nom">${echapper(p.nom)}</div>
-            <div class="pnj-titre">${echapper(p.titre)}</div>
+      .map((p) => {
+        const estSecret = !!p.secret;
+        const revele = !estSecret || _pnjEstRevele(p.id);
+        const verrouillePourJoueur = estSecret && !revele && role !== "mj";
+
+        const badgeSecretMj = estSecret && role === "mj"
+          ? (revele
+              ? `<span class="badge-chaos" title="Révélé aux joueurs">🔓 Révélé</span>`
+              : `<span class="badge-chaos" title="Visible MJ uniquement">🔒 Secret</span>`)
+          : "";
+
+        const boutonReveler = estSecret && !revele && role === "mj"
+          ? `<button type="button" class="btn petit secondaire" data-act="reveler-pnj" data-id="${p.id}">🔓 Révéler aux joueurs</button>`
+          : "";
+
+        const corpsHtml = verrouillePourJoueur
+          ? `<p class="pnj-verrouille">🔒 <em>Information non révélée par le Maître de Jeu.</em></p>`
+          : `<p class="pnj-resume"><em>${echapper(p.resume)}</em></p>` +
+            `<div class="contenu">${echapper(p.description)}</div>` +
+            ((p.accroches || []).length ? `<div class="pnj-accroches" data-role="mj"><h4>Accroches</h4><ul>${
+              p.accroches.map((a) => `<li>${echapper(a)}</li>`).join("")
+            }</ul></div>` : "");
+
+        return `<div class="carte pnj-carte${verrouillePourJoueur ? " pnj-carte-verrouillee" : ""}">
+          <div class="pnj-entete">
+            <div>
+              <div class="pnj-nom">${echapper(p.nom)}</div>
+              <div class="pnj-titre">${echapper(p.titre)}</div>
+            </div>
+            ${badgeSecretMj}
+            <span class="badge-faction" style="background:${_couleurFaction(p.faction)};">${echapper(p.faction)}</span>
           </div>
-          <span class="badge-faction" style="background:${_couleurFaction(p.faction)};">${echapper(p.faction)}</span>
-        </div>
-        <p class="pnj-resume"><em>${echapper(p.resume)}</em></p>
-        <div class="contenu">${echapper(p.description)}</div>
-        ${(p.accroches || []).length ? `<div class="pnj-accroches" data-role="mj"><h4>Accroches</h4><ul>${
-          p.accroches.map((a) => `<li>${echapper(a)}</li>`).join("")
-        }</ul></div>` : ""}
-      </div>`).join("");
+          ${corpsHtml}
+          ${boutonReveler}
+        </div>`;
+      }).join("");
     zone.innerHTML = filtreHtml + cartesHtml;
     zone.querySelectorAll("[data-pnj-faction]").forEach((btn) => {
       btn.onclick = () => { _pnjFactionFiltre = btn.dataset.pnjFaction; rendrePnjCles(); };
+    });
+    zone.querySelectorAll('[data-act="reveler-pnj"]').forEach((btn) => {
+      btn.onclick = () => {
+        const id = btn.dataset.id;
+        const pnj = PNJ_CLES.find((p) => p.id === id);
+        if (!confirm(`Révéler "${pnj ? pnj.nom : id}" à tous les joueurs ? Cette action est irréversible.`)) return;
+        _reveleerPnj(id);
+        toast("PNJ révélé aux joueurs.");
+        rendrePnjCles();
+      };
     });
   }
 
@@ -6647,6 +6696,14 @@ const App = (() => {
         _rendreAtelierPaliers();
         _rendreAlchimieDetail();
       }
+    });
+
+    // Un MJ révèle un PNJ secret (Œil de Solmaris, etc.) : tous les clients (autres
+    // joueurs ET autres onglets MJ) doivent voir le déverrouillage immédiatement s'ils
+    // sont sur l'onglet PNJ du panneau Lore.
+    SyncStore.subscribe(STORAGE_PNJ_REVELES, () => {
+      const zonePnj = document.getElementById("zone-lore-pnj");
+      if (zonePnj) rendrePnjCles();
     });
 
     // Modal choix permanent d'une capacité (ex. +2 DEF OU +1d8 DM)

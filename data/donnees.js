@@ -2205,6 +2205,51 @@ const PNJ_CLES = [
     ],
   },
   {
+    id: "ilsevar-cendreau",
+    nom: "Ilsevar Cendreau",
+    titre: "Veilleur Suprême de l'Œil de Solmaris",
+    faction: "Solvarn",
+    secret: true,
+    resume: "Chef de l'ordre d'espionnage impérial — un homme sans naissance notable, précisément parce que c'est sa force.",
+    description:
+      "Ancien intendant sans lignée noble avant sa nomination par l'Empereur Aurelian III, dans les mois de panique suivant la Sécession des quatre maisons. Ilsevar rapporte uniquement à l'Empereur — aucune maison ne peut le réclamer comme un des siens, ni le corrompre par des liens de sang. Officiellement, il porte le titre terne de \"chancelier du Zénith\", poste administratif qui décourage les questions. Le nom \"Cendreau\" n'apparaît sur aucun registre officiel de la cour ; à Solmaris, on le prononce presque jamais à voix haute.\n\nIl cloisonne volontairement ses deux maîtres (Vantrel et Ashevel), qui ignorent l'un de l'autre au-delà du strict nécessaire opérationnel — deux maîtres qui se surveillent mutuellement ne complotent pas contre lui.",
+    accroches: [
+      "Un PJ remonte accidentellement jusqu'à \"Cendreau\" en tirant un fil administratif anodin — personne à la cour ne veut confirmer que ce nom existe.",
+      "Ilsevar recrute discrètement un PJ étranger à la cour (donc incorruptible par les maisons) pour une mission qu'il ne peut confier à ses propres agents.",
+      "Le secret personnel d'Aurelian III (l'Aube silencieuse) et l'existence de l'Œil pourraient un jour se recouper si un PJ tire sur les deux fils à la fois.",
+    ],
+  },
+  {
+    id: "isaure-vantrel",
+    nom: "Dame Isaure Vantrel",
+    titre: "Maître du Regard Intérieur",
+    faction: "Solvarn",
+    secret: true,
+    resume: "Ancienne confesseure de la foi solaire — surveille les quatre maisons loyalistes de l'intérieur, sans jamais rien écrire.",
+    description:
+      "Choisie par Ilsevar pour sa maîtrise du protocole religieux : c'est elle qui décide quand une accusation de corruption par le Chaos devient \"utile\" plutôt que prématurée — arme politique redoutable dans un monde où le Sang divin humain est intrinsèquement sujet au Chaos, une dénonciation bien placée suffisant à briser une lignée sans procès public. Froide, méthodique, elle tient un registre mental plutôt qu'écrit des secrets des quatre maisons loyalistes (Ashe, Solenne, Vosgard, Kestrel) — elle ne fait jamais confiance au papier.\n\nSa couverture : dame de compagnie itinérante, reçue tour à tour dans les quatre foyers nobles sous prétexte de piété partagée. Personne ne s'étonne de sa présence ; personne ne se souvient exactement quand elle est arrivée pour la première fois.",
+    accroches: [
+      "Une maison loyaliste (au choix du MJ) découvre une fuite impossible à expliquer autrement que par un espion interne — les PJ enquêtent sans savoir qu'ils cherchent Vantrel.",
+      "Vantrel envisage d'utiliser l'accusation de corruption par le Chaos contre un PNJ que les PJ protègent — dilemme moral si elle les approche pour \"confirmer\" des soupçons.",
+      "Sa rivalité feutrée avec Corentin Ashevel (elle juge son terrain \"romantisme de mercenaire\") peut se jouer devant des PJ témoins sans qu'ils comprennent l'enjeu.",
+    ],
+  },
+  {
+    id: "corentin-ashevel",
+    nom: "Corentin Ashevel",
+    titre: "Maître du Regard Lointain",
+    faction: "Solvarn",
+    secret: true,
+    resume: "Ancien marchand de la maison Ashe reconverti en espion — opère sur le front d'Aetharion et jusqu'à Libris même.",
+    description:
+      "Ancien marchand affilié à la maison Ashe (le nom \"Ashevel\" laisse planer une ambiguïté sur un lien de sang réel, jamais confirmée — lui-même l'entretient), reconverti en agent de la couronne après avoir monté un réseau commercial légitime le long du front d'Aetharion. Contrairement à Vantrel, il aime le risque et le contact direct : il a lui-même posé le pied à Libris sous couverture diplomatique. Exploite les liens de sang entre maisons loyalistes et leurs miroirs sécessionnistes (Ashe/Valdorne notamment) — cousins et anciens serments deviennent des sources précieuses côté Coalisés.\n\nRivalité feutrée avec Vantrel, qu'il juge \"paranoïa de cour\" — tension qu'Ilsevar cultive délibérément.",
+    accroches: [
+      "Les PJ croisent un marchand solvarien trop bien informé sur le front d'Aetharion ou sur Libris — Ashevel sous couverture.",
+      "Un contact d'Ashevel côté Coalisés (cousin d'une maison sécessionniste) est démasqué : les PJ peuvent le sauver, l'exploiter, ou le voir liquidé par l'Œil lui-même.",
+      "Cellule dédiée à Liberra jugée dangereuse non par la force militaire mais par contagion idéologique (mélange des races, République) — terrain naturel de recoupement avec le Comptoir/Aurèle Ferrand (Scénario 0).",
+    ],
+  },
+  {
     id: "minerva-sarelle",
     nom: "Minerva Sarelle",
     titre: "Ancienne mage attitrée de la couronne de Valdorne (assassinée)",

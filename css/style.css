@@ -1028,6 +1028,17 @@ main:has(#panneau-lore.actif) { max-width: 1400px; }
 .pnj-accroches h4 { margin: 0 0 4px; color: var(--violet); font-size: 0.85rem; }
 .pnj-accroches ul { margin: 0; padding-left: 20px; font-size: 0.88rem; color: #4a4358; }
 .pnj-accroches li { margin-bottom: 3px; }
+.pnj-carte-verrouillee { opacity: 0.75; }
+.pnj-verrouille {
+  font-style: italic;
+  color: #6a6278;
+  background: #f0eef4;
+  border: 1px dashed #b8b0c8;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 8px 0 0;
+  font-size: 0.88rem;
+}
 
 /* ---------- Listes de persos sauvegardés ---------- */
 .liste-persos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
