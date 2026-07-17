@@ -5213,6 +5213,7 @@ const App = (() => {
               </div>
               <div class="barre-actions">
                 <button class="btn petit or" id="btn-niveau-up">⬆ Monter de niveau</button>
+                <button class="btn petit secondaire" id="btn-recalculer-pv" title="Recalcule le max de PV avec la formule à jour (utile après un changement d'équilibrage)">🔄 Recalculer PV</button>
                 <button class="btn petit secondaire" id="btn-editer-fiche">✎ Modifier</button>
                 <button class="btn petit secondaire" id="btn-exporter-fiche">Exporter</button>
               </div>
@@ -5404,6 +5405,24 @@ const App = (() => {
     // de l'autre vue si les deux sont montées en même temps).
     wireCapacitesEtEtats(zone, id, p, () => afficherFiche(id));
     document.getElementById("btn-niveau-up").onclick = () => monterDeNiveau(id);
+    // Recalcule le max de PV avec la formule actuelle (utile pour les persos
+    // créés avant un changement d'équilibrage, ex. +2 PV au niveau 1). Applique
+    // le delta aux PV actuels ; même logique que le Don "Robuste" (cf. plus bas).
+    const btnRecalcPv = document.getElementById("btn-recalculer-pv");
+    if (btnRecalcPv) btnRecalcPv.onclick = () => {
+      const persos = chargerPersos();
+      const pp = persos[id];
+      if (!pp) return;
+      const nouveauMax = new Personnage(pp).pvCalcule();
+      const ancienMax = pp.pvMax || 0;
+      if (nouveauMax === ancienMax) { toast("PV déjà à jour (aucun changement)."); return; }
+      const delta = nouveauMax - ancienMax;
+      pp.pvActuel = Math.max(0, Math.min(nouveauMax, (pp.pvActuel || 0) + delta));
+      pp.pvMax = nouveauMax;
+      sauverPersos(persos);
+      afficherFiche(id);
+      toast(`PV recalculés : ${ancienMax} → ${nouveauMax} (${delta >= 0 ? "+" : ""}${delta}).`);
+    };
     document.getElementById("btn-editer-fiche").onclick = () => editerPerso(id);
     document.getElementById("btn-exporter-fiche").onclick = () => exporterPerso(id);
     // Grande illustration du personnage (cf. htmlPortraitFiche) — upload
