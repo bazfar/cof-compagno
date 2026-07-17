@@ -6502,7 +6502,8 @@ const App = (() => {
       .map((g) => {
         const entitesHtml = g.entites.map((e) => `<div class="carte pnj-carte">
           <div class="pnj-entete">
-            <div>
+            ${e.blason ? `<img class="pnj-blason" src="${echapper(e.blason)}" alt="Blason — ${echapper(e.nom)}" onerror="this.style.display='none';" />` : ""}
+            <div style="flex:1;">
               <div class="pnj-nom">${echapper(e.nom)}</div>
               <div class="pnj-titre">« ${echapper(e.devise)} »</div>
             </div>

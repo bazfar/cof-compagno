@@ -1938,7 +1938,7 @@ const LORE = {
     {
       titre: "Les trois systèmes humains",
       contenu:
-        "La Grande Sécession (la Rupture) a eu lieu il y a environ 170 ans — assez loin pour ne plus être un souvenir personnel, assez proche pour rester un souvenir de famille encore instrumentalisé politiquement.\n\nMême origine pour tous les Humains — le sang divin fracturé. Après la Grande Sécession du Premier Empire, trois systèmes se disputent le monde connu : l'Empire de Solvarn, les Royaumes Coalisés (Valdorne, Arveth, Mornac, Serval) et la République de Liberra.\n\nL'Empire de Solvarn (Xénophobe · Centralisé · Religieux · Solaire)\nHéritier du Premier Empire ; la famille impériale revendique le sang des Gardiens de l'Écorce. Le soleil est son symbole. Doctrine : pureté du sang humain comme rempart au Chaos, non-humains = vecteurs de corruption. Ironie : Solvarn a raison sur un point (les Humains sont plus susceptibles au Chaos), appliqué de façon monstrueuse. But : purifier et reconquérir.\n\nLes Royaumes Coalisés (Chevaleresques · Féodaux · Hypocrites)\n• Valdorne : le plus ancien, berceau de la sécession, chevalerie sincère.\n• Arveth : frontalier de Solvarn, sous pression constante — le vacillant.\n• Mornac : maritime et commerçant, chevalerie de façade, pragmatique.\n• Serval : montagnard, allié des Nains de l'Ordre, le plus indépendant.\nStructure féodale (Seigneurs → Chevaliers → Paysans). Point de rupture : si Arveth tombe, la coalition se fracture.\n\nLa République de Liberra (Idéaliste · Inclusive · Fracturée)\nNée de la Sécession, rejette l'Empire et le féodalisme. Assemblée de citoyens ; non-humains admis (représentation inégale). Majorité Aelindra, minorité Mordanel. Fractures : marchands vs idéalistes vs militaires vs communautés non-humaines.\n\nTensions actuelles\n• Solvarn → Royaumes : reconquête (Arveth en première ligne).\n• Solvarn → Liberra : hérésie raciale.\n• Solvarn → Aetharion : guerre ouverte.\n• Valdorne → Solvarn : résistance idéaliste, refuse tout compromis.\n• Arveth → Coalition : négociations secrètes déjà engagées avec Solvarn — un flanc coalisé neutralisé libérerait des troupes impériales pour l'effort contre Aetharion. Rupture potentielle si ces contacts sont révélés.\n• Mornac : pragmatisme marchand (commerce avec Liberra, vend à Solvarn si le prix est bon).\n• Serval ↔ Nains de l'Ordre : alliance montagnarde solide.\n• Liberra ↔ Aelindra : alliance naturelle. Liberra ↔ Royaumes : alliance inconfortable contre Solvarn.",
+        "La Grande Sécession (la Rupture) a eu lieu il y a environ 170 ans — assez loin pour ne plus être un souvenir personnel, assez proche pour rester un souvenir de famille encore instrumentalisé politiquement.\n\nMême origine pour tous les Humains — le sang divin fracturé. Après la Grande Sécession du Premier Empire, trois systèmes se disputent le monde connu : l'Empire de Solvarn, les Royaumes Coalisés (Valdorne, Arveth, Mornac, Serval) et la République de Liberra.\n\nL'Empire de Solvarn (Xénophobe · Centralisé · Religieux · Solaire)\nHéritier du Premier Empire ; la famille impériale revendique le sang des Gardiens de l'Écorce. Le soleil est son symbole. Doctrine : pureté du sang humain comme rempart au Chaos, non-humains = vecteurs de corruption. Ironie : Solvarn a raison sur un point (les Humains sont plus susceptibles au Chaos), appliqué de façon monstrueuse. But : purifier et reconquérir.\n\nLes Royaumes Coalisés (Chevaleresques · Féodaux · Hypocrites)\n• Valdorne : le plus ancien, berceau de la sécession, chevalerie sincère. Blason : un pont brisé surmonté d'une épée dressée, sur azur — écho direct à Pont-Rompu et au sacrifice d'Alaric. Devise : « Un seul suffit. »\n• Arveth : frontalier de Solvarn, sous pression constante — le vacillant. Blason : une flamme vacillante entre deux lances croisées, sur fond cendré. Devise : « Nous tenons la ligne. »\n• Mornac : maritime et commerçant, chevalerie de façade, pragmatique. Blason : une ancre couronnée sur des vagues, sur vert-de-mer. Devise : « Le vent tourne, le profit reste. »\n• Serval : montagnard, allié des Nains de l'Ordre, le plus indépendant. Blason : une enclume sur un pic montagneux, sur gris-pierre. Devise : « La roche encaisse mais ne se brise pas. »\nStructure féodale (Seigneurs → Chevaliers → Paysans). Point de rupture : si Arveth tombe, la coalition se fracture.\n\nLa République de Liberra (Idéaliste · Inclusive · Fracturée)\nNée de la Sécession, rejette l'Empire et le féodalisme. Assemblée de citoyens ; non-humains admis (représentation inégale). Majorité Aelindra, minorité Mordanel. Fractures : marchands vs idéalistes vs militaires vs communautés non-humaines.\n\nTensions actuelles\n• Solvarn → Royaumes : reconquête (Arveth en première ligne).\n• Solvarn → Liberra : hérésie raciale.\n• Solvarn → Aetharion : guerre ouverte.\n• Valdorne → Solvarn : résistance idéaliste, refuse tout compromis.\n• Arveth → Coalition : négociations secrètes déjà engagées avec Solvarn — un flanc coalisé neutralisé libérerait des troupes impériales pour l'effort contre Aetharion. Rupture potentielle si ces contacts sont révélés.\n• Mornac : pragmatisme marchand (commerce avec Liberra, vend à Solvarn si le prix est bon).\n• Serval ↔ Nains de l'Ordre : alliance montagnarde solide.\n• Liberra ↔ Aelindra : alliance naturelle. Liberra ↔ Royaumes : alliance inconfortable contre Solvarn.",
     },
     {
       titre: "Les Lieux de Libris",
@@ -2214,8 +2214,12 @@ const PNJ_CLES = [
 const FACTIONS = [
   {
     groupe: "Empire de Solvarn",
+    // Blason national, distinct des 4 blasons de maison (Ashe/Solenne/
+    // Vosgard/Kestrel, cf. leurs description ci-dessous) — cf.
+    // assets/blasons/README.md.
+    blason: "assets/blasons/blason_solvarn.png",
     intro:
-      "Quatre grandes maisons ont fait sécession lors de la Rupture pour fonder les Royaumes Coalisés (Valdorne, Arveth, Mornac, Serval). Quatre autres sont restées fidèles au trône de Solmaris. Narrativement, huit maisons issues du même Premier Empire — quatre qui ont trahi, quatre qui ont tenu bon, chacune des loyalistes reflétant, sous une forme corrompue par la doctrine impériale, la vertu qui a poussé son miroir sécessionniste à partir.",
+      "Quatre grandes maisons ont fait sécession lors de la Rupture pour fonder les Royaumes Coalisés (Valdorne, Arveth, Mornac, Serval). Quatre autres sont restées fidèles au trône de Solmaris. Narrativement, huit maisons issues du même Premier Empire — quatre qui ont trahi, quatre qui ont tenu bon, chacune des loyalistes reflétant, sous une forme corrompue par la doctrine impériale, la vertu qui a poussé son miroir sécessionniste à partir.\n\nBlason impérial — antérieur aux attributs de chaque maison (lames, flamme, balance, faucon), qui n'en sont que des déclinaisons. Devise inscrite sous le trône de Solmaris : « La pureté est le seul rempart. »",
     entites: [
       {
         nom: "Maison Ashe — Le Glaive",
@@ -2244,6 +2248,43 @@ const FACTIONS = [
     ],
     synthese:
       "Rapports de force à la cour de Solmaris (contexte : guerre ouverte contre Aetharion, siège naval sans percée depuis 3 ans)\n\n1. Ashe — ascendante : l'armée est incontournable en temps de guerre, mais dépend entièrement de Vosgard pour le financement.\n2. Solenne — le levier silencieux : légitimité rituelle de l'Empereur, mais les Cendres Blanches échappent peu à peu à son contrôle.\n3. Vosgard — indispensable et méprisée : pouvoir structurel jamais honoré en public.\n4. Kestrel — puissante localement, marginale à la cour : isolée politiquement, dépend de renforts qui n'arrivent jamais vraiment.\n\nAxes de tension : Ashe ↔ Solenne (rivalité froide pour l'oreille de l'Empereur) ; Ashe ↔ Vosgard (dépendance forcée sans confiance) ; Solenne ↔ Vosgard (méfiance doctrinale, l'argent sent l'hérésie pragmatique) ; Kestrel isolée, traitée en subalterne par Ashe.\n\nCe qui pourrait faire basculer l'équilibre : l'aboutissement des négociations secrètes Arveth–Solvarn libérerait des troupes pour Aetharion et renforcerait Ashe ; une dérive incontrôlée des Cendres Blanches forcerait l'Empereur à trancher entre les maisons ; la révélation de la corruption Vosgard–Mornac pourrait pousser Ashe et Solenne à une alliance ponctuelle inédite ; la chute d'une garnison Kestrel faute de renfort exposerait publiquement le mensonge de ses rapports.",
+  },
+  {
+    groupe: "Royaumes Coalisés",
+    intro:
+      "Quatre grandes maisons ont fait sécession lors de la Rupture pour fonder les Royaumes Coalisés — chevaleresques, féodaux, hypocrites. Contrairement à l'Empire, aucun blason unique ne les rassemble : chaque royaume porte le sien, hérité de son propre miroir sécessionniste.",
+    entites: [
+      {
+        nom: "Valdorne",
+        devise: "Un seul suffit.",
+        blason: "assets/blasons/blason_valdorne.png",
+        description:
+          "Le plus ancien des Royaumes Coalisés, berceau de la sécession, chevalerie sincère.\nBlason : un pont brisé surmonté d'une épée dressée, sur azur — écho direct à Pont-Rompu et au sacrifice d'Alaric.",
+      },
+      {
+        nom: "Arveth",
+        devise: "Nous tenons la ligne.",
+        blason: "assets/blasons/blason_arveth.png",
+        description:
+          "Frontalier de Solvarn, sous pression constante — le vacillant de la coalition.\nBlason : une flamme vacillante entre deux lances croisées, sur fond cendré.",
+      },
+      {
+        nom: "Mornac",
+        devise: "Le vent tourne, le profit reste.",
+        blason: "assets/blasons/blason_mornac.png",
+        description:
+          "Maritime et commerçant, chevalerie de façade, pragmatique.\nBlason : une ancre couronnée sur des vagues, sur vert-de-mer.",
+      },
+      {
+        nom: "Serval",
+        devise: "La roche encaisse mais ne se brise pas.",
+        blason: "assets/blasons/blason_serval.png",
+        description:
+          "Montagnard, allié des Nains de l'Ordre, le plus indépendant des Royaumes Coalisés.\nBlason : une enclume sur un pic montagneux, sur gris-pierre.",
+      },
+    ],
+    synthese:
+      "Structure féodale (Seigneurs → Chevaliers → Paysans). Point de rupture : si Arveth tombe, la coalition se fracture.",
   },
   {
     groupe: "République de Liberra",

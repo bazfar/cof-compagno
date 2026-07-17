@@ -1016,6 +1016,7 @@ main:has(#panneau-lore.actif) { max-width: 1400px; }
 /* ---------- Lore > PNJ clés ---------- */
 .pnj-carte .contenu { white-space: pre-wrap; font-size: 0.9rem; color: #3a3348; }
 .pnj-entete { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.pnj-blason { width: 56px; height: 56px; object-fit: contain; flex-shrink: 0; }
 .pnj-nom { font-weight: 700; color: var(--violet); font-size: 1.05rem; }
 .pnj-titre { font-size: 0.82rem; color: #6a6278; }
 .pnj-resume { font-size: 0.9rem; color: var(--violet-clair); margin: 8px 0; }
