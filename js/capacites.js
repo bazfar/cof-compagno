@@ -573,20 +573,22 @@ const Capacites = (() => {
     return "État";
   }
 
-  // p : objet perso brut. Décompte de 1 tour tous les etatsActifs à durée
-  // numérique (motCle null), retire ceux qui tombent à 0. Ne touche jamais aux
-  // entrées motCle "permanente"/"finCombat"/"horsTour". Pour toute entrée
-  // portant une formuleDot (ex. "maudite" posée avec un DOT), relance la
-  // formule à CE tick et applique les dégâts à p.pvActuel (clampé à 0, sans
-  // réduction d'armure — un DOT magique/malédiction n'est pas de l'armure
-  // physique) — le tick a lieu tant que l'état est actif ce tour, y compris
-  // le dernier tour avant expiration. Pas d'automatisation du jet de
-  // résistance "CON pour moitié" mentionné par certaines capacités : reste
-  // un ajustement manuel de table, comme le reste des nuances non chiffrées
-  // par le schéma standard.
-  // Symétrique pour formuleSoin (ex. Druide "Sanctuaire du gardien") : même
-  // tick, mais soigne p.pvActuel (plafonné à pvMax) au lieu d'infliger des
-  // dégâts.
+  // p : objet perso brut. Ne touche jamais aux entrées motCle "permanente"/
+  // "finCombat"/"horsTour". Pour toute autre entrée (motCle null) portant une
+  // formuleDot (ex. "maudite"/"empoisonnee" posée avec un DOT, mécanisée OU
+  // posée à la main par le MJ via la modale Malus), relance la formule à CE
+  // tick et applique les dégâts à p.pvActuel (clampé à 0, sans réduction
+  // d'armure — un DOT magique/malédiction n'est pas de l'armure physique) —
+  // le tick a lieu tant que l'état est actif ce tour, y compris le dernier
+  // tour avant expiration. Symétrique pour formuleSoin (ex. Druide "Sanctuaire
+  // du gardien") : même tick, mais soigne p.pvActuel (plafonné à pvMax) au
+  // lieu d'infliger des dégâts. Décompte ensuite 1 tour et retire l'entrée à
+  // 0 UNIQUEMENT si dureeRestante.tours est numérique (mécanisée) ; les
+  // entrées à durée libre (texte, ex. "3 tours" posé par le MJ) tickent donc
+  // indéfiniment mais restent à retirer manuellement via ✕. Pas
+  // d'automatisation du jet de résistance "CON pour moitié" mentionné par
+  // certaines capacités : reste un ajustement manuel de table, comme le
+  // reste des nuances non chiffrées par le schéma standard.
   // Renvoie { retires, degats, testsVolonte, soins } : libellés des entrées
   // retirées, détail des dégâts de DOT et des soins de HOT infligés à ce
   // tick, et résultats des tests de Volonté par tour (pour un toast/journal).
@@ -609,7 +611,13 @@ const Capacites = (() => {
       p.aInfligeDegatsSang = false;
     }
     p.etatsActifs = (p.etatsActifs || []).filter((e) => {
-      if (!e.dureeRestante || e.dureeRestante.motCle !== null || typeof e.dureeRestante.tours !== "number") return true;
+      if (!e.dureeRestante || e.dureeRestante.motCle !== null) return true;
+      // Durée libre (posée par le MJ via la modale Malus, ex. "3 tours" en
+      // texte — cf. app.js _entreeMalusMj) : formuleDot/testVolonte tickent
+      // quand même chaque tour, mais dureeRestante.tours n'étant pas
+      // numérique, aucun décompte/retrait automatique — reste manuel via ✕,
+      // comme documenté ci-dessus.
+      const dureeNumerique = typeof e.dureeRestante.tours === "number";
       if (e.formuleDot) {
         const { total, detail } = resoudreExpression(e.formuleDot, {});
         p.pvActuel = Math.max(0, (p.pvActuel || 0) - total);
@@ -644,6 +652,7 @@ const Capacites = (() => {
           cibleForcee: forcee ? forcee.nom : null,
         });
       }
+      if (!dureeNumerique) return true;
       e.dureeRestante.tours -= 1;
       if (e.dureeRestante.tours <= 0) {
         retires.push(_libelleEtatActif(e));
