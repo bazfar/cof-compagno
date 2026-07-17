@@ -6800,6 +6800,14 @@ const App = (() => {
     }).join("");
 
     document.getElementById("modal-malus-duree").value = "";
+    const champDot = document.getElementById("modal-malus-dot");
+    const labelDot = document.getElementById("modal-malus-dot-label");
+    champDot.value = "";
+    const majChampDot = () => {
+      labelDot.style.display = ETATS[selEtat.value] && ETATS[selEtat.value].categorie === "dot" ? "block" : "none";
+    };
+    selEtat.onchange = majChampDot;
+    majChampDot();
     modal.style.display = "flex";
   }
 
@@ -6812,11 +6820,11 @@ const App = (() => {
   // decompterEtatsDebutTour côté capacites.js, qui ignore les entrées sans
   // dureeRestante.tours numérique) : retrait toujours manuel via ✕, comme
   // souhaité pour un malus posé "à la main" par le MJ.
-  function _entreeMalusMj(idEtat, dureeAffichee) {
+  function _entreeMalusMj(idEtat, dureeAffichee, formuleDot) {
     return {
       idEtat,
       dureeRestante: { tours: null, motCle: null, dureeAffichee: dureeAffichee || null },
-      formuleDot: null,
+      formuleDot: formuleDot || null,
       source: "MJ",
       poseLe: Date.now(),
     };
@@ -6826,11 +6834,12 @@ const App = (() => {
     const cibleRaw = document.getElementById("modal-malus-cible").value;
     const idEtat = document.getElementById("modal-malus-etat").value;
     const duree = document.getElementById("modal-malus-duree").value.trim();
+    const formuleDot = document.getElementById("modal-malus-dot").value.trim();
     if (!cibleRaw || !idEtat) return;
     const sep = cibleRaw.indexOf(":");
     const type = cibleRaw.slice(0, sep);
     const id = cibleRaw.slice(sep + 1);
-    const entree = _entreeMalusMj(idEtat, duree);
+    const entree = _entreeMalusMj(idEtat, duree, formuleDot);
 
     if (type === "pj") {
       const persos = chargerPersos();
