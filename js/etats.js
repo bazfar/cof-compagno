@@ -47,6 +47,10 @@ const ETATS = {
     description: "-2 Perception et -2 Volonté tant que l'effet dure." },
   maudite: { nom: "Maudite", categorie: "dot",
     description: "Dégâts au début de chaque tour, montant défini par la capacité qui l'inflige ; CON pour moitié si précisé par la capacité." },
+  empoisonnee: { nom: "Empoisonnée", categorie: "dot",
+    description: "Dégâts de poison au début de chaque tour tant que l'effet dure, "
+      + "montant/durée fixés par le palier de poison appliqué (cf. Atelier > Alchimie > Poisons). "
+      + "Neutralisée immédiatement par un Antidote." },
   ivresse: { nom: "Ivresse", categorie: "malus",
     description: "-1 à tous les tests par point d'Ivresse cumulé (mécanique Barde, voir notes_generales de la classe)." },
 
