@@ -2204,6 +2204,62 @@ const PNJ_CLES = [
       "Quête possible : lui offrir une vraie alternative économique, pour tester si le mouvement perd du terrain autrement que par la force.",
     ],
   },
+  {
+    id: "minerva-sarelle",
+    nom: "Minerva Sarelle",
+    titre: "Ancienne mage attitrée de la couronne de Valdorne (assassinée)",
+    faction: "Valdorne",
+    resume: "Conseillère arcanique du Roi pendant des décennies, morte dans des circonstances qu'elle seule aurait pu expliquer.",
+    description:
+      "Retrouvée morte il y a quelques mois dans sa tour d'étude à Valdcourt — la version officielle parle d'une défaillance rituelle, un accident regrettable mais plausible pour une mage de son âge manipulant des forces puissantes. En réalité, assassinée par un agent solvarien, probablement pour l'empêcher de terminer une recherche ou de transmettre une information à la couronne. Seule une poignée de personnes soupçonne la vérité ; personne ne peut encore la prouver. Le Roi Baldwin IV lui-même ignore tout du meurtre — il pleure une amie perdue à un mauvais moment, pas une victime de guerre.",
+    accroches: [
+      "Les PJ tombent sur un indice contredisant la thèse de l'accident (une trace de magie étrangère, un témoin disparu depuis).",
+      "Un ancien apprenti ou familier de Minerva cherche des enquêteurs discrets, hors des canaux officiels de la couronne.",
+      "La vérité, si elle éclate, pourrait autant galvaniser Valdorne contre Solvarn que fragiliser la confiance de Baldwin envers ses propres services de renseignement, qui n'ont rien vu venir.",
+    ],
+  },
+  {
+    id: "aldous-ferren",
+    nom: "Aldous Ferren",
+    titre: "Mage attitré de la cour d'Arveth",
+    faction: "Arveth",
+    resume: "Un des derniers praticiens de la foi libre des Gardiens encore toléré à la cour d'Arvenfall — de plus en plus seul.",
+    description:
+      "Pratique une magie ancrée dans la vénération sincère des Gardiens, à mesure que le culte solvarien s'infiltre discrètement dans les temples d'Arveth (cf. panthéon/religions). N'a jamais pris parti publiquement sur les négociations secrètes de Lord Ranulf, mais les deux sujets se rejoignent dans son esprit : céder à Solvarn militairement, c'est aussi, tôt ou tard, céder religieusement. Regardé avec une méfiance croissante par une partie du clergé infiltré, sans que personne n'ose encore l'accuser ouvertement.",
+    accroches: [
+      "Aldous cherche discrètement des alliés extérieurs pour documenter l'infiltration solvarienne dans les temples avant qu'elle ne devienne irréversible.",
+      "Confrontation feutrée possible avec un prêtre récemment \"converti\" à une lecture plus orthodoxe (solvarienne) de la foi des Gardiens.",
+      "Aldous pourrait être la première personne à qui Ranulf se confie vraiment, si les PJ gagnent sa confiance.",
+    ],
+  },
+  {
+    id: "corvina-aldren",
+    nom: "Corvina Aldren",
+    titre: "Mage attitrée de la cour de Mornac",
+    faction: "Mornac",
+    resume: "Magie de route commerciale et de divination au service de la Comtesse — et, à l'occasion, d'opérations moins avouables.",
+    description:
+      "Officiellement chargée de garantir la sécurité magique des routes commerciales et convois de Mornac (divination, protection contre le mauvais temps et la piraterie). Officieusement, l'instrument discret de la Comtesse Yselde Maren dans sa volonté de déstabiliser la guilde marchande grandissante de la République de Liberra — sabotages déguisés en accidents, informations glanées par divination et revendues ou exploitées contre les intérêts de la guilde. Ne se voit pas comme une comploteuse : à ses yeux, elle défend simplement les intérêts de Mornac contre un concurrent qui grandit trop vite.",
+    accroches: [
+      "Un \"accident\" suspect frappe un navire ou un entrepôt lié au Comptoir (bloc marchand de Liberra) — les PJ pourraient être engagés pour enquêter des deux côtés sans le savoir.",
+      "Si le fil du complot de guilde du Scénario 0 (Maître Aurèle Ferrand, le médaillon) est déjà en cours, Corvina peut devenir une piste parallèle ou un point de convergence inattendu, à la discrétion du MJ — les deux fils ne sont pas fondus en un seul complot unique.",
+      "La Comtesse Yselde Maren pourrait désavouer Corvina publiquement si l'opération est découverte, tout en la protégeant en coulisses.",
+    ],
+  },
+  {
+    id: "kettil-rhennar",
+    nom: "Kettil Rhennar",
+    titre: "Enchanteur de la cour de Serval, maître-artisan",
+    faction: "Serval",
+    resume: "Travaille main dans la main avec les maîtres-forgerons nains de Kaldrun — gardien discret de l'avance technologique de Serval.",
+    description:
+      "Formé aux côtés des Nains de l'Ordre, Kettil a contribué à développer des techniques de forge et d'enchantement inédites hors des terres naines — Serval est aujourd'hui en avance sur le reste des Royaumes Coalisés, et probablement sur l'Empire, en métallurgie et développement d'armes. Cette avance, jalousement gardée par le Margrave Torvald Sten, fait de Kettil une cible de choix pour l'espionnage étranger. En jeu, Kettil (ou un artisan formé par lui) peut servir de PNJ de référence pour un maître ou grand maître artisan d'enchantement de haut niveau (cf. système d'enchantement d'arme, `js/enchantement.js` — aucune modification de code ici, référence narrative uniquement).",
+    accroches: [
+      "Une puissance étrangère (Solvarn, ou une guilde de Mornac en délicatesse avec Serval) tente de débaucher ou d'espionner Kettil.",
+      "Les PJ pourraient avoir besoin de ses services pour un enchantement de très haut niveau (+4/+5), difficilement accessible ailleurs.",
+      "La frange isolationniste de la noblesse servaline voudrait que ce savoir-faire reste strictement interne — Kettil, plus ouvert, entre parfois en friction avec eux.",
+    ],
+  },
 ];
 
 /* ============================================================
