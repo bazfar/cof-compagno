@@ -2247,8 +2247,13 @@ const FACTIONS = [
   },
   {
     groupe: "République de Liberra",
+    // Sceau d'État illustré, cf. assets/blasons/README.md pour la convention
+    // de nommage — absent tant que le fichier n'a pas été déposé (repli
+    // silencieux côté rendreFactions(), pas d'icône cassée). D'autres
+    // factions pourront porter leur propre blason de la même façon.
+    blason: "assets/blasons/liberra.png",
     intro:
-      "Contrairement à l'Empire, la République ne repose pas sur une noblesse mais sur une Assemblée de citoyens divisée en cinq blocs politiques, reflétant fidèlement ses fractures internes déjà connues : marchands, idéalistes, militaires, communautés non-humaines — auxquelles s'ajoute un cinquième bloc né du ressentiment, les Fils de Libris.\n\nSceau d'État — une porte à trois arches ouverte (l'Assemblée fondatrice, avant sa scission en cinq blocs) surplombant une chaîne brisée, sur fond bleu-vert : les eaux de la Lisdane, à l'embouchure de laquelle Libris fut fondée. Devise inscrite au fronton de l'Assemblée : « La liberté ne s'hérite pas, elle se gagne. » Rarement brandi avec fierté unanime — chaque bloc préfère son propre insigne — le sceau d'État n'apparaît que sur les actes officiels, les frontières et la monnaie.",
+      "Contrairement à l'Empire, la République ne repose pas sur une noblesse mais sur une Assemblée de citoyens divisée en cinq blocs politiques, reflétant fidèlement ses fractures internes déjà connues : marchands, idéalistes, militaires, communautés non-humaines — auxquelles s'ajoute un cinquième bloc né du ressentiment, les Fils de Libris.\n\nDevise inscrite au fronton de l'Assemblée fondatrice : « La liberté ne s'hérite pas, elle se gagne. » Rarement brandi avec fierté unanime — chaque bloc préfère son propre insigne — le sceau d'État n'apparaît que sur les actes officiels, les frontières et la monnaie.",
     entites: [
       {
         nom: "Le Comptoir — bloc marchand",

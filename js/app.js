@@ -6510,7 +6510,11 @@ const App = (() => {
           </div>
           <div class="contenu">${echapper(e.description)}</div>
         </div>`).join("");
+        const blasonHtml = g.blason
+          ? `<img class="faction-blason" src="${echapper(g.blason)}" alt="Blason — ${echapper(g.groupe)}" onerror="this.style.display='none';" />`
+          : "";
         return `<div class="lore-section"><h3>${echapper(g.groupe)}</h3>` +
+          blasonHtml +
           `<p style="font-style:italic;color:#6a6278;white-space:pre-wrap;">${echapper(g.intro)}</p>` +
           entitesHtml +
           `<div class="carte pnj-carte" style="margin-top:10px;"><div class="contenu">${echapper(g.synthese)}</div></div>` +
