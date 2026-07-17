@@ -6511,7 +6511,7 @@ const App = (() => {
           <div class="contenu">${echapper(e.description)}</div>
         </div>`).join("");
         return `<div class="lore-section"><h3>${echapper(g.groupe)}</h3>` +
-          `<p style="font-style:italic;color:#6a6278;">${echapper(g.intro)}</p>` +
+          `<p style="font-style:italic;color:#6a6278;white-space:pre-wrap;">${echapper(g.intro)}</p>` +
           entitesHtml +
           `<div class="carte pnj-carte" style="margin-top:10px;"><div class="contenu">${echapper(g.synthese)}</div></div>` +
           `</div>`;

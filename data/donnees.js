@@ -2248,7 +2248,7 @@ const FACTIONS = [
   {
     groupe: "République de Liberra",
     intro:
-      "Contrairement à l'Empire, la République ne repose pas sur une noblesse mais sur une Assemblée de citoyens divisée en cinq blocs politiques, reflétant fidèlement ses fractures internes déjà connues : marchands, idéalistes, militaires, communautés non-humaines — auxquelles s'ajoute un cinquième bloc né du ressentiment, les Fils de Libris.",
+      "Contrairement à l'Empire, la République ne repose pas sur une noblesse mais sur une Assemblée de citoyens divisée en cinq blocs politiques, reflétant fidèlement ses fractures internes déjà connues : marchands, idéalistes, militaires, communautés non-humaines — auxquelles s'ajoute un cinquième bloc né du ressentiment, les Fils de Libris.\n\nSceau d'État — une porte à trois arches ouverte (l'Assemblée fondatrice, avant sa scission en cinq blocs) surplombant une chaîne brisée, sur fond bleu-vert : les eaux de la Lisdane, à l'embouchure de laquelle Libris fut fondée. Devise inscrite au fronton de l'Assemblée : « La liberté ne s'hérite pas, elle se gagne. » Rarement brandi avec fierté unanime — chaque bloc préfère son propre insigne — le sceau d'État n'apparaît que sur les actes officiels, les frontières et la monnaie.",
     entites: [
       {
         nom: "Le Comptoir — bloc marchand",
