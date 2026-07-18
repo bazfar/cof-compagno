@@ -5987,6 +5987,30 @@ const App = (() => {
     majAffichageEtapes();
   }
 
+  // Persiste immédiatement niveau + PV du personnage `id` dans persos/Firestore,
+  // à partir de l'état courant du brouillon `creation` — utilisé par
+  // monterDeNiveau ci-dessous, PAS par le reste du flux de création/édition
+  // (qui reste un brouillon en mémoire tant que sauverPersonnage() n'est pas
+  // explicitement appelée). Ne touche jamais nom/classe/race/voies/dons :
+  // seulement niveau/PV, les deux seuls champs qu'un niveau garantit valides
+  // immédiatement (contrairement à un choix de capacité encore en cours).
+  // Bug réellement rencontré à table : un joueur qui montait de niveau puis
+  // changeait d'onglet (ex. retour sur "Ma fiche") AVANT d'avoir cliqué
+  // "Enregistrer" perdait silencieusement le niveau/PV fraîchement gagnés,
+  // `creation` étant abandonné au profit de la fiche encore persistée à
+  // l'ancien niveau.
+  function _persisterNiveauEtPv(id) {
+    const persosActuels = chargerPersos();
+    const p = persosActuels[id];
+    if (!p) return;
+    p.niveau = creation.niveau;
+    p.pvMax = pvTotalActuel();
+    p.pvHistorique = creation.pvHistorique;
+    p.pvNiveauActuel = creation.pvNiveauActuel;
+    if (p.pvActuel === null || p.pvActuel > p.pvMax) p.pvActuel = p.pvMax;
+    sauverPersos(persosActuels);
+  }
+
   // Monte le personnage d'un niveau : ouvre la fiche en édition, incrémente le niveau,
   // jette les PV du nouveau niveau (dé + Mod.CON, min 1) et rafraîchit voies/points/voies hors profil.
   function monterDeNiveau(id) {
@@ -6004,8 +6028,9 @@ const App = (() => {
 
     rendreVoies();
     if (creation.race) rendreVoieRaciale();
+    _persisterNiveauEtPv(id);
 
-    toast(`Niveau ${creation.niveau} ! +${gainPv} PV (total ${pvTotalActuel()}). Points de capacité : ${pointsVoieRestants()}/${pointsVoieTotal()}. Pense à enregistrer.`);
+    toast(`Niveau ${creation.niveau} ! +${gainPv} PV (total ${pvTotalActuel()}, déjà enregistré). Points de capacité : ${pointsVoieRestants()}/${pointsVoieTotal()}. Choisis tes nouvelles capacités puis pense à enregistrer.`);
     allerEtape(2);
 
     // Don gratuit aux niveaux 4/8/12 (cf. data/dons.js) : gratuit, n'entame pas
@@ -6014,8 +6039,9 @@ const App = (() => {
     if (!creation.dons) creation.dons = [];
     if (Personnage.donsRequisPourNiveau(creation.niveau) > creation.dons.length) {
       ouvrirModalChoixDon(creation.dons, (idDon) => {
-        finaliserChoixDon(idDon, creation, " Pense à enregistrer.", () => {
+        finaliserChoixDon(idDon, creation, " Déjà enregistré. Pense à enregistrer tes autres capacités.", () => {
           champPv.value = pvTotalActuel(); // reflète Robuste si c'est le don choisi
+          _persisterNiveauEtPv(id); // idem : Robuste (+2 PV/niveau) ne doit pas non plus se perdre en changeant d'onglet
         });
       });
     }
