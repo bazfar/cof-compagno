@@ -283,11 +283,15 @@ const Combat = (() => {
   // Un PJ à 0 PV est Mourant(e), pas KO : il garde son tour pour lancer son
   // jet de mort (cf. REGLES_GENERALES "Mort et stabilisation") — son tour
   // n'est sauté qu'une fois etatMort=true (3 échecs). Un monstre à 0 PV reste
-  // simplement hors combat, aucun jet de mort pour eux.
+  // simplement hors combat, aucun jet de mort pour eux. Un PJ supprimé de la
+  // fiche en plein combat (p introuvable) est traité comme KO plutôt que
+  // jamais sautable : sans ça, le tracker reste bloqué sur cette entrée
+  // fantôme (tourSuivant ne trouverait jamais de combattant "pas KO" derrière
+  // elle si c'était l'unique bloqueur restant).
   function _estKO(entree) {
     if (entree.type === "pj") {
       const p = App.chargerPersos()[entree.id];
-      return !!(p && p.etatMort);
+      return !p || !!p.etatMort;
     }
     const pv = _pvActuel(entree);
     return typeof pv === "number" && pv <= 0;
