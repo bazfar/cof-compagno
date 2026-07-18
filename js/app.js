@@ -258,8 +258,15 @@ const App = (() => {
     const modal = document.getElementById("modal-couleur-joueur");
     const grille = document.getElementById("modal-couleur-joueur-grille");
     if (!modal || !grille) return;
+    // Exclut aussi les entrées partageant mon PRÉNOM (pas seulement mon id
+    // exact) : un joueurId est volatil (autre appareil, cache vidé...), cf.
+    // memeNom/estProprietaire — sans ça, une ancienne entrée sous mon propre
+    // prénom (créée avant un changement d'appareil) grise à tort une couleur
+    // qui est en fait la mienne.
     const couleursPrises = new Set(
-      window.DepotJoueurs.liste().filter((j) => j.id !== joueurId && j.couleur).map((j) => j.couleur)
+      window.DepotJoueurs.liste()
+        .filter((j) => j.id !== joueurId && !memeNom(j.nom, joueurNom) && j.couleur)
+        .map((j) => j.couleur)
     );
     const moi = window.DepotJoueurs.charger(joueurId);
     const couleurActuelle = moi && moi.couleur;
@@ -286,10 +293,10 @@ const App = (() => {
     if (typeof window.DepotJoueurs === "undefined") return;
     // Re-vérifie au moment du clic (cf. commentaire d'ouvrirModalCouleurJoueur) :
     // le registre a pu changer depuis l'ouverture du modal.
-    const prise = window.DepotJoueurs.liste().some((j) => j.id !== joueurId && j.couleur === couleur);
+    const prise = window.DepotJoueurs.liste().some((j) => j.id !== joueurId && !memeNom(j.nom, joueurNom) && j.couleur === couleur);
     if (prise) { toast("Cette couleur vient d'être prise par un autre joueur."); ouvrirModalCouleurJoueur(); return; }
     window.DepotJoueurs.sauver({ id: joueurId, nom: joueurNom, couleur }, joueurId);
-    if (typeof Carte !== "undefined" && Carte.rafraichirCouleurJoueur) Carte.rafraichirCouleurJoueur(joueurId, couleur);
+    if (typeof Carte !== "undefined" && Carte.rafraichirCouleurJoueur) Carte.rafraichirCouleurJoueur(joueurId, joueurNom, couleur);
     fermerModalCouleurJoueur();
     _majSwatchCouleurJoueur();
     toast("Couleur enregistrée — ton jeton en sera cerclé sur la carte.");

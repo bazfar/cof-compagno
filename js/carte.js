@@ -31,16 +31,40 @@ const Carte = (() => {
   // (encore) choisi de couleur — comportement d'avant ce chantier (or fixe).
   const COULEUR_PJ_DEFAUT = "#b8924a";
 
+  // Compare deux prénoms de joueur de façon tolérante (accents/casse/espaces
+  // ignorés) — copie de app.js memeNom (identité STABLE d'un joueur : cf. son
+  // commentaire, l'id navigateur est volatil — vidage de cache, autre
+  // appareil — alors que le prénom saisi survit). Dupliquée ici plutôt que
+  // partagée : carte.js charge avant app.js, pas l'inverse.
+  function _memeNomJoueur(a, b) {
+    if (!a || !b) return false;
+    const norm = (s) => String(s).trim().toLowerCase().normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "");
+    const na = norm(a), nb = norm(b);
+    if (!na || na === "joueur") return false;
+    return na === nb;
+  }
+
   // Couleur de cercle/bordure d'un token PJ : celle choisie par le joueur
   // propriétaire du personnage (registre partagé DepotJoueurs, champ
   // `couleur` posé par app.js choisirCouleurJoueur) — permet de distinguer
-  // plusieurs joueurs sur la carte. Retombe sur COULEUR_PJ_DEFAUT si le
-  // joueur n'a pas encore choisi (comptes déjà créés avant ce chantier, ou
-  // DepotJoueurs pas encore chargé).
-  function _couleurJoueur(proprietaireId) {
-    if (!proprietaireId || typeof window.DepotJoueurs === "undefined") return COULEUR_PJ_DEFAUT;
-    const j = window.DepotJoueurs.charger(proprietaireId);
-    return (j && j.couleur) || COULEUR_PJ_DEFAUT;
+  // plusieurs joueurs sur la carte. Cherche d'abord par id (rapide, cas
+  // normal), PUIS par prénom (cf. _memeNomJoueur) : un joueur peut avoir
+  // choisi sa couleur depuis un navigateur/appareil différent de celui qui a
+  // créé ce personnage (même bug de fond que app.js estProprietaire/memeNom
+  // — repéré en pratique : un joueur "Fred" dont le perso.proprietaire ne
+  // correspondait pas au joueurId sous lequel il avait choisi sa couleur).
+  // Retombe sur COULEUR_PJ_DEFAUT si aucune couleur n'est trouvée par
+  // aucune des deux voies (comptes créés avant ce chantier, DepotJoueurs pas
+  // encore chargé...).
+  function _couleurJoueur(proprietaireId, proprietaireNom) {
+    if (typeof window.DepotJoueurs === "undefined") return COULEUR_PJ_DEFAUT;
+    const parId = proprietaireId && window.DepotJoueurs.charger(proprietaireId);
+    if (parId && parId.couleur) return parId.couleur;
+    if (proprietaireNom) {
+      const parNom = window.DepotJoueurs.liste().find((j) => j.couleur && _memeNomJoueur(j.nom, proprietaireNom));
+      if (parNom) return parNom.couleur;
+    }
+    return COULEUR_PJ_DEFAUT;
   }
 
   // Recolore rétroactivement tous les tokens PJ déjà posés (worldmap ET
@@ -48,13 +72,16 @@ const Carte = (() => {
   // couleur après coup (cf. app.js choisirCouleurJoueur), pour que le
   // changement soit immédiatement visible sans devoir re-poser son jeton.
   // Un joueur peut posséder plusieurs personnages : tous leurs tokens sont
-  // recolorés, identifiés via leur ref ("pj-" + persoId) et p.proprietaire.
-  function rafraichirCouleurJoueur(joueurId, couleur) {
+  // recolorés, identifiés via leur ref ("pj-" + persoId) et p.proprietaire
+  // OU p.proprietaireNom (cf. _memeNomJoueur/_couleurJoueur ci-dessus — même
+  // repli par prénom, pour que le changement s'applique aussi aux tokens
+  // d'un personnage créé sous un ancien joueurId).
+  function rafraichirCouleurJoueur(joueurId, joueurNom, couleur) {
     const persos = (typeof window.DepotPersos !== "undefined") ? window.DepotPersos.charger() : {};
     const estAMoi = (ref) => {
       if (!ref) return false;
       const p = persos[idPersoDepuisRef(ref)];
-      return !!(p && p.proprietaire === joueurId);
+      return !!(p && (p.proprietaire === joueurId || _memeNomJoueur(p.proprietaireNom, joueurNom)));
     };
     let touche = false;
     etat.jetons.filter((j) => j.pj && estAMoi(j.ref)).forEach((j) => { j.couleur = couleur; touche = true; });
@@ -243,7 +270,7 @@ const Carte = (() => {
       ids.forEach((pid) => {
         const p = persos[pid];
         if (DD2VTT.ajouterTokenData({
-          nom: p.nom, couleur: _couleurJoueur(p.proprietaire), pj: true, ref: "pj-" + pid,
+          nom: p.nom, couleur: _couleurJoueur(p.proprietaire, p.proprietaireNom), pj: true, ref: "pj-" + pid,
           classe: p.classe || null, race: p.race || null, raceVariante: p.raceVariante || null, genre: p.genre || null,
         })) n++;
       });
@@ -256,7 +283,7 @@ const Carte = (() => {
       if (etat.jetons.some((j) => j.ref === ref)) return; // déjà sur la carte
       const p = persos[pid];
       etat.jetons.push({
-        id: nouvelId(), ref: ref, nom: p.nom, couleur: _couleurJoueur(p.proprietaire), pj: true,
+        id: nouvelId(), ref: ref, nom: p.nom, couleur: _couleurJoueur(p.proprietaire, p.proprietaireNom), pj: true,
         portrait: p.portrait || null, classe: p.classe || null,
         race: p.race || null, raceVariante: p.raceVariante || null, genre: p.genre || null,
         x: 15 + ((i % 6) * 12), y: 15 + (Math.floor(i / 6) * 14),
@@ -297,7 +324,7 @@ const Carte = (() => {
     const p = persos[monPersoId];
     if (!p) { toastCarte("Personnage introuvable."); return; }
     DD2VTT.ajouterTokenData({
-      nom: p.nom, couleur: _couleurJoueur(p.proprietaire), pj: true, ref: "pj-" + monPersoId,
+      nom: p.nom, couleur: _couleurJoueur(p.proprietaire, p.proprietaireNom), pj: true, ref: "pj-" + monPersoId,
       classe: p.classe || null, race: p.race || null, raceVariante: p.raceVariante || null, genre: p.genre || null,
     });
   }
