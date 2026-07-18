@@ -208,6 +208,19 @@ const App = (() => {
     if (typeof window.DepotJoueurs === "undefined") return;
     if (!joueurId || !joueurNom || joueurNom.trim().toLowerCase() === "joueur") return;
     if (!_depotJoueursPret) { _enregistrerJoueurEnAttente = true; return; }
+    // Adopte l'id CANONIQUE déjà utilisé par ce prénom dans le registre
+    // partagé, s'il existe — fusion d'identité par prénom ("si on met thomas
+    // on accède à la même session", demande de Thomas) : un même prénom
+    // saisi depuis un autre appareil/navigateur retombe désormais sur LE
+    // MÊME joueurId plutôt que d'en créer un nouveau, éliminant la classe de
+    // bug rencontrée avec Fred (couleur enregistrée sous un id, personnage
+    // sous un autre). Écrase joueurId/localStorage pour TOUT le reste de la
+    // session (nouveaux persos créés, etc.), pas seulement cet appel.
+    const canonique = window.DepotJoueurs.liste().find((j) => memeNom(j.nom, joueurNom));
+    if (canonique && canonique.id !== joueurId) {
+      joueurId = canonique.id;
+      localStorage.setItem(STORAGE_JOUEUR_ID, joueurId);
+    }
     const existant = window.DepotJoueurs.charger(joueurId);
     window.DepotJoueurs.sauver({ id: joueurId, nom: joueurNom, couleur: (existant && existant.couleur) || null }, joueurId);
     verifierCouleurJoueur();
