@@ -382,6 +382,22 @@ const Combat = (() => {
     return !!(entree && entree.aDejaAgi);
   }
 
+  // Renomme une entrée déjà présente dans l'ordre d'initiative — utilisé par
+  // Carte._renommerMonstreCombat (cf. js/carte.js, ajouterMonstre/
+  // _labelMonstreDistinct) pour propager le renommage rétroactif d'un
+  // monstre déjà entré en initiative (ex. un 2e "Loup" posé pendant qu'un
+  // premier a déjà rejoint l'ordre : celui-ci est renommé "Loup 1" à la fois
+  // sur son token ET ici, sinon le tracker garderait l'ancien nom, capturé
+  // une fois pour toutes à l'entrée dans `ordre` par _ajouterMonstreAvecJet).
+  // No-op hors combat ou si l'id n'a pas (encore) d'entrée.
+  function renommerCombattant(id, nouveauNom) {
+    const etat = _lire();
+    const entree = etat.ordre.find((e) => e.id === id);
+    if (!entree) return;
+    entree.nom = nouveauNom;
+    _sauver(etat);
+  }
+
   function ajusterDeplacement(persoId, delta) {
     const etat = _lire();
     const entree = etat.ordre.find((e) => e.id === persoId && e.type === "pj");
@@ -514,6 +530,7 @@ const Combat = (() => {
     SPRINT_BONUS,
     estImmobile,
     aDejaAgiCeCombat,
+    renommerCombattant,
     ajusterDeplacement,
     utiliserActionPrincipale,
     accorderActionPrincipaleBonus,

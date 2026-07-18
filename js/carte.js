@@ -359,11 +359,53 @@ const Carte = (() => {
     }
   }
 
+  // Distingue plusieurs instances du même monstre (ex. 3 "Loup" posés sur la
+  // même table de combat) pour que le MJ s'y retrouve dans l'initiative, le
+  // ciblage des sorts (Capacites.listeCibles, affiche cc.nom) et la table de
+  // combat — sans ça, trois entrées identiques "Loup" sont indiscernables.
+  // Comparaison par monstreId (pas par nom affiché, qui peut varier avec le
+  // tier), donc fiable même si labelBase change d'un ajout à l'autre.
+  // Numéroté seulement à partir du 2e ajout : un monstre seul de son espèce
+  // garde son nom tel quel ("Loup") ; dès qu'un 2e est posé, le PREMIER est
+  // renommé rétroactivement en "Loup 1" (cf. _renommerMonstreCombat) et le
+  // nouveau devient "Loup 2" ; un 3e devient "Loup 3", etc. Ne concerne pas
+  // les invocations (distinguées autrement, cf. INVOCATIONS : nom du
+  // familier + nom de l'invocateur, jamais posées via ajouterMonstre).
+  function _labelMonstreDistinct(monstreId, labelBase) {
+    const memeEspece = listeMonstresCombat().filter((t) => t.monstreId === monstreId);
+    if (memeEspece.length === 0) return labelBase;
+    if (memeEspece.length === 1) {
+      _renommerMonstreCombat(memeEspece[0].id, labelBase + " 1");
+      return labelBase + " 2";
+    }
+    return labelBase + " " + (memeEspece.length + 1);
+  }
+
+  // Renomme un token déjà posé sur la table de combat, quel que soit le mode
+  // actif (battlemap dd2vtt ou worldmap) — même bascule que
+  // appliquerDegatsCombat/definirPvCombat ci-dessous. Utilisé uniquement par
+  // _labelMonstreDistinct ci-dessus pour le renommage rétroactif du premier
+  // exemplaire d'une espèce. Propage aussi vers Combat.renommerCombattant
+  // (js/combat.js, chargé après carte.js — vérifié à l'exécution, jamais à
+  // la définition) : si ce monstre a déjà rejoint l'ordre d'initiative, son
+  // nom y est capturé une fois pour toutes à l'entrée (cf.
+  // _ajouterMonstreAvecJet) et ne suivrait pas ce renommage sans cet appel.
+  function _renommerMonstreCombat(id, nouveauNom) {
+    if (_combatEnBattlemap() && DD2VTT.renommerToken) {
+      DD2VTT.renommerToken(id, nouveauNom);
+    } else {
+      const tok = etat.jetons.find((j) => j.id === id);
+      if (tok) { tok.nom = nouveauNom; sauver(); rendreJetons(); _notifierChangementMonstres(); }
+    }
+    if (typeof Combat !== "undefined" && Combat.renommerCombattant) Combat.renommerCombattant(id, nouveauNom);
+  }
+
   function ajouterMonstre(monstre) {
     if (!monstre) return;
     const couleurs = { 1: "#27ae60", 2: "#2980b9", 3: "#d35400", 4: "#c0392b", 5: "#7d1a24" };
     const couleur = monstre.boss ? "#8e44ad" : (couleurs[monstre.dangerosite] || "#7f8c8d");
-    const label = monstre.tier ? monstre.nom + " [" + monstre.tier + "]" : monstre.nom;
+    const labelBase = monstre.tier ? monstre.nom + " [" + monstre.tier + "]" : monstre.nom;
+    const label = _labelMonstreDistinct(monstre.id, labelBase);
     // Stats de combat (table de combat MJ) : PV/DEF/armure viennent du bestiaire,
     // repris tels quels (armure.valeur -> réduction de dégâts, comme les PJ).
     const donneesCombat = {
@@ -2621,6 +2663,17 @@ const Carte = (() => {
       return { nom: tok.nom, reduction, degatsNets, pvActuel: tok.pvActuel };
     }
 
+    // Renomme un token (utilisé par Carte._renommerMonstreCombat pour
+    // distinguer plusieurs instances d'un même monstre, cf. ajouterMonstre/
+    // _labelMonstreDistinct) — même schéma que definirPvToken ci-dessous.
+    function renommerToken(id, nouveauNom) {
+      const tok = tokensDD.find(t => t.id === id);
+      if (!tok) return;
+      tok.nom = nouveauNom;
+      _sauverToken(tok);
+      _onChangeMonstres && _onChangeMonstres();
+    }
+
     function definirPvToken(id, val) {
       const tok = tokensDD.find(t => t.id === id);
       if (!tok) return;
@@ -3075,6 +3128,7 @@ const Carte = (() => {
       ajouterToken: (sc) => ajouterTokenDD(sc),
       modeWorldmap: activerModeWorldmap, modeBattlemap: activerModeBattlemap, estActive, ajouterTokenData,
       tokensMonstres, tokensPJ, distanceCases, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
+      renommerToken,
       ajouterEtat: ajouterEtatToken, retirerEtat: retirerEtatToken,
       supprimerToken: supprimerTokenDD, onChange, actualiserTokens, reinitialiserExploration,
       onMonstreDevientVisible, reinitialiserDetectionVisibilite, estMonstreVisible,
