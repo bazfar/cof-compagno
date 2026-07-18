@@ -679,11 +679,30 @@ const Capacites = (() => {
   // est listé ci-dessous (durée numérique normale par ailleurs — décomptée
   // tour par tour comme n'importe quel autre état — mais qui doit aussi
   // disparaître immédiatement si le combat se termine avant l'expiration de
-  // cette durée). Appelé à la fin du combat.
-  // - image_decalee (Enchanteur, Voie de l'enchantement rang 1) : dure 3
-  //   tours OU jusqu'à la fin du combat, selon ce qui arrive en premier —
-  //   la double illusoire n'a pas de sens hors combat.
-  const ETATS_RETIRES_FIN_COMBAT_MEME_SI_NUMERIQUE = ["image_decalee"];
+  // cette durée). Appelé à la fin du combat. Tous les états ci-dessous sont
+  // des formes/transformations/buffs qui n'ont de sens qu'EN combat (audit
+  // "incohérences similaires à Image décalée" demandé par Thomas) : sans ce
+  // filet, un combat qui se termine avant l'expiration du minuteur laisserait
+  // le buff actif jusqu'au combat suivant.
+  // - image_decalee (Enchanteur, Voie de l'enchantement r1)
+  // - maitrise_tactique (Guerrier, Voie du soldat r5)
+  // - apogee_physique (Guerrier, Voie de l'élite r5, 1x/combat)
+  // - dechainement (Guerrier, Voie du chaos r5, 1x/scénario)
+  // - avatar_du_chaos (Nécromancien, Voie du chaos r5, 1x/scénario)
+  // - avatar_du_pacte (Chevalier, Voie du chaos r5, 1x/scénario)
+  // - avatar_du_vide (Magicien, Voie du chaos r5, 1x/scénario)
+  // - forme_chaos_sauvage (Druide, Voie du chaos r5, 1x/scénario)
+  // - totem_velocite (Druide, Voie du shaman r4)
+  // - forme_ours / forme_loup (Druide, Voie des compagnons r5 "Forme animale")
+  // - sanctuaire_gardien (Druide, Voie du protecteur r5, 1x/scénario)
+  // - sanctuaire_magicien (Magicien, Voie de la magie protectrice r5, 1x/scénario)
+  // - arme_enchantee (Enchanteur, Voie de la transfiguration r3)
+  const ETATS_RETIRES_FIN_COMBAT_MEME_SI_NUMERIQUE = [
+    "image_decalee", "maitrise_tactique", "apogee_physique", "dechainement",
+    "avatar_du_chaos", "avatar_du_pacte", "avatar_du_vide", "forme_chaos_sauvage",
+    "totem_velocite", "forme_ours", "forme_loup", "sanctuaire_gardien",
+    "sanctuaire_magicien", "arme_enchantee",
+  ];
   function retirerEtatsFinCombat(p) {
     p.etatsActifs = (p.etatsActifs || []).filter((e) =>
       !(e.dureeRestante && e.dureeRestante.motCle === "finCombat") &&
