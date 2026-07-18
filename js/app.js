@@ -5987,18 +5987,21 @@ const App = (() => {
     majAffichageEtapes();
   }
 
-  // Persiste immédiatement niveau + PV du personnage `id` dans persos/Firestore,
-  // à partir de l'état courant du brouillon `creation` — utilisé par
-  // monterDeNiveau ci-dessous, PAS par le reste du flux de création/édition
-  // (qui reste un brouillon en mémoire tant que sauverPersonnage() n'est pas
-  // explicitement appelée). Ne touche jamais nom/classe/race/voies/dons :
-  // seulement niveau/PV, les deux seuls champs qu'un niveau garantit valides
-  // immédiatement (contrairement à un choix de capacité encore en cours).
+  // Persiste immédiatement niveau + PV + dons du personnage `id` dans
+  // persos/Firestore, à partir de l'état courant du brouillon `creation` —
+  // utilisé par monterDeNiveau ci-dessous, PAS par le reste du flux de
+  // création/édition (qui reste un brouillon en mémoire tant que
+  // sauverPersonnage() n'est pas explicitement appelée). Ne touche jamais
+  // nom/classe/race/voies : seulement niveau/PV/dons, les champs qu'un
+  // niveau garantit valides immédiatement (contrairement à un choix de
+  // capacité de voie encore en cours, cf. pointsVoieRestants()).
   // Bug réellement rencontré à table : un joueur qui montait de niveau puis
   // changeait d'onglet (ex. retour sur "Ma fiche") AVANT d'avoir cliqué
-  // "Enregistrer" perdait silencieusement le niveau/PV fraîchement gagnés,
-  // `creation` étant abandonné au profit de la fiche encore persistée à
-  // l'ancien niveau.
+  // "Enregistrer" perdait silencieusement le niveau/PV fraîchement gagnés
+  // (et, séparément, le don gratuit choisi aux niveaux 4/8/12 — ex.
+  // Amélioration de caractéristique — puisque `dons`/`donsChoix` n'étaient
+  // pas non plus persistés), `creation` étant abandonné au profit de la
+  // fiche encore persistée à l'ancien niveau.
   function _persisterNiveauEtPv(id) {
     const persosActuels = chargerPersos();
     const p = persosActuels[id];
@@ -6008,6 +6011,8 @@ const App = (() => {
     p.pvHistorique = creation.pvHistorique;
     p.pvNiveauActuel = creation.pvNiveauActuel;
     if (p.pvActuel === null || p.pvActuel > p.pvMax) p.pvActuel = p.pvMax;
+    p.dons = creation.dons;
+    p.donsChoix = creation.donsChoix;
     sauverPersos(persosActuels);
   }
 
