@@ -175,14 +175,124 @@ const App = (() => {
     enregistrerJoueurCourant();
   }
 
+  // DepotJoueurs (DepotDistant) n'a un cache fiable qu'une fois son tout
+  // premier instantané Firestore arrivé (this._pret côté depot.js) — jamais
+  // garanti synchrone au chargement de la page. Un seul abonnement, posé une
+  // fois pour toutes ici (pas dans enregistrerJoueurCourant, qui peut être
+  // appelée plusieurs fois par session — renommage, aller-retour de rôle —
+  // et créerait sinon un abonnement supplémentaire à chaque fois).
+  let _depotJoueursPret = false;
+  let _enregistrerJoueurEnAttente = false;
+  if (typeof window.DepotJoueurs !== "undefined") {
+    window.DepotJoueurs.ecouter(() => {
+      _depotJoueursPret = true;
+      if (_enregistrerJoueurEnAttente) { _enregistrerJoueurEnAttente = false; enregistrerJoueurCourant(); }
+    });
+  }
+
   // Inscrit (ou met à jour) ce joueur dans le registre partagé des joueurs
   // (cof_joueurs) : un document par joueurId. C'est ce registre qui alimente
   // la "liste des joueurs" (p.ex. partage d'un livre), pour ne pas dépendre
   // des personnages créés. On n'inscrit pas le nom générique "Joueur".
+  // Tant que DepotJoueurs n'est pas prêt (cf. _depotJoueursPret ci-dessus),
+  // reporte l'écriture au lieu de l'exécuter avec un cache vide : sinon,
+  // `existant` serait toujours vide et écraserait silencieusement une
+  // couleur déjà choisie (cf. choisirCouleurJoueur) avec `null` à CHAQUE
+  // chargement de page — bug réellement rencontré en testant ce chantier.
+  // `|| null` (jamais `undefined`) : Firestore refuse un champ à `undefined`
+  // dans .set() et lève une exception SYNCHRONE — sans ce garde-fou, le tout
+  // premier enregistrement d'un joueur (sans couleur existante) plantait ici
+  // et coupait net le reste de l'initialisation de la page (rôle jamais
+  // appliqué, onglets jamais câblés), sans rien de visible dans la console.
   function enregistrerJoueurCourant() {
     if (typeof window.DepotJoueurs === "undefined") return;
     if (!joueurId || !joueurNom || joueurNom.trim().toLowerCase() === "joueur") return;
-    window.DepotJoueurs.sauver({ id: joueurId, nom: joueurNom }, joueurId);
+    if (!_depotJoueursPret) { _enregistrerJoueurEnAttente = true; return; }
+    const existant = window.DepotJoueurs.charger(joueurId);
+    window.DepotJoueurs.sauver({ id: joueurId, nom: joueurNom, couleur: (existant && existant.couleur) || null }, joueurId);
+    verifierCouleurJoueur();
+  }
+
+  // Ouvre automatiquement (une seule fois par session) le picker de couleur
+  // si ce joueur n'en a pas encore choisi — dès que le registre partagé
+  // (Firestore, DepotJoueurs) est chargé. Les callbacks suivants de
+  // DepotJoueurs.ecouter (déclenchés par n'importe quel changement du
+  // registre, pas seulement le mien) se contentent de rafraîchir le badge de
+  // couleur. Gardé par _abonneCouleurJoueur : enregistrerJoueurCourant peut
+  // être appelée plusieurs fois par session (renommage, changement de rôle
+  // aller-retour) sans jamais créer plus d'un abonnement.
+  let _abonneCouleurJoueur = false;
+  function verifierCouleurJoueur() {
+    if (typeof window.DepotJoueurs === "undefined" || !joueurId || !joueurNom || joueurNom.trim().toLowerCase() === "joueur") return;
+    if (_abonneCouleurJoueur) { _majSwatchCouleurJoueur(); return; }
+    _abonneCouleurJoueur = true;
+    let dejaVerifie = false;
+    window.DepotJoueurs.ecouter(() => {
+      _majSwatchCouleurJoueur();
+      if (dejaVerifie) return;
+      dejaVerifie = true;
+      const moi = window.DepotJoueurs.charger(joueurId);
+      if (!moi || !moi.couleur) ouvrirModalCouleurJoueur();
+    });
+  }
+
+  // Reflète la couleur actuellement choisie (ou son absence) sur le petit
+  // rond à côté du bouton "Couleur" — no-op si l'élément n'est pas dans le
+  // DOM courant (ex. onglet MJ) ou si le registre n'est pas encore prêt.
+  function _majSwatchCouleurJoueur() {
+    const swatch = document.getElementById("joueur-couleur-swatch");
+    if (!swatch || typeof window.DepotJoueurs === "undefined") return;
+    const moi = window.DepotJoueurs.charger(joueurId);
+    swatch.style.background = (moi && moi.couleur) || "transparent";
+  }
+
+  // Picker de couleur (mutuellement exclusive entre joueurs de la table) —
+  // grise/désactive toute couleur déjà prise par un AUTRE joueurId dans le
+  // registre partagé DepotJoueurs. Vérification "best effort" (pas de verrou
+  // transactionnel : deux joueurs cliquant à la milliseconde près pourraient
+  // en théorie choisir la même couleur), cohérente avec le reste des gardes
+  // "douces" de l'app (cf. assurerIdentiteJoueur) — re-vérifiée une seconde
+  // fois côté choisirCouleurJoueur au moment du clic.
+  function ouvrirModalCouleurJoueur() {
+    if (typeof window.DepotJoueurs === "undefined" || typeof Carte === "undefined" || !Carte.COULEURS_JOUEURS) return;
+    const modal = document.getElementById("modal-couleur-joueur");
+    const grille = document.getElementById("modal-couleur-joueur-grille");
+    if (!modal || !grille) return;
+    const couleursPrises = new Set(
+      window.DepotJoueurs.liste().filter((j) => j.id !== joueurId && j.couleur).map((j) => j.couleur)
+    );
+    const moi = window.DepotJoueurs.charger(joueurId);
+    const couleurActuelle = moi && moi.couleur;
+    grille.innerHTML = Carte.COULEURS_JOUEURS.map((c) => {
+      const prise = couleursPrises.has(c);
+      const selectionnee = c === couleurActuelle;
+      return `<button type="button" class="swatch-couleur-joueur" data-couleur="${c}" ${prise ? "disabled" : ""}
+        title="${prise ? "Déjà prise par un autre joueur" : c}"
+        style="width:34px;height:34px;border-radius:50%;background:${c};cursor:${prise ? "not-allowed" : "pointer"};
+        opacity:${prise ? "0.25" : "1"};border:${selectionnee ? "3px solid #fff" : "2px solid transparent"};"></button>`;
+    }).join("");
+    grille.querySelectorAll(".swatch-couleur-joueur").forEach((btn) => {
+      btn.onclick = () => choisirCouleurJoueur(btn.dataset.couleur);
+    });
+    modal.style.display = "flex";
+  }
+
+  function fermerModalCouleurJoueur() {
+    const modal = document.getElementById("modal-couleur-joueur");
+    if (modal) modal.style.display = "none";
+  }
+
+  function choisirCouleurJoueur(couleur) {
+    if (typeof window.DepotJoueurs === "undefined") return;
+    // Re-vérifie au moment du clic (cf. commentaire d'ouvrirModalCouleurJoueur) :
+    // le registre a pu changer depuis l'ouverture du modal.
+    const prise = window.DepotJoueurs.liste().some((j) => j.id !== joueurId && j.couleur === couleur);
+    if (prise) { toast("Cette couleur vient d'être prise par un autre joueur."); ouvrirModalCouleurJoueur(); return; }
+    window.DepotJoueurs.sauver({ id: joueurId, nom: joueurNom, couleur }, joueurId);
+    if (typeof Carte !== "undefined" && Carte.rafraichirCouleurJoueur) Carte.rafraichirCouleurJoueur(joueurId, couleur);
+    fermerModalCouleurJoueur();
+    _majSwatchCouleurJoueur();
+    toast("Couleur enregistrée — ton jeton en sera cerclé sur la carte.");
   }
 
   function renommerJoueur() {
@@ -6649,6 +6759,11 @@ const App = (() => {
     if (btnChangerRole) btnChangerRole.onclick = changerDeRole;
     const btnRenommerJoueur = document.getElementById("btn-renommer-joueur");
     if (btnRenommerJoueur) btnRenommerJoueur.onclick = renommerJoueur;
+    const btnChoisirCouleurJoueur = document.getElementById("btn-choisir-couleur-joueur");
+    if (btnChoisirCouleurJoueur) btnChoisirCouleurJoueur.onclick = ouvrirModalCouleurJoueur;
+    const btnFermerModalCouleurJoueur = document.getElementById("btn-fermer-modal-couleur-joueur");
+    if (btnFermerModalCouleurJoueur) btnFermerModalCouleurJoueur.onclick = fermerModalCouleurJoueur;
+    _majSwatchCouleurJoueur();
 
     // Onglets
     document.querySelectorAll("nav.tabs button[data-panneau]").forEach((b) => {

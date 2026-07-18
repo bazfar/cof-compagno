@@ -16,6 +16,54 @@ const Carte = (() => {
   const LIMITE_FOG = 900000; // marge sous la limite Firestore (1 Mio/document)
   const PALETTE = ["#c0392b", "#2980b9", "#27ae60", "#8e44ad", "#d35400", "#16a085", "#b8924a", "#7f8c8d"];
 
+  // Couleurs proposées aux JOUEURS pour distinguer leur jeton sur la carte
+  // (cf. app.js ouvrirModalCouleurJoueur/choisirCouleurJoueur) — mutuellement
+  // exclusives entre joueurs de la même table (vérifié via DepotJoueurs.liste(),
+  // registre partagé Firestore), distincte de PALETTE ci-dessus (jetons
+  // libres/PNJ, jamais des PJ). Exposée via Carte.COULEURS_JOUEURS (interne à
+  // l'IIFE, contrairement à Carte/Combat/Capacites eux-mêmes qui sont de
+  // vrais globals) — lue depuis app.js qui charge après ce fichier.
+  const COULEURS_JOUEURS = [
+    "#e63946", "#457b9d", "#2a9d8f", "#f4a261", "#9b5de5",
+    "#ffca3a", "#f15bb5", "#00b4d8", "#8d5524", "#6c757d",
+  ];
+  // Couleur de secours pour un token PJ dont le joueur propriétaire n'a pas
+  // (encore) choisi de couleur — comportement d'avant ce chantier (or fixe).
+  const COULEUR_PJ_DEFAUT = "#b8924a";
+
+  // Couleur de cercle/bordure d'un token PJ : celle choisie par le joueur
+  // propriétaire du personnage (registre partagé DepotJoueurs, champ
+  // `couleur` posé par app.js choisirCouleurJoueur) — permet de distinguer
+  // plusieurs joueurs sur la carte. Retombe sur COULEUR_PJ_DEFAUT si le
+  // joueur n'a pas encore choisi (comptes déjà créés avant ce chantier, ou
+  // DepotJoueurs pas encore chargé).
+  function _couleurJoueur(proprietaireId) {
+    if (!proprietaireId || typeof window.DepotJoueurs === "undefined") return COULEUR_PJ_DEFAUT;
+    const j = window.DepotJoueurs.charger(proprietaireId);
+    return (j && j.couleur) || COULEUR_PJ_DEFAUT;
+  }
+
+  // Recolore rétroactivement tous les tokens PJ déjà posés (worldmap ET
+  // battlemap) appartenant à ce joueur — appelé quand un joueur change sa
+  // couleur après coup (cf. app.js choisirCouleurJoueur), pour que le
+  // changement soit immédiatement visible sans devoir re-poser son jeton.
+  // Un joueur peut posséder plusieurs personnages : tous leurs tokens sont
+  // recolorés, identifiés via leur ref ("pj-" + persoId) et p.proprietaire.
+  function rafraichirCouleurJoueur(joueurId, couleur) {
+    const persos = (typeof window.DepotPersos !== "undefined") ? window.DepotPersos.charger() : {};
+    const estAMoi = (ref) => {
+      if (!ref) return false;
+      const p = persos[idPersoDepuisRef(ref)];
+      return !!(p && p.proprietaire === joueurId);
+    };
+    let touche = false;
+    etat.jetons.filter((j) => j.pj && estAMoi(j.ref)).forEach((j) => { j.couleur = couleur; touche = true; });
+    if (touche) { sauver(); rendreJetons(); }
+    if (typeof DD2VTT !== "undefined" && DD2VTT.tokensPJ && DD2VTT.changerCouleurToken) {
+      DD2VTT.tokensPJ().filter((t) => estAMoi(t.ref)).forEach((t) => DD2VTT.changerCouleurToken(t.id, couleur));
+    }
+  }
+
   // Cartes intégrées (fichiers dans assets/maps/). En ajouter ici au besoin.
   // groupe : libellé d'optgroup dans le menu déroulant.
   const CARTES_PRESETS = [
@@ -195,7 +243,7 @@ const Carte = (() => {
       ids.forEach((pid) => {
         const p = persos[pid];
         if (DD2VTT.ajouterTokenData({
-          nom: p.nom, couleur: "#b8924a", pj: true, ref: "pj-" + pid,
+          nom: p.nom, couleur: _couleurJoueur(p.proprietaire), pj: true, ref: "pj-" + pid,
           classe: p.classe || null, race: p.race || null, raceVariante: p.raceVariante || null, genre: p.genre || null,
         })) n++;
       });
@@ -208,7 +256,7 @@ const Carte = (() => {
       if (etat.jetons.some((j) => j.ref === ref)) return; // déjà sur la carte
       const p = persos[pid];
       etat.jetons.push({
-        id: nouvelId(), ref: ref, nom: p.nom, couleur: "#b8924a", pj: true,
+        id: nouvelId(), ref: ref, nom: p.nom, couleur: _couleurJoueur(p.proprietaire), pj: true,
         portrait: p.portrait || null, classe: p.classe || null,
         race: p.race || null, raceVariante: p.raceVariante || null, genre: p.genre || null,
         x: 15 + ((i % 6) * 12), y: 15 + (Math.floor(i / 6) * 14),
@@ -249,7 +297,7 @@ const Carte = (() => {
     const p = persos[monPersoId];
     if (!p) { toastCarte("Personnage introuvable."); return; }
     DD2VTT.ajouterTokenData({
-      nom: p.nom, couleur: "#b8924a", pj: true, ref: "pj-" + monPersoId,
+      nom: p.nom, couleur: _couleurJoueur(p.proprietaire), pj: true, ref: "pj-" + monPersoId,
       classe: p.classe || null, race: p.race || null, raceVariante: p.raceVariante || null, genre: p.genre || null,
     });
   }
@@ -2695,6 +2743,18 @@ const Carte = (() => {
       _onChangeMonstres && _onChangeMonstres();
     }
 
+    // Recolore un token (utilisé par Carte.rafraichirCouleurJoueur quand un
+    // joueur change sa couleur après avoir déjà posé son jeton) — même
+    // schéma que renommerToken ci-dessus.
+    function changerCouleurToken(id, couleur) {
+      const tok = tokensDD.find(t => t.id === id);
+      if (!tok) return;
+      tok.couleur = couleur;
+      _sauverToken(tok);
+      rendreTokensDD(scenes[sceneActive]);
+      _onChangeMonstres && _onChangeMonstres();
+    }
+
     function definirPvToken(id, val) {
       const tok = tokensDD.find(t => t.id === id);
       if (!tok) return;
@@ -3149,7 +3209,7 @@ const Carte = (() => {
       ajouterToken: (sc) => ajouterTokenDD(sc),
       modeWorldmap: activerModeWorldmap, modeBattlemap: activerModeBattlemap, estActive, ajouterTokenData,
       tokensMonstres, tokensPJ, distanceCases, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
-      renommerToken,
+      renommerToken, changerCouleurToken,
       ajouterEtat: ajouterEtatToken, retirerEtat: retirerEtatToken,
       supprimerToken: supprimerTokenDD, onChange, actualiserTokens, reinitialiserExploration,
       onMonstreDevientVisible, reinitialiserDetectionVisibilite, estMonstreVisible,
@@ -3204,6 +3264,6 @@ const Carte = (() => {
     ajouterEtatCombat, retirerEtatCombat, distanceCasesEntre,
     supprimerMonstreCombat, onMonstresChange, definirModeCarte,
     onMonstreDevientVisible, reinitialiserDetectionVisibilite, idPersoDepuisRef, tokenIdPourPerso, monstreEstVisible,
-    initiales,
+    initiales, rafraichirCouleurJoueur, COULEURS_JOUEURS,
   };
 })();

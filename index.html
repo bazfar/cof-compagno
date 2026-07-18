@@ -78,7 +78,8 @@
           <button class="btn secondaire" onclick="App.allerVers('lore')">Découvrir le monde</button>
         </div>
         <p class="role-actuel">Rôle actuel : <strong id="role-actuel-label"></strong>
-          <span id="bloc-joueur-nom" style="display:none;"> · Prénom : <strong id="joueur-nom-label"></strong> <button type="button" class="btn petit secondaire" id="btn-renommer-joueur">Renommer</button></span>
+          <span id="bloc-joueur-nom" style="display:none;"> · Prénom : <strong id="joueur-nom-label"></strong> <button type="button" class="btn petit secondaire" id="btn-renommer-joueur">Renommer</button>
+            · Couleur sur la carte : <span id="joueur-couleur-swatch" style="display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:middle;border:1px solid #fff;background:transparent;"></span> <button type="button" class="btn petit secondaire" id="btn-choisir-couleur-joueur">Couleur</button></span>
           · <button type="button" class="btn petit secondaire" id="btn-changer-role">Changer de rôle</button></p>
       </div>
     </section>
@@ -704,6 +705,20 @@
     </div>
   </div>
 
+  <!-- Modal joueur : choisir sa couleur de jeton sur la carte (mutuellement exclusive) -->
+  <div id="modal-couleur-joueur" class="modal-overlay" style="display:none;">
+    <div class="modal-boite">
+      <div class="modal-entete">
+        <h3>Choisir ma couleur</h3>
+        <button class="modal-fermer" id="btn-fermer-modal-couleur-joueur">✕</button>
+      </div>
+      <div style="padding:0 18px 18px;display:flex;flex-direction:column;gap:10px;">
+        <p class="aide" style="margin:0;">Ton jeton sera cerclé de cette couleur sur la carte. Une couleur grisée est déjà prise par un autre joueur de la table.</p>
+        <div id="modal-couleur-joueur-grille" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal choix permanent d'une capacité (ex. +2 DEF OU +1d8 DM) -->
   <div id="modal-choix-capacite" class="modal-overlay" style="display:none;">
     <div class="modal-boite">
@@ -747,7 +762,7 @@
   <script src="js/firebase-config.js?v=1"></script>
   <script src="js/depot.js?v=6"></script>
   <script src="js/sync.js?v=2"></script>
-  <script src="js/carte.js?v=60"></script>
+  <script src="js/carte.js?v=61"></script>
   <script src="js/raretes.js?v=5"></script>
   <script src="js/materiaux.js?v=1"></script>
   <script src="js/affixes.js?v=1"></script>
@@ -756,6 +771,6 @@
   <script src="js/loot.js?v=10"></script>
   <script src="js/capacites.js?v=34"></script>
   <script src="js/combat.js?v=14"></script>
-  <script src="js/app.js?v=124"></script>
+  <script src="js/app.js?v=127"></script>
 </body>
 </html>
