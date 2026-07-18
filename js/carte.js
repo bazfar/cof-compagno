@@ -2545,11 +2545,20 @@ const Carte = (() => {
         const barreHp = infosPv
           ? '<div class="dd-token-hp"><div class="rempli ' + _classePv(infosPv.pvActuel, infosPv.pvMax) + '" style="width:' + Math.max(0, Math.min(100, (infosPv.pvActuel / infosPv.pvMax) * 100)) + '%"></div></div>'
           : '';
+        // Badge numéro (ex. "Gobelin garde 1"/"2", "Loup 1"/"2"/"3", cf.
+        // _labelDistinct côté ajouterMonstre/confirmerInvocation) : deux
+        // tokens de la même espèce montrent la même image/initiale et ne se
+        // distinguent AUTREMENT que par ce suffixe numérique dans le nom —
+        // sans badge visible sur le jeton lui-même, ce nom n'aide en rien
+        // tant qu'on n'a pas cliqué dessus (seul el.title, un tooltip au
+        // survol, le porte). Extrait le nombre final du nom déjà résolu.
+        const numeroTok = /\s(\d+)$/.exec(tok.nom);
+        const badgeNumero = numeroTok ? '<span class="dd-token-numero">' + numeroTok[1] + '</span>' : '';
         // MJ : retire n'importe quel token. Joueur : seulement ses propres
         // invocations (une créature qu'il a lui-même invoquée), jamais un
         // monstre du bestiaire ni le jeton d'un autre joueur.
         const peutSupprimer = role === 'mj' || (!!tok.invocateur && tok.invocateur === monPersoId);
-        el.innerHTML = contenuTok + barreHp
+        el.innerHTML = contenuTok + barreHp + badgeNumero
           + (peutSupprimer ? '<button class="dd-token-suppr" title="Retirer ' + tok.nom + '">✕</button>' : '');
 
         // Drag sur grille

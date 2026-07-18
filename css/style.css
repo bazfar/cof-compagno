@@ -1344,6 +1344,29 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .dd-token-hp .rempli.critique { background: var(--chaos); }
 .dd-token:hover .dd-token-suppr { display: block; }
 
+/* Badge numéro distinguant plusieurs instances d'une même espèce sur le
+   jeton lui-même (ex. "Gobelin garde 1"/"2") — cf. rendreTokensDD, sans quoi
+   deux tokens identiques (même image/initiale) ne se distinguent qu'au
+   survol (tooltip) ou après avoir cliqué dessus. */
+.dd-token-numero {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: #1d1526;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 12;
+}
+
 /* ============================================================
    Modal générique
    ============================================================ */
