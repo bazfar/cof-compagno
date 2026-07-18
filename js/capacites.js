@@ -675,9 +675,19 @@ const Capacites = (() => {
     return { retires, degats, testsVolonte, soins };
   }
 
-  // Retire uniquement les entrées motCle === "finCombat" (appelé à la fin du combat).
+  // Retire les entrées motCle === "finCombat", PLUS toute entrée dont l'idEtat
+  // est listé ci-dessous (durée numérique normale par ailleurs — décomptée
+  // tour par tour comme n'importe quel autre état — mais qui doit aussi
+  // disparaître immédiatement si le combat se termine avant l'expiration de
+  // cette durée). Appelé à la fin du combat.
+  // - image_decalee (Enchanteur, Voie de l'enchantement rang 1) : dure 3
+  //   tours OU jusqu'à la fin du combat, selon ce qui arrive en premier —
+  //   la double illusoire n'a pas de sens hors combat.
+  const ETATS_RETIRES_FIN_COMBAT_MEME_SI_NUMERIQUE = ["image_decalee"];
   function retirerEtatsFinCombat(p) {
-    p.etatsActifs = (p.etatsActifs || []).filter((e) => !(e.dureeRestante && e.dureeRestante.motCle === "finCombat"));
+    p.etatsActifs = (p.etatsActifs || []).filter((e) =>
+      !(e.dureeRestante && e.dureeRestante.motCle === "finCombat") &&
+      !ETATS_RETIRES_FIN_COMBAT_MEME_SI_NUMERIQUE.includes(e.idEtat));
   }
 
   /* ---------- Voie du chaos (homebrew) : jauge de corruption de combat -------
