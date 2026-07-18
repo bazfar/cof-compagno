@@ -341,11 +341,13 @@ const Carte = (() => {
     const perso = Personnage.depuisJSON(p);
     const { pvMax, attaqueBonus } = _resoudreInvocation(inv, perso, p);
     const jetTxt = `1d20${attaqueBonus >= 0 ? "+" : ""}${attaqueBonus} vs DEF`;
+    const labelBase = `${inv.nom} (${p.nom})`;
     const ok = DD2VTT.ajouterTokenData({
-      nom: `${inv.nom} (${p.nom})`,
+      nom: _labelInvocationDistinct(monPersoId, inv.id, labelBase),
       couleur: "#5a4a7c",
       pj: false,
       invocateur: monPersoId,
+      invocationId: inv.id,
       pvMax, pvActuel: pvMax,
       def: inv.def, armure: inv.armure || 0,
       init: (typeof inv.init === "number") ? inv.init : 0,
@@ -359,33 +361,46 @@ const Carte = (() => {
     }
   }
 
-  // Distingue plusieurs instances du même monstre (ex. 3 "Loup" posés sur la
-  // même table de combat) pour que le MJ s'y retrouve dans l'initiative, le
-  // ciblage des sorts (Capacites.listeCibles, affiche cc.nom) et la table de
-  // combat — sans ça, trois entrées identiques "Loup" sont indiscernables.
-  // Comparaison par monstreId (pas par nom affiché, qui peut varier avec le
-  // tier), donc fiable même si labelBase change d'un ajout à l'autre.
-  // Numéroté seulement à partir du 2e ajout : un monstre seul de son espèce
+  // Distingue plusieurs instances d'un même "type" de combattant (ex. 3
+  // "Loup" du bestiaire, ou 2 "Zombie (Aldric)" invoqués par le même joueur)
+  // posés sur la même table de combat, pour que le MJ s'y retrouve dans
+  // l'initiative, le ciblage des sorts (Capacites.listeCibles, affiche
+  // cc.nom) et la table de combat — sans ça, des entrées identiques sont
+  // indiscernables. `predicat(token)` décide si un token déjà présent compte
+  // comme "même type" que celui qu'on s'apprête à ajouter (cf.
+  // _labelMonstreDistinct/_labelInvocationDistinct ci-dessous pour les deux
+  // usages actuels). Numéroté seulement à partir du 2e ajout : le premier
   // garde son nom tel quel ("Loup") ; dès qu'un 2e est posé, le PREMIER est
   // renommé rétroactivement en "Loup 1" (cf. _renommerMonstreCombat) et le
-  // nouveau devient "Loup 2" ; un 3e devient "Loup 3", etc. Ne concerne pas
-  // les invocations (distinguées autrement, cf. INVOCATIONS : nom du
-  // familier + nom de l'invocateur, jamais posées via ajouterMonstre).
-  function _labelMonstreDistinct(monstreId, labelBase) {
-    const memeEspece = listeMonstresCombat().filter((t) => t.monstreId === monstreId);
-    if (memeEspece.length === 0) return labelBase;
-    if (memeEspece.length === 1) {
-      _renommerMonstreCombat(memeEspece[0].id, labelBase + " 1");
+  // nouveau devient "Loup 2" ; un 3e devient "Loup 3", etc.
+  function _labelDistinct(predicat, labelBase) {
+    const memeType = listeMonstresCombat().filter(predicat);
+    if (memeType.length === 0) return labelBase;
+    if (memeType.length === 1) {
+      _renommerMonstreCombat(memeType[0].id, labelBase + " 1");
       return labelBase + " 2";
     }
-    return labelBase + " " + (memeEspece.length + 1);
+    return labelBase + " " + (memeType.length + 1);
+  }
+  // Monstres du bestiaire (Carte.ajouterMonstre) — comparaison par monstreId
+  // (pas par nom affiché, qui peut varier avec le tier), donc fiable même si
+  // labelBase change d'un ajout à l'autre.
+  function _labelMonstreDistinct(monstreId, labelBase) {
+    return _labelDistinct((t) => t.monstreId === monstreId, labelBase);
+  }
+  // Invocations d'un joueur (confirmerInvocation) — comparaison par
+  // invocateur ET invocationId : deux joueurs différents invoquant le même
+  // familier (ex. deux Nécromanciens, chacun son Zombie) ne doivent PAS se
+  // numéroter entre eux, seulement les doublons d'un MÊME invocateur.
+  function _labelInvocationDistinct(casterId, invocationId, labelBase) {
+    return _labelDistinct((t) => t.invocateur === casterId && t.invocationId === invocationId, labelBase);
   }
 
   // Renomme un token déjà posé sur la table de combat, quel que soit le mode
   // actif (battlemap dd2vtt ou worldmap) — même bascule que
   // appliquerDegatsCombat/definirPvCombat ci-dessous. Utilisé uniquement par
-  // _labelMonstreDistinct ci-dessus pour le renommage rétroactif du premier
-  // exemplaire d'une espèce. Propage aussi vers Combat.renommerCombattant
+  // _labelDistinct ci-dessus pour le renommage rétroactif du premier
+  // exemplaire d'un type (monstre ou invocation). Propage aussi vers Combat.renommerCombattant
   // (js/combat.js, chargé après carte.js — vérifié à l'exécution, jamais à
   // la définition) : si ce monstre a déjà rejoint l'ordre d'initiative, son
   // nom y est capturé une fois pour toutes à l'entrée (cf.
@@ -2612,7 +2627,13 @@ const Carte = (() => {
         // invocateur (permission de déplacer/retirer) + attaques propres au
         // jeton (pas de monstreId/BESTIAIRE_INDEX à interroger — cf.
         // attaquesMonstreHtml côté app.js, qui préfère tok.attaques si présent).
+        // invocationId (id du catalogue INVOCATIONS, ex. "zombie_necromancien") :
+        // sert uniquement à _labelDistinct (cf. confirmerInvocation) pour
+        // détecter plusieurs invocations du même type par le même invocateur
+        // (même rôle que monstreId pour Carte.ajouterMonstre) — jamais lu
+        // ailleurs, comme monstreId l'est par BESTIAIRE_INDEX.
         invocateur: (d && d.invocateur) || null,
+        invocationId: (d && d.invocationId) || null,
         attaques: (d && d.attaques) || null,
       };
       tokensDD.push(nouveauToken);
