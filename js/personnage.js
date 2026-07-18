@@ -98,6 +98,34 @@ class Personnage extends Entite {
     this.equipement = d.equipement;
     this.inventaireListe = d.inventaireListe;
     this.notes = d.notes;
+    // Champs "administratifs" gérés directement sur l'objet perso brut
+    // ailleurs dans l'app (jamais via Personnage), mais qui DOIVENT survivre
+    // un aller-retour Personnage.depuisJSON(p).versJSON() — sans ça,
+    // n'importe quelle action passant par ce chemin (équiper/déséquiper un
+    // objet, ajouter/jeter/donner un item, cf. js/app.js) écrasait
+    // silencieusement le propriétaire du personnage, son genre et ses livres
+    // partagés à la sauvegarde suivante. Bug réellement trouvé en auditant
+    // l'inventaire/équipement (2026-07-18), jamais déclenché en pratique
+    // jusqu'ici car masqué par le bug jumeau ci-dessous (undefined —
+    // Firestore refusait déjà la sauvegarde avant d'écraser quoi que ce soit).
+    this.genre = d.genre;
+    this.proprietaire = d.proprietaire;
+    this.proprietaireNom = d.proprietaireNom;
+    this.livres = d.livres;
+    // Bio "Party" (onglet 🎭 Party, cf. app.js) et illustration pleine page
+    // (distincte du petit portrait) : même risque de perte au aller-retour.
+    this.age = d.age;
+    this.villeOrigine = d.villeOrigine;
+    this.nationOrigine = d.nationOrigine;
+    this.hobbies = d.hobbies;
+    this.bio = d.bio;
+    this.illustration = d.illustration;
+    // Compteur d'illusions actives (Enchanteur, cf. htmlBlocIllusions) et
+    // bourse (or/argent/bronze, cf. htmlBlocBourse) : idem.
+    this.illusionsActives = d.illusionsActives;
+    this.piecesOr = d.piecesOr;
+    this.piecesArgent = d.piecesArgent;
+    this.piecesBronze = d.piecesBronze;
     // this.etatsActifs déjà posé par Entite (super()) ; usagesCapacites
     // compte les usages d'une capacité à fréquence limitée (cf. js/etats.js,
     // rang.mecanique.usage) : { [idCapacite]: nombreUtilise }.
@@ -146,7 +174,7 @@ class Personnage extends Entite {
 
   /* ----- Caractéristiques ----- */
   mod(code) {
-    const base = Entite.modCarac(this.caracs[code] + this.bonusCaracCapacites(code) + this.bonusCaracDons(code) + this.bonusTemporaire(code));
+    const base = Entite.modCarac(this.caracs[code] + this.bonusCaracCapacites(code) + this.bonusCaracDons(code) + this.bonusCaracEquipement(code) + this.bonusTemporaire(code));
     // Guerrier — Voie de l'élite, rang 5 "Apogée physique" (L, 1x/combat) :
     // double le MODIFICATEUR (pas la carac brute) de la carac choisie au
     // rang 1 (Spécimen d'élite), pendant 3 tours — état 'apogee_physique'
@@ -1084,6 +1112,18 @@ class Personnage extends Entite {
   bonusDefEquipement() {
     return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDEF || 0), 0);
   }
+  // Bonus de caractéristique porté par un accessoire équipé (ex. Anneau de
+  // force : { bonusCarac: { FOR: 1 } }, cf. data/loot.js/json) — lu
+  // dynamiquement comme bonusCaracCapacites/bonusCaracDons ci-dessus, jamais
+  // en mutant this.caracs. Seule une poignée d'accessoires "simples" (bonus
+  // de carac fixe, sans condition) portent ce champ pour l'instant : le
+  // reste du catalogue "accessoire" (résistances, immunités, relance 1x/jour,
+  // bonus conditionnels...) reste un effet narratif/manuel, cf. leur `effet`
+  // affiché en badge sur la fiche (badgeEffetItem côté app.js) mais non
+  // chiffré — audit du 2026-07-18, à étendre au cas par cas.
+  bonusCaracEquipement(code) {
+    return this._itemsEquipesUniques().reduce((t, it) => t + ((it.bonusCarac && it.bonusCarac[code]) || 0), 0);
+  }
   // "main_droite" | "main_gauche" -> l'arme qui y est équipée, ou null.
   armeEquipee(main) {
     const it = this.equipement && this.equipement[main];
@@ -1322,13 +1362,27 @@ class Personnage extends Entite {
 
   /* ----- Sérialisation (même forme que le localStorage actuel) ----- */
   versJSON() {
-    return {
+    const obj = {
       id: this.id,
       nom: this.nom,
       niveau: this.niveau,
       classe: this.classe,
       race: this.race,
       raceVariante: this.raceVariante,
+      genre: this.genre,
+      proprietaire: this.proprietaire,
+      proprietaireNom: this.proprietaireNom,
+      livres: this.livres,
+      age: this.age,
+      villeOrigine: this.villeOrigine,
+      nationOrigine: this.nationOrigine,
+      hobbies: this.hobbies,
+      bio: this.bio,
+      illustration: this.illustration,
+      illusionsActives: this.illusionsActives,
+      piecesOr: this.piecesOr,
+      piecesArgent: this.piecesArgent,
+      piecesBronze: this.piecesBronze,
       caracs: this.caracs,
       caracsLibres: this.caracsLibres,
       bonusCompetences: this.bonusCompetences,
@@ -1360,6 +1414,15 @@ class Personnage extends Entite {
       pvTemporairesExpiration: this.pvTemporairesExpiration,
       mutations: this.mutations,
     };
+    // Firestore refuse un champ explicitement à `undefined` dans .set() et
+    // lève une exception SYNCHRONE — via DepotDistant.remplacerTout (qui
+    // sauve TOUS les personnages en un seul batch), ça bloque la sauvegarde
+    // du batch entier, pas seulement de celui-ci. Une fiche créée avant
+    // l'ajout d'un champ (ex. pvTemporairesExpiration/mutations, absents de
+    // `d` à la construction) se retrouve avec `this.champ === undefined` :
+    // filtré ici plutôt que de risquer une régression à chaque nouveau champ.
+    Object.keys(obj).forEach((k) => { if (obj[k] === undefined) delete obj[k]; });
+    return obj;
   }
   static depuisJSON(obj) {
     return new Personnage(obj || {});
