@@ -476,6 +476,14 @@ const Combat = (() => {
         p.instinctChaotiqueActif = false;
         modifie = true;
       }
+      // Compteurs d'usage "Xx/combat" (cf. Capacites.verifierUsage) : remis à
+      // zéro ici comme le reste des ressources scopées au combat ci-dessus —
+      // jusqu'ici seule la période "tour" était auto-réinitialisée (cf.
+      // Combat.tourSuivant/_reinitialiserActionsEntree), laissant "combat"
+      // bloqué jusqu'à un reset manuel (↺) capacité par capacité sur la fiche.
+      const avantUsages = JSON.stringify(p.usagesCapacites || {});
+      Capacites.reinitialiserUsagesPeriode(p, "combat");
+      if (JSON.stringify(p.usagesCapacites || {}) !== avantUsages) modifie = true;
     });
     if (modifie) App.sauverPersos(persos);
     if (typeof Carte !== "undefined" && Carte.reinitialiserDetectionVisibilite) Carte.reinitialiserDetectionVisibilite();
