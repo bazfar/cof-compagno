@@ -460,25 +460,20 @@ const App = (() => {
     return [...monstres, ...pjs].filter((t) => t.id !== monTokenId);
   }
 
-  // 1 case de grille dd2vtt = 1,50 m — seule référence de conversion mètres/
-  // cases explicite dans l'app (cf. le libellé de la carte "Domaine de
-  // Valdcourt" dans js/carte.js), du même ordre de grandeur que le "+2m ≈
-  // +1 case" déjà utilisé pour Grâce féline (cf. js/combat.js).
-  const METRES_PAR_CASE = 1.5;
-
   // Bascule la carte en mode "clic sur un jeton pour cibler" (cf.
   // Carte.activerModeCiblage) pour une capacité en cours de ciblage — ne
   // RÉSOUT rien : un clic sur un jeton en portée présélectionne juste
   // `pickerSelect` (comme si l'utilisateur avait choisi l'option dans le
   // menu déroulant), il faut encore cliquer sur Confirmer. mecanique.portee
-  // (mètres, cf. data/donnees.js) absente/non numérique = pas de limite de
-  // portée appliquée ici (mieux vaut ne rien bloquer qu'un faux négatif sur
-  // une donnée de portée incomplète).
+  // est déjà exprimée en CASES (cf. data/donnees.js, converti depuis les
+  // mètres du texte source) — pas de conversion à faire ici. Absente/non
+  // numérique = pas de limite de portée appliquée (mieux vaut ne rien
+  // bloquer qu'un faux négatif sur une donnée de portée incomplète).
   function _armerCiblageCarte(persoId, mecanique, cibles, pickerSelect) {
     if (typeof Carte === "undefined" || !Carte.activerModeCiblage) return;
     const monTokenId = _monTokenId(persoId);
     if (!monTokenId) { if (Carte.desactiverModeCiblage) Carte.desactiverModeCiblage(); return; }
-    const porteeCases = (typeof mecanique.portee === "number") ? Math.round(mecanique.portee / METRES_PAR_CASE) : null;
+    const porteeCases = (typeof mecanique.portee === "number") ? mecanique.portee : null;
     const tokenVersCible = {};
     const idsValides = [];
     cibles.forEach((cc) => {
