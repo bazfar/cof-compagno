@@ -586,6 +586,28 @@ const App = (() => {
     return { touche, critique: jet.crit, echecCritique: jet.echec, totalAttaque: jet.total, defCible };
   }
 
+  // Applique les dégâts d'une attaque rapide (Contact/Distance/Magique) à sa
+  // cible verrouillée, une fois le jet de dégâts effectué (cf. le bouton
+  // "Dégâts" sidebar/dock) — jusqu'ici ce bouton se contentait d'un jet de
+  // dés affiché, sans jamais toucher la PV de la cible (contrairement à la
+  // table de combat MJ et aux attaques d'opportunité, qui le faisaient déjà).
+  // Même distinction monstre/PJ que _resoudreAttaqueRapide (defCible) : un
+  // monstre passe par Carte.appliquerDegatsCombat (armure du token), un PJ
+  // par subirDegats (réduction complète du personnage, cf. Personnage).
+  function _appliquerDegatsCibleRapide(cibleId, total) {
+    if (!cibleId || typeof total !== "number" || typeof Carte === "undefined") return;
+    const monstre = (Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : []).find((t) => t.id === cibleId);
+    if (monstre) {
+      const info = Carte.appliquerDegatsCombat(cibleId, total);
+      if (info) toast(`${info.nom} subit ${info.degatsNets} dégâts (PV ${info.pvActuel}).`);
+      return;
+    }
+    const pjTok = (Carte.listeTokensJoueursCombat ? Carte.listeTokensJoueursCombat() : []).find((t) => t.id === cibleId);
+    if (pjTok && pjTok.ref && pjTok.ref.startsWith("pj-")) {
+      subirDegats(pjTok.ref.slice(3), total, null);
+    }
+  }
+
   // Chasseur — Voie du chaos, rang 1 "Premier sang du prédateur" (passif) :
   // +1 point de jauge de Chaos par touche RÉUSSIE À DISTANCE (les pièges ne
   // sont pas trackés par l'app, seule cette moitié du texte est mécanisable)
@@ -925,9 +947,9 @@ const App = (() => {
         ${attDistance === null ? `<p class="aide" style="font-size:0.72rem;margin:6px 0 0;">Équipe un arc ou une arbalète pour débloquer l'attaque à distance.</p>` : ""}
         ${(dmgContact && etatDegC.visible) || (dmgDistance && etatDegD.visible) || (dmgMagique && etatDegM.visible) ? `
         <div class="barre-actions" style="margin-top:6px;">
-          ${dmgContact && etatDegC.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}" data-bm-critique="${etatDegC.critique ? "1" : "0"}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}">🎲 Dégâts Contact (${dmgContact})${etatDegC.critique ? " CRIT" : ""}</button>` : ""}
-          ${dmgDistance && etatDegD.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}" data-bm-critique="${etatDegD.critique ? "1" : "0"}" data-bm-mult="${perso.aTirFatal() ? "3" : "2"}" title="${echapper(armeDistance ? armeDistance.nom : "")}">🎲 Dégâts Distance (${dmgDistance})${etatDegD.critique ? " CRIT" : ""}</button>` : ""}
-          ${dmgMagique && etatDegM.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgMagique}" data-bm-critique="${etatDegM.critique ? "1" : "0"}">🎲 Dégâts Magique (${dmgMagique})${etatDegM.critique ? " CRIT" : ""}</button>` : ""}
+          ${dmgContact && etatDegC.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}" data-bm-degats-type="contact" data-bm-critique="${etatDegC.critique ? "1" : "0"}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}">🎲 Dégâts Contact (${dmgContact})${etatDegC.critique ? " CRIT" : ""}</button>` : ""}
+          ${dmgDistance && etatDegD.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}" data-bm-degats-type="distance" data-bm-critique="${etatDegD.critique ? "1" : "0"}" data-bm-mult="${perso.aTirFatal() ? "3" : "2"}" title="${echapper(armeDistance ? armeDistance.nom : "")}">🎲 Dégâts Distance (${dmgDistance})${etatDegD.critique ? " CRIT" : ""}</button>` : ""}
+          ${dmgMagique && etatDegM.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgMagique}" data-bm-degats-type="magique" data-bm-critique="${etatDegM.critique ? "1" : "0"}">🎲 Dégâts Magique (${dmgMagique})${etatDegM.critique ? " CRIT" : ""}</button>` : ""}
         </div>` : ""}
         ${porteeHtml}
       </div>`}
@@ -974,7 +996,12 @@ const App = (() => {
         const bonus = parseInt(el.dataset.bonus, 10);
         const cibleId = (_typeAttaquePortee === type) ? _cibleDistanceId : null;
         const resolution = _resoudreAttaqueRapide(`Attaque ${type}`, bonus, perso.critMinAttaque(type), cibleId);
-        attaquesRapidesEnAttente[type] = Object.assign({ persoId: id }, resolution);
+        // cibleId conservé ici (pas seulement dans la résolution du jet) :
+        // sert au bouton "Dégâts" pour appliquer automatiquement le résultat
+        // sur la BONNE cible au moment du clic (cf. _appliquerDegatsCibleRapide),
+        // même si _cibleDistanceId a changé entre-temps (le joueur a reciblé
+        // avant de cliquer sur Dégâts).
+        attaquesRapidesEnAttente[type] = Object.assign({ persoId: id, cibleId }, resolution);
         const resultatMsg = cibleId
           ? (resolution.echecCritique ? "1 naturel — échec critique automatique."
             : resolution.critique ? `CRITIQUE !${resolution.defCible !== null ? ` (DEF cible ${resolution.defCible})` : ""}`
@@ -998,12 +1025,20 @@ const App = (() => {
     // Dégâts de l'arme équipée (formule figée, pas de bonus au jet ici) —
     // data-bm-critique="1" multiplie les dés (×data-bm-mult, 2 par défaut,
     // 3 à distance avec Tir fatal) si la dernière attaque de ce type était
-    // un critique (cf. etatDegC/D/M, lancerFormule).
+    // un critique (cf. etatDegC/D/M, lancerFormule). Si une cible a été
+    // verrouillée ET touchée pour CE type d'attaque (cf. attaquesRapidesEnAttente/
+    // _appliquerDegatsCibleRapide), les dégâts lui sont appliqués directement —
+    // jusqu'ici ce bouton se contentait d'un jet de dés affiché.
     sidebar.querySelectorAll("[data-bm-degats]").forEach((el) => {
       el.onclick = () => {
         const formule = el.dataset.bmDegats;
         const estCrit = el.dataset.bmCritique === "1";
-        lancerFormule(formule, `${p.nom} — Dégâts (${formule})`, estCrit ? parseInt(el.dataset.bmMult || "2", 10) : false);
+        const total = lancerFormule(formule, `${p.nom} — Dégâts (${formule})`, estCrit ? parseInt(el.dataset.bmMult || "2", 10) : false);
+        const type = el.dataset.bmDegatsType;
+        const attente = type && attaquesRapidesEnAttente[type];
+        if (attente && attente.persoId === id && attente.touche === true && attente.cibleId) {
+          _appliquerDegatsCibleRapide(attente.cibleId, total);
+        }
       };
     });
     // Vérificateur de portée : changer de type d'attaque ou de cible re-rend
@@ -1229,9 +1264,9 @@ const App = (() => {
     if (attDistance !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="distance" data-bonus="${attDistance}"><span class="dock-ic">🏹</span><span class="dock-lbl">Distance ${signe(attDistance)}</span></button>`);
     if (attMagique !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="magique" data-bonus="${attMagique}"><span class="dock-ic">✨</span><span class="dock-lbl">Magique ${signe(attMagique)}</span></button>`);
     if (attLancer !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="lancer" data-bonus="${attLancer}"><span class="dock-ic">🎯</span><span class="dock-lbl">Lancer ${signe(attLancer)}</span></button>`);
-    if (dmgContact && etatDegC.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}" data-bm-critique="${etatDegC.critique ? "1" : "0"}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}${etatDegC.critique ? " CRIT" : ""}</span></button>`);
-    if (dmgDistance && etatDegD.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgDistance}" data-bm-critique="${etatDegD.critique ? "1" : "0"}" data-bm-mult="${perso.aTirFatal() ? "3" : "2"}" title="${echapper(armeDistance.nom)}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgDistance}${etatDegD.critique ? " CRIT" : ""}</span></button>`);
-    if (dmgMagique && etatDegM.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgMagique}" data-bm-critique="${etatDegM.critique ? "1" : "0"}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgMagique}${etatDegM.critique ? " CRIT" : ""}</span></button>`);
+    if (dmgContact && etatDegC.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}" data-bm-degats-type="contact" data-bm-critique="${etatDegC.critique ? "1" : "0"}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}${etatDegC.critique ? " CRIT" : ""}</span></button>`);
+    if (dmgDistance && etatDegD.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgDistance}" data-bm-degats-type="distance" data-bm-critique="${etatDegD.critique ? "1" : "0"}" data-bm-mult="${perso.aTirFatal() ? "3" : "2"}" title="${echapper(armeDistance.nom)}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgDistance}${etatDegD.critique ? " CRIT" : ""}</span></button>`);
+    if (dmgMagique && etatDegM.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgMagique}" data-bm-degats-type="magique" data-bm-critique="${etatDegM.critique ? "1" : "0"}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgMagique}${etatDegM.critique ? " CRIT" : ""}</span></button>`);
     // Bascules Frappe puissante / Tir de précision : -2 attaque / +4 dégâts
     // tant qu'actives, visibles seulement si le don est acquis ET l'arme requise
     // équipée (cf. peutFrappePuissante/peutTirPrecision ci-dessus).
@@ -1353,7 +1388,12 @@ const App = (() => {
         const bonus = parseInt(el.dataset.bonus, 10);
         const cibleId = (_typeAttaquePortee === type) ? _cibleDistanceId : null;
         const resolution = _resoudreAttaqueRapide(`Attaque ${type}`, bonus, perso.critMinAttaque(type), cibleId);
-        attaquesRapidesEnAttente[type] = Object.assign({ persoId: id }, resolution);
+        // cibleId conservé ici (pas seulement dans la résolution du jet) :
+        // sert au bouton "Dégâts" pour appliquer automatiquement le résultat
+        // sur la BONNE cible au moment du clic (cf. _appliquerDegatsCibleRapide),
+        // même si _cibleDistanceId a changé entre-temps (le joueur a reciblé
+        // avant de cliquer sur Dégâts).
+        attaquesRapidesEnAttente[type] = Object.assign({ persoId: id, cibleId }, resolution);
         const resultatMsg = cibleId
           ? (resolution.echecCritique ? "1 naturel — échec critique automatique."
             : resolution.critique ? `CRITIQUE !${resolution.defCible !== null ? ` (DEF cible ${resolution.defCible})` : ""}`
@@ -1370,10 +1410,17 @@ const App = (() => {
         rendreFicheSidebarBattlemap(id);
       };
     });
+    // cf. sidebar.querySelectorAll("[data-bm-degats]") plus haut : même
+    // application automatique des dégâts sur la cible verrouillée/touchée.
     dock.querySelectorAll("[data-bm-degats]").forEach((el) => {
       el.onclick = () => {
         const estCrit = el.dataset.bmCritique === "1";
-        lancerFormule(el.dataset.bmDegats, `${p.nom} — Dégâts (${el.dataset.bmDegats})`, estCrit ? parseInt(el.dataset.bmMult || "2", 10) : false);
+        const total = lancerFormule(el.dataset.bmDegats, `${p.nom} — Dégâts (${el.dataset.bmDegats})`, estCrit ? parseInt(el.dataset.bmMult || "2", 10) : false);
+        const type = el.dataset.bmDegatsType;
+        const attente = type && attaquesRapidesEnAttente[type];
+        if (attente && attente.persoId === id && attente.touche === true && attente.cibleId) {
+          _appliquerDegatsCibleRapide(attente.cibleId, total);
+        }
       };
     });
     dock.querySelectorAll("[data-toggle-don]").forEach((el) => {
@@ -7481,16 +7528,25 @@ const App = (() => {
   // monstre = pastille couleur + initiales, même logique que les jetons de
   // la battlemap (Carte.initiales/couleur du token, js/carte.js).
   function _ligneInitiativeHtml(e, estActif) {
-    let avatarInner, styleCadre = "";
+    let avatarInner, styleCadre = "", badgeNumero = "";
     if (e.type === "pj") {
       const perso = chargerPersos()[e.id];
       avatarInner = avatarHtml(perso, 52);
     } else {
       const monstre = (typeof Carte !== "undefined" ? Carte.listeMonstresCombat() : []).find((m) => m.id === e.id);
       const couleur = (monstre && monstre.couleur) || "#7c5aa6";
-      const inits = typeof Carte !== "undefined" && Carte.initiales ? Carte.initiales(e.nom) : "?";
+      // Distingue plusieurs instances d'un même monstre (ex. "Gobelin garde
+      // 2") — même badge numéro que le jeton sur la carte (cf. rendreTokensDD/
+      // dd-token-numero dans js/carte.js). Sans ce détachement du chiffre
+      // avant d'appeler Carte.initiales(), un nom à 2+ mots ("Gobelin garde
+      // 1"/"Gobelin garde 2") perd le chiffre : slice(0,2) sur ["Gobelin",
+      // "garde","2"] ne garde que "Gobelin"+"garde" → "GG" pour les deux.
+      const numeroMatch = /\s(\d+)$/.exec(e.nom);
+      const nomSansNumero = numeroMatch ? e.nom.slice(0, numeroMatch.index) : e.nom;
+      const inits = typeof Carte !== "undefined" && Carte.initiales ? Carte.initiales(nomSansNumero) : "?";
       styleCadre = ` style="background:${couleur};"`;
       avatarInner = echapper(inits);
+      badgeNumero = numeroMatch ? `<span class="initiative-numero">${numeroMatch[1]}</span>` : "";
     }
     const badgeInitiative = e.initiative === null
       ? `<span class="initiative-badge attente">?</span>`
@@ -7500,6 +7556,7 @@ const App = (() => {
       <div class="initiative-avatar-wrap">
         <div class="initiative-avatar-cadre"${styleCadre}>${avatarInner}</div>
         ${badgeInitiative}
+        ${badgeNumero}
         ${e.koTourCourant ? `<span class="initiative-badge-ko">💀</span>` : ""}
       </div>
       <span class="initiative-nom-mini">${echapper(e.nom)}</span>

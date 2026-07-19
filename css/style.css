@@ -702,6 +702,25 @@ textarea { resize: vertical; min-height: 70px; }
   background: #8a8296;
   color: #fff;
 }
+/* Badge numéro distinguant plusieurs instances d'un même monstre dans
+   l'ordre d'initiative (ex. "Gobelin garde 1"/"2") — même style que le
+   badge équivalent sur le jeton (cf. .dd-token-numero, js/carte.js). */
+.initiative-numero {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: #1d1526;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
 .initiative-badge-ko {
   position: absolute;
   bottom: -4px;
