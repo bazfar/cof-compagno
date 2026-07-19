@@ -2394,11 +2394,17 @@ const Carte = (() => {
     let tokenSelectionne = null;
     // Mode de ciblage carte (clic sur un jeton pour cibler, cf.
     // activerModeCiblage/js/app.js _armerCiblageCarte + le vérificateur de
-    // portée des attaques rapides) : ids = jetons valides (déjà filtrés par
-    // portée côté appelant, qui connaît la mécanique/l'arme — ce module ne
-    // fait AUCUN calcul de portée lui-même), onChoix = callback appelé au
-    // clic sur un jeton valide. Ne résout rien : c'est à l'appelant de
-    // décider quoi faire du choix (ex. présélectionner un <select>).
+    // portée des attaques rapides) : estValide(tokenId) = PRÉDICAT réévalué
+    // à CHAQUE rendu (pas un ensemble figé calculé une fois) — indispensable
+    // pour que la surbrillance suive un déplacement de jeton en direct
+    // (surDragDD rappelle déjà rendreTokensDD à chaque frame pendant un
+    // glisser, cf. plus bas ; un ensemble statique restait sinon calé sur
+    // les distances du moment de l'ouverture du ciblage, ignorant tout
+    // déplacement ultérieur — du lanceur COMME d'une cible). Ce module ne
+    // fait lui-même AUCUN calcul de portée : le prédicat est fourni par
+    // l'appelant, qui seul connaît la mécanique/l'arme en jeu. onChoix =
+    // callback appelé au clic sur un jeton valide ; ne résout rien, c'est à
+    // l'appelant de décider quoi faire du choix (ex. présélectionner un <select>).
     let modeCiblage = null;
     let _depotTokens = null;
     let _depotPortails = null;
@@ -2525,7 +2531,7 @@ const Carte = (() => {
         // LoS habituelle — les deux surbrillances sont mutuellement
         // exclusives en pratique (le clic ne fait qu'une chose à la fois,
         // cf. plus bas) mais rien n'empêche de les cumuler visuellement.
-        const classeCiblage = modeCiblage ? (modeCiblage.ids.has(tok.id) ? ' cible-valide' : ' cible-hors-portee') : '';
+        const classeCiblage = modeCiblage ? (modeCiblage.estValide(tok.id) ? ' cible-valide' : ' cible-hors-portee') : '';
         el.className = 'dd-token' + (tokenSelectionne === tok.id ? ' selectionne' : '') + classeCiblage;
         el.dataset.id = tok.id;
         el.style.pointerEvents = 'all';
@@ -2585,7 +2591,7 @@ const Carte = (() => {
         el.addEventListener('click', ev => {
           ev.stopPropagation();
           if (modeCiblage) {
-            if (modeCiblage.ids.has(tok.id)) modeCiblage.onChoix(tok.id);
+            if (modeCiblage.estValide(tok.id)) modeCiblage.onChoix(tok.id);
             else toastCarte('Hors de portée.');
             return;
           }
@@ -3264,13 +3270,16 @@ const Carte = (() => {
     }
 
     // ── Mode de ciblage (clic sur un jeton pour cibler) ──────
-    // idsValides : tableau d'ids de TOKENS déjà filtrés par portée côté
-    // appelant (js/app.js, qui seul connaît la mécanique/l'arme en jeu).
+    // estValide(tokenId) -> bool : PRÉDICAT fourni par l'appelant (js/app.js,
+    // qui seul connaît la mécanique/l'arme en jeu), rappelé à chaque rendu —
+    // PAS un ensemble d'ids figé au moment de l'activation, pour que la
+    // surbrillance suive un déplacement de jeton en direct (le lanceur ou
+    // une cible potentielle).
     // onChoix(tokenId) : appelé au clic sur un jeton valide, un seul argument
     // (l'id du token cliqué) — traduire vers un id de personnage/capacité
     // reste la responsabilité de l'appelant.
-    function activerModeCiblage(idsValides, onChoix) {
-      modeCiblage = { ids: new Set(idsValides || []), onChoix };
+    function activerModeCiblage(estValide, onChoix) {
+      modeCiblage = { estValide: estValide || (() => false), onChoix };
       const sc = scenes[sceneActive];
       if (sc) rendreTokensDD(sc);
     }
@@ -3339,8 +3348,10 @@ const Carte = (() => {
   // Ciblage par clic sur la carte (cf. DD2VTT.activerModeCiblage) : seule la
   // battlemap dd2vtt gère des jetons cliquables avec portée — no-op en
   // worldmap (aucun appelant ne devrait s'y attendre, mais ne casse rien).
-  function activerModeCiblage(idsValides, onChoix) {
-    if (typeof DD2VTT !== "undefined" && DD2VTT.activerModeCiblage) DD2VTT.activerModeCiblage(idsValides, onChoix);
+  // estValide(tokenId) -> bool : rappelé à chaque rendu, PAS un ensemble figé
+  // (cf. DD2VTT.activerModeCiblage pour le pourquoi).
+  function activerModeCiblage(estValide, onChoix) {
+    if (typeof DD2VTT !== "undefined" && DD2VTT.activerModeCiblage) DD2VTT.activerModeCiblage(estValide, onChoix);
   }
   function desactiverModeCiblage() {
     if (typeof DD2VTT !== "undefined" && DD2VTT.desactiverModeCiblage) DD2VTT.desactiverModeCiblage();

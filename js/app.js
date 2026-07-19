@@ -469,27 +469,35 @@ const App = (() => {
   // mètres du texte source) — pas de conversion à faire ici. Absente/non
   // numérique = pas de limite de portée appliquée (mieux vaut ne rien
   // bloquer qu'un faux négatif sur une donnée de portée incomplète).
+  // La distance est recalculée à CHAQUE appel du prédicat estValide (pas une
+  // seule fois ici) : Carte.activerModeCiblage le rappelle à chaque rendu,
+  // y compris pendant un glisser de jeton, pour que la surbrillance suive
+  // un déplacement (le lanceur ou une cible) au lieu de rester figée sur
+  // les distances du moment de l'ouverture du picker.
   function _armerCiblageCarte(persoId, mecanique, cibles, pickerSelect) {
     if (typeof Carte === "undefined" || !Carte.activerModeCiblage) return;
     const monTokenId = _monTokenId(persoId);
     if (!monTokenId) { if (Carte.desactiverModeCiblage) Carte.desactiverModeCiblage(); return; }
     const porteeCases = (typeof mecanique.portee === "number") ? mecanique.portee : null;
+    // Seul l'ensemble des cibles CANDIDATES (allié/ennemi résolu en token) est
+    // figé ici — l'allégeance/la résolution de token d'un perso ne change pas
+    // quand un jeton se déplace, contrairement à la distance.
     const tokenVersCible = {};
-    const idsValides = [];
     cibles.forEach((cc) => {
       // Un monstre (genre "monstre") a déjà un id de TOKEN (cf.
       // Capacites.listeCibles -> Carte.listeMonstresCombat) ; un PJ
       // (genre "perso") a un id de PERSONNAGE, à traduire en id de token.
       const tokId = cc.genre === "monstre" ? cc.id : Carte.tokenIdPourPerso(cc.id);
       if (!tokId || tokId === monTokenId) return;
-      if (porteeCases !== null) {
-        const dist = Carte.distanceCasesEntre(monTokenId, tokId);
-        if (dist === null || dist > porteeCases) return;
-      }
       tokenVersCible[tokId] = cc.id;
-      idsValides.push(tokId);
     });
-    Carte.activerModeCiblage(idsValides, (tokId) => {
+    const estValide = (tokId) => {
+      if (!tokenVersCible[tokId]) return false;
+      if (porteeCases === null) return true;
+      const dist = Carte.distanceCasesEntre(monTokenId, tokId);
+      return dist !== null && dist <= porteeCases;
+    };
+    Carte.activerModeCiblage(estValide, (tokId) => {
       const cibleId = tokenVersCible[tokId];
       if (!cibleId || !pickerSelect) return;
       pickerSelect.value = cibleId;
@@ -791,7 +799,11 @@ const App = (() => {
     }
 
     let porteeHtml = "";
-    let ciblesEnPorteeActuelles = null; // cf. armement du mode de ciblage carte juste après ce bloc
+    // Hoistés hors du bloc ci-dessous pour l'armement du mode de ciblage
+    // carte juste après (cf. plus bas) : monTokenIdPortee = token du
+    // lanceur, porteeActuellePortee = {min,max} du type d'attaque choisi.
+    let monTokenIdPortee = null;
+    let porteeActuellePortee = null;
     if (typeof Combat !== "undefined" && Combat.estActif() &&
         typeof Carte !== "undefined" && Carte.distanceCasesEntre) {
       const monTokenId = _monTokenId(id);
@@ -804,7 +816,8 @@ const App = (() => {
         const ciblesEnPortee = toutesLesCibles
           .map((cc) => Object.assign({ _distance: Carte.distanceCasesEntre(monTokenId, cc.id) }, cc))
           .filter((cc) => cc._distance !== null && cc._distance >= portee.min && cc._distance <= portee.max);
-        ciblesEnPorteeActuelles = ciblesEnPortee;
+        monTokenIdPortee = monTokenId;
+        porteeActuellePortee = portee;
         if (!ciblesEnPortee.some((cc) => cc.id === _cibleDistanceId)) {
           _cibleDistanceId = ciblesEnPortee.length ? ciblesEnPortee[0].id : null;
         }
@@ -840,15 +853,22 @@ const App = (() => {
     }
 
     // Mode de ciblage carte (clic sur un jeton = présélection, cf.
-    // Carte.activerModeCiblage) : armé avec les mêmes cibles que le menu
-    // déroulant ci-dessus (même filtre de portée), désarmé sinon — évite de
-    // laisser des jetons en surbrillance obsolète (ex. combat terminé entre
-    // deux rendus). Partage modeCiblage avec le ciblage des capacités (cf.
-    // _armerCiblageCarte) : un seul picker/vérificateur peut être actif à la
-    // fois de toute façon, le dernier armé gagne.
+    // Carte.activerModeCiblage) : le prédicat recalcule la distance à CHAQUE
+    // rendu (pas un ensemble d'ids figé), pour suivre un déplacement de
+    // jeton en direct (le sien ou celui d'une cible potentielle) — sinon la
+    // surbrillance restait calée sur les distances du moment de l'ouverture
+    // du vérificateur de portée. Désarmé si aucun vérificateur n'est affiché
+    // (ex. combat terminé entre deux rendus). Partage modeCiblage avec le
+    // ciblage des capacités (cf. _armerCiblageCarte) : un seul picker/
+    // vérificateur peut être actif à la fois de toute façon, le dernier
+    // armé gagne.
     if (typeof Carte !== "undefined" && Carte.activerModeCiblage) {
-      if (ciblesEnPorteeActuelles && ciblesEnPorteeActuelles.length) {
-        Carte.activerModeCiblage(ciblesEnPorteeActuelles.map((cc) => cc.id), (tokId) => {
+      if (monTokenIdPortee && porteeActuellePortee) {
+        Carte.activerModeCiblage((tokId) => {
+          if (tokId === monTokenIdPortee) return false;
+          const dist = Carte.distanceCasesEntre(monTokenIdPortee, tokId);
+          return dist !== null && dist >= porteeActuellePortee.min && dist <= porteeActuellePortee.max;
+        }, (tokId) => {
           _cibleDistanceId = tokId;
           rendreFicheSidebarBattlemap(id);
         });
