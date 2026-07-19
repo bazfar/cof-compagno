@@ -2392,6 +2392,14 @@ const Carte = (() => {
     // cx/cy en coordonnées cases (pas pixels)
     let tokensDD = [];
     let tokenSelectionne = null;
+    // Mode de ciblage carte (clic sur un jeton pour cibler, cf.
+    // activerModeCiblage/js/app.js _armerCiblageCarte + le vérificateur de
+    // portée des attaques rapides) : ids = jetons valides (déjà filtrés par
+    // portée côté appelant, qui connaît la mécanique/l'arme — ce module ne
+    // fait AUCUN calcul de portée lui-même), onChoix = callback appelé au
+    // clic sur un jeton valide. Ne résout rien : c'est à l'appelant de
+    // décider quoi faire du choix (ex. présélectionner un <select>).
+    let modeCiblage = null;
     let _depotTokens = null;
     let _depotPortails = null;
     let _desabonnerTokens = null;
@@ -2512,7 +2520,13 @@ const Carte = (() => {
       const personasPJ2 = (typeof window.DepotPersos !== 'undefined') ? window.DepotPersos.charger() : {};
       tokensDD.forEach(tok => {
         const el = document.createElement('div');
-        el.className = 'dd-token' + (tokenSelectionne === tok.id ? ' selectionne' : '');
+        // Mode de ciblage actif (cf. activerModeCiblage) : distingue les
+        // jetons cliquables (en portée) des autres, en plus de la sélection
+        // LoS habituelle — les deux surbrillances sont mutuellement
+        // exclusives en pratique (le clic ne fait qu'une chose à la fois,
+        // cf. plus bas) mais rien n'empêche de les cumuler visuellement.
+        const classeCiblage = modeCiblage ? (modeCiblage.ids.has(tok.id) ? ' cible-valide' : ' cible-hors-portee') : '';
+        el.className = 'dd-token' + (tokenSelectionne === tok.id ? ' selectionne' : '') + classeCiblage;
         el.dataset.id = tok.id;
         el.style.pointerEvents = 'all';
 
@@ -2563,9 +2577,18 @@ const Carte = (() => {
 
         // Drag sur grille
         el.addEventListener('pointerdown', ev => demarrerDragDD(ev, tok, scene));
-        // Sélection pour LoS
+        // Sélection pour LoS — sauf en mode de ciblage (cf. modeCiblage),
+        // où le clic sert exclusivement à choisir une cible (jamais les deux
+        // à la fois : un jeton hors portée pendant un ciblage ne bascule pas
+        // non plus la sélection LoS, pour ne pas surprendre l'utilisateur en
+        // plein choix de cible).
         el.addEventListener('click', ev => {
           ev.stopPropagation();
+          if (modeCiblage) {
+            if (modeCiblage.ids.has(tok.id)) modeCiblage.onChoix(tok.id);
+            else toastCarte('Hors de portée.');
+            return;
+          }
           tokenSelectionne = tokenSelectionne === tok.id ? null : tok.id;
           rendreTokensDD(scene);
           calculerEtRendreLoS(scene);
@@ -3240,6 +3263,24 @@ const Carte = (() => {
       if (sc) rendreTokensDD(sc);
     }
 
+    // ── Mode de ciblage (clic sur un jeton pour cibler) ──────
+    // idsValides : tableau d'ids de TOKENS déjà filtrés par portée côté
+    // appelant (js/app.js, qui seul connaît la mécanique/l'arme en jeu).
+    // onChoix(tokenId) : appelé au clic sur un jeton valide, un seul argument
+    // (l'id du token cliqué) — traduire vers un id de personnage/capacité
+    // reste la responsabilité de l'appelant.
+    function activerModeCiblage(idsValides, onChoix) {
+      modeCiblage = { ids: new Set(idsValides || []), onChoix };
+      const sc = scenes[sceneActive];
+      if (sc) rendreTokensDD(sc);
+    }
+    function desactiverModeCiblage() {
+      if (!modeCiblage) return;
+      modeCiblage = null;
+      const sc = scenes[sceneActive];
+      if (sc) rendreTokensDD(sc);
+    }
+
     return {
       init, scenes: () => scenes, sceneActive: () => sceneActive,
       ajouterToken: (sc) => ajouterTokenDD(sc),
@@ -3249,6 +3290,7 @@ const Carte = (() => {
       ajouterEtat: ajouterEtatToken, retirerEtat: retirerEtatToken,
       supprimerToken: supprimerTokenDD, onChange, actualiserTokens, reinitialiserExploration,
       onMonstreDevientVisible, reinitialiserDetectionVisibilite, estMonstreVisible,
+      activerModeCiblage, desactiverModeCiblage,
     };
   })();
   // Un changement de token dd2vtt (ajout/dégâts/suppression, local ou distant
@@ -3294,6 +3336,16 @@ const Carte = (() => {
     return DD2VTT.estMonstreVisible ? DD2VTT.estMonstreVisible(id) : true;
   }
 
+  // Ciblage par clic sur la carte (cf. DD2VTT.activerModeCiblage) : seule la
+  // battlemap dd2vtt gère des jetons cliquables avec portée — no-op en
+  // worldmap (aucun appelant ne devrait s'y attendre, mais ne casse rien).
+  function activerModeCiblage(idsValides, onChoix) {
+    if (typeof DD2VTT !== "undefined" && DD2VTT.activerModeCiblage) DD2VTT.activerModeCiblage(idsValides, onChoix);
+  }
+  function desactiverModeCiblage() {
+    if (typeof DD2VTT !== "undefined" && DD2VTT.desactiverModeCiblage) DD2VTT.desactiverModeCiblage();
+  }
+
   return {
     onOpen, definirRole, definirMonPerso, ajouterMonstre,
     listeMonstresCombat, listeTokensJoueursCombat, appliquerDegatsCombat, definirPvCombat, ajusterPvCombat,
@@ -3301,5 +3353,6 @@ const Carte = (() => {
     supprimerMonstreCombat, onMonstresChange, definirModeCarte,
     onMonstreDevientVisible, reinitialiserDetectionVisibilite, idPersoDepuisRef, tokenIdPourPerso, monstreEstVisible,
     initiales, rafraichirCouleurJoueur, COULEURS_JOUEURS,
+    activerModeCiblage, desactiverModeCiblage,
   };
 })();

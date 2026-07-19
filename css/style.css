@@ -1292,6 +1292,15 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
   box-shadow: 0 0 0 3px #fff, 0 0 10px 4px rgba(255,255,255,0.5);
 }
 
+/* Mode de ciblage (clic sur un jeton pour cibler, cf. Carte.activerModeCiblage) :
+   un jeton en portée se distingue visuellement des autres, restés cliquables
+   mais rejetés (toast "Hors de portée") — cf. js/carte.js pour la logique. */
+.dd-token.cible-valide {
+  box-shadow: 0 0 0 3px #4ade80, 0 0 12px 4px rgba(74,222,128,0.6);
+  cursor: pointer;
+}
+.dd-token.cible-hors-portee { opacity: 0.4; }
+
 .dd-token:active { cursor: grabbing; }
 
 .dd-token-initiale {

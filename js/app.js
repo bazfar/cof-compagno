@@ -460,6 +460,48 @@ const App = (() => {
     return [...monstres, ...pjs].filter((t) => t.id !== monTokenId);
   }
 
+  // 1 case de grille dd2vtt = 1,50 m — seule référence de conversion mètres/
+  // cases explicite dans l'app (cf. le libellé de la carte "Domaine de
+  // Valdcourt" dans js/carte.js), du même ordre de grandeur que le "+2m ≈
+  // +1 case" déjà utilisé pour Grâce féline (cf. js/combat.js).
+  const METRES_PAR_CASE = 1.5;
+
+  // Bascule la carte en mode "clic sur un jeton pour cibler" (cf.
+  // Carte.activerModeCiblage) pour une capacité en cours de ciblage — ne
+  // RÉSOUT rien : un clic sur un jeton en portée présélectionne juste
+  // `pickerSelect` (comme si l'utilisateur avait choisi l'option dans le
+  // menu déroulant), il faut encore cliquer sur Confirmer. mecanique.portee
+  // (mètres, cf. data/donnees.js) absente/non numérique = pas de limite de
+  // portée appliquée ici (mieux vaut ne rien bloquer qu'un faux négatif sur
+  // une donnée de portée incomplète).
+  function _armerCiblageCarte(persoId, mecanique, cibles, pickerSelect) {
+    if (typeof Carte === "undefined" || !Carte.activerModeCiblage) return;
+    const monTokenId = _monTokenId(persoId);
+    if (!monTokenId) { if (Carte.desactiverModeCiblage) Carte.desactiverModeCiblage(); return; }
+    const porteeCases = (typeof mecanique.portee === "number") ? Math.round(mecanique.portee / METRES_PAR_CASE) : null;
+    const tokenVersCible = {};
+    const idsValides = [];
+    cibles.forEach((cc) => {
+      // Un monstre (genre "monstre") a déjà un id de TOKEN (cf.
+      // Capacites.listeCibles -> Carte.listeMonstresCombat) ; un PJ
+      // (genre "perso") a un id de PERSONNAGE, à traduire en id de token.
+      const tokId = cc.genre === "monstre" ? cc.id : Carte.tokenIdPourPerso(cc.id);
+      if (!tokId || tokId === monTokenId) return;
+      if (porteeCases !== null) {
+        const dist = Carte.distanceCasesEntre(monTokenId, tokId);
+        if (dist === null || dist > porteeCases) return;
+      }
+      tokenVersCible[tokId] = cc.id;
+      idsValides.push(tokId);
+    });
+    Carte.activerModeCiblage(idsValides, (tokId) => {
+      const cibleId = tokenVersCible[tokId];
+      if (!cibleId || !pickerSelect) return;
+      pickerSelect.value = cibleId;
+      toast("Cible présélectionnée sur la carte — clique sur Confirmer.");
+    });
+  }
+
   // Combine deux formules de dégâts (bi-arme : mêlée + arme courte en main
   // secondaire, cf. Personnage.armeCourteSecondaire) en une seule formule
   // lançable via lancerFormule (qui gère désormais plusieurs termes de dés).
@@ -632,6 +674,7 @@ const App = (() => {
     if (!p) {
       sidebar.innerHTML = ordreHtml + `<div class="carte"><p class="aide">Choisis ton personnage dans « Mon personnage » ci-dessus pour afficher sa fiche ici.</p></div>`;
       rendreDockCombat(); // masque le dock si aucun perso sélectionné
+      if (typeof Carte !== "undefined" && Carte.desactiverModeCiblage) Carte.desactiverModeCiblage();
       return;
     }
     const c = CLASSES[p.classe];
@@ -753,6 +796,7 @@ const App = (() => {
     }
 
     let porteeHtml = "";
+    let ciblesEnPorteeActuelles = null; // cf. armement du mode de ciblage carte juste après ce bloc
     if (typeof Combat !== "undefined" && Combat.estActif() &&
         typeof Carte !== "undefined" && Carte.distanceCasesEntre) {
       const monTokenId = _monTokenId(id);
@@ -765,6 +809,7 @@ const App = (() => {
         const ciblesEnPortee = toutesLesCibles
           .map((cc) => Object.assign({ _distance: Carte.distanceCasesEntre(monTokenId, cc.id) }, cc))
           .filter((cc) => cc._distance !== null && cc._distance >= portee.min && cc._distance <= portee.max);
+        ciblesEnPorteeActuelles = ciblesEnPortee;
         if (!ciblesEnPortee.some((cc) => cc.id === _cibleDistanceId)) {
           _cibleDistanceId = ciblesEnPortee.length ? ciblesEnPortee[0].id : null;
         }
@@ -793,8 +838,27 @@ const App = (() => {
             ${ciblesEnPortee.map((cc) => `<option value="${cc.id}" ${cc.id === _cibleDistanceId ? "selected" : ""}>${echapper(cc.nom)} (${cc._distance} case${cc._distance === 1 ? "" : "s"})</option>`).join("")}
           </select>
           ${cibleActuelle ? `<p style="font-size:0.78rem;margin:4px 0 0;color:#2f9e44;font-weight:700;">En portée — ${cibleActuelle._distance} case${cibleActuelle._distance === 1 ? "" : "s"}</p>` : ""}
+          <p class="aide" style="font-size:0.72rem;margin:4px 0 0;">💡 Ou clique directement sur un jeton en surbrillance sur la carte.</p>
           ` : `<p class="aide" style="font-size:0.72rem;margin:4px 0 0;">Aucune cible à portée pour cette attaque.</p>`}
         </div>`;
+      }
+    }
+
+    // Mode de ciblage carte (clic sur un jeton = présélection, cf.
+    // Carte.activerModeCiblage) : armé avec les mêmes cibles que le menu
+    // déroulant ci-dessus (même filtre de portée), désarmé sinon — évite de
+    // laisser des jetons en surbrillance obsolète (ex. combat terminé entre
+    // deux rendus). Partage modeCiblage avec le ciblage des capacités (cf.
+    // _armerCiblageCarte) : un seul picker/vérificateur peut être actif à la
+    // fois de toute façon, le dernier armé gagne.
+    if (typeof Carte !== "undefined" && Carte.activerModeCiblage) {
+      if (ciblesEnPorteeActuelles && ciblesEnPorteeActuelles.length) {
+        Carte.activerModeCiblage(ciblesEnPorteeActuelles.map((cc) => cc.id), (tokId) => {
+          _cibleDistanceId = tokId;
+          rendreFicheSidebarBattlemap(id);
+        });
+      } else if (Carte.desactiverModeCiblage) {
+        Carte.desactiverModeCiblage();
       }
     }
 
@@ -4087,6 +4151,7 @@ const App = (() => {
       // capacité suivante.
       if (pickerSelect) { pickerSelect.multiple = false; pickerSelect.size = 1; }
       lancerCapaciteEnAttente = null;
+      if (typeof Carte !== "undefined" && Carte.desactiverModeCiblage) Carte.desactiverModeCiblage();
     }
     // cibleIds (optionnel) : Prêtre — Voie de la guérison rang 4 "Bénédiction",
     // choix "soin_partage" (jusqu'à 3 cibles indépendantes) — seul cas actuel
@@ -4197,6 +4262,7 @@ const App = (() => {
               ? cibles.map((cc) => `<option value="${cc.id}">${echapper(cc.nom)}</option>`).join("")
               : `<option value="">Aucune cible disponible</option>`;
             pickerForme.style.display = "flex";
+            _armerCiblageCarte(id, mecanique, cibles, pickerSelect);
           } else {
             resoudreCapaciteEtRafraichir(null);
           }
@@ -4239,7 +4305,10 @@ const App = (() => {
         resoudreCapaciteEtRafraichir(cibleId);
       };
     }
-    if (btnAnnulerCible) btnAnnulerCible.onclick = fermerPickerCibleCapacite;
+    // Après Annuler, redemande un rendu (rafraichir) : sur la battlemap, ça
+    // réarme le mode de ciblage carte pour les attaques rapides (cf.
+    // rendreFicheSidebarBattlemap), coupé par fermerPickerCibleCapacite ci-dessus.
+    if (btnAnnulerCible) btnAnnulerCible.onclick = () => { fermerPickerCibleCapacite(); rafraichir(); };
 
     // Résolution différée des dégâts/états d'une capacité d'attaque vs DEF qui
     // a touché (cf. capaciteDegatsEnAttente/htmlDegatsCapaciteEnAttente).
