@@ -6874,8 +6874,12 @@ const App = (() => {
         const blasonHtml = g.blason
           ? `<img class="faction-blason" src="${echapper(g.blason)}" alt="Blason — ${echapper(g.groupe)}" onerror="this.style.display='none';" />`
           : "";
+        const histoireHtml = g.histoire
+          ? `<h4 style="color:var(--or);margin:10px 0 4px;font-size:0.95rem;">Histoire</h4><div class="contenu">${echapper(g.histoire)}</div>`
+          : "";
         return `<div class="lore-section"><h3>${echapper(g.groupe)}</h3>` +
           blasonHtml +
+          histoireHtml +
           `<p style="font-style:italic;color:#6a6278;white-space:pre-wrap;">${echapper(g.intro)}</p>` +
           entitesHtml +
           `<div class="carte pnj-carte" style="margin-top:10px;"><div class="contenu">${echapper(g.synthese)}</div></div>` +
