@@ -2586,7 +2586,7 @@ const REGLES_GENERALES = [
 /* ── Cartes monde disponibles dans assets/maps/ ────────────
    Pour ajouter une carte : ajouter une entrée ici + l'image dans assets/maps/ */
 const CARTES_MONDE = [
-  { nom: 'Arbre-Monde',           fichier: 'assets/maps/monde.png',              categorie: 'Monde' },
+  { nom: 'Arbre-Monde',           fichier: 'assets/maps/Carte monde.png',        categorie: 'Monde' },
   { nom: 'Aetharion',             fichier: 'assets/maps/aetharion.png',          categorie: 'Nations' },
   { nom: 'Aelindra',              fichier: 'assets/maps/aelindra.png',           categorie: 'Nations' },
   { nom: 'Mordanel',              fichier: 'assets/maps/mordanel.png',           categorie: 'Nations' },

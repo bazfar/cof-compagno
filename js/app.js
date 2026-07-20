@@ -6714,7 +6714,7 @@ const App = (() => {
       `<h2 class="titre-bandeau" style="margin:0;flex:1;">${LORE.titre}</h2>` +
       `<button type="button" class="btn petit secondaire" id="btn-modifier-lore" data-role="mj">✏️ Modifier</button>` +
       `</div>`;
-    html += `<img id="lore-carte-img" src="assets/maps/monde.png" alt="Carte du monde" class="lore-carte" />`;
+    html += `<img id="lore-carte-img" src="assets/maps/Carte monde.png" alt="Carte du monde" class="lore-carte" />`;
     if (LORE.intro) html += `<p style="font-style:italic;color:#6a6278;">${LORE.intro}</p>`;
     LORE.sections.forEach((s) => {
       html += `<div class="lore-section"><h3>${s.titre}</h3><div class="contenu">${echapper(s.contenu)}</div></div>`;

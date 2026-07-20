@@ -94,7 +94,7 @@ const Carte = (() => {
   // Cartes intégrées (fichiers dans assets/maps/). En ajouter ici au besoin.
   // groupe : libellé d'optgroup dans le menu déroulant.
   const CARTES_PRESETS = [
-    { key: "monde", groupe: "Monde & régions", label: "🌍 Le Monde", file: "assets/maps/monde.png" },
+    { key: "monde", groupe: "Monde & régions", label: "🌍 Le Monde", file: "assets/maps/Carte monde.png" },
     { key: "solvarn", groupe: "Monde & régions", label: "Solvarn — Empire", file: "assets/maps/solvarn.png" },
     { key: "valdorne", groupe: "Monde & régions", label: "Valdorne — Chevalerie", file: "assets/maps/valdorne.png" },
     { key: "arveth", groupe: "Monde & régions", label: "Arveth — Le Vacillant", file: "assets/maps/arveth.png" },
