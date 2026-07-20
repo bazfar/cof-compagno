@@ -105,7 +105,7 @@ const Carte = (() => {
     { key: "aelindra", groupe: "Monde & régions", label: "Aelindra — Elfes Sylvains", file: "assets/maps/aelindra.png" },
     { key: "mordanel", groupe: "Monde & régions", label: "Mordanel — Elfes Crépuscule", file: "assets/maps/mordanel.png" },
     { key: "khazrak", groupe: "Monde & régions", label: "Khazrak Dûm — Race Sublimée", file: "assets/maps/khazrak-dum.png" },
-    { key: "valdcourt", groupe: "Lieux & combats", label: "Domaine de Valdcourt (1 case = 1,50 m)", file: "assets/maps/domaine-valdcourt.png" },
+    { key: "valdcourt", groupe: "Lieux & combats", label: "Domaine de Valdecourt (1 case = 1,50 m)", file: "assets/maps/domaine-valdcourt.png" },
   ];
 
   let etat = { image: null, jetons: [], grille: false, fog: false, fogData: null };
