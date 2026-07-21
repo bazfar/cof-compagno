@@ -1938,6 +1938,11 @@ const LORE = {
         "L'Arbre-Monde\n\nÀ l'origine de tout se dresse l'Arbre-Monde — axis de la création, siège des dieux et source de toute vie. Son écorce est le temps, sa sève est la magie, ses racines plongent dans des plans que nul mortel n'a jamais atteints. À son sommet siège le Trône de l'Arbre-Monde, source du pouvoir divin absolu.\n\nLe Panthéon Elfique — Les Deux Factions\n\n• Gardiens de l'Écorce (Ordre · Stase · Préservation) : veulent que l'Arbre reste immuable, parfait, fermé au monde. Pouvoir fondé sur la hiérarchie et la préservation. Ce sont eux qui gagnent la Guerre du Trône.\n• Enfants de la Sève (Croissance · Expansion · Vie) : veulent que l'Arbre croisse et engendre d'autres mondes. Pouvoir fondé sur la fécondité et le changement. Bannis et corrompus lors de la Fracture — ils deviennent les Dieux du Chaos. (Une partie des Elfes qui vénéraient les Enfants de la Sève les auraient suivis dans leur bannissement et leur corruption — fil narratif intentionnellement non développé.)\n\nLa Guerre du Trône\n\nLa guerre éclate quand les Enfants de la Sève cherchent à ouvrir l'Arbre vers d'autres mondes, ce que les Gardiens refusent. Des siècles de conflit divin s'ensuivent. Les émotions générées — violence, meurtre, traque — sont si intenses qu'elles se solidifient en conscience et prennent une existence propre.\n\nLa Fracture\n\n• Défaite des Enfants de la Sève : vaincus, bannis et corrompus — leur désir de croissance devient désir de destruction : ne pouvant avoir l'Arbre, ils veulent l'annihiler.\n• L'Arbre blessé : ses racines sont partiellement corrompues. L'Arbre dépérit lentement depuis — un déclin que les Elfes ressentent dans leur chair.\n• Naissance des Humains : le sang versé pendant la Fracture, mêlé des deux factions, tombe sur le monde et prend vie. Les Humains portent l'écho de la guerre : double nature instable, susceptible au Chaos.\n• Naissance des Dieux du Chaos : les Enfants bannis créent leurs serviteurs — les Démons — pour détruire ce qu'ils n'ont pu posséder.\n• Continent occidental ravagé : l'essentiel des combats de la Guerre du Trône se déroule sur le continent aujourd'hui occidental. Les Elfes qui y vivaient sont décimés ; les survivants se replient sur le continent oriental, où naissent les futures patries d'Aetharion, d'Aelindra et de Mordanel. Seules des enclaves occidentales subsistent, aujourd'hui disputées par les nations humaines (cf. Géographie & capitales).",
     },
     {
+      titre: "Des tribus humaines au Premier Empire",
+      contenu:
+        "Le continent occidental, ravagé par près de deux mille ans de Guerre du Trône, ne reste pas vide longtemps. Les Elfes survivants se sont repliés à l'est ; les émotions cristallisées de la Fracture commencent à se donner des corps — les premières hordes orques et gobelines rôdent déjà sur des terres que plus personne ne dispute vraiment. C'est dans ces cendres, sans autre héritage qu'un sang mêlé et instable, que les Humains apparaissent et entament leur longue montée. Pendant près de trois siècles, ce ne sont que des tribus éparses, luttant pour survivre sur un sol encore marqué par la guerre des dieux — puis viennent, sur les cinq cents années suivantes, la maîtrise du feu, puis celle du bronze, puis du fer, jusqu'à l'émergence, voici environ douze siècles, d'une première grande civilisation humaine — la première à mériter ce nom sur ce continent.\n\nMais le sang qui coule dans les veines humaines porte l'écho de la guerre qui l'a créé, et cet héritage ne pouvait pas rester dormant éternellement. À mesure que les civilisations humaines se multiplient et se répandent, elles se tournent les unes contre les autres. S'ouvre alors, pour environ trois siècles et demi, une ère de guerres longues et meurtrières entre royaumes rivaux — des générations de sang versé pour des raisons que plus personne, à la fin, ne sait vraiment nommer. L'ironie n'échappe à aucun érudit qui s'y penche sérieusement : cette boucherie entre humains a fait plus, en quelques siècles, pour les jeunes peuples orques et gobelins que n'importe quelle guerre elfique n'aurait pu le faire — plus de violence, plus de haine, plus de mort à cristalliser, et les consciences du Chaos n'ont eu qu'à se servir sur un continent qui leur offrait déjà, sans le vouloir, exactement ce dont elles se nourrissent.\n\nDe ce chaos, une civilisation humaine a fini par se distinguer — remportant guerre après guerre, absorbant une à une les terres de ses rivales, jusqu'à ce qu'il ne reste plus, après des générations de conquêtes, personne pour lui disputer sérieusement le continent. Il y a environ huit siècles et demi, l'unification est proclamée : le Premier Empire naît.\n\nLe premier Empereur ne règne pas seul. Huit grandes familles l'accompagnent dès la fondation — les huit maisons fondatrices qui deviendront, des générations plus tard, les huit maisons de l'Empire (quatre resteront fidèles à Solmaris ; quatre finiront par s'en détacher lors de la Rupture). Sous leur autorité partagée, le Premier Empire connaît près de sept siècles de stabilité relative.\n\nC'est cette stabilité que la dynastie régnante finit par rompre elle-même, dans les dernières générations de ce long règne. Obsédée par l'idée d'être la lignée élue — la seule à porter légitimement le sang des Gardiens de l'Écorce —, elle resserre peu à peu l'emprise de la religion sur l'État. La doctrine gagne du terrain sur le pouvoir temporel jusqu'à s'y substituer presque entièrement, et avec elle grandissent les discriminations envers les non-humains, la pression foncière et sociale sur les serfs et les paysans, et bientôt sur certaines des huit familles elles-mêmes, qui voient leur autorité provinciale s'éroder au profit d'un trône de plus en plus absolu. C'est cette pression, accumulée sur des générations, qui finit par se rompre — voici cent soixante-dix ans, la Rupture, la Grande Sécession, et la naissance des Royaumes Coalisés et de la République de Liberra (cf. section \"La Rupture — chronique de la Grande Sécession\").",
+    },
+    {
       titre: "Les races du monde",
       contenu:
         "Les Elfes — Enfants de l'Arbre\n\nPremiers-nés de l'Arbre, antérieurs à la Fracture. Sang de sève pure → résistance au Chaos (+2 ou +rang aux jets contre la corruption de la Voie du Chaos). Ils ressentent physiquement la blessure de l'Arbre. Trois nations :\n\n• Aetharion (Hauts Elfes) : préserver et isoler l'Arbre. Hautains. Bannissent les demi-elfes. Mépris pour les Aelindra, méfiance pour les Mordanel.\n• Aelindra (Elfes Sylvains) : réparer l'Arbre en tissant des liens avec toutes les races. Présents dans la République. Acceptent les demi-elfes.\n• Mordanel (Elfes du Crépuscule) : garder la mémoire et témoigner. Fracture interne : Anciens prudents contre Jeunes qui veulent agir. Accusés par l'Empire d'avoir provoqué l'incarnation de la Traque.\n\nLes Humains — Sang Mêlé, Fracturé\n\nNés du sang divin des deux camps. Ambition insatiable, adaptabilité. -2 aux jets contre la corruption du Chaos, mais accès plus facile à la Voie du Chaos (les consciences les reconnaissent).\n\nLes Nains — Élémentaires de Pierre Éveillés\n\nCréés par un dieu Gardien de la Montagne, devenus conscients. Ancrage dans l'Ordre.\n• Nains de l'Ordre : forge, tradition, alliés de l'Empire (acier et cols fortifiés). +1 contre la corruption.\n• Khazrak Dûm (Nains Renégats) : après le Scellement des Portes du Sud (cf. Histoire — Le Scellement des Portes du Sud), qui emmure leurs garnisons hors de Kaldrun pour sauver la capitale, ces tribus sont livrées à elles-mêmes face aux tribus orques et gobelines des Failles Rouges. Des générations de siège sans espoir de renfort les poussent finalement à un pacte de survie avec leurs assaillants plutôt qu'à leur destruction — pacte qui les transforme peu à peu : plus grands, peau grisée, mâchoire proéminente. En dominant ce qu'ils méprisaient, ils sont devenus ce qu'ils haïssaient. Le Scellement a aussi détruit leur chaîne de commandement : organisés en clans indépendants plutôt qu'en pouvoir central, scindés entre Résistants (refusent toute assimilation nouvelle, espèrent encore une réconciliation avec Kaldrun) et Évolutionnistes (ont intégré le pacte comme identité, enviant en secret la pureté rituelle jamais compromise des Nains de l'Ordre — un ressentiment devenu, de génération en génération, un rêve de reconquête de Kaldrun). Observés par les Dieux du Chaos.\n\nOrcs & Gobelins — Émotions Cristallisées\n\nNés des émotions de violence de la Guerre du Trône, ils créèrent des corps pour traquer et tuer les races de l'Ordre.\n• Orcs (meurtre glorieux) : combattent en horde, face à l'ennemi, vous regardent dans les yeux avant de tuer.\n• Gobelins (traque prédatrice) : embuscades, pièges, nombre. Tuent par instinct. Plus malléables — certaines tribus servent les Khazrak Dûm.",
@@ -2009,6 +2014,80 @@ const LORE = {
     },
   ],
 };
+
+/* ============================================================
+   CHRONOLOGIE (page "Lore" > onglet "Chronologie")
+   Frise chronologique du monde. Chaque événement porte un tag `peuples`
+   (tableau, même logique que le tag `race` du bestiaire) pour permettre un
+   filtrage par peuple. Seuls les événements humains sont renseignés pour
+   l'instant — les événements nains et elfiques seront ajoutés plus tard,
+   sans changement de structure.
+   ============================================================ */
+const CHRONOLOGIE = [
+  {
+    id: "guerre-du-trone",
+    periode: "La Guerre du Trône & la Fracture",
+    quand: "il y a ~2000 ans",
+    duree: null,
+    peuples: ["elfes", "humains", "chaos"],
+    description:
+      "Des siècles de conflit divin entre Gardiens de l'Écorce et Enfants de la Sève. Le sang versé pendant la Fracture donne naissance aux Humains ; les Enfants bannis deviennent les Dieux du Chaos ; le continent occidental est ravagé, les Elfes survivants se replient à l'est.",
+  },
+  {
+    id: "ere-tribus",
+    periode: "Ère des tribus humaines",
+    quand: "il y a ~1700 à ~2000 ans",
+    duree: "~300 ans",
+    peuples: ["humains"],
+    description:
+      "Sur un continent encore marqué par la guerre des dieux, les premières tribus humaines survivent en groupes épars, sans organisation durable.",
+  },
+  {
+    id: "maitrise-feu-bronze-fer",
+    periode: "Maîtrise du feu, du bronze puis du fer — première civilisation",
+    quand: "il y a ~1200 à ~1700 ans",
+    duree: "~500 ans",
+    peuples: ["humains"],
+    description:
+      "Progrès techniques successifs jusqu'à l'émergence de la première grande civilisation humaine du continent.",
+  },
+  {
+    id: "guerres-inter-civilisations",
+    periode: "Guerres inter-civilisations humaines",
+    quand: "il y a ~850 à ~1200 ans",
+    duree: "~350 ans",
+    peuples: ["humains", "chaos"],
+    description:
+      "Les civilisations humaines rivales s'affrontent pendant des générations. Cette violence prolongée nourrit indirectement l'essor des jeunes peuples orques et gobelins.",
+  },
+  {
+    id: "premier-empire",
+    periode: "Proclamation du Premier Empire",
+    quand: "il y a ~850 ans",
+    duree: null,
+    peuples: ["humains"],
+    description:
+      "Une civilisation humaine s'impose sur toutes les autres et proclame l'unification. Huit grandes familles fondatrices accompagnent le premier Empereur.",
+  },
+  {
+    id: "regne-premier-empire",
+    periode: "Règne du Premier Empire",
+    quand: "il y a ~170 à ~850 ans",
+    duree: "~680 ans",
+    peuples: ["humains"],
+    description:
+      "Stabilité relative sous l'autorité partagée des huit maisons, puis dérive doctrinale progressive de la dynastie régnante, obsédée par l'idée d'être la lignée élue du sang des Gardiens.",
+  },
+  {
+    id: "rupture",
+    periode: "La Rupture — Grande Sécession",
+    quand: "il y a ~170 ans",
+    duree: null,
+    peuples: ["humains"],
+    description:
+      "Quatre des huit maisons font sécession et fondent les Royaumes Coalisés ; naissance de la République de Liberra. Cf. section \"La Rupture — chronique de la Grande Sécession\" pour le détail des batailles.",
+  },
+];
 
 /* ============================================================
    PNJ CLÉS (panneau Lore > onglet "PNJ")

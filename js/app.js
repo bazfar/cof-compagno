@@ -6897,6 +6897,49 @@ const App = (() => {
   }
 
   /* ============================================================
+     FRISE CHRONOLOGIQUE (page "Lore" > onglet "Chronologie")
+     ============================================================ */
+  let _chronologiePeupleFiltre = "";
+
+  function rendreChronologie() {
+    const zone = document.getElementById("zone-lore-chronologie");
+    if (!zone || typeof CHRONOLOGIE === "undefined") return;
+
+    const peuples = ["humains", "nains", "elfes", "chaos"];
+    const filtreHtml =
+      `<div style="margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap;">` +
+      `<button type="button" class="btn petit ${_chronologiePeupleFiltre === "" ? "or" : "secondaire"}" data-chronologie-peuple="">Tous</button>` +
+      peuples.map((p) =>
+        `<button type="button" class="btn petit ${_chronologiePeupleFiltre === p ? "or" : "secondaire"}" data-chronologie-peuple="${p}">${p.charAt(0).toUpperCase() + p.slice(1)}</button>`
+      ).join("") +
+      `</div>`;
+
+    const items = CHRONOLOGIE
+      .filter((e) => !_chronologiePeupleFiltre || e.peuples.includes(_chronologiePeupleFiltre))
+      .map((e) => `
+        <div class="frise-item">
+          <div class="frise-point"></div>
+          <div class="frise-contenu">
+            <div class="frise-entete">
+              <span class="frise-periode">${echapper(e.periode)}</span>
+              <span class="frise-quand">${echapper(e.quand)}${e.duree ? ` · ${echapper(e.duree)}` : ""}</span>
+            </div>
+            <div class="frise-description">${echapper(e.description)}</div>
+          </div>
+        </div>`
+      ).join("");
+
+    zone.innerHTML = filtreHtml + `<div class="frise-chronologique">${items}</div>`;
+
+    zone.querySelectorAll("[data-chronologie-peuple]").forEach((btn) => {
+      btn.onclick = () => {
+        _chronologiePeupleFiltre = btn.dataset.chronologiePeuple;
+        rendreChronologie();
+      };
+    });
+  }
+
+  /* ============================================================
      INITIALISATION
      ============================================================ */
 
@@ -6912,9 +6955,11 @@ const App = (() => {
       chroniques: "sous-panneau-lore-chroniques",
       pnj: "sous-panneau-lore-pnj",
       factions: "sous-panneau-lore-factions",
+      chronologie: "sous-panneau-lore-chronologie",
     });
     rendrePnjCles();
     rendreFactions();
+    rendreChronologie();
 
     document.querySelectorAll("#choix-genre .btn-genre").forEach((b) => {
       b.onclick = () => choisirGenre(b.dataset.genre);
