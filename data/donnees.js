@@ -2466,6 +2466,201 @@ const PNJ_CLES = [
     ],
   },
   {
+    id: "imperatrice-liesenne",
+    nom: "Impératrice Liesenne Solyr, née Fenlyre",
+    titre: "Impératrice de Solvarn",
+    faction: "Solvarn",
+    secret: false,
+    resume: "Épouse d'Aurelian III, choisie hors des huit maisons pour qu'aucune ne puisse revendiquer un droit de sang sur ses enfants.",
+    description:
+      "Issue d'une famille noble mineure sans rattachement aux huit maisons — un choix délibéré d'Aurelian III, déjà rongé par le doute sur son propre sang, qui ne pouvait tolérer qu'une maison puisse un jour revendiquer un droit sur ses enfants par la lignée maternelle. Discrète en public, redoutablement observatrice en privé.\n\nC'est elle, davantage que son époux, qui a fini par deviner que quelque chose s'est mal passé au Rite de l'Aube — sans qu'Aurelian le lui ait jamais avoué. Elle porte ce soupçon seule depuis des années, et observe ses quatre enfants avec la question silencieuse de savoir lequel d'entre eux devra un jour affronter le même rite qu'elle soupçonne d'avoir déjà brisé son père.",
+    accroches: [
+      "Liesenne pourrait confier son soupçon à un PJ de confiance plutôt qu'à son propre époux — pourquoi choisirait-elle un étranger plutôt que sa famille ?",
+      "Elle observe ses enfants de près pour deviner lequel gérerait le mieux la vérité si elle venait à éclater publiquement.",
+      "Un PJ pourrait devenir, sans le savoir, le vecteur qui confirme ou infirme son soupçon sur le Rite de l'Aube.",
+    ],
+  },
+  {
+    id: "prince-cassian",
+    nom: "Prince héritier Cassian Solyr",
+    titre: "Héritier du trône de Solvarn (24 ans)",
+    faction: "Solvarn",
+    secret: false,
+    resume: "Dévotion publique presque excessive — et la terreur intime de revivre l'échec de son père au moment de son propre couronnement.",
+    description:
+      "Le plus proche de Théobald Ardenne personnellement, au point que certains à la cour murmurent qu'il ferait un meilleur Flambeau qu'Empereur. Sa piété rassure la cour et calme les tensions avec le Sacerdoce — mais elle cache la même angoisse que son père a portée en silence pendant des décennies : et si le Rite de l'Aube échouait de nouveau, pour lui, le jour de son propre couronnement ?\n\nIl ignore que sa mère a deviné la vérité sur le rite de son père. Il ignore surtout qu'Aurelian n'a jamais pu se résoudre à l'avertir de ce qui l'attend peut-être.",
+    accroches: [
+      "Cassian pourrait chercher, sans le dire à personne, à comprendre exactement ce qu'implique le Rite de l'Aube avant son propre couronnement.",
+      "Sa proximité avec Théobald Ardenne pourrait le mettre, malgré lui, au centre des manœuvres d'Aveline Roquefeu.",
+      "Si la vérité sur le couronnement de son père éclate avant le sien, Cassian devra décider s'il perpétue le mensonge ou le brise.",
+    ],
+  },
+  {
+    id: "prince-dorian",
+    nom: "Prince Dorian Solyr",
+    titre: "Second prince de Solvarn (21 ans)",
+    faction: "Solvarn",
+    secret: false,
+    resume: "Ambitieux, cultive la Maison Ashe, rêve d'un commandement contre Aetharion — juge son frère aîné trop hésitant.",
+    description:
+      "Proche d'Aldric Ashe, avec qui il partage une vision martiale de ce que devrait être l'Empire — les deux hommes se sont liés d'amitié à l'Académie militaire, une relation que le Grand Maréchal Théodren Ashe encourage discrètement, sans savoir jusqu'où Dorian souhaite la pousser politiquement. Dorian n'a aucun doute théologique : sa foi est celle d'un soldat, simple et fonctionnelle. Il voit la guerre contre Aetharion comme une occasion de gloire personnelle autant que comme un devoir sacré.",
+    accroches: [
+      "Dorian pourrait pousser pour un commandement de terrain, quitte à court-circuiter la prudence de son frère aîné Cassian.",
+      "Son amitié avec Aldric Ashe pourrait devenir un levier politique si la succession venait un jour à se contester.",
+      "Sa soif de gloire pourrait le pousser à prendre des risques inconsidérés sur le front d'Aetharion — un PJ pourrait devoir le sauver de lui-même.",
+    ],
+  },
+  {
+    id: "prince-renaud",
+    nom: "Prince Renaud Solyr",
+    titre: "Troisième prince de Solvarn (17 ans)",
+    faction: "Solvarn",
+    secret: true,
+    resume: "Le cadet studieux — en train de mettre discrètement la main sur des agents de bas niveau de l'Œil de Solmaris, sans savoir ce qu'il touche vraiment.",
+    description:
+      "Sa curiosité pour les vieux registres du couronnement de son père l'a mené, par accident, sur des traces administratives que même Ilsevar Cendreau croyait bien enterrées — des lignes de dépenses codées, des comptes de courrier qui ne correspondent à aucun poste officiel. Plutôt que de tout révéler (il n'en a d'ailleurs pas encore saisi l'ampleur), Renaud a commencé, ces derniers mois, à cultiver quelques agents de bas niveau un par un : un courrier qu'il a couvert après une erreur, un informateur mineur à qui il a rendu une faveur discrète.\n\nIl ne sait pas qu'il touche à l'Œil de Solmaris ; il croit avoir simplement trouvé des gens utiles et reconnaissants. Troisième dans l'ordre de succession, éclipsé par ses deux frères, il découvre pour la première fois ce que c'est que d'avoir du pouvoir que personne ne lui a donné — et il y prend goût.\n\nIlsevar Cendreau n'a encore rien remarqué : ce sont des agents trop bas dans la hiérarchie pour attirer son attention. Mais un réseau construit sans compartimentage, même petit, même innocent dans l'intention, est exactement le genre de faille que trois maîtres cloisonnés n'ont jamais pensé à surveiller — parce qu'elle ne vient d'aucun d'entre eux.",
+    accroches: [
+      "Un des agents de bas niveau que Renaud croit avoir \"recruté\" pourrait en réalité rendre compte à Vantrel ou Ashevel sans que personne ne s'en rende compte encore.",
+      "Si Cendreau découvre ce que fait Renaud, la question devient : protège-t-il un prince maladroit, ou traite-t-il la fuite comme n'importe quelle autre menace ?",
+      "Les PJ pourraient croiser un informateur mineur visiblement loyal à quelqu'un d'inattendu — un fil qui remonte, sans le vouloir, jusqu'à un prince de 17 ans.",
+    ],
+  },
+  {
+    id: "princesse-elyane",
+    nom: "Princesse Elyane Solyr",
+    titre: "Princesse de Solvarn (19 ans)",
+    faction: "Solvarn",
+    secret: false,
+    resume: "Exclue de la succession par la primogéniture masculine, promise à un mariage politique qu'elle n'a pas choisi — la plus perspicace des quatre, et la seule que personne ne prend au sérieux.",
+    description:
+      "N'ayant aucune part légitime au trône (Cassian, puis Dorian, puis Renaud la précèdent tous dans l'ordre de succession), Elyane est traitée à la cour comme un instrument diplomatique plutôt que comme une héritière — un mariage avec une maison loyaliste ou, plus audacieusement, avec une maison sécessionniste dans l'espoir d'une paix future, est déjà envisagé sans qu'on lui ait vraiment demandé son avis.\n\nCette mise à l'écart a un effet inattendu : personne ne la surveille vraiment, ni ne se méfie d'elle. Elle observe tout — les tensions entre ses frères, l'inquiétude muette de sa mère, la piété trop parfaite de Cassian — et commence à assembler des pièces que personne d'autre n'a même cherché à relier.",
+    accroches: [
+      "Elyane pourrait être la première à remarquer que quelque chose ne va pas entre ses parents au sujet du couronnement de son père.",
+      "Un mariage politique proposé pour elle (Solvarn ou Coalisé) pourrait devenir un point de départ de campagne à part entière.",
+      "Sous-estimée par tous, elle pourrait devenir la meilleure alliée discrète des PJ à la cour impériale — ou leur pire adversaire, si elle décide de jouer sa propre partie.",
+    ],
+  },
+  {
+    id: "aldric-ashe",
+    nom: "Aldric Ashe",
+    titre: "Héritier de la Maison Ashe (27 ans, marié)",
+    faction: "Solvarn",
+    secret: false,
+    resume: "Aîné de Théodren Ashe, rigide comme son père, sans le moindre doute sur la doctrine — marié à Dame Iselde Solenne.",
+    description:
+      "Groomé depuis l'enfance pour succéder à son père, Aldric incarne la discipline martiale d'Ashe sans jamais la questionner — contrairement à son frère cadet Ilyan. Son mariage avec Dame Iselde Solenne (cousine de la Grande Sacerdotesse Yvelle Solenne, non son fils Cyrian) lie en privé deux maisons officiellement rivales froides pour l'oreille de l'Empereur : ce que la politique de cour maintient à distance, le sang le rapproche malgré tout.\n\nProche ami du Prince Dorian Solyr depuis l'Académie militaire, il partage sa vision martiale de l'Empire et son impatience face à la guerre d'usure contre Aetharion.",
+    accroches: [
+      "Le mariage Ashe-Solenne pourrait devenir un canal de communication informel entre deux maisons qui, officiellement, se méfient l'une de l'autre.",
+      "Son amitié avec le Prince Dorian pourrait le pousser vers des ambitions politiques dépassant largement le commandement militaire qu'il attend.",
+      "Aldric pourrait être le premier à devoir choisir entre la loyauté à son père et celle à son frère si la fracture Ilyan/Théodren éclate publiquement.",
+    ],
+  },
+  {
+    id: "ilyan-ashe",
+    nom: "Ilyan Ashe",
+    titre: "Cadet de la Maison Ashe, écarté du commandement (24 ans)",
+    faction: "Solvarn",
+    secret: false,
+    resume: "Doute de la méthode de l'Inquisition depuis Mornhaven — pas de la cause — et en paie le prix politique.",
+    description:
+      "Contrairement à son frère Aldric, Ilyan a vu d'assez près les conséquences du durcissement doctrinal hérité de son arrière-grand-père Corvain Ashe pour commencer à en douter — non pas de la nécessité de défendre l'Empire, mais des méthodes de plus en plus radicales employées en son nom. Son père Théodren l'a écarté du commandement plutôt que de le réduire publiquement au silence, un geste qui protège autant qu'il condamne : Ilyan reste un Ashe, mais un Ashe sans troupes.",
+    accroches: [
+      "Ilyan pourrait chercher des alliés discrets parmi ceux qui partagent ses doutes — dangereux, dans une maison qui ne tolère pas la dissidence publique.",
+      "Un PJ pourrait le convaincre d'utiliser sa position marginale pour infléchir la doctrine de l'intérieur plutôt que de la fuir.",
+      "Sa relation avec son frère Aldric, loyal jusqu'à l'aveuglement, pourrait se briser si les tensions internes à Ashe éclatent au grand jour.",
+    ],
+  },
+  {
+    id: "isabeau-ashe",
+    nom: "Isabeau Ashe",
+    titre: "Chevalier-Inquisiteur, benjamine de la Maison Ashe (20 ans)",
+    faction: "Solvarn",
+    secret: false,
+    resume: "A rejoint l'ordre militant que sa propre maison supervise — et fait déjà partie, sans le savoir vraiment, du réseau personnel qu'Aveline Roquefeu est en train de tisser.",
+    description:
+      "Plus jeune des trois enfants Ashe, Isabeau a choisi de rejoindre les Chevaliers-Inquisiteurs plutôt que l'armée régulière — un choix que son père approuve publiquement, sans se douter que sa fille sert, dans les faits, davantage les intérêts personnels d'Aveline Roquefeu que la doctrine officielle du Concile. Isabeau croit servir la Flamme ; elle ignore la distinction, de plus en plus ténue, entre les deux.",
+    accroches: [
+      "Isabeau pourrait être chargée par Roquefeu d'une mission qui, sur le terrain, ressemble à s'y méprendre à une affaire de famille Ashe — sans qu'elle comprenne le double jeu.",
+      "Si elle découvre la nature réelle du réseau de Roquefeu, la question devient : le rapporte-t-elle à son père, au Concile, ou garde-t-elle le silence par loyauté mal placée ?",
+      "Son lien de sang avec Ashe pourrait un jour rapprocher, sans le vouloir, les intérêts de sa maison et ceux de Roquefeu.",
+    ],
+  },
+  {
+    id: "cyrian-solenne",
+    nom: "Cyrian Solenne",
+    titre: "Fils unique de la Grande Sacerdotesse Yvelle Solenne (26 ans)",
+    faction: "Solvarn",
+    secret: false,
+    resume: "Voix montante des Cendres Blanches — la faction radicale que sa propre mère peine justement à contrôler.",
+    description:
+      "Là où Yvelle Solenne incarne une foi sincère mais mesurée, son fils Cyrian a trouvé dans les Cendres Blanches une ferveur plus tranchante, plus jeune, qui le séduit précisément parce qu'elle dépasse la prudence politique de sa mère. Il ne s'oppose pas à elle ouvertement — ce serait un scandale que ni l'un ni l'autre ne peut se permettre — mais son influence grandissante sur la faction inquiète Yvelle bien plus que n'importe quel rival extérieur.",
+    accroches: [
+      "Cyrian pourrait pousser les Cendres Blanches vers une action radicale que sa mère serait ensuite forcée de désavouer publiquement — ou de couvrir.",
+      "Un PJ pourrait devenir, sans le vouloir, la preuve vivante que la doctrine de pureté du sang est plus compliquée que les Cendres Blanches ne le prêchent.",
+      "La relation mère-fils pourrait se briser publiquement si Cyrian venait à dépasser une ligne que Yvelle ne peut tolérer.",
+    ],
+  },
+  {
+    id: "renard-vosgard",
+    nom: "Renard Vosgard",
+    titre: "Héritier de la Maison Vosgard (29 ans, marié)",
+    faction: "Solvarn",
+    secret: false,
+    resume: "Aîné discipliné, futur Intendant sans surprise — marié à une parente éloignée de la Comtesse Yselde Maren de Mornac.",
+    description:
+      "Administrateur prometteur, Renard suit la voie tracée par son père sans dévier — son mariage avec une parente de la dynastie marchande de Mornac a été salué comme un coup diplomatique brillant, resserrant des liens commerciaux déjà informels entre les deux maisons. Ce que Renard ignore : cette même alliance sanctionnée officiellement offre, par accident, une couverture presque parfaite à la fuite de renseignements économiques bien moins officielle que sa sœur Isolde entretient vers ce même Mornac.",
+    accroches: [
+      "Si la fuite d'Isolde est découverte, les soupçons tomberont d'abord sur le mariage de Renard avant qu'on ne pense à elle.",
+      "Renard pourrait involontairement transmettre une information sensible en toute innocence, croyant qu'il s'agit d'une correspondance familiale ordinaire.",
+      "Sa loyauté envers son père pourrait être testée s'il découvre que sa propre sœur a exploité son mariage sans son consentement.",
+    ],
+  },
+  {
+    id: "isolde-vosgard",
+    nom: "Isolde Vosgard",
+    titre: "Cadette de la Maison Vosgard (25 ans)",
+    faction: "Solvarn",
+    secret: true,
+    resume: "Source réelle et personnelle de la fuite de renseignements économiques vers Mornac déjà connue de la maison — pas seulement une affaire d'intérêt commercial.",
+    description:
+      "Officiellement, la maison Vosgard tolère que certains de ses agents vendent des renseignements économiques à Mornac par simple opportunisme commercial. En réalité, c'est Isolde elle-même qui alimente une bonne partie de cette fuite — pour des raisons plus personnelles que mercantiles, qu'elle n'a confiées à personne. Le mariage de son frère Renard avec une parente de Mornac lui offre une couverture inespérée : personne ne s'étonne des échanges réguliers entre les deux maisons.",
+    accroches: [
+      "La vraie raison d'Isolde (romantique ? un vieux ressentiment familial ? une dette qu'elle rembourse ?) reste à la discrétion du MJ — un bon accroche à développer selon les besoins de la campagne.",
+      "Si son père Bastian découvre la vérité, la question devient : protège-t-il sa fille, ou fait-il un exemple pour préserver la réputation de la maison ?",
+      "Isolde pourrait recruter un PJ, sans lui révéler l'ampleur réelle de ce qu'elle fait, pour une mission qui semble anodine mais touche à Mornac.",
+    ],
+  },
+  {
+    id: "tobias-vosgard",
+    nom: "Tobias Vosgard",
+    titre: "Benjamin de la Maison Vosgard (21 ans)",
+    faction: "Solvarn",
+    secret: false,
+    resume: "Ambitieux, frustré par une maison \"indispensable et méprisée\" à la cour — cherche une reconnaissance politique que l'argent seul ne lui donne pas.",
+    description:
+      "Tobias a grandi en observant son père gérer les finances d'un Empire qui ne remercie jamais publiquement la maison Vosgard pour son travail indispensable. Contrairement à son frère Renard, satisfait de l'ombre utile, Tobias veut que sa maison soit reconnue pour ce qu'elle apporte réellement — quitte à chercher des alliances politiques plus audacieuses que ce que son père jugerait prudent.",
+    accroches: [
+      "Tobias pourrait chercher à se rapprocher du Prince Dorian ou d'Aldric Ashe pour offrir un soutien financier en échange d'une reconnaissance politique.",
+      "Son impatience pourrait le pousser à prendre des initiatives que Bastian Vosgard devra ensuite désavouer ou couvrir.",
+      "Il pourrait devenir un point d'entrée pour des PJ cherchant un financement discret — à condition d'accepter de jouer selon ses propres ambitions.",
+    ],
+  },
+  {
+    id: "garrick-kestrel",
+    nom: "Garrick Kestrel",
+    titre: "Fils unique de la Margravine Sélène Kestrel (23 ans)",
+    faction: "Solvarn",
+    secret: false,
+    resume: "Endurci par la frontière, rancunier envers le mépris de la Maison Ashe pour les rapports de sa mère — pourrait chercher des appuis en dehors des canaux officiels.",
+    description:
+      "Élevé sur les Marches orientales plutôt qu'à la cour de Solmaris, Garrick a vu de ses propres yeux l'épuisement réel des garnisons que sa mère maquille dans ses rapports à Ashe pour éviter d'admettre publiquement leur vulnérabilité. Ce mépris silencieux de la capitale envers la frontière qui la protège le pousse, en privé, à envisager des solutions que sa mère refuserait d'approuver ouvertement — y compris, potentiellement, des contacts discrets avec des homologues coalisés partageant la même frustration face à leurs propres capitales (échec en miroir avec Lord Ranulf d'Arveth, déjà engagé dans des négociations secrètes avec Solvarn).",
+    accroches: [
+      "Garrick pourrait initier un contact non-officiel avec quelqu'un côté Arveth ou Serval, par pur pragmatisme frontalier plutôt que par trahison.",
+      "Si Ashe découvre que Kestrel maquille ses rapports, Garrick pourrait être le premier à en payer le prix politique à la place de sa mère.",
+      "Sa frustration pourrait le rendre réceptif à une offre extérieure (Œil de Solmaris, un PJ, un rival) qu'il ne verrait pas venir dans un contexte moins désespéré.",
+    ],
+  },
+  {
     id: "minerva-sarelle",
     nom: "Minerva Sarelle",
     titre: "Ancienne mage attitrée de la couronne de Valdorne (assassinée)",
@@ -2545,28 +2740,28 @@ const FACTIONS = [
         devise: "Un ordre, une lame.",
         blason: "assets/blasons/blason_ashe.png",
         description:
-          "Chef actuel : Grand Maréchal Théodren Ashe, arrière-petit-fils du Haut-Maréchal Corvain Ashe (Siège de Mornhaven). Rigide, incorruptible en apparence — use la doctrine de son aïeul comme un dogme figé plutôt qu'une conviction vivante.\nBlason : soleil noir sur bronze, deux lames croisées. Commande l'armée impériale régulière, forme les officiers, supervise (sans les diriger) les Chevaliers-Inquisiteurs.\nFracture interne : son fils cadet Ilyan Ashe doute depuis Mornhaven — pas de la cause, de la méthode — et a été écarté du commandement plutôt que réduit au silence publiquement.\nMiroir : Valdorne, la chevalerie sincère devenue discipline totale.",
+          "Chef actuel : Grand Maréchal Théodren Ashe, arrière-petit-fils du Haut-Maréchal Corvain Ashe (Siège de Mornhaven). Rigide, incorruptible en apparence — use la doctrine de son aïeul comme un dogme figé plutôt qu'une conviction vivante.\n\nBlason : soleil noir sur bronze, deux lames croisées. Commande l'armée impériale régulière, forme les officiers, supervise (sans les diriger) les Chevaliers-Inquisiteurs.\n\nFamille : trois enfants. Aldric (aîné, 27 ans, marié à Dame Iselde Solenne), héritier sans le moindre doute ; Ilyan (cadet, 24 ans), écarté du commandement ; Isabeau (benjamine, 20 ans), Chevalier-Inquisiteur — cf. PNJ clés pour le détail des trois.\n\nFracture interne : Ilyan doute depuis Mornhaven — pas de la cause, de la méthode — et a été écarté du commandement plutôt que réduit au silence publiquement.\n\nMiroir : Valdorne, la chevalerie sincère devenue discipline totale.",
       },
       {
         nom: "Maison Solenne — La Flamme",
         devise: "La lumière ne négocie pas.",
         blason: "assets/blasons/blason_solenne.png",
         description:
-          "Cheffe actuelle : Grande Sacerdotesse Yvelle Solenne, charismatique, absolument sincère dans sa foi — ce qui la rend plus dangereuse qu'une cynique.\nBlason : flamme dorée à sept pointes sur pourpre. Tient le Temple-Mère, légitime la lignée impériale, supervise doctrinalement les Chevaliers-Inquisiteurs.\nFracture interne : les \"Cendres Blanches\", faction jeune du clergé, prônent une purification encore plus radicale — tolérées comme bras armé idéologique, elles commencent à échapper à son contrôle.\nMiroir : aucun miroir sécessionniste direct — Solenne est le cœur idéologique de l'Empire.",
+          "Cheffe actuelle : Grande Sacerdotesse Yvelle Solenne, charismatique, absolument sincère dans sa foi — ce qui la rend plus dangereuse qu'une cynique.\n\nBlason : flamme dorée à sept pointes sur pourpre. Tient le Temple-Mère, légitime la lignée impériale, supervise doctrinalement les Chevaliers-Inquisiteurs.\n\nFamille : un fils unique, Cyrian (26 ans) — voix montante des Cendres Blanches, la faction que sa propre mère peine justement à contrôler (cf. PNJ clés).\n\nFracture interne : les \"Cendres Blanches\", faction jeune du clergé, prônent une purification encore plus radicale — tolérées comme bras armé idéologique, elles commencent à échapper à son contrôle.\n\nMiroir : aucun miroir sécessionniste direct — Solenne est le cœur idéologique de l'Empire.",
       },
       {
         nom: "Maison Vosgard — La Bourse",
         devise: "Ce qui se compte, se gouverne.",
         blason: "assets/blasons/blason_vosgard.png",
         description:
-          "Chef actuel : Intendant Général Bastian Vosgard, administrateur brillant, sans conviction religieuse réelle.\nBlason : balance dorée sur gris-bleu. Trésorerie impériale, impôts provinciaux, logistique militaire — Ashe dépend de lui autant que de ses propres officiers.\nFracture interne : certains agents Vosgard vendent des renseignements économiques à Mornac, par intérêt commercial plus que par trahison idéologique.\nMiroir : Mornac, le pragmatisme marchand devenu corruption structurelle.",
+          "Chef actuel : Intendant Général Bastian Vosgard, administrateur brillant, sans conviction religieuse réelle.\n\nBlason : balance dorée sur gris-bleu. Trésorerie impériale, impôts provinciaux, logistique militaire — Ashe dépend de lui autant que de ses propres officiers.\n\nFamille : trois enfants. Renard (aîné, 29 ans, marié à une parente de la Comtesse Yselde Maren de Mornac) ; Isolde (cadette, 25 ans) ; Tobias (benjamin, 21 ans) — cf. PNJ clés pour le détail des trois.\n\nFracture interne : certains agents Vosgard vendent des renseignements économiques à Mornac, par intérêt commercial plus que par trahison idéologique — le mariage de Renard avec Mornac offre, sans qu'il le sache, une couverture parfaite à cette fuite.\n\nMiroir : Mornac, le pragmatisme marchand devenu corruption structurelle.",
       },
       {
         nom: "Maison Kestrel — Les Marches",
         devise: "La peur tient mieux qu'un traité.",
         blason: "assets/blasons/blason_kestrel.png",
         description:
-          "Cheffe actuelle : Margravine Sélène Kestrel, dure, pragmatique, façonnée par des décennies de guerre frontalière contre Aetharion et les passes disputées avec Khazrak Dûm.\nBlason : faucon gris plongeant sur blanc glacé. Défend les Marches orientales, gère les garnisons frontalières et un réseau d'éclaireurs au-delà des lignes.\nFracture interne : maquille ses rapports envoyés à Ashe pour cacher l'épuisement réel de ses garnisons sous-équipées.\nMiroir : Serval, même géographie montagnarde, logique opposée (alliance vs domination par la peur).",
+          "Cheffe actuelle : Margravine Sélène Kestrel, dure, pragmatique, façonnée par des décennies de guerre frontalière contre Aetharion et les passes disputées avec Khazrak Dûm.\n\nBlason : faucon gris plongeant sur blanc glacé. Défend les Marches orientales, gère les garnisons frontalières et un réseau d'éclaireurs au-delà des lignes.\n\nFamille : un fils unique, Garrick (23 ans), endurci par la frontière et rancunier envers le mépris d'Ashe pour les rapports de sa mère (cf. PNJ clés).\n\nFracture interne : maquille ses rapports envoyés à Ashe pour cacher l'épuisement réel de ses garnisons sous-équipées.\n\nMiroir : Serval, même géographie montagnarde, logique opposée (alliance vs domination par la peur).",
       },
       {
         nom: "Inquisition",
