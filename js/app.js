@@ -67,6 +67,7 @@ const App = (() => {
   // purement manuel ensuite (pas de reset automatique/périodique).
   const STORAGE_CHANCE_EQUIPE = "chance:equipe";
   const STORAGE_PNJ_REVELES = "pnj:reveles"; // via SyncStore (Firestore) : ids des PNJ secrets révélés aux joueurs — irréversible
+  const STORAGE_FACTIONS_REVELES = "factions:reveles"; // via SyncStore (Firestore) : groupes de factions secrètes révélés aux joueurs — irréversible
   let livreOuvertId = null;  // id du livre ouvert dans l'étagère du perso (null = vue étagère)
   let livreOuvertPersoId = null; // id du perso auquel appartient le livre ouvert (le mien, ou celui d'un livre partagé avec moi)
   let role = null;           // "joueur" | "mj" | null (pas encore choisi)
@@ -6843,6 +6844,15 @@ const App = (() => {
     const idx = groupes.indexOf(groupe);
     return PNJ_PALETTE_FACTIONS[idx % PNJ_PALETTE_FACTIONS.length];
   }
+  function _factionsRevelees() { return SyncStore.get(STORAGE_FACTIONS_REVELES) || []; }
+  function _factionGroupeEstRevele(groupe) { return _factionsRevelees().includes(groupe); }
+  function _reveleerFactionGroupe(groupe) {
+    if (role !== "mj") return;
+    const reveles = _factionsRevelees();
+    if (reveles.includes(groupe)) return;
+    reveles.push(groupe);
+    SyncStore.set(STORAGE_FACTIONS_REVELES, reveles);
+  }
   function rendreFactions() {
     const zone = document.getElementById("zone-lore-factions");
     if (!zone || typeof FACTIONS === "undefined") return;
@@ -6860,6 +6870,26 @@ const App = (() => {
     const groupesHtml = FACTIONS
       .filter((g) => !_factionsGroupeFiltre || g.groupe === _factionsGroupeFiltre)
       .map((g) => {
+        const estSecret = !!g.secret;
+        const revele = !estSecret || _factionGroupeEstRevele(g.groupe);
+        const verrouillePourJoueur = estSecret && !revele && role !== "mj";
+
+        const badgeSecretMj = estSecret && role === "mj"
+          ? (revele
+              ? `<span class="badge-chaos" title="Révélé aux joueurs">🔓 Révélé</span>`
+              : `<span class="badge-chaos" title="Visible MJ uniquement">🔒 Secret</span>`)
+          : "";
+
+        const boutonReveler = estSecret && !revele && role === "mj"
+          ? `<button type="button" class="btn petit secondaire" data-act="reveler-faction" data-groupe="${echapper(g.groupe)}">🔓 Révéler aux joueurs</button>`
+          : "";
+
+        if (verrouillePourJoueur) {
+          return `<div class="lore-section"><h3>${echapper(g.groupe)} ${badgeSecretMj}</h3>` +
+            `<p class="pnj-verrouille">🔒 <em>Faction non révélée par le Maître de Jeu.</em></p>` +
+            `</div>`;
+        }
+
         const entitesHtml = g.entites.map((e) => `<div class="carte pnj-carte">
           <div class="pnj-entete">
             ${e.blason ? `<img class="pnj-blason" src="${echapper(e.blason)}" alt="Blason — ${echapper(e.nom)}" onerror="this.style.display='none';" />` : ""}
@@ -6877,7 +6907,7 @@ const App = (() => {
         const histoireHtml = g.histoire
           ? `<h4 style="color:var(--or);margin:10px 0 4px;font-size:0.95rem;">Histoire</h4><div class="contenu" style="color:#fff;">${echapper(g.histoire)}</div>`
           : "";
-        return `<div class="lore-section"><h3>${echapper(g.groupe)}</h3>` +
+        return `<div class="lore-section"><h3>${echapper(g.groupe)} ${badgeSecretMj} ${boutonReveler}</h3>` +
           blasonHtml +
           histoireHtml +
           `<p style="font-style:italic;color:#6a6278;white-space:pre-wrap;">${echapper(g.intro)}</p>` +
@@ -6888,6 +6918,15 @@ const App = (() => {
     zone.innerHTML = filtreHtml + groupesHtml;
     zone.querySelectorAll("[data-factions-groupe]").forEach((btn) => {
       btn.onclick = () => { _factionsGroupeFiltre = btn.dataset.factionsGroupe; rendreFactions(); };
+    });
+    zone.querySelectorAll("[data-act='reveler-faction']").forEach((btn) => {
+      btn.onclick = () => {
+        const groupe = btn.dataset.groupe;
+        if (!confirm(`Révéler la faction "${groupe}" à tous les joueurs ? Cette action est irréversible.`)) return;
+        _reveleerFactionGroupe(groupe);
+        toast("Faction révélée aux joueurs.");
+        rendreFactions();
+      };
     });
     const btnModifierFactions = document.getElementById("btn-modifier-factions");
     if (btnModifierFactions) {
@@ -7069,6 +7108,13 @@ const App = (() => {
     SyncStore.subscribe(STORAGE_PNJ_REVELES, () => {
       const zonePnj = document.getElementById("zone-lore-pnj");
       if (zonePnj) rendrePnjCles();
+    });
+
+    // Un MJ révèle une faction secrète (Inquisition, Œil de Solmaris) : même
+    // principe que la révélation des PNJ ci-dessus.
+    SyncStore.subscribe(STORAGE_FACTIONS_REVELES, () => {
+      const zoneFactions = document.getElementById("zone-lore-factions");
+      if (zoneFactions) rendreFactions();
     });
 
     // Modal choix permanent d'une capacité (ex. +2 DEF OU +1d8 DM)
