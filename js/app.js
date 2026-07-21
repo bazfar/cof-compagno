@@ -67,7 +67,7 @@ const App = (() => {
   // purement manuel ensuite (pas de reset automatique/périodique).
   const STORAGE_CHANCE_EQUIPE = "chance:equipe";
   const STORAGE_PNJ_REVELES = "pnj:reveles"; // via SyncStore (Firestore) : ids des PNJ secrets révélés aux joueurs — irréversible
-  const STORAGE_FACTIONS_REVELES = "factions:reveles"; // via SyncStore (Firestore) : groupes de factions secrètes révélés aux joueurs — irréversible
+  const STORAGE_FACTIONS_ENTITES_REVELEES = "factions:entites:reveles"; // via SyncStore (Firestore) : ids d'entités de faction partiellement secrètes (ex. Inquisition, Œil de Solmaris) dont la partie cachée a été révélée aux joueurs — irréversible
   let livreOuvertId = null;  // id du livre ouvert dans l'étagère du perso (null = vue étagère)
   let livreOuvertPersoId = null; // id du perso auquel appartient le livre ouvert (le mien, ou celui d'un livre partagé avec moi)
   let role = null;           // "joueur" | "mj" | null (pas encore choisi)
@@ -418,6 +418,12 @@ const App = (() => {
       if (choixRole) choixRole.style.display = "block";
       if (accueilContenu) accueilContenu.style.display = "none";
     }
+
+    // Le contenu verrouillé du Lore (PNJ/factions secrets) dépend de `role` :
+    // sans ce re-rendu, un changement de rôle en cours de session (sans
+    // rechargement de page) laisserait affiché le contenu MJ précédent.
+    rendrePnjCles();
+    rendreFactions();
   }
 
   function rendreSelecteurMonPerso() {
@@ -6844,14 +6850,18 @@ const App = (() => {
     const idx = groupes.indexOf(groupe);
     return PNJ_PALETTE_FACTIONS[idx % PNJ_PALETTE_FACTIONS.length];
   }
-  function _factionsRevelees() { return SyncStore.get(STORAGE_FACTIONS_REVELES) || []; }
-  function _factionGroupeEstRevele(groupe) { return _factionsRevelees().includes(groupe); }
-  function _reveleerFactionGroupe(groupe) {
+  // Verrouillage MJ au niveau d'une entité (ex. Inquisition/Œil de Solmaris
+  // dans le bloc Empire de Solvarn) plutôt qu'au niveau du groupe entier :
+  // l'entité et sa description générale restent toujours visibles, seule
+  // e.descriptionSecrete est gatée tant que le MJ ne l'a pas révélée.
+  function _factionsEntitesRevelees() { return SyncStore.get(STORAGE_FACTIONS_ENTITES_REVELEES) || []; }
+  function _factionEntiteEstRevelee(id) { return _factionsEntitesRevelees().includes(id); }
+  function _reveleerFactionEntite(id) {
     if (role !== "mj") return;
-    const reveles = _factionsRevelees();
-    if (reveles.includes(groupe)) return;
-    reveles.push(groupe);
-    SyncStore.set(STORAGE_FACTIONS_REVELES, reveles);
+    const reveles = _factionsEntitesRevelees();
+    if (reveles.includes(id)) return;
+    reveles.push(id);
+    SyncStore.set(STORAGE_FACTIONS_ENTITES_REVELEES, reveles);
   }
   function rendreFactions() {
     const zone = document.getElementById("zone-lore-factions");
@@ -6870,44 +6880,46 @@ const App = (() => {
     const groupesHtml = FACTIONS
       .filter((g) => !_factionsGroupeFiltre || g.groupe === _factionsGroupeFiltre)
       .map((g) => {
-        const estSecret = !!g.secret;
-        const revele = !estSecret || _factionGroupeEstRevele(g.groupe);
-        const verrouillePourJoueur = estSecret && !revele && role !== "mj";
+        const entitesHtml = g.entites.map((e) => {
+          const estSecretEntite = !!e.secret;
+          const releveeEntite = !estSecretEntite || _factionEntiteEstRevelee(e.id);
 
-        const badgeSecretMj = estSecret && role === "mj"
-          ? (revele
-              ? `<span class="badge-chaos" title="Révélé aux joueurs">🔓 Révélé</span>`
-              : `<span class="badge-chaos" title="Visible MJ uniquement">🔒 Secret</span>`)
-          : "";
+          const badgeSecretEntiteMj = estSecretEntite && role === "mj"
+            ? (releveeEntite
+                ? `<span class="badge-chaos" title="Révélé aux joueurs">🔓 Révélé</span>`
+                : `<span class="badge-chaos" title="Visible MJ uniquement">🔒 Secret</span>`)
+            : "";
 
-        const boutonReveler = estSecret && !revele && role === "mj"
-          ? `<button type="button" class="btn petit secondaire" data-act="reveler-faction" data-groupe="${echapper(g.groupe)}">🔓 Révéler aux joueurs</button>`
-          : "";
+          const boutonRevelerEntite = estSecretEntite && !releveeEntite && role === "mj"
+            ? `<button type="button" class="btn petit secondaire" data-act="reveler-faction-entite" data-id="${echapper(e.id)}">🔓 Révéler aux joueurs</button>`
+            : "";
 
-        if (verrouillePourJoueur) {
-          return `<div class="lore-section"><h3>${echapper(g.groupe)} ${badgeSecretMj}</h3>` +
-            `<p class="pnj-verrouille">🔒 <em>Faction non révélée par le Maître de Jeu.</em></p>` +
-            `</div>`;
-        }
+          const partieSecreteHtml = estSecretEntite && e.descriptionSecrete && (releveeEntite || role === "mj")
+            ? `<div class="contenu" style="margin-top:8px;">${echapper(e.descriptionSecrete)}</div>`
+            : "";
 
-        const entitesHtml = g.entites.map((e) => `<div class="carte pnj-carte">
+          return `<div class="carte pnj-carte">
           <div class="pnj-entete">
             ${e.blason ? `<img class="pnj-blason" src="${echapper(e.blason)}" alt="Blason — ${echapper(e.nom)}" onerror="this.style.display='none';" />` : ""}
             <div style="flex:1;">
               <div class="pnj-nom">${echapper(e.nom)}</div>
               <div class="pnj-titre">« ${echapper(e.devise)} »</div>
             </div>
+            ${badgeSecretEntiteMj}
             <span class="badge-faction" style="background:${_couleurGroupeFaction(g.groupe, groupes)};">${echapper(g.groupe)}</span>
           </div>
           <div class="contenu">${echapper(e.description)}</div>
-        </div>`).join("");
+          ${partieSecreteHtml}
+          ${boutonRevelerEntite}
+        </div>`;
+        }).join("");
         const blasonHtml = g.blason
           ? `<img class="faction-blason" src="${echapper(g.blason)}" alt="Blason — ${echapper(g.groupe)}" onerror="this.style.display='none';" />`
           : "";
         const histoireHtml = g.histoire
           ? `<h4 style="color:var(--or);margin:10px 0 4px;font-size:0.95rem;">Histoire</h4><div class="contenu" style="color:#fff;">${echapper(g.histoire)}</div>`
           : "";
-        return `<div class="lore-section"><h3>${echapper(g.groupe)} ${badgeSecretMj} ${boutonReveler}</h3>` +
+        return `<div class="lore-section"><h3>${echapper(g.groupe)}</h3>` +
           blasonHtml +
           histoireHtml +
           `<p style="font-style:italic;color:#6a6278;white-space:pre-wrap;">${echapper(g.intro)}</p>` +
@@ -6919,12 +6931,12 @@ const App = (() => {
     zone.querySelectorAll("[data-factions-groupe]").forEach((btn) => {
       btn.onclick = () => { _factionsGroupeFiltre = btn.dataset.factionsGroupe; rendreFactions(); };
     });
-    zone.querySelectorAll("[data-act='reveler-faction']").forEach((btn) => {
+    zone.querySelectorAll("[data-act='reveler-faction-entite']").forEach((btn) => {
       btn.onclick = () => {
-        const groupe = btn.dataset.groupe;
-        if (!confirm(`Révéler la faction "${groupe}" à tous les joueurs ? Cette action est irréversible.`)) return;
-        _reveleerFactionGroupe(groupe);
-        toast("Faction révélée aux joueurs.");
+        const id = btn.dataset.id;
+        if (!confirm(`Révéler cette information à tous les joueurs ? Cette action est irréversible.`)) return;
+        _reveleerFactionEntite(id);
+        toast("Information révélée aux joueurs.");
         rendreFactions();
       };
     });
@@ -7110,9 +7122,9 @@ const App = (() => {
       if (zonePnj) rendrePnjCles();
     });
 
-    // Un MJ révèle une faction secrète (Inquisition, Œil de Solmaris) : même
-    // principe que la révélation des PNJ ci-dessus.
-    SyncStore.subscribe(STORAGE_FACTIONS_REVELES, () => {
+    // Un MJ révèle la partie cachée d'une entité de faction (Inquisition,
+    // Œil de Solmaris) : même principe que la révélation des PNJ ci-dessus.
+    SyncStore.subscribe(STORAGE_FACTIONS_ENTITES_REVELEES, () => {
       const zoneFactions = document.getElementById("zone-lore-factions");
       if (zoneFactions) rendreFactions();
     });

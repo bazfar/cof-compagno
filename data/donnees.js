@@ -2568,6 +2568,26 @@ const FACTIONS = [
         description:
           "Cheffe actuelle : Margravine Sélène Kestrel, dure, pragmatique, façonnée par des décennies de guerre frontalière contre Aetharion et les passes disputées avec Khazrak Dûm.\nBlason : faucon gris plongeant sur blanc glacé. Défend les Marches orientales, gère les garnisons frontalières et un réseau d'éclaireurs au-delà des lignes.\nFracture interne : maquille ses rapports envoyés à Ashe pour cacher l'épuisement réel de ses garnisons sous-équipées.\nMiroir : Serval, même géographie montagnarde, logique opposée (alliance vs domination par la peur).",
       },
+      {
+        nom: "Inquisition",
+        devise: "Rien n'échappe à la Flamme — sauf, peut-être, ce qu'elle refuse elle-même de voir.",
+        secret: true,
+        id: "inquisition",
+        description:
+          "Née du durcissement doctrinal qui a suivi l'échec du Haut-Maréchal Corvain Ashe à Mornhaven et Pont-Rompu, l'Inquisition traque l'hérésie et surveille la pureté doctrinale au nom du Concile des Flammes. Officiellement, elle ne répond qu'au Concile et, in fine, au Flambeau Suprême — les Chevaliers-Inquisiteurs, guerriers-clercs d'élite, en sont le bras armé le plus visible.",
+        descriptionSecrete:
+          "Dans les faits, c'est Aveline Roquefeu, Protectrice de la Flamme, qui en dirige l'essentiel du quotidien — une charge administrative que Théobald Ardenne, Flambeau Suprême sincèrement dévot mais peu intéressé par la logistique de la traque, lui a cédée presque entièrement dès son élection. Sans le savoir, Aveline a ouvert un front invisible contre l'Œil de Solmaris en recrutant sur le même terrain que le Regard Intérieur d'Isaure Vantrel — une guerre froide que ni l'une ni l'autre ne peut se permettre de rendre publique. Bastian Vorn, Grand Inquisiteur et agent de terrain le plus capable d'Aveline, exécute ses ordres sans poser de questions, sincèrement loyal à la doctrine — il ignore tout des ambitions personnelles de sa supérieure.",
+      },
+      {
+        nom: "Œil de Solmaris",
+        devise: "Ce qui n'existe sur aucun registre ne peut être ni confirmé, ni trahi.",
+        secret: true,
+        id: "oeil-solmaris",
+        description:
+          "Rumeur persistante à la cour de Solmaris : au-delà de l'armée et de l'Inquisition, l'Empereur disposerait d'un service de renseignement personnel, jamais officiellement reconnu, répondant à lui seul.",
+        descriptionSecrete:
+          "Fondé en secret par l'Empereur Aurelian III dans les mois de panique qui ont suivi la Sécession des quatre maisons, l'Œil de Solmaris répond uniquement à la Couronne — jamais à l'Église, jamais aux maisons loyalistes. Son fondateur, Ilsevar Cendreau, Veilleur Suprême sous couverture de chancelier du Zénith, cloisonne volontairement ses deux maîtres de terrain : Isaure Vantrel, Maître du Regard Intérieur, surveille les quatre maisons loyalistes sous couverture de dame de compagnie itinérante, et a récemment repéré les traces d'un réseau rival qu'elle attribue à la Protectrice de la Flamme, sans savoir que celle-ci ignore tout de l'Œil ; Corentin Ashevel, Maître du Regard Lointain, opère sur le front d'Aetharion et jusqu'à Libris, exploitant les liens de sang entre maisons loyalistes et sécessionnistes. Une confrontation ouverte avec l'Inquisition exposerait l'existence même de l'Œil à l'appareil religieux — un risque qu'aucun des deux camps n'est prêt à prendre, pour l'instant.",
+      },
     ],
     synthese:
       "Rapports de force à la cour de Solmaris (contexte : guerre ouverte contre Aetharion, siège naval sans percée depuis 3 ans)\n\n1. Ashe — ascendante : l'armée est incontournable en temps de guerre, mais dépend entièrement de Vosgard pour le financement.\n2. Solenne — le levier silencieux : légitimité rituelle de l'Empereur, mais les Cendres Blanches échappent peu à peu à son contrôle.\n3. Vosgard — indispensable et méprisée : pouvoir structurel jamais honoré en public.\n4. Kestrel — puissante localement, marginale à la cour : isolée politiquement, dépend de renforts qui n'arrivent jamais vraiment.\n\nAxes de tension : Ashe ↔ Solenne (rivalité froide pour l'oreille de l'Empereur) ; Ashe ↔ Vosgard (dépendance forcée sans confiance) ; Solenne ↔ Vosgard (méfiance doctrinale, l'argent sent l'hérésie pragmatique) ; Kestrel isolée, traitée en subalterne par Ashe.\n\nCe qui pourrait faire basculer l'équilibre : l'aboutissement des négociations secrètes Arveth–Solvarn libérerait des troupes pour Aetharion et renforcerait Ashe ; une dérive incontrôlée des Cendres Blanches forcerait l'Empereur à trancher entre les maisons ; la révélation de la corruption Vosgard–Mornac pourrait pousser Ashe et Solenne à une alliance ponctuelle inédite ; la chute d'une garnison Kestrel faute de renfort exposerait publiquement le mensonge de ses rapports.",
@@ -2733,72 +2753,6 @@ const FACTIONS = [
     ],
     synthese:
       "L'absence de pouvoir central depuis le Scellement explique pourquoi le rêve de reconquête des Évolutionnistes n'est jamais devenu une vraie menace militaire coordonnée : c'est une aspiration culturelle largement partagée, pas un plan de guerre. Elle explique aussi pourquoi Thrakan Kelgarn reste une figure tragique isolée — même son propre camp n'a pas la structure pour le soutenir massivement.\n\nCe qui pourrait faire basculer l'équilibre : un chef Grimgal charismatique parvenant à fédérer les autres clans évolutionnistes transformerait le rêve latent en campagne militaire réelle contre Serval et Kaldrun ; à l'inverse, un rapprochement réussi entre Kelgarn et un Gardien du Marteau ouvert d'esprit côté Ordre pourrait fracturer les Évolutionnistes de l'intérieur, entre ceux qui y verraient un espoir et ceux qui y verraient une trahison à punir.",
-  },
-  {
-    groupe: "Inquisition",
-    secret: true,
-    intro:
-      "Rien n'échappe à la Flamme — sauf, peut-être, ce qu'elle refuse elle-même de voir.",
-    histoire:
-      "Née du durcissement doctrinal qui a suivi l'échec du Haut-Maréchal Corvain Ashe à Mornhaven et Pont-Rompu, l'Inquisition traque l'hérésie et surveille la pureté doctrinale au nom du Concile des Flammes. Officiellement, elle ne répond qu'au Concile et, in fine, au Flambeau Suprême. Dans les faits, c'est Aveline Roquefeu, Protectrice de la Flamme, qui en dirige l'essentiel du quotidien — une charge administrative que Théobald Ardenne, peu intéressé par la logistique de la traque, lui a cédée presque entièrement dès son élection.\n\nSans le savoir, Aveline a ouvert un front invisible contre l'Œil de Solmaris en recrutant sur le même terrain que le Regard Intérieur d'Isaure Vantrel. Une guerre froide que ni l'une ni l'autre ne peut se permettre de rendre publique.",
-    entites: [
-      {
-        nom: "Théobald Ardenne — Flambeau Suprême",
-        devise: "La foi ne ment jamais ; seuls les hommes mentent.",
-        description:
-          "Chef spirituel du Sacerdoce Solaire, élu à vie par le Concile des Flammes. Sincèrement dévot, il ignore jusqu'où sa Protectrice de la Flamme a étendu son pouvoir personnel sous couvert de doctrine.",
-      },
-      {
-        nom: "Aveline Roquefeu — Protectrice de la Flamme",
-        devise: "La pureté se prouve ; elle ne se suppose jamais.",
-        description:
-          "Supervise administrativement l'ensemble des Chevaliers-Inquisiteurs au nom du Concile — une charge transformée en pouvoir personnel bien au-delà de son titre. Bâtit un réseau de confidents qui empiète, sans qu'elle le sache, sur celui du Regard Intérieur.",
-      },
-      {
-        nom: "Bastian Vorn — Grand Inquisiteur",
-        devise: "Aucune ombre ne survit à la Flamme.",
-        description:
-          "Le plus capable des agents de terrain d'Aveline, sincèrement loyal à la doctrine — il ignore tout des ambitions personnelles de sa supérieure. Statistiques de combat au bestiaire.",
-      },
-      {
-        nom: "Les Chevaliers-Inquisiteurs",
-        devise: "Nous jugeons ce que d'autres n'osent voir.",
-        description:
-          "Ordre militant : traquent l'hérésie, surveillent la pureté doctrinale, servent aussi de guerriers-clercs d'élite.",
-      },
-    ],
-    synthese:
-      "Une institution qui se croit unifiée sous une seule flamme, mais qui est en réalité tirée en deux directions : la foi sincère de Théobald, et l'ambition personnelle d'Aveline — laquelle vient, sans le savoir, de déclencher un conflit avec une organisation dont elle ignore jusqu'à l'existence.",
-  },
-  {
-    groupe: "Œil de Solmaris",
-    secret: true,
-    intro:
-      "Ce qui n'existe sur aucun registre ne peut être ni confirmé, ni trahi.",
-    histoire:
-      "Fondé en secret par l'Empereur Aurelian III dans les mois de panique qui ont suivi la Sécession des quatre maisons, l'Œil de Solmaris répond uniquement à la Couronne — jamais à l'Église, jamais aux maisons loyalistes. Son fondateur, Ilsevar Cendreau, cloisonne volontairement ses deux maîtres de terrain, qui ignorent l'un de l'autre au-delà du strict nécessaire opérationnel : deux maîtres qui se surveillent mutuellement ne complotent pas contre lui.",
-    entites: [
-      {
-        nom: "Ilsevar Cendreau — Veilleur Suprême",
-        devise: "Ce qui n'existe pas ne peut trahir personne.",
-        description:
-          "Ancien intendant sans lignée noble, nommé par Aurelian III. Rapporte uniquement à l'Empereur ; couverture officielle : chancelier du Zénith.",
-      },
-      {
-        nom: "Isaure Vantrel — Maître du Regard Intérieur",
-        devise: "Le silence est la seule preuve qui ne ment jamais.",
-        description:
-          "Surveille les quatre maisons loyalistes de l'intérieur sous couverture de dame de compagnie itinérante. A récemment repéré les traces d'un réseau rival qu'elle attribue à la Protectrice de la Flamme, sans savoir que celle-ci ignore tout de l'Œil.",
-      },
-      {
-        nom: "Corentin Ashevel — Maître du Regard Lointain",
-        devise: "Un bon secret voyage mieux qu'une armée.",
-        description:
-          "Opère sur le front d'Aetharion et jusqu'à Libris, exploitant les liens de sang entre maisons loyalistes et sécessionnistes. Rivalité feutrée avec Vantrel, qu'Ilsevar cultive délibérément.",
-      },
-    ],
-    synthese:
-      "L'Œil n'a jamais eu à composer avec une menace venue de l'intérieur de l'Empire lui-même — jusqu'à ce qu'Isaure Vantrel commence à soupçonner qu'un réseau rival, sans le savoir hérité de l'Inquisition, chasse sur son propre terrain. Une confrontation ouverte exposerait l'existence même de l'Œil à l'appareil religieux — un risque qu'aucun des deux camps n'est prêt à prendre, pour l'instant.",
   },
 ];
 
