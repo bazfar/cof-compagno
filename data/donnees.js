@@ -2084,6 +2084,90 @@ const PNJ_CLES = [
     ],
   },
   {
+    id: "brakka-thrundal",
+    nom: "Maréchal Brakka Thrundal, dite Ligne-Tenue",
+    titre: "Chef du clan Sombreforge",
+    faction: "Nains de l'Ordre",
+    resume: "A gagné sa marque de clan en tenant la ligne face aux orcs — et compte bien que Kaldrun n'oublie jamais ce que ça veut dire.",
+    description:
+      "Descendante directe de Korrin Sombreforge, Brakka a obtenu sa marque \"Ligne-Tenue\" en abattant une dizaine d'orcs lors d'une incursion aux Portes du Sud — l'épreuve martiale du clan, qu'elle a passée jeune et sans hésitation. Commande aujourd'hui la garnison de Kaldrun avec la même rigueur silencieuse que ses ancêtres : la sentinelle face aux galeries scellées n'est pas une corvée, c'est un rite qu'elle refuse de voir affaibli. Porte la version héroïque du Scellement sans nuance ni remords, et s'oppose à toute réconciliation avec Khazrak Dûm — moins par doctrine que par une fierté martiale qu'elle considère comme la seule chose qui reste intacte de ce que ses ancêtres ont payé.",
+    accroches: [
+      "Les bruits rapportés en silence par Pierrefonde finissent par remonter jusqu'à elle — sa réaction pourrait rouvrir le dossier du Scellement.",
+      "Un jeune Sombreforge qui rechigne à l'épreuve des dix orcs (par pacifisme, blessure, ou doute) la place devant une contradiction qu'elle refuse d'examiner.",
+      "Face-à-face possible avec Thrakan Kelgarn si un canal de dialogue s'ouvre malgré elle.",
+    ],
+  },
+  {
+    id: "ishma-kaelvorn",
+    nom: "Haute Gardienne du Marteau Ishma Kaelvorn, dite Silence-Gravé",
+    titre: "Cheffe du clan Runegrave",
+    faction: "Nains de l'Ordre",
+    resume: "Porte, en silence, le vrai poids théologique du Scellement — c'est son clan qui a gravé la rune, pas les soldats qu'on célèbre.",
+    description:
+      "A obtenu sa marque \"Silence-Gravé\" en atteignant la maîtrise runique la plus élevée reconnue par le clan Runegrave, dépositaire des mystères les plus anciens de l'Ordre — le Marteau-Premier compris. En tant que Haute Gardienne du Marteau, elle porte une charge que Sombreforge ignore superbement : c'est un maître Runegrave, pas un soldat, qui a gravé la rune interdite du Scellement. Ishma ne le rappelle jamais publiquement — le silence fait partie de la prière —, mais elle sait que la légitimité même des Gardiens du Marteau repose sur cette gravure plus que sur n'importe quel sacrifice martial.",
+    accroches: [
+      "La dissidence naissante chez les jeunes de Ferrune (son propre vivier) pourrait la forcer à sortir de son silence théologique.",
+      "Un PJ Runegrave en quête de sa marque devrait affronter, via Ishma, ce que \"maîtrise runique reconnue\" veut vraiment dire au-delà du simple niveau technique.",
+      "Détient peut-être, dans les mystères du Marteau-Premier, un savoir qui pourrait rouvrir ou refermer définitivement le dossier du Scellement.",
+    ],
+  },
+  {
+    id: "dorn-brannok",
+    nom: "Maître des Galeries Dorn Brannok, dit Écoute-Roche",
+    titre: "Chef du clan Pierrefonde",
+    faction: "Nains de l'Ordre",
+    resume: "Sait que quelque chose bouge derrière les galeries scellées — et n'a toujours pas osé le dire aux Sombreforge.",
+    description:
+      "A gagné sa marque \"Écoute-Roche\" en démontrant sa capacité à forger une arme runique — l'épreuve du clan Pierrefonde, plus discrète que celle des Sombreforge mais tout aussi exigeante. Dirige les architectes de galeries et les mineurs qui entretiennent en silence les murs du Scellement, pour s'assurer qu'ils tiennent. Rapporte depuis peu, à ses plus proches, des bruits réguliers de l'autre côté de l'effondrement — trop réguliers pour être naturels — une information qu'il n'a pas encore osé remonter officiellement aux Sombreforge, de peur de rouvrir un dossier que tout Kaldrun préférerait clos.",
+    accroches: [
+      "Les PJ pourraient être les premiers à qui Dorn confie ces bruits, avant même Brakka Thrundal.",
+      "Une expédition discrète vers les galeries scellées, montée par Dorn sans en référer à l'autorité centrale.",
+      "Si les bruits remontent enfin aux Sombreforge, Dorn devra assumer publiquement d'avoir attendu.",
+    ],
+  },
+  {
+    id: "kessa-hurnvig",
+    nom: "Maîtresse de Forge-Runez Kessa Hurnvig, dite Double-Trempe",
+    titre: "Cheffe du clan Ferrune",
+    faction: "Nains de l'Ordre",
+    resume: "Supervise une jeunesse qui commence, discrètement, à trouver absurde qu'on ne discute jamais du Scellement.",
+    description:
+      "A obtenu sa marque \"Double-Trempe\" en décrochant un diplôme de recherche en rune — la théorie éprouvée par la recherche, puis éprouvée par l'enseignement, comme le veut la devise du clan. Supervise Forge-Runez et la formation de tous les apprentis du royaume à l'écriture runique, avant leur admission dans les forges profondes de Kaldrun. Plus jeune et plus tournée vers l'extérieur que les autres chefs de clan, elle a le plus de contacts avec les artisans de Serval. Consciente qu'une frange discrète de ses propres apprentis commence à trouver absurde qu'on enseigne le Scellement comme une évidence morale sans jamais en débattre — elle n'encourage pas ouvertement cette dissidence, mais ne l'étouffe pas non plus.",
+    accroches: [
+      "La dissidence naissante chez ses apprentis pourrait devenir, si elle s'organise, le premier canal officieux de dialogue avec Khazrak Dûm que Kaldrun n'a jamais eu.",
+      "Un PJ nain de l'Ordre pourrait être l'un de ces apprentis sympathisants à la cause de Thrakan Kelgarn.",
+      "Kessa elle-même, tiraillée entre loyauté envers l'Ordre et curiosité intellectuelle, pourrait basculer selon comment les PJ abordent la question.",
+    ],
+  },
+  {
+    id: "vrag-grimgal",
+    nom: "Vrag Grimgal",
+    titre: "Chef de guerre du clan Grimgal — Évolutionniste",
+    faction: "Khazrak Dûm",
+    resume: "Rêve de fédérer les clans évolutionnistes pour reprendre Kaldrun par la force — et s'en approche, doucement.",
+    description:
+      "Chef de guerre du clan qui donne son nom à la forge de guerre de Karag Dûm — le clan évolutionniste le plus fervent, celui qui porte le plus ouvertement le rêve de reconquête de Kaldrun. Vrag travaille activement à fédérer les autres clans évolutionnistes derrière ce rêve, sans y être encore parvenu : Grimgal n'est pas encore assez puissant pour rassembler les autres à lui seul. Le jour où il y parviendrait, le rêve latent deviendrait une vraie menace militaire contre Serval et Kaldrun.",
+    accroches: [
+      "Un chef Grimgal charismatique (Vrag) qui parvient à fédérer les autres clans évolutionnistes transformerait le rêve latent en campagne militaire réelle.",
+      "Les PJ pourraient intercepter ou infiltrer une tentative de Vrag de rallier un clan évolutionniste hésitant.",
+      "Rivalité ou négociation possible avec Skarn Ombrefaille, dont les contacts commerciaux pourraient servir — ou entraver — les ambitions militaires de Vrag.",
+    ],
+  },
+  {
+    id: "skarn-ombrefaille",
+    nom: "Skarn Ombrefaille",
+    titre: "Négociant en chef du clan Ombrefaille — oscillant",
+    faction: "Khazrak Dûm",
+    resume: "Ni Résistant ni Évolutionniste — juste utile, avec des contacts que personne d'autre n'a.",
+    description:
+      "Tient le fil de tous les contacts commerciaux, légaux et de contrebande du clan Ombrefaille à travers les Failles Rouges — y compris avec des intermédiaires humains ou orques selon l'opportunité. Sans conviction idéologique forte, contrairement à Thrakan Kelgarn ou Vrag Grimgal, Skarn cultive délibérément son absence de camp : c'est ce qui lui donne accès à tout le monde. Point d'entrée naturel pour des PJ qui voudraient s'infiltrer dans l'un ou l'autre camp sans devoir déjà choisir un côté.",
+    accroches: [
+      "Skarn pourrait vendre une information à qui paie le mieux — y compris sur Vrag Grimgal ou Thrakan Kelgarn.",
+      "Un PJ cherchant un point d'entrée neutre dans les Failles Rouges passe naturellement par lui.",
+      "Sa neutralité pourrait se fissurer si l'un des deux camps lui fait une offre qu'il ne peut refuser.",
+    ],
+  },
+  {
     id: "thrakan-kelgarn",
     nom: "Thrakan Kelgarn",
     titre: "Chef de clan Khazrak Dûm — Résistant",
@@ -2466,7 +2550,7 @@ const FACTIONS = [
   {
     groupe: "Nains de l'Ordre",
     histoire:
-      "Les Nains ne se racontent pas comme des enfants de l'Arbre-Monde, mais comme une prière exaucée : des élémentaires de pierre éveillés par l'attention d'un dieu Gardien de la Montagne, Valdaan, avant même la Fracture. Cette origine façonne tout le reste — chez eux, la forge n'est pas un métier comme un autre, c'est la seule façon de s'adresser à leur dieu.\n\nKaldrun, la Cité sous la Montagne, s'est construite sur ce principe pendant des siècles sans grand bouleversement, jusqu'au jour où une horde orque et gobeline a manqué de tout emporter par le passage sud des Contreforts de Serval. Les Gardiens du Marteau de l'époque ont scellé ce passage pour de bon — sacrifiant leurs propres garnisons du sud pour sauver la capitale. C'est le Scellement des Portes du Sud (cf. Histoire), l'événement fondateur qui pèse encore, différemment, sur chaque clan de l'Ordre aujourd'hui.\n\nContrairement à Khazrak Dûm, l'Ordre n'a pas perdu son autorité centrale dans la catastrophe — les Gardiens du Marteau ont au contraire resserré leur emprise, présentant le sacrifice comme la preuve qu'une décision unique et rapide, prise en temps de crise, doit rester au-dessus de toute contestation.\n\nCette centralisation, née d'un deuil qu'on ne discute plus, explique pourquoi remettre en cause le Scellement aujourd'hui revient presque à remettre en cause la légitimité même des Gardiens du Marteau — et pourquoi chaque clan porte ce poids à sa manière plutôt que de le porter ensemble.",
+      "Les Nains ne se racontent pas comme des enfants de l'Arbre-Monde, mais comme une prière exaucée : des élémentaires de pierre éveillés par l'attention d'un dieu Gardien de la Montagne, Valdaan, avant même la Fracture. Cette origine façonne tout le reste — chez eux, la forge n'est pas un métier comme un autre, c'est la seule façon de s'adresser à leur dieu.\n\nKaldrun, la Cité sous la Montagne, s'est construite sur ce principe pendant des siècles sans grand bouleversement, jusqu'au jour où une horde orque et gobeline a manqué de tout emporter par le passage sud des Contreforts de Serval. Les Gardiens du Marteau de l'époque ont scellé ce passage pour de bon — sacrifiant leurs propres garnisons du sud pour sauver la capitale. C'est le Scellement des Portes du Sud (cf. Histoire), l'événement fondateur qui pèse encore, différemment, sur chaque clan de l'Ordre aujourd'hui. Sombreforge a tenu la ligne jusqu'au bout ; c'est un maître Runegrave qui a gravé la rune interdite ayant scellé le passage pour de bon — la fierté martiale du sacrifice pour l'un, le poids théologique silencieux d'avoir prononcé la parole qui l'a rendu possible pour l'autre.\n\nLa marque qui se mérite\nUn nain de l'Ordre porte trois noms : le prénom, le nom de famille hérité, et la marque d'appartenance de clan — qui ne se transmet pas. Elle se mérite à chaque génération par une épreuve propre à chaque clan : dix orcs abattus pour les Sombreforge, la maîtrise runique la plus haute pour les Runegrave, une arme runique forgée pour les Pierrefonde, un diplôme de recherche en rune pour les Ferrune. Sans l'épreuve réussie, un nain reste identifié par son seul nom de famille, quelle que soit sa lignée.\n\nContrairement à Khazrak Dûm, l'Ordre n'a pas perdu son autorité centrale dans la catastrophe — les Gardiens du Marteau ont au contraire resserré leur emprise, présentant le sacrifice comme la preuve qu'une décision unique et rapide, prise en temps de crise, doit rester au-dessus de toute contestation.\n\nCette centralisation, née d'un deuil qu'on ne discute plus, explique pourquoi remettre en cause le Scellement aujourd'hui revient presque à remettre en cause la légitimité même des Gardiens du Marteau — et pourquoi chaque clan porte ce poids à sa manière plutôt que de le porter ensemble.",
     // Blason absent tant qu'il n'a pas été déposé dans assets/blasons/
     // (repli silencieux côté rendreFactions() — voir assets/blasons/README.md).
     blason: "assets/blasons/blason_nains_ordre.png",
