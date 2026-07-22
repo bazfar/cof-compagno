@@ -90,6 +90,7 @@ const App = (() => {
   let overlayJetRevealTimer = null;
   let overlayJetDuoTimer = null; // phase "2 dés visibles" avant fusion, cf. afficherOverlayJet (avantage/désavantage)
   let _sonDe = null; // instance Audio réutilisée (évite de la recréer à chaque jet)
+  let _sonEchec = null; // instance Audio réutilisée pour le stinger d'échec critique
 
   /* ---------- Utilitaires ---------- */
 
@@ -6461,6 +6462,17 @@ const App = (() => {
     } catch (e) { /* pas de son plutôt que planter le jet */ }
   }
 
+  // Stinger joué en plus du son de dé, uniquement sur échec critique (1 naturel),
+  // au moment de la révélation du résultat (cf. finPhaseRoulement dans
+  // afficherOverlayJet) — jamais au lancer, pour ne pas se superposer à _jouerSonDe.
+  function _jouerSonEchec() {
+    try {
+      if (!_sonEchec) _sonEchec = new Audio("assets/sounds/echec-critique.mp3");
+      _sonEchec.currentTime = 0;
+      _sonEchec.play().catch(() => {}); // autoplay bloqué (rare) : silencieux
+    } catch (e) { /* pas de son plutôt que planter le jet */ }
+  }
+
   // Remplit et affiche l'overlay de jet de dé (visible sur n'importe quel
   // onglet). entree suit le même format que les entrées de des:histo. Le dé
   // "roule" (son + rotation CSS) le temps du roulement, puis révèle le total.
@@ -6531,7 +6543,7 @@ const App = (() => {
         document.getElementById("overlay-jet-badge").textContent =
           entree.crit ? "CRITIQUE ! 🎉" : entree.echec ? "Échec critique 💀" : "";
         if (entree.crit) overlay.classList.add("crit");
-        else if (entree.echec) overlay.classList.add("echec");
+        else if (entree.echec) { overlay.classList.add("echec"); _jouerSonEchec(); }
         // Durée d'affichage du total final : 5s pour un jet normal, 2s pour
         // un duo (cf. DUREE_DUO_MS ci-dessous) — la lecture des 2 dés a déjà
         // pris son temps, pas besoin de laisser le total affiché aussi
