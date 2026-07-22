@@ -6723,8 +6723,14 @@ const App = (() => {
       `</div>`;
     html += `<img id="lore-carte-img" src="assets/maps/Carte monde.png" alt="Carte du monde" class="lore-carte" />`;
     if (LORE.intro) html += `<p style="font-style:italic;color:#6a6278;">${LORE.intro}</p>`;
+    let categoriePrecedente = null;
     LORE.sections.forEach((s) => {
-      html += `<div class="lore-section"><h3>${s.titre}</h3><div class="contenu">${echapper(s.contenu)}</div></div>`;
+      if (s.categorie && s.categorie !== categoriePrecedente) {
+        html += `<h2 class="lore-categorie">${echapper(s.categorie)}</h2>`;
+        categoriePrecedente = s.categorie;
+      }
+      const attrRole = s.mjSeulement ? ` data-role="mj"` : "";
+      html += `<div class="lore-section"${attrRole}><h3>${echapper(s.titre)}</h3><div class="contenu">${echapper(s.contenu)}</div></div>`;
     });
     zone.innerHTML = html;
     const btnModifierLore = document.getElementById("btn-modifier-lore");
