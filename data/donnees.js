@@ -1953,6 +1953,11 @@ const LORE = {
         "Hiérarchie du Chaos\n\n• Niveau I — Dieux du Chaos : Enfants de la Sève bannis, pleinement cristallisés. Absents physiquement, influence indirecte et plans à long terme.\n• Niveau II — Consciences-émotions (Violence / Meurtre / Traque) : pas encore des dieux, millénaires d'existence. Bénédictions sur champions ; rarement, incarnation temporaire (siècles de recharge).\n• Niveau III — Démons : serviteurs créés par les Dieux du Chaos. Actifs dans le monde, outils de destruction de l'Ordre.\n• Niveau IV — Orcs & Gobelins : corps des consciences dans le monde mortel. Omniprésents, instruments sans dévotion consciente.\n\nL'Incarnation de la Traque — le Silence de Valmoire (il y a ~18 ans)\n\nPour la première fois depuis des siècles, la conscience de la Traque s'est incarnée, dans une zone frontalière disputée entre les terres Mordanel et les marches orientales de Solvarn. Le village de Valmoire a disparu en trois semaines — les habitants traqués un par un, retrouvés des jours après sans marque de lutte. Cette méthode silencieuse et patiente a permis à l'Empire de désigner les Elfes du Crépuscule : \"Qui d'autre traque ainsi, sinon un peuple qui vit dans l'entre-deux du jour et de la nuit ?\"\n\nL'Empire a exploité l'événement pour élargir son accusation à Aetharion également — cible plus \"légitime\" aux yeux de l'opinion solvarienne (riche, isolationniste, déjà mal-aimée) qu'un peuple pauvre et dispersé. Mensonge délibéré ou conviction sincère ? Ambiguïté narrative centrale de la campagne. Et si les Dieux du Chaos avaient manipulé les deux camps simultanément ?\n\nChez les Mordanel, l'événement est encore frais : la fracture interne entre Anciens (retenue) et Jeunes (réponse armée) n'est pas tranchée. Les dryades proches des terres Mordanel se sont en partie retirées depuis le Silence — un désaveu silencieux qui aggrave la fracture (voir section Les Dryades).",
     },
     {
+      titre: "L'Aspect de la Bravoure — la quête de Valdorne",
+      contenu:
+        "La Guerre du Trône a cristallisé des émotions négatives en consciences autonomes — Violence, Meurtre, Traque, et à terme les Dieux du Chaos eux-mêmes. Aucune émotion positive n'a jamais accompli l'inverse. Nulle part. Jamais. C'est précisément ce que Valdorne tente de faire depuis des générations, sans savoir si la chose est seulement possible.\n\nTout part de la mort d'Alaric de Valdorne au Pont-Rompu : un acte de bravoure pure, sans espoir de survie ni de gloire posthume. Le clergé des Gardiens sincères de Valdorne enseigne que ce sacrifice a \"presque\" suffi à faire naître quelque chose — une Conscience-vertu, miroir inversé des Consciences du Chaos, née non de la souffrance infligée mais du sacrifice librement consenti. L'Ordre du Pont, fondé en mémoire d'Alaric, poursuit cette quête sans toujours oser la nommer aussi crûment : chaque vœu tenu, chaque retraite couverte au prix d'une vie, est autant un acte de guerre qu'une tentative de terminer ce qu'Alaric a commencé.\n\nQuelques champions légendaires, à travers les générations, auraient reçu dans des instants de bravoure extrême et désintéressée une clarté ou une force impossibles à expliquer autrement — jamais confirmées, jamais reproductibles à volonté, jamais consignées ailleurs que dans les chants et les vœux des chevaliers. Le Roi Baldwin IV y croit sincèrement, pas seulement par tradition politique — ce qui explique en bonne partie l'intransigeance idéologique de Valdorne envers Solvarn : transiger reviendrait à trahir un serment sacré envers quelque chose qui n'est peut-être même pas encore né.\n\nCar là est toute l'incertitude, gardée volontairement ouverte : personne ne sait si la vertu peut vraiment cristalliser comme la souffrance l'a fait, ou si l'intensité seule de l'émotion compte, indépendamment de sa valence morale. Le courage naît souvent de la peur, du désespoir, de la violence qu'on inflige ou qu'on subit. Rien ne garantit qu'un Aspect de la Bravoure, s'il naissait un jour, ressemblerait à ce que Valdorne espère.\n\nEt l'idéal porte en lui une faille plus immédiate, que peu osent formuler à voix haute : la bravoure qu'on célèbre est réservée à une élite. Seule une petite portion de la population — la noblesse, les lignées de chevaliers — a même la possibilité de tenter l'acte héroïque, reconnu, chanté, susceptible un jour de nourrir la quête. Le reste du royaume vit et meurt en paysans, en conscrits, en soldats de métier sans nom, ou au mieux en écuyers qui ne seront jamais adoubés. La quête collective de Valdorne repose, structurellement, sur le servage et le sacrifice anonyme de ceux à qui on ne donnera jamais la chance de devenir des Alaric. Si un Aspect de la Bravoure naissait un jour d'une vertu cultivée sur un tel fondement, nul ne sait s'il serait aussi pur que ses architectes l'espèrent — ou s'il porterait, comme les Humains portent l'écho de la Fracture, la trace de tout ce qu'il a fallu taire pour le faire naître.",
+    },
+    {
       titre: "Les trois systèmes humains",
       contenu:
         "La Grande Sécession (la Rupture) a eu lieu il y a environ 170 ans — assez loin pour ne plus être un souvenir personnel, assez proche pour rester un souvenir de famille encore instrumentalisé politiquement.\n\nMême origine pour tous les Humains — le sang divin fracturé. Après la Grande Sécession du Premier Empire, trois systèmes se disputent le monde connu : l'Empire de Solvarn, les Royaumes Coalisés (Valdorne, Arveth, Mornac, Serval) et la République de Liberra.\n\nL'Empire de Solvarn (Xénophobe · Centralisé · Religieux · Solaire)\nHéritier du Premier Empire ; la famille impériale revendique le sang des Gardiens de l'Écorce. Le soleil est son symbole. Doctrine : pureté du sang humain comme rempart au Chaos, non-humains = vecteurs de corruption. Ironie : Solvarn a raison sur un point (les Humains sont plus susceptibles au Chaos), appliqué de façon monstrueuse. But : purifier et reconquérir.\n\nLes Royaumes Coalisés (Chevaleresques · Féodaux · Hypocrites)\n• Valdorne : le plus ancien, berceau de la sécession, chevalerie sincère. Blason : un pont brisé surmonté d'une épée dressée, sur azur — écho direct à Pont-Rompu et au sacrifice d'Alaric. Devise : « Un seul suffit. »\n• Arveth : frontalier de Solvarn, sous pression constante — le vacillant. Blason : une flamme vacillante entre deux lances croisées, sur fond cendré. Devise : « Nous tenons la ligne. »\n• Mornac : maritime et commerçant, chevalerie de façade, pragmatique. Blason : une ancre couronnée sur des vagues, sur vert-de-mer. Devise : « Le vent tourne, le profit reste. »\n• Serval : montagnard, allié des Nains de l'Ordre, le plus indépendant. Blason : une enclume sur un pic montagneux, sur gris-pierre. Devise : « La roche encaisse mais ne se brise pas. »\nStructure féodale (Seigneurs → Chevaliers → Paysans). Point de rupture : si Arveth tombe, la coalition se fracture.\n\nLa République de Liberra (Idéaliste · Inclusive · Fracturée)\nNée de la Sécession, rejette l'Empire et le féodalisme. Assemblée de citoyens ; non-humains admis (représentation inégale). Majorité Aelindra, minorité Mordanel. Fractures : marchands vs idéalistes vs militaires vs communautés non-humaines.\n\nTensions actuelles\n• Solvarn → Royaumes : reconquête (Arveth en première ligne).\n• Solvarn → Liberra : hérésie raciale.\n• Solvarn → Aetharion : guerre ouverte.\n• Valdorne → Solvarn : résistance idéaliste, refuse tout compromis.\n• Arveth → Coalition : négociations secrètes déjà engagées avec Solvarn — un flanc coalisé neutralisé libérerait des troupes impériales pour l'effort contre Aetharion. Rupture potentielle si ces contacts sont révélés.\n• Mornac : pragmatisme marchand (commerce avec Liberra, vend à Solvarn si le prix est bon).\n• Serval ↔ Nains de l'Ordre : alliance montagnarde solide.\n• Liberra ↔ Aelindra : alliance naturelle. Liberra ↔ Royaumes : alliance inconfortable contre Solvarn.",
@@ -1966,6 +1971,11 @@ const LORE = {
       titre: "La Rupture — chronique de la Grande Sécession",
       contenu:
         "Quand la dynastie régnante du Premier Empire a durci sa doctrine solaire, une branche a revendiqué l'exclusivité du sang divin des Gardiens et verrouillé le pouvoir — devenant Solvarn. Quatre grandes maisons provinciales (futurs Valdorne, Arveth, Mornac, Serval) ont refusé cette purification et se sont soulevées ensemble : la Rupture. Guerre de dix ans, achevée sur un armistice que Solvarn n'a jamais considéré comme définitif.\n\nTrois batailles marquantes :\n\n• La Charge de Fossessainte (an 1) — bataille d'ouverture à un gué frontalier. Sire Alaric de Valdorne, jeune chevalier sans grade, rallie les colonnes dispersées et transforme une déroute en victoire. Fondateur du code chevaleresque de Valdorne : l'honneur individuel qui sauve la cause commune.\n\n• Le Siège de Mornhaven (an 4-5) — le Haut-Maréchal Corvain Ashe assiège la capitale de Mornac huit mois. Mornac tient grâce aux convois de Serval à travers ses cols — ce qui soude la Coalition en alliance réelle.\n\n• La Bataille du Pont-Rompu (an 9) — Alaric, devenu commandant respecté, meurt en détruisant un pont pour couvrir la retraite coalisée. Un mois plus tard, les deux camps épuisés négocient.\n\nL'Armistice des Quatre Sceaux — signé près de Pont-Rompu. Chaque maison appose son sceau séparément (d'où le nom), refusant un sceau commun. Solvarn signe sous protestation, le considérant comme une pause tactique. Corvain Ashe, marqué par cet échec, aurait inspiré des décennies plus tard le durcissement de la doctrine des Chevaliers-Inquisiteurs.\n\n\"Être un Alaric\", à Valdorne, désigne aujourd'hui un acte de courage qui dépasse son rang.",
+    },
+    {
+      titre: "Les Écourtés et les Endurcis — les rites de guerre d'Arveth",
+      contenu:
+        "Avant la Rupture, Arveth n'était pas une maison de foi ni de commerce, mais d'épée : elle tenait la marche orientale du Premier Empire, déjà en première ligne face aux terres qui deviendraient plus tard celles de Mordanel. Cette expérience militaire, plus qu'aucun autre héritage, a fait d'Arveth le pilier martial de la Coalition après la sécession — le royaume qui sait vraiment se battre, quand Valdorne inspire et que Mornac finance.\n\nMais un pilier qu'on sollicite sans relâche finit par s'user. Cent soixante-dix ans de tension quasi permanente sur la frontière la plus exposée de toute la Coalition ont vidé Arveth d'une manière qu'aucun autre royaume coalisé n'a connue aussi durement : des hameaux qui se dépeuplent faute de bras pour les champs, des garnisons qui ne se renouvellent plus au rythme des naissances, un âge de conscription qui recule d'année en année, génération après génération, sans jamais vraiment s'arrêter de reculer.\n\nFace à cette hémorragie silencieuse, Arveth s'est tourné vers une réponse qu'aucun autre royaume n'a osé formaliser : la modification magique de ses propres soldats.\n\nLe Rite de Maturité Hâtée — que le peuple, en privé, appelle \"les Écourtés\" — accélère en quelques semaines la maturation physique et martiale d'un adolescent de quatorze à seize ans, là où la nature en aurait mis des années. Le nom dit tout : le rite raccourcit l'enfance de ceux qui le subissent, et raccourcit tout autant leur espérance de vie. La magie employée, rapide et instable par nécessité plutôt que par choix, expose ceux qui la reçoivent à un risque de corruption du Chaos plus élevé que la moyenne déjà préoccupante des Humains — un risque que le commandement militaire préfère ne pas quantifier publiquement.\n\nLe Rite du Sang Renforcé — \"les Endurcis\", dans le même argot populaire — vise cette fois des soldats déjà en service : renforcement magique du muscle, des réflexes, de l'endurance, pour qu'un seul combattant augmenté vaille ce qu'il aurait fallu deux ou trois hommes pour accomplir autrefois. Le rituel échoue parfois. Quand il échoue, ce n'est pas une simple inefficacité qu'on déplore : c'est une mort sur la table, ou pire, une mutation qu'on ne peut plus défaire — un corps qui a changé de nature sans que l'esprit qui l'habite ait eu voix au chapitre.\n\nLord Ranulf d'Arvenfall a autorisé les deux programmes à contrecœur, sous la pression insistante de son commandement militaire — un compromis de plus dans une liste qui ne cesse de s'allonger, aux côtés de ses négociations secrètes avec Solvarn. Ce que peu de gens savent encore à la cour, c'est que ce compromis a cessé, récemment, d'être purement abstrait pour lui.\n\nComme pour l'idéal chevaleresque de Valdorne, une réalité plus amère se cache sous la nécessité affichée : les fils et filles de la noblesse d'Arveth échappent presque toujours aux deux rites, exemptés par coutume plutôt que par loi écrite. Ce sont les enfants des paysans, des artisans, des soldats de métier sans nom, qui portent presque seuls le poids des Écourtés et des Endurcis — une asymétrie qu'Arveth partage, sans jamais le formuler ainsi, avec la faille de classe qui ronge l'idéal chevaleresque de son voisin valdornais.",
     },
     {
       titre: "Le Scellement des Portes du Sud",
@@ -2123,6 +2133,66 @@ const PNJ_CLES = [
     ],
   },
   {
+    id: "baldwin-iv",
+    nom: "Roi Baldwin IV de Valdorne",
+    titre: "Roi de Valdorne",
+    faction: "Valdorne",
+    secret: false,
+    resume: "Porte l'héritage d'Alaric comme une conviction vivante — sincèrement habité par la quête de l'Aspect de la Bravoure, pas seulement par tradition politique.",
+    description:
+      "Baldwin gouverne Valdorne moins comme un roi pragmatique que comme le gardien d'un serment qui dépasse sa propre vie : voir un jour la bravoure de son peuple accomplir ce qu'Alaric a failli achever au Pont-Rompu. Cette conviction sincère explique son intransigeance envers Solvarn, jugée naïve par certains courtisans à mesure que la realpolitik gagne du terrain ailleurs dans la Coalition (Arveth en tête).\n\nIl ignore toujours que sa conseillère arcanique de longue date, Minerva Sarelle, a été assassinée par un agent solvarien plutôt que victime d'un accident rituel — il pleure une amie perdue à un mauvais moment, pas une victime de guerre. La vérité, si elle éclate, pourrait autant galvaniser son royaume que fragiliser sa confiance dans ses propres services.",
+    accroches: [
+      "Baldwin pourrait charger des PJ étrangers à la cour d'une quête directement liée à la recherche de \"preuves\" de l'Aspect — sans se douter de ce qu'ils pourraient réellement trouver.",
+      "La découverte de la vérité sur Minerva Sarelle pourrait être révélée par des PJ, forçant Baldwin à choisir entre la colère et le doute sur son propre jugement.",
+      "Sa fille Blanche pourrait tenter d'utiliser des PJ pour lui faire entendre raison sur le coût réel de la quête, sans jamais le confronter directement.",
+    ],
+  },
+  {
+    id: "reine-alienor",
+    nom: "Reine Aliénor de Valdorne",
+    titre: "Reine de Valdorne",
+    faction: "Valdorne",
+    secret: false,
+    resume: "Partage pleinement la foi de son époux dans la quête de l'Aspect — les deux souverains y voient une conviction commune plutôt qu'un désaccord.",
+    description:
+      "Contrairement à beaucoup de mariages politiques entre maisons rivales, Aliénor et Baldwin partagent une foi authentique et commune dans l'héritage d'Alaric — ce qui rend leur couple inhabituellement uni face aux pressions de la cour. Elle gère la vie quotidienne de la couronne avec la même conviction tranquille que son époux, et c'est elle, plus que lui, qui a remarqué que leur fille Blanche commence à douter — sans savoir encore comment aborder la question sans la braquer.",
+    accroches: [
+      "Aliénor pourrait chercher un intermédiaire (un PJ de confiance) pour comprendre les doutes de Blanche avant qu'ils n'éclatent en conflit ouvert avec Baldwin.",
+      "Sa foi sincère pourrait être mise à l'épreuve si des preuves contradictoires sur la nature de l'Aspect émergent.",
+      "Elle pourrait être la première de la famille royale à apprendre la vérité sur Minerva Sarelle, et devoir décider seule si elle en parle à Baldwin.",
+    ],
+  },
+  {
+    id: "prince-roland",
+    nom: "Prince héritier Roland de Valdorne",
+    titre: "Héritier du trône de Valdorne (25 ans)",
+    faction: "Valdorne",
+    secret: false,
+    resume: "Élevé pour devenir le prochain grand exemple chevaleresque — rêve d'accomplir ce qu'Alaric n'a pu terminer.",
+    description:
+      "Roland a grandi en écoutant les chants de Pont-Rompu comme d'autres enfants écoutent des berceuses. Il ne doute jamais de la quête de son père ; il rêve activement d'en devenir l'instrument, l'acte héroïque qui achèverait enfin ce qu'Alaric a commencé. Sire Tristan d'Aurvel, chevalier de l'Ordre du Pont déjà fatigué de porter cet idéal presque seul, voit en Roland à la fois un espoir sincère et une pression supplémentaire : le prince attend de lui des réponses que Tristan n'a plus la certitude de posséder.",
+    accroches: [
+      "Roland pourrait chercher à provoquer lui-même l'occasion d'un acte de bravoure suffisamment pur pour \"réussir\" là où des générations ont échoué — au risque de forcer les choses plutôt que de les laisser advenir.",
+      "Sa relation avec Tristan d'Aurvel pourrait se tendre si Roland perçoit la fatigue morale du chevalier comme un manque de foi.",
+      "Un PJ pourrait devenir malgré lui le témoin (ou l'objet) d'une quête que Roland engage pour prouver sa valeur avant même de monter sur le trône.",
+    ],
+  },
+  {
+    id: "princesse-blanche",
+    nom: "Princesse Blanche de Valdorne",
+    titre: "Princesse de Valdorne (21 ans)",
+    faction: "Valdorne",
+    secret: false,
+    resume: "La seule voix de doute dans la famille royale — pas sur la sincérité de la quête, mais sur ce que Valdorne sacrifie pour la poursuivre.",
+    description:
+      "Blanche ne remet pas en cause la sincérité de son père, ni même la possibilité que l'Aspect existe un jour. Ce qui l'inquiète, c'est le prix : un royaume qui investit son autorité morale et une partie de sa force réelle dans une légende jamais prouvée, pendant que Solvarn regagne du terrain et que la Coalition se fracture doucement autour d'eux (Arveth en négociations secrètes, Serval de plus en plus conditionnel). Elle observe le pragmatisme grandissant ailleurs dans la Coalition avec un mélange d'envie et de culpabilité de ressentir cette envie.\n\nElle n'ose pas confronter son père directement — ce serait, à ses yeux comme aux siens, un acte de trahison familiale autant que politique.",
+    accroches: [
+      "Blanche pourrait chercher, par des canaux indirects (un PJ, un conseiller de confiance), à infléchir la politique de Valdorne sans jamais s'opposer publiquement à son père.",
+      "Elle pourrait être la première de la famille à apprendre que Minerva Sarelle a été assassinée — et à comprendre ce que cela signifie pour la vulnérabilité réelle du royaume.",
+      "Un rapprochement discret avec des voix pragmatiques d'Arveth ou de Mornac pourrait la faire apparaître, aux yeux de certains, comme une menace pour l'unité idéologique de Valdorne.",
+    ],
+  },
+  {
     id: "ranulf-darvenfall",
     nom: "Lord Ranulf d'Arvenfall",
     titre: "Seigneur d'Arveth — le vacillant",
@@ -2134,6 +2204,66 @@ const PNJ_CLES = [
       "Les PJ interceptent une missive ou escortent un émissaire suspect.",
       "Ranulf sollicite directement les PJ pour \"évaluer discrètement\" une option de repli, sans révéler tout de suite ses vraies intentions.",
       "Confrontation possible avec Tristan d'Aurvel si les deux fils narratifs se croisent.",
+    ],
+  },
+  {
+    id: "osric-kell",
+    nom: "Magistre Osric Kell",
+    titre: "Superviseur des rites de guerre d'Arveth",
+    faction: "Arveth",
+    secret: false,
+    resume: "Dirige les Écourtés et les Endurcis avec la conviction sincère qu'il s'agit du seul moyen de sauver Arveth — sans les remords qui rongent Ranulf.",
+    description:
+      "Là où Ranulf autorise les rites à contrecœur, Osric les a conçus et continue de les défendre avec une conviction froide et sans hésitation apparente : Arveth mourra de toute façon si personne n'agit, alors autant agir efficacement. Il tient des registres méticuleux des échecs (morts, mutations) qu'il présente à la cour comme un coût de guerre acceptable, au même titre que des pertes au combat — une comparaison que beaucoup, y compris Ranulf, ont du mal à accepter aussi froidement que lui.\n\nIl ignore encore que la propre fille de Ranulf s'est portée volontaire pour le Rite du Sang Renforcé ; quand il l'apprendra, sa réaction (fierté d'avoir une conversion aussi symbolique, ou malaise d'exposer la famille régnante au même risque que les autres) reste à déterminer selon les besoins de la campagne.",
+    accroches: [
+      "Osric pourrait chercher à recruter des PJ pour tester une variante plus risquée des rites, présentée comme une amélioration.",
+      "Un PJ pourrait découvrir les registres des échecs d'Osric et devoir décider s'il les rend publics.",
+      "La découverte qu'Elswyth s'est portée volontaire pourrait forcer Osric à choisir entre la protéger discrètement et la traiter comme n'importe quel autre sujet.",
+    ],
+  },
+  {
+    id: "merielle-darvenfall",
+    nom: "Lady Mérielle d'Arvenfall",
+    titre: "Épouse de Lord Ranulf d'Arvenfall",
+    faction: "Arveth",
+    secret: false,
+    resume: "Porte en silence le poids des deux secrets de son mari — les négociations avec Solvarn, et maintenant le choix de leur fille.",
+    description:
+      "Mérielle a soutenu Ranulf à travers chacun de ses compromis, convaincue comme lui qu'un mauvais choix vaut parfois mieux qu'aucun choix. Mais la décision d'Elswyth de se soumettre elle-même au Rite du Sang Renforcé a fissuré cette solidarité silencieuse pour la première fois : Mérielle n'arrive pas à décider si elle est terrifiée, ou secrètement fière que sa fille refuse le privilège qui aurait dû la protéger.",
+    accroches: [
+      "Mérielle pourrait chercher, en secret et sans le dire à Ranulf, à obtenir des garanties d'Osric Kell sur la sécurité du rituel d'Elswyth.",
+      "Elle pourrait devenir la première à craquer et révéler l'existence des négociations avec Solvarn, si la pression familiale devient trop forte.",
+      "Un PJ pourrait devenir son confident malgré lui, simplement en étant présent au mauvais moment.",
+    ],
+  },
+  {
+    id: "edmund-darvenfall",
+    nom: "Edmund d'Arvenfall",
+    titre: "Héritier d'Arveth (24 ans)",
+    faction: "Arveth",
+    secret: false,
+    resume: "Protégé par la coutume qui exempte la noblesse des rites de guerre — un privilège qu'il porte de plus en plus mal.",
+    description:
+      "Edmund n'a jamais eu à choisir entre l'enfance et le champ de bataille, contrairement à la plupart des jeunes gens de son âge à Arveth. Il le sait, et ça le ronge discrètement — d'autant plus depuis qu'Elswyth, sa cadette, a choisi de renoncer à cette même protection. Il n'a pas son courage, ou pas encore, et n'ose pas se l'avouer complètement.",
+    accroches: [
+      "Edmund pourrait chercher à compenser sa culpabilité par un excès de zèle politique ou militaire, sans jamais vraiment égaler le geste de sa sœur.",
+      "Un PJ issu du peuple pourrait le confronter, consciemment ou non, sur le privilège dont il n'a jamais eu à répondre.",
+      "Si Ranulf venait à disparaître, Edmund devrait choisir s'il perpétue les mêmes compromis ou change de cap — sans être certain d'en avoir la force.",
+    ],
+  },
+  {
+    id: "elswyth-darvenfall",
+    nom: "Elswyth d'Arvenfall",
+    titre: "Cadette d'Arveth (19 ans)",
+    faction: "Arveth",
+    secret: true,
+    resume: "S'est portée volontaire pour le Rite du Sang Renforcé contre l'avis de son père — la noblesse d'Arveth n'est pas censée porter ce risque.",
+    description:
+      "Elswyth a grandi en regardant partir des jeunes gens de son âge, année après année, sans jamais avoir à craindre le même sort. Ce privilège est devenu, avec le temps, une honte qu'elle ne pouvait plus porter en silence. Contre l'avis explicite de Ranulf et à l'insu d'Osric Kell jusqu'à très récemment, elle s'est portée volontaire pour le Rite du Sang Renforcé — un geste qu'elle refuse de présenter comme un sacrifice, insistant qu'il s'agit simplement de justice.\n\nRanulf ne sait pas encore comment réagir : l'en empêcher par son autorité de père et de seigneur trahirait tout ce qu'il prétend défendre en autorisant le rite pour les autres ; la laisser faire pourrait lui coûter sa fille.",
+    accroches: [
+      "Le rituel d'Elswyth pourrait échouer, réussir, ou produire un résultat ambigu — un moment charnière pour toute la famille d'Arvenfall et pour la politique intérieure d'Arveth.",
+      "Des PJ pourraient être sollicités, sciemment ou non, pour protéger ou surveiller Elswyth pendant ou après le rituel.",
+      "Si sa décision devient publique, elle pourrait devenir malgré elle un symbole politique — pour ou contre la poursuite des rites de guerre — bien au-delà de ce qu'elle a voulu.",
     ],
   },
   {
@@ -2799,14 +2929,14 @@ const FACTIONS = [
         devise: "Un seul suffit.",
         blason: "assets/blasons/blason_valdorne.png",
         description:
-          "Souverain actuel : Roi Baldwin IV de Valdorne, porte l'héritage d'Alaric comme une conviction vivante, pas un folklore — capitale Valdecourt.\nBlason : un pont brisé surmonté d'une épée dressée, sur azur — écho direct à Pont-Rompu.\nMage attitrée : Minerva Sarelle, conseillère arcanique de la couronne pendant des décennies, morte récemment — officiellement d'une \"défaillance rituelle\", en réalité assassinée par un agent solvarien. Un secret que seule une poignée de personnes soupçonne, que personne ne peut prouver, et que Baldwin lui-même ignore (cf. PNJ clés).\nFracture interne : plus la realpolitik gagne du terrain ailleurs dans la Coalition (Arveth en tête), plus Baldwin s'isole dans un idéalisme que certains courtisans jugent naïf face à la menace réelle — et il vient de perdre, sans le savoir, son conseil arcanique le plus fiable au pire moment possible.\nMiroir : la maison Ashe de Solvarn, la même chevalerie sincère devenue discipline totale sous la doctrine impériale.",
+          "Souverain actuel : Roi Baldwin IV de Valdorne, porte l'héritage d'Alaric comme une conviction vivante, pas un folklore — capitale Valdecourt.\n\nBlason : un pont brisé surmonté d'une épée dressée, sur azur — écho direct à Pont-Rompu.\n\nFamille : Reine Aliénor (partage pleinement sa foi dans la quête) ; Prince héritier Roland (25 ans), élevé pour devenir le prochain grand exemple chevaleresque ; Princesse Blanche (21 ans), seule voix de doute — pas sur la sincérité de la quête, mais sur le prix que Valdorne paie pour la poursuivre (cf. PNJ clés).\n\nL'obsession du royaume : depuis des générations, Valdorne poursuit la naissance d'un Aspect de la Bravoure, miroir inversé des Consciences du Chaos — jamais accompli nulle part, par personne (cf. section \"L'Aspect de la Bravoure\"). Cette quête repose sur un fondement rarement questionné : seule la noblesse chevaleresque peut prétendre à l'acte héroïque reconnu ; le reste du royaume sert en paysans, conscrits ou écuyers jamais adoubés.\n\nMage attitrée : Minerva Sarelle, conseillère arcanique de la couronne pendant des décennies, morte récemment — officiellement d'une \"défaillance rituelle\", en réalité assassinée par un agent solvarien. Un secret que seule une poignée de personnes soupçonne, que personne ne peut prouver, et que Baldwin lui-même ignore (cf. PNJ clés).\n\nFracture interne : plus la realpolitik gagne du terrain ailleurs dans la Coalition (Arveth en tête), plus Baldwin s'isole dans un idéalisme que certains courtisans jugent naïf face à la menace réelle — et il vient de perdre, sans le savoir, son conseil arcanique le plus fiable au pire moment possible.\n\nMiroir : la maison Ashe de Solvarn, la même chevalerie sincère devenue discipline totale sous la doctrine impériale.",
       },
       {
         nom: "Arveth — le vacillant",
         devise: "Nous tenons la ligne.",
         blason: "assets/blasons/blason_arveth.png",
         description:
-          "Seigneur actuel : Lord Ranulf d'Arvenfall (cf. PNJ clés), négocie en secret avec Solvarn par peur sincère pour son peuple plus que par ambition — capitale Arvenfall, frontière directe avec l'Empire.\nBlason : une flamme vacillante entre deux lances croisées, sur fond cendré.\nMage attitré : Aldous Ferren, un des derniers praticiens de la foi libre des Gardiens encore toléré à la cour — de plus en plus regardé de travers par le culte solvarien qui s'infiltre dans les temples d'Arveth, tension religieuse qui se superpose à la tension politique du palais (cf. PNJ clés).\nFracture interne : le culte solvarien s'infiltre déjà dans ses temples — si Arveth bascule religieusement avant de basculer militairement, la Coalition perd son ciment moral avant même sa force armée.\nMiroir : aucun miroir loyaliste direct côté Solvarn — Arveth est le seul royaume dont le retour dans le giron impérial reste une possibilité concrète plutôt qu'une trahison de principe.",
+          "Seigneur actuel : Lord Ranulf d'Arvenfall (cf. PNJ clés), négocie en secret avec Solvarn par peur sincère pour son peuple plus que par ambition — capitale Arvenfall, frontière directe avec l'Empire.\n\nBlason : une flamme vacillante entre deux lances croisées, sur fond cendré.\n\nFamille : Lady Mérielle d'Arvenfall (épouse) ; Edmund (aîné, 24 ans), héritier protégé par la coutume qui exempte la noblesse des rites de guerre ; Elswyth (cadette, 19 ans), qui a choisi de se soumettre elle-même au Rite du Sang Renforcé contre l'avis de son père (cf. PNJ clés).\n\nLes rites de guerre : face à l'hémorragie démographique d'un siècle et demi de tension frontalière quasi permanente, Arveth pratique deux programmes de modification magique de ses soldats — le Rite de Maturité Hâtée (\"les Écourtés\") et le Rite du Sang Renforcé (\"les Endurcis\"), tous deux supervisés par le Magistre Osric Kell (cf. section \"Les Écourtés et les Endurcis\" et PNJ clés). Les deux rites comportent des risques sérieux — corruption du Chaos, mort, mutation — et pèsent presque exclusivement sur les enfants du peuple, la noblesse y échappant par coutume.\n\nMage attitré : Aldous Ferren, un des derniers praticiens de la foi libre des Gardiens encore toléré à la cour — de plus en plus regardé de travers par le culte solvarien qui s'infiltre dans les temples d'Arveth, tension religieuse qui se superpose à la tension politique du palais (cf. PNJ clés).\n\nFracture interne : le culte solvarien s'infiltre déjà dans ses temples — si Arveth bascule religieusement avant de basculer militairement, la Coalition perd son ciment moral avant même sa force armée.\n\nMiroir : aucun miroir loyaliste direct côté Solvarn — Arveth est le seul royaume dont le retour dans le giron impérial reste une possibilité concrète plutôt qu'une trahison de principe.",
       },
       {
         nom: "Mornac — le pragmatique",
