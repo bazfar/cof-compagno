@@ -567,6 +567,16 @@ const App = (() => {
     return jet.total >= defCible;
   }
 
+  // Caractéristique dont dépend un jet d'attaque, selon son type — pour le
+  // Contrat Démoniaque (cf. lancerTest/opts.caracCode) uniquement : réutilise
+  // CARAC_MAGIE (data/donnees.js), déjà la source de perso.bonusAttaque("magique").
+  function _caracPourTypeAttaque(type, perso) {
+    if (type === "contact" || type === "lancer") return "FOR";
+    if (type === "distance") return "DEX";
+    if (type === "magique" && perso) return (typeof CARAC_MAGIE !== "undefined" && CARAC_MAGIE[perso.classe]) || null;
+    return null;
+  }
+
   // Résout une attaque rapide à l'arme : lance le jet (réutilise lancerTest,
   // ne duplique jamais le tirage de dés/le journal). Si `cibleId` (id de
   // TOKEN dd2vtt, cf. _cibleDistanceId/_ciblesPortee — PAS un id de
@@ -574,8 +584,10 @@ const App = (() => {
   // _toucheVsDef. Un token PJ n'a pas de champ `def` direct (contrairement à
   // un token monstre) : il faut recalculer Personnage.calculerDEF() via son
   // `ref` ("pj-"+persoId), cf. _ciblesPortee/ajouterMonPersoBattlemap.
-  function _resoudreAttaqueRapide(label, bonus, critMin, cibleId) {
-    const jet = lancerTest(label, bonus, critMin);
+  // opts (optionnel) : { persoId, caracCode } transmis tel quel à lancerTest
+  // (cf. sa doc) pour le Contrat Démoniaque/l'Anneau de Chance.
+  function _resoudreAttaqueRapide(label, bonus, critMin, cibleId, opts) {
+    const jet = lancerTest(label, bonus, critMin, null, opts);
     let defCible = null;
     if (cibleId && typeof Carte !== "undefined") {
       const monstre = (Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : []).find((t) => t.id === cibleId);
@@ -1003,7 +1015,7 @@ const App = (() => {
         const type = el.dataset.bmAttaque;
         const bonus = parseInt(el.dataset.bonus, 10);
         const cibleId = (_typeAttaquePortee === type) ? _cibleDistanceId : null;
-        const resolution = _resoudreAttaqueRapide(`Attaque ${type}`, bonus, perso.critMinAttaque(type), cibleId);
+        const resolution = _resoudreAttaqueRapide(`Attaque ${type}`, bonus, perso.critMinAttaque(type), cibleId, { persoId: perso.id, caracCode: _caracPourTypeAttaque(type, perso) });
         // cibleId conservé ici (pas seulement dans la résolution du jet) :
         // sert au bouton "Dégâts" pour appliquer automatiquement le résultat
         // sur la BONNE cible au moment du clic (cf. _appliquerDegatsCibleRapide),
@@ -1395,7 +1407,7 @@ const App = (() => {
         const type = el.dataset.bmAttaque;
         const bonus = parseInt(el.dataset.bonus, 10);
         const cibleId = (_typeAttaquePortee === type) ? _cibleDistanceId : null;
-        const resolution = _resoudreAttaqueRapide(`Attaque ${type}`, bonus, perso.critMinAttaque(type), cibleId);
+        const resolution = _resoudreAttaqueRapide(`Attaque ${type}`, bonus, perso.critMinAttaque(type), cibleId, { persoId: perso.id, caracCode: _caracPourTypeAttaque(type, perso) });
         // cibleId conservé ici (pas seulement dans la résolution du jet) :
         // sert au bouton "Dégâts" pour appliquer automatiquement le résultat
         // sur la BONNE cible au moment du clic (cf. _appliquerDegatsCibleRapide),
@@ -1464,7 +1476,7 @@ const App = (() => {
         const modeForce = (code === "CON" && perso.aEnduranceDeFer()) || (code === "SAG" && perso.aAvantageResistanceMentale())
           ? "avantage" : null;
         const bonusAmes = code === "INT" ? perso.bonusSavoirVole() : 0;
-        lancerTest(`Test de ${code}`, mods[code] + bonusAmes, null, modeForce);
+        lancerTest(`Test de ${code}`, mods[code] + bonusAmes, null, modeForce, { persoId: perso.id, caracCode: code });
       };
     });
     // Objets : boire/utiliser un consommable de soin sur soi (réutilise
@@ -4552,7 +4564,7 @@ const App = (() => {
             messages.push(`✅ ${m.nom} : pas d'attaque d'opportunité (don Mobile).`);
             return;
           }
-          const jet = lancerTest(`${perso.nom || "Perso"} — Poussée (désengagement vs ${m.nom})`, bonusFor, 20);
+          const jet = lancerTest(`${perso.nom || "Perso"} — Poussée (désengagement vs ${m.nom})`, bonusFor, 20, null, { persoId: perso.id, caracCode: "FOR" });
           const defM = typeof m.def === "number" ? m.def : null;
           const reussi = defM !== null && jet.total >= defM;
           if (reussi) {
@@ -4632,7 +4644,7 @@ const App = (() => {
         const critMin = perso.critMinAttaque("contact");
         const messages = [];
         adjacents.forEach((m) => {
-          const resolution = _resoudreAttaqueRapide(`${perso.nom || "Perso"} — Attaque d'opportunité vs ${m.nom}`, bonus, critMin, m.id);
+          const resolution = _resoudreAttaqueRapide(`${perso.nom || "Perso"} — Attaque d'opportunité vs ${m.nom}`, bonus, critMin, m.id, { persoId: perso.id, caracCode: "FOR" });
           if (resolution.echecCritique) {
             messages.push(`❌ Échec critique automatique sur ${m.nom} (1 naturel), pas de dégâts.`);
           } else if (resolution.touche === false) {
@@ -4720,6 +4732,18 @@ const App = (() => {
       </div>`;
     }).join("");
 
+    // Contrat Démoniaque (data/loot.json: contrat_demoniaque) : pas de notion
+    // de repos long dans l'app — réinitialisation manuelle par le joueur,
+    // visible seulement si le contrat a été utilisé/a une pénalité active
+    // (cf. Personnage.penaliteContratDemoniaque, js/app.js lancerTest).
+    const contratActif = perso.contratDemoniaqueUtilise || perso.contratDemoniaquePenalite;
+    const contratHtml = contratActif
+      ? `<div class="recap-equipement" style="margin-top:6px;">
+          <div>🔥 Contrat Démoniaque : ${perso.contratDemoniaquePenalite ? `-${perso.contratDemoniaquePenalite.valeur} ${perso.contratDemoniaquePenalite.carac}` : "utilisé"}</div>
+          <button class="btn petit secondaire" id="btn-reset-contrat-demoniaque">🔄 Réinitialiser le Contrat Démoniaque</button>
+        </div>`
+      : "";
+
     return `
       <div class="carte">
         <h3 class="titre-bandeau" style="font-size:1rem;">🛡️ Équipement</h3>
@@ -4728,6 +4752,7 @@ const App = (() => {
           <div>DEF totale : <strong>${_defPjAvecAura(perso, perso.id)}</strong> (dont +${perso.bonusDefEquipement()} équipement)</div>
           <div>Réduction de dégâts : <strong>${perso.reductionDegats()}</strong></div>
         </div>
+        ${contratHtml}
         <div class="selecteur-slot" id="selecteur-slot-equip" style="display:none;"></div>
       </div>`;
   }
@@ -5167,25 +5192,24 @@ const App = (() => {
   }
 
   // Soin direct (symétrique de subirDegats) : clamp via ajusterPv, toast dédié.
+  // Délègue à Personnage.appliquerGainPv (point d'application unique de tout
+  // gain de PV) — gère le halving Corruption persistante ET la Dette du
+  // Soigneur (data/loot.json: collier_dette_soigneur).
   function soigner(id, montant, source) {
     if (!montant) return;
     const persos = chargerPersos();
     const p = persos[id];
     if (!p) return;
-    // Prêtre — Voie du chaos, rang 4 "Corruption persistante" (dès CA 5+) :
-    // les soins REÇUS par ce personnage sont réduits de moitié (arrondi
-    // inf.), quelle que soit la source du soin.
-    const perso = Personnage.depuisJSON(p);
-    const montantReduit = perso.aCorruptionPersistante() ? Math.floor(montant / 2) : montant;
     const avant = p.pvActuel;
-    p.pvActuel = Math.max(0, Math.min(p.pvMax, p.pvActuel + montantReduit));
+    const res = Personnage.appliquerGainPv(p, montant);
     const transition = _majEtatMourant(p, avant);
     sauverPersos(persos);
     _syncPvAffichages(id, p);
     if (transition) _rerendreApresTransitionMourant(id);
-    const gain = p.pvActuel - avant;
-    const suffixeReduit = montantReduit < montant ? ` (réduit de moitié — Corruption persistante)` : "";
-    toast(`❤ ${p.nom} récupère ${gain} PV${source ? " (" + source + ")" : ""}${suffixeReduit}.`);
+    const suffixeReduit = res.detteAnnulee
+      ? ` (Dette du Soigneur : gain annulé, dette effacée)`
+      : res.reduit ? ` (réduit de moitié — Corruption persistante)` : "";
+    toast(`❤ ${p.nom} récupère ${res.gain} PV${source ? " (" + source + ")" : ""}${suffixeReduit}.`);
   }
 
   // Bouton "Utiliser" : le personnage consomme lui-même l'objet, soin immédiat
@@ -5636,7 +5660,7 @@ const App = (() => {
         if (code === "INT" && _armerAvantageJournalier("arme-int-heroique", "classe:magicien:univ5")) modeForce = "avantage";
         else if (code === "INT" && _armerAvantageJournalier("arme-double-heritage", "race:demi_elfe:5")) modeForce = "avantage";
         const bonusAmes = code === "INT" ? perso.bonusSavoirVole() : 0;
-        lancerTest(`Test de ${code}`, mods[code] + bonusAmes, null, modeForce);
+        lancerTest(`Test de ${code}`, mods[code] + bonusAmes, null, modeForce, { persoId: perso.id, caracCode: code });
         allerVers("des");
       };
     });
@@ -5656,7 +5680,7 @@ const App = (() => {
         const bonus = perso.modCompetence(nom, code);
         let modeForce = perso.aActeur() && COMPETENCES_ACTEUR.includes(nom) ? "avantage" : null;
         if (COMPETENCES_DOUBLE_HERITAGE.includes(nom) && _armerAvantageJournalier("arme-double-heritage", "race:demi_elfe:5")) modeForce = "avantage";
-        lancerTest(`Test de ${nom}`, bonus, null, modeForce);
+        lancerTest(`Test de ${nom}`, bonus, null, modeForce, { persoId: perso.id, caracCode: code });
         allerVers("des");
       };
     });
@@ -5664,7 +5688,7 @@ const App = (() => {
     zone.querySelectorAll("[data-attaque]").forEach((el) => {
       el.onclick = () => {
         const bonus = parseInt(el.dataset.bonus, 10);
-        lancerTest(`Attaque ${el.dataset.attaque}`, bonus, perso.critMinAttaque(el.dataset.attaque));
+        lancerTest(`Attaque ${el.dataset.attaque}`, bonus, perso.critMinAttaque(el.dataset.attaque), null, { persoId: perso.id, caracCode: _caracPourTypeAttaque(el.dataset.attaque, perso) });
         allerVers("des");
       };
     });
@@ -5747,6 +5771,9 @@ const App = (() => {
     zone.querySelectorAll(".btn-ouvrir-equiper").forEach((el) => {
       el.onclick = () => ouvrirSelecteurEquip(id, el.dataset.slot);
     });
+    // Contrat Démoniaque — reset manuel (cf. rendreBlocEquipement)
+    const btnResetContrat = zone.querySelector("#btn-reset-contrat-demoniaque");
+    if (btnResetContrat) btnResetContrat.onclick = () => reinitialiserContratDemoniaque(id);
     // Inventaire — équiper directement (choisit l'emplacement automatiquement)
     zone.querySelectorAll(".btn-equiper-depuis-inv").forEach((el) => {
       el.onclick = () => equiperItem(id, parseInt(el.dataset.idx, 10));
@@ -5870,25 +5897,59 @@ const App = (() => {
     rendreFicheSidebarBattlemap(ficheSidebarActiveId);
     rendreDockCombat();
   }
+  // Ajustement manuel MJ (+/-) : contrairement à soigner(), n'a jamais
+  // appliqué le halving Corruption persistante (correction/triche assumée du
+  // MJ, pas un vrai "soin") — un delta positif reste néanmoins un gain de PV
+  // et doit donc pouvoir déclencher/payer la Dette du Soigneur (cf.
+  // Personnage.appliquerGainPv, { ignorerCorruption: true }). Un delta négatif
+  // (perte) n'a rien à voir avec un gain, inchangé.
   function ajusterPv(id, delta) {
     const persos = chargerPersos();
     const p = persos[id];
     const pvAvant = p.pvActuel;
-    p.pvActuel = Math.max(0, Math.min(p.pvMax, p.pvActuel + delta));
+    if (delta > 0) {
+      Personnage.appliquerGainPv(p, delta, { ignorerCorruption: true });
+    } else {
+      p.pvActuel = Math.max(0, Math.min(p.pvMax, p.pvActuel + delta));
+    }
     const transition = _majEtatMourant(p, pvAvant);
     sauverPersos(persos);
     _syncPvAffichages(id, p);
     if (transition) _rerendreApresTransitionMourant(id);
   }
+  // Saisie MJ d'une valeur PV absolue — même logique qu'ajusterPv ci-dessus :
+  // une hausse est un gain de PV (Dette du Soigneur applicable), une baisse
+  // ou une valeur inchangée ne l'est pas.
   function definirPv(id, val) {
     const persos = chargerPersos();
     const p = persos[id];
     const pvAvant = p.pvActuel;
-    p.pvActuel = isNaN(val) ? p.pvActuel : Math.max(0, Math.min(p.pvMax, val));
+    if (isNaN(val)) {
+      // valeur invalide : inchangé, comme avant.
+    } else if (val > p.pvActuel) {
+      Personnage.appliquerGainPv(p, val - p.pvActuel, { ignorerCorruption: true });
+    } else {
+      p.pvActuel = Math.max(0, Math.min(p.pvMax, val));
+    }
     const transition = _majEtatMourant(p, pvAvant);
     sauverPersos(persos);
     _syncPvAffichages(id, p);
     if (transition) _rerendreApresTransitionMourant(id);
+  }
+
+  // Contrat Démoniaque (data/loot.json: contrat_demoniaque) : bouton de reset
+  // manuel géré par le joueur lui-même (cf. rendreBlocEquipement) — pas de
+  // notion de repos long dans l'app. Efface à la fois la pénalité de
+  // caractéristique ET la disponibilité de l'usage.
+  function reinitialiserContratDemoniaque(id) {
+    const persos = chargerPersos();
+    const p = persos[id];
+    if (!p) return;
+    p.contratDemoniaqueUtilise = false;
+    p.contratDemoniaquePenalite = null;
+    sauverPersos(persos);
+    if (ficheActiveId === id) afficherFiche(id);
+    toast(`🔥 Contrat Démoniaque réinitialisé pour ${p.nom}.`);
   }
 
   // Notes libres de la fiche vivante (idées, quêtes en cours...) — éditables
@@ -6285,9 +6346,18 @@ const App = (() => {
   // Renvoie { total, de, crit, echec } — lu par _resoudreAttaqueRapide pour
   // gater le bouton de dégâts sans dupliquer le tirage de dés/le journal ;
   // les appelants historiques (ne regardant pas le retour) ne sont pas affectés.
-  function lancerTest(label, bonus, critMin, modeForce) {
+  // opts = { persoId, caracCode } (tous deux optionnels) : identifie le PJ qui
+  // lance CE jet précis et la caractéristique dont il dépend, uniquement pour
+  // activer le Contrat Démoniaque / l'Anneau de Chance sur Naturel s'il les
+  // porte (data/loot.json) — cf. _proposerBonusItemsLance/_apresJetAnneauChance
+  // ci-dessous. Sans opts.persoId (dés libres, panneau "Dés"), aucun item ne
+  // s'active : comportement strictement inchangé.
+  function lancerTest(label, bonus, critMin, modeForce, opts) {
+    opts = opts || {};
     bonus = bonus || 0;
     critMin = critMin || 20;
+    const bonusItems = opts.persoId ? _proposerBonusItemsLancer(opts.persoId, opts.caracCode) : 0;
+    bonus += bonusItems;
     const mode = modeForce || modeD20();
     const { de, d1, d2, detailDes } = _lancerD20SelonMode(mode);
     const total = de + bonus;
@@ -6295,7 +6365,71 @@ const App = (() => {
     const detail = `${detailDes} ${signe(bonus)}`;
     afficherResultat(label, total, detail, crit, echec);
     ajouterHisto(label + " " + signe(bonus), total, crit, echec, detail, { mode, d1, d2 });
+    if (echec && opts.persoId) _apresJetAnneauChance(opts.persoId);
     return { total, de, crit, echec };
+  }
+
+  // Contrat Démoniaque (contrat_demoniaque) / Anneau de Chance sur Naturel
+  // (anneau_chance_naturel) : proposés AVANT le jet (prompt/confirm), un seul
+  // item à la fois peut se déclencher par clic — chacun modifie `bonus` et
+  // pose son propre state persistant sur le perso. Retourne le bonus total à
+  // ajouter au jet (0 si aucun item porté, ou si le joueur décline).
+  function _proposerBonusItemsLancer(persoId, caracCode) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return 0;
+    const perso = Personnage.depuisJSON(p);
+    const items = perso._itemsEquipesUniques();
+    let bonusTotal = 0;
+    let modifie = false;
+    // Contrat Démoniaque : la pénalité qu'il pose dépend de la caractéristique
+    // liée au jet — sans caracCode connu (ex. jet libre non rattaché à une
+    // carac précise), l'item n'a rien de cohérent à pénaliser, donc on ne le
+    // propose pas plutôt que de deviner.
+    if (caracCode && !p.contratDemoniaqueUtilise && items.some((it) => it.id === "contrat_demoniaque")) {
+      const saisie = prompt(`🔥 Contrat Démoniaque : utiliser sur ce jet ? Choisis un bonus (nombre entier), ou laisse vide pour ne pas l'utiliser.\nEn contrepartie, cette valeur sera déduite du modificateur de ${caracCode} jusqu'à réinitialisation manuelle du contrat.`);
+      const n = saisie === null || saisie.trim() === "" ? NaN : parseInt(saisie, 10);
+      if (!isNaN(n) && n !== 0) {
+        bonusTotal += n;
+        p.contratDemoniaqueUtilise = true;
+        p.contratDemoniaquePenalite = { carac: caracCode, valeur: n };
+        modifie = true;
+      }
+    }
+    if (items.some((it) => it.id === "anneau_chance_naturel")) {
+      const cumulsAvant = p.anneauChanceCumuls || 0;
+      const ok = confirm(`💍 Anneau de Chance sur Naturel : ajouter +5 à ce jet ?\nCumuls actuels : ${cumulsAvant} — un 1 naturel infligera alors ${cumulsAvant + 1}d10 de dégâts directs.`);
+      if (ok) {
+        bonusTotal += 5;
+        p.anneauChanceCumuls = cumulsAvant + 1;
+        modifie = true;
+      }
+    }
+    if (modifie) sauverPersos(persos);
+    return bonusTotal;
+  }
+
+  // Contrecoup de l'Anneau de Chance sur Naturel : appelé uniquement après un
+  // jet en 1 naturel (echec === true, cf. lancerTest ci-dessus). Dégâts
+  // DIRECTS (pas de réduction d'armure/PV temporaires — c'est une malédiction,
+  // pas une attaque), cumuls remis à 0 quoi qu'il arrive.
+  function _apresJetAnneauChance(persoId) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p || !p.anneauChanceCumuls) return;
+    const cumuls = p.anneauChanceCumuls;
+    const jets = [];
+    let total = 0;
+    for (let i = 0; i < cumuls; i++) { const v = lancerDe(10); jets.push(v); total += v; }
+    p.anneauChanceCumuls = 0;
+    const avant = p.pvActuel;
+    p.pvActuel = Math.max(0, p.pvActuel - total);
+    ajouterHisto(`${p.nom} — Contrecoup de l'Anneau de Chance`, -total, false, false, `${cumuls}d10 [${jets.join(",")}]`);
+    const transition = _majEtatMourant(p, avant);
+    sauverPersos(persos);
+    _syncPvAffichages(persoId, p);
+    if (transition) _rerendreApresTransitionMourant(persoId);
+    toast(`💍 1 naturel ! L'Anneau de Chance inflige ${total} dégâts directs à ${p.nom} (${cumuls}d10, cumuls remis à 0).`);
   }
 
   // d20 "simple" (section Dés simples) : respecte quand même le mode

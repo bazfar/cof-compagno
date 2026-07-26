@@ -47,11 +47,19 @@ const Capacites = (() => {
       if (de) {
         const nb = parseInt(de[1] || "1", 10);
         const faces = parseInt(de[2], 10);
-        const jets = [];
-        for (let i = 0; i < nb; i++) jets.push(App.lancerDe(faces));
-        valeur = jets.reduce((a, b) => a + b, 0);
-        libelle = `${brut}[${jets.join(",")}]`;
-        if (critique) {
+        // Collier de la Dette du Soigneur (data/loot.json: collier_dette_soigneur) :
+        // le sort de soin du porteur soigne sa valeur MAX sans jet de dés — cf.
+        // resoudreEffet("soin") ci-dessous, seul appelant qui passe forcerMax.
+        let jets = [];
+        if (ctx.forcerMax) {
+          valeur = nb * faces;
+          libelle = `${brut}[max]`;
+        } else {
+          for (let i = 0; i < nb; i++) jets.push(App.lancerDe(faces));
+          valeur = jets.reduce((a, b) => a + b, 0);
+          libelle = `${brut}[${jets.join(",")}]`;
+        }
+        if (!ctx.forcerMax && critique) {
           const jets2 = [];
           for (let i = 0; i < nb; i++) jets2.push(App.lancerDe(faces));
           valeur += jets2.reduce((a, b) => a + b, 0);
@@ -405,13 +413,13 @@ const Capacites = (() => {
   // Prêtre — Voie du chaos rang 4 "Corruption persistante" (dès CA 5+) : les
   // soins REÇUS par la cible sont réduits de moitié (arrondi inf.), quelle
   // que soit la source — même règle qu'app.js/soigner(), seul autre point
-  // d'application d'un soin à un PJ.
+  // d'application d'un soin à un PJ. Délègue à Personnage.appliquerGainPv
+  // (point d'application unique de tout gain de PV, cf. sa doc) qui gère
+  // aussi la Dette du Soigneur (data/loot.json: collier_dette_soigneur) —
+  // hérité gratuitement ici par le vol de vie/Sang impie, seuls autres
+  // appelants de cette fonction.
   function appliquerSoinPersoLocal(pCible, montant) {
-    const perso = Personnage.depuisJSON(pCible);
-    const montantReduit = perso.aCorruptionPersistante() ? Math.floor(montant / 2) : montant;
-    const avant = pCible.pvActuel;
-    pCible.pvActuel = Math.max(0, Math.min(pCible.pvMax, pCible.pvActuel + montantReduit));
-    return { gain: pCible.pvActuel - avant, reduit: montantReduit < montant };
+    return Personnage.appliquerGainPv(pCible, montant);
   }
 
   // Résout effet.duree (chaîne brute du catalogue) en une valeur canonique
@@ -605,7 +613,7 @@ const Capacites = (() => {
       const perso = Personnage.depuisJSON(p);
       if (perso.classe === "necromancien" && perso.rangMaxVoie("Voie du sang") >= 2) {
         const { total, detail } = resoudreExpression("1d4", {});
-        p.pvActuel = Math.max(0, Math.min(p.pvMax, (p.pvActuel || 0) + total));
+        Personnage.appliquerGainPv(p, total);
         soins.push({ libelle: "Régénération sanguine", total, detail, pvApres: p.pvActuel });
       }
       p.aInfligeDegatsSang = false;
@@ -629,7 +637,7 @@ const Capacites = (() => {
       // d'infliger des dégâts. Plafonné à pvMax comme tout autre soin.
       if (e.formuleSoin) {
         const { total, detail } = resoudreExpression(e.formuleSoin, {});
-        p.pvActuel = Math.max(0, Math.min(p.pvMax, (p.pvActuel || 0) + total));
+        Personnage.appliquerGainPv(p, total);
         soins.push({ libelle: _libelleEtatActif(e), total, detail, pvApres: p.pvActuel });
       }
       // Test de Volonté par tour (ex. Guerrier "Déchaînement" — e.testVolonte
@@ -959,13 +967,29 @@ const Capacites = (() => {
       return `${total} dégâts (${detail}) — aucune cible sélectionnée, à appliquer manuellement.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}`;
     }
     if (effet.type === "soin") {
-      const { total, detail } = resoudreExpression(effet.formule, { perso, rang });
+      // Collier de la Dette du Soigneur (data/loot.json: collier_dette_soigneur) :
+      // porté par le LANCEUR (perso, pas cible) — soigne sa valeur MAX sans
+      // jet, puis active la dette sur le lanceur lui-même (persos[perso.id]),
+      // pas sur le personnage soigné. La dette est posée APRÈS avoir appliqué
+      // le soin ci-dessous (jamais avant) : sinon un porteur qui se soigne
+      // lui-même verrait son propre soin max immédiatement annulé par la
+      // dette qu'il vient de déclencher. Ne se cumule pas si déjà active.
+      const collierActif = perso._itemsEquipesUniques().some((it) => it.id === "collier_dette_soigneur");
+      const { total, detail } = resoudreExpression(effet.formule, { perso, rang, forcerMax: collierActif });
       App.ajouterHisto(`${libelle} — Soin`, total, false, false, detail);
+      let res = null;
       if (cible && cible.genre === "perso" && persos[cible.id]) {
-        const res = appliquerSoinPersoLocal(persos[cible.id], total);
-        return `${total} PV (${detail}) → ${cible.nom} récupère ${res.gain} PV${res.reduit ? " (réduit de moitié — Corruption persistante)" : ""}.`;
+        res = appliquerSoinPersoLocal(persos[cible.id], total);
       }
-      return `${total} PV (${detail}) — aucune cible sélectionnée, à appliquer manuellement.`;
+      let noteDette = "";
+      if (collierActif && persos[perso.id] && !persos[perso.id].detteSoigneurActive) {
+        persos[perso.id].detteSoigneurActive = true;
+        noteDette = " ⚠ Dette du Soigneur activée sur le lanceur (prochain gain de PV du porteur réduit à 0).";
+      }
+      if (res) {
+        return `${total} PV (${detail}) → ${cible.nom} récupère ${res.gain} PV${res.reduit ? " (réduit de moitié — Corruption persistante)" : ""}.${noteDette}`;
+      }
+      return `${total} PV (${detail}) — aucune cible sélectionnée, à appliquer manuellement.${noteDette}`;
     }
     if (effet.type === "pvTemp") {
       // PV temporaires (distincts des PV normaux, jamais cumulatifs — cf.

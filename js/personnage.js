@@ -65,6 +65,17 @@ class Personnage extends Entite {
         mortSucces: 0,
         mortEchecs: 0,
         etatMort: false,
+        // Items loot mécanisés (data/loot.json: collier_dette_soigneur,
+        // contrat_demoniaque, anneau_chance_naturel) — cf. Personnage.appliquerGainPv
+        // et le hook dans js/app.js lancerTest(). detteSoigneurActive : soin du
+        // porteur forcé au max au prochain sort de soin qu'il lance, PUIS son
+        // prochain gain de PV (n'importe quelle source) tombe à 0. contratDemoniaque*
+        // : pas de notion de "repos long" dans l'app — réinitialisé manuellement
+        // par le joueur (cf. bouton dédié sur la fiche).
+        detteSoigneurActive: false,
+        contratDemoniaquePenalite: null, // { carac, valeur } ou null
+        contratDemoniaqueUtilise: false,
+        anneauChanceCumuls: 0,
       },
       data
     );
@@ -144,6 +155,10 @@ class Personnage extends Entite {
     this.mortSucces = d.mortSucces;
     this.mortEchecs = d.mortEchecs;
     this.etatMort = d.etatMort;
+    this.detteSoigneurActive = d.detteSoigneurActive;
+    this.contratDemoniaquePenalite = d.contratDemoniaquePenalite;
+    this.contratDemoniaqueUtilise = d.contratDemoniaqueUtilise;
+    this.anneauChanceCumuls = d.anneauChanceCumuls;
     // PV temporaires (Guerrier Cri du rassemblement, Druide Rempart vivant/
     // Forme du chaos sauvage) : jamais cumulatifs (une nouvelle source
     // n'écrase l'ancien total que si elle est plus élevée), expirent avec la
@@ -174,7 +189,7 @@ class Personnage extends Entite {
 
   /* ----- Caractéristiques ----- */
   mod(code) {
-    const base = Entite.modCarac(this.caracs[code] + this.bonusCaracCapacites(code) + this.bonusCaracDons(code) + this.bonusCaracEquipement(code) + this.bonusTemporaire(code));
+    const base = Entite.modCarac(this.caracs[code] + this.bonusCaracCapacites(code) + this.bonusCaracDons(code) + this.bonusCaracEquipement(code) + this.bonusTemporaire(code)) - this.penaliteContratDemoniaque(code);
     // Guerrier — Voie de l'élite, rang 5 "Apogée physique" (L, 1x/combat) :
     // double le MODIFICATEUR (pas la carac brute) de la carac choisie au
     // rang 1 (Spécimen d'élite), pendant 3 tours — état 'apogee_physique'
@@ -390,6 +405,16 @@ class Personnage extends Entite {
       if (e.bonus && e.bonus.cible === cible && typeof e.bonus.valeur === "number") return total + e.bonus.valeur;
       return total;
     }, 0);
+  }
+
+  // Contrat Démoniaque (data/loot.json: contrat_demoniaque) — pénalité posée
+  // sur UNE SEULE caractéristique (celle liée au jet où le bonus a été
+  // utilisé, cf. js/app.js lancerTest), distincte de bonusTemporaire ci-dessus
+  // (pas liée à un état à durée limitée : reste active jusqu'à ce que le
+  // porteur clique le bouton de reset dédié sur sa fiche).
+  penaliteContratDemoniaque(code) {
+    const p = this.contratDemoniaquePenalite;
+    return (p && p.carac === code && typeof p.valeur === "number") ? p.valeur : 0;
   }
 
   /* ----- Défense ----- */
@@ -1410,6 +1435,10 @@ class Personnage extends Entite {
       mortSucces: this.mortSucces,
       mortEchecs: this.mortEchecs,
       etatMort: this.etatMort,
+      detteSoigneurActive: this.detteSoigneurActive,
+      contratDemoniaquePenalite: this.contratDemoniaquePenalite,
+      contratDemoniaqueUtilise: this.contratDemoniaqueUtilise,
+      anneauChanceCumuls: this.anneauChanceCumuls,
       pvTemporaires: this.pvTemporaires,
       pvTemporairesExpiration: this.pvTemporairesExpiration,
       mutations: this.mutations,
@@ -1426,6 +1455,32 @@ class Personnage extends Entite {
   }
   static depuisJSON(obj) {
     return new Personnage(obj || {});
+  }
+
+  // Point d'application UNIQUE de tout gain de PV (soin de sort, potion,
+  // régénération/tick, ajustement MJ +PV...) — remplace la logique dupliquée
+  // (clamp + halving Corruption persistante) qui existait indépendamment dans
+  // js/capacites.js (appliquerSoinPersoLocal) et js/app.js (soigner). Ajouté
+  // pour le Collier de la Dette du Soigneur (data/loot.json:
+  // collier_dette_soigneur) : tant que pRaw.detteSoigneurActive est vrai, le
+  // PROCHAIN gain de PV, quelle qu'en soit la source, est ramené à 0 et la
+  // dette s'efface — cf. js/app.js lancerTest/soigner, js/capacites.js
+  // resoudreEffet("soin")/decompterEtatsDebutTour pour les points d'appel.
+  // opts.ignorerCorruption : utilisé par les ajustements MJ bruts
+  // (js/app.js ajusterPv/definirPv), qui n'ont jamais appliqué le halving
+  // Corruption persistante — la dette reste, elle, toujours active.
+  static appliquerGainPv(pRaw, montantBrut, opts = {}) {
+    const perso = Personnage.depuisJSON(pRaw);
+    let montant = (!opts.ignorerCorruption && perso.aCorruptionPersistante()) ? Math.floor(montantBrut / 2) : montantBrut;
+    let detteAnnulee = false;
+    if (pRaw.detteSoigneurActive && montant > 0) {
+      montant = 0;
+      pRaw.detteSoigneurActive = false;
+      detteAnnulee = true;
+    }
+    const avant = pRaw.pvActuel;
+    pRaw.pvActuel = Math.max(0, Math.min(pRaw.pvMax, pRaw.pvActuel + montant));
+    return { gain: pRaw.pvActuel - avant, reduit: montant < montantBrut && !detteAnnulee, detteAnnulee };
   }
 }
 
