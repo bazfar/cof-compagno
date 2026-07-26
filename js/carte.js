@@ -1468,6 +1468,16 @@ const Carte = (() => {
     let _depotObjetsManuels = null;
     let _dessinEnCours = null; // { scene, x1, y1, x2, y2 } en pixels natifs de la scène
 
+    // Vrais murs dessinés à la main par le MJ (indispensable pour une scène
+    // importée en simple image, cf. chargerImage — sans .dd2vtt, scene.segments
+    // est toujours vide : aucun déplacement de PJ n'y est jamais bloqué). Même
+    // sémantique que scene.segments : bloque la LoS ET _deplacementBloque,
+    // contrairement à un "objet bloquant" (arbre/rocher, LoS seulement). Un
+    // document par mur (_depotMursManuels), synchronisé comme les obstacles.
+    let modeDessinMur = false;
+    let _depotMursManuels = null;
+    let _dessinMurEnCours = null; // { scene, x1, y1, x2, y2 } en pixels natifs de la scène
+
     // Portes/fenêtres dessinées à la main par le MJ (indispensable pour une
     // scène importée en simple image, cf. chargerImage — sans .dd2vtt, aucun
     // portail n'existe). Poussées directement dans scene.portails au même
@@ -1881,6 +1891,20 @@ const Carte = (() => {
         calculerEtRendreLoS(scene);
       });
 
+      // Idem pour les vrais murs dessinés à la main (cf. basculerModeDessinMur) :
+      // un document par mur, reconstruit en segments pour _segmentsBloquants
+      // ET _deplacementBloque (contrairement aux obstacles ci-dessus).
+      if (_depotMursManuels) _depotMursManuels.arreter();
+      _depotMursManuels = new DepotDistant('battlemap_' + nom + '_murs_manuels');
+      scene.mursManuelsBruts = _depotMursManuels.charger();
+      scene.segmentsMursManuels = Object.values(scene.mursManuelsBruts).map(o => [[o.x1, o.y1], [o.x2, o.y2]]);
+      _depotMursManuels.ecouter((cache) => {
+        scene.mursManuelsBruts = cache;
+        scene.segmentsMursManuels = Object.values(cache).map(o => [[o.x1, o.y1], [o.x2, o.y2]]);
+        rendreScene(scene);
+        calculerEtRendreLoS(scene);
+      });
+
       // Idem pour les portes/fenêtres dessinées à la main (indispensable pour
       // une scène importée en simple image, sans aucun portail Dungeondraft) —
       // fusionnées directement dans scene.portails, cf. commentaire plus haut.
@@ -1979,6 +2003,22 @@ const Carte = (() => {
         ctxMurs.stroke();
       }
       ctxMurs.shadowBlur = 0;
+
+      // Vrais murs dessinés à la main (cf. basculerModeDessinMur) : même rendu
+      // qu'un mur importé (line_of_sight) puisqu'ils ont exactement le même
+      // effet (LoS ET déplacement) — pas de distinction visuelle nécessaire.
+      if (scene.segmentsMursManuels && scene.segmentsMursManuels.length) {
+        ctxMurs.strokeStyle = 'rgba(220, 80, 0, 0.9)';
+        ctxMurs.shadowColor = '#ff6600';
+        ctxMurs.shadowBlur  = 4;
+        for (const seg of scene.segmentsMursManuels) {
+          ctxMurs.beginPath();
+          ctxMurs.moveTo(offX + seg[0][0] * sx, offY + seg[0][1] * sy);
+          ctxMurs.lineTo(offX + seg[1][0] * sx, offY + seg[1][1] * sy);
+          ctxMurs.stroke();
+        }
+        ctxMurs.shadowBlur = 0;
+      }
 
       // Objets bloquant la vue mais pas le passage (arbres, rochers...) : même
       // idée que les murs pour la LoS (cf. _segmentsBloquants), tracé en vert
@@ -2094,7 +2134,10 @@ const Carte = (() => {
       const px = scene.px;
       const p0 = [(cx0 + 0.5) * px, (cy0 + 0.5) * px];
       const p1 = [(cx1 + 0.5) * px, (cy1 + 0.5) * px];
-      for (const seg of scene.segments) {
+      // Murs importés (line_of_sight) + vrais murs dessinés à la main (cf.
+      // basculerModeDessinMur) : mêmes effets, donc même boucle de blocage.
+      const segsMurs = scene.segmentsMursManuels ? scene.segments.concat(scene.segmentsMursManuels) : scene.segments;
+      for (const seg of segsMurs) {
         const pt = _pointIntersectionSegments(p0, p1, seg[0], seg[1]);
         if (!pt) continue;
         const portail = _portailProche(scene, pt, px);
@@ -2196,6 +2239,7 @@ const Carte = (() => {
       // Un seul mode de dessin à la fois (sinon les deux pointerdown se
       // disputent le même geste).
       if (modeDessinObjet && modeDessinPortail) basculerModeDessinPortail();
+      if (modeDessinObjet && modeDessinMur) basculerModeDessinMur();
       toastCarte(modeDessinObjet
         ? '🌳 Mode obstacle : clique-glisse pour tracer un obstacle (bloque la vue, pas le passage), clique sur un obstacle existant pour le retirer.'
         : 'Mode obstacle désactivé.');
@@ -2280,6 +2324,99 @@ const Carte = (() => {
       toastCarte('Obstacle retiré.');
     }
 
+    // ── Dessin manuel de vrais murs — MJ uniquement ──────────────────────
+    // Même interaction que le dessin d'obstacle (clique-glisse pour tracer,
+    // clic seul pour retirer), mais produit un segment dans
+    // scene.segmentsMursManuels : repris à la fois par _segmentsBloquants
+    // (LoS) et _deplacementBloque (mouvement), contrairement à un obstacle.
+    function basculerModeDessinMur() {
+      modeDessinMur = !modeDessinMur;
+      const btn = document.getElementById('btn-mur-dd');
+      if (btn) btn.classList.toggle('actif-bouton', modeDessinMur);
+      // Un seul mode de dessin à la fois (sinon les pointerdown se disputent
+      // le même geste) — cf. basculerModeDessinObjet/basculerModeDessinPortail.
+      if (modeDessinMur && modeDessinObjet) basculerModeDessinObjet();
+      if (modeDessinMur && modeDessinPortail) basculerModeDessinPortail();
+      toastCarte(modeDessinMur
+        ? '🧱 Mode mur : clique-glisse pour tracer un vrai mur (bloque la vue ET le passage), clique sur un mur manuel pour le retirer.'
+        : 'Mode mur désactivé.');
+    }
+
+    function _demarrerDessinMur(ev) {
+      if (!modeDessinMur) return;
+      if (ev.target && ev.target.closest && ev.target.closest('.dd-token')) return;
+      const scene = scenes[sceneActive];
+      if (!scene) return;
+      const pt = _pointSceneDepuisEvent(ev, scene);
+      if (!pt) return;
+      ev.preventDefault();
+      _dessinMurEnCours = { scene, x1: pt[0], y1: pt[1], x2: pt[0], y2: pt[1] };
+      window.addEventListener('pointermove', _surDessinMur);
+      window.addEventListener('pointerup', _finDessinMur);
+    }
+
+    function _surDessinMur(ev) {
+      if (!_dessinMurEnCours) return;
+      const { scene } = _dessinMurEnCours;
+      const pt = _pointSceneDepuisEvent(ev, scene);
+      if (!pt) return;
+      _dessinMurEnCours.x2 = pt[0];
+      _dessinMurEnCours.y2 = pt[1];
+      rendreScene(scene);
+      // Prévisualisation en direct par-dessus le rendu normal des murs/objets.
+      const imgEl = document.getElementById('carte-image');
+      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
+      if (!rect || rect.width === 0) return;
+      const sx = rect.width / scene.largeur, sy = rect.height / scene.hauteur;
+      ctxMurs.strokeStyle = 'rgba(220, 80, 0, 0.9)';
+      ctxMurs.lineWidth   = Math.max(1.5, scene.px * sx / 60);
+      ctxMurs.beginPath();
+      ctxMurs.moveTo(_dessinMurEnCours.x1 * sx, _dessinMurEnCours.y1 * sy);
+      ctxMurs.lineTo(_dessinMurEnCours.x2 * sx, _dessinMurEnCours.y2 * sy);
+      ctxMurs.stroke();
+    }
+
+    function _finDessinMur() {
+      window.removeEventListener('pointermove', _surDessinMur);
+      window.removeEventListener('pointerup', _finDessinMur);
+      if (!_dessinMurEnCours) return;
+      const { scene, x1, y1, x2, y2 } = _dessinMurEnCours;
+      _dessinMurEnCours = null;
+      const distance = Math.hypot(x2 - x1, y2 - y1);
+      if (distance < scene.px * 0.15) {
+        // Pas de glisser significatif : un clic sur un mur existant le retire.
+        _supprimerMurManuelProche(scene, x1, y1);
+        return;
+      }
+      const id = 'mur-' + Date.now();
+      const mur = { x1, y1, x2, y2 };
+      if (!scene.mursManuelsBruts) scene.mursManuelsBruts = {};
+      scene.mursManuelsBruts[id] = mur;
+      scene.segmentsMursManuels = Object.values(scene.mursManuelsBruts).map(o => [[o.x1, o.y1], [o.x2, o.y2]]);
+      // Rendu local d'abord, synchro en dernier (cf. _finDessinObjet).
+      rendreScene(scene);
+      calculerEtRendreLoS(scene);
+      if (_depotMursManuels) _depotMursManuels.sauver(mur, id);
+      toastCarte('Mur ajouté.');
+    }
+
+    function _supprimerMurManuelProche(scene, x, y) {
+      const bruts = scene.mursManuelsBruts || {};
+      let meilleurId = null, meilleureDist = scene.px * 0.5;
+      Object.keys(bruts).forEach((id) => {
+        const o = bruts[id];
+        const d = _distancePointSegment(x, y, o.x1, o.y1, o.x2, o.y2);
+        if (d < meilleureDist) { meilleureDist = d; meilleurId = id; }
+      });
+      if (!meilleurId) { rendreScene(scene); toastCarte('Aucun mur à cet endroit.'); return; }
+      delete bruts[meilleurId];
+      scene.segmentsMursManuels = Object.values(bruts).map(o => [[o.x1, o.y1], [o.x2, o.y2]]);
+      rendreScene(scene);
+      calculerEtRendreLoS(scene);
+      if (_depotMursManuels) _depotMursManuels.supprimer(meilleurId);
+      toastCarte('Mur retiré.');
+    }
+
     // ── Dessin manuel de portes/fenêtres — MJ uniquement ─────────────────
     // Même interaction que le dessin d'obstacle (clique-glisse pour tracer,
     // clic seul pour retirer), mais produit un portail normal dans
@@ -2290,6 +2427,7 @@ const Carte = (() => {
       const btn = document.getElementById('btn-portail-dd');
       if (btn) btn.classList.toggle('actif-bouton', modeDessinPortail);
       if (modeDessinPortail && modeDessinObjet) basculerModeDessinObjet();
+      if (modeDessinPortail && modeDessinMur) basculerModeDessinMur();
       toastCarte(modeDessinPortail
         ? '🚪 Mode porte/fenêtre : clique-glisse pour tracer une porte (clic simple dessus, ensuite, pour l\'ouvrir/fermer), clique sur une porte manuelle pour la retirer.'
         : 'Mode porte/fenêtre désactivé.');
@@ -2898,6 +3036,21 @@ const Carte = (() => {
       calculerEtRendreLoS(scene);
     }
 
+    // Bouton "Tout révéler" côté MJ : inverse de reinitialiserExploration —
+    // marque toute la scène comme déjà explorée (canvasFog2 rempli en noir
+    // opaque partout) plutôt que rien explorée. La vision courante des tokens
+    // (calculerEtRendreLoS, appelé ensuite) continue de s'appliquer par-dessus
+    // normalement : le brouillard "déjà exploré" (semi-transparent) disparaît
+    // partout, mais les zones dans la portée claire d'un token restent quand
+    // même rendues en clair total plutôt qu'en semi-transparent.
+    function revelerToutExploration() {
+      const scene = scenes[sceneActive];
+      if (!scene) return;
+      ctxFog2.fillStyle = '#000';
+      ctxFog2.fillRect(0, 0, canvasFog2.width, canvasFog2.height);
+      calculerEtRendreLoS(scene);
+    }
+
     // ── Segments bloquants pour la LoS (murs + objets + portails fermés) ──
     // Un portail (porte ou fenêtre — Dungeondraft ne les distingue pas) ouvert
     // ne génère aucun segment : le rayon de vision passe à travers l'embrasure.
@@ -2918,6 +3071,9 @@ const Carte = (() => {
       }
       if (scene.segmentsObjetsManuels) {
         for (const seg of scene.segmentsObjetsManuels) segs.push([seg[0], seg[1]]);
+      }
+      if (scene.segmentsMursManuels) {
+        for (const seg of scene.segmentsMursManuels) segs.push([seg[0], seg[1]]);
       }
       for (const p of scene.portails) {
         if (p.ouvert) continue;
@@ -3126,7 +3282,7 @@ const Carte = (() => {
       // du tracé (cf. _demarrerDessinObjet/_finDessinObjet) : on le court-circuite.
       const scene2 = document.getElementById('carte-scene');
       if (scene2) scene2.addEventListener('click', (ev) => {
-        if (modeDessinObjet || modeDessinPortail) return;
+        if (modeDessinObjet || modeDessinPortail || modeDessinMur) return;
         const sc = scenes[sceneActive];
         if (sc && _basculerPortailAuClic(ev, sc)) return;
         if (tokenSelectionne) {
@@ -3136,6 +3292,7 @@ const Carte = (() => {
       });
       if (scene2) scene2.addEventListener('pointerdown', _demarrerDessinObjet);
       if (scene2) scene2.addEventListener('pointerdown', _demarrerDessinPortail);
+      if (scene2) scene2.addEventListener('pointerdown', _demarrerDessinMur);
 
       // Sync scène active : le MJ choisit une scène → tous les clients la
       // chargent automatiquement au prochain poll (ou immédiatement si même
@@ -3178,6 +3335,14 @@ const Carte = (() => {
         });
       }
 
+      const btnMur = document.getElementById('btn-mur-dd');
+      if (btnMur) {
+        btnMur.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          basculerModeDessinMur();
+        });
+      }
+
       const btnObjet = document.getElementById('btn-objet-bloquant-dd');
       if (btnObjet) {
         btnObjet.addEventListener('click', (ev) => {
@@ -3191,6 +3356,16 @@ const Carte = (() => {
         btnPortailDessin.addEventListener('click', (ev) => {
           ev.stopPropagation();
           basculerModeDessinPortail();
+        });
+      }
+
+      const btnFogClearDD = document.getElementById('btn-fog-clear-dd');
+      if (btnFogClearDD) {
+        btnFogClearDD.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          if (!confirm("Révéler toute la carte (dissiper le brouillard de guerre partout) pour cette scène ?")) return;
+          revelerToutExploration();
+          toastCarte('Brouillard dissipé sur toute la scène.');
         });
       }
 
@@ -3223,10 +3398,14 @@ const Carte = (() => {
         if (tokensEl) tokensEl.style.display = 'block';
         const btnTok = document.getElementById('btn-token-dd');
         if (btnTok) btnTok.style.display = 'inline-block';
+        const btnMur = document.getElementById('btn-mur-dd');
+        if (btnMur) btnMur.style.display = 'inline-block';
         const btnObjet = document.getElementById('btn-objet-bloquant-dd');
         if (btnObjet) btnObjet.style.display = 'inline-block';
         const btnPortailDessin = document.getElementById('btn-portail-dd');
         if (btnPortailDessin) btnPortailDessin.style.display = 'inline-block';
+        const btnFogClearDD = document.getElementById('btn-fog-clear-dd');
+        if (btnFogClearDD) btnFogClearDD.style.display = 'inline-block';
         const sel = document.getElementById('select-scene-dd2vtt');
         if (sel) sel.style.display = '';
         const scene = scenes[sceneActive];
@@ -3242,12 +3421,17 @@ const Carte = (() => {
       // Cacher les éléments battlemap
       const btnTok = document.getElementById('btn-token-dd');
       if (btnTok) btnTok.style.display = 'none';
+      const btnMur = document.getElementById('btn-mur-dd');
+      if (btnMur) { btnMur.style.display = 'none'; btnMur.classList.remove('actif-bouton'); }
+      modeDessinMur = false;
       const btnObjet = document.getElementById('btn-objet-bloquant-dd');
       if (btnObjet) { btnObjet.style.display = 'none'; btnObjet.classList.remove('actif-bouton'); }
       modeDessinObjet = false;
       const btnPortailDessin = document.getElementById('btn-portail-dd');
       if (btnPortailDessin) { btnPortailDessin.style.display = 'none'; btnPortailDessin.classList.remove('actif-bouton'); }
       modeDessinPortail = false;
+      const btnFogClearDD = document.getElementById('btn-fog-clear-dd');
+      if (btnFogClearDD) btnFogClearDD.style.display = 'none';
       const sel = document.getElementById('select-scene-dd2vtt');
       if (sel) sel.style.display = 'none';
       // Cacher canvas battlemap
@@ -3297,7 +3481,7 @@ const Carte = (() => {
       tokensMonstres, tokensPJ, distanceCases, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
       renommerToken, changerCouleurToken,
       ajouterEtat: ajouterEtatToken, retirerEtat: retirerEtatToken,
-      supprimerToken: supprimerTokenDD, onChange, actualiserTokens, reinitialiserExploration,
+      supprimerToken: supprimerTokenDD, onChange, actualiserTokens, reinitialiserExploration, revelerToutExploration,
       onMonstreDevientVisible, reinitialiserDetectionVisibilite, estMonstreVisible,
       activerModeCiblage, desactiverModeCiblage,
     };
