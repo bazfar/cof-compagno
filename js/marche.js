@@ -53,12 +53,27 @@ const Marche = (() => {
     return meilleur.id;
   }
 
+  // Un objet enchanté (arme/armure/bouclier avec enchantement > 0) coûte plus
+  // cher que sa version de base — même échelle que RARETES_MARCHE (une arme
+  // +1/+2/+3 est de fait "peu commune/rare/légendaire"), plutôt qu'une
+  // nouvelle échelle inventée séparément. +1 → ×1,5, +2 → ×3, +3 et plus → ×6.
+  function _multiplicateurEnchantement(niveau) {
+    if (!niveau) return 1;
+    if (niveau >= 3) return _valeurRarete("legendaire");
+    if (niveau === 2) return _valeurRarete("rare");
+    return _valeurRarete("peu_commun");
+  }
+
   // Prix = base × modificateur régional (sauf accessoire) × rareté (accessoire
-  // non rariteFixe uniquement) × (1 - remise%), arrondi entier supérieur.
+  // non rariteFixe uniquement) × multiplicateur d'enchantement (arme/armure/
+  // bouclier déjà enchantés) × (1 - remise%), arrondi entier supérieur.
   function calculerPrix(item, modificateurValeur, rareteValeur, remisePct) {
     let prix = item.prixPo;
     if (!item.sansModificateurRegional) prix *= modificateurValeur;
     if (item.type === "accessoire" && !item.rariteFixe) prix *= rareteValeur;
+    if ((item.type === "arme" || item.type === "armure" || item.type === "bouclier") && item.enchantement > 0) {
+      prix *= _multiplicateurEnchantement(item.enchantement);
+    }
     if (remisePct) prix *= (1 - remisePct / 100);
     return Math.ceil(prix);
   }
@@ -249,6 +264,7 @@ const Marche = (() => {
       <div class="loot-item-header">
         <span class="loot-item-nom">${echapper(item.nom)}</span>
         <span class="loot-badge loot-badge-${item.type}">${item.type}</span>
+        ${item.enchantement ? `<span class="loot-badge loot-badge-magic">+${item.enchantement}</span>` : ""}
       </div>
       ${stats ? `<div class="loot-item-stats">${echapper(stats)}</div>` : ""}
       <div class="loot-item-desc">${echapper(item.description)}</div>
@@ -268,6 +284,7 @@ const Marche = (() => {
       <div class="loot-item-header">
         <span class="loot-item-nom">${echapper(item.nom)}</span>
         <span class="loot-badge loot-badge-${item.type}">${item.type}</span>
+        ${item.enchantement ? `<span class="loot-badge loot-badge-magic">+${item.enchantement}</span>` : ""}
       </div>
       ${stats ? `<div class="loot-item-stats">${echapper(stats)}</div>` : ""}
       <div class="loot-item-desc">${echapper(item.description)}</div>
