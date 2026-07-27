@@ -83,10 +83,35 @@ const RARETES_MARCHE = [
   { id: "legendaire", label: "Légendaire (×6)", valeur: 6 },
 ];
 
+// Poids de tirage de la rareté d'un objet à l'arrivée en stock — indépendant
+// du sélecteur RARETES_MARCHE (qui sert au calcul du prix), c'est juste la
+// probabilité qu'un objet donné arrive en stock étiqueté peu commun/rare/
+// légendaire plutôt que commun. Un item déjà rariteFixe=true (accessoires
+// Rare par nature) ou déjà enchanté (arme/armure/bouclier avec enchantement
+// > 0, qui a déjà son propre multiplicateur de prix) ne tire jamais : il
+// reste "commun" pour ne pas cumuler deux bonus de prix différents.
+const POIDS_RARETE_STOCK = [
+  { id: "commun", poids: 70 },
+  { id: "peu_commun", poids: 22 },
+  { id: "rare", poids: 7 },
+  { id: "legendaire", poids: 1 },
+];
+
+function tirerRareteStock() {
+  const total = POIDS_RARETE_STOCK.reduce((s, r) => s + r.poids, 0);
+  let tirage = Math.random() * total;
+  for (const r of POIDS_RARETE_STOCK) {
+    if (tirage < r.poids) return r.id;
+    tirage -= r.poids;
+  }
+  return "commun";
+}
+
 // Tire aléatoirement jusqu'à 40 objets du catalogue LOOT respectant les
 // filtres du marchand (type autorisé + plafond valeurArmure/bonusDEF de
 // la localité). Si le pool filtré fait moins de 40 objets, prend tout le
-// pool (pas de duplication).
+// pool (pas de duplication). Chaque objet tiré reçoit en plus une rareté de
+// stock aléatoire (cf. POIDS_RARETE_STOCK) qui majore son prix de vente.
 function tirerStockMarchand(marchand, localite, catalogueLoot) {
   const pool = catalogueLoot.filter((item) => {
     if (!marchand.typesAutorises.includes(item.type)) return false;
@@ -98,5 +123,9 @@ function tirerStockMarchand(marchand, localite, catalogueLoot) {
     return true;
   });
   const melange = pool.slice().sort(() => Math.random() - 0.5);
-  return melange.slice(0, 40).map((item) => item.id);
+  return melange.slice(0, 40).map((item, idx) => ({
+    slotId: item.id + "_" + Date.now() + "_" + idx + "_" + Math.random().toString(36).slice(2, 8),
+    itemId: item.id,
+    rareteId: (item.rariteFixe || item.enchantement > 0) ? "commun" : tirerRareteStock(),
+  }));
 }
