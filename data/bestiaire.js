@@ -4062,6 +4062,47 @@ const BESTIAIRE = [
       "description": "Cuirasse sertie d'or et de gemmes volées — réduit 3 points de dégâts physiques."
     },
     "emoji": "👑"
+  },
+  {
+    "id": "anselme_vaudrel",
+    "nom": "Anselme Vaudrel",
+    "famille": "cupide",
+    "tier": "meneur",
+    "race": ["humanoïdes"],
+    "categorie": "Mission 2",
+    "pv": 34,
+    "def": 14,
+    "init": 5,
+    "atk": 5,
+    "dangerosite": 3,
+    "boss": true,
+    "taille": "moyenne",
+    "voies": [],
+    "attaques": [
+      {
+        "nom": "Serpe de jardinier lourde",
+        "armeId": "hache_guerre",
+        "bonusAttaque": 5,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Avidité dévorante",
+        "description": "Chaque fois qu'il inflige des dégâts à une cible portant un objet de valeur visible (arme ornée, bijou, bourse en évidence), il regagne 1d6 PV."
+      },
+      {
+        "nom": "Ne recule jamais devant un trésor",
+        "description": "Insensible aux tests de moral tant qu'un butin est visible sur le champ de bataille. Peut être détourné en jetant de l'or ou un objet précieux loin de lui (action du groupe, pas de jet requis)."
+      },
+      {
+        "nom": "Signe (note MJ)",
+        "description": "Regard qui s'attarde une fraction de seconde de trop sur l'or, tic de la main qui compte ou soupèse sans objet réel. Premier indice tangible pour des PJ attentifs — ne pas surligner, juste décrire."
+      }
+    ],
+    "lore": "Ancien serviteur/jardinier du domaine familial des Orfeuil, abandonné sur place quand la famille a quitté les lieux. Sa rancune contre les Orfeuil ne l'a jamais quitté — et depuis peu, sans qu'il comprenne pourquoi, elle s'accompagne de tics étranges annonçant une corruption naissante (aspect cristallisé de Khoreth, cf. chambre cultiste Mission 1). Boss unique de la Mission 2 « Le Poids de l'Or » — statistiques identiques au Meneur avide standard, ne pas réutiliser ce PNJ nommé ailleurs (contrairement aux tiers génériques recrue/meneur/grand_hote de la famille cupide, prévus pour être rebaptisés librement).",
+    "armure": null,
+    "emoji": "🥀"
   }
 ];
 const BESTIAIRE_INDEX = Object.fromEntries(BESTIAIRE.map(function(m){ return [m.id, m]; }));
