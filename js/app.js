@@ -1506,6 +1506,7 @@ const App = (() => {
     if (panneau === "mutations") rendrePanneauMutations();
     if (panneau === "messages") { rendreMessages(); _majBadgeMessages(); }
     if (panneau === "loot" && typeof Loot !== "undefined") Loot.rendreCatalogue();
+    if (panneau === "marche" && typeof Marche !== "undefined") Marche.rendrePanneauMarche();
     if (panneau === "atelier") rendrePanneauAtelier();
     if (panneau === "regles") rendreRegles();
     if (panneau === "bestiaire") rendreBestiaire();
@@ -7440,6 +7441,18 @@ const App = (() => {
       const surMaFiche = ficheActiveId === monId && document.getElementById("panneau-fiche")?.classList.contains("actif");
       if (!surMaFiche) toast("🎁 Nouveau loot à voter ! Va sur « Ma fiche ».");
     });
+
+    // Marché — réassort MJ ou nouvelle demande/validation : répercute en
+    // direct chez tout le monde si le panneau Marché est actuellement ouvert
+    // (même schéma que loot:vote ci-dessus).
+    SyncStore.subscribe("marche:stock", () => {
+      const p = document.getElementById("panneau-marche");
+      if (p && p.classList.contains("actif") && typeof Marche !== "undefined") Marche.rendrePanneauMarche();
+    });
+    SyncStore.subscribe("marche:demandes", () => {
+      const p = document.getElementById("panneau-marche");
+      if (p && p.classList.contains("actif") && typeof Marche !== "undefined") Marche.rendrePanneauMarche();
+    });
   }
 
   /* ============================================================
@@ -8197,5 +8210,7 @@ const App = (() => {
   // forcer la navigation d'un joueur quand le MJ choisit une carte)
   // — chargerPersos/sauverPersos/lancerDe/ajouterHisto sont en plus exposés
   // pour js/capacites.js (moteur de résolution des capacités mécanisées).
-  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto };
+  // — obtenirRole/estProprietaire sont en plus exposés pour js/marche.js
+  // (filtrer le sélecteur de personnage par propriétaire en vue joueur).
+  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire };
 })();

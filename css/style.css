@@ -1879,3 +1879,18 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .selecteur-slot select { width: 100%; margin-bottom: 6px; }
 
 .form-ajout-item { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--parchemin-fonce); }
+
+/* ============================================================
+   MARCHÉ
+   ============================================================ */
+.entete-panneau { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.entete-panneau select { min-width: 180px; }
+.marche-selecteurs { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.marche-selecteurs select { flex: 1; min-width: 160px; }
+#zone-marche, #zone-marche-demandes { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+#zone-marche-demandes:not(:empty) { margin-bottom: 16px; }
+#zone-marche-demandes h3 { grid-column: 1 / -1; margin: 0; }
+.marche-prix { font-weight: 700; color: var(--or); font-size: 0.9rem; }
+.marche-controles { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.marche-controles select { flex: 1; min-width: 120px; font-size: 0.78rem; }
+.marche-prix-calcule { font-weight: 700; color: var(--or); font-size: 0.85rem; white-space: nowrap; }

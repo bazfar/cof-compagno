@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=70" />
+  <link rel="stylesheet" href="css/style.css?v=71" />
 </head>
 <body>
   <header>
@@ -31,6 +31,7 @@
       <button data-panneau="table-combat" data-role="mj">⚔ Combat</button>
       <button data-panneau="bestiaire" data-role="mj">Bestiaire</button>
       <button data-panneau="loot" data-role="mj">Loot</button>
+      <button data-panneau="marche">🏪 Marché</button>
       <button data-panneau="atelier">🔨 Atelier</button>
       <button data-panneau="regles">Règles</button>
       <button data-panneau="lore">Lore</button>
@@ -482,6 +483,21 @@
       <div id="loot-notif-joueur" style="display:none;" class="carte loot-notif-card" data-role="joueur"></div>
     </section>
 
+    <!-- MARCHÉ (localités/marchands, achat, négociation) -->
+    <section class="panneau" id="panneau-marche">
+      <div class="entete-panneau">
+        <h2 class="titre-bandeau">🏪 Marché</h2>
+        <select id="select-marche-perso"></select>
+      </div>
+      <div class="marche-selecteurs">
+        <select id="select-marche-localite"></select>
+        <select id="select-marche-marchand"></select>
+        <button class="btn petit secondaire" id="btn-marche-reassort" data-role="mj">🔄 Réassort (40 objets)</button>
+      </div>
+      <div id="zone-marche-demandes" data-role="mj"></div>
+      <div id="zone-marche"></div>
+    </section>
+
     <!-- ATELIER (enchantement à risque + alchimie) -->
     <section class="panneau" id="panneau-atelier">
       <div class="carte">
@@ -756,7 +772,8 @@
   <script src="data/mutations.js?v=1"></script>
   <script src="data/bestiaire.js?v=4"></script>
   <script src="data/armes_monstres.js?v=2"></script>
-  <script src="data/loot.js?v=18"></script>
+  <script src="data/loot.js?v=19"></script>
+  <script src="data/marche.js?v=1"></script>
   <script src="data/equipement_depart.js?v=4"></script>
   <script src="js/emblemes.js?v=15"></script>
   <script src="js/carte-monde.js?v=9"></script>
@@ -776,8 +793,9 @@
   <script src="js/enchantement.js?v=1"></script>
   <script src="js/alchimie.js?v=2"></script>
   <script src="js/loot.js?v=10"></script>
+  <script src="js/marche.js?v=1"></script>
   <script src="js/capacites.js?v=35"></script>
   <script src="js/combat.js?v=14"></script>
-  <script src="js/app.js?v=143"></script>
+  <script src="js/app.js?v=144"></script>
 </body>
 </html>
