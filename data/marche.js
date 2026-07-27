@@ -48,6 +48,7 @@ const LOCALITES_MARCHE = [
         typesAutorises: ["arme", "armure", "bouclier", "accessoire", "consommable"],
         modificateurParDefaut: 0.8,
         estMarcheNoir: false,
+        faction: "comptoir", // lie ce marchand à la réputation du bloc Comptoir (Liberra)
       },
     ],
   },

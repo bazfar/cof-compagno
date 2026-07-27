@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=72" />
+  <link rel="stylesheet" href="css/style.css?v=73" />
 </head>
 <body>
   <header>
@@ -33,6 +33,7 @@
       <button data-panneau="loot" data-role="mj">Loot</button>
       <button data-panneau="marche">🏪 Marché</button>
       <button data-panneau="atelier">🔨 Atelier</button>
+      <button data-panneau="reputation">🏛 Réputation</button>
       <button data-panneau="regles">Règles</button>
       <button data-panneau="lore">Lore</button>
     </nav>
@@ -447,6 +448,14 @@
     </section>
 
     <!-- LOOT -->
+    <section class="panneau" id="panneau-reputation">
+      <div class="carte">
+        <h2 class="titre-bandeau">🏛 Réputation — République de Liberra</h2>
+        <p style="font-size:0.85rem;color:#6a6278;">Réputation du groupe auprès des 5 blocs de l'Assemblée de Libris. Le MJ ajuste après les événements marquants ; tout le monde voit l'état en temps réel.</p>
+      </div>
+      <div id="zone-reputation"></div>
+    </section>
+
     <section class="panneau" id="panneau-loot" data-role="mj">
       <!-- Vue MJ : catalogue + vote en cours + historique -->
       <div class="carte" data-role="mj">
@@ -778,7 +787,8 @@
   <script src="data/bestiaire.js?v=4"></script>
   <script src="data/armes_monstres.js?v=2"></script>
   <script src="data/loot.js?v=19"></script>
-  <script src="data/marche.js?v=2"></script>
+  <script src="data/marche.js?v=3"></script>
+  <script src="data/reputation.js?v=1"></script>
   <script src="data/equipement_depart.js?v=4"></script>
   <script src="js/emblemes.js?v=15"></script>
   <script src="js/carte-monde.js?v=9"></script>
@@ -798,9 +808,10 @@
   <script src="js/enchantement.js?v=1"></script>
   <script src="js/alchimie.js?v=2"></script>
   <script src="js/loot.js?v=10"></script>
-  <script src="js/marche.js?v=3"></script>
+  <script src="js/marche.js?v=4"></script>
+  <script src="js/reputation.js?v=1"></script>
   <script src="js/capacites.js?v=35"></script>
   <script src="js/combat.js?v=14"></script>
-  <script src="js/app.js?v=144"></script>
+  <script src="js/app.js?v=145"></script>
 </body>
 </html>

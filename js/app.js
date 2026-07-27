@@ -1507,6 +1507,7 @@ const App = (() => {
     if (panneau === "messages") { rendreMessages(); _majBadgeMessages(); }
     if (panneau === "loot" && typeof Loot !== "undefined") Loot.rendreCatalogue();
     if (panneau === "marche" && typeof Marche !== "undefined") Marche.rendrePanneauMarche();
+    if (panneau === "reputation" && typeof Reputation !== "undefined") Reputation.rendrePanneauReputation();
     if (panneau === "atelier") rendrePanneauAtelier();
     if (panneau === "regles") rendreRegles();
     if (panneau === "bestiaire") rendreBestiaire();
@@ -7453,6 +7454,19 @@ const App = (() => {
       const p = document.getElementById("panneau-marche");
       if (p && p.classList.contains("actif") && typeof Marche !== "undefined") Marche.rendrePanneauMarche();
     });
+
+    // Réputation — un ajustement MJ sur un bloc répercute en direct chez tout
+    // le monde si le panneau Réputation est actuellement ouvert (même schéma
+    // que marche:stock/marche:demandes ci-dessus). Une clé SyncStore par
+    // faction (reputation:{factionId}), abonnement individuel pour chacune.
+    if (typeof REPUTATION_FACTIONS_LIBERRA !== "undefined") {
+      REPUTATION_FACTIONS_LIBERRA.forEach((f) => {
+        SyncStore.subscribe(`reputation:${f.id}`, () => {
+          const p = document.getElementById("panneau-reputation");
+          if (p && p.classList.contains("actif") && typeof Reputation !== "undefined") Reputation.rendrePanneauReputation();
+        });
+      });
+    }
   }
 
   /* ============================================================

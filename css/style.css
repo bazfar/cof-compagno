@@ -1899,3 +1899,28 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .loot-badge-rarete-peu_commun { background: #dff0d8; color: #2d6a1e; }
 .loot-badge-rarete-rare       { background: #e0d8f5; color: #4a2f8a; }
 .loot-badge-rarete-legendaire { background: #fbe6c2; color: #8a5a00; }
+
+/* ============================================================
+   RÉPUTATION
+   ============================================================ */
+.reputation-carte { margin-bottom: 14px; }
+.reputation-barre {
+  background: #e8dfc8;
+  border-radius: 6px;
+  height: 10px;
+  overflow: hidden;
+  margin: 6px 0;
+}
+.reputation-barre-remplie {
+  background: linear-gradient(90deg, #A8843A, #3D1F4D);
+  height: 100%;
+  transition: width 0.3s ease;
+}
+.reputation-score-ligne {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.95rem;
+}
+.reputation-palier { font-weight: 600; color: #3D1F4D; }
+.reputation-controles { display: flex; gap: 6px; margin-top: 8px; }

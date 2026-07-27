@@ -82,9 +82,12 @@ const Marche = (() => {
 
   // Prix = base × modificateur régional (sauf accessoire) × rareté (tout objet
   // non rariteFixe et non déjà enchanté) × multiplicateur d'enchantement
-  // (arme/armure/bouclier déjà enchantés) × (1 - remise%), arrondi entier
-  // supérieur.
-  function calculerPrix(item, modificateurValeur, rareteValeur, remisePct) {
+  // (arme/armure/bouclier déjà enchantés) × (1 - remise%) × modificateur de
+  // réputation (si le marchand est lié à une faction, cf. js/reputation.js) —
+  // arrondi entier supérieur. Retourne null si le palier de réputation est
+  // Némésis (commerce refusé) : à l'appelant de vérifier avant d'afficher un
+  // prix ou de proposer un achat.
+  function calculerPrix(item, modificateurValeur, rareteValeur, remisePct, factionId) {
     let prix = item.prixPo;
     if (!item.sansModificateurRegional) prix *= modificateurValeur;
     if (_peutAvoirRarete(item)) prix *= rareteValeur;
@@ -92,7 +95,12 @@ const Marche = (() => {
       prix *= _multiplicateurEnchantement(item.enchantement);
     }
     if (remisePct) prix *= (1 - remisePct / 100);
-    return Math.ceil(prix);
+    prix = Math.ceil(prix);
+    if (factionId && typeof Reputation !== "undefined") {
+      const resultat = Reputation.appliquerModifierPrix(factionId, prix);
+      return resultat.refuse ? null : resultat.prix;
+    }
+    return prix;
   }
 
   const _LABELS_RARETE_COURT = { commun: "Commun", peu_commun: "Peu commun", rare: "Rare", legendaire: "Légendaire" };
@@ -232,7 +240,8 @@ const Marche = (() => {
     const { localite, marchand } = _trouverMarchandEtLocalite(marchandId);
     if (!perso || !item || !localite || !marchand) return;
     const rareteEffective = _peutAvoirRarete(item) ? (rareteId || "commun") : "commun";
-    const prixFinalPo = calculerPrix(item, marchand.modificateurParDefaut, _valeurRarete(rareteEffective), 0);
+    const prixFinalPo = calculerPrix(item, marchand.modificateurParDefaut, _valeurRarete(rareteEffective), 0, marchand.faction);
+    if (prixFinalPo == null) { toast("Ce marchand refuse de vous vendre quoi que ce soit."); return; }
     const demandes = lireDemandes();
     demandes.push({
       id: "demande_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
@@ -291,15 +300,16 @@ const Marche = (() => {
     if (!controles) return;
     const item = _itemCatalogue(controles.dataset.itemId);
     if (!item) return;
+    const marchand = _marchand(_localite(_localiteId), _marchandId);
     const selMod = controles.querySelector(".marche-select-mod");
     const selRarete = controles.querySelector(".marche-select-rarete");
     const selRemise = controles.querySelector(".marche-select-remise");
     const modVal = selMod ? _valeurModificateur(selMod.value) : 1;
     const rareteVal = selRarete ? _valeurRarete(selRarete.value) : 1;
     const remisePct = selRemise ? parseInt(selRemise.value, 10) || 0 : 0;
-    const prix = calculerPrix(item, modVal, rareteVal, remisePct);
+    const prix = calculerPrix(item, modVal, rareteVal, remisePct, marchand ? marchand.faction : null);
     const span = controles.querySelector(".marche-prix-calcule");
-    if (span) span.textContent = `${prix} po`;
+    if (span) span.textContent = prix == null ? "Refusé" : `${prix} po`;
     return prix;
   }
 
@@ -310,7 +320,8 @@ const Marche = (() => {
 
   function _carteStockJoueur(slot, marchand) {
     const item = slot.item;
-    const prix = calculerPrix(item, marchand.modificateurParDefaut, _valeurRarete(slot.rareteId), 0);
+    const prix = calculerPrix(item, marchand.modificateurParDefaut, _valeurRarete(slot.rareteId), 0, marchand.faction);
+    const refuse = prix == null;
     const stats = _statsItem(item);
     return `<div class="loot-item">
       <div class="loot-item-header">
@@ -321,9 +332,9 @@ const Marche = (() => {
       </div>
       ${stats ? `<div class="loot-item-stats">${echapper(stats)}</div>` : ""}
       <div class="loot-item-desc">${echapper(item.description)}</div>
-      <div class="marche-prix">${prix} po</div>
+      <div class="marche-prix">${refuse ? "Commerce refusé" : prix + " po"}</div>
       <div class="barre-actions" style="margin-top:8px;">
-        <button class="btn petit or btn-marche-demander" data-item-id="${item.id}" data-rarete-id="${slot.rareteId}">🛒 Demander l'achat</button>
+        <button class="btn petit or btn-marche-demander" data-item-id="${item.id}" data-rarete-id="${slot.rareteId}" ${refuse ? "disabled" : ""}>🛒 Demander l'achat</button>
       </div>
     </div>`;
   }
@@ -332,7 +343,7 @@ const Marche = (() => {
     const item = slot.item;
     const stats = _statsItem(item);
     const modDefautId = _idModificateurLePlusProche(marchand.modificateurParDefaut);
-    const prixInitial = calculerPrix(item, marchand.modificateurParDefaut, _valeurRarete(slot.rareteId), 0);
+    const prixInitial = calculerPrix(item, marchand.modificateurParDefaut, _valeurRarete(slot.rareteId), 0, marchand.faction);
     const afficheRarete = _peutAvoirRarete(item);
     return `<div class="loot-item">
       <div class="loot-item-header">
@@ -347,7 +358,7 @@ const Marche = (() => {
         ${!item.sansModificateurRegional ? `<select class="marche-select-mod">${_optionsModificateur(item, modDefautId)}</select>` : ""}
         ${afficheRarete ? `<select class="marche-select-rarete">${_optionsRarete(slot.rareteId)}</select>` : ""}
         <select class="marche-select-remise" ${marchand.estMarcheNoir ? "disabled" : ""}>${_optionsRemise(0)}</select>
-        <span class="marche-prix-calcule">${prixInitial} po</span>
+        <span class="marche-prix-calcule">${prixInitial == null ? "Refusé" : prixInitial + " po"}</span>
       </div>
       <div class="barre-actions" style="margin-top:8px;">
         <button class="btn petit or btn-marche-acheter-direct" data-slot-id="${slot.slotId}" data-item-id="${item.id}">💰 Acheter (direct)</button>
@@ -375,6 +386,7 @@ const Marche = (() => {
         btn.onclick = () => {
           if (!_persoId) { toast("Choisis un personnage destinataire."); return; }
           const prix = _recalculerLigne(zone, btn.dataset.slotId);
+          if (prix == null) { toast("Ce marchand refuse de vous vendre quoi que ce soit."); return; }
           const res = acheterObjetMarche(_persoId, btn.dataset.itemId, prix);
           if (!res.ok) { toast(res.raison === "bourse_insuffisante" ? "Bourse insuffisante." : "Achat impossible."); return; }
           toast("Achat effectué ✔");
@@ -398,7 +410,7 @@ const Marche = (() => {
     const { localite, marchand } = _trouverMarchandEtLocalite(d.marchandId);
     if (!item || !localite || !marchand) return "";
     const afficheRarete = _peutAvoirRarete(item);
-    const prixActuel = calculerPrix(item, _valeurModificateur(d.modRegionalId), _valeurRarete(d.rariteId), d.remisePct);
+    const prixActuel = calculerPrix(item, _valeurModificateur(d.modRegionalId), _valeurRarete(d.rariteId), d.remisePct, marchand.faction);
     return `<div class="loot-item marche-demande" data-demande-id="${d.id}">
       <div class="loot-item-header">
         <span class="loot-item-nom">${echapper(d.persoNom)} → ${echapper(item.nom)}</span>
@@ -409,7 +421,7 @@ const Marche = (() => {
         ${!item.sansModificateurRegional ? `<select class="marche-select-mod" data-demande-id="${d.id}">${_optionsModificateur(item, d.modRegionalId)}</select>` : ""}
         ${afficheRarete ? `<select class="marche-select-rarete" data-demande-id="${d.id}">${_optionsRarete(d.rariteId)}</select>` : ""}
         <select class="marche-select-remise" data-demande-id="${d.id}" ${marchand.estMarcheNoir ? "disabled" : ""}>${_optionsRemise(marchand.estMarcheNoir ? 0 : d.remisePct)}</select>
-        <span class="marche-prix-calcule" data-demande-id="${d.id}">${prixActuel} po</span>
+        <span class="marche-prix-calcule" data-demande-id="${d.id}">${prixActuel == null ? "Refusé" : prixActuel + " po"}</span>
       </div>
       <div class="barre-actions" style="margin-top:8px;">
         <button class="btn petit or btn-marche-valider" data-demande-id="${d.id}">✅ Valider</button>
@@ -430,9 +442,10 @@ const Marche = (() => {
     const modVal = selMod ? _valeurModificateur(selMod.value) : 1;
     const rareteVal = selRarete ? _valeurRarete(selRarete.value) : 1;
     const remisePct = selRemise ? parseInt(selRemise.value, 10) || 0 : 0;
-    const prix = calculerPrix(item, modVal, rareteVal, remisePct);
+    const { marchand } = _trouverMarchandEtLocalite(d.marchandId);
+    const prix = calculerPrix(item, modVal, rareteVal, remisePct, marchand ? marchand.faction : null);
     const span = zone.querySelector(`.marche-prix-calcule[data-demande-id="${demandeId}"]`);
-    if (span) span.textContent = `${prix} po`;
+    if (span) span.textContent = prix == null ? "Refusé" : `${prix} po`;
     return { prix, modId: selMod ? selMod.value : d.modRegionalId, rariteId: selRarete ? selRarete.value : d.rariteId, remisePct };
   }
 
@@ -454,7 +467,11 @@ const Marche = (() => {
         let demandes = lireDemandes();
         const d = demandes.find((x) => x.id === demandeId);
         if (!d) return;
-        const prixFinal = recalc.prix != null ? recalc.prix : d.prixFinalPo;
+        const prixFinal = recalc.prix !== undefined ? recalc.prix : d.prixFinalPo;
+        if (prixFinal == null) {
+          toast(`Ce marchand refuse de vendre quoi que ce soit à ${d.persoNom} — demande laissée en attente.`);
+          return;
+        }
         const res = acheterObjetMarche(d.persoId, d.itemId, prixFinal);
         if (!res.ok) {
           toast(res.raison === "bourse_insuffisante"
