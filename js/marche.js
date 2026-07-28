@@ -234,7 +234,7 @@ const Marche = (() => {
     perso.piecesArgent = Math.floor((restePb % 100) / 10);
     perso.piecesBronze = restePb % 10;
     perso.inventaireListe = perso.inventaireListe || [];
-    perso.inventaireListe.push({ id: item.id, nom: item.nom, type: item.type, description: item.description, quantite: 1 });
+    perso.inventaireListe.push(Object.assign({}, item, { quantite: 1 }));
     sauverPersosPartagees(persos);
     return { ok: true };
   }
