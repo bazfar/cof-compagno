@@ -673,9 +673,12 @@ class Personnage extends Entite {
   }
 
   // A-t-il pris au moins un rang dans la "Voie du chaos" de sa classe
-  // (voie.speciale === true, cf. data/donnees.js) ? Sert à n'afficher le bloc
-  // Corruption sur la fiche qu'aux joueurs ayant opté pour cette mécanique
-  // (proposée sur demande/accord MJ, jamais par défaut).
+  // (voie.speciale === true, cf. data/donnees.js) ? Sert désormais UNIQUEMENT
+  // à la ligne "Jauge de combat" du bloc Corruption (mécanique de classe
+  // auto-incrémentée en combat) — la ligne "Corruption d'Âme" du même bloc
+  // est, elle, générale à tous les PJ depuis le 28/07/2026 (cf.
+  // htmlBlocCorruption côté app.js), le MJ pouvant l'ajuster narrativement
+  // sans que le joueur ait pris cette voie.
   aVoieChaosActive() {
     const c = this.classeDef;
     if (!c) return false;

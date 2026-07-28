@@ -4232,37 +4232,53 @@ const App = (() => {
     </div>`;
   }
 
-  // Bloc "Corruption" (Voie du chaos, homebrew) — visible seulement pour un
-  // perso ayant pris au moins un rang dans sa Voie du chaos (opt-in, cf.
-  // Personnage.aVoieChaosActive). Jauge de combat incrémentée automatiquement
-  // par Capacites.lancer() (rang.mecanique.corruption) pour les capacités au
-  // gain univoque ; +/- manuels ici pour les déclencheurs passifs non
-  // automatisables (ex. Guerrier/Chasseur rang 1) et les corrections de table.
-  // Corruption d'Âme (majeure) ne se réinitialise jamais, y compris après combat.
+  // Bloc "Corruption" — deux jauges distinctes cohabitant sur la même carte :
+  // - "Jauge de combat" (corruptionCombat) : mécanique de classe Voie du
+  //   chaos (opt-in, cf. Personnage.aVoieChaosActive), auto-incrémentée par
+  //   Capacites.lancer() (rang.mecanique.corruption) pour les capacités au
+  //   gain univoque ; +/- manuels ici pour les déclencheurs passifs non
+  //   automatisables et les corrections de table. Éditable par le joueur
+  //   comme avant, inchangé.
+  // - "Corruption d'Âme" (corruptionMajeure) : depuis le 28/07/2026, jauge
+  //   GÉNÉRALE ouverte à tout PJ (exposition à la Cupidité ou à d'autres
+  //   aspects du Chaos rencontrés en jeu, pas seulement la Voie du chaos).
+  //   Gain/perte reste une décision manuelle et narrative du MJ (validé avec
+  //   Thomas) : les boutons +/- de cette ligne ne s'affichent qu'au MJ, le
+  //   joueur ne voit que la valeur. Ne se réinitialise jamais, y compris
+  //   après combat. Le franchissement d'un palier reste géré par l'onglet
+  //   🧬 Mutations (déjà générique, aucun changement requis là-bas).
+  // Le bloc entier s'affiche si : la Voie du chaos est active (comme avant),
+  // OU l'utilisateur courant est le MJ (pour pouvoir fixer la CA de
+  // n'importe quel PJ), OU corruptionMajeure > 0 (le joueur voit sa jauge
+  // une fois touché) — un PJ classique à CA 0 ne voit donc rien de plus.
   function htmlBlocCorruption(p, perso) {
-    if (!perso.aVoieChaosActive() || typeof Capacites === "undefined") return "";
-    const combat = p.corruptionCombat || 0;
+    const aChaos = perso.aVoieChaosActive();
     const majeure = p.corruptionMajeure || 0;
-    const seuil = Capacites.SEUIL_CORRUPTION_MAJEURE || 6;
+    const estMJ = role === "mj";
+    if (!aChaos && !estMJ && !majeure) return "";
+    const afficherJaugeCombat = aChaos && typeof Capacites !== "undefined";
+    const combat = p.corruptionCombat || 0;
+    const seuil = (typeof Capacites !== "undefined" && Capacites.SEUIL_CORRUPTION_MAJEURE) || 6;
     return `<div class="carte corruption-bloc">
       <h3 style="margin-top:0;">☣ Corruption</h3>
-      <div class="corruption-ligne">
+      ${afficherJaugeCombat ? `<div class="corruption-ligne">
         <span>Jauge de combat</span>
         <div class="corruption-control">
           <button data-corruption-moins="combat" title="Diminuer">−</button>
           <span class="corruption-valeur${combat > seuil ? " corruption-danger" : ""}">${combat}/${seuil}</span>
           <button data-corruption-plus="combat" title="Augmenter">+</button>
         </div>
-      </div>
+      </div>` : ""}
       <div class="corruption-ligne">
         <span>Corruption d'Âme</span>
         <div class="corruption-control">
-          <button data-corruption-moins="majeure" title="Diminuer">−</button>
+          ${estMJ ? `<button data-corruption-moins="majeure" title="Diminuer">−</button>` : ""}
           <span class="corruption-valeur${majeure > 0 ? " corruption-danger" : ""}">${majeure}</span>
-          <button data-corruption-plus="majeure" title="Augmenter">+</button>
+          ${estMJ ? `<button data-corruption-plus="majeure" title="Augmenter">+</button>` : ""}
         </div>
       </div>
-      ${majeure >= 5 ? `<p class="aide" style="margin:6px 0 0;">⚠️ Dès Corruption d'Âme 5+ : le rang 4 « Voie du chaos » se débloque (contrepartie incluse).</p>` : ""}
+      ${aChaos && majeure >= 5 ? `<p class="aide" style="margin:6px 0 0;">⚠️ Dès Corruption d'Âme 5+ : le rang 4 « Voie du chaos » se débloque (contrepartie incluse).</p>` : ""}
+      ${!estMJ && !aChaos ? `<p class="aide" style="margin:6px 0 0;">Cette jauge évolue uniquement à la discrétion du MJ.</p>` : ""}
     </div>`;
   }
 
