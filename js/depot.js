@@ -133,7 +133,7 @@ class DepotDistant extends Depot {
     const cle = id || (obj && obj.id);
     if (!cle) return null;
     this._cache[cle] = obj; // optimiste : visible localement tout de suite
-    this._collection().doc(cle).set(obj)
+    window.suivreEcritureFirestore(this._collection().doc(cle).set(obj))
       .catch((e) => {
         console.error(`DepotDistant(${this.cle}).sauver(${cle}) échoué :`, e);
         if (onError) onError(e);
@@ -142,7 +142,7 @@ class DepotDistant extends Depot {
   }
   supprimer(id) {
     delete this._cache[id];
-    this._collection().doc(id).delete()
+    window.suivreEcritureFirestore(this._collection().doc(id).delete())
       .catch((e) => console.error(`DepotDistant(${this.cle}).supprimer(${id}) échoué :`, e));
   }
   // Remplace tout le store d'un coup : diff local pour ne réécrire/supprimer
@@ -155,7 +155,7 @@ class DepotDistant extends Depot {
     const batch = window.FirebaseDB.batch();
     Object.keys(ancien).forEach((id) => { if (!(id in nouveau)) batch.delete(col.doc(id)); });
     Object.keys(nouveau).forEach((id) => batch.set(col.doc(id), nouveau[id]));
-    batch.commit()
+    window.suivreEcritureFirestore(batch.commit())
       .catch((e) => console.error(`DepotDistant(${this.cle}).remplacerTout() échoué :`, e));
     return true;
   }

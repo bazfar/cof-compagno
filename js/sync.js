@@ -31,9 +31,14 @@ const SyncStore = (() => {
     return Object.prototype.hasOwnProperty.call(_cache, cle) ? _cache[cle] : null;
   }
 
+  // suivreEcritureFirestore (cf. firebase-config.js) : affiche #statut-sync
+  // si cette écriture n'est pas accusée par le serveur après quelques
+  // secondes — sinon un client qui n'atteint plus Firestore (réseau coupé,
+  // bloqueur...) croit que son jet est parti (mise à jour optimiste locale
+  // ci-dessous) alors qu'il n'a jamais atteint les autres joueurs.
   function set(cle, valeur) {
     _cache[cle] = valeur; // optimiste, dispo immédiatement pour l'appelant local
-    _doc(cle).set({ valeur: valeur })
+    window.suivreEcritureFirestore(_doc(cle).set({ valeur: valeur }))
       .catch((e) => console.error(`SyncStore.set(${cle}) échoué :`, e));
     return true;
   }

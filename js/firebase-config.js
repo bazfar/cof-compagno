@@ -40,4 +40,45 @@
 
   window.FirebaseDB = db;
   window.SESSION_ID = SESSION_ID;
+
+  // ------------------------------------------------------------
+  // Suivi des écritures Firestore en attente d'accusé de réception serveur.
+  // Utilisé par depot.js (fiches perso, registre joueurs) et sync.js
+  // (journal de dés partagé) : les deux font une mise à jour LOCALE
+  // optimiste immédiate, puis poussent en tâche de fond — un joueur dont le
+  // navigateur n'atteint plus Firestore (réseau coupé, bloqueur de pub,
+  // pare-feu...) voit donc ses propres actions "marcher" alors qu'elles ne
+  // sortent jamais de son appareil, invisibles pour le reste de la table,
+  // sans aucun signe pour lui expliquer pourquoi (bug réellement rencontré :
+  // joueur isolé, personne ne voit ses jets de dés).
+  //
+  // La promesse de .set()/.delete()/.commit() Firestore ne se résout QUE
+  // lorsque l'écriture est accusée par le serveur (même avec la persistance
+  // offline ci-dessus) : on l'utilise comme signal — passé SEUIL_MS sans
+  // résolution, on affiche #statut-sync (cf. index.html/style.css).
+  const SEUIL_MS = 6000;
+  const _enAttente = new Set();
+  let _intervalStatut = null;
+  let _depuis = null;
+
+  function _majStatutSync() {
+    const zone = document.getElementById("statut-sync");
+    if (!zone) return;
+    if (_enAttente.size === 0) {
+      _depuis = null;
+      zone.style.display = "none";
+      return;
+    }
+    if (!_depuis) _depuis = Date.now();
+    zone.style.display = (Date.now() - _depuis > SEUIL_MS) ? "block" : "none";
+  }
+
+  window.suivreEcritureFirestore = function (promise) {
+    const id = {};
+    _enAttente.add(id);
+    if (!_intervalStatut) _intervalStatut = setInterval(_majStatutSync, 1000);
+    const _terminer = () => { _enAttente.delete(id); _majStatutSync(); };
+    promise.then(_terminer, _terminer);
+    return promise;
+  };
 })();

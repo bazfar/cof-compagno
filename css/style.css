@@ -71,6 +71,17 @@ header h1 .sous {
   font-style: italic;
 }
 
+/* ---------- Bandeau statut synchro (cf. sync.js) ---------- */
+#statut-sync {
+  background: var(--chaos-bg);
+  color: var(--chaos);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 8px 16px;
+  border-bottom: 2px solid var(--chaos);
+}
+
 /* ---------- Onglets ---------- */
 nav.tabs {
   display: flex;
