@@ -459,6 +459,24 @@ const App = (() => {
     return Carte.tokenIdPourPerso(persoId);
   }
 
+  // Une capacité de zone SANS jet opposé vise-t-elle des ennemis (comme
+  // Chant brisant, Cataclysme élémentaire) plutôt que des alliés (comme
+  // Rempart vivant, Sanctuaire du gardien, Convocation des esprits
+  // ancestraux) ? Sert à réserver le sélecteur de cible carte (monstre
+  // uniquement, cf. son appelant) aux zones réellement hostiles — sans ce
+  // garde-fou, une zone de soin/buff alliée se retrouverait avec un picker
+  // qui ne propose que des monstres, inutilisable pour prévisualiser qui
+  // serait vraiment affecté. Pas de champ dédié dans les données : déduit
+  // des effets déjà présents (un "degats", ou un "bonus" à valeur négative =
+  // un debuff, donc hostile ; un "pvTemp" ou un "bonus" positif = un buff
+  // allié, donc pas concerné).
+  function _zoneCibleHostile(mecanique) {
+    if (mecanique.jetOppose) return true;
+    return (mecanique.effets || []).some((e) =>
+      e.type === "degats" || (e.type === "bonus" && typeof e.valeur === "number" && e.valeur < 0)
+    );
+  }
+
   // Cibles possibles pour le vérificateur de portée : tous les tokens de la
   // table de combat (monstres + autres PJ), hors soi-même.
   function _ciblesPortee(monTokenId) {
@@ -4382,19 +4400,23 @@ const App = (() => {
               : `<option value="">Aucune cible disponible</option>`;
             if (soinPartage) toast("Sélectionne jusqu'à 3 alliés (Ctrl/Cmd + clic).");
             pickerForme.style.display = "flex";
-          } else if (mecanique.cible === "zone" && (mecanique.jetOppose || mecanique.portee)) {
-            // Capacité de zone AVEC jet opposé (ex. Barde "Mélopée de la
-            // Folie"/"Requiem du silence", Voie du chant/chaos) OU avec une
-            // portée définie mais sans jet opposé (ex. Barde "Chant brisant",
-            // un debuff de zone pur) : le moteur ne cible jamais
-            // automatiquement toute une zone à la fois (même limite que les
-            // zones à bonus, ex. Cri du rassemblement — "à appliquer
-            // manuellement allié par allié"), mais on permet ici de choisir UN
-            // monstre de la zone (via le sélecteur carte, avec aperçu de zone
-            // au survol — cf. _armerCiblageCarte/mecanique.zone) pour que le
-            // jet vs DEF se résolve automatiquement contre lui s'il y en a un
-            // (cibleId ignoré sans effet si jetOppose est absent, cf.
-            // Capacites.lancer) ; relancer pour la cible suivante.
+          } else if (mecanique.cible === "zone" && (mecanique.jetOppose || mecanique.portee) && _zoneCibleHostile(mecanique)) {
+            // Capacité de zone HOSTILE (cf. _zoneCibleHostile) avec une portée
+            // définie — AVEC jet opposé (ex. Barde "Mélopée de la Folie"/
+            // "Requiem du silence") OU sans (ex. Barde "Chant brisant",
+            // Magicien "Cataclysme élémentaire", un debuff/AOE de zone pur) :
+            // le moteur ne cible jamais automatiquement toute une zone à la
+            // fois (même limite que les zones à bonus alliées, ex. Cri du
+            // rassemblement — "à appliquer manuellement allié par allié"),
+            // mais on permet ici de choisir UN monstre de la zone (via le
+            // sélecteur carte, avec aperçu de zone au survol — cf.
+            // _armerCiblageCarte/mecanique.zone) pour que le jet vs DEF se
+            // résolve automatiquement contre lui s'il y en a un (cibleId
+            // ignoré sans effet si jetOppose est absent, cf. Capacites.lancer)
+            // ; relancer pour la cible suivante. Les zones alliées (Rempart
+            // vivant, Sanctuaire du gardien...) restent sur la résolution
+            // immédiate ci-dessous : un picker de monstres n'aurait aucun sens
+            // pour prévisualiser qui serait affecté.
             const cibles = Capacites.listeCibles(id).filter((cc) => cc.genre === "monstre");
             pickerSelect.innerHTML = cibles.length
               ? cibles.map((cc) => `<option value="${cc.id}">${echapper(cc.nom)}</option>`).join("")
