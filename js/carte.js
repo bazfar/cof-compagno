@@ -633,6 +633,28 @@ const Carte = (() => {
     sauver(); rendreJetons();
     _notifierChangementMonstres();
   }
+  // Décompte d'un tour les états actifs d'un monstre au début de son propre
+  // tour (cf. js/combat.js tourSuivant, même principe que
+  // Capacites.decompterEtatsDebutTour côté PJ) — même bascule battlemap/
+  // worldmap qu'ajouterEtatCombat/retirerEtatCombat ci-dessus. Renvoie les
+  // libellés des états retirés (durée épuisée), pour journalisation.
+  function decompterEtatsMonstre(id) {
+    if (_combatEnBattlemap() && DD2VTT.tokensMonstres().some((t) => t.id === id)) {
+      return DD2VTT.decompterEtats ? DD2VTT.decompterEtats(id) : [];
+    }
+    const tok = etat.jetons.find((j) => j.id === id);
+    if (!tok || !tok.etatsActifs || !tok.etatsActifs.length) return [];
+    const retires = [];
+    tok.etatsActifs = tok.etatsActifs.filter((e) => {
+      if (!e.dureeRestante || typeof e.dureeRestante.tours !== "number") return true;
+      e.dureeRestante.tours -= 1;
+      if (e.dureeRestante.tours <= 0) { retires.push(e.source || (e.bonus ? `Bonus ${e.bonus.cible}` : "État")); return false; }
+      return true;
+    });
+    sauver(); rendreJetons();
+    _notifierChangementMonstres();
+    return retires;
+  }
 
   // Retire le monstre à la fois de la table de combat et de la carte (même
   // suppression que le bouton ✕ du jeton/token) — quel que soit le mode actif.
@@ -3015,6 +3037,27 @@ const Carte = (() => {
       _sauverToken(tok);
       _onChangeMonstres && _onChangeMonstres();
     }
+    // Décompte d'un tour toutes les durées numériques des états actifs d'un
+    // token (posés via ajouterEtatToken/Carte.ajouterEtatCombat, ex. debuffs
+    // de zone du Barde) — retire les entrées expirées (tours <= 0). Pas de
+    // DOT/soin de tour ici (contrairement à Capacites.decompterEtatsDebutTour
+    // côté PJ) : seul producteur actuel pour un monstre, un simple bonus/malus
+    // temporaire. Renvoie les libellés retirés, pour un message de log
+    // optionnel côté appelant (js/combat.js tourSuivant).
+    function decompterEtatsToken(id) {
+      const tok = tokensDD.find(t => t.id === id);
+      if (!tok || !tok.etatsActifs || !tok.etatsActifs.length) return [];
+      const retires = [];
+      tok.etatsActifs = tok.etatsActifs.filter(e => {
+        if (!e.dureeRestante || typeof e.dureeRestante.tours !== 'number') return true;
+        e.dureeRestante.tours -= 1;
+        if (e.dureeRestante.tours <= 0) { retires.push(e.source || (e.bonus ? `Bonus ${e.bonus.cible}` : 'État')); return false; }
+        return true;
+      });
+      _sauverToken(tok);
+      _onChangeMonstres && _onChangeMonstres();
+      return retires;
+    }
 
     // Suppression : MJ (n'importe quel token) ou joueur retirant sa propre
     // invocation (cf. rendreTokensDD, même garde de propriété pour le bouton
@@ -3506,7 +3549,7 @@ const Carte = (() => {
       modeWorldmap: activerModeWorldmap, modeBattlemap: activerModeBattlemap, estActive, ajouterTokenData,
       tokensMonstres, tokensPJ, distanceCases, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
       renommerToken, changerCouleurToken,
-      ajouterEtat: ajouterEtatToken, retirerEtat: retirerEtatToken,
+      ajouterEtat: ajouterEtatToken, retirerEtat: retirerEtatToken, decompterEtats: decompterEtatsToken,
       supprimerToken: supprimerTokenDD, onChange, actualiserTokens, reinitialiserExploration, revelerToutExploration,
       onMonstreDevientVisible, reinitialiserDetectionVisibilite, estMonstreVisible,
       activerModeCiblage, desactiverModeCiblage,
@@ -3570,7 +3613,7 @@ const Carte = (() => {
   return {
     onOpen, definirRole, definirMonPerso, ajouterMonstre,
     listeMonstresCombat, listeTokensJoueursCombat, appliquerDegatsCombat, definirPvCombat, ajusterPvCombat,
-    ajouterEtatCombat, retirerEtatCombat, distanceCasesEntre,
+    ajouterEtatCombat, retirerEtatCombat, decompterEtatsMonstre, distanceCasesEntre,
     supprimerMonstreCombat, onMonstresChange, definirModeCarte,
     onMonstreDevientVisible, reinitialiserDetectionVisibilite, idPersoDepuisRef, tokenIdPourPerso, monstreEstVisible,
     initiales, rafraichirCouleurJoueur, COULEURS_JOUEURS,

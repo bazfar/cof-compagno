@@ -349,6 +349,17 @@ const Combat = (() => {
         ));
       }
     }
+    // Décompte des états actifs d'un MONSTRE au début de son propre tour —
+    // même principe que Capacites.decompterEtatsDebutTour côté PJ ci-dessus,
+    // mais pour les debuffs/bonus posés sur un jeton (cf.
+    // Carte.ajouterEtatCombat/decompterEtatsMonstre, js/app.js
+    // _appliquerBonusMonstreDepuisMessages) — seul moyen de suivre la durée
+    // (ex. Note discordante/Chant brisant du Barde) sans passer par
+    // js/capacites.js, qui ne gère que les PJ.
+    if (actif && actif.type === "monstre" && typeof Carte !== "undefined" && Carte.decompterEtatsMonstre) {
+      const retires = Carte.decompterEtatsMonstre(actif.id);
+      retires.forEach((libelle) => App.ajouterHisto(`${libelle} s'est dissipé sur ${actif.nom}`, 0, false, false, ""));
+    }
 
     _sauver(etat);
   }

@@ -551,6 +551,7 @@ textarea { resize: vertical; min-height: 70px; }
 .cm-entete { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
 .cm-nom { font-weight: 700; color: var(--violet); font-size: 0.95rem; }
 .cm-stats { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.78rem; color: var(--violet-clair); margin-bottom: 8px; }
+.def-ajustee { opacity: 0.7; font-size: 0.9em; text-decoration: line-through; }
 .cm-attaques { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 .cm-attaque-ligne { display: flex; align-items: center; gap: 6px; }
 .cm-attaque-ligne .btn { flex: 1; text-align: left; font-size: 0.78rem; padding: 5px 8px; }

@@ -574,6 +574,78 @@ const App = (() => {
     return def;
   }
 
+  // Bonus/malus temporaires actifs sur un jeton monstre (cf.
+  // Carte.ajouterEtatCombat, posé par resoudreCapaciteEtRafraichir pour
+  // toute capacité "bonus" ciblant un monstre — ex. Barde "Note
+  // discordante"/"Chant brisant") pour une cible donnée ("DEF" ou
+  // "attaque") — même principe que Personnage.bonusTemporaire côté PJ, mais
+  // sur le token puisqu'un monstre n'a pas de classe Personnage. Utilisé
+  // partout où m.def/bonusAttaque est lu (affichage carte de combat ET
+  // résolution réelle des jets), pour que la valeur affichée corresponde
+  // toujours à la valeur réellement utilisée dans les jets.
+  function _bonusEtatsMonstre(m, cible) {
+    return ((m && m.etatsActifs) || []).reduce((t, e) => t + ((e.bonus && e.bonus.cible === cible) ? e.bonus.valeur : 0), 0);
+  }
+  // DEF effective d'un monstre : valeur de base + bonus/malus actifs (cf.
+  // _bonusEtatsMonstre) — null si la DEF de base est inconnue (comme avant).
+  function _defEffectiveMonstre(m) {
+    return (m && typeof m.def === "number") ? m.def + _bonusEtatsMonstre(m, "DEF") : null;
+  }
+
+  // Résout une formule de durée ("3+Mod.CHA", "2", "prochainTour",
+  // "permanente"...) en nombre de tours pour un état posé sur un monstre —
+  // même vocabulaire que Capacites.resoudreDureeInitiale (data/donnees.js),
+  // mais réimplémenté ici en miniature (juste Mod.XXX/constantes, jamais de
+  // dé dans une durée) pour ne jamais avoir à toucher js/capacites.js : ce
+  // module ne stocke un état que sur un PJ (cf. appliquerBonusSurPerso), pas
+  // sur un jeton monstre. perso = le LANCEUR (dont dépend Mod.XXX ici).
+  function _resoudreDureeToursMonstre(dureeExpr, perso) {
+    if (dureeExpr === "permanente") return { tours: null, motCle: "permanente" };
+    if (dureeExpr === "finCombat") return { tours: null, motCle: "finCombat" };
+    if (dureeExpr === "24h") return { tours: null, motCle: "horsTour" };
+    if (dureeExpr === "prochainTour") return { tours: 1, motCle: null };
+    const termes = String(dureeExpr || "").replace(/\s/g, "").match(/[+-]?[^+-]+/g) || [];
+    let total = 0;
+    for (const terme of termes) {
+      const negatif = terme.startsWith("-");
+      const brut = terme.replace(/^[+-]/, "");
+      const mod = /^Mod\.([A-Za-z]+)$/i.exec(brut);
+      let v;
+      if (mod) v = perso ? perso.mod(mod[1].toUpperCase()) : 0;
+      else if (/^\d+$/.test(brut)) v = parseInt(brut, 10);
+      else return { tours: null, motCle: null }; // formule imprévue (dé...) : pas de décompte fiable
+      total += negatif ? -v : v;
+    }
+    return { tours: total, motCle: null };
+  }
+
+  // Applique manuellement, côté app.js, le bonus/malus d'une capacité de
+  // zone/attaque ciblant un MONSTRE (Capacites.resoudreEffet ne stocke un
+  // "bonus" que pour un PJ, cf. sa doc — sur une cible monstre il se contente
+  // de renvoyer un message "à appliquer manuellement", même sans le savoir
+  // lui-même vraiment sélectionné). Plutôt que dupliquer les nombreux
+  // ajustements de rang spécifiques (Refrain lancinant/Dissonance profonde,
+  // Malédiction profonde...) déjà résolus dans ce message, on relit la
+  // valeur FINALE déjà calculée dedans (regex sur le motif "Bonus (cible
+  // valeur, duree) — ..."), puis on la stocke via Carte.ajouterEtatCombat —
+  // même format d'entrée que appliquerBonusSurPerso (bonus.cible/valeur,
+  // dureeRestante), affiché par htmlEtatsActifs comme pour un PJ.
+  function _appliquerBonusMonstreDepuisMessages(messages, cibleMonstreId, perso, libelle) {
+    if (typeof Carte === "undefined" || !Carte.ajouterEtatCombat) return;
+    const re = /Bonus \(([A-Za-zÀ-ÿ]+) ([+-]?\d+), ([^)]+)\) — aucune cible sélectionnée, à appliquer manuellement\./g;
+    let m;
+    while ((m = re.exec(messages.join("\n")))) {
+      const [, cible, valeurTxt, duree] = m;
+      Carte.ajouterEtatCombat(cibleMonstreId, {
+        idEtat: null,
+        bonus: { cible, valeur: parseInt(valeurTxt, 10) },
+        dureeRestante: Object.assign(_resoudreDureeToursMonstre(duree, perso), { dureeAffichee: duree }),
+        source: libelle,
+        poseLe: Date.now(),
+      });
+    }
+  }
+
   // Détermine touché/raté à partir d'un jet déjà résolu (cf. lancerTest) et
   // d'une DEF cible déjà connue (ou null) — cœur de règle partagé par
   // _resoudreAttaqueRapide (joueur, armes rapides) ET la table de combat MJ
@@ -615,7 +687,7 @@ const App = (() => {
     if (cibleId && typeof Carte !== "undefined") {
       const monstre = (Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : []).find((t) => t.id === cibleId);
       if (monstre) {
-        defCible = typeof monstre.def === "number" ? monstre.def : null;
+        defCible = _defEffectiveMonstre(monstre);
       } else {
         const pjTok = (Carte.listeTokensJoueursCombat ? Carte.listeTokensJoueursCombat() : []).find((t) => t.id === cibleId);
         if (pjTok && pjTok.ref && pjTok.ref.startsWith("pj-")) {
@@ -3959,8 +4031,23 @@ const App = (() => {
       } else {
         libelle = "État";
       }
-      const dureeAffichee = e.dureeRestante && typeof e.dureeRestante === "object" ? e.dureeRestante.dureeAffichee : e.dureeRestante;
-      return `<span class="etat-actif">${libelle}${dureeAffichee ? ` (${dureeAffichee})` : ""}${e.source ? ` · ${e.source}` : ""} ` +
+      // Durée affichée : nombre de tours RESTANTS en direct (décompté à
+      // chaque tour, cf. Capacites.decompterEtatsDebutTour côté PJ /
+      // Carte.decompterEtatsMonstre côté monstre) plutôt que la formule de
+      // départ figée — permet de suivre le debuff dans la durée, pas
+      // seulement sa valeur initiale. Repli sur un mot-clé (permanent/fin de
+      // combat) ou, en dernier recours, la formule brute si jamais résolue.
+      const dr = e.dureeRestante;
+      let dureeTxt;
+      if (dr && typeof dr === "object") {
+        if (typeof dr.tours === "number") dureeTxt = `${dr.tours} tour${dr.tours > 1 ? "s" : ""}`;
+        else if (dr.motCle === "permanente") dureeTxt = "permanent";
+        else if (dr.motCle === "finCombat") dureeTxt = "jusqu'à la fin du combat";
+        else dureeTxt = dr.dureeAffichee;
+      } else {
+        dureeTxt = dr;
+      }
+      return `<span class="etat-actif">${libelle}${dureeTxt ? ` (${dureeTxt})` : ""}${e.source ? ` · ${e.source}` : ""} ` +
         `<button class="btn-retirer-etat" data-etat-idx="${idx}" title="Retirer cet état/bonus">✕</button></span>`;
     }).join(" ");
     return `<div class="carte"><h3>États actifs</h3><div class="etats-actifs-liste">${items}</div></div>`;
@@ -4339,6 +4426,18 @@ const App = (() => {
           sauverPersos(persosApresSoin);
         }
       }
+      // Barde "Note discordante"/"Chant brisant" (et toute future capacité de
+      // zone/attaque à bonus) ciblant un MONSTRE : Capacites.lancer ne stocke
+      // rien pour lui (cf. appliquerBonusSurPerso, PJ uniquement) — reproduit
+      // ici l'équivalent côté app.js (cf. _appliquerBonusMonstreDepuisMessages),
+      // pour que le debuff soit réellement suivi (DEF/attaque ajustées, durée
+      // en tours) sur la fiche monstre plutôt que laissé purement narratif.
+      if (res.ok && cibleId && (mecaniqueLancee.cible === "ennemi" || mecaniqueLancee.cible === "zone")) {
+        const cibleMonstre = Capacites.listeCibles(id).find((c) => c.id === cibleId && c.genre === "monstre");
+        if (cibleMonstre) {
+          _appliquerBonusMonstreDepuisMessages(res.messages, cibleMonstre.id, Personnage.depuisJSON(p), sourceLancee.nomCap || "Capacité");
+        }
+      }
       // Consomme l'action principale du tour en combat (no-op hors combat) —
       // "compétence" est l'autre exemple type d'action principale. Une
       // réaction (mecanique.reactionCout, ex. Guerrier "Fils du village") ne
@@ -4496,6 +4595,18 @@ const App = (() => {
       el.onclick = () => {
         if (!capaciteDegatsEnAttente || capaciteDegatsEnAttente.persoId !== id) return;
         const res = Capacites.resoudreDegatsEnAttente(capaciteDegatsEnAttente);
+        // Barde "Note discordante" (bonus différé, cf. differe:true) ciblant
+        // un MONSTRE : même application manuelle que dans
+        // resoudreCapaciteEtRafraichir ci-dessus, mais ici pour un effet
+        // résolu seulement APRÈS confirmation du toucher (le message "Bonus"
+        // n'existe qu'à ce moment-là, pas au moment du jet d'attaque).
+        const cibleDeg = capaciteDegatsEnAttente.cible;
+        if (res.ok && cibleDeg && cibleDeg.genre === "monstre") {
+          const pLanceur = chargerPersos()[capaciteDegatsEnAttente.persoId];
+          _appliquerBonusMonstreDepuisMessages(res.messages, cibleDeg.id,
+            pLanceur ? Personnage.depuisJSON(pLanceur) : null,
+            (capaciteDegatsEnAttente.source && capaciteDegatsEnAttente.source.nomCap) || "Capacité");
+        }
         capaciteDegatsEnAttente = null;
         toast(res.messages.length ? res.messages.join(" · ") : "Aucun dégât à résoudre.");
         rafraichir();
@@ -4663,7 +4774,7 @@ const App = (() => {
             return;
           }
           const jet = lancerTest(`${perso.nom || "Perso"} — Poussée (désengagement vs ${m.nom})`, bonusFor, 20, null, { persoId: perso.id, caracCode: "FOR" });
-          const defM = typeof m.def === "number" ? m.def : null;
+          const defM = _defEffectiveMonstre(m);
           const reussi = defM !== null && jet.total >= defM;
           if (reussi) {
             messages.push(`✅ ${m.nom} repoussé (${jet.total} vs DEF ${defM}) — pas d'attaque d'opportunité.`);
@@ -4675,7 +4786,7 @@ const App = (() => {
           const a = attaques && attaques[0];
           const r = a && _resoudreAttaqueMonstre(a);
           if (!r) { messages.push(`  → attaque de ${m.nom} inconnue, à résoudre manuellement.`); return; }
-          const resolution = _resoudreAttaqueMonstreVsPJ(`${m.nom} — ${r.nom} (attaque d'opportunité)`, r.bonusAttaque, r.critMin, id);
+          const resolution = _resoudreAttaqueMonstreVsPJ(`${m.nom} — ${r.nom} (attaque d'opportunité)`, r.bonusAttaque + _bonusEtatsMonstre(m, "attaque"), r.critMin, id);
           if (resolution.echecCritique) {
             messages.push(`  → échec critique automatique (1 naturel), pas de dégâts.`);
           } else if (resolution.touche === false) {
@@ -7950,12 +8061,17 @@ const App = (() => {
     const def = (typeof BESTIAIRE_INDEX !== "undefined" && m.monstreId) ? BESTIAIRE_INDEX[m.monstreId] : null;
     const attaques = m.attaques || (def && def.attaques);
     if (!attaques || !attaques.length) return "";
+    // bonusAttaqueEffectif : bonusAttaque de base + malus/bonus actifs (cf.
+    // _bonusEtatsMonstre, ex. Barde "Note discordante") — affiché ici et
+    // repris tel quel au clic (data-monstre-jet ci-dessous), pour que le
+    // nombre affiché soit toujours celui réellement lancé.
     return `<div class="cm-attaques">${attaques.map((a, i) => {
       const r = _resoudreAttaqueMonstre(a);
       if (!r) return "";
       const etatDeg = _etatDegatsMonstre(m.id, i);
+      const bonusAttaqueEffectif = r.bonusAttaque + _bonusEtatsMonstre(m, "attaque");
       return `<div class="cm-attaque-ligne">
-        <button class="btn petit secondaire" data-monstre-jet="${m.id}" data-idx-attaque="${i}" title="${echapper(r.jetTexte || "")}">⚔ ${echapper(r.nom)} (${signe(r.bonusAttaque)})</button>
+        <button class="btn petit secondaire" data-monstre-jet="${m.id}" data-idx-attaque="${i}" title="${echapper(r.jetTexte || "")}">⚔ ${echapper(r.nom)} (${signe(bonusAttaqueEffectif)})</button>
         ${etatDeg.visible ? `<button class="btn-de-cap" data-monstre-degats="${m.id}" data-idx-attaque="${i}" data-monstre-critique="${etatDeg.critique ? "1" : "0"}" title="Dégâts : ${echapper(r.degats || "")}">🎲${etatDeg.critique ? " CRIT" : ""}</button>` : ""}
       </div>`;
     }).join("")}</div>`;
@@ -8098,6 +8214,14 @@ const App = (() => {
       const etoiles = m.dangerosite ? "★".repeat(Math.min(m.dangerosite, 5)) : "";
       const badgeBoss = m.boss ? ' <span class="badge-boss">BOSS</span>' : "";
       const cibleActuelle = ciblesMonstres[m.id] || "";
+      // DEF affichée = valeur effective (base + bonus/malus actifs, ex. Barde
+      // "Note discordante"/"Chant brisant", cf. _bonusEtatsMonstre) — la base
+      // reste visible entre parenthèses dès qu'un ajustement est actif, pour
+      // que le MJ voie d'un coup d'œil la DEF réelle ET d'où elle vient.
+      const bonusDefActif = _bonusEtatsMonstre(m, "DEF");
+      const defHtml = (m.def !== null && m.def !== undefined)
+        ? `<span>DEF ${m.def + bonusDefActif}${bonusDefActif ? ` <span class="def-ajustee">(base ${m.def})</span>` : ""}</span>`
+        : "";
       // Cible PJ de l'attaque (cf. _resoudreAttaqueMonstreVsPJ) — pas de
       // gating possible sans elle (comportement d'avant ce chantier, jamais
       // bloquant), donc omise s'il n'y a aucun PJ enregistré.
@@ -8114,7 +8238,7 @@ const App = (() => {
             <button class="btn petit danger" data-suppr-monstre="${m.id}">✕</button>
           </div>
           <div class="cm-stats">
-            ${m.def !== null && m.def !== undefined ? `<span>DEF ${m.def}</span>` : ""}
+            ${defHtml}
             <span>Armure ${m.armure || 0}</span>
             ${etoiles ? `<span>${etoiles}</span>` : ""}
           </div>
@@ -8163,7 +8287,7 @@ const App = (() => {
         const r = _resoudreAttaqueMonstre(a);
         if (!r) return;
         const pjId = ciblesMonstres[m.id] || null;
-        const resolution = _resoudreAttaqueMonstreVsPJ(`${m.nom} — ${r.nom}`, r.bonusAttaque, r.critMin, pjId);
+        const resolution = _resoudreAttaqueMonstreVsPJ(`${m.nom} — ${r.nom}`, r.bonusAttaque + _bonusEtatsMonstre(m, "attaque"), r.critMin, pjId);
         attaquesMonstresEnAttente[`${m.id}:${idx}`] = resolution;
         if (pjId) {
           const nomCible = (persos[pjId] && persos[pjId].nom) || "la cible";
