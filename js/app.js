@@ -4309,9 +4309,10 @@ const App = (() => {
     // à ne pas se résoudre sur UNE cible unique, cf. Capacites.lancer.
     function resoudreCapaciteEtRafraichir(cibleId, cibleIds) {
       const mecaniqueLancee = lancerCapaciteEnAttente.mecanique;
+      const sourceLancee = lancerCapaciteEnAttente.source;
       const res = Capacites.lancer({
         persoId: id,
-        source: lancerCapaciteEnAttente.source,
+        source: sourceLancee,
         mecanique: mecaniqueLancee,
         cibleId,
         cibleIds,
@@ -4319,6 +4320,25 @@ const App = (() => {
       });
       fermerPickerCibleCapacite();
       toast(res.messages.join(" · "));
+      // Prêtre — Voie de la guérison rang 5 "Résurrection" : au-delà du soin
+      // générique (1d6 PV, déjà résolu par Capacites.lancer ci-dessus via le
+      // canal "soin" standard, qui ne touche que pvActuel), lève aussi l'état
+      // Mort de la cible (etatMort/mortSucces/mortEchecs) — sans quoi le
+      // personnage resterait affiché "Mort" malgré ses PV retrouvés, le
+      // moteur générique de soin n'ayant aucune notion de "ramène un mort"
+      // propre à ce rang précis. Même mécanique que reanimerAllie (objet de
+      // réanimation), appliquée ici après un cast réussi de la capacité.
+      if (res.ok && cibleId && mecaniqueLancee.cible === "allie" &&
+          sourceLancee.voie === "Voie de la guérison" && sourceLancee.rang === 5) {
+        const persosApresSoin = chargerPersos();
+        const cibleResurrection = persosApresSoin[cibleId];
+        if (cibleResurrection && cibleResurrection.etatMort) {
+          cibleResurrection.etatMort = false;
+          cibleResurrection.mortSucces = 0;
+          cibleResurrection.mortEchecs = 0;
+          sauverPersos(persosApresSoin);
+        }
+      }
       // Consomme l'action principale du tour en combat (no-op hors combat) —
       // "compétence" est l'autre exemple type d'action principale. Une
       // réaction (mecanique.reactionCout, ex. Guerrier "Fils du village") ne
