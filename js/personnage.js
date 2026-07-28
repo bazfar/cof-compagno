@@ -788,6 +788,16 @@ class Personnage extends Entite {
     return this.classe === "guerrier" && this.estChoisie("Voie de l'élite", 2);
   }
 
+  // Guerrier — Voie de l'élite, rang 4 "Force herculéenne" (désormais
+  // passive, cf. data/donnees.js) : avantage automatique aux tests
+  // d'Athlétisme — même mécanisme qu'Endurance de fer ci-dessus (rang 2,
+  // même voie) sur le Test de CON, lu par le bouton compétence "Athlétisme"
+  // côté app.js. Le bonus de dégâts (+1d4 aux attaques au contact) est
+  // mécanisé séparément dans bonusDegatsForceHerculeenne ci-dessous.
+  aForceHerculeenne() {
+    return this.classe === "guerrier" && this.estChoisie("Voie de l'élite", 4);
+  }
+
   // Avantage automatique aux tests de résistance MENTALE (SAG) — regroupe 3
   // capacités au texte quasi identique : Chevalier "Verdict inébranlable"
   // (tromperie/illusion/manipulation), Moine "Vœu inébranlable" (corruption/
@@ -1088,6 +1098,17 @@ class Personnage extends Entite {
       if (cap && cap.choix === "degats") return "1d8";
     }
     return null;
+  }
+  // Guerrier — Voie de l'élite, rang 4 "Force herculéenne" (passive) : +1d4
+  // DM permanent sur l'arme de contact, câblé aux mêmes 3 sites app.js que
+  // bonusDegatsArmeChaos/Dechainement/ArmeEnchantee/AvatarPacte ci-dessous —
+  // simple terme de dé supplémentaire ajouté à la formule de dégâts (le dé de
+  // l'arme et ce d4 bonus sont lancés séparément puis fusionnés en un seul
+  // résultat par lancerFormule, comme n'importe quel autre bonus de dégâts
+  // "+NdF" de cette liste). Contrairement aux autres, pas d'état ni de choix
+  // à vérifier : actif en permanence dès le rang acquis.
+  bonusDegatsForceHerculeenne() {
+    return this.classe === "guerrier" && this.estChoisie("Voie de l'élite", 4) ? "1d4" : null;
   }
   // Guerrier — Voie du chaos, rang 5 "Déchaînement" : +2d6 DM à toutes les
   // attaques au contact tant que l'état 'dechainement' reste actif (posé par

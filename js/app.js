@@ -784,6 +784,7 @@ const App = (() => {
     // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
+    if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
@@ -1225,6 +1226,7 @@ const App = (() => {
     // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
+    if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
@@ -4669,6 +4671,7 @@ const App = (() => {
     // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
+    if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
@@ -5743,6 +5746,8 @@ const App = (() => {
     // indépendamment du sélecteur global mode-d20. Demi-Elfe Double
     // Héritage : même principe sur Perception + les 4 compétences "Social"
     // (même groupe que Doué/Sens Affinés, cf. Personnage.bonusCompetence).
+    // Guerrier "Force herculéenne" (Voie de l'élite rang 4) : même principe
+    // sur Athlétisme (cf. Personnage.aForceHerculeenne).
     const COMPETENCES_ACTEUR = ["Bluff", "Représentation"];
     const COMPETENCES_DOUBLE_HERITAGE = ["Perception", "Bluff", "Intimidation", "Représentation", "Persuasion"];
     zone.querySelectorAll(".competence-btn").forEach((el) => {
@@ -5751,7 +5756,8 @@ const App = (() => {
         const nom = el.dataset.competence;
         const code = el.dataset.carac;
         const bonus = perso.modCompetence(nom, code);
-        let modeForce = perso.aActeur() && COMPETENCES_ACTEUR.includes(nom) ? "avantage" : null;
+        let modeForce = (perso.aActeur() && COMPETENCES_ACTEUR.includes(nom)) || (nom === "Athlétisme" && perso.aForceHerculeenne())
+          ? "avantage" : null;
         if (COMPETENCES_DOUBLE_HERITAGE.includes(nom) && _armerAvantageJournalier("arme-double-heritage", "race:demi_elfe:5")) modeForce = "avantage";
         lancerTest(`Test de ${nom}`, bonus, null, modeForce, { persoId: perso.id, caracCode: code });
         allerVers("des");
