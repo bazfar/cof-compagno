@@ -3178,27 +3178,55 @@ const App = (() => {
     </button>`;
   }
 
+  // Range les livres par catégorie : catégories nommées triées alpha, puis le
+  // groupe "Sans catégorie" en dernier. Une seule catégorie vide → pas de
+  // regroupement (l'étagère reste plate, comme avant).
+  function _grouperLivresParCategorie(livres) {
+    const groupes = new Map();
+    livres.forEach((l) => {
+      const cat = (l.categorie || "").trim();
+      if (!groupes.has(cat)) groupes.set(cat, []);
+      groupes.get(cat).push(l);
+    });
+    const nommees = [...groupes.keys()].filter((c) => c).sort((a, b) => a.localeCompare(b, "fr"));
+    const ordre = groupes.has("") ? [...nommees, ""] : nommees;
+    return ordre.map((cat) => ({ cat, livres: groupes.get(cat) }));
+  }
+
+  // Étagère HTML d'une liste de livres : plate s'il n'y a aucune catégorie,
+  // sinon un bloc par catégorie avec un intitulé.
+  function _htmlEtagere(livres, estPartage) {
+    const groupes = _grouperLivresParCategorie(livres);
+    if (!groupes.some((g) => g.cat)) {
+      return `<div class="livre-etagere">${livres.map((l) => _htmlSpine(l, estPartage, l._perso)).join("")}</div>`;
+    }
+    return groupes.map((g) => `<div class="livre-groupe">
+      <div class="livre-groupe-titre">🏷 ${g.cat ? echapper(g.cat) : "Sans catégorie"}</div>
+      <div class="livre-etagere">${g.livres.map((l) => _htmlSpine(l, estPartage, l._perso)).join("")}</div>
+    </div>`).join("");
+  }
+
   // Vue "étagère" : mes livres (+ bouton Nouveau livre si éditable), puis une
   // section "Partagés avec moi" avec les livres que d'autres joueurs m'ont ouverts.
   function _rendreEtagere(p, livres, persos) {
     const zone = document.getElementById("zone-livret");
     const editable = _peutEditerLivre(p);
-    const spines = livres.map((l) => _htmlSpine(l, false)).join("");
     const partages = _livresPartagesAvecMoi(persos);
-    const spinesPartages = partages.map((it) => _htmlSpine(it.livre, true, it.perso)).join("");
+    // Porte le perso propriétaire sur chaque livre partagé pour _htmlEtagere/_htmlSpine.
+    const livresPartages = partages.map((it) => Object.assign({}, it.livre, { _perso: it.perso }));
     zone.innerHTML = `<div class="carte livret-bloc">
       <div class="livret-entete">
         <h3 style="margin:0;">📚 Livres — ${echapper(p.nom)}</h3>
         ${editable ? `<button class="btn petit" id="btn-nouveau-livre">➕ Nouveau livre</button>` : ""}
       </div>
       ${livres.length
-        ? `<div class="livre-etagere">${spines}</div>`
+        ? _htmlEtagere(livres, false)
         : `<p class="vide">${editable ? "Aucun livre pour l'instant. Clique « ➕ Nouveau livre » pour commencer." : "Aucun livre."}</p>`}
     </div>
     ${role !== "mj" ? `<div class="carte livret-bloc">
       <h3 style="margin:0 0 12px;">📬 Partagés avec moi</h3>
       ${partages.length
-        ? `<div class="livre-etagere">${spinesPartages}</div>`
+        ? _htmlEtagere(livresPartages, true)
         : `<p class="vide">Aucun livre partagé avec toi pour l'instant. Quand un joueur partagera un livre avec toi (ou avec toute la table), il apparaîtra ici.</p>`}
     </div>` : ""}`;
     zone.querySelectorAll('.livre-spine[data-type="mien"]').forEach((b) => {
@@ -3717,6 +3745,11 @@ const App = (() => {
         ? `<label class="livre-titre-champ"><span class="livre-titre-lbl">Titre du livre</span>
             <input type="text" id="livre-titre" class="livre-titre-input" value="${echapper(l.titre || "")}" placeholder="Donne un titre à ton livre…" maxlength="80" /></label>`
         : `<h3 class="livre-titre-lecture">📖 ${echapper(l.titre || "Sans titre")}</h3>`}
+      ${editable
+        ? `<label class="livre-cat-champ"><span class="livre-titre-lbl">Catégorie (pour ranger)</span>
+            <input type="text" id="livre-categorie" class="livre-cat-input" list="livre-cat-suggestions" value="${echapper(l.categorie || "")}" placeholder="ex. Histoire, Quête, Notes…" maxlength="30" />
+            <datalist id="livre-cat-suggestions">${_suggestionsCategories(p).map((c) => `<option value="${echapper(c)}"></option>`).join("")}</datalist></label>`
+        : (l.categorie ? `<div class="livre-cat-lecture">🏷 ${echapper(l.categorie)}</div>` : "")}
       ${editable ? _htmlPartageControl(p, l, persos) : _htmlInfoLecture(p, l)}
       ${illustration}
       <textarea id="livre-texte" class="livret-texte" rows="14"${editable ? "" : " readonly"} placeholder="Écris ici l'histoire, tes notes, une lettre…">${echapper(l.texte || "")}</textarea>
@@ -3724,6 +3757,7 @@ const App = (() => {
     document.getElementById("btn-retour-etagere").onclick = () => { livreOuvertId = null; livreOuvertPersoId = null; _rendreZoneLivret(); };
     if (editable) {
       document.getElementById("livre-titre").onchange = (e) => sauverChampLivre(p.id, l.id, "titre", e.target.value);
+      document.getElementById("livre-categorie").onchange = (e) => sauverChampLivre(p.id, l.id, "categorie", e.target.value.trim());
       document.getElementById("livre-texte").onchange = (e) => sauverChampLivre(p.id, l.id, "texte", e.target.value);
       document.getElementById("btn-suppr-livre").onclick = () => supprimerLivre(p.id, l.id);
       const inp = document.getElementById("input-livre-image");
@@ -3768,6 +3802,14 @@ const App = (() => {
 
   function _genLivreId() {
     return "lv" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  // Suggestions de catégories pour la saisie : celles déjà utilisées par ce
+  // perso d'abord (réutilisation en un clic), puis quelques valeurs par défaut.
+  function _suggestionsCategories(p) {
+    const base = ["Histoire", "Quête", "Journal", "Notes", "Lettres", "Sorts", "PNJ", "Lieux"];
+    const utilisees = livresDe(p).map((l) => (l.categorie || "").trim()).filter(Boolean);
+    return [...new Set([...utilisees, ...base])];
   }
 
   // Écrit le tableau de livres dans la fiche et absorbe l'ancien champ `livret`

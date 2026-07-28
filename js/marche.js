@@ -122,6 +122,15 @@ const Marche = (() => {
   let _persoId = null;
   let _localiteId = null;
   let _marchandId = null;
+  let _filtreType = "tous"; // "tous" | "equip" | "conso" — filtre d'affichage du stock
+
+  // Un objet est un consommable ou un "équipement" (tout le reste : arme,
+  // armure, bouclier, accessoire, charme…). Sert au filtre du marché.
+  function _correspondFiltre(item) {
+    if (_filtreType === "conso") return item.type === "consommable";
+    if (_filtreType === "equip") return item.type !== "consommable";
+    return true;
+  }
 
   /* ── Sélecteurs (peuplés une fois, valeur préservée entre les rendus) ── */
   function _peuplerSelectPerso(role) {
@@ -376,7 +385,12 @@ const Marche = (() => {
       .map((entry) => Object.assign({}, entry, { item: _itemCatalogue(entry.itemId) }))
       .filter((s) => s.item);
     if (!slots.length) { zone.innerHTML = '<p class="vide">Ce marchand n\'a rien en stock pour l\'instant.</p>'; return; }
-    zone.innerHTML = slots.map((s) => role === "mj" ? _carteStockMj(s, marchand) : _carteStockJoueur(s, marchand)).join("");
+    const slotsFiltres = slots.filter((s) => _correspondFiltre(s.item));
+    if (!slotsFiltres.length) {
+      zone.innerHTML = `<p class="vide">Aucun ${_filtreType === "conso" ? "consommable" : "équipement"} en stock chez ce marchand.</p>`;
+      return;
+    }
+    zone.innerHTML = slotsFiltres.map((s) => role === "mj" ? _carteStockMj(s, marchand) : _carteStockJoueur(s, marchand)).join("");
 
     if (role === "mj") {
       zone.querySelectorAll(".marche-controles select").forEach((sel) => {
@@ -548,6 +562,20 @@ const Marche = (() => {
     };
   }
 
+  /* ── Filtre d'affichage (Tout / Équipements / Consommables) ────── */
+  function _wireFiltreType() {
+    const barre = document.getElementById("marche-filtres");
+    if (!barre) return;
+    barre.querySelectorAll("[data-marche-filtre]").forEach((btn) => {
+      btn.classList.toggle("actif", btn.dataset.marcheFiltre === _filtreType);
+      btn.onclick = () => {
+        if (_filtreType === btn.dataset.marcheFiltre) return;
+        _filtreType = btn.dataset.marcheFiltre;
+        rendrePanneauMarche();
+      };
+    });
+  }
+
   /* ── Point d'entrée ──────────────────────────────────────────── */
   function rendrePanneauMarche() {
     if (typeof LOCALITES_MARCHE === "undefined" || typeof LOOT_CATALOGUE === "undefined") return;
@@ -557,6 +585,7 @@ const Marche = (() => {
     _peuplerSelectMarchand();
     const localite = _localite(_localiteId);
     const marchand = _marchand(localite, _marchandId);
+    _wireFiltreType();
     _afficherStock(role, marchand, localite);
     const zoneDemandes = document.getElementById("zone-marche-demandes");
     if (zoneDemandes) {

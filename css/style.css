@@ -851,6 +851,33 @@ textarea { resize: vertical; min-height: 70px; }
 .livre-titre-input::placeholder { font-weight: 400; font-style: italic; color: #9a90a8; }
 .livre-titre-input:focus { outline: none; border-color: var(--or); box-shadow: 0 0 0 2px rgba(198, 160, 74, 0.25); }
 .livre-titre-lecture { font-family: Georgia, "Times New Roman", serif; color: var(--encre); margin: 0 0 10px; }
+.livre-cat-champ { display: block; margin-bottom: 12px; max-width: 340px; }
+.livre-cat-input {
+  display: block;
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--encre);
+  background: #fffdf7;
+  border: 1px solid var(--parchemin-fonce);
+  border-radius: 5px;
+  padding: 7px 10px;
+}
+.livre-cat-input::placeholder { font-style: italic; color: #9a90a8; }
+.livre-cat-input:focus { outline: none; border-color: var(--or); box-shadow: 0 0 0 2px rgba(198, 160, 74, 0.25); }
+.livre-cat-lecture { font-size: 0.85rem; color: var(--violet); font-weight: 600; margin: 0 0 10px; }
+/* Regroupement de l'étagère par catégorie */
+.livre-groupe + .livre-groupe { margin-top: 16px; }
+.livre-groupe-titre {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--violet);
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--parchemin-fonce);
+}
 
 /* Vue "livre ouvert" : présentée comme une vraie page de livre reliée */
 .livre-ouvert {
@@ -1896,6 +1923,8 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .marche-prix-calcule { font-weight: 700; color: var(--or); font-size: 0.85rem; white-space: nowrap; }
 .marche-ajout-manuel { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; padding: 10px; background: #fffdf7; border: 1px dashed var(--parchemin-fonce); border-radius: var(--radius); }
 .marche-ajout-manuel select { flex: 1; min-width: 160px; }
+.marche-filtres { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.marche-filtres .btn.actif { border-color: var(--or); background: var(--or); color: #fff; }
 .loot-badge-rarete-peu_commun { background: #dff0d8; color: #2d6a1e; }
 .loot-badge-rarete-rare       { background: #e0d8f5; color: #4a2f8a; }
 .loot-badge-rarete-legendaire { background: #fbe6c2; color: #8a5a00; }
