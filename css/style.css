@@ -1174,6 +1174,8 @@ main:has(#panneau-lore.actif) { max-width: 1400px; }
 .battlemap-fiche-sidebar .cap-fiche { padding: 8px 10px; margin-bottom: 6px; }
 .battlemap-fiche-sidebar .titre-cap { font-size: 0.85rem; }
 .battlemap-fiche-sidebar .effet-cap { font-size: 0.78rem; }
+#battlemap-historique-sidebar { flex: 0 0 260px; width: 260px; }
+#battlemap-zone-historique .ligne-histo { font-size: 0.8rem; padding: 5px 0; }
 @media (max-width: 900px) {
   .battlemap-layout { flex-direction: column; }
   .battlemap-fiche-sidebar { width: 100%; position: static; max-height: none; }

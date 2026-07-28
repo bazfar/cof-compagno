@@ -4629,7 +4629,7 @@ const App = (() => {
           } else if (resolution.touche === false) {
             messages.push(`  → raté (DEF ${resolution.defCible}), pas de dégâts.`);
           } else {
-            const total = lancerFormule(r.degats, `${m.nom} — ${r.nom} (dégâts, attaque d'opportunité)`, resolution.critique);
+            const total = lancerFormule(r.degats, `${m.nom} — ${r.nom} (dégâts, attaque d'opportunité)`, resolution.critique, { estMonstre: true });
             if (typeof total === "number") {
               const typeDegatsNormalise = r.typedegats && r.typedegats.startsWith("physique") ? "physique" : "magique";
               subirDegats(id, total, typeDegatsNormalise);
@@ -6443,7 +6443,7 @@ const App = (() => {
     const crit = (de >= critMin), echec = (de === 1);
     const detail = `${detailDes} ${signe(bonus)}`;
     afficherResultat(label, total, detail, crit, echec);
-    ajouterHisto(label + " " + signe(bonus), total, crit, echec, detail, { mode, d1, d2 });
+    ajouterHisto(label + " " + signe(bonus), total, crit, echec, detail, { mode, d1, d2, estMonstre: !!opts.estMonstre });
     if (echec && opts.persoId) _apresJetAnneauChance(opts.persoId);
     return { total, de, crit, echec };
   }
@@ -6545,7 +6545,8 @@ const App = (() => {
   // de capacités). Accepte soit un booléen (true = ×2, comportement
   // historique), soit un NOMBRE = multiplicateur explicite — cf. Chasseur
   // "Tir fatal" (×3 sur les dégâts critiques à distance, Personnage.aTirFatal()).
-  function lancerFormule(formule, label, critique) {
+  function lancerFormule(formule, label, critique, opts) {
+    opts = opts || {};
     formule = (formule || "").trim().toLowerCase().replace(/\s/g, "");
     if (!formule) { toast("Entre une formule, ex. 2d6+3"); return; }
     const termes = formule.match(/[+-]?[^+-]+/g) || [];
@@ -6587,7 +6588,7 @@ const App = (() => {
     const detail = detailParts.join(" ");
     label = label || formule;
     afficherResultat(label, total, detail, crit, echec);
-    ajouterHisto(label, total, crit, echec, detail);
+    ajouterHisto(label, total, crit, echec, detail, { estMonstre: !!opts.estMonstre });
     return total;
   }
 
@@ -6633,6 +6634,7 @@ const App = (() => {
       label, total, crit, echec, detail: detail || "", auteur: nomLanceur(), horodatage: Date.now(),
       joueurId, cache,
       mode: opts.mode || null, d1: typeof opts.d1 === "number" ? opts.d1 : null, d2: typeof opts.d2 === "number" ? opts.d2 : null,
+      estMonstre: !!opts.estMonstre,
     });
     if (h.length > 40) h.pop();
     SyncStore.set(STORAGE_HISTO, h);
@@ -6647,12 +6649,36 @@ const App = (() => {
   function rendreHisto() {
     const h = chargerHisto();
     const zone = document.getElementById("historique");
-    if (!h.length) { zone.innerHTML = `<div class="vide">Aucun lancer pour l'instant.</div>`; return; }
-    zone.innerHTML = h.map((x) => {
+    if (!h.length) { zone.innerHTML = `<div class="vide">Aucun lancer pour l'instant.</div>`; }
+    else {
+      zone.innerHTML = h.map((x) => {
+        if (!_jetVisibleEnClair(x)) {
+          // Ni nom ni valeur, même standard que l'overlay masqué (cf.
+          // afficherOverlayJet) — la simple présence d'une ligne suffit à
+          // signaler qu'un jet a eu lieu, sans révéler qui ni quoi.
+          return `<div class="ligne-histo"><span>🙈 <em>Jet caché</em></span><span class="res"></span></div>`;
+        }
+        return `<div class="ligne-histo"><span>${x.auteur ? `<strong>${echapper(x.auteur)}</strong> — ` : ""}${echapper(x.label)}</span>` +
+          `<span class="res ${x.crit ? "crit" : x.echec ? "echec" : ""}">${x.total}</span></div>`;
+      }).join("");
+    }
+    rendreHistoriqueBattlemap();
+  }
+  // Panneau "🎲 Jets de dés" à droite de la battlemap : le joueur n'y voit que
+  // ses propres jets (même joueurId, cf. _jetVisibleEnClair) et ceux des
+  // monstres (cf. estMonstre, posé par _resoudreAttaqueMonstreVsPJ et les
+  // lancerFormule de dégâts monstre) — les jets des AUTRES joueurs sont
+  // simplement absents de cette liste (pas "cachés" : filtrés en amont). Le
+  // MJ y voit tout, comme le panneau "Dés" classique (rendreHisto), y compris
+  // les jets cachés qui lui restent lisibles en clair.
+  function rendreHistoriqueBattlemap() {
+    const zone = document.getElementById("battlemap-zone-historique");
+    if (!zone) return;
+    const h = chargerHisto();
+    const visible = role === "mj" ? h : h.filter((x) => x.estMonstre || (!!x.joueurId && x.joueurId === joueurId));
+    if (!visible.length) { zone.innerHTML = `<div class="vide">Aucun lancer pour l'instant.</div>`; return; }
+    zone.innerHTML = visible.map((x) => {
       if (!_jetVisibleEnClair(x)) {
-        // Ni nom ni valeur, même standard que l'overlay masqué (cf.
-        // afficherOverlayJet) — la simple présence d'une ligne suffit à
-        // signaler qu'un jet a eu lieu, sans révéler qui ni quoi.
         return `<div class="ligne-histo"><span>🙈 <em>Jet caché</em></span><span class="res"></span></div>`;
       }
       return `<div class="ligne-histo"><span>${x.auteur ? `<strong>${echapper(x.auteur)}</strong> — ` : ""}${echapper(x.label)}</span>` +
@@ -7847,7 +7873,7 @@ const App = (() => {
     const cibleP = pjId ? chargerPersos()[pjId] : null;
     const cible = cibleP ? Personnage.depuisJSON(cibleP) : null;
     const modeForce = cible && cible.aExpertBouclier() ? "desavantage" : null;
-    const jet = lancerTest(label, bonus, critMin, modeForce);
+    const jet = lancerTest(label, bonus, critMin, modeForce, { estMonstre: true });
     const defCible = cible ? _defPjAvecAura(cible, pjId) : null;
     const touche = _toucheVsDef(jet, !!pjId, defCible);
     return { touche, critique: jet.crit, echecCritique: jet.echec, totalAttaque: jet.total, defCible };
@@ -8106,7 +8132,7 @@ const App = (() => {
         const r = _resoudreAttaqueMonstre(a);
         if (!r) return;
         const critique = btn.dataset.monstreCritique === "1";
-        const total = lancerFormule(r.degats, `${m.nom} — ${r.nom} (dégâts)`, critique);
+        const total = lancerFormule(r.degats, `${m.nom} — ${r.nom} (dégâts)`, critique, { estMonstre: true });
         // Applique automatiquement les dégâts à la cible PJ choisie (celle du
         // moment, pas forcément celle du jet d'attaque si changée entre-temps)
         // — c'est précisément l'intérêt d'avoir désigné une cible : éviter à

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=74" />
+  <link rel="stylesheet" href="css/style.css?v=75" />
 </head>
 <body>
   <header>
@@ -401,6 +401,16 @@
             <div id="dd2vtt-tokens"></div>
             <div id="carte-jetons"></div>
           </div>
+          <!-- Historique des jets, visible en continu à droite de la battlemap.
+               Joueur : uniquement ses propres jets détaillés + ceux des monstres
+               (jets des autres joueurs masqués, cf. rendreHistoriqueBattlemap).
+               MJ : tout, comme partout ailleurs dans l'app. -->
+          <aside class="battlemap-fiche-sidebar battlemap-only" id="battlemap-historique-sidebar">
+            <div class="carte">
+              <h3 style="margin-top:0;">🎲 Jets de dés</h3>
+              <div id="battlemap-zone-historique"></div>
+            </div>
+          </aside>
         </div>
         <div id="battlemap-dock-combat" class="battlemap-only" data-role="joueur"></div>
       </div>
@@ -817,6 +827,6 @@
   <script src="js/reputation.js?v=1"></script>
   <script src="js/capacites.js?v=35"></script>
   <script src="js/combat.js?v=14"></script>
-  <script src="js/app.js?v=148"></script>
+  <script src="js/app.js?v=149"></script>
 </body>
 </html>
