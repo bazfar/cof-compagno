@@ -2829,6 +2829,7 @@ const App = (() => {
   }
 
   function rendrePartyPanneau() {
+    if (typeof Repos !== "undefined") Repos.rendreZoneRepos();
     const zone = document.getElementById("zone-party");
     if (!zone) return;
     const persos = chargerPersos();
@@ -8521,5 +8522,8 @@ const App = (() => {
   // pour js/capacites.js (moteur de résolution des capacités mécanisées).
   // — obtenirRole/estProprietaire sont en plus exposés pour js/marche.js
   // (filtrer le sélecteur de personnage par propriétaire en vue joueur).
-  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire };
+  // — ajusterPv est en plus exposé pour js/repos.js (applique le résultat
+  // du jet de régénération, avec le même plafond PV max / interaction
+  // Dette du Soigneur que le reste de l'app — cf. Personnage.appliquerGainPv).
+  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire, ajusterPv };
 })();
