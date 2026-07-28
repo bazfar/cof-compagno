@@ -274,6 +274,7 @@ class Personnage extends Entite {
   // this.bonusCompetences (réservé aux futurs dons/voies à choix explicite).
   bonusCompetence(nom) {
     let bonus = (this.bonusCompetences && this.bonusCompetences[nom]) || 0;
+    bonus += this.bonusCompetenceEquipement(nom);
     const competencesDoue = ["Bluff", "Intimidation", "Représentation", "Persuasion"];
     if ((this.dons || []).includes("doue") && competencesDoue.includes(nom)) bonus += 1;
 
@@ -364,7 +365,7 @@ class Personnage extends Entite {
   }
   // PV total = niveau 1 + somme des jets de niveau historisés + bonus de capacités/dons
   pvCalcule() {
-    return (this.pvHistorique || []).reduce((t, j) => t + (j.total || 0), this.pvNiveau1()) + this.bonusPvCapacites() + this.bonusPvDons();
+    return (this.pvHistorique || []).reduce((t, j) => t + (j.total || 0), this.pvNiveau1()) + this.bonusPvCapacites() + this.bonusPvDons() + this.bonusPvEquipement();
   }
   // Guerrier — Voie de l'élite, rang 2 "Endurance de fer" (passive) : +1 PV par niveau.
   bonusPvCapacites() {
@@ -523,7 +524,7 @@ class Personnage extends Entite {
   // Mod.INT ou Mod.SAG en plus de la DEX, cf. bonusInitiativeCapacites) +
   // bonus temporaires actifs (sorts/capacités, cf. bonusTemporaire).
   calculerInitiative() {
-    return this.mod("DEX") + this.bonusInitiativeCapacites() + this.bonusInitiativeDons() + this.bonusTemporaire("initiative");
+    return this.mod("DEX") + this.bonusInitiativeCapacites() + this.bonusInitiativeDons() + this.bonusInitiativeEquipement() + this.bonusTemporaire("initiative");
   }
   bonusInitiativeCapacites() {
     let bonus = 0;
@@ -1148,6 +1149,26 @@ class Personnage extends Entite {
   // chiffré — audit du 2026-07-18, à étendre au cas par cas.
   bonusCaracEquipement(code) {
     return this._itemsEquipesUniques().reduce((t, it) => t + ((it.bonusCarac && it.bonusCarac[code]) || 0), 0);
+  }
+  // Même principe que bonusCaracEquipement, pour les accessoires qui donnent
+  // un bonus fixe à une compétence nommée (ex. Cape de camouflage :
+  // { bonusCompetences: { "Discrétion": 1 } }) — lu par bonusCompetence().
+  bonusCompetenceEquipement(nom) {
+    return this._itemsEquipesUniques().reduce((t, it) => t + ((it.bonusCompetences && it.bonusCompetences[nom]) || 0), 0);
+  }
+  // Bonus d'initiative porté par un accessoire équipé (ex. Bottes légères :
+  // { bonusInitiative: 1 }) — lu par calculerInitiative().
+  bonusInitiativeEquipement() {
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusInitiative || 0), 0);
+  }
+  // Bonus de PV max porté par un accessoire équipé. Pour les objets à bonus
+  // fixe, bonusPvMax est déjà posé côté catalogue. Pour un bonus aléatoire
+  // (ex. Amulette de santé : bonusPvMaxDe: "1d4"), le jet est effectué une
+  // seule fois, à la première mise en équipement de CETTE instance d'objet
+  // (cf. App.equiperItem), qui fige le résultat dans bonusPvMax sur l'objet —
+  // jamais relancé ensuite, y compris si l'objet est déséquipé puis rééquipé.
+  bonusPvEquipement() {
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusPvMax || 0), 0);
   }
   // "main_droite" | "main_gauche" -> l'arme qui y est équipée, ou null.
   armeEquipee(main) {

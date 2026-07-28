@@ -5064,6 +5064,32 @@ const App = (() => {
     };
   }
 
+  // Roule le dé de bonus PV max d'un objet (ex. Amulette de santé,
+  // bonusPvMaxDe: "1d4") une seule fois, à la première mise en équipement de
+  // CETTE instance d'objet — fige le résultat dans bonusPvMax, jamais
+  // relancé ensuite (y compris déséquiper/rééquiper), cf.
+  // Personnage.bonusPvEquipement.
+  function _resoudreDePvMaxSiBesoin(item) {
+    if (!item || !item.bonusPvMaxDe || item.bonusPvMax !== undefined) return;
+    const m = /^(\d*)d(\d+)$/.exec(item.bonusPvMaxDe);
+    if (!m) return;
+    const nb = parseInt(m[1] || "1", 10), faces = parseInt(m[2], 10);
+    let total = 0;
+    for (let i = 0; i < nb; i++) total += lancerDe(faces);
+    item.bonusPvMax = total;
+  }
+
+  // Applique un delta de PV max lié à l'équipement (accessoires à
+  // bonusPvMax, ex. Amulette de santé) aux PV actuels — même principe que le
+  // recalcul manuel (btn-recalculer-pv) ou le Don Robuste, mais ciblé sur ce
+  // seul delta pour ne jamais toucher au reste de la formule (n'écrase pas un
+  // pvMax ajusté manuellement pour une autre raison).
+  function _ajusterPvMaxEquipement(perso, delta) {
+    if (!delta) return;
+    perso.pvMax = (perso.pvMax || 0) + delta;
+    perso.pvActuel = Math.max(0, Math.min(perso.pvMax, (perso.pvActuel || 0) + delta));
+  }
+
   // Équipe l'item d'index `idx` de l'inventaire. slotPref force un
   // emplacement précis (choisi via le sélecteur du bloc Équipement) ; sans
   // préférence, on prend le premier emplacement libre compatible (ou, à
@@ -5081,10 +5107,12 @@ const App = (() => {
     const slot = slotPref && slotsPossibles.includes(slotPref)
       ? slotPref
       : (slotsPossibles.find((s) => !perso.equipement[s]) || slotsPossibles[0]);
+    _resoudreDePvMaxSiBesoin(item);
     const ancien = perso.equiper(slot, item);
     if (ancien === undefined) { toast("Cet objet ne peut pas être équipé dans cet emplacement."); return; }
     perso.inventaireListe.splice(idx, 1);
     if (ancien) perso.inventaireListe.push(ancien);
+    _ajusterPvMaxEquipement(perso, (item.bonusPvMax || 0) - ((ancien && ancien.bonusPvMax) || 0));
     persos[persoId] = perso.versJSON();
     sauverPersos(persos);
     afficherFiche(persoId);
@@ -5099,6 +5127,7 @@ const App = (() => {
     const item = perso.deséquiper(slot);
     if (!item) return;
     perso.inventaireListe.push(item);
+    _ajusterPvMaxEquipement(perso, -((item.bonusPvMax) || 0));
     persos[persoId] = perso.versJSON();
     sauverPersos(persos);
     afficherFiche(persoId);
