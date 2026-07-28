@@ -1400,6 +1400,12 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
   cursor: pointer;
 }
 .dd-token.cible-hors-portee { opacity: 0.4; }
+/* Aperçu de zone d'effet au survol d'une cible valide (cf. rendreTokensDD/
+   rayonZoneCases) : signale les AUTRES jetons qui seraient touchés si la
+   capacité était centrée sur le jeton survolé. */
+.dd-token.zone-touchee {
+  box-shadow: 0 0 0 3px #f97316, 0 0 14px 6px rgba(249,115,22,0.7);
+}
 
 .dd-token:active { cursor: grabbing; }
 

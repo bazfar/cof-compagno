@@ -505,12 +505,17 @@ const App = (() => {
       const dist = Carte.distanceCasesEntre(monTokenId, tokId);
       return dist !== null && dist <= porteeCases;
     };
+    // mecanique.zone (cases) : rayon de l'aperçu de zone d'effet au survol
+    // d'une cible valide (cf. Carte.activerModeCiblage/rayonZoneCases) — les
+    // AUTRES jetons dans ce rayon se surlignent pour prévisualiser qui serait
+    // aussi touché. Même unité que portee (cases), aucune conversion ici.
+    const rayonZoneCases = (typeof mecanique.zone === "number") ? mecanique.zone : null;
     Carte.activerModeCiblage(estValide, (tokId) => {
       const cibleId = tokenVersCible[tokId];
       if (!cibleId || !pickerSelect) return;
       pickerSelect.value = cibleId;
       toast("Cible présélectionnée sur la carte — clique sur Confirmer.");
-    });
+    }, rayonZoneCases);
   }
 
   // Combine deux formules de dégâts (bi-arme : mêlée + arme courte en main
@@ -4377,14 +4382,19 @@ const App = (() => {
               : `<option value="">Aucune cible disponible</option>`;
             if (soinPartage) toast("Sélectionne jusqu'à 3 alliés (Ctrl/Cmd + clic).");
             pickerForme.style.display = "flex";
-          } else if (mecanique.cible === "zone" && mecanique.jetOppose) {
+          } else if (mecanique.cible === "zone" && (mecanique.jetOppose || mecanique.portee)) {
             // Capacité de zone AVEC jet opposé (ex. Barde "Mélopée de la
-            // Folie"/"Requiem du silence", Voie du chant/chaos) : le moteur
-            // ne cible jamais automatiquement toute une zone à la fois (même
-            // limite que les zones à bonus, ex. Cri du rassemblement — "à
-            // appliquer manuellement allié par allié"), mais on permet ici de
-            // choisir UN monstre de la zone pour que le jet vs DEF se résolve
-            // automatiquement contre lui ; relancer pour la cible suivante.
+            // Folie"/"Requiem du silence", Voie du chant/chaos) OU avec une
+            // portée définie mais sans jet opposé (ex. Barde "Chant brisant",
+            // un debuff de zone pur) : le moteur ne cible jamais
+            // automatiquement toute une zone à la fois (même limite que les
+            // zones à bonus, ex. Cri du rassemblement — "à appliquer
+            // manuellement allié par allié"), mais on permet ici de choisir UN
+            // monstre de la zone (via le sélecteur carte, avec aperçu de zone
+            // au survol — cf. _armerCiblageCarte/mecanique.zone) pour que le
+            // jet vs DEF se résolve automatiquement contre lui s'il y en a un
+            // (cibleId ignoré sans effet si jetOppose est absent, cf.
+            // Capacites.lancer) ; relancer pour la cible suivante.
             const cibles = Capacites.listeCibles(id).filter((cc) => cc.genre === "monstre");
             pickerSelect.innerHTML = cibles.length
               ? cibles.map((cc) => `<option value="${cc.id}">${echapper(cc.nom)}</option>`).join("")

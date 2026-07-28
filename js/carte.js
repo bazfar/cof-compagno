@@ -2737,6 +2737,27 @@ const Carte = (() => {
           rendreTokensDD(scene);
           calculerEtRendreLoS(scene);
         });
+        // Aperçu de zone d'effet (cf. activerModeCiblage/rayonZoneCases) : au
+        // survol d'un jeton valide pendant un ciblage de capacité en zone,
+        // surligne tous les AUTRES jetons qui seraient aussi touchés si la
+        // capacité était centrée ici — jamais le jeton survolé lui-même (déjà
+        // distingué par .cible-valide). Ne fait qu'ajouter/retirer une classe
+        // CSS sur les éléments déjà rendus, pas de re-rendu complet (garde le
+        // survol fluide).
+        el.addEventListener('mouseenter', () => {
+          if (!modeCiblage || modeCiblage.rayonZoneCases === null || !modeCiblage.estValide(tok.id)) return;
+          tokensDD.forEach(autre => {
+            if (autre.id === tok.id) return;
+            const d = distanceCases(tok.id, autre.id);
+            if (d === null || d > modeCiblage.rayonZoneCases) return;
+            const autreEl = Array.from(conteneur.children).find(c => c.dataset.id === autre.id);
+            if (autreEl) autreEl.classList.add('zone-touchee');
+          });
+        });
+        el.addEventListener('mouseleave', () => {
+          if (!modeCiblage || modeCiblage.rayonZoneCases === null) return;
+          conteneur.querySelectorAll('.zone-touchee').forEach(e => e.classList.remove('zone-touchee'));
+        });
         // Suppression (garde de rôle/propriété ci-dessus — bouton absent du DOM sinon)
         const btnSuppr = el.querySelector('.dd-token-suppr');
         if (btnSuppr) btnSuppr.addEventListener('click', ev => {
@@ -3462,8 +3483,13 @@ const Carte = (() => {
     // onChoix(tokenId) : appelé au clic sur un jeton valide, un seul argument
     // (l'id du token cliqué) — traduire vers un id de personnage/capacité
     // reste la responsabilité de l'appelant.
-    function activerModeCiblage(estValide, onChoix) {
-      modeCiblage = { estValide: estValide || (() => false), onChoix };
+    // rayonZoneCases (optionnel) : rayon en cases d'un aperçu de zone d'effet
+    // (cf. Personnage-like mecanique.zone, data/donnees.js) — au survol d'un
+    // jeton valide, tous les AUTRES jetons à portée de ce rayon reçoivent la
+    // classe 'zone-touchee' (cf. rendreTokensDD) pour prévisualiser qui serait
+    // aussi touché si la capacité était centrée sur le jeton survolé.
+    function activerModeCiblage(estValide, onChoix, rayonZoneCases) {
+      modeCiblage = { estValide: estValide || (() => false), onChoix, rayonZoneCases: (typeof rayonZoneCases === "number") ? rayonZoneCases : null };
       const sc = scenes[sceneActive];
       if (sc) rendreTokensDD(sc);
     }
@@ -3534,8 +3560,8 @@ const Carte = (() => {
   // worldmap (aucun appelant ne devrait s'y attendre, mais ne casse rien).
   // estValide(tokenId) -> bool : rappelé à chaque rendu, PAS un ensemble figé
   // (cf. DD2VTT.activerModeCiblage pour le pourquoi).
-  function activerModeCiblage(estValide, onChoix) {
-    if (typeof DD2VTT !== "undefined" && DD2VTT.activerModeCiblage) DD2VTT.activerModeCiblage(estValide, onChoix);
+  function activerModeCiblage(estValide, onChoix, rayonZoneCases) {
+    if (typeof DD2VTT !== "undefined" && DD2VTT.activerModeCiblage) DD2VTT.activerModeCiblage(estValide, onChoix, rayonZoneCases);
   }
   function desactiverModeCiblage() {
     if (typeof DD2VTT !== "undefined" && DD2VTT.desactiverModeCiblage) DD2VTT.desactiverModeCiblage();
