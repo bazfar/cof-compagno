@@ -6794,7 +6794,7 @@ const App = (() => {
     return role === "mj" ? "MJ" : "Joueur";
   }
 
-  function chargerHisto() { return SyncStore.get(STORAGE_HISTO) || []; }
+  function chargerHisto() { return SyncStore.getListe(STORAGE_HISTO); }
   // opts (optionnel) : { mode, d1, d2 } — pour un jet 2d20 (avantage/
   // désavantage, cf. lancerTest), permet à l'overlay de rejouer l'animation
   // "2 dés qui se lancent puis fusionnent" côté afficherOverlayJet, y compris
@@ -6809,15 +6809,16 @@ const App = (() => {
     opts = opts || {};
     const caseCache = document.getElementById("jet-cache");
     const cache = !!(caseCache && caseCache.checked);
-    const h = chargerHisto();
-    h.unshift({
+    // Chaque jet devient son propre document Firestore (cf. SyncStore.
+    // ajouterListe) plutôt qu'une réécriture du tableau entier : deux jets
+    // presque simultanés (ex. initiative de groupe) ne peuvent plus
+    // s'écraser l'un l'autre.
+    SyncStore.ajouterListe(STORAGE_HISTO, {
       label, total, crit, echec, detail: detail || "", auteur: nomLanceur(), horodatage: Date.now(),
       joueurId, cache,
       mode: opts.mode || null, d1: typeof opts.d1 === "number" ? opts.d1 : null, d2: typeof opts.d2 === "number" ? opts.d2 : null,
       estMonstre: !!opts.estMonstre,
-    });
-    if (h.length > 40) h.pop();
-    SyncStore.set(STORAGE_HISTO, h);
+    }, 40);
     rendreHisto();
   }
   // Un jet caché reste illisible pour tout le monde SAUF son auteur (même
@@ -6866,7 +6867,7 @@ const App = (() => {
     }).join("");
   }
   function viderHisto() {
-    SyncStore.set(STORAGE_HISTO, []);
+    SyncStore.viderListe(STORAGE_HISTO);
     rendreHisto();
   }
 
@@ -7672,7 +7673,10 @@ const App = (() => {
     });
 
     // Journal de dés partagé : re-rendu dès qu'un autre client lance un dé.
-    SyncStore.subscribe(STORAGE_HISTO, () => { rendreHisto(); _verifierNouveauJetPourOverlay(); });
+    // subscribeListe (sous-collection, cf. sync.js) au lieu de subscribe
+    // (document unique) : chaque jet est un document séparé, plus de
+    // réécriture d'un tableau partagé entre clients concurrents.
+    SyncStore.subscribeListe(STORAGE_HISTO, () => { rendreHisto(); _verifierNouveauJetPourOverlay(); }, 40);
 
     // Tracker d'initiative : re-rendu temps réel (MJ ET joueurs voient le même
     // ordre/round/tour actif), y compris le bloc "Lancer mon initiative" sur
