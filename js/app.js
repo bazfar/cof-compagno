@@ -6891,7 +6891,7 @@ const App = (() => {
   // afficherOverlayJet) — jamais au lancer, pour ne pas se superposer à _jouerSonDe.
   function _jouerSonEchec() {
     try {
-      if (!_sonEchec) _sonEchec = new Audio("assets/sounds/echec-critique.mp3");
+      if (!_sonEchec) _sonEchec = new Audio("assets/sounds/echec-critique/echec-critique.mp3");
       _sonEchec.currentTime = 0;
       _sonEchec.play().catch(() => {}); // autoplay bloqué (rare) : silencieux
     } catch (e) { /* pas de son plutôt que planter le jet */ }
