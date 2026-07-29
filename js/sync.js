@@ -90,7 +90,7 @@ const SyncStore = (() => {
       if (snap.size <= limite) return;
       const batch = window.FirebaseDB.batch();
       snap.docs.slice(limite).forEach((d) => batch.delete(d.ref));
-      return batch.commit();
+      return window.suivreEcritureFirestore(batch.commit());
     }).catch(() => {});
   }
 
@@ -105,7 +105,7 @@ const SyncStore = (() => {
     const liste = getListe(cle).slice();
     liste.unshift(Object.assign({ _id: null }, valeur));
     _listeCache[cle] = liste;
-    _itemsCol(cle).add(valeur)
+    window.suivreEcritureFirestore(_itemsCol(cle).add(valeur))
       .then(() => _elaguerListe(cle, limite))
       .catch((e) => console.error(`SyncStore.ajouterListe(${cle}) échoué :`, e));
     return true;
@@ -118,7 +118,7 @@ const SyncStore = (() => {
       if (snap.empty) return;
       const batch = window.FirebaseDB.batch();
       snap.docs.forEach((d) => batch.delete(d.ref));
-      return batch.commit();
+      return window.suivreEcritureFirestore(batch.commit());
     }).catch((e) => console.error(`SyncStore.viderListe(${cle}) échoué :`, e));
     return true;
   }
