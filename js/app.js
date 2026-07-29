@@ -4256,7 +4256,10 @@ const App = (() => {
     const aChaos = perso.aVoieChaosActive();
     const majeure = p.corruptionMajeure || 0;
     const estMJ = role === "mj";
-    if (!aChaos && !estMJ && !majeure) return "";
+    // Toujours affichée, même à 0 — sinon la ligne "Corruption d'Âme" disparaît
+    // du point de vue joueur dès qu'elle retombe à 0 (ex. purification), sans
+    // aucun moyen de constater son existence ni de la faire remonter plus tard
+    // (seul le MJ a les boutons +/-, cf. plus bas).
     const afficherJaugeCombat = aChaos && typeof Capacites !== "undefined";
     const combat = p.corruptionCombat || 0;
     const seuil = (typeof Capacites !== "undefined" && Capacites.SEUIL_CORRUPTION_MAJEURE) || 6;
