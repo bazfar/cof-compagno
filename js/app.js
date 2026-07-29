@@ -95,7 +95,23 @@ const App = (() => {
   // Pas de liste automatique possible (aucune API navigateur ne liste le
   // contenu d'un dossier) : pour ajouter un son, dépose le fichier dans
   // assets/sounds/echec-critique/ ET ajoute son nom ici.
-  const SONS_ECHEC_CRITIQUE = ["echec-critique.mp3"];
+  const SONS_ECHEC_CRITIQUE = [
+    "echec-critique.mp3",
+    "All An Ally has been Slain Classic Announcer Sounds (LoL) - Sound Effects for editing (mp3cut.net).mp3",
+    "Chauve barbe vicieux (mp3cut.net).mp3",
+    "Hitler Angry Moments 1 (mp3cut.net).mp3",
+    "It was at this moment he knew, He f_cked up sound Effect.mp3",
+    "Mario Death - Sound Effect (HD).mp3",
+    "NARUTO SAD SONG  SOUND EFFECTS  cut.mp3",
+    "Nelson Haha #shorts.mp3",
+    "OSS 117 - Tes mauvais Jack (mp3cut.net).mp3",
+    "Rickroll (Meme Template) (mp3cut.net).mp3",
+    "SPONGEBOB FAIL SOUND EFFECT.mp3",
+    "Sad Trombone - Sound Effect (HD).mp3",
+    "Super windows error meme (Download In Description!) (mp3cut.net).mp3",
+    "The Price is Right Losing Horn - Sound Effect (HD).mp3",
+    "emotional damage (mp3cut.net).mp3",
+  ];
 
   /* ---------- Utilitaires ---------- */
 
@@ -6896,7 +6912,9 @@ const App = (() => {
   // afficherOverlayJet) — jamais au lancer, pour ne pas se superposer à _jouerSonDe.
   function _jouerSonEchec() {
     try {
-      if (!_sonsEchec) _sonsEchec = SONS_ECHEC_CRITIQUE.map((f) => new Audio("assets/sounds/echec-critique/" + f));
+      // encodeURIComponent : certains noms de fichiers contiennent un "#", qui
+      // casserait l'URL (fragment) s'il n'était pas échappé.
+      if (!_sonsEchec) _sonsEchec = SONS_ECHEC_CRITIQUE.map((f) => new Audio("assets/sounds/echec-critique/" + encodeURIComponent(f)));
       const son = _sonsEchec[Math.floor(Math.random() * _sonsEchec.length)];
       son.currentTime = 0;
       son.play().catch(() => {}); // autoplay bloqué (rare) : silencieux
