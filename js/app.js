@@ -90,7 +90,12 @@ const App = (() => {
   let overlayJetRevealTimer = null;
   let overlayJetDuoTimer = null; // phase "2 dés visibles" avant fusion, cf. afficherOverlayJet (avantage/désavantage)
   let _sonDe = null; // instance Audio réutilisée (évite de la recréer à chaque jet)
-  let _sonEchec = null; // instance Audio réutilisée pour le stinger d'échec critique
+  let _sonsEchec = null; // instances Audio réutilisées (une par fichier), cf. SONS_ECHEC_CRITIQUE
+  // Un fichier tiré au hasard à chaque échec critique, pour varier le stinger.
+  // Pas de liste automatique possible (aucune API navigateur ne liste le
+  // contenu d'un dossier) : pour ajouter un son, dépose le fichier dans
+  // assets/sounds/echec-critique/ ET ajoute son nom ici.
+  const SONS_ECHEC_CRITIQUE = ["echec-critique.mp3"];
 
   /* ---------- Utilitaires ---------- */
 
@@ -6891,9 +6896,10 @@ const App = (() => {
   // afficherOverlayJet) — jamais au lancer, pour ne pas se superposer à _jouerSonDe.
   function _jouerSonEchec() {
     try {
-      if (!_sonEchec) _sonEchec = new Audio("assets/sounds/echec-critique/echec-critique.mp3");
-      _sonEchec.currentTime = 0;
-      _sonEchec.play().catch(() => {}); // autoplay bloqué (rare) : silencieux
+      if (!_sonsEchec) _sonsEchec = SONS_ECHEC_CRITIQUE.map((f) => new Audio("assets/sounds/echec-critique/" + f));
+      const son = _sonsEchec[Math.floor(Math.random() * _sonsEchec.length)];
+      son.currentTime = 0;
+      son.play().catch(() => {}); // autoplay bloqué (rare) : silencieux
     } catch (e) { /* pas de son plutôt que planter le jet */ }
   }
 
