@@ -112,6 +112,10 @@ const App = (() => {
     "The Price is Right Losing Horn - Sound Effect (HD).mp3",
     "emotional damage (mp3cut.net).mp3",
   ];
+  let _sonsSucces = null; // instances Audio réutilisées (une par fichier), cf. SONS_SUCCES_CRITIQUE
+  // Même principe que SONS_ECHEC_CRITIQUE, mais pour le succès critique (20
+  // naturel) — dossier assets/sounds/succes-critique/, vide pour l'instant.
+  const SONS_SUCCES_CRITIQUE = [];
 
   /* ---------- Utilitaires ---------- */
 
@@ -6921,6 +6925,19 @@ const App = (() => {
     } catch (e) { /* pas de son plutôt que planter le jet */ }
   }
 
+  // Même principe que _jouerSonEchec, pour le succès critique (20 naturel).
+  // Ne fait rien tant qu'aucun fichier n'a été déposé dans
+  // assets/sounds/succes-critique/ (SONS_SUCCES_CRITIQUE vide).
+  function _jouerSonSucces() {
+    if (!SONS_SUCCES_CRITIQUE.length) return;
+    try {
+      if (!_sonsSucces) _sonsSucces = SONS_SUCCES_CRITIQUE.map((f) => new Audio("assets/sounds/succes-critique/" + encodeURIComponent(f)));
+      const son = _sonsSucces[Math.floor(Math.random() * _sonsSucces.length)];
+      son.currentTime = 0;
+      son.play().catch(() => {}); // autoplay bloqué (rare) : silencieux
+    } catch (e) { /* pas de son plutôt que planter le jet */ }
+  }
+
   // Remplit et affiche l'overlay de jet de dé (visible sur n'importe quel
   // onglet). entree suit le même format que les entrées de des:histo. Le dé
   // "roule" (son + rotation CSS) le temps du roulement, puis révèle le total.
@@ -6990,7 +7007,7 @@ const App = (() => {
         document.getElementById("overlay-jet-total").textContent = entree.total;
         document.getElementById("overlay-jet-badge").textContent =
           entree.crit ? "CRITIQUE ! 🎉" : entree.echec ? "Échec critique 💀" : "";
-        if (entree.crit) overlay.classList.add("crit");
+        if (entree.crit) { overlay.classList.add("crit"); _jouerSonSucces(); }
         else if (entree.echec) { overlay.classList.add("echec"); _jouerSonEchec(); }
         // Durée d'affichage du total final : 5s pour un jet normal, 2s pour
         // un duo (cf. DUREE_DUO_MS ci-dessous) — la lecture des 2 dés a déjà
