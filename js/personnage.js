@@ -12,7 +12,7 @@
 // 9 emplacements d'équipement fixes. Seul ce qui est placé ici compte pour
 // les stats de combat (DEF, réduction de dégâts, dégâts d'arme) — le reste
 // vit dans inventaireListe, un simple sac sans effet mécanique.
-const SLOTS_EQUIPEMENT = ["tete", "torse", "jambe", "botte", "avant_bras", "main_droite", "main_gauche", "collier", "bague", "mains"];
+const SLOTS_EQUIPEMENT = ["tete", "torse", "jambe", "avant_bras", "main_droite", "main_gauche", "collier", "bague", "mains"];
 
 function equipementVide() {
   const e = {};
@@ -107,6 +107,21 @@ class Personnage extends Entite {
     this.pvHistorique = d.pvHistorique;
     this.pvNiveauActuel = d.pvNiveauActuel;
     this.equipement = d.equipement;
+    // Migration slot "botte" -> "jambe" (fusion des deux emplacements,
+    // cf. commit "fusion jambe/botte") : une fiche sauvegardée avant la
+    // fusion peut encore porter un objet dans equipement.botte, un slot qui
+    // n'existe plus dans SLOTS_EQUIPEMENT. On le rapatrie dans "jambe" s'il
+    // est libre, sinon on le renvoie dans l'inventaire plutôt que de le
+    // perdre silencieusement.
+    if (this.equipement && this.equipement.botte) {
+      const orphelin = this.equipement.botte;
+      if (!this.equipement.jambe) {
+        this.equipement.jambe = orphelin;
+      } else {
+        (d.inventaireListe || (d.inventaireListe = [])).push(orphelin);
+      }
+      delete this.equipement.botte;
+    }
     this.inventaireListe = d.inventaireListe;
     this.notes = d.notes;
     // Champs "administratifs" gérés directement sur l'objet perso brut
@@ -1303,10 +1318,17 @@ class Personnage extends Entite {
     const rg = voie && voie.rangs.find((r) => r.rang === rangMax);
     const effet = rg && rg.mecanique.effets.find((e) => e.type === "degats");
     if (!effet) return null;
-    return effet.formule.replace(/([+-])Mod\.([A-Za-z]+)/gi, (_, signe, code) => {
+    let formule = effet.formule.replace(/([+-])Mod\.([A-Za-z]+)/gi, (_, signe, code) => {
       const v = (signe === "-" ? -1 : 1) * this.mod(code.toUpperCase());
       return v >= 0 ? "+" + v : String(v);
     });
+    // Bonus fixe porté par un accessoire équipé (ex. Gants du Poing :
+    // { bonusDegatsMainsNues: 1 }, cf. data/loot.js/json) — item déjà en jeu
+    // mais jamais réellement appliqué avant ce commit (aucune lecture
+    // d'équipement dans degatsPoings() jusqu'ici).
+    const bonusGants = this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDegatsMainsNues || 0), 0);
+    if (bonusGants) formule += "+" + bonusGants;
+    return formule;
   }
 
   /* ----- Attaque ----- */
@@ -1342,7 +1364,15 @@ class Personnage extends Entite {
   bonusAttaque(type) {
     const b = this.bonusProgression() + this.bonusTemporaire("attaque") + this.malusCombatDeuxArmes(type) + this.bonusAttaqueCapacites(type);
     if (type === "contact") return b + this.mod("FOR");
-    if (type === "distance") return b + this.mod("DEX");
+    if (type === "distance") {
+      // Bonus simple et mécanique d'un item équipé (ex. Gants du
+      // Franc-Tireur : { bonusAttaqueDistance: 1 }, cf. data/loot.js/json)
+      // — même convention que bonusGrimoire ci-dessous pour l'attaque
+      // magique, jamais fusionné dans les caracs de base.
+      const bonusGantsDistance = this._itemsEquipesUniques()
+        .reduce((t, it) => t + (it.bonusAttaqueDistance || 0), 0);
+      return b + this.mod("DEX") + bonusGantsDistance;
+    }
     if (type === "lancer") return b + this.mod("FOR");
     if (type === "magique") {
       const cm = typeof CARAC_MAGIE !== "undefined" ? CARAC_MAGIE[this.classe] : null;
@@ -1364,9 +1394,14 @@ class Personnage extends Entite {
     const cm = typeof CARAC_MAGIE !== "undefined" ? CARAC_MAGIE[this.classe] : null;
     if (!cm) return null;
     const niveau = this.niveau || 1;
-    if (niveau >= 8) return "1d10";
-    if (niveau >= 4) return "1d8";
-    return "1d6";
+    let base = niveau >= 8 ? "1d10" : niveau >= 4 ? "1d8" : "1d6";
+    // Bonus fixe porté par un accessoire équipé (ex. Jambières d'Affinité
+    // Arcanique : { bonusDegatsMagiques: 1 }, cf. data/loot.js/json) — même
+    // convention que bonusCarac/bonusDEF, lu dynamiquement, jamais fusionné
+    // dans les caracs de base.
+    const bonusEquip = this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDegatsMagiques || 0), 0);
+    if (bonusEquip) base += "+" + bonusEquip;
+    return base;
   }
 
   /* ----- Dons (niveaux 4/8/12) ----- */

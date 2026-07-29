@@ -4897,7 +4897,7 @@ const App = (() => {
      ============================================================ */
 
   const LABELS_SLOT = {
-    tete: "Tête", torse: "Torse", jambe: "Jambes", botte: "Bottes",
+    tete: "Tête", torse: "Torse", jambe: "Jambes / Bottes",
     avant_bras: "Avant-bras", main_droite: "Main droite", main_gauche: "Main gauche",
     collier: "Collier", bague: "Bague", mains: "Mains",
   };
@@ -5049,8 +5049,9 @@ const App = (() => {
      classe précédemment sélectionnée dans cette session, pour ne jamais
      accumuler les kits si le joueur change d'avis plusieurs fois. */
   function appliquerEquipementDepart(cle) {
-    // Retire le kit précédent des slots qu'il peut occuper (tête/jambes/bottes/
-    // avant-bras/collier/bague ne sont jamais touchés : rien n'y est placé ici).
+    // Retire le kit précédent des slots qu'il peut occuper (tête/jambes
+    // (fusionné avec bottes)/avant-bras/collier/bague ne sont jamais
+    // touchés : rien n'y est placé ici).
     creation.equipement.main_droite = null;
     creation.equipement.main_gauche = null;
     creation.equipement.torse = null;
