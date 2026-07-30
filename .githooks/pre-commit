@@ -1,0 +1,41 @@
+#!/bin/sh
+# Bump automatiquement le ?v=N de chaque fichier versionné (index.html :
+# <script src="...?v=N">, <link href="...?v=N">) qui fait partie de ce commit.
+#
+# Pourquoi : index.html référence chaque js/*.js, data/*.js et css/style.css
+# avec un ?v=N pour casser le cache navigateur. Si un commit modifie un de
+# ces fichiers sans bumper son ?v=, l'URL ne change pas → les navigateurs qui
+# ont déjà visité le site gardent l'ancienne version en cache indéfiniment,
+# même après un `firebase deploy` (cf. incident du 2026-07-30 : 8 commits
+# d'affilée sur js/app.js sans bump, un fix resté invisible ~36h en prod).
+#
+# Installation (une fois par clone) : git config core.hooksPath .githooks
+
+set -e
+
+HTML="index.html"
+[ -f "$HTML" ] || exit 0
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACM -- . ':!index.html')
+[ -z "$STAGED" ] && exit 0
+
+CHANGED=0
+
+for f in $STAGED; do
+  # Cherche une référence ?v=N à CE chemin exact dans index.html (src= ou href=)
+  ligne=$(grep -nE "(src|href)=\"$f\?v=[0-9]+\"" "$HTML" || true)
+  [ -z "$ligne" ] && continue
+
+  ver=$(printf '%s\n' "$ligne" | head -1 | sed -E 's/.*\?v=([0-9]+).*/\1/')
+  nouveau=$((ver + 1))
+
+  sed -i -E "s#((src|href)=\"$f\?v=)$ver\"#\\1$nouveau\"#" "$HTML"
+  echo "pre-commit: $f -> ?v=$nouveau (cache-busting auto)"
+  CHANGED=1
+done
+
+if [ "$CHANGED" = "1" ]; then
+  git add "$HTML"
+fi
+
+exit 0
