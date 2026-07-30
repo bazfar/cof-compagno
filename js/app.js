@@ -6838,13 +6838,22 @@ const App = (() => {
     opts = opts || {};
     const caseCache = document.getElementById("jet-cache");
     const cache = !!(caseCache && caseCache.checked);
+    // Son de crit/échec choisi UNE SEULE FOIS ici, par le lanceur, et stocké
+    // dans l'entrée partagée — sinon chaque client qui reçoit ce jet (cf.
+    // _verifierNouveauJetPourOverlay, déclenché à chaque synchro Firestore
+    // sur TOUS les clients) tirerait indépendamment son propre Math.random()
+    // et n'entendrait pas le même stinger que les autres joueurs.
+    const sonEchec = (echec && SONS_ECHEC_CRITIQUE.length)
+      ? SONS_ECHEC_CRITIQUE[Math.floor(Math.random() * SONS_ECHEC_CRITIQUE.length)] : null;
+    const sonSucces = (crit && SONS_SUCCES_CRITIQUE.length)
+      ? SONS_SUCCES_CRITIQUE[Math.floor(Math.random() * SONS_SUCCES_CRITIQUE.length)] : null;
     // Chaque jet devient son propre document Firestore (cf. SyncStore.
     // ajouterListe) plutôt qu'une réécriture du tableau entier : deux jets
     // presque simultanés (ex. initiative de groupe) ne peuvent plus
     // s'écraser l'un l'autre.
     SyncStore.ajouterListe(STORAGE_HISTO, {
       label, total, crit, echec, detail: detail || "", auteur: nomLanceur(), horodatage: Date.now(),
-      joueurId, cache,
+      joueurId, cache, sonEchec, sonSucces,
       mode: opts.mode || null, d1: typeof opts.d1 === "number" ? opts.d1 : null, d2: typeof opts.d2 === "number" ? opts.d2 : null,
       estMonstre: !!opts.estMonstre,
     }, 40);
@@ -6914,12 +6923,17 @@ const App = (() => {
   // Stinger joué en plus du son de dé, uniquement sur échec critique (1 naturel),
   // au moment de la révélation du résultat (cf. finPhaseRoulement dans
   // afficherOverlayJet) — jamais au lancer, pour ne pas se superposer à _jouerSonDe.
-  function _jouerSonEchec() {
+  // `fichier` : nom déjà tiré au sort UNE FOIS par ajouterHisto et stocké dans
+  // l'entrée partagée (entree.sonEchec), pour que tous les clients jouent le
+  // même son sur le même jet — cf. commentaire dans ajouterHisto. Repli sur un
+  // tirage local si absent (entrées d'historique antérieures à ce champ).
+  function _jouerSonEchec(fichier) {
     try {
       // encodeURIComponent : certains noms de fichiers contiennent un "#", qui
       // casserait l'URL (fragment) s'il n'était pas échappé.
       if (!_sonsEchec) _sonsEchec = SONS_ECHEC_CRITIQUE.map((f) => new Audio("assets/sounds/echec-critique/" + encodeURIComponent(f)));
-      const son = _sonsEchec[Math.floor(Math.random() * _sonsEchec.length)];
+      const idx = fichier ? SONS_ECHEC_CRITIQUE.indexOf(fichier) : -1;
+      const son = _sonsEchec[idx >= 0 ? idx : Math.floor(Math.random() * _sonsEchec.length)];
       son.currentTime = 0;
       son.play().catch(() => {}); // autoplay bloqué (rare) : silencieux
     } catch (e) { /* pas de son plutôt que planter le jet */ }
@@ -6928,11 +6942,12 @@ const App = (() => {
   // Même principe que _jouerSonEchec, pour le succès critique (20 naturel).
   // Ne fait rien tant qu'aucun fichier n'a été déposé dans
   // assets/sounds/succes-critique/ (SONS_SUCCES_CRITIQUE vide).
-  function _jouerSonSucces() {
+  function _jouerSonSucces(fichier) {
     if (!SONS_SUCCES_CRITIQUE.length) return;
     try {
       if (!_sonsSucces) _sonsSucces = SONS_SUCCES_CRITIQUE.map((f) => new Audio("assets/sounds/succes-critique/" + encodeURIComponent(f)));
-      const son = _sonsSucces[Math.floor(Math.random() * _sonsSucces.length)];
+      const idx = fichier ? SONS_SUCCES_CRITIQUE.indexOf(fichier) : -1;
+      const son = _sonsSucces[idx >= 0 ? idx : Math.floor(Math.random() * _sonsSucces.length)];
       son.currentTime = 0;
       son.play().catch(() => {}); // autoplay bloqué (rare) : silencieux
     } catch (e) { /* pas de son plutôt que planter le jet */ }
@@ -7007,8 +7022,8 @@ const App = (() => {
         document.getElementById("overlay-jet-total").textContent = entree.total;
         document.getElementById("overlay-jet-badge").textContent =
           entree.crit ? "CRITIQUE ! 🎉" : entree.echec ? "Échec critique 💀" : "";
-        if (entree.crit) { overlay.classList.add("crit"); _jouerSonSucces(); }
-        else if (entree.echec) { overlay.classList.add("echec"); _jouerSonEchec(); }
+        if (entree.crit) { overlay.classList.add("crit"); _jouerSonSucces(entree.sonSucces); }
+        else if (entree.echec) { overlay.classList.add("echec"); _jouerSonEchec(entree.sonEchec); }
         // Durée d'affichage du total final : 5s pour un jet normal, 2s pour
         // un duo (cf. DUREE_DUO_MS ci-dessous) — la lecture des 2 dés a déjà
         // pris son temps, pas besoin de laisser le total affiché aussi
