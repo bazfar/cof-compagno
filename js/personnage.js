@@ -216,9 +216,11 @@ class Personnage extends Entite {
 
   // Bonus permanent à une caractéristique de base, accordé par un choix fixé
   // à l'acquisition d'une capacité (ex. Guerrier — Spécimen d'élite : +1 FOR,
-  // DEX ou CON au choix, cf. CAPACITES_A_CHOIX côté app.js). N'altère pas la
-  // valeur affichée sur la fiche (this.caracs), seulement le modificateur
-  // effectif utilisé pour tous les calculs (attaque, DEF, PV...).
+  // DEX ou CON au choix, cf. CAPACITES_A_CHOIX côté app.js). N'altère jamais
+  // this.caracs (la base allouée à la création reste intacte) — mais est bien
+  // ajouté à la valeur "val." affichée sur la fiche (cf. app.js, à côté du
+  // modificateur) comme au modificateur effectif utilisé pour tous les
+  // calculs (attaque, DEF, PV...).
   bonusCaracCapacites(code) {
     let bonus = 0;
     if (this.classe === "guerrier") {
