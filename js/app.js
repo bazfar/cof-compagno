@@ -17,9 +17,9 @@ const App = (() => {
   // les AUTRES clients affichent le bon skin sans document Firestore séparé.
   const STORAGE_SKIN_DE = "cof_skin_de";
   const SKINS_DE = {
-    solvarn:   { nom: "Solvarn",             img: "assets/des/d20-solvarn-vierge.png?v=1" },
-    libris:    { nom: "Libris",              img: "assets/des/d20-libris-tissage.png?v=1" },
-    citadelle: { nom: "Citadelle des Ponts", img: "assets/des/d20-citadelle-ponts.png?v=1" },
+    solvarn:   { nom: "Solvarn",             img: "assets/des/d20-solvarn-vierge.png?v=2" },
+    libris:    { nom: "Libris",              img: "assets/des/d20-libris-tissage.png?v=2" },
+    citadelle: { nom: "Citadelle des Ponts", img: "assets/des/d20-citadelle-ponts.png?v=2" },
   };
   const SKIN_DE_DEFAUT = "solvarn";
 
