@@ -1204,6 +1204,22 @@ class Personnage extends Entite {
     return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusInitiative || 0), 0);
   }
 
+  // Résout l'entrée CANONIQUE (avec caracDelta/competenceDelta/etc.) d'une
+  // mutation stockée sur le perso, via palier+d6 dans TABLE_MUTATIONS —
+  // jamais via les champs figés sur l'entrée du perso elle-même (qui ne
+  // contient que { id, palier, d6, nom, effet, obtenueLe }, cf.
+  // genererMutation côté app.js : il ne recopie PAS les champs de chiffrage).
+  // Indispensable pour que le chiffrage s'applique rétroactivement aux
+  // mutations déjà tirées avant son ajout, ET aux futures sans dépendre de
+  // ce que genererMutation choisit de stocker. Renvoie null si la table
+  // n'est pas chargée ou si le palier/d6 ne correspond à rien (mutation
+  // d'un palier retiré/renommé depuis).
+  static _entreeCanoniqueMutation(m) {
+    if (typeof TABLE_MUTATIONS === "undefined") return null;
+    const table = TABLE_MUTATIONS[m.palier];
+    if (!table) return null;
+    return table.mutations.find((x) => x.d6 === m.d6) || null;
+  }
   // Bonus de caractéristique porté par une mutation de la Corruption d'Âme
   // (data/mutations.js: caracDelta, ex. Veines sombres { FOR: 1, CHA: -1 })
   // — même principe que bonusCaracEquipement/Capacites/Dons, lu dynamiquement
@@ -1213,7 +1229,10 @@ class Personnage extends Entite {
   // via un schéma générique de conditions, vu que c'est le seul cas de toute
   // la table (cf. note de chiffrage en tête de data/mutations.js).
   bonusCaracMutations(code) {
-    let bonus = (this.mutations || []).reduce((t, m) => t + ((m.caracDelta && m.caracDelta[code]) || 0), 0);
+    let bonus = (this.mutations || []).reduce((t, m) => {
+      const e = Personnage._entreeCanoniqueMutation(m);
+      return t + ((e && e.caracDelta && e.caracDelta[code]) || 0);
+    }, 0);
     if (code === "CHA" && (this.mutations || []).some((m) => m.nom === "Troisième œil (fermé)") && !this.equipement.tete) {
       bonus -= 2;
     }
@@ -1223,17 +1242,26 @@ class Personnage extends Entite {
   // bonus/malus fixe à une compétence nommée (data/mutations.js:
   // competenceDelta) — lu par bonusCompetence().
   bonusCompetenceMutations(nom) {
-    return (this.mutations || []).reduce((t, m) => t + ((m.competenceDelta && m.competenceDelta[nom]) || 0), 0);
+    return (this.mutations || []).reduce((t, m) => {
+      const e = Personnage._entreeCanoniqueMutation(m);
+      return t + ((e && e.competenceDelta && e.competenceDelta[nom]) || 0);
+    }, 0);
   }
   // Bonus de DEF porté par une mutation (data/mutations.js: defDelta, ex.
   // Peau de pierre +2, Carapace fissurée +4) — lu par calculerDEF().
   bonusDefMutations() {
-    return (this.mutations || []).reduce((t, m) => t + (m.defDelta || 0), 0);
+    return (this.mutations || []).reduce((t, m) => {
+      const e = Personnage._entreeCanoniqueMutation(m);
+      return t + ((e && e.defDelta) || 0);
+    }, 0);
   }
   // Bonus d'initiative porté par une mutation (data/mutations.js:
   // initiativeDelta, ex. Troisième œil (fermé) +2) — lu par calculerInitiative().
   bonusInitiativeMutations() {
-    return (this.mutations || []).reduce((t, m) => t + (m.initiativeDelta || 0), 0);
+    return (this.mutations || []).reduce((t, m) => {
+      const e = Personnage._entreeCanoniqueMutation(m);
+      return t + ((e && e.initiativeDelta) || 0);
+    }, 0);
   }
   // Réduction de la valeur d'un gain de PV portée par une mutation
   // (data/mutations.js: soinsRecusDelta, ex. Sang noir -3) — lue par
@@ -1241,7 +1269,10 @@ class Personnage extends Entite {
   // persistante déjà appliqué là-bas. Négatif = réduction ; la somme est
   // ajoutée directement au montant (jamais en-dessous de 0, cf. appliquerGainPv).
   reductionSoinsMutations() {
-    return (this.mutations || []).reduce((t, m) => t + (m.soinsRecusDelta || 0), 0);
+    return (this.mutations || []).reduce((t, m) => {
+      const e = Personnage._entreeCanoniqueMutation(m);
+      return t + ((e && e.soinsRecusDelta) || 0);
+    }, 0);
   }
   // Bonus de PV max porté par un accessoire équipé. Pour les objets à bonus
   // fixe, bonusPvMax est déjà posé côté catalogue. Pour un bonus aléatoire
