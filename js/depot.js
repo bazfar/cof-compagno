@@ -100,6 +100,23 @@ class DepotDistant extends Depot {
   _demarrer() {
     this._desabonnerFirestore = this._collection().onSnapshot(
       (snap) => {
+        // hasPendingWrites=true : ce snapshot reflète un état LOCAL encore en
+        // cours d'envoi au serveur, pas l'état confirmé. Avec remplacerTout()
+        // (écritures multi-documents rapprochées, ex. équiper un objet PUIS
+        // modifier la bourse juste après), le SDK Firestore relivre parfois
+        // plusieurs échos "pending" intermédiaires — chacun ne reflétant
+        // qu'UNE des écritures en vol, pas la dernière — avant l'écho final
+        // confirmé. Comme remplacerTout()/sauver() mettent déjà this._cache à
+        // jour de façon synchrone et optimiste à l'écriture, ces échos
+        // intermédiaires n'apportent rien et peuvent au contraire écraser
+        // temporairement (voire durablement, si aucune écriture ultérieure ne
+        // vient corriger) un état plus récent avec un état plus ancien —
+        // symptôme observé : un objet équipé qui repart tout seul dans
+        // l'inventaire juste après une deuxième action rapprochée. On ignore
+        // donc tout snapshot tant qu'il reste des écritures en attente ; le
+        // cache local optimiste reste la source de vérité jusqu'à
+        // confirmation serveur complète.
+        if (snap.metadata.hasPendingWrites) return;
         const o = {};
         snap.forEach((doc) => { o[doc.id] = doc.data(); });
         this._cache = o;
