@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=78" />
+  <link rel="stylesheet" href="css/style.css?v=79" />
 </head>
 <body>
   <header>
@@ -287,6 +287,19 @@
           <button class="de-btn" data-de="12">d12</button>
           <button class="de-btn" data-de="20">d20</button>
           <button class="de-btn" data-de="100">d100</button>
+        </div>
+
+        <div class="skin-de-selecteur" id="skin-de-selecteur">
+          <span class="skin-de-label">Mon dé :</span>
+          <button class="skin-de-vignette" data-skin="solvarn" title="Solvarn — marbre et or">
+            <img src="assets/des/d20-solvarn-vierge.png?v=1" alt="Skin Solvarn" />
+          </button>
+          <button class="skin-de-vignette" data-skin="libris" title="Libris — bois tressé">
+            <img src="assets/des/d20-libris-tissage.png?v=1" alt="Skin Libris" />
+          </button>
+          <button class="skin-de-vignette" data-skin="citadelle" title="Citadelle des Ponts — granit">
+            <img src="assets/des/d20-citadelle-ponts.png?v=1" alt="Skin Citadelle" />
+          </button>
         </div>
 
         <h3 style="margin-top:18px;">Jet personnalisé</h3>
@@ -627,47 +640,16 @@
            avant de fusionner sur le dé unique ci-dessous — cf. afficherOverlayJet. -->
       <div class="overlay-jet-duo" id="overlay-jet-duo">
         <div class="overlay-jet-d20 mini" id="overlay-jet-d20-a">
-          <svg class="overlay-jet-d20-svg" viewBox="0 0 100 100" aria-hidden="true">
-            <polygon class="d20-face" points="50,4 93,28 93,72 50,96 7,72 7,28" />
-            <g class="d20-aretes">
-              <path d="M50,4 L50,24" /><path d="M7,28 L50,24" /><path d="M93,28 L50,24" />
-              <path d="M50,24 L30,76" /><path d="M50,24 L70,76" /><path d="M30,76 L50,96" />
-              <path d="M70,76 L50,96" /><path d="M7,50 L50,24" /><path d="M93,50 L50,24" />
-              <path d="M7,50 L30,76" /><path d="M93,50 L70,76" />
-            </g>
-          </svg>
+          <img class="overlay-jet-d20-svg" id="overlay-jet-d20-img-a" alt="" aria-hidden="true" />
           <span id="overlay-jet-val-a"></span>
         </div>
         <div class="overlay-jet-d20 mini" id="overlay-jet-d20-b">
-          <svg class="overlay-jet-d20-svg" viewBox="0 0 100 100" aria-hidden="true">
-            <polygon class="d20-face" points="50,4 93,28 93,72 50,96 7,72 7,28" />
-            <g class="d20-aretes">
-              <path d="M50,4 L50,24" /><path d="M7,28 L50,24" /><path d="M93,28 L50,24" />
-              <path d="M50,24 L30,76" /><path d="M50,24 L70,76" /><path d="M30,76 L50,96" />
-              <path d="M70,76 L50,96" /><path d="M7,50 L50,24" /><path d="M93,50 L50,24" />
-              <path d="M7,50 L30,76" /><path d="M93,50 L70,76" />
-            </g>
-          </svg>
+          <img class="overlay-jet-d20-svg" id="overlay-jet-d20-img-b" alt="" aria-hidden="true" />
           <span id="overlay-jet-val-b"></span>
         </div>
       </div>
       <div class="overlay-jet-d20" id="overlay-jet-d20">
-        <svg class="overlay-jet-d20-svg" viewBox="0 0 100 100" aria-hidden="true">
-          <polygon class="d20-face" points="50,4 93,28 93,72 50,96 7,72 7,28" />
-          <g class="d20-aretes">
-            <path d="M50,4 L50,24" />
-            <path d="M7,28 L50,24" />
-            <path d="M93,28 L50,24" />
-            <path d="M50,24 L30,76" />
-            <path d="M50,24 L70,76" />
-            <path d="M30,76 L50,96" />
-            <path d="M70,76 L50,96" />
-            <path d="M7,50 L50,24" />
-            <path d="M93,50 L50,24" />
-            <path d="M7,50 L30,76" />
-            <path d="M93,50 L70,76" />
-          </g>
-        </svg>
+        <img class="overlay-jet-d20-svg" id="overlay-jet-d20-img" alt="" aria-hidden="true" />
         <span id="overlay-jet-total"></span>
       </div>
       <div class="overlay-jet-detail" id="overlay-jet-detail"></div>
@@ -834,6 +816,6 @@
   <script src="js/reputation.js?v=1"></script>
   <script src="js/capacites.js?v=35"></script>
   <script src="js/combat.js?v=15"></script>
-  <script src="js/app.js?v=161"></script>
+  <script src="js/app.js?v=162"></script>
 </body>
 </html>

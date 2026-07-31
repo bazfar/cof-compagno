@@ -1047,6 +1047,20 @@ textarea { resize: vertical; min-height: 70px; }
 .options-de label { display: flex; align-items: center; gap: 6px; font-weight: 500; }
 .options-de input[type="radio"], .options-de input[type="checkbox"] { width: auto; }
 
+.skin-de-selecteur {
+  display: flex; align-items: center; gap: 10px; margin: 14px 0 10px;
+  flex-wrap: wrap;
+}
+.skin-de-label { font-weight: 600; color: var(--violet-clair); font-size: 0.9rem; }
+.skin-de-vignette {
+  width: 52px; height: 52px; padding: 3px; border-radius: 10px;
+  border: 2px solid transparent; background: rgba(0,0,0,0.08);
+  cursor: pointer; transition: border-color 0.15s, transform 0.1s;
+}
+.skin-de-vignette img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.skin-de-vignette:hover { transform: translateY(-2px); border-color: var(--violet-accent); }
+.skin-de-vignette.actif { border-color: var(--or); background: rgba(184,146,74,0.15); }
+
 /* ---------- Messages MJ -> joueur ---------- */
 .message-ligne { padding: 8px 10px; border-bottom: 1px solid var(--parchemin-fonce); font-size: 0.88rem; }
 .message-ligne:last-child { border-bottom: none; }
@@ -1290,14 +1304,15 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
   display: flex; align-items: center; justify-content: center;
   color: var(--violet); /* repris par le SVG (fill/stroke: currentColor) */
 }
-.overlay-jet-d20-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.overlay-jet-d20-svg .d20-face { fill: currentColor; stroke: currentColor; stroke-width: 2.5; stroke-linejoin: round; }
-.overlay-jet-d20-svg .d20-aretes path {
-  fill: none; stroke: rgba(0,0,0,0.35); stroke-width: 1.6; stroke-linecap: round;
+.overlay-jet-d20-svg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));
 }
 .overlay-jet-d20 span {
-  position: relative; color: var(--parchemin); font-size: 1.9rem; font-weight: 800; line-height: 1;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  position: relative; color: var(--violet); font-size: 1.9rem; font-weight: 800; line-height: 1;
+  text-shadow: 0 0 3px var(--parchemin), 0 0 6px var(--parchemin), 0 1px 2px rgba(0,0,0,0.35);
   transition: opacity 0.15s;
 }
 .overlay-jet-d20 span:empty { opacity: 0; }
@@ -1311,12 +1326,12 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .overlay-jet-d20.en-cours .overlay-jet-d20-svg { animation: d20-roule 0.6s ease-out; }
 .overlay-jet-detail { font-size: 0.8rem; color: var(--violet-clair); margin-bottom: 6px; min-height: 1.1em; }
 .overlay-jet-badge { font-size: 0.85rem; font-weight: 700; min-height: 1.1em; color: var(--encre); }
-.overlay-jet.crit .overlay-jet-boite { border-color: var(--succes); }
-.overlay-jet.crit .overlay-jet-d20 { color: var(--succes); }
+.overlay-jet.crit .overlay-jet-boite { border-color: var(--succes); box-shadow: 0 0 18px rgba(58,125,68,0.45); }
 .overlay-jet.crit .overlay-jet-badge { color: var(--succes); }
-.overlay-jet.echec .overlay-jet-boite { border-color: var(--chaos); }
-.overlay-jet.echec .overlay-jet-d20 { color: var(--chaos); }
+.overlay-jet.crit .overlay-jet-d20 span { color: var(--succes); text-shadow: 0 0 3px var(--parchemin), 0 0 6px var(--parchemin); }
+.overlay-jet.echec .overlay-jet-boite { border-color: var(--chaos); box-shadow: 0 0 18px rgba(138,47,59,0.45); }
 .overlay-jet.echec .overlay-jet-badge { color: var(--chaos); }
+.overlay-jet.echec .overlay-jet-d20 span { color: var(--chaos); text-shadow: 0 0 3px var(--parchemin), 0 0 6px var(--parchemin); }
 
 /* Duo avantage/désavantage (cf. afficherOverlayJet) : les 2 d20 individuels
    affichés côte à côte pendant le "moment de suspense", avant de fusionner

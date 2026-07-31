@@ -12,6 +12,41 @@ const App = (() => {
   const STORAGE_MON_PERSO = "cof_mon_perso_actif";
   const STORAGE_JOUEUR_ID = "cof_joueur_id";
   const STORAGE_JOUEUR_NOM = "cof_joueur_nom";
+  // Skin de d20 choisi par CE navigateur (local, pas synchronisé en soi) —
+  // embarqué dans chaque jet (cf. ajouterHisto/afficherOverlayJet) pour que
+  // les AUTRES clients affichent le bon skin sans document Firestore séparé.
+  const STORAGE_SKIN_DE = "cof_skin_de";
+  const SKINS_DE = {
+    solvarn:   { nom: "Solvarn",             img: "assets/des/d20-solvarn-vierge.png?v=1" },
+    libris:    { nom: "Libris",              img: "assets/des/d20-libris-tissage.png?v=1" },
+    citadelle: { nom: "Citadelle des Ponts", img: "assets/des/d20-citadelle-ponts.png?v=1" },
+  };
+  const SKIN_DE_DEFAUT = "solvarn";
+
+  function _skinDeActuel() {
+    return localStorage.getItem(STORAGE_SKIN_DE) || SKIN_DE_DEFAUT;
+  }
+  function _skinDeImg(id) {
+    return (SKINS_DE[id] || SKINS_DE[SKIN_DE_DEFAUT]).img;
+  }
+  // Câble les vignettes du panneau Dés (#skin-de-selecteur) : clic = mémorise
+  // le choix (localStorage) et met à jour le surlignage. Le choix n'est lu
+  // qu'au moment du jet suivant (cf. ajouterHisto) — pas besoin de re-render
+  // ailleurs.
+  function initSelecteurSkinDe() {
+    const zone = document.getElementById("skin-de-selecteur");
+    if (!zone) return;
+    const actuel = _skinDeActuel();
+    zone.querySelectorAll(".skin-de-vignette").forEach((btn) => {
+      btn.classList.toggle("actif", btn.dataset.skin === actuel);
+      btn.onclick = () => {
+        localStorage.setItem(STORAGE_SKIN_DE, btn.dataset.skin);
+        zone.querySelectorAll(".skin-de-vignette").forEach((b) =>
+          b.classList.toggle("actif", b === btn)
+        );
+      };
+    });
+  }
   // Messages MJ → joueur individuel : liste partagée (SyncStore), même
   // schéma que STORAGE_HISTO — ciblage par NOM (memeNom), pas par joueurId,
   // pour rester cohérent avec le partage de livres (_rosterJoueurs/
@@ -6865,6 +6900,7 @@ const App = (() => {
       joueurId, cache, sonDe, sonEchec, sonSucces,
       mode: opts.mode || null, d1: typeof opts.d1 === "number" ? opts.d1 : null, d2: typeof opts.d2 === "number" ? opts.d2 : null,
       estMonstre: !!opts.estMonstre,
+      skinDe: _skinDeActuel(),
     }, 40);
     rendreHisto();
   }
@@ -7002,6 +7038,8 @@ const App = (() => {
     const overlay = document.getElementById("overlay-jet");
     const d20 = document.getElementById("overlay-jet-d20");
     if (!overlay || !d20 || !entree) return;
+    const skinImg = document.getElementById("overlay-jet-d20-img");
+    if (skinImg) skinImg.src = _skinDeImg(entree.skinDe);
 
     const estAuteur = !!(entree.joueurId && entree.joueurId === joueurId);
     const masque = !!entree.cache && role !== "mj" && !estAuteur;
@@ -7020,6 +7058,10 @@ const App = (() => {
     const zoneDuo = document.getElementById("overlay-jet-duo");
     const d20a = document.getElementById("overlay-jet-d20-a");
     const d20b = document.getElementById("overlay-jet-d20-b");
+    const skinImgA = document.getElementById("overlay-jet-d20-img-a");
+    const skinImgB = document.getElementById("overlay-jet-d20-img-b");
+    if (skinImgA) skinImgA.src = _skinDeImg(entree.skinDe);
+    if (skinImgB) skinImgB.src = _skinDeImg(entree.skinDe);
     const valA = document.getElementById("overlay-jet-val-a");
     const valB = document.getElementById("overlay-jet-val-b");
     if (valA) valA.textContent = "";
@@ -7718,6 +7760,7 @@ const App = (() => {
       if (e.key === "Enter") lancerFormule(e.target.value);
     });
     document.getElementById("btn-vider-histo").onclick = viderHisto;
+    initSelecteurSkinDe();
 
     // Messages MJ → joueur
     const btnEnvoyerMessage = document.getElementById("btn-envoyer-message");
