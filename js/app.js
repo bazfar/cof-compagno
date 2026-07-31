@@ -149,6 +149,7 @@ const App = (() => {
     "Super windows error meme (Download In Description!) (mp3cut.net).mp3",
     "The Price is Right Losing Horn - Sound Effect (HD).mp3",
     "emotional damage (mp3cut.net).mp3",
+    "TFTD Lana del rey my 🐱 tastes like pepsi cola (mp3cut.net).mp3",
   ];
   let _sonsSucces = null; // instances Audio réutilisées (une par fichier), cf. SONS_SUCCES_CRITIQUE
   // Même principe que SONS_ECHEC_CRITIQUE, mais pour le succès critique (20
