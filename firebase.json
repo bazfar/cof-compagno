@@ -8,6 +8,14 @@
       "docs/**",
       "*.md",
       "*.patch"
+    ],
+    "headers": [
+      {
+        "source": "/index.html",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache" }
+        ]
+      }
     ]
   }
 }
