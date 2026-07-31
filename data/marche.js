@@ -113,8 +113,12 @@ function tirerRareteStock() {
 // la localité). Si le pool filtré fait moins de 40 objets, prend tout le
 // pool (pas de duplication). Chaque objet tiré reçoit en plus une rareté de
 // stock aléatoire (cf. POIDS_RARETE_STOCK) qui majore son prix de vente.
+// horsMarche=true (cf. loot.json) : objet unique/quête qu'un marchand
+// générique ne doit jamais avoir en stock au hasard — reste obtenable
+// uniquement via le MJ (Loot/+Ajouter un objet), jamais tiré ici.
 function tirerStockMarchand(marchand, localite, catalogueLoot) {
   const pool = catalogueLoot.filter((item) => {
+    if (item.horsMarche) return false;
     if (!marchand.typesAutorises.includes(item.type)) return false;
     if (item.type === "armure" && item.valeurArmure > localite.plafondValeurArmure) return false;
     if (item.type === "bouclier") {
