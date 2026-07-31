@@ -114,8 +114,12 @@ const App = (() => {
   ];
   let _sonsSucces = null; // instances Audio réutilisées (une par fichier), cf. SONS_SUCCES_CRITIQUE
   // Même principe que SONS_ECHEC_CRITIQUE, mais pour le succès critique (20
-  // naturel) — dossier assets/sounds/succes-critique/, vide pour l'instant.
-  const SONS_SUCCES_CRITIQUE = [];
+  // naturel) — dossier assets/sounds/succes-critique/.
+  const SONS_SUCCES_CRITIQUE = [
+    "Abba - Money, Money, Money (Official Music Video) (mp3cut.net).mp3",
+  ];
+  let _sonNiveau = null; // instance Audio réutilisée pour le thème de montée de niveau
+  const VOLUME_SON_NIVEAU = 0.7; // -30% par rapport au plein volume (demande de Thomas)
 
   /* ---------- Utilitaires ---------- */
 
@@ -6522,6 +6526,7 @@ const App = (() => {
     rendreVoies();
     if (creation.race) rendreVoieRaciale();
     _persisterNiveauEtPv(id);
+    _jouerSonNiveau();
 
     toast(`Niveau ${creation.niveau} ! +${gainPv} PV (total ${pvTotalActuel()}, déjà enregistré). Points de capacité : ${pointsVoieRestants()}/${pointsVoieTotal()}. Choisis tes nouvelles capacités puis pense à enregistrer.`);
     allerEtape(2);
@@ -6951,6 +6956,20 @@ const App = (() => {
       son.currentTime = 0;
       son.play().catch(() => {}); // autoplay bloqué (rare) : silencieux
     } catch (e) { /* pas de son plutôt que planter le jet */ }
+  }
+
+  // Thème joué au clic sur "⬆ Monter de niveau" (cf. monterDeNiveau). Volume
+  // réduit de 30% (VOLUME_SON_NIVEAU) par rapport aux stingers courts
+  // ci-dessus : c'est un vrai morceau de musique, pas un simple bruitage.
+  function _jouerSonNiveau() {
+    try {
+      if (!_sonNiveau) {
+        _sonNiveau = new Audio("assets/sounds/niveau/" + encodeURIComponent("FF VII victory theme (mp3cut.net).mp3"));
+        _sonNiveau.volume = VOLUME_SON_NIVEAU;
+      }
+      _sonNiveau.currentTime = 0;
+      _sonNiveau.play().catch(() => {}); // autoplay bloqué (rare) : silencieux
+    } catch (e) { /* pas de son plutôt que planter la montée de niveau */ }
   }
 
   // Remplit et affiche l'overlay de jet de dé (visible sur n'importe quel
