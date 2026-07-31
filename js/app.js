@@ -810,6 +810,34 @@ const App = (() => {
     if (franchi) toast(`⚠️ ${p.nom} franchit le seuil de Corruption d'Âme (Corruption d'Âme +1, total ${p.corruptionMajeure}).`);
   }
 
+  // Épée de Cupidité (data/loot.json: epee_cupidite) : en cas d'échec au jet
+  // d'ATTAQUE DE CONTACT avec cette épée effectivement équipée en main de
+  // contact, le porteur perd 25 PO ; s'il n'a déjà plus aucun or, il perd
+  // 1d4 PV à la place — dégâts bruts appliqués directement (cf. ajusterPv),
+  // sans réduction d'armure : c'est une malédiction, pas un coup encaissé.
+  // Perte partielle si moins de 25 PO en poche (ex. 10 PO → perd les 10,
+  // pas de dégâts de repli) : seul un porteur DÉJÀ à 0 PO avant ce jet
+  // subit les PV — cf. bonusDegatsEpeeCupidite pour le volet dégâts du
+  // même objet. Même schéma d'appel que _gererPremierSangChasseur ci-dessus.
+  function _gererMalusEpeeCupidite(persoId, type, touche) {
+    if (type !== "contact" || touche !== false) return;
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const perso = Personnage.depuisJSON(p);
+    const arme = perso.armeContactEquipee();
+    if (!arme || arme.id !== "epee_cupidite") return;
+    if ((p.piecesOr || 0) > 0) {
+      p.piecesOr = Math.max(0, (p.piecesOr || 0) - 25);
+      sauverPersos(persos);
+      toast(`💰 Épée de Cupidité : ${p.nom} perd de l'or (reste ${p.piecesOr} PO).`);
+    } else {
+      const degats = lancerDe(4);
+      ajusterPv(persoId, -degats);
+      toast(`🗡️ Épée de Cupidité : plus d'or, ${p.nom} subit ${degats} dégâts.`);
+    }
+  }
+
   // Résout un token de battlemap (cibleId, cf. _ciblesPortee) vers la clé
   // composite attendue par ouvrirModalMalus/appliquerMalus ("pj:id" ou
   // "monstre:id") — même logique de résolution que _resoudreAttaqueRapide.
@@ -948,6 +976,7 @@ const App = (() => {
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
+    if (dmgContact && perso.bonusDegatsEpeeCupidite()) dmgContact += "+" + perso.bonusDegatsEpeeCupidite();
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
@@ -1202,6 +1231,7 @@ const App = (() => {
           toast(resultatMsg);
         }
         _gererPremierSangChasseur(id, type, resolution.touche);
+        _gererMalusEpeeCupidite(id, type, resolution.touche);
         if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
         rendreFicheSidebarBattlemap(id);
       };
@@ -1390,6 +1420,7 @@ const App = (() => {
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
+    if (dmgContact && perso.bonusDegatsEpeeCupidite()) dmgContact += "+" + perso.bonusDegatsEpeeCupidite();
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
@@ -1591,6 +1622,7 @@ const App = (() => {
           toast(resultatMsg);
         }
         _gererPremierSangChasseur(id, type, resolution.touche);
+        _gererMalusEpeeCupidite(id, type, resolution.touche);
         if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
         rendreFicheSidebarBattlemap(id);
       };
@@ -4923,6 +4955,7 @@ const App = (() => {
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
+    if (dmgContact && perso.bonusDegatsEpeeCupidite()) dmgContact += "+" + perso.bonusDegatsEpeeCupidite();
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
