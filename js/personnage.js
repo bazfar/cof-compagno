@@ -641,6 +641,21 @@ class Personnage extends Entite {
   // immobilité, présence d'un allié...) restent gérées à la table par le MJ.
   bonusDefCapacites() {
     let bonus = 0;
+    // Druide — Voie de la nature, rang 2 "Terrain naturel" : texte d'origine
+    // conditionné à un combat "en terrain difficile" (neige/boue/broussailles),
+    // notion absente de l'app (pas de mécanique de terrain) — simplifié en
+    // bonus permanent dès l'acquisition, comme la mutation "Reflet trouble"
+    // (cf. data/mutations.js) ; à la table d'ignorer hors contexte adapté.
+    // Volet attaque du même rang : cf. bonusAttaque().
+    if (this.classe === "druide" && this.estChoisie("Voie de la nature", 2)) {
+      bonus += 2;
+    }
+    // Druide — Voie du protecteur, rang 2 "Symbiose protectrice" (passive) :
+    // texte d'origine conditionné à "se trouver en milieu naturel", même
+    // simplification que Terrain naturel ci-dessus (bonus permanent).
+    if (this.classe === "druide" && this.estChoisie("Voie du protecteur", 2)) {
+      bonus += 2;
+    }
     // Prêtre — Voie de la conversion, rang 1 "Vêtements sacrés" : +5 DEF tant
     // qu'aucune armure physique n'est portée. Seul un item de type "armure"
     // peut occuper le slot torse (cf. slotsPourType) : torse vide = pas d'armure.
@@ -1425,6 +1440,13 @@ class Personnage extends Entite {
     let bonus = 0;
     if (type === "contact" && this.classe === "barde" && this.estChoisie("Voie de la rapière", 1)) {
       bonus += 1;
+    }
+    // Druide — Voie de la nature, rang 2 "Terrain naturel" : volet attaque du
+    // même rang que le +2 DEF (cf. bonusDefCapacites) — même simplification
+    // (bonus permanent, condition de terrain non trackée), appliqué à tout
+    // type d'attaque faute de restriction dans le texte source.
+    if (this.classe === "druide" && this.estChoisie("Voie de la nature", 2)) {
+      bonus += 2;
     }
     // Chasseur — Voie de la gâchette, rang 1 "Tir ajusté" (passive) : +1 en
     // attaque à distance. Même gap que Précision ci-dessus : déclaré dans les
