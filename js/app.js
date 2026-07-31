@@ -89,7 +89,10 @@ const App = (() => {
   let overlayJetTimer = null;
   let overlayJetRevealTimer = null;
   let overlayJetDuoTimer = null; // phase "2 dés visibles" avant fusion, cf. afficherOverlayJet (avantage/désavantage)
-  let _sonDe = null; // instance Audio réutilisée (évite de la recréer à chaque jet)
+  let _sonsDe = null; // instances Audio réutilisées (une par fichier), cf. SONS_DE
+  // Même principe que SONS_ECHEC_CRITIQUE, pour le bruit de dé qui roule joué
+  // à chaque jet — dossier assets/sounds/de/.
+  const SONS_DE = ["de-lance.mp3"];
   let _sonsEchec = null; // instances Audio réutilisées (une par fichier), cf. SONS_ECHEC_CRITIQUE
   // Un fichier tiré au hasard à chaque échec critique, pour varier le stinger.
   // Pas de liste automatique possible (aucune API navigateur ne liste le
@@ -6848,6 +6851,7 @@ const App = (() => {
     // _verifierNouveauJetPourOverlay, déclenché à chaque synchro Firestore
     // sur TOUS les clients) tirerait indépendamment son propre Math.random()
     // et n'entendrait pas le même stinger que les autres joueurs.
+    const sonDe = SONS_DE.length ? SONS_DE[Math.floor(Math.random() * SONS_DE.length)] : null;
     const sonEchec = (echec && SONS_ECHEC_CRITIQUE.length)
       ? SONS_ECHEC_CRITIQUE[Math.floor(Math.random() * SONS_ECHEC_CRITIQUE.length)] : null;
     const sonSucces = (crit && SONS_SUCCES_CRITIQUE.length)
@@ -6858,7 +6862,7 @@ const App = (() => {
     // s'écraser l'un l'autre.
     SyncStore.ajouterListe(STORAGE_HISTO, {
       label, total, crit, echec, detail: detail || "", auteur: nomLanceur(), horodatage: Date.now(),
-      joueurId, cache, sonEchec, sonSucces,
+      joueurId, cache, sonDe, sonEchec, sonSucces,
       mode: opts.mode || null, d1: typeof opts.d1 === "number" ? opts.d1 : null, d2: typeof opts.d2 === "number" ? opts.d2 : null,
       estMonstre: !!opts.estMonstre,
     }, 40);
@@ -6915,13 +6919,20 @@ const App = (() => {
   }
 
   // Son de collision joué à chaque jet (local ou distant, cf. afficherOverlayJet).
-  // Instance réutilisée + currentTime remis à 0 pour permettre des jets
-  // rapprochés sans attendre la fin du son précédent.
-  function _jouerSonDe() {
+  // Instances réutilisées + currentTime remis à 0 pour permettre des jets
+  // rapprochés sans attendre la fin du son précédent. `fichier` : nom déjà
+  // tiré au sort UNE FOIS par ajouterHisto et stocké dans l'entrée partagée
+  // (entree.sonDe), pour que tous les clients entendent le même son sur le
+  // même jet (même principe que sonEchec/sonSucces, cf. ajouterHisto) —
+  // repli sur un tirage local si absent (entrées antérieures à ce champ).
+  function _jouerSonDe(fichier) {
+    if (!SONS_DE.length) return;
     try {
-      if (!_sonDe) _sonDe = new Audio("assets/sounds/de-lance.mp3");
-      _sonDe.currentTime = 0;
-      _sonDe.play().catch(() => {}); // autoplay bloqué (rare, nécessite une interaction) : silencieux
+      if (!_sonsDe) _sonsDe = SONS_DE.map((f) => new Audio("assets/sounds/de/" + encodeURIComponent(f)));
+      const idx = fichier ? SONS_DE.indexOf(fichier) : -1;
+      const son = _sonsDe[idx >= 0 ? idx : Math.floor(Math.random() * _sonsDe.length)];
+      son.currentTime = 0;
+      son.play().catch(() => {}); // autoplay bloqué (rare, nécessite une interaction) : silencieux
     } catch (e) { /* pas de son plutôt que planter le jet */ }
   }
 
@@ -7026,7 +7037,7 @@ const App = (() => {
     void d20.offsetWidth;
     d20.classList.add("en-cours");
     if (duo) { if (d20a) d20a.classList.add("en-cours"); if (d20b) d20b.classList.add("en-cours"); }
-    _jouerSonDe();
+    _jouerSonDe(entree.sonDe);
 
     overlayJetRevealTimer = setTimeout(() => {
       [d20, d20a, d20b].forEach((el) => { if (el) el.classList.remove("en-cours"); });
