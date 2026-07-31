@@ -2864,7 +2864,7 @@ const App = (() => {
       <span title="Défense">🛡 ${perso.calculerDEF()}</span>
     </div>`;
     const statsHtml = `<div class="party-stats">${CARACS.map((cc) =>
-      `<div class="party-stat"><span class="party-stat-code">${cc.code}</span><b>${((p.caracs && p.caracs[cc.code] != null) ? p.caracs[cc.code] : 10) + perso.bonusCaracCapacites(cc.code) + perso.bonusCaracDons(cc.code) + perso.bonusCaracEquipement(cc.code)}</b><span class="party-stat-mod">${signe(perso.mod(cc.code))}</span></div>`).join("")}</div>`;
+      `<div class="party-stat"><span class="party-stat-code">${cc.code}</span><b>${((p.caracs && p.caracs[cc.code] != null) ? p.caracs[cc.code] : 10) + perso.bonusCaracCapacites(cc.code) + perso.bonusCaracDons(cc.code) + perso.bonusCaracEquipement(cc.code) + perso.bonusCaracMutations(cc.code)}</b><span class="party-stat-mod">${signe(perso.mod(cc.code))}</span></div>`).join("")}</div>`;
     return `<div class="party-carte" style="border-top:4px solid ${couleur};">
       <div class="party-illus-wrap">${illus}</div>
       <div class="party-corps">
@@ -5870,7 +5870,7 @@ const App = (() => {
                 `<div class="stat-box" style="cursor:pointer;" data-test="${cc.code}" title="Lancer un test de ${cc.nom}">
                   <div class="label">${cc.code}</div>
                   <div class="valeur">${signe(mods[cc.code])}</div>
-                  <div style="font-size:0.65rem;opacity:0.7;">val. ${p.caracs[cc.code] + perso.bonusCaracCapacites(cc.code) + perso.bonusCaracDons(cc.code) + perso.bonusCaracEquipement(cc.code)} · 🎲 test</div>
+                  <div style="font-size:0.65rem;opacity:0.7;">val. ${p.caracs[cc.code] + perso.bonusCaracCapacites(cc.code) + perso.bonusCaracDons(cc.code) + perso.bonusCaracEquipement(cc.code) + perso.bonusCaracMutations(cc.code)} · 🎲 test</div>
                   ${COMPETENCES_PAR_CARAC[cc.code] && COMPETENCES_PAR_CARAC[cc.code].length > 0 ? `
                     <details class="carac-competences" onclick="event.stopPropagation();">
                       <summary>Compétences</summary>

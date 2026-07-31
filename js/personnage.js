@@ -204,7 +204,7 @@ class Personnage extends Entite {
 
   /* ----- Caractéristiques ----- */
   mod(code) {
-    const base = Entite.modCarac(this.caracs[code] + this.bonusCaracCapacites(code) + this.bonusCaracDons(code) + this.bonusCaracEquipement(code) + this.bonusTemporaire(code)) - this.penaliteContratDemoniaque(code);
+    const base = Entite.modCarac(this.caracs[code] + this.bonusCaracCapacites(code) + this.bonusCaracDons(code) + this.bonusCaracEquipement(code) + this.bonusCaracMutations(code) + this.bonusTemporaire(code)) - this.penaliteContratDemoniaque(code);
     // Guerrier — Voie de l'élite, rang 5 "Apogée physique" (L, 1x/combat) :
     // double le MODIFICATEUR (pas la carac brute) de la carac choisie au
     // rang 1 (Spécimen d'élite), pendant 3 tours — état 'apogee_physique'
@@ -292,6 +292,7 @@ class Personnage extends Entite {
   bonusCompetence(nom) {
     let bonus = (this.bonusCompetences && this.bonusCompetences[nom]) || 0;
     bonus += this.bonusCompetenceEquipement(nom);
+    bonus += this.bonusCompetenceMutations(nom);
     const competencesDoue = ["Bluff", "Intimidation", "Représentation", "Persuasion"];
     if ((this.dons || []).includes("doue") && competencesDoue.includes(nom)) bonus += 1;
 
@@ -438,7 +439,7 @@ class Personnage extends Entite {
   /* ----- Défense ----- */
   calculerDEF() {
     const dex = Math.min(this.mod("DEX"), this.plafondDex());
-    return 10 + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusTemporaire("DEF") + this.bonusDefImmobile() + this.bonusDefDuel() + this.bonusDefBouclierExpert() + this.bonusDefPhalange();
+    return 10 + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusDefMutations() + this.bonusTemporaire("DEF") + this.bonusDefImmobile() + this.bonusDefDuel() + this.bonusDefBouclierExpert() + this.bonusDefPhalange();
   }
 
   // Chasseur — Voie de la traque, rang 2 "Camouflage naturel" (passive) :
@@ -541,7 +542,7 @@ class Personnage extends Entite {
   // Mod.INT ou Mod.SAG en plus de la DEX, cf. bonusInitiativeCapacites) +
   // bonus temporaires actifs (sorts/capacités, cf. bonusTemporaire).
   calculerInitiative() {
-    return this.mod("DEX") + this.bonusInitiativeCapacites() + this.bonusInitiativeDons() + this.bonusInitiativeEquipement() + this.bonusTemporaire("initiative");
+    return this.mod("DEX") + this.bonusInitiativeCapacites() + this.bonusInitiativeDons() + this.bonusInitiativeEquipement() + this.bonusInitiativeMutations() + this.bonusTemporaire("initiative");
   }
   bonusInitiativeCapacites() {
     let bonus = 0;
@@ -1202,6 +1203,46 @@ class Personnage extends Entite {
   bonusInitiativeEquipement() {
     return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusInitiative || 0), 0);
   }
+
+  // Bonus de caractéristique porté par une mutation de la Corruption d'Âme
+  // (data/mutations.js: caracDelta, ex. Veines sombres { FOR: 1, CHA: -1 })
+  // — même principe que bonusCaracEquipement/Capacites/Dons, lu dynamiquement
+  // par mod(), jamais en mutant this.caracs. Cas particulier : "Troisième œil
+  // (fermé)" n'a PAS de caracDelta.CHA dans les données (son malus est
+  // conditionnel, "si pas de casque équipé") — testé nommément ici plutôt que
+  // via un schéma générique de conditions, vu que c'est le seul cas de toute
+  // la table (cf. note de chiffrage en tête de data/mutations.js).
+  bonusCaracMutations(code) {
+    let bonus = (this.mutations || []).reduce((t, m) => t + ((m.caracDelta && m.caracDelta[code]) || 0), 0);
+    if (code === "CHA" && (this.mutations || []).some((m) => m.nom === "Troisième œil (fermé)") && !this.equipement.tete) {
+      bonus -= 2;
+    }
+    return bonus;
+  }
+  // Même principe que bonusCaracMutations, pour les mutations qui donnent un
+  // bonus/malus fixe à une compétence nommée (data/mutations.js:
+  // competenceDelta) — lu par bonusCompetence().
+  bonusCompetenceMutations(nom) {
+    return (this.mutations || []).reduce((t, m) => t + ((m.competenceDelta && m.competenceDelta[nom]) || 0), 0);
+  }
+  // Bonus de DEF porté par une mutation (data/mutations.js: defDelta, ex.
+  // Peau de pierre +2, Carapace fissurée +4) — lu par calculerDEF().
+  bonusDefMutations() {
+    return (this.mutations || []).reduce((t, m) => t + (m.defDelta || 0), 0);
+  }
+  // Bonus d'initiative porté par une mutation (data/mutations.js:
+  // initiativeDelta, ex. Troisième œil (fermé) +2) — lu par calculerInitiative().
+  bonusInitiativeMutations() {
+    return (this.mutations || []).reduce((t, m) => t + (m.initiativeDelta || 0), 0);
+  }
+  // Réduction de la valeur d'un gain de PV portée par une mutation
+  // (data/mutations.js: soinsRecusDelta, ex. Sang noir -3) — lue par
+  // Personnage.appliquerGainPv, même principe que le halving Corruption
+  // persistante déjà appliqué là-bas. Négatif = réduction ; la somme est
+  // ajoutée directement au montant (jamais en-dessous de 0, cf. appliquerGainPv).
+  reductionSoinsMutations() {
+    return (this.mutations || []).reduce((t, m) => t + (m.soinsRecusDelta || 0), 0);
+  }
   // Bonus de PV max porté par un accessoire équipé. Pour les objets à bonus
   // fixe, bonusPvMax est déjà posé côté catalogue. Pour un bonus aléatoire
   // (ex. Amulette de santé : bonusPvMaxDe: "1d4"), le jet est effectué une
@@ -1554,6 +1595,11 @@ class Personnage extends Entite {
   static appliquerGainPv(pRaw, montantBrut, opts = {}) {
     const perso = Personnage.depuisJSON(pRaw);
     let montant = (!opts.ignorerCorruption && perso.aCorruptionPersistante()) ? Math.floor(montantBrut / 2) : montantBrut;
+    // Mutation "Sang noir" (data/mutations.js: soinsRecusDelta) : réduit la
+    // valeur ajoutée aux PV, jamais en-dessous de 0 — appliquée sur tout gain
+    // positif, avant la dette du Soigneur (qui, elle, ramène à 0 sans notion
+    // de "réduit" partiel).
+    if (montant > 0) montant = Math.max(0, montant + perso.reductionSoinsMutations());
     let detteAnnulee = false;
     if (pRaw.detteSoigneurActive && montant > 0) {
       montant = 0;
