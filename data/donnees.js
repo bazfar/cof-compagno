@@ -1747,6 +1747,157 @@ const CLASSES = {
 /* Ordre d'affichage des classes */
 const ORDRE_CLASSES = ["guerrier", "chevalier", "barde", "chasseur", "moine", "druide", "pretre", "magicien", "enchanteur", "necromancien"];
 
+/* Liste autonome de sorts piochés par le Magicien (apprentissage via
+   parchemin/recherche/montée de niveau, cf. reference_sorts_connus.md) —
+   séparée des Voies de classe, à la manière d'un catalogue de sorts D&D.
+   20 sorts, rangs 1-5, coût PP = rang×2 (cf. reference_systeme_magie_pp.md).
+   Portée limitée à la donnée : PP réel sur Personnage, slots de Grimoire,
+   UI de sélection, verifierRessourcePP()/verifierSortConnu() dans
+   capacites.js restent des chantiers séparés — cette liste n'est pas
+   encore utilisable en jeu tant qu'ils ne sont pas branchés.
+   modeSauvegarde: "moitie" (sorts de zone à jet de sauvegarde, ex. Boule de
+   feu/Éclair) : donnée posée, résolution ("moitié dégâts si Sauvegarde
+   réussie") pas encore câblée dans capacites.js — sans précédent exact
+   avant ce champ. Les effets type:"special" avec note "résolution
+   manuelle" ne sont pas automatisables aujourd'hui, cohérent avec d'autres
+   capacités déjà en jeu dans ce cas (Rage incontrôlée, Bastion improvisé). */
+const SORTS_MAGICIEN = [
+  // --- Rang 1 (coût PP: 2) ---
+  { id: "trait_de_feu", nom: "Trait de feu", rang: 1, categorie: "evocation",
+    effet: "Attaque magique à distance : 1d10 dégâts de feu",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "unique", portee: 15, zone: null,
+      jetOppose: { caracAttaquant: "INT", caracDefenseur: "DEF" },
+      effets: [ { type: "degats", formule: "1d10", typeDegats: "magique" } ] } },
+
+  { id: "projectile_magique", nom: "Projectile magique", rang: 1, categorie: "evocation",
+    effet: "Touche automatiquement (pas de jet d'attaque) : 3×(1d4+1) dégâts de force",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "unique", portee: 20, zone: null,
+      jetOppose: null,
+      effets: [ { type: "degats", formule: "3*(1d4+1)", typeDegats: "magique", note: "touche automatique, pas de jetOppose" } ] } },
+
+  { id: "bouclier_arcanique_mineur", nom: "Bouclier arcanique mineur", rang: 1, categorie: "protection",
+    effet: "Réaction : +2 CA jusqu'au prochain tour du Magicien",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, reactionCout: 1, coutPP: 2, typeSort: "majeur",
+      cible: "soi", portee: null, zone: null, jetOppose: null,
+      effets: [ { type: "bonusTemporaire", cle: "DEF", valeur: 2, duree: { motCle: "prochainTour" } } ] } },
+
+  { id: "detection_magie", nom: "Détection de la magie", rang: 1, categorie: "utilitaire",
+    effet: "Révèle les auras magiques dans la zone (rituel)",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, rituel: true, coutPP: 2, typeSort: "majeur",
+      cible: "zone", portee: 10, zone: { taille: 3 }, jetOppose: null,
+      effets: [ { type: "special", note: "Information narrative — révèle présence/nature d'auras magiques, pas d'effet chiffré." } ] } },
+
+  { id: "sommeil", nom: "Sommeil", rang: 1, categorie: "controle",
+    effet: "Jet opposé INT vs Volonté sur les cibles en zone : échec = endormi jusqu'à subir des dégâts ou 3 tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "zone", portee: 12, zone: { taille: 1 },
+      jetOppose: { caracAttaquant: "INT", caracDefenseur: "Volonte" },
+      effets: [ { type: "etat", id: "endormi", duree: { tours: 3, rompuSiDegats: true } } ] } },
+
+  // --- Rang 2 (coût PP: 4) ---
+  { id: "eclair_localise", nom: "Éclair localisé", rang: 2, categorie: "evocation",
+    effet: "Ligne : 2d8 dégâts électriques",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "ligne", portee: 15, zone: { forme: "ligne", longueur: 6 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", modeSauvegarde: "moitie" },
+      effets: [ { type: "degats", formule: "2d8", typeDegats: "magique" } ] } },
+
+  { id: "toile_araignee", nom: "Toile d'araignée", rang: 2, categorie: "controle",
+    effet: "Zone 2 cases : jet Réflexes ou Entravé",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "zone", portee: 10, zone: { taille: 2 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes" },
+      effets: [ { type: "etat", id: "entrave", duree: { tours: 2 } } ] } },
+
+  { id: "peau_de_pierre", nom: "Peau de pierre", rang: 2, categorie: "protection",
+    effet: "+2 réduction de dégâts pendant 3 tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "bonusTemporaire", cle: "reduction_degats", valeur: 2, duree: { tours: 3 } } ] } },
+
+  { id: "invisibilite_mineure", nom: "Invisibilité mineure", rang: 2, categorie: "utilitaire",
+    effet: "Invisible jusqu'à la prochaine action offensive",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "etat", id: "invisible", duree: { motCle: "jusquaActionOffensive" } } ] } },
+
+  { id: "image_miroir", nom: "Image miroir", rang: 2, categorie: "protection",
+    effet: "Crée 2 doubles illusoires : chance qu'une attaque touche un double au lieu du Magicien",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "soi", portee: null, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "2 doubles ; résolution manuelle par la table (pas de moteur de redirection aléatoire d'attaque dans l'app) — même limite que Contresort/Mur de force." } ] } },
+
+  // --- Rang 3 (coût PP: 6) ---
+  { id: "boule_de_feu", nom: "Boule de feu", rang: 3, categorie: "evocation",
+    effet: "Zone 2 cases : 4d6 dégâts de feu, Réflexes pour moitié",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "zone", portee: 15, zone: { taille: 2 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", modeSauvegarde: "moitie" },
+      effets: [ { type: "degats", formule: "4d6", typeDegats: "magique" } ] } },
+
+  { id: "ralentissement", nom: "Ralentissement", rang: 3, categorie: "controle",
+    effet: "Zone : -2 attaque/DEF + moitié vitesse, jet Vigueur",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "zone", portee: 12, zone: { taille: 2 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Vigueur" },
+      effets: [ { type: "etat", id: "ralenti", duree: { tours: 3 } } ] } },
+
+  { id: "contresort", nom: "Contresort", rang: 3, categorie: "protection",
+    effet: "Réaction : annule un sort ennemi en cours de résolution",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, reactionCout: 1, coutPP: 6, typeSort: "majeur",
+      cible: "unique", portee: 15, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "Résolution manuelle par la table — pas de moteur d'annulation de sort en cours dans l'app." } ] } },
+
+  { id: "vol", nom: "Vol", rang: 3, categorie: "utilitaire",
+    effet: "La cible gagne la capacité de voler pendant plusieurs tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "etat", id: "vol", duree: { tours: 5 } } ] } },
+
+  // --- Rang 4 (coût PP: 8) ---
+  { id: "eclair_grand", nom: "Éclair", rang: 4, categorie: "evocation",
+    effet: "Ligne longue : 6d6 dégâts électriques, Réflexes pour moitié",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+      cible: "ligne", portee: 20, zone: { forme: "ligne", longueur: 10 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", modeSauvegarde: "moitie" },
+      effets: [ { type: "degats", formule: "6d6", typeDegats: "magique" } ] } },
+
+  { id: "cecite_surdite", nom: "Cécité/Surdité", rang: 4, categorie: "controle",
+    effet: "Jet Vigueur : aveugle ou assourdit 3 tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+      cible: "unique", portee: 10, zone: null,
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Vigueur" },
+      effets: [ { type: "etat", id: "aveugle_ou_sourd", duree: { tours: 3 } } ] } },
+
+  { id: "mur_de_force", nom: "Mur de force", rang: 4, categorie: "protection",
+    effet: "Érige un mur temporaire infranchissable",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+      cible: "zone", portee: 10, zone: { taille: 3 }, jetOppose: null,
+      effets: [ { type: "special", note: "Résolution manuelle par la table — pas de moteur d'obstacle bloquant LoS/mouvement dans l'app." } ] } },
+
+  { id: "invisibilite_majeure", nom: "Invisibilité majeure", rang: 4, categorie: "utilitaire",
+    effet: "Invisibilité complète prolongée, ne se rompt pas à la première action offensive",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "etat", id: "invisible_majeur", duree: { tours: 5 } } ] } },
+
+  // --- Rang 5 (coût PP: 10, 1x/scénario) ---
+  { id: "meteore_mineur", nom: "Météore mineur", rang: 5, categorie: "evocation",
+    effet: "Zone large : 8d6 dégâts, Réflexes pour moitié",
+    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
+      cible: "zone", portee: 20, zone: { taille: 4 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", modeSauvegarde: "moitie" },
+      effets: [ { type: "degats", formule: "8d6", typeDegats: "magique" } ] } },
+
+  { id: "teleportation", nom: "Téléportation", rang: 5, categorie: "utilitaire",
+    effet: "Déplace le groupe vers un lieu connu",
+    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
+      cible: "groupe", portee: null, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "Résolution narrative par la table — déplacement de groupe vers un lieu connu du lanceur." } ] } },
+];
+
 /* ============================================================
    VOIES RACIALES (homebrew)
    Chaque personnage dispose d'une Voie Raciale gratuite, en plus
