@@ -1483,7 +1483,11 @@ class Personnage extends Entite {
   // type : "contact" (FOR), "distance" (DEX), "magique" (carac de magie de la classe), "lancer" (FOR, objet jeté)
   bonusAttaque(type) {
     const b = this.bonusProgression() + this.bonusTemporaire("attaque") + this.malusCombatDeuxArmes(type) + this.bonusAttaqueCapacites(type);
-    if (type === "contact") return b + this.mod("FOR");
+    // Malus de proficience d'armure (-3, cf. estArmureNonMaitrisee) : contact
+    // et magique uniquement — l'attaque à distance garde son propre -2 (déjà
+    // dans le malus DEX ci-dessous), pas de cumul entre les deux.
+    const malusProficienceAttaque = (type === "contact" || type === "magique") && Personnage.estArmureNonMaitrisee(this) ? -3 : 0;
+    if (type === "contact") return b + this.mod("FOR") + malusProficienceAttaque;
     if (type === "distance") {
       // Bonus simple et mécanique d'un item équipé (ex. Gants du
       // Franc-Tireur : { bonusAttaqueDistance: 1 }, cf. data/loot.js/json)
@@ -1505,7 +1509,7 @@ class Personnage extends Entite {
       // effetRarete), ce bonus est câblé directement ici.
       const bonusGrimoire = this._itemsEquipesUniques()
         .reduce((t, it) => t + (it.bonusAttaqueMagique || 0), 0);
-      return b + this.mod(cm) + bonusGrimoire;
+      return b + this.mod(cm) + bonusGrimoire + malusProficienceAttaque;
     }
     return b;
   }

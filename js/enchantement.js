@@ -20,13 +20,13 @@
      item.nomBase mémorise le nom AVANT tout suffixe de matériau : repasser
      un palier supérieur sur la même arme remplace le suffixe au lieu de
      l'empiler ("épée enflammée ardente").
-   - protection : +1 à +3 valeurArmure (armure). Contrairement à
-     `enchantement`, valeurArmure est déjà un champ « brut » utilisé tel
-     quel ailleurs (calcul de DEF...) : chaque palier doit donc reconstruire
-     "valeur d'origine + bonus du palier", jamais ajouter au résultat déjà
-     enchanté d'un palier précédent. item.valeurArmureBase mémorise cette
-     valeur d'origine (avant tout palier de CE système), posée une seule
-     fois au premier succès et jamais réécrite ensuite.
+   - protection : +1 à +3 valeurCA (armure). Contrairement à
+     `enchantement`, valeurCA est déjà un champ « brut » utilisé tel
+     quel ailleurs (calcul de CA, cf. Personnage.calculerCA) : chaque palier
+     doit donc reconstruire "valeur d'origine + bonus du palier", jamais
+     ajouter au résultat déjà enchanté d'un palier précédent. item.valeurCABase
+     mémorise cette valeur d'origine (avant tout palier de CE système), posée
+     une seule fois au premier succès et jamais réécrite ensuite.
 
    Le jet (1d20 BRUT, avant bonus) détermine seul la destruction ; la
    réussite se juge sur jet+bonus vs diff. Les deux sont indépendants : un
@@ -87,18 +87,18 @@ const ENCHANTEMENTS = {
     paliers: [
       { id: 1, diff: 12, tentativesJour: 3, cout: [{ id: "poussiere_diamant", qte: 1 }],
         destructionSi: 0, effet: (item) => {
-          const base = (typeof item.valeurArmureBase === "number") ? item.valeurArmureBase : (item.valeurArmure || 0);
-          return Object.assign({}, item, { valeurArmureBase: base, valeurArmure: base + 1 });
+          const base = (typeof item.valeurCABase === "number") ? item.valeurCABase : (item.valeurCA || 10);
+          return Object.assign({}, item, { valeurCABase: base, valeurCA: base + 1 });
         } },
       { id: 2, diff: 14, tentativesJour: 2, cout: [{ id: "poussiere_diamant", qte: 2 }],
         destructionSi: 0, effet: (item) => {
-          const base = (typeof item.valeurArmureBase === "number") ? item.valeurArmureBase : (item.valeurArmure || 0);
-          return Object.assign({}, item, { valeurArmureBase: base, valeurArmure: base + 2 });
+          const base = (typeof item.valeurCABase === "number") ? item.valeurCABase : (item.valeurCA || 10);
+          return Object.assign({}, item, { valeurCABase: base, valeurCA: base + 2 });
         } },
       { id: 3, diff: 16, tentativesJour: 1, cout: [{ id: "poussiere_diamant", qte: 3 }],
         destructionSi: 5, effet: (item) => {
-          const base = (typeof item.valeurArmureBase === "number") ? item.valeurArmureBase : (item.valeurArmure || 0);
-          return Object.assign({}, item, { valeurArmureBase: base, valeurArmure: base + 3 });
+          const base = (typeof item.valeurCABase === "number") ? item.valeurCABase : (item.valeurCA || 10);
+          return Object.assign({}, item, { valeurCABase: base, valeurCA: base + 3 });
         } },
     ],
   },

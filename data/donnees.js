@@ -3346,7 +3346,7 @@ const REGLES_GENERALES = [
           <tr><td rowspan="3">Feu (arme, jamais de destruction)</td><td>Rang 1 « enflammée »</td><td>12</td><td>3</td><td>1 Poussière de rubis</td><td>1d4 dégâts de feu</td></tr>
           <tr><td>Rang 2 « ardente »</td><td>14</td><td>2</td><td>2 Poussières de rubis</td><td>1d6 dégâts de feu</td></tr>
           <tr><td>Rang 3 « incandescente »</td><td>16</td><td>1</td><td>3 Poussières de rubis</td><td>1d8 dégâts de feu</td></tr>
-          <tr><td rowspan="3">Protection (armure, valeurArmure)</td><td>+1</td><td>12</td><td>3</td><td>1 Poussière de diamant</td><td>Aucune destruction</td></tr>
+          <tr><td rowspan="3">Protection (armure, valeurCA)</td><td>+1</td><td>12</td><td>3</td><td>1 Poussière de diamant</td><td>Aucune destruction</td></tr>
           <tr><td>+2</td><td>14</td><td>2</td><td>2 Poussières de diamant</td><td>Aucune destruction</td></tr>
           <tr><td>+3</td><td>16</td><td>1</td><td>3 Poussières de diamant</td><td>Détruit si jet ≤5</td></tr>
         </tbody>

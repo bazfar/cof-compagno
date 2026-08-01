@@ -200,7 +200,7 @@ const Marche = (() => {
 
   // Mise en vente manuelle d'un objet précis par le MJ, en plus du stock
   // aléatoire — n'écrase rien, ajoute juste une ligne (contrairement au
-  // réassort). Ignore délibérément le plafond de valeurArmure/bonusDEF de la
+  // réassort). Ignore délibérément le plafond de valeurCA/bonusDEF de la
   // localité : c'est un outil de placement volontaire, pas un tirage.
   function _ajouterItemAuStock(marchand, itemId, rareteId) {
     const item = _itemCatalogue(itemId);

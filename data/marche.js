@@ -25,7 +25,7 @@ const LOCALITES_MARCHE = [
     id: "haldren",
     nom: "Haldren (Valdorne)",
     palier: "bourg",
-    plafondValeurArmure: 2,
+    plafondValeurCA: 12,
     marchands: [
       {
         id: "generaliste_haldren",
@@ -40,7 +40,7 @@ const LOCALITES_MARCHE = [
     id: "grand_marche_libris",
     nom: "Grand Marché (Libris)",
     palier: "capitale",
-    plafondValeurArmure: 6,
+    plafondValeurCA: 16,
     marchands: [
       {
         id: "factrice_comptoir",
@@ -56,7 +56,7 @@ const LOCALITES_MARCHE = [
     id: "karag_dum",
     nom: "Karag Dûm — marché noir",
     palier: "capitale",
-    plafondValeurArmure: 6,
+    plafondValeurCA: 16,
     marchands: [
       {
         id: "skarn_ombrefaille",
@@ -109,7 +109,7 @@ function tirerRareteStock() {
 }
 
 // Tire aléatoirement jusqu'à 40 objets du catalogue LOOT respectant les
-// filtres du marchand (type autorisé + plafond valeurArmure/bonusDEF de
+// filtres du marchand (type autorisé + plafond valeurCA/bonusDEF de
 // la localité). Si le pool filtré fait moins de 40 objets, prend tout le
 // pool (pas de duplication). Chaque objet tiré reçoit en plus une rareté de
 // stock aléatoire (cf. POIDS_RARETE_STOCK) qui majore son prix de vente.
@@ -120,9 +120,13 @@ function tirerStockMarchand(marchand, localite, catalogueLoot) {
   const pool = catalogueLoot.filter((item) => {
     if (item.horsMarche) return false;
     if (!marchand.typesAutorises.includes(item.type)) return false;
-    if (item.type === "armure" && item.valeurArmure > localite.plafondValeurArmure) return false;
+    if (item.type === "armure" && (item.valeurCA || 10) > localite.plafondValeurCA) return false;
     if (item.type === "bouclier") {
-      const plafondBouclier = localite.plafondValeurArmure >= 4 ? 3 : Math.min(item.bonusDEF, localite.plafondValeurArmure);
+      // Seuil/plafond décalés de -10 par rapport à plafondValeurCA (échelle
+      // 0-6, cf. ex-plafondValeurArmure) pour rester comparables à bonusDEF
+      // (échelle 1-3) — migration valeurCA à comportement inchangé.
+      const plafondCru = localite.plafondValeurCA - 10;
+      const plafondBouclier = plafondCru >= 4 ? 3 : Math.min(item.bonusDEF, plafondCru);
       if (item.bonusDEF > plafondBouclier) return false;
     }
     return true;
