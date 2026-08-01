@@ -6734,6 +6734,34 @@ const App = (() => {
     return { total, de, crit, echec };
   }
 
+  // Attaque d'Opportunité générique semi-auto (cf. §3 de
+  // reference_sauvegardes_reactions.md) — appelée par js/carte.js
+  // (demarrerDragDD/finDragDD) quand un token monstre quitte une case
+  // adjacente à un PJ éligible (CLASSES_ELIGIBLES_AO, data/donnees.js).
+  // Consomme le pool générique de réactions (Capacites.REACTIONS_MAX/
+  // reactionsRestantes, cf. js/capacites.js) — silencieux (pas de popup) si
+  // le PJ n'a plus de réaction disponible. nomMonstre : déjà résolu côté
+  // carte.js (tok.nom), pas de lookup ici.
+  // Portée volontairement limitée au jet d'attaque seul (pas de résolution
+  // de dégâts) — distinct du bouton "Attaque d'opportunité" existant
+  // (Sentinelle/Expert en hast, cf. htmlBlocAttaqueOpportunite), qui reste
+  // la voie complète (dégâts inclus) pour les dons qui le permettent.
+  function proposerAttaqueOpportunite(persoId, nomMonstre) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const restantes = (typeof Capacites !== "undefined" && Capacites.reactionsRestantes) ? Capacites.reactionsRestantes(p) : 0;
+    if (restantes < 1) return;
+    const cible = nomMonstre || "la cible";
+    if (!confirm(`Attaque d'Opportunité disponible contre ${cible} avec ${p.nom} (${restantes} réaction(s) restante(s)). Lancer l'attaque ?`)) return;
+    p.reactionsUtilisees = (p.reactionsUtilisees || 0) + 1;
+    sauverPersos(persos);
+    const perso = Personnage.depuisJSON(p);
+    const bonus = perso.bonusAttaque("contact");
+    const critMin = perso.critMinAttaque("contact");
+    lancerTest(`Attaque d'Opportunité (${p.nom} vs ${cible})`, bonus, critMin, null, { persoId, caracCode: "FOR" });
+  }
+
   // Contrat Démoniaque (contrat_demoniaque) / Anneau de Chance sur Naturel
   // (anneau_chance_naturel) : proposés AVANT le jet (prompt/confirm), un seul
   // item à la fois peut se déclencher par clic — chacun modifie `bonus` et
@@ -8696,5 +8724,7 @@ const App = (() => {
   // — ajusterPv est en plus exposé pour js/repos.js (applique le résultat
   // du jet de régénération, avec le même plafond PV max / interaction
   // Dette du Soigneur que le reste de l'app — cf. Personnage.appliquerGainPv).
-  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire, ajusterPv };
+  // — proposerAttaqueOpportunite est en plus exposé pour js/carte.js
+  // (déclenchement géométrique semi-auto depuis demarrerDragDD/finDragDD).
+  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire, ajusterPv, proposerAttaqueOpportunite };
 })();

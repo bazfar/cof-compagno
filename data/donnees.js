@@ -67,6 +67,13 @@ const PROFICIENCE_ARMURE = {
 };
 const RANG_CATEGORIE = { legere: 0, moyenne: 1, lourde: 2 };
 
+/* Classes éligibles à l'Attaque d'Opportunité générique (cf. §3 de
+   reference_sauvegardes_reactions.md) — les 3 Lanceurs purs (magicien,
+   necromancien, enchanteur) en sont exclus. Déclaré ici (global, chargé
+   avant js/carte.js ET js/app.js) plutôt que dans l'un des deux modules
+   IIFE, qui n'ont pas de visibilité l'un sur l'autre. */
+const CLASSES_ELIGIBLES_AO = ["guerrier", "chevalier", "chasseur", "pretre", "druide", "barde", "moine"];
+
 /* Archétype de progression du bonus d'attaque (jet uniquement, pas les dégâts) par classe. */
 const ARCHETYPE_CLASSE = {
   guerrier: "martial", chevalier: "martial", chasseur: "martial",
