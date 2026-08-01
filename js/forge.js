@@ -22,6 +22,11 @@ const Forge = (() => {
   const RARETES = [
     ["commun", "Commun"], ["peu_commun", "Peu commun"], ["rare", "Rare"], ["legendaire", "Légendaire"],
   ];
+  // Compétences COF (pour le bonus à un jet de compétence, ex. Persuasion) —
+  // appliqué par le moteur via bonusCompetenceEquipement (cf. personnage.js).
+  const COMPETENCES = (typeof COMPETENCES_PAR_CARAC !== "undefined")
+    ? Object.values(COMPETENCES_PAR_CARAC).reduce((a, b) => a.concat(b), [])
+    : ["Athlétisme", "Discrétion", "Acrobaties", "Escamotage", "Connaissances (arcanes)", "Connaissances (histoire)", "Connaissances (nature)", "Investigation", "Artisanat", "Perception", "Discernement", "Survie", "Médecine", "Dressage", "Bluff", "Intimidation", "Représentation", "Persuasion"];
 
   /* ── Helpers locaux (même convention que marche.js) ── */
   function echapper(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
@@ -65,6 +70,14 @@ const Forge = (() => {
     const bonusCarac = {};
     CARACS.forEach((c) => { const val = n("forge-carac-" + c); if (val) bonusCarac[c] = val; });
     if (Object.keys(bonusCarac).length) item.bonusCarac = bonusCarac;
+    // Bonus à un jet de compétence (ex. Persuasion) — lu par le moteur.
+    const comp = v("forge-comp"); const compVal = n("forge-comp-val");
+    if (comp && compVal) item.bonusCompetences = { [comp]: compVal };
+    // Autres bonus déjà câblés côté équipement (personnage.js).
+    const init = n("forge-init"); if (init) item.bonusInitiative = init;
+    const am = n("forge-atkmag"); if (am) item.bonusAttaqueMagique = am;
+    const ad = n("forge-atkdist"); if (ad) item.bonusAttaqueDistance = ad;
+    const dm = n("forge-degmag"); if (dm) item.bonusDegatsMagiques = dm;
     // Champs selon le type
     if (type === "accessoire") item.slot = v("forge-slot");
     const def = n("forge-def"); if (def) item.bonusDEF = def;
@@ -109,6 +122,11 @@ const Forge = (() => {
     if (it.slot) bits.push("emplacement : " + it.slot);
     if (it.bonusCarac) bits.push(Object.entries(it.bonusCarac).map(([k, val]) => `${val > 0 ? "+" : ""}${val} ${k}`).join(", "));
     if (it.bonusDEF) bits.push(`${it.bonusDEF > 0 ? "+" : ""}${it.bonusDEF} DEF`);
+    if (it.bonusCompetences) bits.push(Object.entries(it.bonusCompetences).map(([k, val]) => `${val > 0 ? "+" : ""}${val} ${k}`).join(", "));
+    if (it.bonusInitiative) bits.push(`${it.bonusInitiative > 0 ? "+" : ""}${it.bonusInitiative} init`);
+    if (it.bonusAttaqueMagique) bits.push(`${it.bonusAttaqueMagique > 0 ? "+" : ""}${it.bonusAttaqueMagique} atk mag.`);
+    if (it.bonusAttaqueDistance) bits.push(`${it.bonusAttaqueDistance > 0 ? "+" : ""}${it.bonusAttaqueDistance} atk dist.`);
+    if (it.bonusDegatsMagiques) bits.push(`${it.bonusDegatsMagiques > 0 ? "+" : ""}${it.bonusDegatsMagiques} dég. mag.`);
     if (it.valeurArmure) bits.push(`réduction ${it.valeurArmure}` + (it.malusDEX ? `, malus DEX -${it.malusDEX}` : ""));
     if (it.type === "arme") bits.push(`${it.degats} · ${it.portee}` + (it.deuxMains ? " · 2 mains" : ""));
     if (it.effet) bits.push(echapper(it.effet));
@@ -149,6 +167,22 @@ const Forge = (() => {
       <div class="forge-caracs-bloc">
         <span class="forge-sous-titre">Bonus de caractéristiques (± , 0 = aucun)</span>
         <div class="forge-caracs">${_caracsInputs()}</div>
+      </div>
+      <div class="forge-caracs-bloc">
+        <span class="forge-sous-titre">Bonus à un jet de compétence (ex. Persuasion)</span>
+        <div class="forge-grille">
+          <label>Compétence<select id="forge-comp"><option value="">— aucune —</option>${COMPETENCES.map((c) => `<option value="${c}">${c}</option>`).join("")}</select></label>
+          <label>Valeur<input type="number" id="forge-comp-val" value="0" step="1" /></label>
+        </div>
+      </div>
+      <div class="forge-caracs-bloc">
+        <span class="forge-sous-titre">Autres bonus (optionnels, ± )</span>
+        <div class="forge-grille">
+          <label>Initiative<input type="number" id="forge-init" value="0" step="1" /></label>
+          <label>Attaque magique<input type="number" id="forge-atkmag" value="0" step="1" /></label>
+          <label>Attaque à distance<input type="number" id="forge-atkdist" value="0" step="1" /></label>
+          <label>Dégâts magiques<input type="number" id="forge-degmag" value="0" step="1" /></label>
+        </div>
       </div>
       <label class="forge-full">Description<textarea id="forge-desc" rows="2" placeholder="Description de l'objet…"></textarea></label>
       <label class="forge-full">Effet narratif (optionnel)<input type="text" id="forge-effet" placeholder="ex. Résistance au feu (géré à la table)" /></label>
