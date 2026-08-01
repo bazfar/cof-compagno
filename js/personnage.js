@@ -188,6 +188,13 @@ class Personnage extends Entite {
     // redescend — cf. genererMutation/retirerMutation côté app.js pour la
     // génération 1d6 et le retrait au choix, onglet "🧬 Mutations").
     this.mutations = d.mutations;
+    // Points de Pouvoir (Magicien et autres classes à CARAC_MAGIE, cf.
+    // calculerPPMax ci-dessous) — calculé après TOUS les champs dont
+    // calculerPPMax dépend transitivement via mod() (caracs, dons,
+    // équipement, mutations, etatsActifs...), d'où sa position en toute fin
+    // de constructeur plutôt qu'à côté de pvActuel (posé par super() tout en
+    // haut, avant que ces champs n'existent encore sur `this`).
+    this.ppActuel = d.ppActuel !== undefined ? d.ppActuel : this.calculerPPMax();
 
     // Migration douce : l'ancien champ libre `inventaire` (string) devient un
     // item texte libre dans inventaireListe, pour ne rien perdre à la casse
@@ -437,6 +444,30 @@ class Personnage extends Entite {
   penaliteContratDemoniaque(code) {
     const p = this.contratDemoniaquePenalite;
     return (p && p.carac === code && typeof p.valeur === "number") ? p.valeur : 0;
+  }
+
+  /* ----- Points de Pouvoir (PP, cf. reference_systeme_magie_pp.md) ----- */
+  // PP max : null si la classe n'a pas de CARAC_MAGIE (même garde-fou que
+  // bonusAttaque("magique")) — un Guerrier n'a pas de pool de PP.
+  calculerPPMax() {
+    const carac = CARAC_MAGIE[this.classe];
+    if (!carac) return null;
+    return 4 + (this.niveau || 1) * 2 + this.mod(carac) * 2;
+  }
+  // Repos long (bouton manuel, cf. Capacites.reinitialiserUsage pour le
+  // même principe) : reset complet.
+  reposLongPP() {
+    const max = this.calculerPPMax();
+    if (max === null) return;
+    this.ppActuel = max;
+  }
+  // Repos court (bouton manuel, nouveau — pas de fonction équivalente pour
+  // les usages de capacités, spécifique aux PP) : +25% de ppMax, arrondi au
+  // supérieur, plafonné à ppMax.
+  reposCourtPP() {
+    const max = this.calculerPPMax();
+    if (max === null) return;
+    this.ppActuel = Math.min(max, (this.ppActuel || 0) + Math.ceil(max * 0.25));
   }
 
   /* ----- Défense ----- */

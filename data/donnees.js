@@ -1794,7 +1794,7 @@ const SORTS_MAGICIEN = [
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
       cible: "zone", portee: 12, zone: { taille: 1 },
       jetOppose: { caracAttaquant: "INT", caracDefenseur: "Volonte" },
-      effets: [ { type: "etat", id: "endormi", duree: { tours: 3, rompuSiDegats: true } } ] } },
+      effets: [ { type: "etat", id: "endormie", duree: { tours: 3, rompuSiDegats: true } } ] } },
 
   // --- Rang 2 (coût PP: 4) ---
   { id: "eclair_localise", nom: "Éclair localisé", rang: 2, categorie: "evocation",
@@ -1809,7 +1809,7 @@ const SORTS_MAGICIEN = [
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
       cible: "zone", portee: 10, zone: { taille: 2 },
       jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes" },
-      effets: [ { type: "etat", id: "entrave", duree: { tours: 2 } } ] } },
+      effets: [ { type: "etat", id: "entravee", duree: { tours: 2 } } ] } },
 
   { id: "peau_de_pierre", nom: "Peau de pierre", rang: 2, categorie: "protection",
     effet: "+2 réduction de dégâts pendant 3 tours",
@@ -1842,7 +1842,7 @@ const SORTS_MAGICIEN = [
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
       cible: "zone", portee: 12, zone: { taille: 2 },
       jetOppose: { caracAttaquant: null, caracDefenseur: "Vigueur" },
-      effets: [ { type: "etat", id: "ralenti", duree: { tours: 3 } } ] } },
+      effets: [ { type: "etat", id: "ralentie", duree: { tours: 3 } } ] } },
 
   { id: "contresort", nom: "Contresort", rang: 3, categorie: "protection",
     effet: "Réaction : annule un sort ennemi en cours de résolution",

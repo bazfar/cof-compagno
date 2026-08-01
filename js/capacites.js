@@ -1240,6 +1240,17 @@ const Capacites = (() => {
       }
     }
 
+    // Coût en Points de Pouvoir (cf. reference_systeme_magie_pp.md) — bloque
+    // AVANT résolution si le pool est insuffisant, même principe que
+    // reactionCout ci-dessus. mecanique.coutPP absent ou 0 = capacité
+    // gratuite (martiale, ou sort mineur type degatsMagiques()).
+    if (mecanique.coutPP) {
+      const ppRestants = (p.ppActuel || 0);
+      if (ppRestants < mecanique.coutPP) {
+        return { ok: false, messages: [`Pas assez de Points de Pouvoir (${mecanique.coutPP} requis, ${ppRestants} disponibles).`] };
+      }
+    }
+
     // Nécromancien — Voie des âmes, "Libération vengeresse" : coût en âme
     // stockée (cf. AMES_MAX ci-dessus), bloque AVANT résolution si le
     // réceptacle est vide.
@@ -1731,6 +1742,13 @@ const Capacites = (() => {
       const restantes = REACTIONS_MAX - p.reactionsUtilisees;
       App.ajouterHisto(`${libelle} — Réaction`, restantes, false, false, `-${mecanique.reactionCout} réaction(s) (${p.nom}, ${restantes}/${REACTIONS_MAX} restantes)`);
       messages.push(`Réaction(s) -${mecanique.reactionCout} (${restantes}/${REACTIONS_MAX} restantes ce combat).`);
+    }
+    // Coût en Points de Pouvoir (cf. le garde-fou plus haut) : décompté une
+    // fois l'activation confirmée, même logique que reactionCout ci-dessus.
+    if (mecanique.coutPP) {
+      p.ppActuel = (p.ppActuel || 0) - mecanique.coutPP;
+      App.ajouterHisto(`${libelle} — PP`, p.ppActuel, false, false, `-${mecanique.coutPP} PP (${p.nom}, ${p.ppActuel} restants)`);
+      messages.push(`PP -${mecanique.coutPP} (${p.ppActuel} restants).`);
     }
     // Gain/coût en âmes stockées (cf. AMES_MAX plus haut) : décompté une fois
     // l'activation confirmée, même logique que corruptionCout/reactionCout.

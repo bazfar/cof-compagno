@@ -5843,6 +5843,10 @@ const App = (() => {
     const attDistance = perso.bonusAttaque("distance");
     const attMagique = perso.bonusAttaque("magique");
     const init = perso.calculerInitiative();
+    // Points de Pouvoir (cf. reference_systeme_magie_pp.md) : null pour les
+    // classes sans CARAC_MAGIE (cf. Personnage.calculerPPMax) — zone entière
+    // masquée pour elles, pas de bloc vide.
+    const ppMax = perso.calculerPPMax();
 
     const zone = document.getElementById("zone-fiche-active");
 
@@ -5888,6 +5892,21 @@ const App = (() => {
               <div class="stat-box"><div class="label">CA</div><div class="valeur">${_defPjAvecAura(perso, id)}</div></div>
               <div class="stat-box"><div class="label">Initiative</div><div class="valeur">${signe(init)}</div></div>
             </div>
+
+            ${ppMax !== null ? `
+            <div class="stats-rapides">
+              <div class="stat-box">
+                <div class="label">Points de Pouvoir</div>
+                <div class="pv-control">
+                  <span style="font-weight:700;">${p.ppActuel != null ? p.ppActuel : ppMax} / ${ppMax}</span>
+                </div>
+                <div class="barre-actions" style="margin-top:6px;">
+                  <button class="btn petit secondaire" id="btn-repos-long-pp" title="Reset complet des PP">🌙 Repos long</button>
+                  <button class="btn petit secondaire" id="btn-repos-court-pp" title="+25% des PP max, arrondi supérieur, plafonné">☕ Repos court</button>
+                </div>
+              </div>
+            </div>
+            ` : ""}
 
             ${perso.estMort() ? `<p class="aide" style="color:#c0392b;font-weight:700;">💀 Mort.</p>`
               : perso.estMourant() ? `<p class="aide" style="color:#c0392b;font-weight:700;">🩸 Mourant(e) — Succès ${p.mortSucces || 0}/3 · Échecs ${p.mortEchecs || 0}/3. Jet de mort à son tour (onglet Battlemap) ou stabilisation via « Relever un allié ».</p>` : ""}
@@ -6079,6 +6098,35 @@ const App = (() => {
       sauverPersos(persos);
       afficherFiche(id);
       toast(`PV recalculés : ${ancienMax} → ${nouveauMax} (${delta >= 0 ? "+" : ""}${delta}).`);
+    };
+    // Repos long/court PP (cf. reference_systeme_magie_pp.md) : boutons
+    // manuels, comme Capacites.reinitialiserUsage — pas de cycle jour/nuit
+    // automatique dans l'app. Absents du DOM pour les classes sans PP
+    // (ppMax === null), d'où les gardes getElementById.
+    const btnReposLongPP = document.getElementById("btn-repos-long-pp");
+    if (btnReposLongPP) btnReposLongPP.onclick = () => {
+      const persos = chargerPersos();
+      const pp = persos[id];
+      if (!pp) return;
+      const instance = new Personnage(pp);
+      instance.reposLongPP();
+      pp.ppActuel = instance.ppActuel;
+      sauverPersos(persos);
+      afficherFiche(id);
+      toast("Repos long : Points de Pouvoir restaurés au maximum.");
+    };
+    const btnReposCourtPP = document.getElementById("btn-repos-court-pp");
+    if (btnReposCourtPP) btnReposCourtPP.onclick = () => {
+      const persos = chargerPersos();
+      const pp = persos[id];
+      if (!pp) return;
+      const instance = new Personnage(pp);
+      const avant = instance.ppActuel || 0;
+      instance.reposCourtPP();
+      pp.ppActuel = instance.ppActuel;
+      sauverPersos(persos);
+      afficherFiche(id);
+      toast(`Repos court : Points de Pouvoir +${instance.ppActuel - avant} (${instance.ppActuel}/${instance.calculerPPMax()}).`);
     };
     document.getElementById("btn-editer-fiche").onclick = () => editerPerso(id);
     document.getElementById("btn-exporter-fiche").onclick = () => exporterPerso(id);

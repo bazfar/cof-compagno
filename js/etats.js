@@ -28,6 +28,8 @@ const ETATS = {
     description: "Ne peut lancer aucun sort/capacité à composante vocale." },
   invisible: { nom: "Invisible", categorie: "controle",
     description: "Non ciblable par une attaque ou une capacité tant que le porteur n'a pas lui-même attaqué ni lancé de capacité offensive. Le déplacement reste normal. L'état est rompu immédiatement dès la première action offensive du porteur, ou à expiration de sa durée." },
+  invisible_majeur: { nom: "Invisible (majeure)", categorie: "controle",
+    description: "Comme Invisible, mais ne se rompt PAS à la première action offensive du porteur — invisibilité complète jusqu'à expiration de sa durée (Magicien, sort Invisibilité majeure, rang 4)." },
 
   // ── Malus continus ─────────────────────────────────────────
   influencee: { nom: "Influencée", categorie: "malus",
@@ -63,6 +65,8 @@ const ETATS = {
     description: "-2 DEF. Ne peut réaliser aucune action (attaque, capacité) ni se déplacer tant que l'effet dure." },
   aveuglee: { nom: "Aveuglée", categorie: "malus",
     description: "Désavantage sur tous les jets d'attaque ; ne peut viser qu'au contact." },
+  aveugle_ou_sourd: { nom: "Aveuglé ou Assourdi", categorie: "malus",
+    description: "Au choix du lanceur à l'activation : Aveuglé (comme Aveuglée) ou Assourdi (échoue automatiquement tout test reposant sur l'ouïe, ne peut lancer de sort à composante vocale) — Magicien, sort Cécité/Surdité, rang 4." },
   brulure: { nom: "Brûlure", categorie: "dot",
     description: "1d4 dégâts en début de tour tant que la cible reste dans les flammes / n'éteint pas le feu (action de mouvement pour éteindre)." },
 
@@ -99,6 +103,8 @@ const ETATS = {
     description: "+5 cases de déplacement ce tour (cf. Combat._deplacementMax), tant que l'état dure (Chevalier, Voie du commandant rang 5 « Charge collective ») — posé sur TOUS les PJ en combat, pas seulement les alliés en vue (simplification assumée)." },
   avatar_du_pacte: { nom: "Avatar du pacte", categorie: "buff",
     description: "+2d6 DM à toutes les attaques au contact (cf. Personnage.bonusDegatsAvatarPacte) et immunité à la Peur (cf. Personnage.aImmuniteEtat) tant que l'état dure (Chevalier, Voie du chaos rang 5). Le +4 DEF est posé séparément. Contrecoup (perd son action de mouvement au tour suivant) non modélisé." },
+  vol: { nom: "Vol", categorie: "buff",
+    description: "Peut voler librement tant que l'état dure (Magicien, sort Vol, rang 3)." },
 };
 
 const ORDRE_CATEGORIES_ETATS = ["controle", "malus", "dot", "physique", "buff"];
