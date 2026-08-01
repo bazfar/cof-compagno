@@ -3283,7 +3283,7 @@ const REGLES_GENERALES = [
     titre: "Dons (niveaux 4, 8 et 12)",
     html: true,
     contenu:
-      `<p>Aux niveaux 4, 8 et 12 (soit 1, 2 et 3 voies de classe complètes, cf. pointsVoieTotal), chaque personnage obtient un Don gratuit au choix parmi la liste ci-dessous, en plus des points de voie habituels — aucune réduction de ceux-ci. Un personnage déjà à ces niveaux avant l'introduction de cette règle peut rattraper ses Dons manquants depuis sa fiche. Les Dons sont des bonus descriptifs, appliqués manuellement par le joueur en jeu, comme les effets d'accessoires ou les capacités textuelles — aucune automatisation de calcul de dégâts/DEF.</p>
+      `<p>Aux niveaux 4, 8 et 12 (soit 1, 2 et 3 voies de classe complètes, cf. pointsVoieTotal), chaque personnage obtient un Don gratuit au choix parmi la liste ci-dessous, en plus des points de voie habituels — aucune réduction de ceux-ci. Un personnage déjà à ces niveaux avant l'introduction de cette règle peut rattraper ses Dons manquants depuis sa fiche. La plupart des Dons sont automatisés par la fiche (bonus de caractéristique, DEF, initiative, PV, plafond d'armure, etc., calculés sans action du joueur) ; quelques-uns restent partiellement ou totalement manuels à appliquer en jeu (ex. Fouilleur de donjon).</p>
       <div class="tableau-regle-scroll"><table class="tableau-regle">
         <thead><tr><th>Catégorie</th><th>Don</th><th>Effet</th></tr></thead>
         <tbody>
