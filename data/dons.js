@@ -33,10 +33,10 @@ const DONS = [
     effet: "+2 PV par niveau, rétroactif sur tous les niveaux déjà acquis." },
 
   { id: "maitre_armures_moyennes", nom: "Maître des armures moyennes", categorie: "defense",
-    effet: "Armure équipée avec valeurArmure 3-4 : aucun malus de Discrétion, et le plafond de bonus DEX passe de +2 à +3." },
+    effet: "Porter une armure moyenne ne provoque plus aucun malus de proficience (DEX forcé à 0 en CA, -2 aux tests DEX, -2 déplacement), même sans la maîtriser nativement." },
 
   { id: "maitre_armures_lourdes", nom: "Maître des armures lourdes", categorie: "defense",
-    effet: "Armure équipée avec valeurArmure 5+ : réduit de 3 les dégâts physiques subis, avant application de valeurArmure." },
+    effet: "Porter une armure lourde ne provoque plus aucun malus de proficience, même sans la maîtriser nativement. Avec une armure lourde équipée : réduit aussi de 3 les dégâts physiques subis, avant application de reductionDegats." },
 
   { id: "expert_bouclier", nom: "Expert du bouclier", categorie: "defense",
     effet: "Bouclier équipé : +1 DEF supplémentaire. Les adversaires qui vous attaquent au contact ou à distance sont désavantagés (2d20, gardent le plus bas)." },

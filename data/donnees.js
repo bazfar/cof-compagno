@@ -3305,8 +3305,8 @@ const REGLES_GENERALES = [
           <tr><td>Expert en hast</td><td>Arme deux_mains à allonge : +1 dégâts, attaque d'opportunité bonus au contact</td></tr>
           <tr><td>Sentinelle</td><td>Attaque d'opportunité même sur retrait organisé, réduit le déplacement de la cible à 0</td></tr>
           <tr><td rowspan="4">Défense</td><td>Robuste</td><td>+2 PV par niveau, rétroactif</td></tr>
-          <tr><td>Maître des armures moyennes</td><td>ValeurArmure 3-4 : aucun malus de Discrétion, plafond DEX +3</td></tr>
-          <tr><td>Maître des armures lourdes</td><td>ValeurArmure 5+ : -3 dégâts physiques subis avant valeurArmure</td></tr>
+          <tr><td>Maître des armures moyennes</td><td>Lève le malus de proficience (DEX/tests DEX/déplacement) d'une armure moyenne</td></tr>
+          <tr><td>Maître des armures lourdes</td><td>Lève le malus de proficience d'une armure lourde, -3 dégâts physiques subis avant reductionDegats</td></tr>
           <tr><td>Expert du bouclier</td><td>Bouclier équipé : +2 Réflexes, 1x/tour réduit de moitié des dégâts subis</td></tr>
           <tr><td>Perception</td><td>Alerte</td><td>+5 Initiative, jamais surpris</td></tr>
           <tr><td>Mobilité</td><td>Mobile</td><td>+1 case de déplacement, ignore terrain difficile après avoir attaqué au contact, jamais d'attaque d'opportunité en s'éloignant d'une cible frappée</td></tr>
@@ -3342,7 +3342,7 @@ const REGLES_GENERALES = [
           <tr><td>+2</td><td>14</td><td>3</td><td>1 Poussière d'acier</td><td>Aucune destruction</td></tr>
           <tr><td>+3</td><td>16</td><td>2</td><td>1 Gemme magique</td><td>Détruit si jet ≤2</td></tr>
           <tr><td>+4</td><td>18</td><td>1</td><td>2 Gemmes magiques</td><td>Détruit si jet ≤5</td></tr>
-          <tr><td>+5</td><td>20</td><td>1</td><td>3 Gemmes magiques + 1 Diamant</td><td>Détruit si jet ≤10 ; ignore en permanence 2 points de valeurArmure de la cible</td></tr>
+          <tr><td>+5</td><td>20</td><td>1</td><td>3 Gemmes magiques + 1 Diamant</td><td>Détruit si jet ≤10 ; ignore en permanence 2 points de reductionDegats de la cible</td></tr>
           <tr><td rowspan="3">Feu (arme, jamais de destruction)</td><td>Rang 1 « enflammée »</td><td>12</td><td>3</td><td>1 Poussière de rubis</td><td>1d4 dégâts de feu</td></tr>
           <tr><td>Rang 2 « ardente »</td><td>14</td><td>2</td><td>2 Poussières de rubis</td><td>1d6 dégâts de feu</td></tr>
           <tr><td>Rang 3 « incandescente »</td><td>16</td><td>1</td><td>3 Poussières de rubis</td><td>1d8 dégâts de feu</td></tr>

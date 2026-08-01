@@ -1043,7 +1043,7 @@ class Personnage extends Entite {
     return items;
   }
   reductionDegats() {
-    return this._itemsEquipesUniques().reduce((t, it) => t + (it.valeurArmure || 0), 0) + this.bonusReductionCapacites()
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.reductionDegats || 0), 0) + this.bonusReductionCapacites()
       + this.bonusTemporaire("reduction_degats");
   }
   // Druide — Voie de la nature, rang 4 "Résistance naturelle" : réduction
@@ -1207,13 +1207,14 @@ class Personnage extends Entite {
     return this.classe === "pretre" && this.estChoisie("Voie de la conversion", 3);
   }
   // Don Maître des armures lourdes : -3 dégâts physiques subis, appliqué
-  // AVANT valeurArmure (cf. subirDegats côté app.js — pas inclus dans
+  // AVANT reductionDegats (cf. subirDegats côté app.js — pas inclus dans
   // reductionDegats(), qui n'a pas connaissance du type de dégâts). Actif
-  // uniquement avec une armure valeurArmure >= 5 équipée.
+  // uniquement avec une armure de catégorie lourde équipée (condition basée
+  // sur la catégorie plutôt que sur un seuil de valeurArmure, cf. §5 de la
+  // référence CA/armures).
   bonusReductionLourdeDons() {
     const armure = this._itemsEquipesUniques().find((it) => it.type === "armure");
-    const va = armure ? (armure.valeurArmure || 0) : 0;
-    return (va >= 5 && (this.dons || []).includes("maitre_armures_lourdes")) ? 3 : 0;
+    return (armure && armure.categorie === "lourde" && (this.dons || []).includes("maitre_armures_lourdes")) ? 3 : 0;
   }
   bonusDefEquipement() {
     return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDEF || 0), 0);

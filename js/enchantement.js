@@ -48,7 +48,7 @@ const ENCHANTEMENTS = {
         destructionSi: 5, effet: (item) => Object.assign({}, item, { enchantement: 4 }) },
       { id: 5, diff: 20, tentativesJour: 1, cout: [{ id: "gemme_magique", qte: 3 }, { id: "diamant", qte: 1 }],
         destructionSi: 10, effet: (item) => Object.assign({}, item, {
-          enchantement: 5, effetEnchantement: "Ignore en permanence 2 points de valeurArmure de la cible" }) },
+          enchantement: 5, effetEnchantement: "Ignore en permanence 2 points de reductionDegats de la cible" }) },
     ],
   },
   feu: {

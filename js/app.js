@@ -5015,7 +5015,7 @@ const App = (() => {
       const bonus = it.bonusDegatsTotal !== undefined ? it.bonusDegatsTotal : (it.enchantement || 0);
       return [it.degats, it.typedegats, bonus ? "+" + bonus : ""].filter(Boolean).join(" ");
     }
-    if (it.type === "armure") return it.valeurArmure ? `+${it.valeurArmure} armure` : "";
+    if (it.type === "armure") return it.valeurCA ? `${it.valeurCA} CA` : "";
     if (it.type === "bouclier") return it.bonusDEF ? `+${it.bonusDEF} DEF` : "";
     if (it.type === "accessoire") return it.effet || "";
     return "";
@@ -6330,7 +6330,7 @@ const App = (() => {
   // ajusterPv/definirPv qui manipulent les PV bruts sans passer par
   // l'équipement (undo d'un soin, correction manuelle...). typeDegats
   // ("physique"/"magique", cf. blocDegatsSubisHtml) détermine si le don
-  // Maître des armures lourdes (-3 dégâts physiques, avant valeurArmure)
+  // Maître des armures lourdes (-3 dégâts physiques, avant reductionDegats)
   // s'applique — sans effet sur des dégâts magiques.
   // coeurMontagneArme (optionnel) : case cochée sur le formulaire (cf.
   // blocDegatsSubisHtml/wireDegatsSubisGenerique) — Nain "Cœur de Montagne"
