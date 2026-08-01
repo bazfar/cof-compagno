@@ -16,14 +16,14 @@
         <mxCell id="depotlocal" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f5f5f5;strokeColor=#666666;" value="&lt;b&gt;DepotLocal&lt;/b&gt; ▷ Depot&lt;hr&gt;localStorage&lt;br&gt;mono-poste, hors-ligne&lt;br&gt;(actuel)" vertex="1">
           <mxGeometry height="86" width="260" x="40" y="230" as="geometry" />
         </mxCell>
-        <mxCell id="depotdistant" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f5f5f5;strokeColor=#666666;dashed=1;" value="&lt;b&gt;DepotDistant&lt;/b&gt; ▷ Depot&lt;hr&gt;Firebase / API&lt;br&gt;multijoueur, temps reel&lt;br&gt;-- a brancher plus tard --" vertex="1">
+        <mxCell id="depotdistant" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f5f5f5;strokeColor=#666666;" value="&lt;b&gt;DepotDistant&lt;/b&gt; ▷ Depot&lt;hr&gt;Firebase / Firestore (SyncStore, depot.js)&lt;br&gt;multijoueur, temps reel&lt;br&gt;-- deja branche en prod (01/08/2026) --" vertex="1">
           <mxGeometry height="100" width="260" x="40" y="335" as="geometry" />
         </mxCell>
         <mxCell id="entite" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;Entite&lt;/b&gt; «abstraite»&lt;hr&gt;# nom&lt;div&gt;# atk&lt;br&gt;# pvMax / pvActuel&lt;br&gt;# def&lt;hr&gt;+ subirDegats(n)&lt;br&gt;+ soigner(n)&lt;br&gt;+ estVivant() : bool&lt;/div&gt;" vertex="1">
           <mxGeometry height="150" width="270" x="20" y="490" as="geometry" />
         </mxCell>
-        <mxCell id="perso" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;Personnage&lt;/b&gt; → Entite&lt;hr&gt;- classe, race, niveau&lt;br&gt;- caracs, capacites[]&lt;br&gt;- portrait, inventaire&lt;hr&gt;+ calculerPV() / calculerDEF()&lt;br&gt;+ bonusAttaque(type)&lt;br&gt;+ monterNiveau()&lt;br&gt;+ versJSON() / depuisJSON()" vertex="1">
-          <mxGeometry height="200" width="280" x="330" y="370" as="geometry" />
+        <mxCell id="perso" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;Personnage&lt;/b&gt; → Entite&lt;hr&gt;- classe, race, niveau&lt;br&gt;- caracs, capacites[]&lt;br&gt;- portrait, inventaire&lt;br&gt;- ppActuel/ppMax (Lanceurs, PJ seul)&lt;br&gt;- reactionsUtilisees (pool 3/combat)&lt;hr&gt;+ calculerPV() / calculerCA() &lt;i&gt;(ex-calculerDEF, 01/08/2026)&lt;/i&gt;&lt;br&gt;+ calculerPPMax() / reposCourt()&lt;br&gt;+ modSauvegarde() / bonusSauvegarde()&lt;br&gt;+ reductionDegats() &lt;i&gt;(stat indépendante de CA)&lt;/i&gt;&lt;br&gt;+ bonusAttaque(type)&lt;br&gt;+ monterNiveau()&lt;br&gt;+ versJSON() / depuisJSON()" vertex="1">
+          <mxGeometry height="260" width="280" x="330" y="370" as="geometry" />
         </mxCell>
         <mxCell id="monstre" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;Monstre&lt;/b&gt; → Entite&lt;hr&gt;- modele : ModeleMonstre&lt;br&gt;- pvActuel (instance en combat)&lt;div&gt;&lt;hr&gt;+ depuisModele(m)&lt;br&gt;+ attaquer(cible)&lt;/div&gt;" vertex="1">
           <mxGeometry height="140" width="280" x="320" y="650" as="geometry" />
@@ -75,6 +75,9 @@
         </mxCell>
         <mxCell id="vues" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;Vues (UI)&lt;/b&gt;&lt;hr&gt;Creation · Fiche · Des&lt;br&gt;Carte · Bestiaire&lt;br&gt;Regles · Lore&lt;hr&gt;+ rendre()" vertex="1">
           <mxGeometry height="150" width="270" x="2010" y="428" as="geometry" />
+        </mxCell>
+        <mxCell id="notechantiers" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#fff2cc;strokeColor=#d6b656;dashed=1;" value="&lt;b&gt;Chantiers valides 01/08/2026&lt;/b&gt; (design, implementation groupee a venir)&lt;hr&gt;- PP magie + scaling DEF monstres&lt;br&gt;- Sauvegardes + Attaque d'Opportunite&lt;br&gt;- CA (ex-DEF) armures/boucliers + proficience classe&lt;br&gt;- Reduction de degats (stat independante)&lt;br&gt;- Dons : texte corrige (16/21 deja automatises)&lt;br&gt;- Schema objets + validateur (tools/valider_loot.js)&lt;br&gt;- Catalogue objets hybride (statique + Firestore)&lt;hr&gt;Fichiers de reference : reference_*.md (hors repo)" vertex="1">
+          <mxGeometry height="190" width="270" x="2000" y="610" as="geometry" />
         </mxCell>
         <mxCell id="i1" edge="1" parent="1" source="depotlocal" style="endArrow=block;endFill=0;dashed=1;html=1;" target="depot">
           <mxGeometry relative="1" as="geometry" />
