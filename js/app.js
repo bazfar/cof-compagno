@@ -629,11 +629,11 @@ const App = (() => {
   // DEF d'un PJ + aura Guerrier "L'exemple" (Voie du peuple rang 2, cf.
   // Capacites.bonusDefAuraPeuple) : cette aura dépend d'AUTRES personnages
   // (position/immobilité d'un Guerrier proche), elle ne peut donc pas vivre
-  // dans Personnage.calculerDEF() (auto-contenu à `this`) — appelée ici à
+  // dans Personnage.calculerCA() (auto-contenu à `this`) — appelée ici à
   // chaque affichage ET résolution de DEF de PJ, pour ne jamais désynchroniser
   // la valeur affichée de la valeur réellement opposée à une attaque.
   function _defPjAvecAura(perso, persoId) {
-    let def = perso.calculerDEF();
+    let def = perso.calculerCA();
     if (typeof Capacites === "undefined") return def;
     if (Capacites.bonusDefAuraPeuple) def += Capacites.bonusDefAuraPeuple(persoId);
     // Chevalier — Voie du protecteur rang 1 "Bouclier partagé" : même
@@ -745,7 +745,7 @@ const App = (() => {
   // TOKEN dd2vtt, cf. _cibleDistanceId/_ciblesPortee — PAS un id de
   // personnage) est fourni, détermine touché/raté/critique/échec critique via
   // _toucheVsDef. Un token PJ n'a pas de champ `def` direct (contrairement à
-  // un token monstre) : il faut recalculer Personnage.calculerDEF() via son
+  // un token monstre) : il faut recalculer Personnage.calculerCA() via son
   // `ref` ("pj-"+persoId), cf. _ciblesPortee/ajouterMonPersoBattlemap.
   // opts (optionnel) : { persoId, caracCode } transmis tel quel à lancerTest
   // (cf. sa doc) pour le Contrat Démoniaque/l'Anneau de Chance.
@@ -1135,7 +1135,7 @@ const App = (() => {
             <div class="barre-pv"><div class="rempli" id="bm-barre-pv-rempli"></div></div>
             ${blocDegatsSubisHtml("bm-", perso, p)}
           </div>
-          <div class="stat-box"><div class="label">DEF</div><div class="valeur">${_defPjAvecAura(perso, id)}</div></div>
+          <div class="stat-box"><div class="label">CA</div><div class="valeur">${_defPjAvecAura(perso, id)}</div></div>
           <div class="stat-box"><div class="label">Init.</div><div class="valeur">${signe(init)}</div></div>
         </div>
         <button class="btn petit secondaire" id="bm-voir-fiche-complete" style="width:100%;margin-top:6px;">Voir la fiche complète</button>
@@ -2751,9 +2751,9 @@ const App = (() => {
   function recalculerDerives() {
     const champDef = document.getElementById("champ-def");
     // On ne réécrase que si l'utilisateur n'a pas saisi manuellement
-    if (!champDef.dataset.touche) champDef.value = new Personnage(creation).calculerDEF();
+    if (!champDef.dataset.touche) champDef.value = new Personnage(creation).calculerCA();
     appliquerPvAuto();
-    // Le récap DEF affiché dans le bloc équipement (perso.calculerDEF()) doit
+    // Le récap DEF affiché dans le bloc équipement (perso.calculerCA()) doit
     // rester en phase avec le champ-def ci-dessus : sans ça, cocher/décocher
     // une capacité qui modifie la DEF (cf. Personnage.bonusDefCapacites)
     // laissait ce bloc affiché avec une valeur périmée jusqu'au prochain
@@ -2893,7 +2893,7 @@ const App = (() => {
     const vitalsHtml = `<div class="party-vitals">
       <span title="Niveau">Niv ${p.niveau || 1}</span>
       <span title="Points de vie">❤ ${p.pvActuel != null ? p.pvActuel : (p.pvMax || 0)}/${p.pvMax || 0}</span>
-      <span title="Défense">🛡 ${perso.calculerDEF()}</span>
+      <span title="Défense">🛡 ${perso.calculerCA()}</span>
     </div>`;
     const statsHtml = `<div class="party-stats">${CARACS.map((cc) =>
       `<div class="party-stat"><span class="party-stat-code">${cc.code}</span><b>${((p.caracs && p.caracs[cc.code] != null) ? p.caracs[cc.code] : 10) + perso.bonusCaracCapacites(cc.code) + perso.bonusCaracDons(cc.code) + perso.bonusCaracEquipement(cc.code) + perso.bonusCaracMutations(cc.code)}</b><span class="party-stat-mod">${signe(perso.mod(cc.code))}</span></div>`).join("")}</div>`;
@@ -5885,7 +5885,7 @@ const App = (() => {
                 <div class="barre-pv"><div class="rempli" id="barre-pv-rempli"></div></div>
                 ${blocDegatsSubisHtml("", perso, p)}
               </div>
-              <div class="stat-box"><div class="label">DEF</div><div class="valeur">${_defPjAvecAura(perso, id)}</div></div>
+              <div class="stat-box"><div class="label">CA</div><div class="valeur">${_defPjAvecAura(perso, id)}</div></div>
               <div class="stat-box"><div class="label">Initiative</div><div class="valeur">${signe(init)}</div></div>
             </div>
 
@@ -8214,7 +8214,7 @@ const App = (() => {
   // critique via _toucheVsDef si un PJ cible est choisi. Sans cible, touche
   // vaut null (jamais bloquant, jet brut) — même logique que
   // _resoudreAttaqueRapide côté joueur, avec une DEF cible directement issue
-  // de calculerDEF() (pas de token dd2vtt à résoudre ici, la cible est
+  // de calculerCA() (pas de token dd2vtt à résoudre ici, la cible est
   // choisie par id de personnage directement).
   // Don Expert du bouclier (cf. Personnage.aExpertBouclier) : force le
   // désavantage sur CE jet précis, indépendamment du sélecteur global

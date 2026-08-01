@@ -57,6 +57,16 @@ const CARAC_MAGIE = {
   // guerrier, chasseur & chevalier : pas de magie
 };
 
+/* Catégorie d'armure maîtrisée sans malus par chaque classe (cf.
+   reference_def_armures_boucliers.md §1-2) — sert à
+   Personnage.estArmureNonMaitrisee(). */
+const PROFICIENCE_ARMURE = {
+  guerrier: "lourde", chevalier: "lourde",
+  chasseur: "moyenne", pretre: "moyenne", druide: "moyenne", barde: "moyenne",
+  moine: "legere", magicien: "legere", necromancien: "legere", enchanteur: "legere",
+};
+const RANG_CATEGORIE = { legere: 0, moyenne: 1, lourde: 2 };
+
 /* Archétype de progression du bonus d'attaque (jet uniquement, pas les dégâts) par classe. */
 const ARCHETYPE_CLASSE = {
   guerrier: "martial", chevalier: "martial", chasseur: "martial",
@@ -179,7 +189,7 @@ const CLASSES = {
                 { type: "special", note: "Magnitude = Personnage.rangMaxVoie('Voie du soldat') (±1 à ±4 selon les rangs déjà acquis dans la voie), doublée tant que l'état 'maitrise_tactique' (rang 5) est actif — résolution dédiée dans Capacites.resoudreEffet (choix pairé, cf. son commentaire). Le côté 'DM' est un nouveau canal de bonus temporaire (bonusTemporaire('DM')), lu dans les 3 points de construction des formules de dégâts d'arme côté app.js, au même titre que bonusDegatsArmeChaos." } ] } },
           { rang: 2, nom: "Combat en phalange", effet: "+1 DEF par PJ à son contact (case adjacente)",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Simplifié par rapport au texte d'origine (+1 attaque ET DEF, condition 'combattant la même cible') : validé avec Thomas, +1 DEF uniquement, par PJ adjacent (distance <= 1 case), sans condition de cible commune. Déjà codé dans Personnage.bonusDefPhalange() (calqué sur bonusDefDuel()), câblé dans calculerDEF() — nécessite une scène de combat dd2vtt active et un jeton posé, comme bonusDefDuel." } ] } },
+              effets: [ { type: "special", note: "Simplifié par rapport au texte d'origine (+1 attaque ET DEF, condition 'combattant la même cible') : validé avec Thomas, +1 DEF uniquement, par PJ adjacent (distance <= 1 case), sans condition de cible commune. Déjà codé dans Personnage.bonusDefPhalange() (calqué sur bonusDefDuel()), câblé dans calculerCA() — nécessite une scène de combat dd2vtt active et un jeton posé, comme bonusDefDuel." } ] } },
           { rang: 3, nom: "Second souffle (L)", effet: "Renonce à attaquer ce tour pour reprendre son souffle : regagne 2d6+Mod.CON PV",
             mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "soin", formule: "2d6+Mod.CON" },
@@ -376,7 +386,7 @@ const CLASSES = {
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "bonus", cible: "initiative", valeur: "Mod.INT", duree: "permanente" },
                 { type: "bonus", cible: "DEF", valeur: "Mod.INT", duree: "permanente" },
-                { type: "special", note: "Déjà calculé dans Personnage (cf. calculerDEF) pour la partie DEF ; valeur dynamique (Mod.INT), pas un nombre fixe." } ] } },
+                { type: "special", note: "Déjà calculé dans Personnage (cf. calculerCA) pour la partie DEF ; valeur dynamique (Mod.INT), pas un nombre fixe." } ] } },
           { rang: 3, nom: "Feinte (L)", effet: "Test d'attaque opposé contre la DEF adverse : réussite → la cible subit -4 DEF jusqu'au prochain tour du Barde",
             mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
               jetOppose: { caracAttaquant: "attaqueContact", caracDefenseur: "DEF", difficulteFixe: null },
@@ -1288,7 +1298,7 @@ const CLASSES = {
           { rang: 2, nom: null, effet: "Ajoute son Mod. de CHA à sa DEF — son rang impose le respect, y compris au combat",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "bonus", cible: "DEF", valeur: "Mod.CHA", duree: "permanente" },
-                { type: "special", note: "Déjà calculé dans Personnage (cf. calculerDEF) ; valeur dynamique (Mod.CHA), pas un nombre fixe." } ] } },
+                { type: "special", note: "Déjà calculé dans Personnage (cf. calculerCA) ; valeur dynamique (Mod.CHA), pas un nombre fixe." } ] } },
           { rang: 3, nom: null, effet: "Avantages tactiques en duel singulier (1 contre 1 formel) : jet de CHA vs DEF",
             mecanique: { type: "limitee", usage: { frequence: "1x/combat" }, cible: "ennemi", portee: null, zone: null,
               jetOppose: { caracAttaquant: "CHA", caracDefenseur: "DEF", difficulteFixe: null },

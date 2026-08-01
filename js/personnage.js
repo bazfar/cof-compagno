@@ -362,9 +362,12 @@ class Personnage extends Entite {
   }
 
   // Modificateur total pour un test de compétence : mod. de la carac porteuse
-  // + bonusCompetence(nom) éventuel.
+  // + bonusCompetence(nom) éventuel, moins le malus de proficience d'armure
+  // (-2, cf. estArmureNonMaitrisee) sur les compétences DEX (Discrétion,
+  // Acrobaties, Escamotage).
   modCompetence(nom, caracCode) {
-    return this.mod(caracCode) + this.bonusCompetence(nom);
+    const malusProficience = (caracCode === "DEX" && Personnage.estArmureNonMaitrisee(this)) ? -2 : 0;
+    return this.mod(caracCode) + this.bonusCompetence(nom) + malusProficience;
   }
 
   get classeDef() {
@@ -437,9 +440,39 @@ class Personnage extends Entite {
   }
 
   /* ----- Défense ----- */
-  calculerDEF() {
-    const dex = Math.min(this.mod("DEX"), this.plafondDex());
-    return 10 + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusDefMutations() + this.bonusTemporaire("DEF") + this.bonusDefImmobile() + this.bonusDefDuel() + this.bonusDefBouclierExpert() + this.bonusDefPhalange();
+  // A-t-il une armure équipée d'une catégorie au-dessus de celle maîtrisée
+  // par sa classe (cf. PROFICIENCE_ARMURE/RANG_CATEGORIE, data/donnees.js),
+  // sans le don qui lève le malus de proficience ? Utilisable aussi bien sur
+  // une instance Personnage que sur un objet perso brut `p` (même patron que
+  // Combat._deplacementMax).
+  static estArmureNonMaitrisee(p) {
+    if (!p) return false;
+    // Une armure occupe toujours le slot "torse" (cf. slotsPourType) — pas de
+    // slot "armure" dédié dans SLOTS_EQUIPEMENT.
+    const armure = (p.equipement && p.equipement.torse) || null;
+    if (!armure || armure.type !== "armure" || !armure.categorie) return false; // "Vêtements" par défaut = toujours légère, jamais non-maîtrisée
+    const categorieRequise = PROFICIENCE_ARMURE[p.classe] || "legere";
+    const auDessus = RANG_CATEGORIE[armure.categorie] > RANG_CATEGORIE[categorieRequise];
+    if (!auDessus) return false;
+    const donRequis = armure.categorie === "lourde" ? "maitre_armures_lourdes" : "maitre_armures_moyennes";
+    return !(p.dons || []).includes(donRequis);
+  }
+
+  // Mod. DEX effectif pour la CA : ignoré entièrement si l'armure équipée
+  // n'est pas maîtrisée (cf. estArmureNonMaitrisee), sinon réduit du malusDEX
+  // de l'armure (data/loot.json).
+  dexEffectifCA() {
+    if (Personnage.estArmureNonMaitrisee(this)) return 0;
+    const armure = this._itemsEquipesUniques().find((it) => it.type === "armure");
+    const malusDEX = armure ? (armure.malusDEX || 0) : 0;
+    return this.mod("DEX") - malusDEX;
+  }
+
+  calculerCA() {
+    const dex = this.dexEffectifCA();
+    const armure = this._itemsEquipesUniques().find((it) => it.type === "armure");
+    const valeurCA = armure ? (armure.valeurCA || 10) : 10; // 10 = "Vêtements" par défaut
+    return valeurCA + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusDefMutations() + this.bonusTemporaire("DEF") + this.bonusDefImmobile() + this.bonusDefDuel() + this.bonusDefBouclierExpert() + this.bonusDefPhalange();
   }
 
   // Chasseur — Voie de la traque, rang 2 "Camouflage naturel" (passive) :
@@ -502,7 +535,7 @@ class Personnage extends Entite {
   // équipé. Le second volet ("l'attaquant est désavantagé") n'est pas un
   // bonus de CE perso : cf. Personnage.aExpertBouclier(), lu directement par
   // _resoudreAttaqueMonstreVsPJ côté app.js pour forcer le désavantage sur le
-  // jet de l'ATTAQUANT (monstre) — hors de portée de calculerDEF().
+  // jet de l'ATTAQUANT (monstre) — hors de portée de calculerCA().
   bonusDefBouclierExpert() {
     if (!(this.dons || []).includes("expert_bouclier")) return 0;
     return this._itemsEquipesUniques().some((it) => it.type === "bouclier") ? 1 : 0;
@@ -515,27 +548,6 @@ class Personnage extends Entite {
   // pas les capacités, dont le jet d'attaque ne passe pas par lancerTest).
   aExpertBouclier() {
     return (this.dons || []).includes("expert_bouclier") && this._itemsEquipesUniques().some((it) => it.type === "bouclier");
-  }
-
-  // Plafond de bonus DEX à la DEF selon le poids de l'armure équipée (aucun
-  // plafond si aucune armure ou armure légère, valeurArmure <= 2). Le champ
-  // malusDEX du catalogue (data/loot.json) n'est volontairement pas lu ici :
-  // superseded par ce plafond dérivé de valeurArmure (cf. commit) — laissé
-  // en place sur les données pour ne rien casser, mais plus consulté.
-  plafondDex() {
-    const armure = this._itemsEquipesUniques().find((it) => it.type === "armure");
-    const va = armure ? (armure.valeurArmure || 0) : 0;
-    if (va >= 5) return this.plafondDexDons(0);
-    if (va >= 3) return this.plafondDexDons(2);
-    return Infinity; // pas d'armure ou armure légère : aucun plafond
-  }
-  // Don Maître des armures moyennes : relève le plafond des armures moyennes
-  // (valeurArmure 3-4) de +2 à +3. Sans effet sur les armures lourdes (cf.
-  // Maître des armures lourdes, qui ne touche pas au plafond DEX mais à la
-  // réduction de dégâts physiques, cf. bonusReductionLourdeDons).
-  plafondDexDons(plafondBase) {
-    if (plafondBase === 2 && (this.dons || []).includes("maitre_armures_moyennes")) return 3;
-    return plafondBase;
   }
 
   // Initiative = Mod. de DEX + bonus de capacités (ex. Barde/Moine ajoutant
@@ -1274,7 +1286,7 @@ class Personnage extends Entite {
     }, 0);
   }
   // Bonus de DEF porté par une mutation (data/mutations.js: defDelta, ex.
-  // Peau de pierre +2, Carapace fissurée +4) — lu par calculerDEF().
+  // Peau de pierre +2, Carapace fissurée +4) — lu par calculerCA().
   bonusDefMutations() {
     return (this.mutations || []).reduce((t, m) => {
       const e = Personnage._entreeCanoniqueMutation(m);
@@ -1478,7 +1490,9 @@ class Personnage extends Entite {
       // magique, jamais fusionné dans les caracs de base.
       const bonusGantsDistance = this._itemsEquipesUniques()
         .reduce((t, it) => t + (it.bonusAttaqueDistance || 0), 0);
-      return b + this.mod("DEX") + bonusGantsDistance;
+      // Malus de proficience d'armure (-2, cf. estArmureNonMaitrisee).
+      const malusProficience = Personnage.estArmureNonMaitrisee(this) ? -2 : 0;
+      return b + this.mod("DEX") + bonusGantsDistance + malusProficience;
     }
     if (type === "lancer") return b + this.mod("FOR");
     if (type === "magique") {

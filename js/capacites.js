@@ -169,7 +169,7 @@ const Capacites = (() => {
 
   // DEF numérique d'une cible (issue de listeCibles), ou null si indisponible
   // — sert à déterminer touché/raté pour les capacités d'attaque vs DEF (cf.
-  // lancer()). PJ : recalculée via Personnage.calculerDEF() (jamais stockée
+  // lancer()). PJ : recalculée via Personnage.calculerCA() (jamais stockée
   // telle quelle, contrairement aux monstres). Monstre : lit le champ `def`
   // du token (Carte.listeMonstresCombat()) — peut être `null` si le bestiaire
   // ne le renseigne pas (cf. js/carte.js), traité ici comme "DEF inconnue".
@@ -177,7 +177,7 @@ const Capacites = (() => {
     if (!cible) return null;
     if (cible.genre === "perso") {
       const p = persos[cible.id];
-      return p ? Personnage.depuisJSON(p).calculerDEF() + bonusDefAuraPeuple(cible.id) + bonusDefAuraBouclierChevalier(cible.id) : null;
+      return p ? Personnage.depuisJSON(p).calculerCA() + bonusDefAuraPeuple(cible.id) + bonusDefAuraBouclierChevalier(cible.id) : null;
     }
     if (cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
       const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
@@ -190,7 +190,7 @@ const Capacites = (() => {
   // à 2 cases (cf. Carte.distanceCasesEntre) d'un Guerrier possédant ce rang,
   // tant que ce Guerrier reste immobile ce tour (Combat.estImmobile, même
   // mécanique que Chasseur "Camouflage naturel"). Dépend d'AUTRES personnages
-  // (contrairement aux bonus DEF de Personnage.calculerDEF(), auto-contenus à
+  // (contrairement aux bonus DEF de Personnage.calculerCA(), auto-contenus à
   // `this`) : vit ici plutôt que dans personnage.js, et doit être appelé à la
   // fois par obtenirDefCible() ci-dessus (résolution d'attaque) ET par app.js
   // (affichage de la fiche), pour ne jamais désynchroniser la DEF affichée de
