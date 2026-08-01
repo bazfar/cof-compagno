@@ -195,6 +195,10 @@ class Personnage extends Entite {
     // de constructeur plutôt qu'à côté de pvActuel (posé par super() tout en
     // haut, avant que ces champs n'existent encore sur `this`).
     this.ppActuel = d.ppActuel !== undefined ? d.ppActuel : this.calculerPPMax();
+    // Sorts appris hors Voies (cf. reference_sorts_connus.md) : tableau d'id
+    // de SORTS_MAGICIEN (ou liste équivalente future Nécro/Enchanteur),
+    // distinct de capacites[] (réservé aux rangs de Voie classiques).
+    this.grimoireSortsConnus = d.grimoireSortsConnus || [];
 
     // Migration douce : l'ancien champ libre `inventaire` (string) devient un
     // item texte libre dans inventaireListe, pour ne rien perdre à la casse
@@ -327,13 +331,6 @@ class Personnage extends Entite {
     if (this.classe === "chasseur" && (nom === "Survie" || nom === "Discrétion")) {
       bonus += 2 * this.rangMaxVoie("Voie de la traque"); // Pisteur (pistage replié sur Survie)
     }
-    if (this.classe === "magicien" && ["Connaissances (arcanes)", "Connaissances (histoire)", "Connaissances (nature)"].includes(nom)) {
-      // Voie de la magie universitaire : +2/+4/+6/+8 par rang (remplacé, pas
-      // cumulé — rangMaxVoie donne directement la bonne valeur). "Érudition"
-      // repliée sur les 3 compétences Connaissances, pas Investigation ni
-      // Artisanat (plus proches de la pratique que du savoir livresque).
-      bonus += 2 * this.rangMaxVoie("Voie de la magie universitaire");
-    }
     if (this.classe === "druide" && nom === "Dressage") {
       bonus += 2 * this.rangMaxVoie("Voie des compagnons"); // Communication animale
     }
@@ -452,7 +449,17 @@ class Personnage extends Entite {
   calculerPPMax() {
     const carac = CARAC_MAGIE[this.classe];
     if (!carac) return null;
-    return 4 + (this.niveau || 1) * 2 + this.mod(carac) * 2;
+    return 4 + (this.niveau || 1) * 2 + this.mod(carac) * 2 + this.bonusPPCapacites();
+  }
+  // Magicien — Voie de la magie universitaire, rangs 1/2 "Réserve étendue
+  // I/II" (passives) : +4 PP max par rang acquis (cumulables, +8 max aux
+  // rangs 1-2). rangMaxVoie plafonné à 2 : les rangs 3-5 de cette voie
+  // n'ajoutent aucun bonus de PP max (Efficience arcanique/Surcharge
+  // maîtrisée/Consumation totale, effets différents — cf. leur note
+  // respective dans data/donnees.js).
+  bonusPPCapacites() {
+    if (this.classe !== "magicien") return 0;
+    return Math.min(this.rangMaxVoie("Voie de la magie universitaire"), 2) * 4;
   }
   // Repos long (bouton manuel, cf. Capacites.reinitialiserUsage pour le
   // même principe) : reset complet.
@@ -468,6 +475,19 @@ class Personnage extends Entite {
     const max = this.calculerPPMax();
     if (max === null) return;
     this.ppActuel = Math.min(max, (this.ppActuel || 0) + Math.ceil(max * 0.25));
+  }
+
+  // Nombre de sorts hors Voies que le personnage peut connaître à la fois
+  // (cf. reference_sorts_connus.md) : 0 sans Manuel d'incantation équipé
+  // (data/loot.json: manuel_incantation, type "accessoire") — 3 de base,
+  // +2 par palier de rareté de l'exemplaire réellement porté (Commun 3,
+  // Peu commun 5, Rare 7, Légendaire 9, cf. bonusRarete posé par
+  // Raretes.appliquer à l'instanciation).
+  slotsGrimoire() {
+    const manuel = this._itemsEquipesUniques().find((it) => it.type === "accessoire" && it.id === "manuel_incantation");
+    if (!manuel) return 0;
+    const bonusRarete = manuel.bonusRarete || 0;
+    return 3 + 2 * bonusRarete;
   }
 
   /* ----- Défense ----- */
@@ -594,10 +614,15 @@ class Personnage extends Entite {
     if (this.classe === "barde" && this.estChoisie("Voie de la rapière", 2)) {
       bonus += this.mod("INT");
     }
-    // Moine — Voie de l'élévation, rang 2 : même choix (INT ou SAG) que pour la DEF.
-    if (this.classe === "moine") {
-      const cap = this.capaciteEntree("Voie de l'élévation", 2);
-      if (cap && (cap.choix === "INT" || cap.choix === "SAG")) bonus += this.mod(cap.choix);
+    // Moine — Voie de l'élévation, rang 1 "Réflexes du sage" (passive) :
+    // +Mod.SAG à l'Initiative, sans condition.
+    if (this.classe === "moine" && this.estChoisie("Voie de l'élévation", 1)) {
+      bonus += this.mod("SAG");
+    }
+    // Chevalier — Voie du noble, rang 1 "Prestance martiale" (passive) :
+    // +Mod.CHA à l'Initiative, sans condition.
+    if (this.classe === "chevalier" && this.estChoisie("Voie du noble", 1)) {
+      bonus += this.mod("CHA");
     }
     // Chasseur — Voie de la traque, rang 4 "Sens du danger" (passive) : +2
     // Initiative. Gap corrigé : ce bonus était déclaré dans les données mais
@@ -632,16 +657,6 @@ class Personnage extends Entite {
     // critique sur 19-20 au lieu de 20, uniquement sur les attaques au contact.
     if (type === "contact" && this.classe === "guerrier" && this.estChoisie("Voie de l'élite", 3)) {
       seuil = 19;
-    }
-    // Moine — Voie de l'élévation, rang 1 "Bonus de précision" (passive) :
-    // même seuil que Précision létale (19-20), fixé par Thomas car le texte
-    // d'origine ("critiques facilités") n'en donnait pas — seulement aux
-    // attaques au contact à mains nues ou au bâton (id catalogue "baton*",
-    // cf. data/loot.js), pas avec une autre arme équipée.
-    if (type === "contact" && this.classe === "moine" && this.estChoisie("Voie de l'élévation", 1)) {
-      const armeContact = this.armeContactEquipee();
-      const mainsNuesOuBaton = !armeContact || (armeContact.id || "").startsWith("baton");
-      if (mainsNuesOuBaton) seuil = Math.min(seuil, 19);
     }
     // Chasseur — Voie de la gâchette, rang 5 "Tir fatal" (L, 1x/combat en
     // théorie) : critique sur 18-20 au lieu de 20 sur les attaques à distance.
@@ -714,10 +729,6 @@ class Personnage extends Entite {
     if (this.classe === "druide" && this.estChoisie("Voie du chaos", 2)) {
       bonus += 2;
     }
-    // Chevalier — Voie du noble, rang 2 : ajoute le Mod. de CHA à la DEF.
-    if (this.classe === "chevalier" && this.estChoisie("Voie du noble", 2)) {
-      bonus += this.mod("CHA");
-    }
     // Moine — Voie des poings, rang 3 : "le dé passe à 1d10, +2 DEF" (partie DEF).
     if (this.classe === "moine" && this.estChoisie("Voie des poings", 3)) {
       bonus += 2;
@@ -732,11 +743,12 @@ class Personnage extends Entite {
       const cap = this.capaciteEntree("Voie du chaos", 4);
       if (cap && cap.choix === "def") bonus += 2;
     }
-    // Moine — Voie de l'élévation, rang 2 : ajoute au choix (fixé à
-    // l'acquisition) le Mod. d'INT ou de SAG à l'Initiative et à la DEF.
-    if (this.classe === "moine") {
-      const cap = this.capaciteEntree("Voie de l'élévation", 2);
-      if (cap && (cap.choix === "INT" || cap.choix === "SAG")) bonus += this.mod(cap.choix);
+    // Moine — Voie de l'élévation, rang 2 "Défense du corps libre" (passive) :
+    // +Mod.SAG à la CA tant qu'aucune armure (categorie moyenne/lourde) n'est équipée.
+    if (this.classe === "moine" && this.estChoisie("Voie de l'élévation", 2)) {
+      const armure = this._itemsEquipesUniques().find((it) => it.type === "armure");
+      const sansArmureReelle = !armure || !armure.categorie || armure.categorie === "legere";
+      if (sansArmureReelle) bonus += this.mod("SAG");
     }
     return bonus;
   }
@@ -838,12 +850,6 @@ class Personnage extends Entite {
   // seulement défensif.
   aImmuniteEtat(idEtat) {
     if ((idEtat === "immobilisee" || idEtat === "entravee") && this.classe === "barde" && this.estChoisie("Voie du spectacle", 5)) return true;
-    // Chevalier — Voie du commandant, rang 1 (passive) : immunisé à la Peur.
-    // Gap corrigé : cette immunité était déclarée dans les données ("special")
-    // mais jamais câblée, contrairement à Liberté d'action ci-dessus (même
-    // mécanisme). L'extension du bonus de résistance aux alliés proches (même
-    // rang) reste non chiffrée/non modélisée.
-    if (idEtat === "effrayee" && this.classe === "chevalier" && this.estChoisie("Voie du commandant", 1)) return true;
     // Chevalier — Voie du chaos, rang 5 "Avatar du pacte" : immunité
     // temporaire à la Peur tant que l'état 'avatar_du_pacte' reste actif
     // (indépendante du choix de la Voie du commandant ci-dessus).
@@ -906,17 +912,6 @@ class Personnage extends Entite {
     return 0;
   }
 
-  // Magicien — Voie de la magie universitaire, rang 5 "INT héroïque"
-  // (1x/jour) : gate seule, le contrôle d'usage réel vit côté app.js
-  // (Capacites.verifierUsage, clé "classe:magicien:univ5") puisqu'il s'agit
-  // d'une case à cocher "armée" avant un clic de test, pas d'une capacité
-  // Capacites.lancer() classique — même principe que Cœur de Montagne.
-  // "Relance un test raté, garde le meilleur" ≡ "avantage" (2d20 garde le
-  // plus haut) en termes de distribution de probabilité : même simplification
-  // que le reste de la famille avantage de l'app.
-  aIntHeroique() {
-    return this.classe === "magicien" && this.estChoisie("Voie de la magie universitaire", 5);
-  }
   // Demi-Elfe — "Double Héritage" (rang racial 5, 1x/jour) : même principe,
   // sur Perception/Social(4 compétences CHA)/INT — cf. app.js.
   aDoubleHeritage() {

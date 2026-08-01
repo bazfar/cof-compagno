@@ -177,7 +177,7 @@ const Capacites = (() => {
     if (!cible) return null;
     if (cible.genre === "perso") {
       const p = persos[cible.id];
-      return p ? Personnage.depuisJSON(p).calculerCA() + bonusDefAuraPeuple(cible.id) + bonusDefAuraBouclierChevalier(cible.id) : null;
+      return p ? Personnage.depuisJSON(p).calculerCA() + bonusDefAuraPeuple(cible.id) + bonusDefGardeRapprochee(cible.id) : null;
     }
     if (cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
       const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
@@ -216,37 +216,34 @@ const Capacites = (() => {
     return qualifie ? 1 : 0;
   }
 
-  // Chevalier — Voie du protecteur, rang 1 "Bouclier partagé" (passive) : un
-  // allié au contact (distance <= 1 case) d'un Chevalier ayant ce rang ET un
-  // bouclier équipé gagne le bonus DEF de CE bouclier — valeur lue sur
-  // Personnage._itemsEquipesUniques() (champ bonusDEF), la même que celle
-  // déjà comptée dans la propre DEF du Chevalier via bonusDefEquipement().
-  // Même schéma que bonusDefAuraPeuple ci-dessus (dépend d'un AUTRE
-  // personnage, vit ici plutôt que dans personnage.js — appelé à la fois par
-  // obtenirDefCible() et par app.js/_defPjAvecAura à l'affichage). Pas de
-  // cumul si plusieurs Chevaliers qualifient à la fois : garde la valeur la
-  // plus haute, pas la somme.
-  function bonusDefAuraBouclierChevalier(persoId) {
+  // Chevalier — Voie du protecteur, rang 1 "Garde rapprochée" (passive) : un
+  // allié au contact (distance <= 1 case) d'un Chevalier ayant ce rang gagne
+  // +2 CA fixe — remplace l'ancien "Bouclier partagé" (partage du bonusDEF du
+  // bouclier équipé), retiré (validé avec Thomas) : plus de dépendance à un
+  // bouclier réellement équipé, cf. le texte du nouveau rang ("tout allié
+  // adjacent qualifie", pas de désignation explicite d'un protégé unique —
+  // même simplification que bonusDefAuraPeuple). Même schéma que
+  // bonusDefAuraPeuple ci-dessus (dépend d'un AUTRE personnage, vit ici
+  // plutôt que dans personnage.js — appelé à la fois par obtenirDefCible() et
+  // par app.js/_defPjAvecAura à l'affichage). Pas de cumul si plusieurs
+  // Chevaliers qualifient à la fois : bonus fixe, pas de somme.
+  function bonusDefGardeRapprochee(persoId) {
     if (typeof Carte === "undefined" || !Carte.tokenIdPourPerso || !Carte.listeTokensJoueursCombat ||
         !Carte.distanceCasesEntre || !Carte.idPersoDepuisRef) return 0;
     const monToken = Carte.tokenIdPourPerso(persoId);
     if (!monToken) return 0;
     const persos = App.chargerPersos();
-    let meilleur = 0;
-    (Carte.listeTokensJoueursCombat() || []).forEach((t) => {
-      if (t.id === monToken || !t.ref) return;
+    const qualifie = (Carte.listeTokensJoueursCombat() || []).some((t) => {
+      if (t.id === monToken || !t.ref) return false;
       const chevalierId = Carte.idPersoDepuisRef(t.ref);
       const pc = persos[chevalierId];
-      if (!pc) return;
+      if (!pc) return false;
       const chevalier = Personnage.depuisJSON(pc);
-      if (!(chevalier.classe === "chevalier" && chevalier.estChoisie("Voie du protecteur", 1))) return;
+      if (!(chevalier.classe === "chevalier" && chevalier.estChoisie("Voie du protecteur", 1))) return false;
       const d = Carte.distanceCasesEntre(t.id, monToken);
-      if (d === null || d > 1) return;
-      const bouclier = chevalier._itemsEquipesUniques().find((it) => it.type === "bouclier");
-      const valeur = (bouclier && bouclier.bonusDEF) || 0;
-      if (valeur > meilleur) meilleur = valeur;
+      return d !== null && d <= 1;
     });
-    return meilleur;
+    return qualifie ? 2 : 0;
   }
 
   // Guerrier — Voie du chaos, rang 3/5 "Rage incontrôlée"/"Déchaînement" (cf.
@@ -1211,6 +1208,14 @@ const Capacites = (() => {
     const perso = Personnage.depuisJSON(p);
     const libelle = source.nomCap || "Capacité";
 
+    // Gate d'accès Grimoire (cf. reference_sorts_connus.md) : un sort hors
+    // Voies (SORTS_MAGICIEN ou équivalent) ne peut être lancé que s'il est
+    // effectivement appris — vérifié avant tout le reste (usage, PP...),
+    // pas de sens à décompter quoi que ce soit pour un sort non appris.
+    if (mecanique.origineGrimoire && !(p.grimoireSortsConnus || []).includes(source.idSort)) {
+      return { ok: false, messages: [`Ce sort n'est pas (encore) inscrit dans le Grimoire.`] };
+    }
+
     const cle = cleCapacite(source);
     const usage = verifierUsage(p, cle, mecanique);
     if (!usage.ok) return { ok: false, messages: [usage.raison] };
@@ -1826,7 +1831,7 @@ const Capacites = (() => {
     listeCibles,
     obtenirDefCible,
     bonusDefAuraPeuple,
-    bonusDefAuraBouclierChevalier,
+    bonusDefGardeRapprochee,
     cibleCreaturePlusProche,
     lancer,
     resoudreDegatsEnAttente,

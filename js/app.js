@@ -636,9 +636,9 @@ const App = (() => {
     let def = perso.calculerCA();
     if (typeof Capacites === "undefined") return def;
     if (Capacites.bonusDefAuraPeuple) def += Capacites.bonusDefAuraPeuple(persoId);
-    // Chevalier — Voie du protecteur rang 1 "Bouclier partagé" : même
-    // principe que l'aura ci-dessus, cf. Capacites.bonusDefAuraBouclierChevalier.
-    if (Capacites.bonusDefAuraBouclierChevalier) def += Capacites.bonusDefAuraBouclierChevalier(persoId);
+    // Chevalier — Voie du protecteur rang 1 "Garde rapprochée" : même
+    // principe que l'aura ci-dessus, cf. Capacites.bonusDefGardeRapprochee.
+    if (Capacites.bonusDefGardeRapprochee) def += Capacites.bonusDefGardeRapprochee(persoId);
     return def;
   }
 
@@ -2468,14 +2468,6 @@ const App = (() => {
       options: [
         { valeur: "def", label: "+2 DEF permanent" },
         { valeur: "degats", label: "+1d8 DM chaotique sur l'arme de prédilection" },
-      ],
-    },
-    "moine|Voie de l'élévation|2": {
-      titre: "Voie de l'élévation — rang 2",
-      consigne: "Choisis la caractéristique ajoutée à l'Initiative et à la DEF :",
-      options: [
-        { valeur: "INT", label: "Modificateur d'INTELLIGENCE" },
-        { valeur: "SAG", label: "Modificateur de SAGESSE" },
       ],
     },
     "guerrier|Voie de l'élite|1": {
@@ -4619,6 +4611,16 @@ const App = (() => {
           const v = rc && rc.variantes && rc.variantes.find((vv) => vv.code === d.lancerCode);
           mecanique = v && v.mecanique;
           source.code = d.lancerCode;
+        } else if (d.lancerOrigine === "grimoire") {
+          // Sort connu hors Voies (cf. reference_sorts_connus.md, SORTS_MAGICIEN,
+          // data/donnees.js) — cloné pour poser origineGrimoire sans muter
+          // l'entrée partagée SORTS_MAGICIEN. source.idSort : lu par le gate
+          // dans Capacites.lancer() (mecanique.origineGrimoire).
+          const sort = (typeof SORTS_MAGICIEN !== "undefined") ? SORTS_MAGICIEN.find((s) => s.id === d.lancerCle) : null;
+          if (sort) {
+            mecanique = Object.assign({}, sort.mecanique, { origineGrimoire: true });
+            source.idSort = sort.id;
+          }
         }
         if (!mecanique) { toast("Capacité introuvable."); return; }
 
@@ -5100,6 +5102,7 @@ const App = (() => {
           const badge = badgeEffetItem(it);
           const soin = formuleSoinItem(it);
           const resurrection = estParcheminResurrection(it);
+          const parcheminSort = estParcheminSort(it);
           return `<div class="inv-item">
             <div class="inv-item-header">
               <span class="inv-item-nom" style="color:${it.rareteCouleur || ""}">${echapper(it.nom)}</span>${badgeRareteHtml(it)}
@@ -5116,6 +5119,7 @@ const App = (() => {
               ${soin && persoId ? `<button class="btn petit or btn-utiliser-item" data-idx="${idx}">🧪 Utiliser</button>` : ""}
               ${soin && persoId ? `<button class="btn petit secondaire btn-soigner-allie" data-idx="${idx}">❤ Soigner un allié</button>` : ""}
               ${resurrection && persoId ? `<button class="btn petit or btn-reanimer-allie" data-idx="${idx}">📜 Réanimer un allié</button>` : ""}
+              ${parcheminSort && persoId ? `<button class="btn petit or btn-apprendre-sort" data-idx="${idx}">📖 Apprendre</button>` : ""}
               ${persoId ? `<button class="btn petit secondaire btn-donner-item" data-idx="${idx}">🎁 Donner</button>` : ""}
               <button class="btn petit danger btn-jeter-item" data-idx="${idx}">Jeter</button>
             </div>
@@ -5404,7 +5408,14 @@ const App = (() => {
     persos[persoId] = perso.versJSON();
     sauverPersos(persos);
     afficherFiche(persoId);
-    toast(`« ${item.nom} » équipé (${LABELS_SLOT[slot]}).`);
+    // Bâton (cf. reference_sorts_connus.md §4) : "prérequis" cosmétique, pas
+    // de vraie restriction technique (l'app n'a aucune notion de prérequis
+    // d'équipement) — simple avertissement non bloquant si le porteur ne
+    // connaît encore aucun sort, l'objet reste équipable dans tous les cas.
+    const avertissementBaton = /^baton/.test(item.id || "") && !(perso.grimoireSortsConnus || []).length
+      ? " ⚠️ Aucun sort connu — le bonus de canalisation ne sert à rien pour l'instant."
+      : "";
+    toast(`« ${item.nom} » équipé (${LABELS_SLOT[slot]}).${avertissementBaton}`);
   }
 
   function desequiperItem(persoId, slot) {
@@ -5522,6 +5533,14 @@ const App = (() => {
   // générique qui ne ferait rien.
   function estParcheminResurrection(it) {
     return !!it && it.type === "consommable" && it.id === "parchemin_resurrection";
+  }
+
+  // Parchemin d'apprentissage (cf. reference_sorts_connus.md) : consommable
+  // référençant un id de SORTS_MAGICIEN via sortAppris — identifié par champ
+  // plutôt que par id explicite (contrairement à estParcheminResurrection),
+  // pour ne pas devoir lister chaque parchemin un par un.
+  function estParcheminSort(it) {
+    return !!it && it.type === "consommable" && typeof it.sortAppris === "string";
   }
 
   // Réduit la quantité d'un consommable utilisé, retire l'entrée si elle tombe à 0.
@@ -5728,6 +5747,32 @@ const App = (() => {
     rendreDockCombat();
   }
 
+  // Apprend un sort depuis un parchemin (cf. reference_sorts_connus.md,
+  // estParcheminSort ci-dessus) — toujours sur SOI (pas de sélection de
+  // destinataire comme reanimerAllie/soignerAllie : aucune mécanique
+  // canonique pour "apprendre un sort à un allié" dans la référence).
+  // Consommé uniquement en cas de succès (sort déjà connu ou plus de slot
+  // disponible = tentative refusée, le parchemin reste dans l'inventaire).
+  function apprendreSortDepuisParchemin(persoId, idx) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const item = p.inventaireListe[idx];
+    if (!item || !estParcheminSort(item)) return;
+    if (typeof CARAC_MAGIE === "undefined" || !CARAC_MAGIE[p.classe]) { toast("Seul un casteur pur peut apprendre ce sort."); return; }
+    const perso = Personnage.depuisJSON(p);
+    const slots = perso.slotsGrimoire();
+    const connus = p.grimoireSortsConnus || [];
+    if (connus.includes(item.sortAppris)) { toast("Ce sort est déjà connu."); return; }
+    if (connus.length >= slots) { toast(`Plus de slot disponible dans le Grimoire (${connus.length}/${slots}) — équipe un Manuel d'incantation de meilleure rareté, ou n'apprends pas de nouveau sort pour l'instant.`); return; }
+    const sort = (typeof SORTS_MAGICIEN !== "undefined") ? SORTS_MAGICIEN.find((s) => s.id === item.sortAppris) : null;
+    p.grimoireSortsConnus = connus.concat([item.sortAppris]);
+    _consommerUnite(p, idx);
+    sauverPersos(persos);
+    afficherFiche(persoId);
+    toast(`📖 « ${sort ? sort.nom : item.sortAppris} » ajouté au Grimoire (${p.grimoireSortsConnus.length}/${slots}).`);
+  }
+
   // Jet de mort (état Mourant, 0 PV, cf. REGLES_GENERALES "Mort et
   // stabilisation") : 1d20, ≥11 = succès. 3 succès = stabilisé à 1 PV
   // (jet de mort remis à zéro). 3 échecs = mort (etatMort, plus aucun jet,
@@ -5827,14 +5872,10 @@ const App = (() => {
     const mods = {};
     // + bonusTestCaracCapacites : cf. même ajout côté rendreDockCombat().
     CARACS.forEach((cc) => (mods[cc.code] = perso.mod(cc.code) + perso.bonusTestCaracCapacites(cc.code)));
-    // Magicien "INT héroïque" (Voie de la magie universitaire rang 5) et
     // Demi-Elfe "Double Héritage" (race rang 5) : 1x/jour, avantage sur le
-    // PROCHAIN test concerné (INT pour le premier ; Perception/Social/INT
-    // pour le second) — case à cocher "armée" avant de cliquer un bouton de
-    // test, consommée à ce clic (cf. wiring plus bas), même mécanique
-    // d'usage que Cœur de Montagne (Capacites.verifierUsage).
-    const intHeroiqueDispo = !!(perso.aIntHeroique() && typeof Capacites !== "undefined" &&
-      Capacites.verifierUsage(p, "classe:magicien:univ5", { usage: { frequence: "1x/jour" } }).ok);
+    // PROCHAIN test de Perception/Social/INT — case à cocher "armée" avant de
+    // cliquer un bouton de test, consommée à ce clic (cf. wiring plus bas),
+    // même mécanique d'usage que Cœur de Montagne (Capacites.verifierUsage).
     const doubleHeritageDispo = !!(perso.aDoubleHeritage() && typeof Capacites !== "undefined" &&
       Capacites.verifierUsage(p, "race:demi_elfe:5", { usage: { frequence: "1x/jour" } }).ok);
 
@@ -5906,15 +5947,28 @@ const App = (() => {
                 </div>
               </div>
             </div>
+            <div class="carte" style="margin-top:10px;">
+              <h3 style="margin-top:0;">📖 Grimoire</h3>
+              <div class="aide" style="margin-bottom:8px;">${(p.grimoireSortsConnus || []).length}/${perso.slotsGrimoire()} sorts connus${perso.slotsGrimoire() === 0 ? " — équipe un Manuel d'incantation pour en apprendre." : ""}</div>
+              ${(p.grimoireSortsConnus || []).length ? (p.grimoireSortsConnus || []).map((sortId) => {
+                const sort = (typeof SORTS_MAGICIEN !== "undefined") ? SORTS_MAGICIEN.find((s) => s.id === sortId) : null;
+                if (!sort) return "";
+                const source = { origine: "grimoire", cle: sort.id, nomCap: sort.nom };
+                return `<div class="cap-fiche">
+                  <div class="titre-cap">${echapper(sort.nom)}${htmlLancerCapacite(source, sort.mecanique, p)}</div>
+                  <div class="voie-source">Rang ${sort.rang} · ${sort.mecanique.coutPP} PP</div>
+                  <div class="effet-cap">${echapper(sort.effet)}</div>
+                </div>`;
+              }).join("") : `<div class="vide">Aucun sort appris.</div>`}
+            </div>
             ` : ""}
 
             ${perso.estMort() ? `<p class="aide" style="color:#c0392b;font-weight:700;">💀 Mort.</p>`
               : perso.estMourant() ? `<p class="aide" style="color:#c0392b;font-weight:700;">🩸 Mourant(e) — Succès ${p.mortSucces || 0}/3 · Échecs ${p.mortEchecs || 0}/3. Jet de mort à son tour (onglet Battlemap) ou stabilisation via « Relever un allié ».</p>` : ""}
 
-            ${(intHeroiqueDispo || doubleHeritageDispo) ? `
+            ${doubleHeritageDispo ? `
               <div class="aide" style="margin-bottom:8px;display:flex;flex-direction:column;gap:4px;">
-                ${intHeroiqueDispo ? `<label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="arme-int-heroique" /> 🎓 INT héroïque (1x/jour) : avantage sur le prochain test d'INT</label>` : ""}
-                ${doubleHeritageDispo ? `<label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="arme-double-heritage" /> 🧬 Double Héritage (1x/jour) : avantage sur le prochain test de Perception/Social/INT</label>` : ""}
+                <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="arme-double-heritage" /> 🧬 Double Héritage (1x/jour) : avantage sur le prochain test de Perception/Social/INT</label>
               </div>
             ` : ""}
             <div class="stats-rapides">
@@ -6037,8 +6091,7 @@ const App = (() => {
         const code = el.dataset.test;
         let modeForce = (code === "CON" && perso.aEnduranceDeFer()) || (code === "SAG" && perso.aAvantageResistanceMentale())
           ? "avantage" : null;
-        if (code === "INT" && _armerAvantageJournalier("arme-int-heroique", "classe:magicien:univ5")) modeForce = "avantage";
-        else if (code === "INT" && _armerAvantageJournalier("arme-double-heritage", "race:demi_elfe:5")) modeForce = "avantage";
+        if (code === "INT" && _armerAvantageJournalier("arme-double-heritage", "race:demi_elfe:5")) modeForce = "avantage";
         const bonusAmes = code === "INT" ? perso.bonusSavoirVole() : 0;
         lancerTest(`Test de ${code}`, mods[code] + bonusAmes, null, modeForce, { persoId: perso.id, caracCode: code });
         allerVers("des");
@@ -6209,6 +6262,10 @@ const App = (() => {
     // Inventaire — réanimer un allié Mort avec un parchemin de résurrection
     zone.querySelectorAll(".btn-reanimer-allie").forEach((el) => {
       el.onclick = () => ouvrirSelecteurReanimation(id, parseInt(el.dataset.idx, 10));
+    });
+    // Inventaire — apprendre un sort depuis un parchemin (Grimoire)
+    zone.querySelectorAll(".btn-apprendre-sort").forEach((el) => {
+      el.onclick = () => apprendreSortDepuisParchemin(id, parseInt(el.dataset.idx, 10));
     });
     // Inventaire — formulaire d'ajout, lié au catalogue loot (+ option "divers")
     const btnAjouterItem = document.getElementById("btn-ajouter-item");
@@ -6625,6 +6682,7 @@ const App = (() => {
     if (p.pvActuel === null || p.pvActuel > p.pvMax) p.pvActuel = p.pvMax;
     p.dons = creation.dons;
     p.donsChoix = creation.donsChoix;
+    p.grimoireSortsConnus = creation.grimoireSortsConnus;
     sauverPersos(persosActuels);
   }
 
@@ -6662,6 +6720,30 @@ const App = (() => {
           _persisterNiveauEtPv(id); // idem : Robuste (+2 PV/niveau) ne doit pas non plus se perdre en changeant d'onglet
         });
       });
+    }
+
+    // Sorts hors Voies (cf. reference_sorts_connus.md) : un casteur pur
+    // (CARAC_MAGIE défini) avec un slot de Grimoire encore libre se voit
+    // proposer un sort non encore connu à chaque montée de niveau — pas
+    // d'apprentissage forcé (fermer le modal sans choisir ne fait rien, cf.
+    // ouvrirModalChoixCapacite/btn-fermer-modal-choix-capacite). Recherche
+    // via parchemin (Partie 2 point 1) reste le seul autre canal.
+    if (typeof CARAC_MAGIE !== "undefined" && CARAC_MAGIE[creation.classe] && typeof SORTS_MAGICIEN !== "undefined") {
+      const slots = new Personnage(creation).slotsGrimoire();
+      const connus = creation.grimoireSortsConnus || [];
+      const disponibles = SORTS_MAGICIEN.filter((s) => !connus.includes(s.id));
+      if (slots > connus.length && disponibles.length) {
+        ouvrirModalChoixCapacite({
+          titre: "Nouveau sort disponible",
+          consigne: `Slot de Grimoire libre (${connus.length}/${slots}) — apprends un nouveau sort, ou ferme cette fenêtre pour l'apprendre plus tard (parchemin) :`,
+          options: disponibles.map((s) => ({ label: `${s.nom} (rang ${s.rang}, ${s.mecanique.coutPP} PP) — ${s.effet}`, valeur: s.id })),
+        }, (sortId) => {
+          creation.grimoireSortsConnus = (creation.grimoireSortsConnus || []).concat([sortId]);
+          _persisterNiveauEtPv(id);
+          const sort = SORTS_MAGICIEN.find((s) => s.id === sortId);
+          toast(`📖 « ${sort ? sort.nom : sortId} » ajouté au Grimoire. Déjà enregistré.`);
+        });
+      }
     }
   }
 

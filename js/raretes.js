@@ -377,6 +377,17 @@ const Raretes = (() => {
     switch (item.type) {
       case "arme":
         clone.bonusDegatsTotal = (item.enchantement || 0) + bonus;
+        // Bâton (id "baton"/"baton_p1", cf. reference_sorts_connus.md §4) :
+        // seule arme qui "canalise" — bonusAttaqueMagique/bonusDegatsMagiques
+        // scalent avec la rareté de CET exemplaire plutôt que d'être une
+        // valeur fixe en catalogue (Commun = pas de bonus, Peu commun +1,
+        // Rare +2, Légendaire +3). Lus génériquement par
+        // Personnage.bonusAttaque("magique")/degatsMagiques() comme
+        // n'importe quel autre item équipé porteur de ces champs.
+        if (/^baton/.test(item.id || "")) {
+          clone.bonusAttaqueMagique = (item.bonusAttaqueMagique || 0) + bonus;
+          clone.bonusDegatsMagiques = (item.bonusDegatsMagiques || 0) + bonus;
+        }
         if (auMoinsRare) {
           if (item.degatsAuMoinsRare) clone.degats = item.degatsAuMoinsRare;
           if (variante) { clone.effetRarete = variante[rarete.id]; clone.varianteNom = variante.nom; }
