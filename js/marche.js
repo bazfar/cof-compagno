@@ -40,7 +40,13 @@ const Marche = (() => {
     setTimeout(() => t.classList.remove("visible"), 2800);
   }
 
-  function _catalogue() { return (typeof LOOT_CATALOGUE !== "undefined") ? LOOT_CATALOGUE : []; }
+  function _catalogue() {
+    const base = (typeof LOOT_CATALOGUE !== "undefined") ? LOOT_CATALOGUE : [];
+    // Objets forgés par le MJ (cf. js/forge.js) : fusionnés au catalogue pour
+    // être résolus (prix/stock) et vendables via la mise en vente manuelle.
+    const custom = (typeof Forge !== "undefined" && Forge.catalogueCustom) ? Forge.catalogueCustom() : [];
+    return custom.length ? base.concat(custom) : base;
+  }
   function _itemCatalogue(id) { return _catalogue().find((i) => i.id === id); }
   function _localite(id) { return LOCALITES_MARCHE.find((l) => l.id === id); }
   function _marchand(localite, id) { return localite ? localite.marchands.find((m) => m.id === id) : null; }
@@ -597,6 +603,7 @@ const Marche = (() => {
       _peuplerAjoutManuel(marchand);
       _wireAjoutManuel(marchand);
     }
+    if (typeof Forge !== "undefined") Forge.rendre(); // Forge du MJ (guarde le rôle en interne)
   }
 
   return { rendrePanneauMarche, acheterObjetMarche, demanderAchatMarche, calculerPrix };

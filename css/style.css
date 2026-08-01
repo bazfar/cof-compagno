@@ -1960,6 +1960,30 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .marche-ajout-manuel select { flex: 1; min-width: 160px; }
 .marche-filtres { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .marche-filtres .btn.actif { border-color: var(--or); background: var(--or); color: #fff; }
+/* Forge du MJ (js/forge.js) */
+.forge-bloc { margin-top: 14px; }
+.forge-aide { font-size: 0.82rem; color: #6a6278; margin: 0 0 12px; }
+.forge-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.forge-grille label, .forge-full { display: flex; flex-direction: column; gap: 3px; font-size: 0.8rem; font-weight: 600; color: var(--encre); }
+.forge-full { margin-top: 10px; }
+.forge-grille input, .forge-grille select, .forge-full input, .forge-full textarea {
+  font-family: inherit; font-size: 0.9rem; padding: 6px 8px; border: 1px solid var(--parchemin-fonce);
+  border-radius: 5px; background: #fffdf7; font-weight: 400;
+}
+.forge-grille .forge-check { flex-direction: row; align-items: center; gap: 6px; }
+.forge-grille .forge-check input { width: auto; }
+.forge-caracs-bloc { margin-top: 12px; }
+.forge-sous-titre { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--violet); margin-bottom: 6px; }
+.forge-caracs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.forge-carac { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 0.72rem; font-weight: 700; }
+.forge-carac input { width: 100%; text-align: center; font-family: inherit; padding: 5px 4px; border: 1px solid var(--parchemin-fonce); border-radius: 5px; background: #fffdf7; }
+@media (max-width: 560px) { .forge-caracs { grid-template-columns: repeat(3, 1fr); } }
+.forge-liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.forge-item { border: 1px solid var(--parchemin-fonce); border-left: 4px solid var(--or); border-radius: 5px; padding: 9px 11px; background: var(--parchemin); }
+.forge-item-tete { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.forge-item-nom { font-weight: 700; color: var(--encre); }
+.forge-item-badge { font-size: 0.72rem; color: #6a6278; }
+.forge-item-resume { font-size: 0.8rem; color: #4a4458; margin-top: 4px; line-height: 1.4; }
 .loot-badge-rarete-peu_commun { background: #dff0d8; color: #2d6a1e; }
 .loot-badge-rarete-rare       { background: #e0d8f5; color: #4a2f8a; }
 .loot-badge-rarete-legendaire { background: #fbe6c2; color: #8a5a00; }
