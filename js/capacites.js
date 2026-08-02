@@ -831,16 +831,6 @@ const Capacites = (() => {
       // "degats" sont des sorts, pas besoin de distinguer par voie/rang.
       const bonusChaos = perso.bonusDegatsSortsChaos && perso.bonusDegatsSortsChaos();
       let formuleAjustee = bonusChaos ? `${effet.formule}+${bonusChaos}` : effet.formule;
-      // Magicien — Voie de la magie élémentaire, rang 2 "Intensité
-      // élémentaire" (passive) : remplace le 1d6 initial du Trio élémentaire
-      // (rang 1, seule formule "degats" représentée sur les 3 sorts au choix,
-      // cf. sa note) par un 1d8 dès que le rang 2 est acquis — modifie une
-      // AUTRE capacité déjà mécanisée, identifiée ici par voie+rang (ctx.voie
-      // vient de source.voie côté lancer()/resoudreDegatsEnAttente).
-      if (voie === "Voie de la magie élémentaire" && rang === 1 && perso.classe === "magicien"
-          && perso.rangMaxVoie("Voie de la magie élémentaire") >= 2 && /^1d6\b/.test(formuleAjustee)) {
-        formuleAjustee = formuleAjustee.replace(/^1d6/, "1d8");
-      }
       // Moine — Voie des éléments, rang 2 "Maîtrise élémentaire" (passive) :
       // même principe qu'Intensité élémentaire ci-dessus, remplace le 1d4
       // initial de l'option Feu de Poing élémentaire (rang 1, seule option
@@ -1112,15 +1102,6 @@ const Capacites = (() => {
       if (voie === "Voie du chant" && rang === 3 && perso.classe === "barde"
           && perso.rangMaxVoie("Voie du chant") >= 4 && effet.valeur === -2) {
         valeurBrute = -4;
-      }
-      // Magicien — Voie de la magie protectrice, rang 2 "Résistance
-      // arcanique" (passive) : le bonus de Bouclier arcanique (rang 1) passe
-      // de +2 à +3 DEF dès le rang 2 acquis — même principe que Refrain
-      // lancinant ci-dessus. Gap corrigé : cette modification était
-      // documentée dans data/donnees.js mais jamais câblée.
-      if (voie === "Voie de la magie protectrice" && rang === 1 && effet.cible === "DEF" && perso.classe === "magicien"
-          && perso.rangMaxVoie("Voie de la magie protectrice") >= 2 && effet.valeur === 2) {
-        valeurBrute = 3;
       }
       // Nécromancien — Voie de la sombre magie, rang 4 "Malédiction
       // profonde" (suite) : Toucher flétrissant (rang 2, choix attaque/DEF)
