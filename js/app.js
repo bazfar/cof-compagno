@@ -4807,39 +4807,45 @@ const App = (() => {
     _rendreZoneLivret();
   }
 
-  // Migration douce : déplace les anciens livres (p.livres[] dans la fiche) vers
-  // la collection cof_livres (1 doc/livre), puis vide p.livres (la fiche
-  // rétrécit → plus de saturation du document perso par les images). Idempotent
-  // (l'id du livre = l'id du doc) et sûr entre clients (mêmes ids → écritures
-  // convergentes). Ne tourne qu'une fois par session, quand les persos sont là.
-  let _migrationLivresFaite = false;
+  // Migration en 2 temps (sûre : aucune perte possible).
+  // Ids des livres CONFIRMÉS côté serveur (présents dans un vrai snapshot
+  // Firestore de cof_livres, cf. l'abonnement DepotLivres.ecouter plus bas) —
+  // jamais alimenté par le cache optimiste. Sert de garde pour la phase 2.
+  const _livresConfirmesServeur = new Set();
+
+  // PHASE 1 — COPIE : recopie les anciens p.livres[] vers cof_livres (1 doc/
+  // livre), idempotent (id du livre = id du doc), SANS JAMAIS vider p.livres.
+  // Puis tente la phase 2. Sûr entre clients (mêmes ids → convergent).
   function _migrerLivresVersDocs() {
-    if (_migrationLivresFaite || typeof DepotLivres === "undefined") return;
+    if (typeof DepotLivres === "undefined") return;
     const persos = chargerPersos();
     if (!Object.keys(persos).length) return; // persos pas encore chargés : on réessaiera
-    const dejaEnDocs = chargerLivres();
-    let migres = 0;
+    const enDocs = chargerLivres();
     Object.keys(persos).forEach((pid) => {
       const p = persos[pid];
       if (!Array.isArray(p.livres) || !p.livres.length) return;
       p.livres.forEach((l, i) => {
         const id = l.id || _genLivreId();
-        if (!dejaEnDocs[id]) {
-          DepotLivres.sauver(Object.assign({ ordre: i }, l, { id, persoId: pid }), id);
-          migres++;
-        }
+        if (!enDocs[id]) DepotLivres.sauver(Object.assign({ ordre: i }, l, { id, persoId: pid }), id);
       });
     });
-    if (migres > 0) {
-      // Vide p.livres des fiches APRÈS avoir écrit les docs (cache cof_livres
-      // déjà à jour de façon optimiste), pour ne rien perdre.
-      const persos2 = chargerPersos();
-      let touche = false;
-      Object.keys(persos2).forEach((pid) => { if (Array.isArray(persos2[pid].livres) && persos2[pid].livres.length) { persos2[pid].livres = []; touche = true; } });
-      if (touche) sauverPersos(persos2);
-      console.log(`Livret : ${migres} livre(s) migré(s) vers cof_livres.`);
-    }
-    _migrationLivresFaite = true;
+    _nettoyerFichesMigrees();
+  }
+
+  // PHASE 2 — NETTOYAGE : vide p.livres d'un perso UNIQUEMENT quand TOUS ses
+  // livres sont confirmés côté serveur (_livresConfirmesServeur). Tant que ce
+  // n'est pas le cas, p.livres reste comme filet de sécurité → même si la copie
+  // échoue ou que la connexion coupe, on ne perd rien. Rappelé à chaque snapshot
+  // cof_livres, donc la fiche rétrécit dès que le serveur a bien tout enregistré.
+  function _nettoyerFichesMigrees() {
+    const persos = chargerPersos();
+    let touche = false;
+    Object.keys(persos).forEach((pid) => {
+      const p = persos[pid];
+      if (!Array.isArray(p.livres) || !p.livres.length) return;
+      if (p.livres.every((l) => l.id && _livresConfirmesServeur.has(l.id))) { p.livres = []; touche = true; }
+    });
+    if (touche) sauverPersos(persos);
   }
 
   // Détecte une notation de dé (ex. "1d6", "2d4+2") dans le texte d'effet
@@ -10475,7 +10481,12 @@ const App = (() => {
     // Livres (cof_livres) en temps réel : un livre créé/partagé/modifié ailleurs
     // (autre joueur, autre appareil) rafraîchit l'étagère — mais on ne re-rend
     // PAS si un livre est ouvert en édition, pour ne pas écraser la saisie.
-    if (window.DepotLivres) window.DepotLivres.ecouter(() => {
+    if (window.DepotLivres) window.DepotLivres.ecouter((map) => {
+      // Ce callback ne se déclenche que sur des snapshots serveur confirmés
+      // (les échos "pending" sont ignorés par DepotDistant) → ces ids sont
+      // sûrs. On les note, puis on tente le nettoyage des fiches (phase 2).
+      Object.keys(map || {}).forEach((id) => _livresConfirmesServeur.add(id));
+      _nettoyerFichesMigrees();
       const pan = document.getElementById("panneau-livret");
       if (pan && pan.classList.contains("actif") && !livreOuvertId) _rendreZoneLivret();
     });
