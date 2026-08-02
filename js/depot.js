@@ -202,4 +202,10 @@ if (typeof window !== "undefined") {
   // joueurs" pour, p.ex., choisir avec qui partager un livre — indépendamment
   // des personnages créés.
   window.DepotJoueurs = new DepotDistant("cof_joueurs");
+  // Livres du Livret (cof_livres) : UN document par livre { id, persoId, titre,
+  // texte, image, categorie, partage, partageAvec }. Sorti de la fiche du perso
+  // (autrefois p.livres[]) pour que les images de livres ne saturent plus le
+  // document du personnage (limite Firestore 1 Mo/doc) : chaque livre a son
+  // propre budget de 1 Mo. Migration douce depuis p.livres, cf. app.js.
+  window.DepotLivres = new DepotDistant("cof_livres");
 }

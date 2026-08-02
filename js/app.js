@@ -3860,6 +3860,7 @@ const App = (() => {
     const sel = document.getElementById("select-livret-perso");
     const zone = document.getElementById("zone-livret");
     if (!sel || !zone) return;
+    _migrerLivresVersDocs(); // migration douce p.livres → cof_livres (une fois)
     const persos = chargerPersos();
     const ids = Object.keys(persos).filter((id) => estProprietaire(persos[id]));
     if (!ids.length) {
@@ -3917,10 +3918,21 @@ const App = (() => {
   function _livresPartagesAvecMoi(persos) {
     if (role === "mj") return [];
     const res = [];
+    const map = chargerLivres();
+    const persosCouverts = {}; // persoId déjà servi par cof_livres → pas de repli
+    Object.keys(map).forEach((lid) => {
+      const l = map[lid];
+      if (!l || !l.persoId) return;
+      const p = persos[l.persoId];
+      if (!p || estProprietaire(p)) return; // pas les miens
+      persosCouverts[l.persoId] = true;
+      if (_livrePartageAvecMoi(l)) res.push({ persoId: l.persoId, perso: p, livre: l });
+    });
+    // Repli : persos pas encore migrés (livres encore dans p.livres).
     Object.keys(persos).forEach((pid) => {
       const p = persos[pid];
-      if (estProprietaire(p)) return; // mes persos : déjà dans mon étagère
-      livresDe(p).forEach((l) => { if (_livrePartageAvecMoi(l)) res.push({ persoId: pid, perso: p, livre: l }); });
+      if (estProprietaire(p) || persosCouverts[pid]) return;
+      (Array.isArray(p.livres) ? p.livres : []).forEach((l) => { if (_livrePartageAvecMoi(l)) res.push({ persoId: pid, perso: p, livre: l }); });
     });
     return res;
   }
@@ -4709,11 +4721,19 @@ const App = (() => {
     }
   }
 
-  // Liste des livres d'un perso. Migre à la volée (sans écrire) l'ancien champ
-  // mono-texte `livret` de thomas en un premier livre "Mon histoire" ; l'écriture
-  // effective (et la suppression de `livret`) a lieu au premier _ecrireLivres.
+  // Map { livreId: livre } de la collection partagée cof_livres (1 doc/livre).
+  function chargerLivres() { return (typeof DepotLivres !== "undefined") ? DepotLivres.charger() : {}; }
+
+  // Liste des livres d'un perso, triés (ordre de création). Source principale :
+  // cof_livres (1 doc/livre, images hors de la fiche → plus de saturation du
+  // document perso). Replis, pour ne rien perdre avant/pendant la migration :
+  // ancien tableau p.livres, puis l'antique champ mono-texte p.livret.
   function livresDe(p) {
-    if (Array.isArray(p.livres)) return p.livres;
+    if (!p) return [];
+    const map = chargerLivres();
+    const docs = Object.keys(map).map((k) => map[k]).filter((l) => l && l.persoId === p.id);
+    if (docs.length) return docs.sort((a, b) => (a.ordre || 0) - (b.ordre || 0) || String(a.id).localeCompare(String(b.id)));
+    if (Array.isArray(p.livres) && p.livres.length) return p.livres;
     if (p.livret && p.livret.trim()) return [{ id: "lv-histoire", titre: "Mon histoire", texte: p.livret }];
     return [];
   }
@@ -4730,25 +4750,31 @@ const App = (() => {
     return [...new Set([...utilisees, ...base])];
   }
 
-  // Écrit le tableau de livres dans la fiche et absorbe l'ancien champ `livret`
-  // (migration). Réservé au propriétaire : jamais câblé côté MJ.
-  function _ecrireLivres(persoId, livres) {
+  // Récupère un livre (doc cof_livres) ; repli sur l'ancien p.livres si pas
+  // encore migré, en y injectant persoId.
+  function _livreCourant(persoId, livreId) {
+    const doc = (typeof DepotLivres !== "undefined") ? DepotLivres.charger(livreId) : null;
+    if (doc) return Object.assign({}, doc, { persoId });
+    const p = chargerPersos()[persoId];
+    const ancien = p && livresDe(p).find((x) => x.id === livreId);
+    return ancien ? Object.assign({ persoId }, ancien) : null;
+  }
+
+  // Si un livre traîne encore dans l'ancien tableau p.livres d'une fiche, l'en
+  // retire (la fiche rétrécit). Idempotent.
+  function _retirerLivreDeFiche(persoId, livreId) {
     const persos = chargerPersos();
     const p = persos[persoId];
-    if (!p) return;
-    p.livres = livres;
-    delete p.livret;
+    if (!p || !Array.isArray(p.livres) || !p.livres.some((x) => x.id === livreId)) return;
+    p.livres = p.livres.filter((x) => x.id !== livreId);
     sauverPersos(persos);
   }
 
   function creerLivre(persoId) {
-    const persos = chargerPersos();
-    const p = persos[persoId];
-    if (!p) return;
-    const livres = livresDe(p).slice();
-    const nouveau = { id: _genLivreId(), titre: "Nouveau livre", texte: "", partage: "prive", partageAvec: [] };
-    livres.push(nouveau);
-    _ecrireLivres(persoId, livres);
+    const p = chargerPersos()[persoId];
+    if (!p || typeof DepotLivres === "undefined") return;
+    const nouveau = { id: _genLivreId(), persoId, ordre: livresDe(p).length, titre: "Nouveau livre", texte: "", partage: "prive", partageAvec: [] };
+    DepotLivres.sauver(nouveau, nouveau.id);
     livreOuvertId = nouveau.id;
     livreOuvertPersoId = persoId;
     _rendreZoneLivret();
@@ -4757,38 +4783,63 @@ const App = (() => {
   // Enregistre le mode de partage d'un livre (prive/joueurs/table) et, pour
   // "joueurs", la liste des prénoms destinataires. Réservé au propriétaire.
   function sauverPartageLivre(persoId, livreId, partage, partageAvec) {
-    const persos = chargerPersos();
-    const p = persos[persoId];
-    if (!p) return;
-    const livres = livresDe(p).slice();
-    const l = livres.find((x) => x.id === livreId);
-    if (!l) return;
-    l.partage = partage;
-    l.partageAvec = partage === "joueurs" ? (partageAvec || []) : [];
-    _ecrireLivres(persoId, livres);
+    const l = _livreCourant(persoId, livreId);
+    if (!l || typeof DepotLivres === "undefined") return;
+    const maj = Object.assign({}, l, { persoId, partage, partageAvec: partage === "joueurs" ? (partageAvec || []) : [] });
+    DepotLivres.sauver(maj, livreId);
+    _retirerLivreDeFiche(persoId, livreId);
   }
 
   function sauverChampLivre(persoId, livreId, champ, val) {
-    const persos = chargerPersos();
-    const p = persos[persoId];
-    if (!p) return;
-    const livres = livresDe(p).slice();
-    const l = livres.find((x) => x.id === livreId);
-    if (!l) return;
-    l[champ] = val;
-    _ecrireLivres(persoId, livres);
+    const l = _livreCourant(persoId, livreId);
+    if (!l || typeof DepotLivres === "undefined") return;
+    const maj = Object.assign({}, l, { persoId, [champ]: val });
+    DepotLivres.sauver(maj, livreId, () => toast("⚠️ Enregistrement refusé (image trop lourde ?). Essaie une image plus petite."));
+    _retirerLivreDeFiche(persoId, livreId);
   }
 
   function supprimerLivre(persoId, livreId) {
-    const persos = chargerPersos();
-    const p = persos[persoId];
-    if (!p) return;
-    const livres = livresDe(p);
-    const l = livres.find((x) => x.id === livreId);
+    const l = _livreCourant(persoId, livreId);
     if (!confirm(`Supprimer le livre « ${l ? (l.titre || "Sans titre") : ""} » ?`)) return;
-    _ecrireLivres(persoId, livres.filter((x) => x.id !== livreId));
+    if (typeof DepotLivres !== "undefined") DepotLivres.supprimer(livreId);
+    _retirerLivreDeFiche(persoId, livreId);
     livreOuvertId = null;
     _rendreZoneLivret();
+  }
+
+  // Migration douce : déplace les anciens livres (p.livres[] dans la fiche) vers
+  // la collection cof_livres (1 doc/livre), puis vide p.livres (la fiche
+  // rétrécit → plus de saturation du document perso par les images). Idempotent
+  // (l'id du livre = l'id du doc) et sûr entre clients (mêmes ids → écritures
+  // convergentes). Ne tourne qu'une fois par session, quand les persos sont là.
+  let _migrationLivresFaite = false;
+  function _migrerLivresVersDocs() {
+    if (_migrationLivresFaite || typeof DepotLivres === "undefined") return;
+    const persos = chargerPersos();
+    if (!Object.keys(persos).length) return; // persos pas encore chargés : on réessaiera
+    const dejaEnDocs = chargerLivres();
+    let migres = 0;
+    Object.keys(persos).forEach((pid) => {
+      const p = persos[pid];
+      if (!Array.isArray(p.livres) || !p.livres.length) return;
+      p.livres.forEach((l, i) => {
+        const id = l.id || _genLivreId();
+        if (!dejaEnDocs[id]) {
+          DepotLivres.sauver(Object.assign({ ordre: i }, l, { id, persoId: pid }), id);
+          migres++;
+        }
+      });
+    });
+    if (migres > 0) {
+      // Vide p.livres des fiches APRÈS avoir écrit les docs (cache cof_livres
+      // déjà à jour de façon optimiste), pour ne rien perdre.
+      const persos2 = chargerPersos();
+      let touche = false;
+      Object.keys(persos2).forEach((pid) => { if (Array.isArray(persos2[pid].livres) && persos2[pid].livres.length) { persos2[pid].livres = []; touche = true; } });
+      if (touche) sauverPersos(persos2);
+      console.log(`Livret : ${migres} livre(s) migré(s) vers cof_livres.`);
+    }
+    _migrationLivresFaite = true;
   }
 
   // Détecte une notation de dé (ex. "1d6", "2d4+2") dans le texte d'effet
@@ -10420,6 +10471,13 @@ const App = (() => {
       // attendre que le joueur change d'onglet et y revienne.
       const panneauAtelier = document.getElementById("panneau-atelier");
       if (panneauAtelier && panneauAtelier.classList.contains("actif")) rendrePanneauAtelier();
+    });
+    // Livres (cof_livres) en temps réel : un livre créé/partagé/modifié ailleurs
+    // (autre joueur, autre appareil) rafraîchit l'étagère — mais on ne re-rend
+    // PAS si un livre est ouvert en édition, pour ne pas écraser la saisie.
+    if (window.DepotLivres) window.DepotLivres.ecouter(() => {
+      const pan = document.getElementById("panneau-livret");
+      if (pan && pan.classList.contains("actif") && !livreOuvertId) _rendreZoneLivret();
     });
 
     // Rattrapage objets de Grimoire manquants (cf. rattraperObjetsGrimoireManquants),
