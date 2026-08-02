@@ -1203,8 +1203,31 @@ class Personnage extends Entite {
     const va = armure ? (armure.valeurArmure || 0) : 0;
     return (va >= 5 && (this.dons || []).includes("maitre_armures_lourdes")) ? 3 : 0;
   }
+  // Somme des formules de scaling des objets équipés visant `cible` (et, pour
+  // carac/competence, la sous-clé `cle`) — cf. js/forge.js (champ `formules`)
+  // et js/formule.js (évaluateur @variables). Un objet du catalogue classique
+  // n'a pas de `formules` → contribue 0, aucun changement pour l'existant.
+  bonusFormuleEquipement(cible, cle) {
+    if (typeof Formule === "undefined") return 0;
+    let t = 0;
+    this._itemsEquipesUniques().forEach((it) => {
+      (it.formules || []).forEach((f) => {
+        if (!f || f.cible !== cible) return;
+        if (cle != null && (f.competence || f.carac) !== cle) return;
+        t += Formule.evaluer(f.expr, { perso: this }) || 0;
+      });
+    });
+    return t;
+  }
+  // Bonus de dégâts dérivé d'une formule d'objet (ex. Épée « +dmg par or »),
+  // ajouté à la formule de dégâts côté app.js (même canal que les autres
+  // bonusDegats*). Renvoie un entier (arrondi au plus proche).
+  bonusDegatsFormuleEquipement() {
+    return Math.round(this.bonusFormuleEquipement("degats"));
+  }
   bonusDefEquipement() {
-    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDEF || 0), 0);
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDEF || 0), 0)
+      + this.bonusFormuleEquipement("DEF");
   }
   // Bonus de caractéristique porté par un accessoire équipé (ex. Anneau de
   // force : { bonusCarac: { FOR: 1 } }, cf. data/loot.js/json) — lu
@@ -1216,18 +1239,21 @@ class Personnage extends Entite {
   // affiché en badge sur la fiche (badgeEffetItem côté app.js) mais non
   // chiffré — audit du 2026-07-18, à étendre au cas par cas.
   bonusCaracEquipement(code) {
-    return this._itemsEquipesUniques().reduce((t, it) => t + ((it.bonusCarac && it.bonusCarac[code]) || 0), 0);
+    return this._itemsEquipesUniques().reduce((t, it) => t + ((it.bonusCarac && it.bonusCarac[code]) || 0), 0)
+      + this.bonusFormuleEquipement("carac", code);
   }
   // Même principe que bonusCaracEquipement, pour les accessoires qui donnent
   // un bonus fixe à une compétence nommée (ex. Cape de camouflage :
   // { bonusCompetences: { "Discrétion": 1 } }) — lu par bonusCompetence().
   bonusCompetenceEquipement(nom) {
-    return this._itemsEquipesUniques().reduce((t, it) => t + ((it.bonusCompetences && it.bonusCompetences[nom]) || 0), 0);
+    return this._itemsEquipesUniques().reduce((t, it) => t + ((it.bonusCompetences && it.bonusCompetences[nom]) || 0), 0)
+      + this.bonusFormuleEquipement("competence", nom);
   }
   // Bonus d'initiative porté par un accessoire équipé (ex. Bottes légères :
   // { bonusInitiative: 1 }) — lu par calculerInitiative().
   bonusInitiativeEquipement() {
-    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusInitiative || 0), 0);
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusInitiative || 0), 0)
+      + this.bonusFormuleEquipement("initiative");
   }
 
   // Résout l'entrée CANONIQUE (avec caracDelta/competenceDelta/etc.) d'une

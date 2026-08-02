@@ -977,6 +977,7 @@ const App = (() => {
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
     if (dmgContact && perso.bonusDegatsEpeeCupidite()) dmgContact += "+" + perso.bonusDegatsEpeeCupidite();
+    if (dmgContact && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
@@ -991,6 +992,7 @@ const App = (() => {
     if (dmgContact && perso.bonusTemporaire("degats")) dmgContact += "+" + perso.bonusTemporaire("degats");
     let dmgDistance = formuleDegats(armeDistance);
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
+    if (dmgDistance && perso.bonusDegatsFormuleEquipement()) dmgDistance += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
     // Guerrier — Voie du soldat, rang 1 "Posture de combat" : transfert
     // temporaire vers "DM" (cf. Capacites.resoudreEffet, choix pairé) —
@@ -1421,6 +1423,7 @@ const App = (() => {
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
     if (dmgContact && perso.bonusDegatsEpeeCupidite()) dmgContact += "+" + perso.bonusDegatsEpeeCupidite();
+    if (dmgContact && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
@@ -1435,6 +1438,7 @@ const App = (() => {
     if (dmgContact && perso.bonusTemporaire("degats")) dmgContact += "+" + perso.bonusTemporaire("degats");
     let dmgDistance = armeDistance ? formuleDegats(armeDistance) : null;
     if (dmgDistance && actifTirPrecision) dmgDistance += "+4";
+    if (dmgDistance && perso.bonusDegatsFormuleEquipement()) dmgDistance += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
     const dmgMagique = attMagique !== null ? perso.degatsMagiques() : null;
     // Guerrier — Voie du soldat, rang 1 "Posture de combat" : cf. le même
     // ajout côté rendreFicheSidebarBattlemap plus haut dans ce fichier.
@@ -4956,6 +4960,7 @@ const App = (() => {
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
     if (dmgContact && perso.bonusDegatsEpeeCupidite()) dmgContact += "+" + perso.bonusDegatsEpeeCupidite();
+    if (dmgContact && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.

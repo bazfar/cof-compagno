@@ -78,6 +78,15 @@ const Forge = (() => {
     const am = n("forge-atkmag"); if (am) item.bonusAttaqueMagique = am;
     const ad = n("forge-atkdist"); if (ad) item.bonusAttaqueDistance = ad;
     const dm = n("forge-degmag"); if (dm) item.bonusDegatsMagiques = dm;
+    // Formule de scaling (× variables du jeu) — appliquée par le moteur via
+    // bonusFormuleEquipement (cf. personnage.js) / le hook dégâts (app.js).
+    const fcible = v("forge-f-cible"); const fexpr = v("forge-f-expr");
+    if (fcible && fexpr) {
+      const f = { cible: fcible, expr: fexpr };
+      if (fcible === "carac") f.carac = v("forge-f-carac");
+      if (fcible === "competence") f.competence = v("forge-f-comp");
+      item.formules = [f];
+    }
     // Champs selon le type
     if (type === "accessoire") item.slot = v("forge-slot");
     const def = n("forge-def"); if (def) item.bonusDEF = def;
@@ -129,6 +138,7 @@ const Forge = (() => {
     if (it.bonusDegatsMagiques) bits.push(`${it.bonusDegatsMagiques > 0 ? "+" : ""}${it.bonusDegatsMagiques} dég. mag.`);
     if (it.valeurArmure) bits.push(`réduction ${it.valeurArmure}` + (it.malusDEX ? `, malus DEX -${it.malusDEX}` : ""));
     if (it.type === "arme") bits.push(`${it.degats} · ${it.portee}` + (it.deuxMains ? " · 2 mains" : ""));
+    (it.formules || []).forEach((f) => bits.push(`⚙ ${f.cible}${f.carac ? " " + f.carac : ""}${f.competence ? " " + f.competence : ""} = ${echapper(f.expr)}`));
     if (it.effet) bits.push(echapper(it.effet));
     return bits.join(" · ");
   }
@@ -184,6 +194,24 @@ const Forge = (() => {
           <label>Dégâts magiques<input type="number" id="forge-degmag" value="0" step="1" /></label>
         </div>
       </div>
+      <div class="forge-caracs-bloc">
+        <span class="forge-sous-titre">Bonus dynamique — formule × variables du jeu</span>
+        <div class="forge-grille">
+          <label>S'applique à<select id="forge-f-cible">
+            <option value="">— aucun —</option>
+            <option value="degats">Dégâts</option>
+            <option value="DEF">DEF</option>
+            <option value="initiative">Initiative</option>
+            <option value="carac">Caractéristique…</option>
+            <option value="competence">Compétence…</option>
+          </select></label>
+          <label class="f-fcarac">Caractéristique<select id="forge-f-carac">${CARACS.map((c) => `<option value="${c}">${c}</option>`).join("")}</select></label>
+          <label class="f-fcomp">Compétence<select id="forge-f-comp">${COMPETENCES.map((c) => `<option value="${c}">${c}</option>`).join("")}</select></label>
+        </div>
+        <label class="forge-full">Formule<input type="text" id="forge-f-expr" placeholder="ex. floor(@player-coin / 100)" /></label>
+        <div class="forge-vars">${(typeof Formule !== "undefined" ? Formule.variablesDisponibles() : []).map((vv) => `<button type="button" class="btn petit secondaire btn-forge-var" data-var="${vv.cle}" title="@${vv.cle}">${echapper(vv.label)}</button>`).join("")}</div>
+        <div class="forge-f-apercu" id="forge-f-apercu">Aperçu : —</div>
+      </div>
       <label class="forge-full">Description<textarea id="forge-desc" rows="2" placeholder="Description de l'objet…"></textarea></label>
       <label class="forge-full">Effet narratif (optionnel)<input type="text" id="forge-effet" placeholder="ex. Résistance au feu (géré à la table)" /></label>
       <div class="barre-actions" style="margin-top:10px;">
@@ -234,6 +262,35 @@ const Forge = (() => {
     const btn = $("btn-forger");
     if (btn) btn.onclick = forger;
     zone.querySelectorAll(".btn-forge-suppr").forEach((b) => { b.onclick = () => supprimer(b.dataset.id); });
+
+    // Formule dynamique : visibilité carac/compétence, aperçu, insertion de @variables
+    const majF = () => {
+      const cible = v("forge-f-cible");
+      zone.querySelectorAll(".f-fcarac").forEach((e) => e.style.display = cible === "carac" ? "" : "none");
+      zone.querySelectorAll(".f-fcomp").forEach((e) => e.style.display = cible === "competence" ? "" : "none");
+    };
+    const apercu = () => {
+      const ap = $("forge-f-apercu"); if (!ap) return;
+      const expr = v("forge-f-expr");
+      if (!expr) { ap.textContent = "Aperçu : —"; return; }
+      const r = (typeof Formule !== "undefined") ? Formule.apercuDemo(expr) : 0;
+      ap.textContent = `Aperçu (or=350, niv=3, PV=18/30, CHA=16) → ${r}`;
+    };
+    majF();
+    const selCible = $("forge-f-cible"); if (selCible) selCible.onchange = majF;
+    const inExpr = $("forge-f-expr"); if (inExpr) inExpr.oninput = apercu;
+    zone.querySelectorAll(".btn-forge-var").forEach((b) => {
+      b.onclick = () => {
+        const inp = $("forge-f-expr"); if (!inp) return;
+        const ins = "@" + b.dataset.var;
+        const s = inp.selectionStart != null ? inp.selectionStart : inp.value.length;
+        const e = inp.selectionEnd != null ? inp.selectionEnd : inp.value.length;
+        inp.value = inp.value.slice(0, s) + ins + inp.value.slice(e);
+        inp.focus();
+        const pos = s + ins.length; inp.setSelectionRange(pos, pos);
+        apercu();
+      };
+    });
   }
 
   // Catalogue custom (lu par marche.js via Forge.catalogueCustom()).

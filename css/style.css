@@ -1984,6 +1984,9 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .forge-item-nom { font-weight: 700; color: var(--encre); }
 .forge-item-badge { font-size: 0.72rem; color: #6a6278; }
 .forge-item-resume { font-size: 0.8rem; color: #4a4458; margin-top: 4px; line-height: 1.4; }
+.forge-vars { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.forge-vars .btn { font-size: 0.72rem; padding: 3px 8px; }
+.forge-f-apercu { margin-top: 8px; font-size: 0.82rem; font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--violet); }
 .loot-badge-rarete-peu_commun { background: #dff0d8; color: #2d6a1e; }
 .loot-badge-rarete-rare       { background: #e0d8f5; color: #4a2f8a; }
 .loot-badge-rarete-legendaire { background: #fbe6c2; color: #8a5a00; }
