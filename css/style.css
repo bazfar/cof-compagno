@@ -1991,6 +1991,10 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .forge-icone-apercu img { width: 48px; height: 48px; object-fit: contain; border: 1px solid var(--parchemin-fonce); border-radius: 6px; background: #fffdf7; padding: 2px; }
 .forge-item-icone { width: 22px; height: 22px; object-fit: contain; vertical-align: middle; margin-right: 6px; }
 .loot-item-icone { width: 26px; height: 26px; object-fit: contain; vertical-align: middle; margin-right: 6px; }
+.forge-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.forge-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; background: var(--surface-2, #f9f1dd); border: 1px solid var(--parchemin-fonce); border-radius: 20px; padding: 3px 6px 3px 10px; color: var(--encre); }
+.forge-chip-x { border: none; background: #d9c9a3; color: #4a4458; border-radius: 50%; width: 18px; height: 18px; line-height: 1; cursor: pointer; font-weight: 700; }
+.forge-chip-x:hover { background: var(--danger, #b5443a); color: #fff; }
 .loot-badge-rarete-peu_commun { background: #dff0d8; color: #2d6a1e; }
 .loot-badge-rarete-rare       { background: #e0d8f5; color: #4a2f8a; }
 .loot-badge-rarete-legendaire { background: #fbe6c2; color: #8a5a00; }
