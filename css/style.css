@@ -645,7 +645,21 @@ textarea { resize: vertical; min-height: 70px; }
 
 /* ---------- Dock de combat (barre d'action sous la battlemap) ---------- */
 #battlemap-dock-combat:empty { display: none; }
-#battlemap-dock-combat { margin-top: 10px; }
+/* position:sticky (pas juste margin-top) : .battlemap-layout est un flex row
+   dont la hauteur = celle du plus grand enfant — les sidebars (historique/
+   table de combat), en position:sticky avec max-height:calc(100vh-24px),
+   étirent ce flex row à quasi toute la hauteur de viewport MÊME quand la
+   carte elle-même (souvent bien plus courte) ne le justifie pas. Le dock,
+   placé après ce flex row en flux normal, se retrouvait donc collé tout en
+   bas de cette grande hauteur — loin sous la carte visible à l'écran (bug
+   rencontré). En sticky+bottom, il reste ancré près du bas du VIEWPORT
+   (donc proche de la carte visible) au lieu de suivre la hauteur du flux. */
+#battlemap-dock-combat {
+  position: sticky;
+  bottom: 10px;
+  margin-top: 10px;
+  z-index: 40;
+}
 .dock-combat {
   display: flex;
   flex-wrap: wrap;
@@ -653,6 +667,14 @@ textarea { resize: vertical; min-height: 70px; }
   width: fit-content;
   max-width: min(100%, 880px);
   margin: 0 auto;
+  /* margin:0 auto centre sur la largeur du conteneur ENTIER (sidebar gauche
+     300px + carte + sidebar historique 260px), pas sur la carte elle-même —
+     décalage vers la droite de (300-260)/2 = 20px pour retomber sur le
+     centre réel de la carte. translateX (pas une asymétrie de margin) pour
+     ne pas perturber le calcul d'auto-centrage. Annulé en colonne (<900px,
+     cf. media query .battlemap-layout) où les sidebars passent en pleine
+     largeur au-dessus/dessous : plus d'asymétrie gauche/droite à corriger. */
+  transform: translateX(20px);
   background: var(--parchemin);
   border: 1px solid var(--parchemin-fonce);
   border-radius: var(--radius);
@@ -1205,6 +1227,7 @@ main:has(#panneau-lore.actif) { max-width: 1400px; }
 @media (max-width: 900px) {
   .battlemap-layout { flex-direction: column; }
   .battlemap-fiche-sidebar { width: 100%; position: static; max-height: none; }
+  .dock-combat { transform: none; }
 }
 .carte-scene {
   position: relative; width: 100%; min-height: 220px;
