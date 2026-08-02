@@ -340,7 +340,7 @@ const Marche = (() => {
     const stats = _statsItem(item);
     return `<div class="loot-item">
       <div class="loot-item-header">
-        <span class="loot-item-nom">${echapper(item.nom)}</span>
+        <span class="loot-item-nom">${item.icone ? `<img class="loot-item-icone" src="${item.icone}" alt="" />` : ""}${echapper(item.nom)}</span>
         <span class="loot-badge loot-badge-${item.type}">${item.type}</span>
         ${item.enchantement ? `<span class="loot-badge loot-badge-magic">+${item.enchantement}</span>` : ""}
         ${_badgeRarete(item, slot.rareteId)}
@@ -362,7 +362,7 @@ const Marche = (() => {
     const afficheRarete = _peutAvoirRarete(item);
     return `<div class="loot-item">
       <div class="loot-item-header">
-        <span class="loot-item-nom">${echapper(item.nom)}</span>
+        <span class="loot-item-nom">${item.icone ? `<img class="loot-item-icone" src="${item.icone}" alt="" />` : ""}${echapper(item.nom)}</span>
         <span class="loot-badge loot-badge-${item.type}">${item.type}</span>
         ${item.enchantement ? `<span class="loot-badge loot-badge-magic">+${item.enchantement}</span>` : ""}
         ${_badgeRarete(item, slot.rareteId)}

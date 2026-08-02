@@ -38,6 +38,33 @@ const Forge = (() => {
   }
   function lire() { return SyncStore.get(KEY) || []; }
   function ecrire(arr) { SyncStore.set(KEY, arr); }
+
+  // Icône en cours de saisie (data URI), figée dans l'objet au moment de forger.
+  let _iconeEnCours = null;
+
+  // Redimensionne l'image uploadée en petite icône (<= 80px, PNG pour garder la
+  // transparence) — le catalogue custom est UN document Firestore (limite 1 Mo),
+  // donc on garde les icônes minuscules (~5-15 Ko).
+  function _lireIcone(file, cb) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 80;
+        let w = img.width, h = img.height;
+        if (w >= h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+        else if (h > w && h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+        const cv = document.createElement("canvas");
+        cv.width = w; cv.height = h;
+        cv.getContext("2d").drawImage(img, 0, 0, w, h);
+        try { cb(cv.toDataURL("image/png")); } catch (err) { toast("Image illisible."); }
+      };
+      img.onerror = () => toast("Image illisible.");
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
   function estMj() { return (typeof App !== "undefined" && App.obtenirRole && App.obtenirRole() === "mj"); }
 
   const $ = (id) => document.getElementById(id);
@@ -61,6 +88,7 @@ const Forge = (() => {
       porte: false,
     };
     const eff = v("forge-effet"); if (eff) item.effet = eff;
+    if (_iconeEnCours) item.icone = _iconeEnCours;
     const rar = v("forge-rarete");
     if (rar && rar !== "commun") {
       item.rarete = rar;
@@ -113,6 +141,7 @@ const Forge = (() => {
     const cat = lire();
     cat.push(item);
     ecrire(cat);
+    _iconeEnCours = null; // réinitialise pour le prochain objet
     toast("⚒️ « " + item.nom + " » forgé !");
     // Rafraîchit tout le marché (liste des forgés + dropdown « Mettre en vente »).
     if (typeof Marche !== "undefined") Marche.rendrePanneauMarche(); else rendre();
@@ -212,6 +241,10 @@ const Forge = (() => {
         <div class="forge-vars">${(typeof Formule !== "undefined" ? Formule.variablesDisponibles() : []).map((vv) => `<button type="button" class="btn petit secondaire btn-forge-var" data-var="${vv.cle}" title="@${vv.cle}">${echapper(vv.label)}</button>`).join("")}</div>
         <div class="forge-f-apercu" id="forge-f-apercu">Aperçu : —</div>
       </div>
+      <label class="forge-full">Icône (image, petite)
+        <input type="file" accept="image/*" id="forge-icone-file" />
+      </label>
+      <div class="forge-icone-apercu" id="forge-icone-apercu"></div>
       <label class="forge-full">Description<textarea id="forge-desc" rows="2" placeholder="Description de l'objet…"></textarea></label>
       <label class="forge-full">Effet narratif (optionnel)<input type="text" id="forge-effet" placeholder="ex. Résistance au feu (géré à la table)" /></label>
       <div class="barre-actions" style="margin-top:10px;">
@@ -225,7 +258,7 @@ const Forge = (() => {
     if (!cat.length) return `<div class="carte forge-bloc"><h3 style="margin:0 0 8px;">📦 Objets forgés</h3><p class="vide">Aucun objet forgé. Crée-en un ci-dessus — il apparaîtra ensuite dans « ➕ Mettre en vente ».</p></div>`;
     const items = cat.map((it) => `<div class="forge-item" data-id="${it.id}">
       <div class="forge-item-tete">
-        <span class="forge-item-nom">${echapper(it.nom)}</span>
+        <span class="forge-item-nom">${it.icone ? `<img class="forge-item-icone" src="${it.icone}" alt="" />` : ""}${echapper(it.nom)}</span>
         <span class="forge-item-badge">${it.type}${it.rareteNom ? " · " + echapper(it.rareteNom) : ""} · ${it.prixPo} po</span>
       </div>
       ${_resume(it) ? `<div class="forge-item-resume">${_resume(it)}</div>` : ""}
@@ -262,6 +295,19 @@ const Forge = (() => {
     const btn = $("btn-forger");
     if (btn) btn.onclick = forger;
     zone.querySelectorAll(".btn-forge-suppr").forEach((b) => { b.onclick = () => supprimer(b.dataset.id); });
+
+    // Icône : upload + aperçu + retrait
+    const _majApercuIcone = () => {
+      const ap = $("forge-icone-apercu"); if (!ap) return;
+      ap.innerHTML = _iconeEnCours
+        ? `<img src="${_iconeEnCours}" alt="icône" /> <button type="button" class="btn petit secondaire" id="btn-forge-icone-suppr">Retirer l'icône</button>`
+        : "";
+      const sup = $("btn-forge-icone-suppr");
+      if (sup) sup.onclick = () => { _iconeEnCours = null; _majApercuIcone(); };
+    };
+    _majApercuIcone();
+    const fileIcone = $("forge-icone-file");
+    if (fileIcone) fileIcone.onchange = (e) => { _lireIcone(e.target.files[0], (dataUrl) => { _iconeEnCours = dataUrl; _majApercuIcone(); }); };
 
     // Formule dynamique : visibilité carac/compétence, aperçu, insertion de @variables
     const majF = () => {
