@@ -45,6 +45,8 @@ const Forge = (() => {
   // compétence et PLUSIEURS formules) — figées dans l'objet au moment de forger.
   let _competencesEnCours = []; // [{ competence, valeur }]
   let _formulesEnCours = [];    // [{ cible, expr, carac?, competence? }]
+  let _editionId = null;        // id de l'objet en cours d'édition (sinon création)
+  let _editionData = null;      // données de l'objet en cours d'édition (pour remplir le form)
 
   // Redimensionne l'image uploadée en petite icône (<= 80px, PNG pour garder la
   // transparence) — le catalogue custom est UN document Firestore (limite 1 Mo),
@@ -143,11 +145,17 @@ const Forge = (() => {
     const item = _construireItem();
     if (!item.nom) { toast("Donne un nom à l'objet."); return; }
     if (!item.prixPo) { toast("Indique un prix (po)."); return; }
-    const cat = lire();
-    cat.push(item);
+    let cat = lire();
+    if (_editionId) {
+      item.id = _editionId;                              // conserve l'id (stock/refs restent valides)
+      cat = cat.map((x) => (x.id === _editionId ? item : x));
+    } else {
+      cat.push(item);
+    }
     ecrire(cat);
-    _iconeEnCours = null; _competencesEnCours = []; _formulesEnCours = []; // reset pour le prochain objet
-    toast("⚒️ « " + item.nom + " » forgé !");
+    const enEdition = !!_editionId;
+    _iconeEnCours = null; _competencesEnCours = []; _formulesEnCours = []; _editionId = null; _editionData = null; // reset
+    toast(enEdition ? "💾 « " + item.nom + " » mis à jour." : "⚒️ « " + item.nom + " » forgé !");
     // Rafraîchit tout le marché (liste des forgés + dropdown « Mettre en vente »).
     if (typeof Marche !== "undefined") Marche.rendrePanneauMarche(); else rendre();
   }
@@ -187,7 +195,7 @@ const Forge = (() => {
 
   function _formulaireHtml() {
     return `<div class="carte forge-bloc">
-      <h3 style="margin:0 0 4px;">⚒️ Forge du MJ — créer un objet</h3>
+      <h3 style="margin:0 0 4px;">⚒️ Forge du MJ — ${_editionId ? "modifier « " + echapper((_editionData && _editionData.nom) || "") + " »" : "créer un objet"}</h3>
       <p class="forge-aide">Les bonus <b>chiffrés</b> (caracs, DEF, réduction) s'appliquent automatiquement une fois l'objet équipé. Le champ « effet » reste narratif (à appliquer à la table).</p>
       <div class="forge-grille">
         <label>Nom<input type="text" id="forge-nom" maxlength="60" placeholder="Anneau du Loup" /></label>
@@ -257,7 +265,8 @@ const Forge = (() => {
       <label class="forge-full">Description<textarea id="forge-desc" rows="2" placeholder="Description de l'objet…"></textarea></label>
       <label class="forge-full">Effet narratif (optionnel)<input type="text" id="forge-effet" placeholder="ex. Résistance au feu (géré à la table)" /></label>
       <div class="barre-actions" style="margin-top:10px;">
-        <button class="btn or" id="btn-forger">⚒️ Forger l'objet</button>
+        <button class="btn or" id="btn-forger">${_editionId ? "💾 Mettre à jour" : "⚒️ Forger l'objet"}</button>
+        ${_editionId ? `<button class="btn secondaire" id="btn-forge-annuler">Annuler l'édition</button>` : ""}
       </div>
     </div>`;
   }
@@ -265,16 +274,23 @@ const Forge = (() => {
   function _listeHtml() {
     const cat = lire();
     if (!cat.length) return `<div class="carte forge-bloc"><h3 style="margin:0 0 8px;">📦 Objets forgés</h3><p class="vide">Aucun objet forgé. Crée-en un ci-dessus — il apparaîtra ensuite dans « ➕ Mettre en vente ».</p></div>`;
-    const items = cat.map((it) => `<div class="forge-item" data-id="${it.id}">
+    const enVenteDe = (id) => (typeof Marche !== "undefined" && Marche.estEnVente) ? Marche.estEnVente(id) : 0;
+    const items = cat.map((it) => {
+      const nb = enVenteDe(it.id);
+      return `<div class="forge-item" data-id="${it.id}">
       <div class="forge-item-tete">
         <span class="forge-item-nom">${it.icone ? `<img class="forge-item-icone" src="${it.icone}" alt="" />` : ""}${echapper(it.nom)}</span>
-        <span class="forge-item-badge">${it.type}${it.rareteNom ? " · " + echapper(it.rareteNom) : ""} · ${it.prixPo} po</span>
+        <span class="forge-item-badge">${it.type}${it.rareteNom ? " · " + echapper(it.rareteNom) : ""} · ${it.prixPo} po${nb ? ` · <span class="forge-envente">🏪 en vente${nb > 1 ? " ×" + nb : ""}</span>` : ""}</span>
       </div>
       ${_resume(it) ? `<div class="forge-item-resume">${_resume(it)}</div>` : ""}
       <div class="barre-actions" style="margin-top:6px;">
+        <button class="btn petit secondaire btn-forge-editer" data-id="${it.id}">✏️ Éditer</button>
+        <button class="btn petit secondaire btn-forge-vendre" data-id="${it.id}">🏪 Mettre en vente</button>
+        ${nb ? `<button class="btn petit secondaire btn-forge-retirer" data-id="${it.id}">🚫 Retirer du marché</button>` : ""}
         <button class="btn petit danger btn-forge-suppr" data-id="${it.id}">🗑 Supprimer</button>
       </div>
-    </div>`).join("");
+    </div>`;
+    }).join("");
     return `<div class="carte forge-bloc">
       <h3 style="margin:0 0 8px;">📦 Objets forgés (${cat.length})</h3>
       <p class="forge-aide">Pour les vendre : choisis un marchand puis l'objet dans « ➕ Mettre en vente » plus haut.</p>
@@ -327,6 +343,45 @@ const Forge = (() => {
     _rendreFormulesListe();
   }
 
+  // ── Édition d'un objet existant ──
+  function _editer(id) {
+    const it = lire().find((x) => x.id === id);
+    if (!it) return;
+    _editionId = id;
+    _editionData = it;
+    _iconeEnCours = it.icone || null;
+    _competencesEnCours = Object.keys(it.bonusCompetences || {}).map((competence) => ({ competence, valeur: it.bonusCompetences[competence] }));
+    _formulesEnCours = (it.formules || []).map((f) => Object.assign({}, f));
+    if (typeof Marche !== "undefined") Marche.rendrePanneauMarche(); else rendre();
+    const zone = $("zone-forge"); if (zone && zone.scrollIntoView) zone.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function _annulerEdition() {
+    _editionId = null; _editionData = null; _iconeEnCours = null; _competencesEnCours = []; _formulesEnCours = [];
+    if (typeof Marche !== "undefined") Marche.rendrePanneauMarche(); else rendre();
+  }
+  // Remplit les champs scalaires du formulaire depuis un objet (les listes
+  // compétences/formules/icône sont déjà restaurées via les variables d'état).
+  function _remplirChamps(it) {
+    const S = (id, val) => { const e = $(id); if (e && val != null) e.value = val; };
+    S("forge-nom", it.nom);
+    const st = $("forge-type"); if (st) st.value = it.type || "accessoire";
+    S("forge-slot", it.slot);
+    S("forge-prix", it.prixPo);
+    S("forge-rarete", it.rarete || "commun");
+    if (it.bonusCarac) CARACS.forEach((c) => S("forge-carac-" + c, it.bonusCarac[c] || 0));
+    S("forge-def", it.bonusDEF || 0);
+    S("forge-armure", it.valeurArmure || 0);
+    S("forge-malusdex", it.malusDEX || 0);
+    if (it.type === "arme") { S("forge-degats", it.degats || ""); S("forge-portee", it.portee || ""); const dm = $("forge-deuxmains"); if (dm) dm.checked = !!it.deuxMains; }
+    S("forge-desc", it.description || "");
+    S("forge-effet", it.effet || "");
+    S("forge-init", it.bonusInitiative || 0);
+    S("forge-atkmag", it.bonusAttaqueMagique || 0);
+    S("forge-atkdist", it.bonusAttaqueDistance || 0);
+    S("forge-degmag", it.bonusDegatsMagiques || 0);
+    _majVisibilite();
+  }
+
   // Point d'entrée : rend le formulaire + la liste dans #zone-forge (MJ only).
   function rendre() {
     const zone = $("zone-forge");
@@ -339,6 +394,10 @@ const Forge = (() => {
     const btn = $("btn-forger");
     if (btn) btn.onclick = forger;
     zone.querySelectorAll(".btn-forge-suppr").forEach((b) => { b.onclick = () => supprimer(b.dataset.id); });
+    zone.querySelectorAll(".btn-forge-editer").forEach((b) => { b.onclick = () => _editer(b.dataset.id); });
+    zone.querySelectorAll(".btn-forge-vendre").forEach((b) => { b.onclick = () => { if (typeof Marche !== "undefined") Marche.mettreEnVente(b.dataset.id); }; });
+    zone.querySelectorAll(".btn-forge-retirer").forEach((b) => { b.onclick = () => { if (typeof Marche !== "undefined") Marche.retirerDuMarche(b.dataset.id); }; });
+    const bAnnuler = $("btn-forge-annuler"); if (bAnnuler) bAnnuler.onclick = _annulerEdition;
 
     // Icône : upload + aperçu + retrait
     const _majApercuIcone = () => {
@@ -387,6 +446,8 @@ const Forge = (() => {
         apercu();
       };
     });
+
+    if (_editionData) _remplirChamps(_editionData); // pré-remplit le form en édition
   }
 
   // Catalogue custom (lu par marche.js via Forge.catalogueCustom()).

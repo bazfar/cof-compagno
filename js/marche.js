@@ -606,5 +606,36 @@ const Marche = (() => {
     if (typeof Forge !== "undefined") Forge.rendre(); // Forge du MJ (guarde le rôle en interne)
   }
 
-  return { rendrePanneauMarche, acheterObjetMarche, demanderAchatMarche, calculerPrix };
+  // ── API pour la Forge (js/forge.js) : mise en vente / retrait direct ──
+  // Met un objet en vente chez le marchand actuellement sélectionné.
+  function mettreEnVente(itemId) {
+    const localite = _localite(_localiteId);
+    const marchand = _marchand(localite, _marchandId);
+    if (!marchand) { toast("Choisis d'abord une localité et un marchand."); return; }
+    _ajouterItemAuStock(marchand, itemId, "commun");
+    rendrePanneauMarche();
+  }
+  // Retire un objet du stock de TOUS les marchands. Renvoie le nombre retiré.
+  function retirerDuMarche(itemId) {
+    const stock = lireStock();
+    let retires = 0;
+    Object.keys(stock).forEach((mid) => {
+      const avant = (stock[mid] || []).map(_normStockEntry);
+      const apres = avant.filter((e) => e.itemId !== itemId);
+      retires += avant.length - apres.length;
+      stock[mid] = apres;
+    });
+    if (retires) { sauverStock(stock); toast(`Retiré du marché (${retires}).`); }
+    else toast("Cet objet n'était pas en vente.");
+    rendrePanneauMarche();
+  }
+  // Combien de fois cet objet est en vente (tous marchands confondus).
+  function estEnVente(itemId) {
+    const stock = lireStock();
+    let n = 0;
+    Object.keys(stock).forEach((mid) => (stock[mid] || []).map(_normStockEntry).forEach((e) => { if (e.itemId === itemId) n++; }));
+    return n;
+  }
+
+  return { rendrePanneauMarche, acheterObjetMarche, demanderAchatMarche, calculerPrix, mettreEnVente, retirerDuMarche, estEnVente };
 })();
