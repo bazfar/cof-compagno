@@ -117,7 +117,7 @@ const Marche = (() => {
       const degats = it.enchantement > 0 ? `${it.enchantement}+${it.degats}` : it.degats;
       return `${degats} · ${it.portee}${it.deuxMains ? " · 2 mains" : ""}`;
     }
-    if (it.type === "armure") return `Réduction ${it.valeurArmure}${it.malusDEX ? ` · Malus DEX -${it.malusDEX}` : ""}`;
+    if (it.type === "armure") return `CA ${it.valeurCA ?? 10} · Réduction ${it.reductionDegats || 0}${it.malusDEX ? ` · Malus DEX -${it.malusDEX}` : ""}`;
     if (it.type === "bouclier") return `+${it.bonusDEF} DEF`;
     if (it.type === "accessoire") return it.effet;
     if (it.type === "consommable") return `Quantité : ${it.quantite || 1}`;
@@ -206,7 +206,7 @@ const Marche = (() => {
 
   // Mise en vente manuelle d'un objet précis par le MJ, en plus du stock
   // aléatoire — n'écrase rien, ajoute juste une ligne (contrairement au
-  // réassort). Ignore délibérément le plafond de valeurArmure/bonusDEF de la
+  // réassort). Ignore délibérément le plafond de valeurCA/bonusDEF de la
   // localité : c'est un outil de placement volontaire, pas un tirage.
   function _ajouterItemAuStock(marchand, itemId, rareteId) {
     const item = _itemCatalogue(itemId);

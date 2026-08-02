@@ -2797,10 +2797,26 @@ const Carte = (() => {
     // MJ : peut déplacer n'importe quel token. Porte demarrerDrag() (jetons
     // historiques) sur les tokens dd2vtt.
     let dragDD = null;
+    // Attaque d'Opportunité générique (semi-auto, cf. §3 de
+    // reference_sauvegardes_reactions.md) : PJ éligibles (CLASSES_ELIGIBLES_AO,
+    // data/donnees.js) adjacents au token MONSTRE avant son déplacement — un PJ
+    // qui bouge lui-même ne déclenche jamais d'AO contre lui-même, cf. le garde
+    // `!tok.pj` ci-dessous. Liste d'ids perso, consommée par finDragDD.
+    let dragDDAdjacentsAvant = [];
     function demarrerDragDD(ev, tok, scene) {
       if (role === 'joueur' && tok.ref !== 'pj-' + monPersoId && tok.invocateur !== monPersoId) return;
       ev.preventDefault();
       dragDD = { tok, scene };
+      dragDDAdjacentsAvant = [];
+      if (!tok.pj && typeof App !== 'undefined' && App.chargerPersos && typeof CLASSES_ELIGIBLES_AO !== 'undefined') {
+        const persos = App.chargerPersos();
+        listeTokensJoueursCombat().forEach((t) => {
+          const pid = idPersoDepuisRef(t.ref);
+          const p = persos[pid];
+          if (!p || !CLASSES_ELIGIBLES_AO.includes(p.classe)) return;
+          if (distanceCases(tok.id, t.id) <= 1) dragDDAdjacentsAvant.push(pid);
+        });
+      }
       window.addEventListener('pointermove', surDragDD);
       window.addEventListener('pointerup', finDragDD);
     }
@@ -2828,8 +2844,23 @@ const Carte = (() => {
       calculerEtRendreLoS(scene);
     }
     function finDragDD() {
-      if (dragDD) { _sauverToken(dragDD.tok); }
+      if (dragDD) {
+        const { tok } = dragDD;
+        // Détection après déplacement : tout PJ éligible capturé adjacent au
+        // token monstre avant le drag (dragDDAdjacentsAvant) qui ne l'est plus
+        // maintenant se voit proposer une Attaque d'Opportunité — cf.
+        // demarrerDragDD pour la capture pré-déplacement.
+        if (dragDDAdjacentsAvant.length && typeof App !== 'undefined' && App.proposerAttaqueOpportunite) {
+          dragDDAdjacentsAvant.forEach((pid) => {
+            const t = listeTokensJoueursCombat().find((x) => idPersoDepuisRef(x.ref) === pid);
+            const d = t ? distanceCases(tok.id, t.id) : null;
+            if (d === null || d > 1) App.proposerAttaqueOpportunite(pid, tok.nom);
+          });
+        }
+        _sauverToken(tok);
+      }
       dragDD = null;
+      dragDDAdjacentsAvant = [];
       window.removeEventListener('pointermove', surDragDD);
       window.removeEventListener('pointerup', finDragDD);
     }

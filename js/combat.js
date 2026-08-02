@@ -117,6 +117,8 @@ const Combat = (() => {
     // (doublement complet), cohérent avec un bonus parmi d'autres de la même
     // capacité plutôt qu'une capacité dédiée au déplacement.
     if ((p.etatsActifs || []).some((e) => e.idEtat === "forme_loup")) bonus += 2;
+    // Malus de proficience d'armure (-2, cf. Personnage.estArmureNonMaitrisee).
+    if (Personnage.estArmureNonMaitrisee(p)) bonus -= 2;
     return DEPLACEMENT_BASE + bonus;
   }
 

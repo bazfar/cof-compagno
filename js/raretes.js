@@ -15,7 +15,8 @@
    Application du bonus selon le type :
    - arme       -> bonusRarete s'ajoute aux dégâts EN PLUS de
                    l'enchantement existant (jamais fusionné)
-   - armure     -> bonusRarete s'ajoute à valeurArmure
+   - armure     -> bonusRarete s'ajoute à valeurCA ET reductionDegats (les
+                   deux stats, depuis l'éclatement de l'ancien valeurArmure)
    - bouclier   -> bonusRarete s'ajoute à bonusDEF
    - accessoire -> le nombre du champ `effet` est augmenté (toujours),
                    EN PLUS d'une variante d'effet spécial si l'item en
@@ -71,14 +72,14 @@ const EFFETS_PAR_ITEM = {
   ],
   hache_guerre: [
     { id: "sauvage", nom: "sauvage", rare: "+1d6 dégâts contre une cible à moins de la moitié de ses PV max", legendaire: "+2d6 dégâts contre une cible à moins de la moitié de ses PV max" },
-    { id: "broyeuse", nom: "broyeuse", rare: "Ignore 2 points de valeurArmure de la cible", legendaire: "Ignore 4 points de valeurArmure de la cible" },
+    { id: "broyeuse", nom: "broyeuse", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible" },
   ],
   arc_court: [
     { id: "precise", nom: "précis", rare: "Ignore les bonus de couverture partielle", legendaire: "Ignore toute couverture, même totale, une fois par combat" },
     { id: "empoisonnee", nom: "empoisonné", rare: "1 chance sur 2 d'infliger 1d4 dégâts de poison pendant 2 tours", legendaire: "1 chance sur 2 d'infliger 1d6 dégâts de poison pendant 3 tours" },
   ],
   arc_long: [
-    { id: "perforante", nom: "perforant", rare: "Ignore 2 points de valeurArmure de la cible", legendaire: "Ignore 4 points de valeurArmure de la cible" },
+    { id: "perforante", nom: "perforant", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible" },
     { id: "enflammee", nom: "enflammé", rare: "1 chance sur 2 d'infliger 1d4 dégâts de feu supplémentaires", legendaire: "1 chance sur 2 d'infliger 1d6 dégâts de feu supplémentaires" },
   ],
   lance: [
@@ -98,7 +99,7 @@ const EFFETS_PAR_ITEM = {
     { id: "perfide", nom: "perfide", rare: "Critique sur 19-20", legendaire: "Critique sur 18-20" },
   ],
   arbalete: [
-    { id: "perforante", nom: "perforante", rare: "Ignore 2 points de valeurArmure de la cible", legendaire: "Ignore 4 points de valeurArmure de la cible" },
+    { id: "perforante", nom: "perforante", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible" },
     { id: "a_repetition", nom: "à répétition", rare: "Peut tirer deux fois par tour à -4 aux deux jets", legendaire: "Peut tirer deux fois par tour sans malus" },
   ],
   cimeterre: [
@@ -127,11 +128,11 @@ const EFFETS_PAR_ITEM = {
   ],
   epee_batarde: [
     { id: "polyvalente", nom: "polyvalente", rare: "+1 dégât si maniée à deux mains ce tour", legendaire: "+2 dégâts et +1 DEF si maniée à deux mains ce tour" },
-    { id: "implacable", nom: "implacable", rare: "Ignore 2 points de valeurArmure de la cible", legendaire: "Ignore 4 points de valeurArmure de la cible" },
+    { id: "implacable", nom: "implacable", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible" },
   ],
   arbalete_lourde: [
     { id: "devastatrice", nom: "dévastatrice", rare: "+1d6 dégâts si la cible n'a pas encore agi ce tour", legendaire: "+2d6 dégâts si la cible n'a pas encore agi ce tour" },
-    { id: "perforante", nom: "perforante", rare: "Ignore 3 points de valeurArmure de la cible", legendaire: "Ignore 6 points de valeurArmure de la cible" },
+    { id: "perforante", nom: "perforante", rare: "Ignore 3 points de reductionDegats de la cible", legendaire: "Ignore 6 points de reductionDegats de la cible" },
   ],
   // 3 variantes plutôt que 2 (rien n'empêche d'en avoir plus, cf. en-tête de fichier).
   grimoire: [
@@ -156,7 +157,7 @@ const EFFETS_PAR_ITEM = {
     { id: "robuste", nom: "robuste", rare: "Réduit de moitié les dégâts de chute", legendaire: "Annule les dégâts de chute" },
   ],
   cotte_mailles: [
-    { id: "renforcee", nom: "renforcée", rare: "Réduit d'1 les dégâts physiques après application de valeurArmure", legendaire: "Réduit de 2 les dégâts physiques après application de valeurArmure" },
+    { id: "renforcee", nom: "renforcée", rare: "Réduit d'1 les dégâts physiques après application de reductionDegats", legendaire: "Réduit de 2 les dégâts physiques après application de reductionDegats" },
     { id: "cliquetante", nom: "intimidante", rare: "+1 en intimidation", legendaire: "+2 en intimidation, effraie les créatures de faible dangerosité au 1er round" },
   ],
   demi_plaques: [
@@ -164,7 +165,7 @@ const EFFETS_PAR_ITEM = {
     { id: "ancree", nom: "ancrée", rare: "Résiste automatiquement à un effet de repoussement par combat", legendaire: "Résiste automatiquement à tout effet de repoussement" },
   ],
   plaques_comp: [
-    { id: "impenetrable", nom: "impénétrable", rare: "Réduit de 1 tout dégât physique après application de valeurArmure", legendaire: "Réduit de 2 tout dégât physique après application de valeurArmure" },
+    { id: "impenetrable", nom: "impénétrable", rare: "Réduit de 1 tout dégât physique après application de reductionDegats", legendaire: "Réduit de 2 tout dégât physique après application de reductionDegats" },
     { id: "ecrasante", nom: "écrasante", rare: "+1 en FOR tant que l'armure est équipée", legendaire: "+2 en FOR tant que l'armure est équipée" },
   ],
   armure_ombre: [
@@ -196,7 +197,7 @@ const EFFETS_PAR_ITEM = {
     { id: "standard", nom: "d'unité", rare: "+1 DEF quand porté aux côtés d'un autre porteur de la même armure", legendaire: "+2 DEF dans les mêmes conditions" },
   ],
   armure_druidique: [
-    { id: "vivante", nom: "vivante", rare: "Se répare de 1 point de valeurArmure perdu par jour de repos", legendaire: "Se répare intégralement après une nuit de repos" },
+    { id: "vivante", nom: "vivante", rare: "Se répare de 1 point de reductionDegats perdu par jour de repos", legendaire: "Se répare intégralement après une nuit de repos" },
     { id: "camouflee", nom: "camouflée", rare: "+1 en discrétion en milieu naturel", legendaire: "+2 en discrétion en milieu naturel, indétectable à l'arrêt" },
   ],
 
@@ -278,7 +279,7 @@ const EFFETS_PAR_ITEM = {
     { id: "entravant", nom: "entravant", rare: "1 chance sur 2 d'immobiliser la cible 1 tour", legendaire: "Immobilise la cible 1 tour sur tout coup touché, 2 tours sur critique" },
   ],
   javelot: [
-    { id: "percant", nom: "perçant", rare: "Ignore 2 points de valeurArmure de la cible", legendaire: "Ignore 4 points de valeurArmure de la cible" },
+    { id: "percant", nom: "perçant", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible" },
     { id: "revenant", nom: "revenant", rare: "Revient dans la main du porteur après un lancer réussi, 1 fois par combat", legendaire: "Revient systématiquement dans la main du porteur après chaque lancer" },
   ],
   fronde: [
@@ -301,10 +302,10 @@ const EFFETS_PAR_ITEM = {
   ],
   armure_guerre_orque: [
     { id: "brutale", nom: "brutale", rare: "+1d4 dégâts avec armes de contact tant que l'armure est équipée", legendaire: "+1d6 dégâts avec armes de contact tant que l'armure est équipée" },
-    { id: "increvable", nom: "increvable", rare: "Ignore 1 point de dégâts physiques après application de valeurArmure", legendaire: "Ignore 2 points de dégâts physiques après application de valeurArmure" },
+    { id: "increvable", nom: "increvable", rare: "Ignore 1 point de dégâts physiques après application de reductionDegats", legendaire: "Ignore 2 points de dégâts physiques après application de reductionDegats" },
   ],
   gants_poing: [
-    { id: "percutants", nom: "percutants", rare: "+1 dégâts à mains nues ; ignore 1 point de valeurArmure de la cible", legendaire: "+2 dégâts à mains nues ; ignore 2 points de valeurArmure de la cible" },
+    { id: "percutants", nom: "percutants", rare: "+1 dégâts à mains nues ; ignore 1 point de reductionDegats de la cible", legendaire: "+2 dégâts à mains nues ; ignore 2 points de reductionDegats de la cible" },
     { id: "foudroyants", nom: "foudroyants", rare: "+1 dégâts à mains nues ; 1 chance sur 2 d'étourdir la cible 1 tour sur un coup critique", legendaire: "+2 dégâts à mains nues ; étourdit systématiquement la cible 1 tour sur tout coup critique" },
   ],
 
@@ -376,6 +377,17 @@ const Raretes = (() => {
     switch (item.type) {
       case "arme":
         clone.bonusDegatsTotal = (item.enchantement || 0) + bonus;
+        // Bâton (id "baton"/"baton_p1", cf. reference_sorts_connus.md §4) :
+        // seule arme qui "canalise" — bonusAttaqueMagique/bonusDegatsMagiques
+        // scalent avec la rareté de CET exemplaire plutôt que d'être une
+        // valeur fixe en catalogue (Commun = pas de bonus, Peu commun +1,
+        // Rare +2, Légendaire +3). Lus génériquement par
+        // Personnage.bonusAttaque("magique")/degatsMagiques() comme
+        // n'importe quel autre item équipé porteur de ces champs.
+        if (/^baton/.test(item.id || "")) {
+          clone.bonusAttaqueMagique = (item.bonusAttaqueMagique || 0) + bonus;
+          clone.bonusDegatsMagiques = (item.bonusDegatsMagiques || 0) + bonus;
+        }
         if (auMoinsRare) {
           if (item.degatsAuMoinsRare) clone.degats = item.degatsAuMoinsRare;
           if (variante) { clone.effetRarete = variante[rarete.id]; clone.varianteNom = variante.nom; }
@@ -383,7 +395,11 @@ const Raretes = (() => {
         }
         break;
       case "armure":
-        clone.valeurArmure = (item.valeurArmure || 0) + bonus;
+        // Le bonus de rareté se répartit sur les deux stats depuis
+        // l'éclatement de l'ancien valeurArmure (cf. §7 de la référence
+        // CA/armures) : valeurCA ET reductionDegats gagnent chacun +bonus.
+        clone.valeurCA = (item.valeurCA || 10) + bonus;
+        clone.reductionDegats = (item.reductionDegats || 0) + bonus;
         if (auMoinsRare) {
           if (variante) { clone.effetRarete = variante[rarete.id]; clone.varianteNom = variante.nom; }
           else clone.effetRarete = _effetGenerique("armure", rarete.id);

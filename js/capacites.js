@@ -169,7 +169,7 @@ const Capacites = (() => {
 
   // DEF numérique d'une cible (issue de listeCibles), ou null si indisponible
   // — sert à déterminer touché/raté pour les capacités d'attaque vs DEF (cf.
-  // lancer()). PJ : recalculée via Personnage.calculerDEF() (jamais stockée
+  // lancer()). PJ : recalculée via Personnage.calculerCA() (jamais stockée
   // telle quelle, contrairement aux monstres). Monstre : lit le champ `def`
   // du token (Carte.listeMonstresCombat()) — peut être `null` si le bestiaire
   // ne le renseigne pas (cf. js/carte.js), traité ici comme "DEF inconnue".
@@ -177,7 +177,7 @@ const Capacites = (() => {
     if (!cible) return null;
     if (cible.genre === "perso") {
       const p = persos[cible.id];
-      return p ? Personnage.depuisJSON(p).calculerDEF() + bonusDefAuraPeuple(cible.id) + bonusDefAuraBouclierChevalier(cible.id) : null;
+      return p ? Personnage.depuisJSON(p).calculerCA() + bonusDefAuraPeuple(cible.id) + bonusDefGardeRapprochee(cible.id) : null;
     }
     if (cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
       const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
@@ -190,7 +190,7 @@ const Capacites = (() => {
   // à 2 cases (cf. Carte.distanceCasesEntre) d'un Guerrier possédant ce rang,
   // tant que ce Guerrier reste immobile ce tour (Combat.estImmobile, même
   // mécanique que Chasseur "Camouflage naturel"). Dépend d'AUTRES personnages
-  // (contrairement aux bonus DEF de Personnage.calculerDEF(), auto-contenus à
+  // (contrairement aux bonus DEF de Personnage.calculerCA(), auto-contenus à
   // `this`) : vit ici plutôt que dans personnage.js, et doit être appelé à la
   // fois par obtenirDefCible() ci-dessus (résolution d'attaque) ET par app.js
   // (affichage de la fiche), pour ne jamais désynchroniser la DEF affichée de
@@ -216,37 +216,34 @@ const Capacites = (() => {
     return qualifie ? 1 : 0;
   }
 
-  // Chevalier — Voie du protecteur, rang 1 "Bouclier partagé" (passive) : un
-  // allié au contact (distance <= 1 case) d'un Chevalier ayant ce rang ET un
-  // bouclier équipé gagne le bonus DEF de CE bouclier — valeur lue sur
-  // Personnage._itemsEquipesUniques() (champ bonusDEF), la même que celle
-  // déjà comptée dans la propre DEF du Chevalier via bonusDefEquipement().
-  // Même schéma que bonusDefAuraPeuple ci-dessus (dépend d'un AUTRE
-  // personnage, vit ici plutôt que dans personnage.js — appelé à la fois par
-  // obtenirDefCible() et par app.js/_defPjAvecAura à l'affichage). Pas de
-  // cumul si plusieurs Chevaliers qualifient à la fois : garde la valeur la
-  // plus haute, pas la somme.
-  function bonusDefAuraBouclierChevalier(persoId) {
+  // Chevalier — Voie du protecteur, rang 1 "Garde rapprochée" (passive) : un
+  // allié au contact (distance <= 1 case) d'un Chevalier ayant ce rang gagne
+  // +2 CA fixe — remplace l'ancien "Bouclier partagé" (partage du bonusDEF du
+  // bouclier équipé), retiré (validé avec Thomas) : plus de dépendance à un
+  // bouclier réellement équipé, cf. le texte du nouveau rang ("tout allié
+  // adjacent qualifie", pas de désignation explicite d'un protégé unique —
+  // même simplification que bonusDefAuraPeuple). Même schéma que
+  // bonusDefAuraPeuple ci-dessus (dépend d'un AUTRE personnage, vit ici
+  // plutôt que dans personnage.js — appelé à la fois par obtenirDefCible() et
+  // par app.js/_defPjAvecAura à l'affichage). Pas de cumul si plusieurs
+  // Chevaliers qualifient à la fois : bonus fixe, pas de somme.
+  function bonusDefGardeRapprochee(persoId) {
     if (typeof Carte === "undefined" || !Carte.tokenIdPourPerso || !Carte.listeTokensJoueursCombat ||
         !Carte.distanceCasesEntre || !Carte.idPersoDepuisRef) return 0;
     const monToken = Carte.tokenIdPourPerso(persoId);
     if (!monToken) return 0;
     const persos = App.chargerPersos();
-    let meilleur = 0;
-    (Carte.listeTokensJoueursCombat() || []).forEach((t) => {
-      if (t.id === monToken || !t.ref) return;
+    const qualifie = (Carte.listeTokensJoueursCombat() || []).some((t) => {
+      if (t.id === monToken || !t.ref) return false;
       const chevalierId = Carte.idPersoDepuisRef(t.ref);
       const pc = persos[chevalierId];
-      if (!pc) return;
+      if (!pc) return false;
       const chevalier = Personnage.depuisJSON(pc);
-      if (!(chevalier.classe === "chevalier" && chevalier.estChoisie("Voie du protecteur", 1))) return;
+      if (!(chevalier.classe === "chevalier" && chevalier.estChoisie("Voie du protecteur", 1))) return false;
       const d = Carte.distanceCasesEntre(t.id, monToken);
-      if (d === null || d > 1) return;
-      const bouclier = chevalier._itemsEquipesUniques().find((it) => it.type === "bouclier");
-      const valeur = (bouclier && bouclier.bonusDEF) || 0;
-      if (valeur > meilleur) meilleur = valeur;
+      return d !== null && d <= 1;
     });
-    return meilleur;
+    return qualifie ? 2 : 0;
   }
 
   // Guerrier — Voie du chaos, rang 3/5 "Rage incontrôlée"/"Déchaînement" (cf.
@@ -834,16 +831,6 @@ const Capacites = (() => {
       // "degats" sont des sorts, pas besoin de distinguer par voie/rang.
       const bonusChaos = perso.bonusDegatsSortsChaos && perso.bonusDegatsSortsChaos();
       let formuleAjustee = bonusChaos ? `${effet.formule}+${bonusChaos}` : effet.formule;
-      // Magicien — Voie de la magie élémentaire, rang 2 "Intensité
-      // élémentaire" (passive) : remplace le 1d6 initial du Trio élémentaire
-      // (rang 1, seule formule "degats" représentée sur les 3 sorts au choix,
-      // cf. sa note) par un 1d8 dès que le rang 2 est acquis — modifie une
-      // AUTRE capacité déjà mécanisée, identifiée ici par voie+rang (ctx.voie
-      // vient de source.voie côté lancer()/resoudreDegatsEnAttente).
-      if (voie === "Voie de la magie élémentaire" && rang === 1 && perso.classe === "magicien"
-          && perso.rangMaxVoie("Voie de la magie élémentaire") >= 2 && /^1d6\b/.test(formuleAjustee)) {
-        formuleAjustee = formuleAjustee.replace(/^1d6/, "1d8");
-      }
       // Moine — Voie des éléments, rang 2 "Maîtrise élémentaire" (passive) :
       // même principe qu'Intensité élémentaire ci-dessus, remplace le 1d4
       // initial de l'option Feu de Poing élémentaire (rang 1, seule option
@@ -1116,15 +1103,6 @@ const Capacites = (() => {
           && perso.rangMaxVoie("Voie du chant") >= 4 && effet.valeur === -2) {
         valeurBrute = -4;
       }
-      // Magicien — Voie de la magie protectrice, rang 2 "Résistance
-      // arcanique" (passive) : le bonus de Bouclier arcanique (rang 1) passe
-      // de +2 à +3 DEF dès le rang 2 acquis — même principe que Refrain
-      // lancinant ci-dessus. Gap corrigé : cette modification était
-      // documentée dans data/donnees.js mais jamais câblée.
-      if (voie === "Voie de la magie protectrice" && rang === 1 && effet.cible === "DEF" && perso.classe === "magicien"
-          && perso.rangMaxVoie("Voie de la magie protectrice") >= 2 && effet.valeur === 2) {
-        valeurBrute = 3;
-      }
       // Nécromancien — Voie de la sombre magie, rang 4 "Malédiction
       // profonde" (suite) : Toucher flétrissant (rang 2, choix attaque/DEF)
       // passe de -1d4 à -1d6 — ce rang n'utilise jamais la branche
@@ -1211,6 +1189,14 @@ const Capacites = (() => {
     const perso = Personnage.depuisJSON(p);
     const libelle = source.nomCap || "Capacité";
 
+    // Gate d'accès Grimoire (cf. reference_sorts_connus.md) : un sort hors
+    // Voies (SORTS_MAGICIEN ou équivalent) ne peut être lancé que s'il est
+    // effectivement appris — vérifié avant tout le reste (usage, PP...),
+    // pas de sens à décompter quoi que ce soit pour un sort non appris.
+    if (mecanique.origineGrimoire && !(p.grimoireSortsConnus || []).includes(source.idSort)) {
+      return { ok: false, messages: [`Ce sort n'est pas (encore) inscrit dans le Grimoire.`] };
+    }
+
     const cle = cleCapacite(source);
     const usage = verifierUsage(p, cle, mecanique);
     if (!usage.ok) return { ok: false, messages: [usage.raison] };
@@ -1237,6 +1223,17 @@ const Capacites = (() => {
       const reactionsRestantes = REACTIONS_MAX - (p.reactionsUtilisees || 0);
       if (reactionsRestantes < mecanique.reactionCout) {
         return { ok: false, messages: [`Plus assez de réactions ce combat (${reactionsRestantes}/${REACTIONS_MAX} restantes).`] };
+      }
+    }
+
+    // Coût en Points de Pouvoir (cf. reference_systeme_magie_pp.md) — bloque
+    // AVANT résolution si le pool est insuffisant, même principe que
+    // reactionCout ci-dessus. mecanique.coutPP absent ou 0 = capacité
+    // gratuite (martiale, ou sort mineur type degatsMagiques()).
+    if (mecanique.coutPP) {
+      const ppRestants = (p.ppActuel || 0);
+      if (ppRestants < mecanique.coutPP) {
+        return { ok: false, messages: [`Pas assez de Points de Pouvoir (${mecanique.coutPP} requis, ${ppRestants} disponibles).`] };
       }
     }
 
@@ -1732,6 +1729,13 @@ const Capacites = (() => {
       App.ajouterHisto(`${libelle} — Réaction`, restantes, false, false, `-${mecanique.reactionCout} réaction(s) (${p.nom}, ${restantes}/${REACTIONS_MAX} restantes)`);
       messages.push(`Réaction(s) -${mecanique.reactionCout} (${restantes}/${REACTIONS_MAX} restantes ce combat).`);
     }
+    // Coût en Points de Pouvoir (cf. le garde-fou plus haut) : décompté une
+    // fois l'activation confirmée, même logique que reactionCout ci-dessus.
+    if (mecanique.coutPP) {
+      p.ppActuel = (p.ppActuel || 0) - mecanique.coutPP;
+      App.ajouterHisto(`${libelle} — PP`, p.ppActuel, false, false, `-${mecanique.coutPP} PP (${p.nom}, ${p.ppActuel} restants)`);
+      messages.push(`PP -${mecanique.coutPP} (${p.ppActuel} restants).`);
+    }
     // Gain/coût en âmes stockées (cf. AMES_MAX plus haut) : décompté une fois
     // l'activation confirmée, même logique que corruptionCout/reactionCout.
     if (mecanique.ameGain) {
@@ -1808,7 +1812,7 @@ const Capacites = (() => {
     listeCibles,
     obtenirDefCible,
     bonusDefAuraPeuple,
-    bonusDefAuraBouclierChevalier,
+    bonusDefGardeRapprochee,
     cibleCreaturePlusProche,
     lancer,
     resoudreDegatsEnAttente,

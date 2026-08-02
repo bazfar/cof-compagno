@@ -188,6 +188,17 @@ class Personnage extends Entite {
     // redescend — cf. genererMutation/retirerMutation côté app.js pour la
     // génération 1d6 et le retrait au choix, onglet "🧬 Mutations").
     this.mutations = d.mutations;
+    // Points de Pouvoir (Magicien et autres classes à CARAC_MAGIE, cf.
+    // calculerPPMax ci-dessous) — calculé après TOUS les champs dont
+    // calculerPPMax dépend transitivement via mod() (caracs, dons,
+    // équipement, mutations, etatsActifs...), d'où sa position en toute fin
+    // de constructeur plutôt qu'à côté de pvActuel (posé par super() tout en
+    // haut, avant que ces champs n'existent encore sur `this`).
+    this.ppActuel = d.ppActuel !== undefined ? d.ppActuel : this.calculerPPMax();
+    // Sorts appris hors Voies (cf. reference_sorts_connus.md) : tableau d'id
+    // de SORTS_MAGICIEN (ou liste équivalente future Nécro/Enchanteur),
+    // distinct de capacites[] (réservé aux rangs de Voie classiques).
+    this.grimoireSortsConnus = d.grimoireSortsConnus || [];
 
     // Migration douce : l'ancien champ libre `inventaire` (string) devient un
     // item texte libre dans inventaireListe, pour ne rien perdre à la casse
@@ -320,13 +331,6 @@ class Personnage extends Entite {
     if (this.classe === "chasseur" && (nom === "Survie" || nom === "Discrétion")) {
       bonus += 2 * this.rangMaxVoie("Voie de la traque"); // Pisteur (pistage replié sur Survie)
     }
-    if (this.classe === "magicien" && ["Connaissances (arcanes)", "Connaissances (histoire)", "Connaissances (nature)"].includes(nom)) {
-      // Voie de la magie universitaire : +2/+4/+6/+8 par rang (remplacé, pas
-      // cumulé — rangMaxVoie donne directement la bonne valeur). "Érudition"
-      // repliée sur les 3 compétences Connaissances, pas Investigation ni
-      // Artisanat (plus proches de la pratique que du savoir livresque).
-      bonus += 2 * this.rangMaxVoie("Voie de la magie universitaire");
-    }
     if (this.classe === "druide" && nom === "Dressage") {
       bonus += 2 * this.rangMaxVoie("Voie des compagnons"); // Communication animale
     }
@@ -362,9 +366,12 @@ class Personnage extends Entite {
   }
 
   // Modificateur total pour un test de compétence : mod. de la carac porteuse
-  // + bonusCompetence(nom) éventuel.
+  // + bonusCompetence(nom) éventuel, moins le malus de proficience d'armure
+  // (-2, cf. estArmureNonMaitrisee) sur les compétences DEX (Discrétion,
+  // Acrobaties, Escamotage).
   modCompetence(nom, caracCode) {
-    return this.mod(caracCode) + this.bonusCompetence(nom);
+    const malusProficience = (caracCode === "DEX" && Personnage.estArmureNonMaitrisee(this)) ? -2 : 0;
+    return this.mod(caracCode) + this.bonusCompetence(nom) + malusProficience;
   }
 
   get classeDef() {
@@ -436,10 +443,87 @@ class Personnage extends Entite {
     return (p && p.carac === code && typeof p.valeur === "number") ? p.valeur : 0;
   }
 
+  /* ----- Points de Pouvoir (PP, cf. reference_systeme_magie_pp.md) ----- */
+  // PP max : null si la classe n'a pas de CARAC_MAGIE (même garde-fou que
+  // bonusAttaque("magique")) — un Guerrier n'a pas de pool de PP.
+  calculerPPMax() {
+    const carac = CARAC_MAGIE[this.classe];
+    if (!carac) return null;
+    return 4 + (this.niveau || 1) * 2 + this.mod(carac) * 2 + this.bonusPPCapacites();
+  }
+  // Magicien — Voie de la magie universitaire, rangs 1/2 "Réserve étendue
+  // I/II" (passives) : +4 PP max par rang acquis (cumulables, +8 max aux
+  // rangs 1-2). rangMaxVoie plafonné à 2 : les rangs 3-5 de cette voie
+  // n'ajoutent aucun bonus de PP max (Efficience arcanique/Surcharge
+  // maîtrisée/Consumation totale, effets différents — cf. leur note
+  // respective dans data/donnees.js).
+  bonusPPCapacites() {
+    if (this.classe !== "magicien") return 0;
+    return Math.min(this.rangMaxVoie("Voie de la magie universitaire"), 2) * 4;
+  }
+  // Repos long (bouton manuel, cf. Capacites.reinitialiserUsage pour le
+  // même principe) : reset complet.
+  reposLongPP() {
+    const max = this.calculerPPMax();
+    if (max === null) return;
+    this.ppActuel = max;
+  }
+  // Repos court (bouton manuel, nouveau — pas de fonction équivalente pour
+  // les usages de capacités, spécifique aux PP) : +25% de ppMax, arrondi au
+  // supérieur, plafonné à ppMax.
+  reposCourtPP() {
+    const max = this.calculerPPMax();
+    if (max === null) return;
+    this.ppActuel = Math.min(max, (this.ppActuel || 0) + Math.ceil(max * 0.25));
+  }
+
+  // Nombre de sorts hors Voies que le personnage peut connaître à la fois
+  // (cf. reference_sorts_connus.md) : 0 sans Manuel d'incantation équipé
+  // (data/loot.json: manuel_incantation, type "accessoire") — 3 de base,
+  // +2 par palier de rareté de l'exemplaire réellement porté (Commun 3,
+  // Peu commun 5, Rare 7, Légendaire 9, cf. bonusRarete posé par
+  // Raretes.appliquer à l'instanciation).
+  slotsGrimoire() {
+    const manuel = this._itemsEquipesUniques().find((it) => it.type === "accessoire" && it.id === "manuel_incantation");
+    if (!manuel) return 0;
+    const bonusRarete = manuel.bonusRarete || 0;
+    return 3 + 2 * bonusRarete;
+  }
+
   /* ----- Défense ----- */
-  calculerDEF() {
-    const dex = Math.min(this.mod("DEX"), this.plafondDex());
-    return 10 + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusDefMutations() + this.bonusTemporaire("DEF") + this.bonusDefImmobile() + this.bonusDefDuel() + this.bonusDefBouclierExpert() + this.bonusDefPhalange();
+  // A-t-il une armure équipée d'une catégorie au-dessus de celle maîtrisée
+  // par sa classe (cf. PROFICIENCE_ARMURE/RANG_CATEGORIE, data/donnees.js),
+  // sans le don qui lève le malus de proficience ? Utilisable aussi bien sur
+  // une instance Personnage que sur un objet perso brut `p` (même patron que
+  // Combat._deplacementMax).
+  static estArmureNonMaitrisee(p) {
+    if (!p) return false;
+    // Une armure occupe toujours le slot "torse" (cf. slotsPourType) — pas de
+    // slot "armure" dédié dans SLOTS_EQUIPEMENT.
+    const armure = (p.equipement && p.equipement.torse) || null;
+    if (!armure || armure.type !== "armure" || !armure.categorie) return false; // "Vêtements" par défaut = toujours légère, jamais non-maîtrisée
+    const categorieRequise = PROFICIENCE_ARMURE[p.classe] || "legere";
+    const auDessus = RANG_CATEGORIE[armure.categorie] > RANG_CATEGORIE[categorieRequise];
+    if (!auDessus) return false;
+    const donRequis = armure.categorie === "lourde" ? "maitre_armures_lourdes" : "maitre_armures_moyennes";
+    return !(p.dons || []).includes(donRequis);
+  }
+
+  // Mod. DEX effectif pour la CA : ignoré entièrement si l'armure équipée
+  // n'est pas maîtrisée (cf. estArmureNonMaitrisee), sinon réduit du malusDEX
+  // de l'armure (data/loot.json).
+  dexEffectifCA() {
+    if (Personnage.estArmureNonMaitrisee(this)) return 0;
+    const armure = this._itemsEquipesUniques().find((it) => it.type === "armure");
+    const malusDEX = armure ? (armure.malusDEX || 0) : 0;
+    return this.mod("DEX") - malusDEX;
+  }
+
+  calculerCA() {
+    const dex = this.dexEffectifCA();
+    const armure = this._itemsEquipesUniques().find((it) => it.type === "armure");
+    const valeurCA = armure ? (armure.valeurCA || 10) : 10; // 10 = "Vêtements" par défaut
+    return valeurCA + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusDefMutations() + this.bonusTemporaire("DEF") + this.bonusDefImmobile() + this.bonusDefDuel() + this.bonusDefBouclierExpert() + this.bonusDefPhalange();
   }
 
   // Chasseur — Voie de la traque, rang 2 "Camouflage naturel" (passive) :
@@ -502,7 +586,7 @@ class Personnage extends Entite {
   // équipé. Le second volet ("l'attaquant est désavantagé") n'est pas un
   // bonus de CE perso : cf. Personnage.aExpertBouclier(), lu directement par
   // _resoudreAttaqueMonstreVsPJ côté app.js pour forcer le désavantage sur le
-  // jet de l'ATTAQUANT (monstre) — hors de portée de calculerDEF().
+  // jet de l'ATTAQUANT (monstre) — hors de portée de calculerCA().
   bonusDefBouclierExpert() {
     if (!(this.dons || []).includes("expert_bouclier")) return 0;
     return this._itemsEquipesUniques().some((it) => it.type === "bouclier") ? 1 : 0;
@@ -515,27 +599,6 @@ class Personnage extends Entite {
   // pas les capacités, dont le jet d'attaque ne passe pas par lancerTest).
   aExpertBouclier() {
     return (this.dons || []).includes("expert_bouclier") && this._itemsEquipesUniques().some((it) => it.type === "bouclier");
-  }
-
-  // Plafond de bonus DEX à la DEF selon le poids de l'armure équipée (aucun
-  // plafond si aucune armure ou armure légère, valeurArmure <= 2). Le champ
-  // malusDEX du catalogue (data/loot.json) n'est volontairement pas lu ici :
-  // superseded par ce plafond dérivé de valeurArmure (cf. commit) — laissé
-  // en place sur les données pour ne rien casser, mais plus consulté.
-  plafondDex() {
-    const armure = this._itemsEquipesUniques().find((it) => it.type === "armure");
-    const va = armure ? (armure.valeurArmure || 0) : 0;
-    if (va >= 5) return this.plafondDexDons(0);
-    if (va >= 3) return this.plafondDexDons(2);
-    return Infinity; // pas d'armure ou armure légère : aucun plafond
-  }
-  // Don Maître des armures moyennes : relève le plafond des armures moyennes
-  // (valeurArmure 3-4) de +2 à +3. Sans effet sur les armures lourdes (cf.
-  // Maître des armures lourdes, qui ne touche pas au plafond DEX mais à la
-  // réduction de dégâts physiques, cf. bonusReductionLourdeDons).
-  plafondDexDons(plafondBase) {
-    if (plafondBase === 2 && (this.dons || []).includes("maitre_armures_moyennes")) return 3;
-    return plafondBase;
   }
 
   // Initiative = Mod. de DEX + bonus de capacités (ex. Barde/Moine ajoutant
@@ -551,10 +614,15 @@ class Personnage extends Entite {
     if (this.classe === "barde" && this.estChoisie("Voie de la rapière", 2)) {
       bonus += this.mod("INT");
     }
-    // Moine — Voie de l'élévation, rang 2 : même choix (INT ou SAG) que pour la DEF.
-    if (this.classe === "moine") {
-      const cap = this.capaciteEntree("Voie de l'élévation", 2);
-      if (cap && (cap.choix === "INT" || cap.choix === "SAG")) bonus += this.mod(cap.choix);
+    // Moine — Voie de l'élévation, rang 1 "Réflexes du sage" (passive) :
+    // +Mod.SAG à l'Initiative, sans condition.
+    if (this.classe === "moine" && this.estChoisie("Voie de l'élévation", 1)) {
+      bonus += this.mod("SAG");
+    }
+    // Chevalier — Voie du noble, rang 1 "Prestance martiale" (passive) :
+    // +Mod.CHA à l'Initiative, sans condition.
+    if (this.classe === "chevalier" && this.estChoisie("Voie du noble", 1)) {
+      bonus += this.mod("CHA");
     }
     // Chasseur — Voie de la traque, rang 4 "Sens du danger" (passive) : +2
     // Initiative. Gap corrigé : ce bonus était déclaré dans les données mais
@@ -589,16 +657,6 @@ class Personnage extends Entite {
     // critique sur 19-20 au lieu de 20, uniquement sur les attaques au contact.
     if (type === "contact" && this.classe === "guerrier" && this.estChoisie("Voie de l'élite", 3)) {
       seuil = 19;
-    }
-    // Moine — Voie de l'élévation, rang 1 "Bonus de précision" (passive) :
-    // même seuil que Précision létale (19-20), fixé par Thomas car le texte
-    // d'origine ("critiques facilités") n'en donnait pas — seulement aux
-    // attaques au contact à mains nues ou au bâton (id catalogue "baton*",
-    // cf. data/loot.js), pas avec une autre arme équipée.
-    if (type === "contact" && this.classe === "moine" && this.estChoisie("Voie de l'élévation", 1)) {
-      const armeContact = this.armeContactEquipee();
-      const mainsNuesOuBaton = !armeContact || (armeContact.id || "").startsWith("baton");
-      if (mainsNuesOuBaton) seuil = Math.min(seuil, 19);
     }
     // Chasseur — Voie de la gâchette, rang 5 "Tir fatal" (L, 1x/combat en
     // théorie) : critique sur 18-20 au lieu de 20 sur les attaques à distance.
@@ -671,10 +729,6 @@ class Personnage extends Entite {
     if (this.classe === "druide" && this.estChoisie("Voie du chaos", 2)) {
       bonus += 2;
     }
-    // Chevalier — Voie du noble, rang 2 : ajoute le Mod. de CHA à la DEF.
-    if (this.classe === "chevalier" && this.estChoisie("Voie du noble", 2)) {
-      bonus += this.mod("CHA");
-    }
     // Moine — Voie des poings, rang 3 : "le dé passe à 1d10, +2 DEF" (partie DEF).
     if (this.classe === "moine" && this.estChoisie("Voie des poings", 3)) {
       bonus += 2;
@@ -689,11 +743,12 @@ class Personnage extends Entite {
       const cap = this.capaciteEntree("Voie du chaos", 4);
       if (cap && cap.choix === "def") bonus += 2;
     }
-    // Moine — Voie de l'élévation, rang 2 : ajoute au choix (fixé à
-    // l'acquisition) le Mod. d'INT ou de SAG à l'Initiative et à la DEF.
-    if (this.classe === "moine") {
-      const cap = this.capaciteEntree("Voie de l'élévation", 2);
-      if (cap && (cap.choix === "INT" || cap.choix === "SAG")) bonus += this.mod(cap.choix);
+    // Moine — Voie de l'élévation, rang 2 "Défense du corps libre" (passive) :
+    // +Mod.SAG à la CA tant qu'aucune armure (categorie moyenne/lourde) n'est équipée.
+    if (this.classe === "moine" && this.estChoisie("Voie de l'élévation", 2)) {
+      const armure = this._itemsEquipesUniques().find((it) => it.type === "armure");
+      const sansArmureReelle = !armure || !armure.categorie || armure.categorie === "legere";
+      if (sansArmureReelle) bonus += this.mod("SAG");
     }
     return bonus;
   }
@@ -795,12 +850,6 @@ class Personnage extends Entite {
   // seulement défensif.
   aImmuniteEtat(idEtat) {
     if ((idEtat === "immobilisee" || idEtat === "entravee") && this.classe === "barde" && this.estChoisie("Voie du spectacle", 5)) return true;
-    // Chevalier — Voie du commandant, rang 1 (passive) : immunisé à la Peur.
-    // Gap corrigé : cette immunité était déclarée dans les données ("special")
-    // mais jamais câblée, contrairement à Liberté d'action ci-dessus (même
-    // mécanisme). L'extension du bonus de résistance aux alliés proches (même
-    // rang) reste non chiffrée/non modélisée.
-    if (idEtat === "effrayee" && this.classe === "chevalier" && this.estChoisie("Voie du commandant", 1)) return true;
     // Chevalier — Voie du chaos, rang 5 "Avatar du pacte" : immunité
     // temporaire à la Peur tant que l'état 'avatar_du_pacte' reste actif
     // (indépendante du choix de la Voie du commandant ci-dessus).
@@ -863,17 +912,6 @@ class Personnage extends Entite {
     return 0;
   }
 
-  // Magicien — Voie de la magie universitaire, rang 5 "INT héroïque"
-  // (1x/jour) : gate seule, le contrôle d'usage réel vit côté app.js
-  // (Capacites.verifierUsage, clé "classe:magicien:univ5") puisqu'il s'agit
-  // d'une case à cocher "armée" avant un clic de test, pas d'une capacité
-  // Capacites.lancer() classique — même principe que Cœur de Montagne.
-  // "Relance un test raté, garde le meilleur" ≡ "avantage" (2d20 garde le
-  // plus haut) en termes de distribution de probabilité : même simplification
-  // que le reste de la famille avantage de l'app.
-  aIntHeroique() {
-    return this.classe === "magicien" && this.estChoisie("Voie de la magie universitaire", 5);
-  }
   // Demi-Elfe — "Double Héritage" (rang racial 5, 1x/jour) : même principe,
   // sur Perception/Social(4 compétences CHA)/INT — cf. app.js.
   aDoubleHeritage() {
@@ -1031,7 +1069,7 @@ class Personnage extends Entite {
     return items;
   }
   reductionDegats() {
-    return this._itemsEquipesUniques().reduce((t, it) => t + (it.valeurArmure || 0), 0) + this.bonusReductionCapacites()
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.reductionDegats || 0), 0) + this.bonusReductionCapacites()
       + this.bonusTemporaire("reduction_degats");
   }
   // Druide — Voie de la nature, rang 4 "Résistance naturelle" : réduction
@@ -1195,13 +1233,14 @@ class Personnage extends Entite {
     return this.classe === "pretre" && this.estChoisie("Voie de la conversion", 3);
   }
   // Don Maître des armures lourdes : -3 dégâts physiques subis, appliqué
-  // AVANT valeurArmure (cf. subirDegats côté app.js — pas inclus dans
+  // AVANT reductionDegats (cf. subirDegats côté app.js — pas inclus dans
   // reductionDegats(), qui n'a pas connaissance du type de dégâts). Actif
-  // uniquement avec une armure valeurArmure >= 5 équipée.
+  // uniquement avec une armure de catégorie lourde équipée (condition basée
+  // sur la catégorie plutôt que sur un seuil de valeurArmure, cf. §5 de la
+  // référence CA/armures).
   bonusReductionLourdeDons() {
     const armure = this._itemsEquipesUniques().find((it) => it.type === "armure");
-    const va = armure ? (armure.valeurArmure || 0) : 0;
-    return (va >= 5 && (this.dons || []).includes("maitre_armures_lourdes")) ? 3 : 0;
+    return (armure && armure.categorie === "lourde" && (this.dons || []).includes("maitre_armures_lourdes")) ? 3 : 0;
   }
   // Somme des formules de scaling des objets équipés visant `cible` (et, pour
   // carac/competence, la sous-clé `cle`) — cf. js/forge.js (champ `formules`)
@@ -1300,7 +1339,7 @@ class Personnage extends Entite {
     }, 0);
   }
   // Bonus de DEF porté par une mutation (data/mutations.js: defDelta, ex.
-  // Peau de pierre +2, Carapace fissurée +4) — lu par calculerDEF().
+  // Peau de pierre +2, Carapace fissurée +4) — lu par calculerCA().
   bonusDefMutations() {
     return (this.mutations || []).reduce((t, m) => {
       const e = Personnage._entreeCanoniqueMutation(m);
@@ -1496,7 +1535,11 @@ class Personnage extends Entite {
   // type : "contact" (FOR), "distance" (DEX), "magique" (carac de magie de la classe), "lancer" (FOR, objet jeté)
   bonusAttaque(type) {
     const b = this.bonusProgression() + this.bonusTemporaire("attaque") + this.malusCombatDeuxArmes(type) + this.bonusAttaqueCapacites(type);
-    if (type === "contact") return b + this.mod("FOR");
+    // Malus de proficience d'armure (-3, cf. estArmureNonMaitrisee) : contact
+    // et magique uniquement — l'attaque à distance garde son propre -2 (déjà
+    // dans le malus DEX ci-dessous), pas de cumul entre les deux.
+    const malusProficienceAttaque = (type === "contact" || type === "magique") && Personnage.estArmureNonMaitrisee(this) ? -3 : 0;
+    if (type === "contact") return b + this.mod("FOR") + malusProficienceAttaque;
     if (type === "distance") {
       // Bonus simple et mécanique d'un item équipé (ex. Gants du
       // Franc-Tireur : { bonusAttaqueDistance: 1 }, cf. data/loot.js/json)
@@ -1504,7 +1547,9 @@ class Personnage extends Entite {
       // magique, jamais fusionné dans les caracs de base.
       const bonusGantsDistance = this._itemsEquipesUniques()
         .reduce((t, it) => t + (it.bonusAttaqueDistance || 0), 0);
-      return b + this.mod("DEX") + bonusGantsDistance;
+      // Malus de proficience d'armure (-2, cf. estArmureNonMaitrisee).
+      const malusProficience = Personnage.estArmureNonMaitrisee(this) ? -2 : 0;
+      return b + this.mod("DEX") + bonusGantsDistance + malusProficience;
     }
     if (type === "lancer") return b + this.mod("FOR");
     if (type === "magique") {
@@ -1516,7 +1561,7 @@ class Personnage extends Entite {
       // effetRarete), ce bonus est câblé directement ici.
       const bonusGrimoire = this._itemsEquipesUniques()
         .reduce((t, it) => t + (it.bonusAttaqueMagique || 0), 0);
-      return b + this.mod(cm) + bonusGrimoire;
+      return b + this.mod(cm) + bonusGrimoire + malusProficienceAttaque;
     }
     return b;
   }

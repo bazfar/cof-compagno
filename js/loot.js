@@ -145,7 +145,7 @@ const Loot = (() => {
         (it.degatsFeu ? ` · 🔥+${it.degatsFeu}` : "") +
         (it.bonusAttaqueMagique ? ` · +${it.bonusAttaqueMagique} attaque magique` : "");
     }
-    if (it.type === "armure")     return `Réduction ${it.valeurArmure}${it.malusDEX ? ` · Malus DEX -${it.malusDEX}` : ""}`;
+    if (it.type === "armure")     return `CA ${it.valeurCA ?? 10} · Réduction ${it.reductionDegats || 0}${it.malusDEX ? ` · Malus DEX -${it.malusDEX}` : ""}`;
     if (it.type === "bouclier")   return `+${it.bonusDEF} DEF`;
     if (it.type === "accessoire") return it.effet;
     if (it.type === "consommable")return `Quantité : ${it.quantite}`;

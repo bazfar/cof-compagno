@@ -122,7 +122,8 @@ const Forge = (() => {
     if (type === "accessoire") item.slot = v("forge-slot");
     const def = n("forge-def"); if (def) item.bonusDEF = def;
     if (type === "armure") {
-      item.valeurArmure = n("forge-armure");
+      item.valeurCA = n("forge-valeurca") || 10;                       // classe d'armure (plus dur à toucher)
+      const rd = n("forge-reduction"); if (rd) item.reductionDegats = rd; // réduction de dégâts (absorbe)
       const md = n("forge-malusdex"); if (md) item.malusDEX = md;
     }
     if (type === "arme") {
@@ -178,7 +179,9 @@ const Forge = (() => {
     if (it.bonusAttaqueMagique) bits.push(`${it.bonusAttaqueMagique > 0 ? "+" : ""}${it.bonusAttaqueMagique} atk mag.`);
     if (it.bonusAttaqueDistance) bits.push(`${it.bonusAttaqueDistance > 0 ? "+" : ""}${it.bonusAttaqueDistance} atk dist.`);
     if (it.bonusDegatsMagiques) bits.push(`${it.bonusDegatsMagiques > 0 ? "+" : ""}${it.bonusDegatsMagiques} dég. mag.`);
-    if (it.valeurArmure) bits.push(`réduction ${it.valeurArmure}` + (it.malusDEX ? `, malus DEX -${it.malusDEX}` : ""));
+    if (it.valeurCA) bits.push(`CA ${it.valeurCA}`);
+    if (it.reductionDegats) bits.push(`réduction ${it.reductionDegats}`);
+    if (it.malusDEX) bits.push(`malus DEX -${it.malusDEX}`);
     if (it.type === "arme") bits.push(`${it.degats} · ${it.portee}` + (it.deuxMains ? " · 2 mains" : ""));
     (it.formules || []).forEach((f) => bits.push(`⚙ ${f.cible}${f.carac ? " " + f.carac : ""}${f.competence ? " " + f.competence : ""} = ${echapper(f.expr)}`));
     if (it.effet) bits.push(echapper(it.effet));
@@ -209,8 +212,9 @@ const Forge = (() => {
         <label class="f-accessoire">Emplacement<select id="forge-slot">${_optionSlots()}</select></label>
         <label>Prix (po)<input type="number" id="forge-prix" value="50" step="1" min="0" /></label>
         <label>Rareté (affichage)<select id="forge-rarete">${_optionRaretes()}</select></label>
-        <label>DEF<input type="number" id="forge-def" value="0" step="1" /></label>
-        <label class="f-armure">Réduction (armure)<input type="number" id="forge-armure" value="0" step="1" min="0" /></label>
+        <label>Bonus CA<input type="number" id="forge-def" value="0" step="1" /></label>
+        <label class="f-armure">Classe d'armure (CA)<input type="number" id="forge-valeurca" value="10" step="1" min="0" /></label>
+        <label class="f-armure">Réduction de dégâts<input type="number" id="forge-reduction" value="0" step="1" min="0" /></label>
         <label class="f-armure">Malus DEX<input type="number" id="forge-malusdex" value="0" step="1" min="0" /></label>
         <label class="f-arme">Dégâts<input type="text" id="forge-degats" placeholder="1d8" /></label>
         <label class="f-arme">Portée<input type="text" id="forge-portee" placeholder="contact" /></label>
@@ -244,7 +248,7 @@ const Forge = (() => {
           <label>S'applique à<select id="forge-f-cible">
             <option value="">— aucun —</option>
             <option value="degats">Dégâts</option>
-            <option value="DEF">DEF</option>
+            <option value="DEF">CA</option>
             <option value="initiative">Initiative</option>
             <option value="carac">Caractéristique…</option>
             <option value="competence">Compétence…</option>
@@ -370,7 +374,8 @@ const Forge = (() => {
     S("forge-rarete", it.rarete || "commun");
     if (it.bonusCarac) CARACS.forEach((c) => S("forge-carac-" + c, it.bonusCarac[c] || 0));
     S("forge-def", it.bonusDEF || 0);
-    S("forge-armure", it.valeurArmure || 0);
+    S("forge-valeurca", it.valeurCA || 10);
+    S("forge-reduction", it.reductionDegats || 0);
     S("forge-malusdex", it.malusDEX || 0);
     if (it.type === "arme") { S("forge-degats", it.degats || ""); S("forge-portee", it.portee || ""); const dm = $("forge-deuxmains"); if (dm) dm.checked = !!it.deuxMains; }
     S("forge-desc", it.description || "");

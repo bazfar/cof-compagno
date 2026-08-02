@@ -57,6 +57,23 @@ const CARAC_MAGIE = {
   // guerrier, chasseur & chevalier : pas de magie
 };
 
+/* Catégorie d'armure maîtrisée sans malus par chaque classe (cf.
+   reference_def_armures_boucliers.md §1-2) — sert à
+   Personnage.estArmureNonMaitrisee(). */
+const PROFICIENCE_ARMURE = {
+  guerrier: "lourde", chevalier: "lourde",
+  chasseur: "moyenne", pretre: "moyenne", druide: "moyenne", barde: "moyenne",
+  moine: "legere", magicien: "legere", necromancien: "legere", enchanteur: "legere",
+};
+const RANG_CATEGORIE = { legere: 0, moyenne: 1, lourde: 2 };
+
+/* Classes éligibles à l'Attaque d'Opportunité générique (cf. §3 de
+   reference_sauvegardes_reactions.md) — les 3 Lanceurs purs (magicien,
+   necromancien, enchanteur) en sont exclus. Déclaré ici (global, chargé
+   avant js/carte.js ET js/app.js) plutôt que dans l'un des deux modules
+   IIFE, qui n'ont pas de visibilité l'un sur l'autre. */
+const CLASSES_ELIGIBLES_AO = ["guerrier", "chevalier", "chasseur", "pretre", "druide", "barde", "moine"];
+
 /* Archétype de progression du bonus d'attaque (jet uniquement, pas les dégâts) par classe. */
 const ARCHETYPE_CLASSE = {
   guerrier: "martial", chevalier: "martial", chasseur: "martial",
@@ -179,7 +196,7 @@ const CLASSES = {
                 { type: "special", note: "Magnitude = Personnage.rangMaxVoie('Voie du soldat') (±1 à ±4 selon les rangs déjà acquis dans la voie), doublée tant que l'état 'maitrise_tactique' (rang 5) est actif — résolution dédiée dans Capacites.resoudreEffet (choix pairé, cf. son commentaire). Le côté 'DM' est un nouveau canal de bonus temporaire (bonusTemporaire('DM')), lu dans les 3 points de construction des formules de dégâts d'arme côté app.js, au même titre que bonusDegatsArmeChaos." } ] } },
           { rang: 2, nom: "Combat en phalange", effet: "+1 DEF par PJ à son contact (case adjacente)",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Simplifié par rapport au texte d'origine (+1 attaque ET DEF, condition 'combattant la même cible') : validé avec Thomas, +1 DEF uniquement, par PJ adjacent (distance <= 1 case), sans condition de cible commune. Déjà codé dans Personnage.bonusDefPhalange() (calqué sur bonusDefDuel()), câblé dans calculerDEF() — nécessite une scène de combat dd2vtt active et un jeton posé, comme bonusDefDuel." } ] } },
+              effets: [ { type: "special", note: "Simplifié par rapport au texte d'origine (+1 attaque ET DEF, condition 'combattant la même cible') : validé avec Thomas, +1 DEF uniquement, par PJ adjacent (distance <= 1 case), sans condition de cible commune. Déjà codé dans Personnage.bonusDefPhalange() (calqué sur bonusDefDuel()), câblé dans calculerCA() — nécessite une scène de combat dd2vtt active et un jeton posé, comme bonusDefDuel." } ] } },
           { rang: 3, nom: "Second souffle (L)", effet: "Renonce à attaquer ce tour pour reprendre son souffle : regagne 2d6+Mod.CON PV",
             mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "soin", formule: "2d6+Mod.CON" },
@@ -376,7 +393,7 @@ const CLASSES = {
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "bonus", cible: "initiative", valeur: "Mod.INT", duree: "permanente" },
                 { type: "bonus", cible: "DEF", valeur: "Mod.INT", duree: "permanente" },
-                { type: "special", note: "Déjà calculé dans Personnage (cf. calculerDEF) pour la partie DEF ; valeur dynamique (Mod.INT), pas un nombre fixe." } ] } },
+                { type: "special", note: "Déjà calculé dans Personnage (cf. calculerCA) pour la partie DEF ; valeur dynamique (Mod.INT), pas un nombre fixe." } ] } },
           { rang: 3, nom: "Feinte (L)", effet: "Test d'attaque opposé contre la DEF adverse : réussite → la cible subit -4 DEF jusqu'au prochain tour du Barde",
             mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
               jetOppose: { caracAttaquant: "attaqueContact", caracDefenseur: "DEF", difficulteFixe: null },
@@ -1282,24 +1299,28 @@ const CLASSES = {
         speciale: false,
         description: "Le rang et le prestige comme armes. Adaptation de la Voie de la noblesse officielle.",
         rangs: [
-          { rang: 1, nom: null, effet: "Bonus de réputation : les tests sociaux face à la noblesse ou aux institutions sont facilités",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Facilite les tests sociaux face à la noblesse/institutions — bonus de test hors combat non chiffré précisément." } ] } },
-          { rang: 2, nom: null, effet: "Ajoute son Mod. de CHA à sa DEF — son rang impose le respect, y compris au combat",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "bonus", cible: "DEF", valeur: "Mod.CHA", duree: "permanente" },
-                { type: "special", note: "Déjà calculé dans Personnage (cf. calculerDEF) ; valeur dynamique (Mod.CHA), pas un nombre fixe." } ] } },
-          { rang: 3, nom: null, effet: "Avantages tactiques en duel singulier (1 contre 1 formel) : jet de CHA vs DEF",
-            mecanique: { type: "limitee", usage: { frequence: "1x/combat" }, cible: "ennemi", portee: null, zone: null,
-              jetOppose: { caracAttaquant: "CHA", caracDefenseur: "DEF", difficulteFixe: null },
-              effets: [ { type: "bonus", cible: "attaque", valeur: 1, duree: "finCombat", differe: true }, { type: "bonus", cible: "DEF", valeur: 1, duree: "finCombat", differe: true },
-                { type: "special", note: "Simplifié (validé avec Thomas) : caracDefenseur passé de 'CHA' à 'DEF' — data/bestiaire.json n'expose aucun modificateur de CHA par monstre, donc l'opposition CHA vs CHA d'origine ne pouvait jamais être automatisée. Auparavant exclu de cette simplification (les bonus s'appliquaient même sur un raté, incohérence entre le message 'Raté' et l'octroi du bonus) : désormais résolu via effet.differe (nouveau marqueur générique), qui gate ces deux bonus sur la confirmation de la touche, comme n'importe quel effet degats/etat vs DEF." } ] } },
-          { rang: 4, nom: null, effet: "Résistance accrue aux tentatives de commandement ou d'intimidation venant d'un ennemi",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Résistance accrue (non chiffrée) aux tentatives de commandement/intimidation ennemies — bonus de test hors combat." } ] } },
-          { rang: 5, nom: null, effet: "Capacité de prestige ultime liée à un titre ou une reconnaissance gagnée en jeu (à définir avec le MJ)",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Contenu explicitement à définir avec le MJ selon la progression en jeu — le texte source ne fournit aucune formule à automatiser." } ] } },
+          { rang: 1, nom: "Prestance martiale (passive)", effet: "+Mod.CHA à l'Initiative, en plus du modificateur habituel",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Lu par Personnage.bonusInitiativeCapacites() : +Mod.CHA à l'Initiative, sans condition." } ] } },
+          { rang: 2, nom: "Défi loyal (activable)", effet: "Jet opposé CHA vs Volonté : la cible subit -2 à tous ses tests jusqu'à son prochain tour si elle n'attaque pas le Chevalier",
+            mecanique: { type: "activable", usage: { frequence: "libre" },
+              cible: "unique", portee: "vue", zone: null,
+              jetOppose: { caracAttaquant: "CHA", caracDefenseur: "Volonte" },
+              effets: [ { type: "etat", id: "defie_noble", duree: { motCle: "prochainTour" } } ] } },
+          { rang: 3, nom: "Autorité de sang (passive)", effet: "Alliés à ≤3 cases gagnent +1 à leurs jets de Sauvegarde Volonté tant que le Chevalier est conscient",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "zone", portee: null, zone: { taille: 3 }, jetOppose: null,
+              effets: [ { type: "special", note: "+1 Sauvegarde Volonté pour les alliés à ≤3 cases (Carte.distanceCasesEntre) tant que ce Chevalier est conscient (pvActuel > 0) — à câbler dans Personnage.bonusSauvegardeCapacites('Volonte') pour un allié donné, en vérifiant la présence d'un Chevalier qualifié à portée, même patron que bonusDefAuraPeuple." } ] } },
+          { rang: 4, nom: "Duel d'honneur (activable, 1x/combat)", effet: "Défie une cible en duel singulier : +2 attaque et +2 CA contre cette cible tant que dure le duel, mais -2 CA contre toute autre cible",
+            mecanique: { type: "limitee", usage: { frequence: "1x/combat" },
+              cible: "unique", portee: "vue", zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Pose un état 'duel_honneur' avec référence à la cible désignée — +2 attaque/+2 CA si la cible active est celle du duel, -2 CA sinon. Résolution manuelle par la table pour l'instant (pas de moteur de bonus conditionnel par cible ciblée dans capacites.js) — même limite que d'autres capacités déjà notées ainsi." } ] } },
+          { rang: 5, nom: "Souverain du champ de bataille (L, 1x/scénario)", effet: "Le Chevalier et ses alliés à ≤5 cases gagnent +2 attaque et +2 CA pendant [3+Mod.CHA] tours",
+            mecanique: { type: "activable", usage: { frequence: "1x/scenario" },
+              cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
+              effets: [ { type: "bonusTemporaire", cle: "attaque", valeur: 2, duree: { tours: "3+Mod.CHA" } },
+                { type: "bonusTemporaire", cle: "DEF", valeur: 2, duree: { tours: "3+Mod.CHA" } } ] } },
         ],
       },
       {
@@ -1307,15 +1328,18 @@ const CLASSES = {
         speciale: false,
         description: "Le meneur sur le champ de bataille. Adaptation de la Voie du meneur d'hommes officielle.",
         rangs: [
-          { rang: 1, nom: null, effet: "Immunisé à la Peur ; étend un bonus de résistance à la Peur à ses alliés proches",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "zone", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Corrige un gap de donnée : l'immunité à l'état 'effrayee' pour le Chevalier lui-même n'était jamais câblée, contrairement à Liberté d'action (Barde, même mécanisme) déjà branché sur aImmuniteEtat(). Ajoutée dans Personnage.aImmuniteEtat(), lue aux deux points où un état est posé sur un PJ (Capacites.resoudreEffet et le panneau MJ appliquerMalus). Le bonus de résistance étendu aux alliés proches reste non chiffré/non modélisé." } ] } },
-          { rang: 2, nom: null, effet: "Une fois par tour, peut encaisser un coup à la place d'un allié à son contact",
-            mecanique: { type: "activable", usage: { frequence: "1x/tour" }, cible: "allie", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Encaisse un coup à la place d'un allié à son contact (redirection défensive) — non modélisé par le schéma standard. Le compteur d'usage (0/1, période 'tour') est désormais remis à zéro automatiquement à chaque nouveau tour du Chevalier (validé avec Thomas) — corrige un gap générique qui touchait TOUTES les capacités '1x/tour' du jeu (cf. Combat._reinitialiserActionsEntree/Capacites.reinitialiserUsagesPeriode), pas seulement celle-ci." } ] } },
-          { rang: 3, nom: null, effet: "Une fois par tour, un allié en vue peut relancer un test d'attaque raté",
-            mecanique: { type: "activable", usage: { frequence: "1x/tour" }, cible: "allie", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Échangé avec l'ancien rang 4 (validé avec Thomas). Permet à un allié en vue de relancer un test d'attaque raté — mécanique de relance, pas un effet degats/soin/etat/bonus classique." } ] } },
+          { rang: 1, nom: "Ordre bref (activable)", effet: "Désigne un allié à portée de vue : il gagne +2 à son prochain jet d'attaque",
+            mecanique: { type: "activable", usage: { frequence: "libre" },
+              cible: "allie", portee: "vue", zone: null, jetOppose: null,
+              effets: [ { type: "bonusTemporaire", cle: "attaque", valeur: 2, duree: { motCle: "prochaineAttaque" } } ] } },
+          { rang: 2, nom: "Coordination (passive)", effet: "Alliés à ≤2 cases du Chevalier gagnent +1 CA tant que le Chevalier n'a pas entamé son déplacement ce tour",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "zone", portee: null, zone: { taille: 2 }, jetOppose: null,
+              effets: [ { type: "special", note: "+1 CA pour les alliés à ≤2 cases (Carte.distanceCasesEntre) tant que ce Chevalier est immobile ce tour (Combat.estImmobile) — même patron que bonusDefAuraPeuple (Guerrier) et bonusDefImmobile (Chasseur), à ajouter comme fonction dédiée dans capacites.js (obtenirDefCible doit potentiellement l'agréger, cf. bonusDefAuraPeuple déjà additionné à cet endroit)." } ] } },
+          { rang: 3, nom: "Manœuvre engagée (activable)", effet: "Un allié à portée de voix peut effectuer son déplacement complet sans consommer son action de mouvement ce tour",
+            mecanique: { type: "activable", usage: { frequence: "libre" },
+              cible: "allie", portee: "voix", zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Accorde un déplacement complet supplémentaire à l'allié ciblé sans consommer l'action de mouvement de son tour — résolution manuelle par la table (pas de moteur de 'mouvement bonus gratuit' distinct de mecanique.actionBonus, qui ne couvre que les actions principales, pas le déplacement)." } ] } },
           { rang: 4, nom: "Élan tactique (activable, 1x/combat)", effet: "Donne une action principale bonus à un allié",
             mecanique: { type: "activable", usage: { frequence: "1x/combat" }, cible: "allie", portee: null, zone: null, jetOppose: null,
               actionBonus: true,
@@ -1331,21 +1355,26 @@ const CLASSES = {
         speciale: false,
         description: "Le rempart inébranlable. Adaptation de la Voie du bouclier du Guerrier, renommée.",
         rangs: [
-          { rang: 1, nom: null, effet: "Partage le bonus de DEF de son bouclier avec un allié à son contact",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "allie", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Mécanisé (validé avec Thomas) : calcul live (pas de bouton), câblé via Capacites.bonusDefAuraBouclierChevalier() — même schéma que L'exemple du Guerrier (Voie du peuple rang 2). Lit la valeur RÉELLE du bouclier équipé par le Chevalier (Personnage._itemsEquipesUniques(), champ bonusDEF), appliquée à tout allié à 1 case (contact). Appelé à la fois par obtenirDefCible() et par _defPjAvecAura() côté app.js, pour ne jamais désynchroniser la DEF affichée de la DEF réellement opposée à une attaque." } ] } },
-          { rang: 2, nom: null, effet: "Peut absorber un coup destiné à un allié (L)",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "allie", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Absorbe un coup destiné à un allié (redirection défensive totale) — non modélisé par le schéma standard." } ] } },
-          { rang: 3, nom: null, effet: "Peut absorber un sort destiné à un allié (L)",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "allie", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Absorbe un sort destiné à un allié — redirection défensive magique, non modélisée par le schéma standard." } ] } },
-          { rang: 4, nom: null, effet: "Accès à l'armure de plaques complète, protection accrue contre les critiques",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Débloque l'accès à l'armure de plaques complète (règle d'équipement). Protection accrue contre les critiques — non chiffrée." } ] } },
-          { rang: 5, nom: null, effet: "Peut renvoyer un sort absorbé contre son lanceur (L)",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Renvoie un sort précédemment absorbé (cf. rang 3) contre son lanceur d'origine — dépendance à un état précédent non modélisée par le schéma standard." } ] } },
+          { rang: 1, nom: "Garde rapprochée (passive)", effet: "Désigne un allié adjacent comme \"protégé\" : celui-ci gagne +2 CA tant qu'il reste adjacent au Chevalier",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "allie", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "+2 CA pour l'allié désigné 'protégé' tant qu'il reste adjacent (distance <=1, Carte.distanceCasesEntre) au Chevalier — cf. js/capacites.js bonusDefGardeRapprochee (remplace bonusDefAuraBouclierChevalier)." } ] } },
+          { rang: 2, nom: "Interposition (réaction)", effet: "Quand un allié adjacent est ciblé par une attaque, le Chevalier peut s'interposer : devient la cible à la place",
+            mecanique: { type: "activable", usage: { frequence: "libre" }, reactionCout: 1,
+              cible: "soi", portee: "adjacent", zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Redirige manuellement la cible de l'attaque déclenchante vers le Chevalier — pas de moteur de ciblage automatique d'attaque adverse dans l'app, application manuelle par la table (même limite que les autres redirections non modélisées)." } ] } },
+          { rang: 3, nom: "Bouclier vivant (activable)", effet: "Un allié adjacent réduit les dégâts subis de [Mod.CON + niveau/2] ; le Chevalier subit cette différence à sa place",
+            mecanique: { type: "activable", usage: { frequence: "libre" },
+              cible: "allie", portee: "adjacent", zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Réduction de [Mod.CON + floor(niveau/2)] appliquée manuellement par la table au moment du calcul des dégâts nets de l'allié, transférée au Chevalier — pas de moteur de transfert de dégâts automatisé." } ] } },
+          { rang: 4, nom: "Rempart (passive)", effet: "Tout allié adjacent au Chevalier bénéficie de +2 en réduction de dégâts",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "zone", portee: null, zone: { taille: 1 }, jetOppose: null,
+              effets: [ { type: "special", note: "+2 reductionDegats pour les alliés adjacents (distance <=1) — même patron d'aura que bonusDefAuraPeuple/bonusDefGardeRapprochee, à ajouter côté capacites.js si une résolution automatique est souhaitée, sinon application manuelle." } ] } },
+          { rang: 5, nom: "Sacrifice ultime (L, 1x/scénario)", effet: "Pendant 1 tour, tous les dégâts destinés à des alliés à ≤2 cases sont redirigés vers le Chevalier",
+            mecanique: { type: "activable", usage: { frequence: "1x/scenario" },
+              cible: "zone", portee: null, zone: { taille: 2 }, jetOppose: null,
+              effets: [ { type: "special", note: "Redirection totale des dégâts destinés aux alliés à ≤2 cases vers le Chevalier pendant 1 tour — résolution manuelle par la table, capstone de contrôle narratif fort, pas de moteur de redirection de dégâts de zone dans l'app." } ] } },
         ],
       },
       {
@@ -1455,14 +1484,14 @@ const CLASSES = {
         speciale: false,
         description: "Maîtrise spirituelle et technique du corps et du bâton — la précision avant la force. (Adaptation de la Voie de la maîtrise officielle.)",
         rangs: [
-          { rang: 1, nom: null, effet: "Bonus de précision : critiques sur 19-20 au lieu de 20 sur les attaques au contact à mains nues ou au bâton",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Seuil 19-20 (même valeur que Précision létale, fixée par Thomas — le texte d'origine ne chiffrait pas le seuil) déjà codé dans Personnage.critMinAttaque(), limité aux attaques au contact à mains nues ou avec une arme d'id catalogue \"baton*\"." } ] } },
-          { rang: 2, nom: null, effet: "Ajoute son Mod. d'INT ou de SAG (au choix à l'acquisition) à l'Initiative et à la DEF",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "bonus", cible: "initiative", valeur: "Mod.SAG", duree: "permanente" },
-                { type: "bonus", cible: "DEF", valeur: "Mod.SAG", duree: "permanente" },
-                { type: "special", note: "Choix fixé à l'acquisition entre Mod.INT et Mod.SAG (Mod.SAG utilisé par défaut ici, plus cohérent avec attaque.magique du Moine) — valeur dynamique, pas un nombre fixe." } ] } },
+          { rang: 1, nom: "Réflexes du sage (passive)", effet: "+Mod.SAG à l'Initiative, en plus du modificateur habituel",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Lu par Personnage.bonusInitiativeCapacites() : +Mod.SAG à l'Initiative, sans condition." } ] } },
+          { rang: 2, nom: "Défense du corps libre (passive)", effet: "Sans armure portée (Vêtements uniquement) : +Mod.SAG à la CA",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Lu par Personnage.bonusDefCapacites() : +Mod.SAG à la CA si aucune armure équipée (categorie absente ou 'legere' via Vêtements par défaut, cf. reference_def_armures_boucliers.md §2). Ne s'applique plus dès qu'une armure de categorie 'moyenne' ou 'lourde' est équipée." } ] } },
           { rang: 3, nom: "Précision instinctive (activable)", effet: "Test de Perception vs DEF de la cible observée : réussite → +2 à sa prochaine attaque contre elle",
             mecanique: { type: "activable", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
               jetOppose: { caracAttaquant: "Perception", caracDefenseur: "DEF", difficulteFixe: null },
@@ -1471,9 +1500,10 @@ const CLASSES = {
           { rang: 4, nom: "Avalanche de coups (L, 1x/combat)", effet: "Série de jets d'attaque au contact vs DEF de la même cible, s'arrête au premier raté ; inflige autant de dés de dégâts (taille du dé de Voie des poings) que d'attaques touchées",
             mecanique: { type: "limitee", usage: { frequence: "1x/combat" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "special", note: "Mécanisé (validé avec Thomas), remplace le texte d'origine (dégâts explosifs sur jet maximal). Résolution dédiée dans Capacites.lancer() (identifiée par voie+rang), hors du schéma jetOppose standard (celui-ci ne gère qu'un seul jet d'attaque) : boucle de jets d'attaque au contact vs DEF, 1 naturel = arrêt automatique, puis un seul effet 'degats' de N dés (N = nombre de touches, taille de dé = celle du rang de Voie des poings le plus haut acquis, d4 par défaut si non investie — assomption) est résolu normalement. Garde-fou à 20 jets max." } ] } },
-          { rang: 5, nom: null, effet: "Capacité ultime de maîtrise totale (à façonner avec le MJ selon le style de combat final souhaité — bâton ou mains nues)",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Contenu à façonner avec le MJ selon le style de combat final souhaité — le texte source lui-même renvoie à une décision de table, pas de formule à inventer." } ] } },
+          { rang: 5, nom: "Tempête parfaite (L, 1x/scénario)", effet: "Comme Avalanche de coups, mais s'arrête au deuxième raté consécutif ; les critiques de la séquence doublent leurs dés de dégâts",
+            mecanique: { type: "activable", usage: { frequence: "1x/scenario" },
+              cible: "ennemi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Extension d'Avalanche de coups (rang 4, inchangé) : la séquence de jets d'attaque continue jusqu'à 2 échecs consécutifs au lieu d'1 ; tout coup critique dans la séquence double ses dés de dégâts (au lieu du doublement standard déjà appliqué par ailleurs — vérifier l'articulation avec le doublement standard de critique pour éviter un quadruplement accidentel)." } ] } },
         ],
       },
       {
@@ -1589,23 +1619,26 @@ const CLASSES = {
         speciale: false,
         description: "Le savoir comme arme. Adaptation de la Voie de la magie universelle officielle.",
         rangs: [
-          { rang: 1, nom: null, effet: "Bonus de +2 à tous les tests d'INT liés à la connaissance et à l'érudition",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "bonus", cible: "Connaissances (arcanes)", valeur: 2, duree: "permanente" },
-                { type: "special", note: "+2 par rang atteint (remplacé, pas cumulé) déjà codé dans Personnage.bonusCompetence() pour les 3 compétences Connaissances (arcanes/histoire/nature) — érudition repliée dessus, pas Investigation ni Artisanat." } ] } },
-          { rang: 2, nom: null, effet: "Le bonus passe à +4 ; produit une source de lumière magique à volonté",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "+4 (remplace le +2 du rang 1) déjà codé, cf. rang 1. Produit une source de lumière magique à volonté — effet utilitaire non chiffrable." } ] } },
-          { rang: 3, nom: null, effet: "Le bonus passe à +6 ; identification rapide d'objets ou de phénomènes magiques observés",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "+6 (remplace le +4 du rang 2) déjà codé, cf. rang 1. Identification rapide d'objets/phénomènes magiques observés — effet utilitaire non chiffrable." } ] } },
-          { rang: 4, nom: null, effet: "Le bonus passe à +8 ; capacité d'invisibilité temporaire ([3+Mod. d'INT] tours), une fois par jour",
-            mecanique: { type: "limitee", usage: { frequence: "1x/jour" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "etat", id: "invisible", duree: "3+Mod.INT" },
-                { type: "special", note: "+8 (remplace le +6 du rang 3, passif, hors de la limite 1x/jour) déjà codé, cf. rang 1. Durée assumée à [3+Mod.INT] tours (non précisée par le texte source, à ajuster avec Thomas si besoin) : l'état 'invisible' existe déjà dans le catalogue (js/etats.js) mais n'était raccroché à aucune capacité — corrigé ici." } ] } },
-          { rang: 5, nom: null, effet: "INT héroïque : une fois par jour, relance un test d'INT raté et garde le meilleur résultat",
-            mecanique: { type: "limitee", usage: { frequence: "1x/jour" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Déjà codé dans Personnage.aIntHeroique() : case à cocher 'INT héroïque' sur la fiche complète (1x/jour, clé 'classe:magicien:univ5'), force l'avantage (2d20 garde le plus haut) sur le prochain Test d'INT — 'relance si raté, garde le meilleur' est mathématiquement équivalent à l'avantage." } ] } },
+          { rang: 1, nom: "Réserve étendue I (passive)", effet: "+4 PP max",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Ajoute 4 à Personnage.calculerPPMax() — bonus permanent, cumulable avec le rang 2." } ] } },
+          { rang: 2, nom: "Réserve étendue II (passive)", effet: "+4 PP max supplémentaires (cumulé : +8 total aux rangs 1-2)",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Ajoute 4 de plus à Personnage.calculerPPMax() (cumulé avec le rang 1)." } ] } },
+          { rang: 3, nom: "Efficience arcanique (passive)", effet: "Coût PP de tout sort réduit de 1 (rangs 1-2) ou 2 (rangs 3-5)",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Réduction permanente du coutPP de TOUT sort du Magicien (toutes voies confondues, pas seulement celle-ci) : -1 si coutPP correspond à un sort de rang 1-2 (coutPP <= 4), -2 sinon. Lu par capacites.js au moment du calcul du coût réel, avant vérification du pool PP." } ] } },
+          { rang: 4, nom: "Surcharge maîtrisée (passive)", effet: "Tout sort dont le coût PP dépasse ¼ de ppMax inflige +1d4 dégâts par tranche de 2 PP au-dessus de ce seuil",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Seuil = floor(ppMax/4). Si coutPP du sort > seuil : bonus = floor((coutPP-seuil)/2) dés de 1d4 ajoutés aux dégâts. Résolution à ajouter dans capacites.js au moment de la résolution des dégâts d'un sort typeSort:\"majeur\"." } ] } },
+          { rang: 5, nom: "Consumation totale (L, 1x/combat)", effet: "Dépense tous les PP restants sur un sort : +1d4 dégâts par tranche de 2 PP dépensés",
+            mecanique: { type: "activable", usage: { frequence: "1x/combat" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Consomme ppActuel entier (ramené à 0). Ajoute floor(ppDepense/2) dés de 1d4 aux dégâts du prochain sort lancé ce même tour. Résolution manuelle par la table (pas de moteur de bonus conditionnel 'au prochain sort' dans l'app) — même limite que Bastion improvisé." } ] } },
         ],
       },
       {
@@ -1635,19 +1668,18 @@ const CLASSES = {
         speciale: false,
         description: "Feu, glace et terre canalisés à travers de vrais sorts — la version magicien de la polyvalence élémentaire.",
         rangs: [
-          { rang: 1, nom: "Trio élémentaire (sort, L)", effet: "Choix quotidien : Flamme (1d6+Mod. d'INT feu) · Givre (1d6+Mod. d'INT glace, Ralentie 1 tour : -2 DEF) · Pierre (1d6+Mod. d'INT contact, repousse 1,5 m)",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
-              jetOppose: { caracAttaquant: "attaqueMagique", caracDefenseur: "DEF", difficulteFixe: null },
-              effets: [ { type: "degats", formule: "1d6+Mod.INT", elementaire: "feu" },
-                { type: "special", note: "Choix à l'activation entre 3 sorts : Flamme (feu, modélisé ici), Givre (glace + état 'ralentie' 1 tour), ou Pierre (contact + repousse 1,5 m) — un seul sur les trois est représenté par l'effet degats ci-dessus." } ] } },
-          { rang: 2, nom: "Intensité élémentaire", effet: "Les 3 sorts passent à 1d8 + Mod. d'INT",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Déjà codé dans Capacites.resoudreEffet (branche 'degats') : dès que ce rang 2 est acquis, le 1d6 initial du Trio élémentaire (rang 1, seule des 3 options de sort représentée par un effet 'degats') est automatiquement remplacé par 1d8, identifié via voie+rang." } ] } },
-          { rang: 3, nom: "Zone élémentaire (L)", effet: "Version en zone (3 m, portée 15 m) d'un des 3 sorts : 3d6 DM vs DEF",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "zone", portee: 7, zone: 1,
-              jetOppose: { caracAttaquant: "attaqueMagique", caracDefenseur: "DEF", difficulteFixe: null },
-              effets: [ { type: "degats", formule: "3d6", elementaire: null },
-                { type: "special", note: "Simplifié (validé avec Thomas) : caracDefenseur passé de 'DEX' à 'DEF' — data/bestiaire.json n'expose aucun modificateur de DEX par monstre, donc l'opposition d'origine ne pouvait jamais être automatisée. Contre 'DEF', le jet magique est désormais pleinement automatisé, au prix de la nuance 'DEX pour moitié' sur résistance réussie (le schéma standard ne gère que touché/raté binaire). Élément (feu/glace/terre) au choix du lanceur." } ] } },
+          { rang: 1, nom: "Initiation élémentaire (passive)", effet: "Débloque l'accès aux sorts de famille Évocation du Grimoire sans consommer de slot (jusqu'à 1 sort simultané)",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Le Magicien peut avoir 1 sort de categorie 'evocation' actif hors des slots normaux du Grimoire (slotsGrimoire() + 1 si ce rang est acquis et qu'au moins un sort evocation est choisi comme tel) — à câbler dans Personnage.slotsGrimoire() ou équivalent, cf. prompt_grimoire_baton.md." } ] } },
+          { rang: 2, nom: "Efficience élémentaire (passive)", effet: "-2 PP sur tout sort de famille Évocation lancé (minimum 1 PP)",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Réduction de coutPP de -2 (plancher 1) pour tout sort categorie:'evocation' — à appliquer dans capacites.js au moment du calcul du coût réel, même point d'intégration que la réduction 'Efficience arcanique' de l'ex-Voie universitaire (cf. prompt_magicien_voie_universitaire.md, rang 3), les deux réductions se cumulent si le personnage a les deux." } ] } },
+          { rang: 3, nom: "Puissance élémentaire (passive)", effet: "+1d6 dégâts sur tout sort de famille Évocation lancé",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "+1d6 aux dégâts de tout sort categorie:'evocation' résolu — à ajouter dans la résolution des dégâts d'un sort majeur, même famille de patron que le bonus de rang 4 de l'ex-Voie universitaire (Surcharge maîtrisée)." } ] } },
           { rang: 4, nom: "Maîtrise duale (L, 1x/combat)", effet: "Combine deux éléments en un seul sort (vapeur Feu+Glace, choc Feu+Terre... à détailler avec le MJ)",
             mecanique: { type: "limitee", usage: { frequence: "1x/combat" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "special", note: "Combine deux éléments en un seul sort — le texte lui-même renvoie au MJ pour le détail exact ; pas de formule fixe à modéliser tant que non tranché." } ] } },
@@ -1662,19 +1694,20 @@ const CLASSES = {
         speciale: false,
         description: "Le savoir tourné vers la survie — boucliers, dissipation, renvoi. Le pilier défensif qui manquait au Magicien.",
         rangs: [
-          { rang: 1, nom: "Bouclier arcanique (L)", effet: "Active un bouclier sur soi ou un allié à portée : +2 DEF pendant 2 tours",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "allie", portee: 5, zone: null, jetOppose: null,
-              effets: [ { type: "bonus", cible: "DEF", valeur: 2, duree: "2" } ] } },
+          { rang: 1, nom: "Initiation protectrice (passive)", effet: "Débloque l'accès aux sorts de famille Abjuration du Grimoire sans consommer de slot (jusqu'à 1 sort simultané)",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Même mécanisme que le rang 1 élémentaire (Voie de la magie élémentaire), appliqué à la famille 'abjuration'." } ] } },
 
-          { rang: 2, nom: "Résistance arcanique", effet: "Passif : +2 aux jets de sauvegarde contre la magie. Bouclier arcanique passe à +3 DEF",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "+2 aux jets de sauvegarde contre la magie — l'app ne modélise aucun jet de sauvegarde côté PJ (les attaques de sorts ennemis se résolvent par comparaison à la DEF, jamais par un jet du joueur) : même limitation structurelle que race Élfe de sang 'Sang Divin'/Demi-Elfe 'Sang Mêlé', bonus de test hors combat non câblable ici." },
-                { type: "special", note: "Corrige un gap de donnée : modifie Bouclier arcanique (rang 1), le bonus passe de +2 à +3 DEF — n'était pas câblé (contrairement à Refrain lancinant/Intensité élémentaire, même principe). Ajouté dans Capacites.resoudreEffet (branche 'bonus'), identifié via voie+rang, durée inchangée (2 tours)." } ] } },
+          { rang: 2, nom: "Efficience protectrice (passive)", effet: "-2 PP sur tout sort de famille Abjuration lancé (minimum 1 PP)",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Même mécanisme que le rang 2 élémentaire (Voie de la magie élémentaire), appliqué à la famille 'abjuration'." } ] } },
 
-          { rang: 3, nom: "Dissipation (L)", effet: "Test d'INT opposé contre le lanceur d'un effet magique ciblant le Magicien ou un allié à 10 m : succès = annule l'effet",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "allie", portee: 5, zone: null,
-              jetOppose: { caracAttaquant: "INT", caracDefenseur: "INT", difficulteFixe: null },
-              effets: [ { type: "special", note: "Vérifié lors de l'audit final (validé avec Thomas) : contrairement aux autres jetOppose non-DEF simplifiés cette session (Chant corrupteur, Exorcisme, Regard du juste...), celui-ci reste volontairement intact — l'opposition porte sur le LANCEUR de l'effet magique à contrer, une tierce entité distincte de 'cible' (l'allié protégé, résolu via cibleId). Remplacer caracDefenseur par 'DEF' comparerait au jet contre la DEF de l'ALLIÉ protégé, pas celle de l'attaquant à contrer — un résultat structurellement faux, pas une simplification. Sur test d'INT réussi contre le lanceur de l'effet magique ciblé : annulation totale de cet effet, avant application — reste manuel." } ] } },
+          { rang: 3, nom: "Résilience protectrice (passive)", effet: "+2 à la magnitude (bonus CA/RD) ou à la durée (tours) de tout sort de famille Abjuration lancé, selon la nature du sort",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "+2 à la valeur numérique principale (bonusTemporaire.valeur) OU +2 tours à la durée, selon le sort abjuration concerné — ambiguïté assumée dans la donnée, à trancher au cas par cas en jeu par la table plutôt que par une règle générale automatisée." } ] } },
 
           { rang: 4, nom: "Renvoi partiel", effet: "1x/combat, quand le Magicien encaisse un sort qui le ciblait directement (test d'attaque magique réussi contre lui), renvoie la moitié des dégâts (arrondi inf.) à l'attaquant, si celui-ci est en vue",
             mecanique: { type: "limitee", usage: { frequence: "1x/combat" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
@@ -1729,6 +1762,198 @@ const CLASSES = {
 
 /* Ordre d'affichage des classes */
 const ORDRE_CLASSES = ["guerrier", "chevalier", "barde", "chasseur", "moine", "druide", "pretre", "magicien", "enchanteur", "necromancien"];
+
+/* Liste autonome de sorts piochés par le Magicien (apprentissage via
+   parchemin/recherche/montée de niveau, cf. reference_sorts_connus.md) —
+   séparée des Voies de classe, à la manière d'un catalogue de sorts D&D.
+   20 sorts, rangs 1-5, coût PP = rang×2 (cf. reference_systeme_magie_pp.md).
+   Portée limitée à la donnée : PP réel sur Personnage, slots de Grimoire,
+   UI de sélection, verifierRessourcePP()/verifierSortConnu() dans
+   capacites.js restent des chantiers séparés — cette liste n'est pas
+   encore utilisable en jeu tant qu'ils ne sont pas branchés.
+   modeSauvegarde: "moitie" (sorts de zone à jet de sauvegarde, ex. Boule de
+   feu/Éclair) : donnée posée, résolution ("moitié dégâts si Sauvegarde
+   réussie") pas encore câblée dans capacites.js — sans précédent exact
+   avant ce champ. Les effets type:"special" avec note "résolution
+   manuelle" ne sont pas automatisables aujourd'hui, cohérent avec d'autres
+   capacités déjà en jeu dans ce cas (Rage incontrôlée, Bastion improvisé). */
+const SORTS_MAGICIEN = [
+  // --- Rang 1 (coût PP: 2) ---
+  { id: "trait_de_feu", nom: "Trait de feu", rang: 1, categorie: "evocation",
+    effet: "Attaque magique à distance : 1d10 dégâts de feu",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "unique", portee: 15, zone: null,
+      jetOppose: { caracAttaquant: "INT", caracDefenseur: "DEF" },
+      effets: [ { type: "degats", formule: "1d10", typeDegats: "magique" } ] } },
+
+  { id: "projectile_magique", nom: "Projectile magique", rang: 1, categorie: "evocation",
+    effet: "Touche automatiquement (pas de jet d'attaque) : 3×(1d4+1) dégâts de force",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "unique", portee: 20, zone: null,
+      jetOppose: null,
+      effets: [ { type: "degats", formule: "3*(1d4+1)", typeDegats: "magique", note: "touche automatique, pas de jetOppose" } ] } },
+
+  { id: "bouclier_arcanique_mineur", nom: "Bouclier arcanique mineur", rang: 1, categorie: "abjuration",
+    effet: "Réaction : +2 CA jusqu'au prochain tour du Magicien",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, reactionCout: 1, coutPP: 2, typeSort: "majeur",
+      cible: "soi", portee: null, zone: null, jetOppose: null,
+      effets: [ { type: "bonusTemporaire", cle: "DEF", valeur: 2, duree: { motCle: "prochainTour" } } ] } },
+
+  { id: "detection_magie", nom: "Détection de la magie", rang: 1, categorie: "divination_transmutation",
+    effet: "Révèle les auras magiques dans la zone (rituel)",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, rituel: true, coutPP: 2, typeSort: "majeur",
+      cible: "zone", portee: 10, zone: { taille: 3 }, jetOppose: null,
+      effets: [ { type: "special", note: "Information narrative — révèle présence/nature d'auras magiques, pas d'effet chiffré." } ] } },
+
+  { id: "sommeil", nom: "Sommeil", rang: 1, categorie: "enchantement",
+    effet: "Jet opposé INT vs Volonté sur les cibles en zone : échec = endormi jusqu'à subir des dégâts ou 3 tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "zone", portee: 12, zone: { taille: 1 },
+      jetOppose: { caracAttaquant: "INT", caracDefenseur: "Volonte" },
+      effets: [ { type: "etat", id: "endormie", duree: { tours: 3, rompuSiDegats: true } } ] } },
+
+  // --- Rang 2 (coût PP: 4) ---
+  { id: "eclair_localise", nom: "Éclair localisé", rang: 2, categorie: "evocation",
+    effet: "Ligne : 2d8 dégâts électriques",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "ligne", portee: 15, zone: { forme: "ligne", longueur: 6 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", modeSauvegarde: "moitie" },
+      effets: [ { type: "degats", formule: "2d8", typeDegats: "magique" } ] } },
+
+  { id: "toile_araignee", nom: "Toile d'araignée", rang: 2, categorie: "enchantement",
+    effet: "Zone 2 cases : jet Réflexes ou Entravé",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "zone", portee: 10, zone: { taille: 2 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes" },
+      effets: [ { type: "etat", id: "entravee", duree: { tours: 2 } } ] } },
+
+  { id: "peau_de_pierre", nom: "Peau de pierre", rang: 2, categorie: "abjuration",
+    effet: "+2 réduction de dégâts pendant 3 tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "bonusTemporaire", cle: "reduction_degats", valeur: 2, duree: { tours: 3 } } ] } },
+
+  { id: "invisibilite_mineure", nom: "Invisibilité mineure", rang: 2, categorie: "illusion",
+    effet: "Invisible jusqu'à la prochaine action offensive",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "etat", id: "invisible", duree: { motCle: "jusquaActionOffensive" } } ] } },
+
+  { id: "image_miroir", nom: "Image miroir", rang: 2, categorie: "illusion",
+    effet: "Crée 2 doubles illusoires : chance qu'une attaque touche un double au lieu du Magicien",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "soi", portee: null, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "2 doubles ; résolution manuelle par la table (pas de moteur de redirection aléatoire d'attaque dans l'app) — même limite que Contresort/Mur de force." } ] } },
+
+  // --- Rang 3 (coût PP: 6) ---
+  { id: "boule_de_feu", nom: "Boule de feu", rang: 3, categorie: "evocation",
+    effet: "Zone 2 cases : 4d6 dégâts de feu, Réflexes pour moitié",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "zone", portee: 15, zone: { taille: 2 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", modeSauvegarde: "moitie" },
+      effets: [ { type: "degats", formule: "4d6", typeDegats: "magique" } ] } },
+
+  { id: "ralentissement", nom: "Ralentissement", rang: 3, categorie: "enchantement",
+    effet: "Zone : -2 attaque/DEF + moitié vitesse, jet Vigueur",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "zone", portee: 12, zone: { taille: 2 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Vigueur" },
+      effets: [ { type: "etat", id: "ralentie", duree: { tours: 3 } } ] } },
+
+  { id: "contresort", nom: "Contresort", rang: 3, categorie: "abjuration",
+    effet: "Réaction : annule un sort ennemi en cours de résolution",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, reactionCout: 1, coutPP: 6, typeSort: "majeur",
+      cible: "unique", portee: 15, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "Résolution manuelle par la table — pas de moteur d'annulation de sort en cours dans l'app." } ] } },
+
+  { id: "vol", nom: "Vol", rang: 3, categorie: "divination_transmutation",
+    effet: "La cible gagne la capacité de voler pendant plusieurs tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "etat", id: "vol", duree: { tours: 5 } } ] } },
+
+  // --- Rang 4 (coût PP: 8) ---
+  { id: "eclair_grand", nom: "Éclair", rang: 4, categorie: "evocation",
+    effet: "Ligne longue : 6d6 dégâts électriques, Réflexes pour moitié",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+      cible: "ligne", portee: 20, zone: { forme: "ligne", longueur: 10 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", modeSauvegarde: "moitie" },
+      effets: [ { type: "degats", formule: "6d6", typeDegats: "magique" } ] } },
+
+  { id: "cecite_surdite", nom: "Cécité/Surdité", rang: 4, categorie: "enchantement",
+    effet: "Jet Vigueur : aveugle ou assourdit 3 tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+      cible: "unique", portee: 10, zone: null,
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Vigueur" },
+      effets: [ { type: "etat", id: "aveugle_ou_sourd", duree: { tours: 3 } } ] } },
+
+  { id: "mur_de_force", nom: "Mur de force", rang: 4, categorie: "abjuration",
+    effet: "Érige un mur temporaire infranchissable",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+      cible: "zone", portee: 10, zone: { taille: 3 }, jetOppose: null,
+      effets: [ { type: "special", note: "Résolution manuelle par la table — pas de moteur d'obstacle bloquant LoS/mouvement dans l'app." } ] } },
+
+  { id: "invisibilite_majeure", nom: "Invisibilité majeure", rang: 4, categorie: "illusion",
+    effet: "Invisibilité complète prolongée, ne se rompt pas à la première action offensive",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "etat", id: "invisible_majeur", duree: { tours: 5 } } ] } },
+
+  // --- Rang 5 (coût PP: 10, 1x/scénario) ---
+  { id: "meteore_mineur", nom: "Météore mineur", rang: 5, categorie: "evocation",
+    effet: "Zone large : 8d6 dégâts, Réflexes pour moitié",
+    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
+      cible: "zone", portee: 20, zone: { taille: 4 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", modeSauvegarde: "moitie" },
+      effets: [ { type: "degats", formule: "8d6", typeDegats: "magique" } ] } },
+
+  { id: "teleportation", nom: "Téléportation", rang: 5, categorie: "divination_transmutation",
+    effet: "Déplace le groupe vers un lieu connu",
+    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
+      cible: "groupe", portee: null, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "Résolution narrative par la table — déplacement de groupe vers un lieu connu du lanceur." } ] } },
+
+  // --- Sorts additionnels (familles Évocation/Abjuration, cf. prompt_sorts_magicien_familles.md) ---
+  { id: "fleche_de_givre", nom: "Flèche de givre", rang: 2, categorie: "evocation",
+    effet: "Attaque magique à distance : 2d6 dégâts de givre, cible Ralentie 1 tour (-2 CA)",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "unique", portee: 15, zone: null,
+      jetOppose: { caracAttaquant: "INT", caracDefenseur: "DEF" },
+      effets: [ { type: "degats", formule: "2d6", typeDegats: "magique" },
+        { type: "etat", id: "ralenti", duree: { tours: 1 } } ] } },
+
+  { id: "orage_de_grele", nom: "Orage de grêle", rang: 4, categorie: "evocation",
+    effet: "Zone 2 cases : 5d6 dégâts, Réflexes pour moitié",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+      cible: "zone", portee: 18, zone: { taille: 2 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", modeSauvegarde: "moitie" },
+      effets: [ { type: "degats", formule: "5d6", typeDegats: "magique" } ] } },
+
+  { id: "armure_de_mage", nom: "Armure de mage", rang: 1, categorie: "abjuration",
+    effet: "+2 CA pendant 5 tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "soi", portee: null, zone: null, jetOppose: null,
+      effets: [ { type: "bonusTemporaire", cle: "DEF", valeur: 2, duree: { tours: 5 } } ] } },
+
+  { id: "dissipation_mineure", nom: "Dissipation mineure", rang: 2, categorie: "abjuration",
+    effet: "Jet opposé INT contre le lanceur d'un effet magique mineur à portée : succès = annule",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "unique", portee: 10, zone: null,
+      jetOppose: { caracAttaquant: "INT", caracDefenseur: "INT" },
+      effets: [ { type: "special", note: "Annule un effet magique mineur en cours si le jet opposé réussit — résolution manuelle par la table pour juger ce qui compte comme 'mineur', pas de liste fermée." } ] } },
+
+  { id: "globe_de_protection", nom: "Globe de protection", rang: 3, categorie: "abjuration",
+    effet: "Alliés à ≤2 cases du lanceur gagnent +1 CA pendant 3 tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "zone", portee: null, zone: { taille: 2 }, jetOppose: null,
+      effets: [ { type: "bonusTemporaire", cle: "DEF", valeur: 1, duree: { tours: 3 } } ] } },
+
+  { id: "bastion_arcanique", nom: "Bastion arcanique", rang: 5, categorie: "abjuration",
+    effet: "Immunité totale aux dégâts magiques pendant [2+Mod.INT] tours",
+    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
+      cible: "soi", portee: null, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "Immunité totale aux dégâts magiques pendant 2+Mod.INT tours — même patron que 'Sanctuaire' (capstone rang 5 de la Voie de la magie protectrice, capacité distincte non affectée par cet ajout) mais accessible via Grimoire indépendamment de la voie." } ] } },
+];
 
 /* ============================================================
    VOIES RACIALES (homebrew)
@@ -3283,7 +3508,7 @@ const REGLES_GENERALES = [
     titre: "Dons (niveaux 4, 8 et 12)",
     html: true,
     contenu:
-      `<p>Aux niveaux 4, 8 et 12 (soit 1, 2 et 3 voies de classe complètes, cf. pointsVoieTotal), chaque personnage obtient un Don gratuit au choix parmi la liste ci-dessous, en plus des points de voie habituels — aucune réduction de ceux-ci. Un personnage déjà à ces niveaux avant l'introduction de cette règle peut rattraper ses Dons manquants depuis sa fiche. Les Dons sont des bonus descriptifs, appliqués manuellement par le joueur en jeu, comme les effets d'accessoires ou les capacités textuelles — aucune automatisation de calcul de dégâts/DEF.</p>
+      `<p>Aux niveaux 4, 8 et 12 (soit 1, 2 et 3 voies de classe complètes, cf. pointsVoieTotal), chaque personnage obtient un Don gratuit au choix parmi la liste ci-dessous, en plus des points de voie habituels — aucune réduction de ceux-ci. Un personnage déjà à ces niveaux avant l'introduction de cette règle peut rattraper ses Dons manquants depuis sa fiche. La plupart des Dons sont automatisés par la fiche (bonus de caractéristique, DEF, initiative, PV, plafond d'armure, etc., calculés sans action du joueur) ; quelques-uns restent partiellement ou totalement manuels à appliquer en jeu (ex. Fouilleur de donjon).</p>
       <div class="tableau-regle-scroll"><table class="tableau-regle">
         <thead><tr><th>Catégorie</th><th>Don</th><th>Effet</th></tr></thead>
         <tbody>
@@ -3295,8 +3520,8 @@ const REGLES_GENERALES = [
           <tr><td>Expert en hast</td><td>Arme deux_mains à allonge : +1 dégâts, attaque d'opportunité bonus au contact</td></tr>
           <tr><td>Sentinelle</td><td>Attaque d'opportunité même sur retrait organisé, réduit le déplacement de la cible à 0</td></tr>
           <tr><td rowspan="4">Défense</td><td>Robuste</td><td>+2 PV par niveau, rétroactif</td></tr>
-          <tr><td>Maître des armures moyennes</td><td>ValeurArmure 3-4 : aucun malus de Discrétion, plafond DEX +3</td></tr>
-          <tr><td>Maître des armures lourdes</td><td>ValeurArmure 5+ : -3 dégâts physiques subis avant valeurArmure</td></tr>
+          <tr><td>Maître des armures moyennes</td><td>Lève le malus de proficience (DEX/tests DEX/déplacement) d'une armure moyenne</td></tr>
+          <tr><td>Maître des armures lourdes</td><td>Lève le malus de proficience d'une armure lourde, -3 dégâts physiques subis avant reductionDegats</td></tr>
           <tr><td>Expert du bouclier</td><td>Bouclier équipé : +2 Réflexes, 1x/tour réduit de moitié des dégâts subis</td></tr>
           <tr><td>Perception</td><td>Alerte</td><td>+5 Initiative, jamais surpris</td></tr>
           <tr><td>Mobilité</td><td>Mobile</td><td>+1 case de déplacement, ignore terrain difficile après avoir attaqué au contact, jamais d'attaque d'opportunité en s'éloignant d'une cible frappée</td></tr>
@@ -3332,11 +3557,11 @@ const REGLES_GENERALES = [
           <tr><td>+2</td><td>14</td><td>3</td><td>1 Poussière d'acier</td><td>Aucune destruction</td></tr>
           <tr><td>+3</td><td>16</td><td>2</td><td>1 Gemme magique</td><td>Détruit si jet ≤2</td></tr>
           <tr><td>+4</td><td>18</td><td>1</td><td>2 Gemmes magiques</td><td>Détruit si jet ≤5</td></tr>
-          <tr><td>+5</td><td>20</td><td>1</td><td>3 Gemmes magiques + 1 Diamant</td><td>Détruit si jet ≤10 ; ignore en permanence 2 points de valeurArmure de la cible</td></tr>
+          <tr><td>+5</td><td>20</td><td>1</td><td>3 Gemmes magiques + 1 Diamant</td><td>Détruit si jet ≤10 ; ignore en permanence 2 points de reductionDegats de la cible</td></tr>
           <tr><td rowspan="3">Feu (arme, jamais de destruction)</td><td>Rang 1 « enflammée »</td><td>12</td><td>3</td><td>1 Poussière de rubis</td><td>1d4 dégâts de feu</td></tr>
           <tr><td>Rang 2 « ardente »</td><td>14</td><td>2</td><td>2 Poussières de rubis</td><td>1d6 dégâts de feu</td></tr>
           <tr><td>Rang 3 « incandescente »</td><td>16</td><td>1</td><td>3 Poussières de rubis</td><td>1d8 dégâts de feu</td></tr>
-          <tr><td rowspan="3">Protection (armure, valeurArmure)</td><td>+1</td><td>12</td><td>3</td><td>1 Poussière de diamant</td><td>Aucune destruction</td></tr>
+          <tr><td rowspan="3">Protection (armure, valeurCA)</td><td>+1</td><td>12</td><td>3</td><td>1 Poussière de diamant</td><td>Aucune destruction</td></tr>
           <tr><td>+2</td><td>14</td><td>2</td><td>2 Poussières de diamant</td><td>Aucune destruction</td></tr>
           <tr><td>+3</td><td>16</td><td>1</td><td>3 Poussières de diamant</td><td>Détruit si jet ≤5</td></tr>
         </tbody>
