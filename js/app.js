@@ -1691,6 +1691,15 @@ const App = (() => {
   /* ---------- Navigation onglets ---------- */
 
   function allerVers(panneau) {
+    // Ferme la bulle "fiche rapide" d'un token (cf. Carte.onClose) quand on
+    // QUITTE l'onglet Carte pour un autre — capturé avant le bascule de
+    // classes ci-dessous, sinon on ne peut plus savoir d'où on vient. Sans
+    // ça, la bulle (position:fixed sur document.body) restait affichée
+    // par-dessus n'importe quel autre onglet (ex. Dés) — bug rencontré.
+    const panneauPrecedent = document.querySelector(".panneau.actif");
+    if (panneauPrecedent && panneauPrecedent.id === "panneau-carte" && panneau !== "carte" && typeof Carte !== "undefined" && Carte.onClose) {
+      Carte.onClose();
+    }
     document.querySelectorAll("nav.tabs button").forEach((b) => {
       b.classList.toggle("actif", b.dataset.panneau === panneau);
     });

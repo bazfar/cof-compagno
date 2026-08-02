@@ -1412,11 +1412,15 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
   cursor: grab;
   pointer-events: all;
   z-index: 11;
-  transition: box-shadow 0.15s;
+  transition: box-shadow 0.15s, transform 0.15s;
 }
 
 .dd-token.selectionne {
+  /* scale ajouté au translate(-50%,-50%) de base (pas remplacé) : sinon le
+     jeton se recentre sur son coin au lieu de grossir depuis son centre. */
+  transform: translate(-50%, -50%) scale(1.18);
   box-shadow: 0 0 0 3px #fff, 0 0 10px 4px rgba(255,255,255,0.5);
+  z-index: 14;
 }
 
 /* Mode de ciblage (clic sur un jeton pour cibler, cf. Carte.activerModeCiblage) :
@@ -1485,6 +1489,103 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .dd-token-hp .rempli.faible { background: #d38b1f; }
 .dd-token-hp .rempli.critique { background: var(--chaos); }
 .dd-token:hover .dd-token-suppr { display: block; }
+
+/* Bulle "fiche rapide" au clic sur un token (cf. tokenSelectionne,
+   _rendreBulleSelection dans js/carte.js) — nom en haut, portrait à gauche,
+   barre de PV en haut à droite du portrait, DEF en dessous. position:fixed
+   individuel (pas de conteneur dédié) : placé via getBoundingClientRect() du
+   token, même principe que .nombre-flottant. */
+#dd-fiche-bulle {
+  position: fixed;
+  z-index: 950;
+  background: var(--parchemin);
+  border: 2px solid var(--or);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 18px var(--ombre);
+  padding: 8px 12px 10px;
+  min-width: 150px;
+  pointer-events: none;
+}
+.dd-fiche-bulle-nom {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--violet);
+  text-align: center;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dd-fiche-bulle-corps { display: flex; gap: 8px; align-items: stretch; }
+.dd-fiche-bulle-portrait {
+  width: 52px; height: 52px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--or);
+  flex-shrink: 0;
+}
+.dd-fiche-bulle-portrait-vide {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--violet);
+  color: #fff;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+.dd-fiche-bulle-stats {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  min-width: 60px;
+}
+.dd-fiche-bulle-hp {
+  width: 100%;
+  height: 8px;
+  background: rgba(0,0,0,0.15);
+  border: 1px solid rgba(0,0,0,0.25);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.dd-fiche-bulle-hp .rempli { height: 100%; background: var(--succes); transition: width 0.2s, background 0.2s; }
+.dd-fiche-bulle-hp .rempli.faible { background: #d38b1f; }
+.dd-fiche-bulle-hp .rempli.critique { background: var(--chaos); }
+.dd-fiche-bulle-hp-vide { background: transparent; border-color: transparent; }
+.dd-fiche-bulle-hp-valeur {
+  font-size: 0.68rem;
+  color: var(--encre);
+  opacity: 0.75;
+  margin: 2px 0 4px;
+  line-height: 1;
+}
+.dd-fiche-bulle-def {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--encre);
+}
+.dd-fiche-bulle-def-icone { margin-right: 4px; }
+/* Flèche façon bulle de dialogue, pointe vers le token — repositionnée
+   horizontalement en JS (left inline) pour rester alignée même si la bulle
+   est recentrée près du bord de l'écran. */
+.dd-fiche-bulle-fleche {
+  position: absolute;
+  bottom: -8px;
+  width: 14px; height: 14px;
+  background: var(--parchemin);
+  border-right: 2px solid var(--or);
+  border-bottom: 2px solid var(--or);
+  transform: translateX(-50%) rotate(45deg);
+}
+.dd-fiche-bulle-en-dessous .dd-fiche-bulle-fleche {
+  bottom: auto;
+  top: -8px;
+  border-right: none;
+  border-bottom: none;
+  border-left: 2px solid var(--or);
+  border-top: 2px solid var(--or);
+}
 
 /* Badge numéro distinguant plusieurs instances d'une même espèce sur le
    jeton lui-même (ex. "Gobelin garde 1"/"2") — cf. rendreTokensDD, sans quoi
