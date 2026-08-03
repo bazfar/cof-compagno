@@ -162,6 +162,19 @@ const INVOCATIONS = [
     pvMax: null, def: 10, armure: 0, init: null, attaqueBonus: null, degats: "1d6",
     description: "PV = niveau × 2 (par défaut, non chiffré par le texte source), Att = attaque magique de l'Enchanteur, DM 1d6 (assumé, à ajuster avec Thomas si besoin). Ne dure que [Mod. de CHA] tours — retire le jeton manuellement à expiration, comme Créature corrompue (Druide).",
   },
+  {
+    id: "illusion_liee_enchanteur",
+    nom: "Illusion liée",
+    classe: "enchanteur", voie: "Voie de l'enchantement", rangRequis: 5,
+    // pvMax: null MAIS sans pvMaxFormule (cf. Carte._resoudreInvocation) : ne
+    // retombe PAS sur le repli générique "niveau×2" — cas spécial dédié
+    // (recalcule floor(PV actuels du lanceur / 2) à CHAQUE invocation, une
+    // vraie valeur dynamique liée à l'état du personnage au moment du clic,
+    // pas une formule figée par pvMaxFormule).
+    pvMax: null, def: 12, armure: 0, init: null, attaqueBonus: null, degats: null,
+    sansAttaque: true,
+    description: "PV = floor(PV actuels du lanceur / 2) au moment de l'invocation (recalculé à chaque invocation). Ne combat pas et n'attaque pas — sert uniquement de vecteur au bonus +1d6 dégâts magiques (cf. Personnage.bonusDegatsMagiquesIllusionsLiees) tant qu'elle reste vivante. Invoquée deux fois au même lancer (2 instances liées) : confirme la modale d'invocation deux fois de suite.",
+  },
 ];
 
 const CLASSES = {
@@ -1003,24 +1016,27 @@ const CLASSES = {
         speciale: false,
         description: "Illusions et tromperie — manipuler la réalité perçue plutôt que la réalité elle-même.",
         rangs: [
-          { rang: 1, nom: "Image décalée (sort, L)", effet: "Crée un double illusoire à 1 m de lui ou d'une autre cible alliée ; la prochaine attaque réussie contre lui rate automatiquement. Dure 3 tours ou jusqu'à la fin du combat, selon ce qui arrive en premier",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "allie", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "etat", id: "image_decalee", duree: "3" },
-                { type: "special", note: "L'annulation de la prochaine attaque réussie contre la cible protégée (soi-même ou un allié à 1 m) reste une appréciation manuelle (pas de mécanisme d'annulation de coup dans l'app) — seule la durée (3 tours, ou fin de combat immédiate si elle arrive avant, cf. Capacites.retirerEtatsFinCombat) est automatisée via l'état 'image_decalee'." } ] } },
-          { rang: 2, nom: "Déguisement magique (sort, L)", effet: "Prend l'apparence exacte d'une créature humanoïde connue pendant [5+Mod. de CHA] heures ; SAG diff. [10+Mod. de CHA] pour percer l'illusion",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Change d'apparence pendant [5+Mod.CHA] heures (durée hors combat) ; un observateur doit réussir un test de SAG diff. [10+Mod.CHA] pour percer l'illusion — non modélisé par le schéma standard." } ] } },
-          { rang: 3, nom: "Mirage (sort, L, zone 2 cases, 10 cases)", effet: "Crée une scène illusoire complexe ; les cibles qui interagissent font SAG diff. [10+Mod. de CHA]",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "zone", portee: 10, zone: 2, jetOppose: null,
-              effets: [ { type: "special", note: "Scène illusoire complexe ; les cibles qui interagissent testent SAG diff. [10+Mod.CHA] — effet narratif/environnemental sans conséquence de combat chiffrable." } ] } },
-          { rang: 4, nom: "Terreur (sort, L, 15 m)", effet: "Attaque magique : la cible voit sa pire crainte, fuit [1d4+Mod. de CHA] tours OU subit -4 DEF et attaque jusqu'à la fin du combat",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: 7, zone: null,
-              jetOppose: { caracAttaquant: "attaqueMagique", caracDefenseur: "DEF", difficulteFixe: null },
-              effets: [ { type: "etat", id: "effrayee", duree: "1d4+Mod.CHA" },
-                { type: "special", note: "Alternative possible (au choix/appréciation) : -4 DEF et -4 attaque jusqu'à la fin du combat au lieu de la fuite." } ] } },
-          { rang: 5, nom: "Grande illusion (sort, L, 1x/scénario, zone 10 cases)", effet: "Illusion totale (bâtiment, armée, désastre) ; dure [niveau] heures sauf dissipation",
-            mecanique: { type: "limitee", usage: { frequence: "1x/scenario" }, cible: "zone", portee: null, zone: 10, jetOppose: null,
-              effets: [ { type: "special", note: "Illusion totale (bâtiment, armée, désastre...) durant [niveau] heures sauf dissipation — effet narratif à grande échelle, non chiffrable par le schéma standard." } ] } },
+          { rang: 1, nom: "Illusion (sort)", effet: "Pose une illusion sur un allié : +1 CA pendant 3 tours (ou jusqu'à la fin du combat si plus court). Coûte 2 PP",
+            mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+              cible: "allie", portee: 5, zone: null, jetOppose: null,
+              effets: [ { type: "bonus", cible: "DEF", valeur: 1, duree: "3" } ] } },
+          { rang: 2, nom: "Fascination (sort)", effet: "Attaque magique (INT, pas CHA) vs DEF + PV actuels/2 de la cible : Fascinée tant que maintenue (2 PP au lancer, puis 2 PP/tour de maintien). Coûte 2 PP",
+            mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+              cible: "unique", portee: 5, zone: null,
+              jetOppose: { caracAttaquant: "INT", caracDefenseurCalcule: "DEF+PVactuels/2" },
+              effets: [ { type: "etat", id: "fascinee_illusoire", duree: "maintenue", coutMaintienPP: 2 } ] } },
+          { rang: 3, nom: "Image décalée (évolution)", effet: "Le sort Illusion remplace son +1 CA par : la prochaine attaque contre le bénéficiaire rate automatiquement",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "À la résolution du sort 'illusion' (rang 1, même voie), remplace l'effet bonus DEF+1 par l'état 'image_decalee' (déjà au catalogue js/etats.js, même sémantique 'prochaine attaque ratée' que l'ancien rang 1 qu'il remplace) — condition vérifiée dans Capacites.lancer via source.voie/source.rang, coût PP inchangé (2, ou 1 avec le rang 4)." } ] } },
+          { rang: 4, nom: "Proficience (passive)", effet: "Le coût d'Illusion (base ou évoluée) passe à 1 PP ; le coût de MAINTIEN de Fascination passe à 1 PP/tour (le coût de lancement initial de Fascination reste à 2 PP)",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "coutPP du sort 'illusion' : 2→1 (câblé dans Capacites.lancer). coutMaintienPP de l'état 'fascinee_illusoire' : 2→1 (câblé dans Capacites.resoudreEffet, à la pose de l'état). coutPP (lancement initial) de 'fascination_illusoire' INCHANGÉ à 2 — seul le maintien baisse." } ] } },
+          { rang: 5, nom: "Illusion vivante (L, 1x/scénario)", effet: "Invoque 2 illusions liées sur le plateau : chacune a la moitié des PV actuels du lanceur, et boost ses dégâts magiques de +1d6 chacune tant qu'elle est vivante. Coûte 10 PP",
+            mecanique: { type: "limitee", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Débloque l'accès à l'invocation 'illusion_liee_enchanteur' (cf. catalogue INVOCATIONS, PV = moitié des PV actuels du lanceur au moment de l'invocation) via la modale d'invocation standard (Carte.ouvrirModalInvocation) — à confirmer deux fois pour poser les 2 instances liées, même flux que les autres invocations à plusieurs jetons du jeu. Le +1d6 dégâts magiques par illusion liée vivante (jusqu'à 2) est câblé via Personnage.bonusDegatsMagiquesIllusionsLiees(), lu par Capacites.resoudreEffet pour tout sort à dégâts de l'Enchanteur." } ] } },
         ],
       },
       {
@@ -1965,6 +1981,30 @@ const SORTS_MAGICIEN = [
    chaîne) plutôt que "bonusTemporaire"/durée-objet, seul schéma résolu par
    Capacites.resoudreEffet aujourd'hui. */
 const SORTS_ENCHANTEUR = [
+  // --- Famille illusion (2, Voie de l'enchantement, cf. prompt_enchanteur_voie_illusion.md) ---
+  // Contrairement au reste de cette liste (schéma "bonusTemporaire"/durée-objet,
+  // pas encore résolu par Capacites.resoudreEffet), ces 2 sorts utilisent le
+  // schéma fonctionnel (type "bonus"/"etat", durée en chaîne) : dupliqués tels
+  // quels dans CLASSES.enchanteur.voies["Voie de l'enchantement"] (rangs 1/2),
+  // seule voie d'accès réellement jouable aujourd'hui (le Grimoire n'est câblé
+  // côté app.js que pour SORTS_MAGICIEN — brancher SORTS_ENCHANTEUR sur le
+  // Grimoire reste un chantier séparé). Présents ici pour la complétude du
+  // catalogue de famille, cf. Voie du spectacle rang 1 "Initiation au
+  // spectacle" qui référence la famille 'illusion' au même titre que
+  // 'enchantement'.
+  { id: "illusion", nom: "Illusion", rang: 1, categorie: "illusion",
+    effet: "Pose une illusion sur un allié : +1 CA pendant 3 tours (ou jusqu'à la fin du combat si plus court). À rang 3 de la Voie de l'enchantement (Image décalée), remplacé par : la prochaine attaque réussie contre le bénéficiaire rate automatiquement",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "bonus", cible: "DEF", valeur: 1, duree: "3" } ] } },
+
+  { id: "fascination_illusoire", nom: "Fascination", rang: 2, categorie: "illusion",
+    effet: "Attaque magique (INT, pas CHA) vs DEF + PV actuels/2 de la cible : Fascinée tant que maintenue (coût de maintien : 2 PP/tour)",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "unique", portee: 5, zone: null,
+      jetOppose: { caracAttaquant: "INT", caracDefenseurCalcule: "DEF+PVactuels/2" },
+      effets: [ { type: "etat", id: "fascinee_illusoire", duree: "maintenue", coutMaintienPP: 2 } ] } },
+
   // --- Famille enchantement (5) ---
   { id: "fascination", nom: "Fascination", rang: 1, categorie: "enchantement",
     effet: "Attaque magique vs DEF : Fascinée (immobile) tant que l'Enchanteur maintient (action L/tour). Brisée par toute attaque ou événement brutal",

@@ -372,6 +372,14 @@ const Carte = (() => {
       attaqueBonus += 2;
       pvMaxFinal += 5;
     }
+    // Enchanteur — Voie de l'enchantement, rang 5 "Illusion vivante" : PV =
+    // floor(PV actuels du lanceur / 2) AU MOMENT de l'invocation — déroge au
+    // repli générique "niveau×2" (pvMax===null sans pvMaxFormule) ci-dessus,
+    // seule invocation du jeu dont les PV dépendent des PV ACTUELS (pas
+    // maximum) du lanceur plutôt que de son niveau.
+    if (inv.id === "illusion_liee_enchanteur") {
+      pvMaxFinal = Math.floor((p.pvActuel || 0) / 2);
+    }
     return { pvMax: pvMaxFinal, attaqueBonus };
   }
 

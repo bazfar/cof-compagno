@@ -1214,6 +1214,20 @@ class Personnage extends Entite {
   bonusDegatsArmeEnchantee() {
     return (this.etatsActifs || []).some((e) => e.idEtat === "arme_enchantee") ? "1d6" : null;
   }
+  // Enchanteur — Voie de l'enchantement, rang 5 "Illusion vivante" : +1d6
+  // dégâts magiques par illusion liée encore vivante (jusqu'à 2, cf.
+  // catalogue INVOCATIONS "illusion_liee_enchanteur") — dépend d'un jeton
+  // posé sur la carte (invocateur/invocationId/pvActuel), pas d'un état sur
+  // this, même schéma dépendance-Carte que bonusDefDuel/bonusDefPhalange
+  // ci-dessus : 0 sans Carte chargée ou hors combat sur grille.
+  bonusDegatsMagiquesIllusionsLiees() {
+    if (this.classe !== "enchanteur") return 0;
+    if (typeof Carte === "undefined" || !Carte.listeMonstresCombat) return 0;
+    const nbVivantes = (Carte.listeMonstresCombat() || []).filter((m) =>
+      m.invocateur === this.id && m.invocationId === "illusion_liee_enchanteur" && (m.pvActuel || 0) > 0
+    ).length;
+    return nbVivantes; // nombre de d6 à ajouter, résolu comme `${n}d6` par l'appelant
+  }
   // Chevalier — Voie du chaos, rang 5 "Avatar du pacte" : +2d6 DM à toutes
   // les attaques au contact tant que l'état 'avatar_du_pacte' reste actif —
   // même canal que bonusDegatsDechainement (câblé aux mêmes 3 sites app.js).

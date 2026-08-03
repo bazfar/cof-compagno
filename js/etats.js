@@ -105,6 +105,8 @@ const ETATS = {
     description: "+2d6 DM à toutes les attaques au contact (cf. Personnage.bonusDegatsAvatarPacte) et immunité à la Peur (cf. Personnage.aImmuniteEtat) tant que l'état dure (Chevalier, Voie du chaos rang 5). Le +4 DEF est posé séparément. Contrecoup (perd son action de mouvement au tour suivant) non modélisé." },
   vol: { nom: "Vol", categorie: "buff",
     description: "Peut voler librement tant que l'état dure (Magicien, sort Vol, rang 3)." },
+  fascinee_illusoire: { nom: "Fascinée (illusion)", categorie: "controle",
+    description: "Immobile tant que l'effet est maintenu (Enchanteur, Voie de l'enchantement rang 2 « Fascination ») — motCle 'maintenue', jamais décompté tour par tour. Coûte coutMaintienPP en PP à chaque début de tour du lanceur (cf. Combat._reinitialiserActionsEntree) ; PP insuffisants = état rompu et retiré immédiatement." },
 };
 
 const ORDRE_CATEGORIES_ETATS = ["controle", "malus", "dot", "physique", "buff"];
