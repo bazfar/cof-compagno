@@ -8899,13 +8899,14 @@ const App = (() => {
     return `<div class="carte carte-monstre">
       <div class="monstre-header">
         <div class="monstre-nom">${emoji} ${echapper(m.nom)} ${boss}${tier}${modifie ? ' <span class="badge-modifie" title="Stats modifiées par le MJ">✎ modifié</span>' : ""}</div>
-        <div class="monstre-meta">${dang} ${taille}${race}${enEdition ? "" : ` <button class="btn petit secondaire btn-monstre-editer" data-id="${echapper(m.id)}" title="Modifier les stats">✏️</button>`}</div>
+        <div class="monstre-meta">${dang} ${taille}${race}</div>
       </div>
       ${m.categorie || m.faction ? `<div class="monstre-sous">${[m.categorie, m.faction].filter(Boolean).map(echapper).join(" · ")}</div>` : ""}
       ${statsHtml}
       ${atqHtml}
       ${capHtml}
       ${loreHtml}
+      ${enEdition ? "" : `<div class="monstre-actions"><button class="btn petit secondaire btn-monstre-editer" data-id="${echapper(m.id)}">✏️ Modifier les stats</button></div>`}
     </div>`;
   }
 

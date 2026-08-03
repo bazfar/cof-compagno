@@ -1819,6 +1819,7 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .edit-stat { display: flex; flex-direction: column; gap: 2px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--violet, #7a5a9e); }
 .edit-stat input { width: 60px; font-family: inherit; font-size: 0.9rem; padding: 4px 6px; border: 1px solid var(--parchemin-fonce); border-radius: 5px; background: #fffdf7; }
 .badge-modifie { font-size: 0.68rem; font-weight: 700; color: var(--or, #a97f34); background: #f4e7d4; border-radius: 10px; padding: 1px 7px; vertical-align: middle; }
+.monstre-actions { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--parchemin-fonce); display: flex; justify-content: flex-end; }
 .monstre-stats {
   display: flex;
   flex-wrap: wrap;
