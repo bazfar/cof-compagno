@@ -8788,9 +8788,11 @@ const App = (() => {
       ? m.race.map(r => `<span class="badge-race">${echapper(r)}</span>`).join("")
       : "";
 
+    const volonte = m.defMentale != null ? m.defMentale : (10 + (m.dangerosite || 0));
     const statsHtml = `<div class="monstre-stats">
       <span title="Points de Vie"><strong>PV</strong> ${m.pv ?? "—"}</span>
       <span title="Défense"><strong>DEF</strong> ${m.def ?? "—"}</span>
+      <span title="Volonté — défense contre les sorts mentaux (${m.defMentale != null ? "fixée" : "dérivée : 10 + dangerosité"})"><strong>VOL</strong> ${volonte}</span>
       <span title="Initiative"><strong>INIT</strong> ${m.init >= 0 ? "+" : ""}${m.init ?? "—"}</span>
       <span title="Attaque"><strong>ATK</strong> ${m.atk >= 0 ? "+" : ""}${m.atk ?? "—"}</span>
       ${m.armure ? `<span title="${echapper(m.armure.description || "")}"><strong>Armure</strong> ${m.armure.valeur ?? "—"}</span>` : ""}
