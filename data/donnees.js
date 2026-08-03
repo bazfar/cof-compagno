@@ -1034,11 +1034,10 @@ const CLASSES = {
           { rang: 2, nom: "Transmutation mineure (rituel, contact, 1 tour)", effet: "Change la nature d'un matériau sur petite surface (bois → métal, verre → pierre) ; tient [niveau] heures",
             mecanique: { type: "rituel", usage: { frequence: "libre" }, cible: "aucune", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "special", note: "Change la nature d'un matériau sur petite surface, tient [niveau] heures — effet d'artisanat magique non chiffrable." } ] } },
-          { rang: 3, nom: "Arme enchantée (sort, L, contact)", effet: "Une arme ou objet gagne +2 attaque et +1d6 DM magiques pendant [3+Mod. de CHA] tours",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "allie", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "bonus", cible: "attaque", valeur: 2, duree: "3+Mod.CHA" },
-                { type: "etat", id: "arme_enchantee", duree: "3+Mod.CHA" },
-                { type: "special", note: "Mécanisé (validé avec Thomas) : +1d6 DM magiques désormais câblé via l'état 'arme_enchantee' (js/etats.js) et Personnage.bonusDegatsArmeEnchantee(), même schéma que bonusDegatsArmeChaos/Dechainement, câblé aux 3 mêmes sites app.js (dmgContact uniquement, même limite que ces deux précédents)." } ] } },
+          { rang: 3, nom: "Maîtrise de la matière (passive)", effet: "-2 PP sur tout sort de famille Transmutation (min 1) et +1d4 dégâts/magnitude sur ces sorts",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Réduction de coutPP -2 (plancher 1) ET +1d4 à la magnitude/aux dégâts pour tout sort categorie:'transmutation', y compris 'Arme enchantée' (le +1d6 DM magiques existant de ce sort n'est pas remplacé, ce bonus s'additionne)." } ] } },
           { rang: 4, nom: "Transmutation majeure (rituel, contact, 5 min)", effet: "Change la nature d'une surface jusqu'à 2 m² ; permanent mais réversible par Dispersion magique",
             mecanique: { type: "rituel", usage: { frequence: "libre" }, cible: "aucune", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "special", note: "Change la nature d'une surface jusqu'à 2 m², permanent mais réversible par Dispersion magique — effet d'artisanat magique non chiffrable." } ] } },
@@ -1058,16 +1057,18 @@ const CLASSES = {
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "bonus", cible: "Connaissances (histoire)", valeur: 2, duree: "permanente" },
                 { type: "special", note: "+2 par rang atteint (pas une valeur fixe) déjà codé dans Personnage.bonusCompetence() pour Connaissances (histoire) et Connaissances (arcanes) — politique/géographie repliées sur Connaissances (histoire), faute d'entrée dédiée." } ] } },
-          { rang: 2, nom: "Lecture d'aura (sort, L, 5 m)", effet: "Révèle la nature magique d'un objet ou créature (école de magie, niveau approximatif, malédictions actives)",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "aucune", portee: 2, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Révèle la nature magique d'un objet/créature (école, niveau approximatif, malédictions actives) — information narrative, pas un effet chiffré." } ] } },
+          { rang: 2, nom: "Œil du chercheur (passive)", effet: "-2 PP sur tout sort de famille Divination (min 1) et +2 au jet opposé de ces sorts",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Réduction de coutPP -2 (plancher 1) ET +2 au jet CHA opposé pour tout sort categorie:'divination'." } ] } },
           { rang: 3, nom: "Pressentiment (passive)", effet: "Ne peut pas être surpris ; +2 Initiative ; une fois par combat, demande au MJ un indice sur les intentions d'une cible",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "bonus", cible: "initiative", valeur: 2, duree: "permanente" },
                 { type: "special", note: "Mécanisé (validé avec Thomas) : +2 Initiative ajouté (mentionné à l'origine, absent du texte de donnees.js jusqu'ici), câblé dans Personnage.bonusInitiativeCapacites() — même schéma/valeur que Chasseur 'Sens du danger' (Voie de la traque rang 4). 'Ne peut pas être surpris' et l'indice du MJ 1x/combat restent non modélisés (pas de mécanique de surprise dans l'app)." } ] } },
-          { rang: 4, nom: "Vision du passé (sort, L, rituel 10 min)", effet: "En touchant un objet ou lieu, perçoit les événements marquants qui s'y sont déroulés (jusqu'à [niveau×10] ans)",
-            mecanique: { type: "rituel", usage: { frequence: "libre" }, cible: "aucune", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Perçoit les événements marquants d'un objet/lieu (jusqu'à [niveau×10] ans) — information narrative, pas un effet chiffré." } ] } },
+          { rang: 4, nom: "Mémoire eidétique (passive)", effet: "Une fois par jour, relance un test d'INT ou de CHA raté lié à une information déjà rencontrée en jeu",
+            mecanique: { type: "passive", usage: { frequence: "1x/jour" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Relance 1x/jour — même patron que 'INT héroïque' (ex-Magicien, retiré depuis, cf. prompt_magicien_voie_universitaire.md) mais réintroduit ici pour l'Enchanteur, appliqué à INT OU CHA au choix." } ] } },
           { rang: 5, nom: "Prophétie (sort, L, 1x/scénario)", effet: "Pose une question sur un événement futur du scénario ; réponse véridique mais cryptique (une phrase, sans détail)",
             mecanique: { type: "limitee", usage: { frequence: "1x/scenario" }, cible: "aucune", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "special", note: "Pose une question sur un événement futur ; réponse véridique mais cryptique du MJ — entièrement narratif." } ] } },
@@ -1078,25 +1079,22 @@ const CLASSES = {
         speciale: false,
         description: "Fascination, sommeil et domination mentale — subjuguer autant que commander.",
         rangs: [
-          { rang: 1, nom: "Fascination (sort, L, 15 m)", effet: "Attaque magique vs DEF : Fascinée (immobile) tant que l'Enchanteur maintient (action L/tour). Brisée par toute attaque ou événement brutal",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: 7, zone: null,
-              jetOppose: { caracAttaquant: "attaqueMagique", caracDefenseur: "DEF", difficulteFixe: null },
-              effets: [ { type: "etat", id: "fascinee", duree: "1" },
-                { type: "special", note: "Simplifié (validé avec Thomas) : caracDefenseur passé de null (difficulté réelle 10+Mod.SAG de la cible, non modélisable) à 'DEF' — même principe que Domination (rang 5, même voie). Contre 'DEF', le jet magique est désormais pleinement automatisé. Maintenue tant que l'Enchanteur consacre son action limitée chaque tour (re-testée manuellement chaque tour, non trackée) ; brisée par toute attaque/événement brutal." } ] } },
+          { rang: 1, nom: "Initiation au spectacle (passive)", effet: "Débloque l'accès aux sorts de famille Enchantement du Grimoire sans consommer de slot (jusqu'à 1 sort simultané)",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Même mécanisme que 'Initiation élémentaire' côté Magicien, appliqué à la famille 'enchantement' de SORTS_ENCHANTEUR." } ] } },
           { rang: 2, nom: "Voix envoûtante (passive)", effet: "+2 par rang à tous les tests de CHA visant à persuader, séduire ou distraire",
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "bonus", cible: "Persuasion", valeur: 2, duree: "permanente" },
                 { type: "special", note: "+2 par rang atteint (pas une valeur fixe) déjà codé dans Personnage.bonusCompetence('Persuasion') — séduction/distraction repliées dessus, faute d'entrée dédiée." } ] } },
-          { rang: 3, nom: "Sommeil (sort, L, 15 m)", effet: "Attaque magique contre une cible avec moins de [Mod. de CHA×5] PV actuels : endormie jusqu'à blessure ou réveil manuel",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: 7, zone: null,
-              jetOppose: { caracAttaquant: "attaqueMagique", caracDefenseur: "DEF", difficulteFixe: null },
-              effets: [ { type: "etat", id: "endormie", duree: "jusquAuReveil" },
-                { type: "special", note: "Condition : la cible doit avoir moins de [Mod.CHA×5] PV actuels — seuil non vérifié automatiquement." } ] } },
-          { rang: 4, nom: "Suggestion (sort, L, 10 m)", effet: "Attaque magique vs DEF : la cible exécute une action raisonnable dans l'heure, sans se souvenir d'avoir été influencée",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: 5, zone: null,
-              jetOppose: { caracAttaquant: "attaqueMagique", caracDefenseur: "DEF", difficulteFixe: null },
-              effets: [ { type: "etat", id: "charmee", duree: "1" },
-                { type: "special", note: "Simplifié (validé avec Thomas) : caracDefenseur passé de null (difficulté réelle 10+Mod.SAG de la cible, non modélisable) à 'DEF' — même principe que Domination/Fascination (même voie). Contre 'DEF', le jet magique est désormais pleinement automatisé. La cible ne se souvient pas avoir été influencée (narratif)." } ] } },
+          { rang: 3, nom: "Emprise du spectacle (passive)", effet: "-2 PP sur tout sort de famille Enchantement (min 1) et +2 à la DD de résistance (Volonté) de la cible",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Réduction de coutPP -2 (plancher 1) ET +2 à la difficulté du jet de Volonté opposé pour tout sort categorie:'enchantement'." } ] } },
+          { rang: 4, nom: "Numéro d'ensemble (passive)", effet: "Un sort 'enchantement' ciblant plusieurs créatures gagne 1 cible supplémentaire à portée",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "+1 cible sur les sorts enchantement à cible multiple/zone — n'a d'effet que sur les sorts qui en acceptent plusieurs (peu nombreux dans la liste actuelle, capacité surtout tournée vers de futurs ajouts à la famille)." } ] } },
           { rang: 5, nom: "Domination (sort, L, 1x/scénario)", effet: "Contrôle total d'une cible humanoïde pendant [Mod. de CHA] jours vs DEF ; nouveau test une fois par jour pour résister",
             mecanique: { type: "limitee", usage: { frequence: "1x/scenario" }, cible: "ennemi", portee: null, zone: null,
               jetOppose: { caracAttaquant: "attaqueMagique", caracDefenseur: "DEF", difficulteFixe: null },
@@ -1953,6 +1951,108 @@ const SORTS_MAGICIEN = [
     mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
       cible: "soi", portee: null, zone: null, jetOppose: null,
       effets: [ { type: "special", note: "Immunité totale aux dégâts magiques pendant 2+Mod.INT tours — même patron que 'Sanctuaire' (capstone rang 5 de la Voie de la magie protectrice, capacité distincte non affectée par cet ajout) mais accessible via Grimoire indépendamment de la voie." } ] } },
+];
+
+/* Liste autonome de sorts piochés par l'Enchanteur (même principe que
+   SORTS_MAGICIEN ci-dessus, cf. prompt_enchanteur_familles.md) — 13 sorts
+   répartis en 3 familles (enchantement/transmutation/divination), coût PP =
+   rang×2. Carac de lancer : CHA (CARAC_MAGIE.enchanteur). Comme
+   SORTS_MAGICIEN, cette liste n'est pas encore utilisable en jeu tant que le
+   Grimoire/PP/slots ne sont pas branchés pour l'Enchanteur (même chantier
+   séparé, cf. reference_systeme_magie_pp.md) — sauf les 2 sorts de la Voie de
+   l'enchantement (cf. plus bas, prompt_enchanteur_voie_illusion.md), qui
+   utilisent un schéma d'effets fonctionnel (type "bonus"/"etat" avec durée en
+   chaîne) plutôt que "bonusTemporaire"/durée-objet, seul schéma résolu par
+   Capacites.resoudreEffet aujourd'hui. */
+const SORTS_ENCHANTEUR = [
+  // --- Famille enchantement (5) ---
+  { id: "fascination", nom: "Fascination", rang: 1, categorie: "enchantement",
+    effet: "Attaque magique vs DEF : Fascinée (immobile) tant que l'Enchanteur maintient (action L/tour). Brisée par toute attaque ou événement brutal",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "unique", portee: 15, zone: null,
+      jetOppose: { caracAttaquant: "CHA", caracDefenseur: "DEF" },
+      effets: [ { type: "etat", id: "fascinee", duree: { motCle: "maintenue" } } ] } },
+
+  { id: "charme_mineur", nom: "Charme mineur", rang: 1, categorie: "enchantement",
+    effet: "Jet opposé CHA vs Volonté : la cible vous considère comme un ami de confiance pendant [1+Mod.CHA] tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "unique", portee: 10, zone: null,
+      jetOppose: { caracAttaquant: "CHA", caracDefenseur: "Volonte" },
+      effets: [ { type: "etat", id: "charmee", duree: { tours: "1+Mod.CHA" } } ] } },
+
+  { id: "manipulation_emotions", nom: "Manipulation des émotions", rang: 2, categorie: "enchantement",
+    effet: "Une cible à portée subit -2 ou +2 (au choix) à son prochain jet, selon l'émotion insufflée (peur/confiance)",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "unique", portee: 12, zone: null,
+      jetOppose: { caracAttaquant: "CHA", caracDefenseur: "Volonte" },
+      effets: [ { type: "bonusTemporaire", cle: "tousTests", valeur: -2, duree: { motCle: "prochainJet" } } ] } },
+
+  { id: "sommeil_enchanteur", nom: "Sommeil", rang: 3, categorie: "enchantement",
+    effet: "Attaque magique contre une cible avec moins de [Mod.CHA×5] PV actuels : endormie jusqu'à blessure ou réveil manuel",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "unique", portee: 15, zone: null,
+      jetOppose: { caracAttaquant: "CHA", caracDefenseur: "DEF" },
+      effets: [ { type: "etat", id: "endormi", duree: { motCle: "jusquaBlessure" } } ] } },
+
+  { id: "suggestion", nom: "Suggestion", rang: 4, categorie: "enchantement",
+    effet: "Attaque magique vs DEF : la cible exécute une action raisonnable dans l'heure, sans se souvenir d'avoir été influencée",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+      cible: "unique", portee: 10, zone: null,
+      jetOppose: { caracAttaquant: "CHA", caracDefenseur: "DEF" },
+      effets: [ { type: "special", note: "Résolution narrative par la table (action raisonnable, pas de moteur de comportement automatisé)." } ] } },
+
+  // --- Famille transmutation (4) ---
+  { id: "alteration_mineure", nom: "Altération mineure", rang: 1, categorie: "transmutation",
+    effet: "Change temporairement une propriété mineure d'un objet ou d'une créature (poids, texture, couleur) pendant [niveau] heures",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "Effet narratif/cosmétique, pas de bonus chiffré." } ] } },
+
+  { id: "vitesse_transmutee", nom: "Vitesse transmutée", rang: 2, categorie: "transmutation",
+    effet: "La cible gagne +2 cases de déplacement pendant 3 tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "+2 à Combat._deplacementMax() du bénéficiaire pendant 3 tours — nécessite un hook dans combat.js/etatsActifs, même famille de patron que les autres bonus temporaires de déplacement déjà gérés (cf. don Mobile)." } ] } },
+
+  { id: "arme_enchantee_grimoire", nom: "Arme enchantée", rang: 3, categorie: "transmutation",
+    effet: "Une arme ou objet gagne +2 attaque et +1d6 DM magiques pendant [3+Mod.CHA] tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "allie", portee: "contact", zone: null, jetOppose: null,
+      effets: [ { type: "bonusTemporaire", cle: "attaque", valeur: 2, duree: { tours: "3+Mod.CHA" } },
+        { type: "etat", id: "arme_enchantee", duree: { tours: "3+Mod.CHA" } } ] } },
+
+  { id: "metamorphose_bestiale", nom: "Métamorphose bestiale", rang: 4, categorie: "transmutation",
+    effet: "Jet opposé CHA vs Volonté : transforme la cible en créature inoffensive pendant [1d4+Mod.CHA] tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+      cible: "unique", portee: 10, zone: null,
+      jetOppose: { caracAttaquant: "CHA", caracDefenseur: "Volonte" },
+      effets: [ { type: "etat", id: "metamorphosee", duree: { tours: "1d4+Mod.CHA" } } ] } },
+
+  // --- Famille divination (4) ---
+  { id: "clairvoyance_mineure", nom: "Clairvoyance mineure", rang: 1, categorie: "divination",
+    effet: "Voit à travers un obstacle mince (porte, rideau, cloison) pendant 3 tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "zone", portee: 10, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "Effet de perception narratif, pas de bonus chiffré." } ] } },
+
+  { id: "lecture_aura_grimoire", nom: "Lecture d'aura", rang: 2, categorie: "divination",
+    effet: "Révèle la nature magique d'un objet ou créature (école de magie, niveau approximatif, malédictions actives)",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "Information narrative, pas d'effet chiffré." } ] } },
+
+  { id: "detection_pensees", nom: "Détection des pensées", rang: 3, categorie: "divination",
+    effet: "Jet opposé CHA vs Volonté : perçoit les intentions superficielles d'une cible à portée",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "unique", portee: 10, zone: null,
+      jetOppose: { caracAttaquant: "CHA", caracDefenseur: "Volonte" },
+      effets: [ { type: "special", note: "Information narrative en cas de succès, résolue par la table." } ] } },
+
+  { id: "vision_du_passe_grimoire", nom: "Vision du passé", rang: 4, categorie: "divination",
+    effet: "En touchant un objet ou lieu, perçoit les événements marquants qui s'y sont déroulés (jusqu'à [niveau×10] ans)",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+      cible: "unique", portee: "contact", zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "Rituel narratif (10 min), information résolue par la table." } ] } },
 ];
 
 /* ============================================================
