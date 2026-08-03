@@ -1805,7 +1805,9 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-shrink: 0;
+  flex-wrap: wrap;          /* les badges (race/tier/dangerosité) passent à la ligne… */
+  justify-content: flex-end;
+  min-width: 0;             /* …au lieu de déborder hors de la carte */
 }
 
 .monstre-sous {
