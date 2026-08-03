@@ -214,6 +214,17 @@ class Personnage extends Entite {
   }
 
   /* ----- Caractéristiques ----- */
+  // Enchanteur — Voie du chaos, rang 5 "Ascension chaotique" (L, 1x/scénario) :
+  // état 'ascension_chaotique' — double TOUS les modificateurs de
+  // caractéristique tant qu'il est actif (cf. mod() ci-dessous). Volontairement
+  // PAS de multiplicateur supplémentaire dans calculerPPMax() (qui appelle déjà
+  // mod() en interne) : un second ×2 par-dessus produirait un double-comptage
+  // (le pool de PP augmente donc via la cascade du mod doublé, pas d'un
+  // strict ×2 du total — simplification assumée pour éviter ce risque signalé
+  // par le design). Même principe pour tout autre calcul qui passe par mod().
+  _multiplicateurAscension() {
+    return (this.etatsActifs || []).some((e) => e.idEtat === "ascension_chaotique") ? 2 : 1;
+  }
   mod(code) {
     const base = Entite.modCarac(this.caracs[code] + this.bonusCaracCapacites(code) + this.bonusCaracDons(code) + this.bonusCaracEquipement(code) + this.bonusCaracMutations(code) + this.bonusTemporaire(code)) - this.penaliteContratDemoniaque(code);
     // Guerrier — Voie de l'élite, rang 5 "Apogée physique" (L, 1x/combat) :
@@ -222,7 +233,7 @@ class Personnage extends Entite {
     // posé avec un champ 'carac' dynamique (cf. resoudreEffet côté
     // capacites.js, qui va chercher le choix fait au rang 1 à la pose).
     const apogeeActif = (this.etatsActifs || []).some((e) => e.idEtat === "apogee_physique" && e.carac === code);
-    return apogeeActif ? base * 2 : base;
+    return (apogeeActif ? base * 2 : base) * this._multiplicateurAscension();
   }
 
   // Bonus permanent à une caractéristique de base, accordé par un choix fixé
@@ -237,13 +248,6 @@ class Personnage extends Entite {
     if (this.classe === "guerrier") {
       const cap = this.capaciteEntree("Voie de l'élite", 1);
       if (cap && cap.choix === code) bonus += 1;
-    }
-    // Enchanteur — Voie du chaos, rang 4 "Réalité fracturée" (passive, dès
-    // Corruption d'Âme 5+) : -2 SAG permanent, contrepartie fixe (pas de
-    // choix) tant que corruptionMajeure n'a pas atteint 5 — ne redescend
-    // jamais en-dessous une fois franchi (corruptionMajeure ne diminue jamais).
-    if (code === "SAG" && this.classe === "enchanteur" && this.estChoisie("Voie du chaos", 4) && (this.corruptionMajeure || 0) >= 5) {
-      bonus -= 2;
     }
     // Voies raciales (homebrew) à bonus de caractéristique permanent — cf.
     // estChoisieRace/choixCapaciteRace, RACE_CAPACITES_A_CHOIX côté app.js
@@ -1543,6 +1547,12 @@ class Personnage extends Entite {
     // données mais jamais lu par aucune fonction.
     if (type === "distance" && this.classe === "chasseur" && this.estChoisie("Voie de la gâchette", 1)) {
       bonus += 1;
+    }
+    // Enchanteur — Voie du chaos, rang 5 "Ascension chaotique" : +4 à tous
+    // les jets d'attaque rapide (contact/distance/magique/lancer) tant que
+    // l'état 'ascension_chaotique' reste actif.
+    if ((this.etatsActifs || []).some((e) => e.idEtat === "ascension_chaotique")) {
+      bonus += 4;
     }
     return bonus;
   }
