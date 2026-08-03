@@ -1538,7 +1538,7 @@ const Capacites = (() => {
     const cd0 = mecanique.jetOppose && mecanique.jetOppose.caracDefenseur;
     const attaqueVsDef = cd0 === "DEF" || cd0 === "defMentale";
     const estDefMentale = cd0 === "defMentale";
-    const libelleDef = estDefMentale ? "Volonté" : "DEF";
+    const libelleDef = estDefMentale ? "SAG" : "DEF";
 
     if (mecanique.jetOppose) {
       const ca = mecanique.jetOppose.caracAttaquant;

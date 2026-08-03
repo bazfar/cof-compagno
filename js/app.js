@@ -8596,7 +8596,7 @@ const App = (() => {
           </div>
           <div class="cm-stats">
             ${defHtml}
-            <span title="Volonté — défense contre les sorts mentaux (Domination, Sommeil, Fascination…)${m.defMentale != null ? " · fixée" : " · dérivée : 10 + dangerosité"}">VOL ${m.defMentale != null ? m.defMentale : (10 + (m.dangerosite || 0))}</span>
+            <span title="SAG — résistance aux sorts mentaux (Domination, Sommeil, Fascination…)${m.defMentale != null ? " · fixée" : " · dérivée : 10 + dangerosité"}">SAG ${m.defMentale != null ? m.defMentale : (10 + (m.dangerosite || 0))}</span>
             <span>Armure ${m.armure || 0}</span>
             ${etoiles ? `<span>${etoiles}</span>` : ""}
           </div>
@@ -8852,10 +8852,10 @@ const App = (() => {
     const volonte = m.defMentale != null ? m.defMentale : (10 + (m.dangerosite || 0));
     const enEdition = m.id === _monstreEnEdition;
     const modifie = _estOverride(m.id);
-    const inp = (champ, val) => `<label class="edit-stat"><span>${champ}</span><input type="number" id="edit-${champ}-${echapper(m.id)}" value="${val != null ? val : 0}" /></label>`;
+    const inp = (champ, val, label) => `<label class="edit-stat"><span>${label || champ}</span><input type="number" id="edit-${champ}-${echapper(m.id)}" value="${val != null ? val : 0}" /></label>`;
     const statsHtml = enEdition
       ? `<div class="monstre-edit">
-          ${inp("pv", m.pv)}${inp("def", m.def)}${inp("defMentale", volonte)}${inp("init", m.init)}${inp("atk", m.atk)}${inp("dangerosite", m.dangerosite)}
+          ${inp("pv", m.pv, "PV")}${inp("def", m.def, "DEF")}${inp("defMentale", volonte, "SAG")}${inp("init", m.init, "INIT")}${inp("atk", m.atk, "ATK")}${inp("dangerosite", m.dangerosite, "Dang.")}
           <div class="barre-actions" style="margin-top:8px;flex-basis:100%;">
             <button class="btn petit or btn-monstre-save" data-id="${echapper(m.id)}">💾 Enregistrer</button>
             <button class="btn petit secondaire btn-monstre-annuler" data-id="${echapper(m.id)}">Annuler</button>
@@ -8865,7 +8865,7 @@ const App = (() => {
       : `<div class="monstre-stats">
       <span title="Points de Vie"><strong>PV</strong> ${m.pv ?? "—"}</span>
       <span title="Défense"><strong>DEF</strong> ${m.def ?? "—"}</span>
-      <span title="Volonté — défense contre les sorts mentaux (${m.defMentale != null ? "fixée" : "dérivée : 10 + dangerosité"})"><strong>VOL</strong> ${volonte}</span>
+      <span title="SAG — résistance aux sorts mentaux (${m.defMentale != null ? "fixée" : "dérivée : 10 + dangerosité"})"><strong>SAG</strong> ${volonte}</span>
       <span title="Initiative"><strong>INIT</strong> ${m.init >= 0 ? "+" : ""}${m.init ?? "—"}</span>
       <span title="Attaque"><strong>ATK</strong> ${m.atk >= 0 ? "+" : ""}${m.atk ?? "—"}</span>
       ${m.armure ? `<span title="${echapper(m.armure.description || "")}"><strong>Armure</strong> ${m.armure.valeur ?? "—"}</span>` : ""}
