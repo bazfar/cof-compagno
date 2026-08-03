@@ -213,6 +213,32 @@ const Capacites = (() => {
     return null;
   }
 
+  // Défense mentale (Volonté), opposée aux sorts mentaux (jetOppose.
+  // caracDefenseur === "defMentale" : Fascination, Sommeil, Domination,
+  // Terreur...). Les monstres n'ont aucune carac mentale dans le bestiaire :
+  //   PJ      → 10 + Mod.SAG (vraie sauvegarde de Volonté) ;
+  //   monstre → defMentale explicite si fournie, sinon DÉRIVÉE de la
+  //             dangerosité (10 + dangerosité) — proxy raisonnable et gratuit.
+  // Évite que la DEF (armure) serve de défense mentale (un monstre blindé mais
+  // bête résistait à tort à la Domination).
+  function obtenirVolonteCible(cible, persos) {
+    if (!cible) return null;
+    if (cible.genre === "perso") {
+      const p = persos[cible.id];
+      return p ? 10 + Personnage.depuisJSON(p).mod("SAG") : null;
+    }
+    if (cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
+      const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
+      if (!tok) return null;
+      const base = (typeof BESTIAIRE_INDEX !== "undefined" && tok.monstreId) ? BESTIAIRE_INDEX[tok.monstreId] : null;
+      const dm = tok.defMentale != null ? tok.defMentale : (base && base.defMentale != null ? base.defMentale : null);
+      if (dm != null) return dm;
+      const dang = tok.dangerosite != null ? tok.dangerosite : (base && base.dangerosite != null ? base.dangerosite : 1);
+      return 10 + dang;
+    }
+    return null;
+  }
+
   // Guerrier — Voie du peuple, rang 2 "L'exemple" (passive) : +1 DEF à tout PJ
   // à 2 cases (cf. Carte.distanceCasesEntre) d'un Guerrier possédant ce rang,
   // tant que ce Guerrier reste immobile ce tour (Combat.estImmobile, même
@@ -1715,9 +1741,9 @@ const Capacites = (() => {
     // l'application des effets etat/degats de mecanique.effets (boucle plus
     // bas) sur une réussite ; non automatisable pour un monstre (le
     // bestiaire n'expose pas ses modificateurs de caractéristique, même
-    // limite que jetOppose.caracDefenseur ≠ "DEF" plus bas) — les effets ne
-    // sont alors jamais appliqués automatiquement. Rang 4 "Murmure
-    // terrifiant" (jetSauvegardeFixe + table à paliers) est un cas
+    // limite que jetOppose.caracDefenseur ≠ "DEF"/"defMentale" plus bas) —
+    // les effets ne sont alors jamais appliqués automatiquement. Rang 4
+    // "Murmure terrifiant" (jetSauvegardeFixe + table à paliers) est un cas
     // particulier distinct, déjà résolu plus haut, retourné tôt.
     let saveBloqueEffets = false;
     if (mecanique.jetSauvegardeFixe) {
@@ -1743,8 +1769,15 @@ const Capacites = (() => {
     // "Fascination", cf. obtenirDefPlusPvMoitieCible) : même pipeline
     // touché/critique/dégâts qu'une attaque vs DEF classique, mais le seuil
     // à battre est un DEF+PV/2 calculé plutôt que la simple DEF de la cible.
+    // "DEF" (armure) et "defMentale" (Volonté dérivée, cf. obtenirVolonteCible,
+    // ajouté en parallèle sur origin/thomas/contributions) se résolvent
+    // pareil : 1d20+attaque vs une valeur cible. Seuls la valeur opposée et
+    // le libellé changent.
+    const cd0 = mecanique.jetOppose && mecanique.jetOppose.caracDefenseur;
     const attaqueVsDef = !!(mecanique.jetOppose &&
-      (mecanique.jetOppose.caracDefenseur === "DEF" || mecanique.jetOppose.caracDefenseurCalcule));
+      (cd0 === "DEF" || cd0 === "defMentale" || mecanique.jetOppose.caracDefenseurCalcule));
+    const estDefMentale = cd0 === "defMentale";
+    const libelleDef = estDefMentale ? "SAG" : "DEF";
 
     if (mecanique.jetOppose) {
       const ca = mecanique.jetOppose.caracAttaquant;
@@ -1774,24 +1807,24 @@ const Capacites = (() => {
         const critMin = typeAttaque ? perso.critMinAttaque(typeAttaque) : 20;
         const echecCritique = d20 === 1;
         const critique = !echecCritique && (d20 === 20 || d20 >= critMin);
-        const defCible = mecanique.jetOppose.caracDefenseurCalcule === "DEF+PVactuels/2"
-          ? obtenirDefPlusPvMoitieCible(cible, persos)
+        const defCible = estDefMentale ? obtenirVolonteCible(cible, persos)
+          : mecanique.jetOppose.caracDefenseurCalcule === "DEF+PVactuels/2" ? obtenirDefPlusPvMoitieCible(cible, persos)
           : obtenirDefCible(cible, persos);
         let touche;
         if (echecCritique) touche = false;
         else if (critique) touche = true;
-        else if (defCible === null) touche = null; // DEF inconnue : ne pas bloquer, à trancher manuellement
+        else if (defCible === null) touche = null; // valeur inconnue : ne pas bloquer, à trancher manuellement
         else touche = total >= defCible;
 
         if (echecCritique) {
           messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) — 1 naturel, échec critique automatique.`);
         } else if (critique) {
           messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) — CRITIQUE !` +
-            (defCible !== null ? ` (DEF cible ${defCible})` : ""));
+            (defCible !== null ? ` (${libelleDef} cible ${defCible})` : ""));
         } else if (defCible === null) {
-          messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) — DEF de la cible inconnue, à comparer manuellement.`);
+          messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) — ${libelleDef} de la cible inconnue, à comparer manuellement.`);
         } else {
-          messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) vs DEF ${defCible} — ${touche ? "Touché !" : "Raté."}`);
+          messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) vs ${libelleDef} ${defCible} — ${touche ? "Touché !" : "Raté."}`);
         }
 
         // Table de mutation Palier 1 (cf. MUTATION_PALIER1_TRIGGERS/

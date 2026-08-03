@@ -8080,6 +8080,11 @@ const App = (() => {
       const p = document.getElementById("panneau-marche");
       if (p && p.classList.contains("actif") && typeof Marche !== "undefined") Marche.rendrePanneauMarche();
     });
+    // Bestiaire — une stat de monstre modifiée par un MJ se répercute en direct.
+    SyncStore.subscribe("bestiaire:overrides", () => {
+      const p = document.getElementById("panneau-bestiaire");
+      if (p && p.classList.contains("actif") && !_monstreEnEdition) _afficherMonstres();
+    });
 
     // Réputation — un ajustement MJ sur un bloc répercute en direct chez tout
     // le monde si le panneau Réputation est actuellement ouvert (même schéma
@@ -8183,7 +8188,8 @@ const App = (() => {
 
     liste.querySelectorAll(".modal-monstre-item").forEach(btn => {
       btn.onclick = () => {
-        const m = typeof BESTIAIRE_INDEX !== "undefined" ? BESTIAIRE_INDEX[btn.dataset.monstreId] : null;
+        const base = typeof BESTIAIRE_INDEX !== "undefined" ? BESTIAIRE_INDEX[btn.dataset.monstreId] : null;
+        const m = base ? _monstreEffectif(base) : null; // stats éditées par le MJ prises en compte en combat
         if (m && typeof Carte !== "undefined") {
           Carte.ajouterMonstre(m);
           fermerModalMonstre();
@@ -8599,6 +8605,7 @@ const App = (() => {
           </div>
           <div class="cm-stats">
             ${defHtml}
+            <span title="SAG — résistance aux sorts mentaux (Domination, Sommeil, Fascination…)${m.defMentale != null ? " · fixée" : " · dérivée : 10 + dangerosité"}">SAG ${m.defMentale != null ? m.defMentale : (10 + (m.dangerosite || 0))}</span>
             <span>Armure ${m.armure || 0}</span>
             ${etoiles ? `<span>${etoiles}</span>` : ""}
           </div>
@@ -8720,6 +8727,32 @@ const App = (() => {
   let _bestDang = "";
   let _bestRace = "";
 
+  // ── Overrides de stats de monstres (MJ) : partagés via SyncStore
+  // ("bestiaire:overrides" = { monstreId: { pv?, def?, defMentale?, init?,
+  // atk?, dangerosite? } }). Le bestiaire (data/bestiaire.json) est immuable ;
+  // on superpose juste les champs modifiés. _monstreEffectif fusionne base +
+  // override, utilisé à l'affichage ET à l'ajout en combat.
+  let _monstreEnEdition = null; // id du monstre dont la carte est en mode édition
+  function _overridesMonstres() { return (typeof SyncStore !== "undefined" && SyncStore.get("bestiaire:overrides")) || {}; }
+  function _monstreEffectif(m) {
+    if (!m) return m;
+    const ov = _overridesMonstres()[m.id];
+    return ov ? Object.assign({}, m, ov) : m;
+  }
+  function _estOverride(id) { return !!_overridesMonstres()[id]; }
+  function _sauverOverrideMonstre(id, champs) {
+    if (typeof SyncStore === "undefined") return;
+    const all = _overridesMonstres();
+    all[id] = Object.assign({}, all[id], champs);
+    SyncStore.set("bestiaire:overrides", all);
+  }
+  function _resetOverrideMonstre(id) {
+    if (typeof SyncStore === "undefined") return;
+    const all = _overridesMonstres();
+    delete all[id];
+    SyncStore.set("bestiaire:overrides", all);
+  }
+
   function rendreBestiaire() {
     if (typeof BESTIAIRE === "undefined") return;
 
@@ -8761,7 +8794,7 @@ const App = (() => {
     const compteur = document.getElementById("bestiaire-compteur");
     if (!grille) return;
 
-    const monstres = BESTIAIRE.filter(m => {
+    const monstres = BESTIAIRE.map((m) => _monstreEffectif(m)).filter(m => {
       if (_bestFamille && m.famille !== _bestFamille) return false;
       if (_bestDang && String(m.dangerosite) !== _bestDang) return false;
       if (_bestRace && !(Array.isArray(m.race) && m.race.includes(_bestRace))) return false;
@@ -8776,6 +8809,34 @@ const App = (() => {
     }
 
     grille.innerHTML = monstres.map(m => _carteMonstreHTML(m)).join("");
+    _wireEditionMonstres();
+  }
+
+  // Câble les boutons Modifier / Enregistrer / Annuler / Réinitialiser des
+  // cartes du bestiaire (MJ). L'édition ne concerne que les stats chiffrées.
+  function _wireEditionMonstres() {
+    const grille = document.getElementById("bestiaire-grille");
+    if (!grille) return;
+    grille.querySelectorAll(".btn-monstre-editer").forEach((b) => {
+      b.onclick = () => { _monstreEnEdition = b.dataset.id; _afficherMonstres(); };
+    });
+    grille.querySelectorAll(".btn-monstre-annuler").forEach((b) => {
+      b.onclick = () => { _monstreEnEdition = null; _afficherMonstres(); };
+    });
+    grille.querySelectorAll(".btn-monstre-reset").forEach((b) => {
+      b.onclick = () => { _resetOverrideMonstre(b.dataset.id); _monstreEnEdition = null; _afficherMonstres(); };
+    });
+    grille.querySelectorAll(".btn-monstre-save").forEach((b) => {
+      b.onclick = () => {
+        const id = b.dataset.id;
+        const num = (champ) => { const e = document.getElementById(`edit-${champ}-${id}`); const v = e ? parseInt(e.value, 10) : NaN; return Number.isFinite(v) ? v : undefined; };
+        const champs = {};
+        ["pv", "def", "defMentale", "init", "atk", "dangerosite"].forEach((c) => { const v = num(c); if (v !== undefined) champs[c] = v; });
+        _sauverOverrideMonstre(id, champs);
+        _monstreEnEdition = null;
+        _afficherMonstres();
+      };
+    });
   }
 
   function _etoiles(n) {
@@ -8797,9 +8858,23 @@ const App = (() => {
       ? m.race.map(r => `<span class="badge-race">${echapper(r)}</span>`).join("")
       : "";
 
-    const statsHtml = `<div class="monstre-stats">
+    const volonte = m.defMentale != null ? m.defMentale : (10 + (m.dangerosite || 0));
+    const enEdition = m.id === _monstreEnEdition;
+    const modifie = _estOverride(m.id);
+    const inp = (champ, val, label) => `<label class="edit-stat"><span>${label || champ}</span><input type="number" id="edit-${champ}-${echapper(m.id)}" value="${val != null ? val : 0}" /></label>`;
+    const statsHtml = enEdition
+      ? `<div class="monstre-edit">
+          ${inp("pv", m.pv, "PV")}${inp("def", m.def, "DEF")}${inp("defMentale", volonte, "SAG")}${inp("init", m.init, "INIT")}${inp("atk", m.atk, "ATK")}${inp("dangerosite", m.dangerosite, "Dang.")}
+          <div class="barre-actions" style="margin-top:8px;flex-basis:100%;">
+            <button class="btn petit or btn-monstre-save" data-id="${echapper(m.id)}">💾 Enregistrer</button>
+            <button class="btn petit secondaire btn-monstre-annuler" data-id="${echapper(m.id)}">Annuler</button>
+            ${modifie ? `<button class="btn petit danger btn-monstre-reset" data-id="${echapper(m.id)}">↺ Réinitialiser</button>` : ""}
+          </div>
+        </div>`
+      : `<div class="monstre-stats">
       <span title="Points de Vie"><strong>PV</strong> ${m.pv ?? "—"}</span>
       <span title="Défense"><strong>DEF</strong> ${m.def ?? "—"}</span>
+      <span title="SAG — résistance aux sorts mentaux (${m.defMentale != null ? "fixée" : "dérivée : 10 + dangerosité"})"><strong>SAG</strong> ${volonte}</span>
       <span title="Initiative"><strong>INIT</strong> ${m.init >= 0 ? "+" : ""}${m.init ?? "—"}</span>
       <span title="Attaque"><strong>ATK</strong> ${m.atk >= 0 ? "+" : ""}${m.atk ?? "—"}</span>
       ${m.armure ? `<span title="${echapper(m.armure.description || "")}"><strong>Armure</strong> ${m.armure.valeur ?? "—"}</span>` : ""}
@@ -8823,8 +8898,8 @@ const App = (() => {
 
     return `<div class="carte carte-monstre">
       <div class="monstre-header">
-        <div class="monstre-nom">${emoji} ${echapper(m.nom)} ${boss}${tier}</div>
-        <div class="monstre-meta">${dang} ${taille}${race}</div>
+        <div class="monstre-nom">${emoji} ${echapper(m.nom)} ${boss}${tier}${modifie ? ' <span class="badge-modifie" title="Stats modifiées par le MJ">✎ modifié</span>' : ""}</div>
+        <div class="monstre-meta">${dang} ${taille}${race}${enEdition ? "" : ` <button class="btn petit secondaire btn-monstre-editer" data-id="${echapper(m.id)}" title="Modifier les stats">✏️</button>`}</div>
       </div>
       ${m.categorie || m.faction ? `<div class="monstre-sous">${[m.categorie, m.faction].filter(Boolean).map(echapper).join(" · ")}</div>` : ""}
       ${statsHtml}
