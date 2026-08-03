@@ -8596,6 +8596,7 @@ const App = (() => {
           </div>
           <div class="cm-stats">
             ${defHtml}
+            <span title="Volonté — défense contre les sorts mentaux (Domination, Sommeil, Fascination…)${m.defMentale != null ? " · fixée" : " · dérivée : 10 + dangerosité"}">VOL ${m.defMentale != null ? m.defMentale : (10 + (m.dangerosite || 0))}</span>
             <span>Armure ${m.armure || 0}</span>
             ${etoiles ? `<span>${etoiles}</span>` : ""}
           </div>
