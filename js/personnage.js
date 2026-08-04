@@ -1044,16 +1044,6 @@ class Personnage extends Entite {
     return (this.corruptionMajeure || 0) >= 10;
   }
 
-  // Prêtre — Voie du chaos, rang 4 "Corruption persistante" (passive, dès
-  // CA 5+) : contrepartie "soins reçus réduits de moitié" — lu par
-  // soigner() côté app.js et appliquerSoinPersoLocal() côté capacites.js,
-  // les deux seuls points d'application d'un soin à un PJ. La moitié "DOT
-  // résiste à la dissipation" reste hors schéma (Dissipation elle-même
-  // n'annule aucun DOT dans l'app).
-  aCorruptionPersistante() {
-    return this.classe === "pretre" && this.estChoisie("Voie du chaos", 4) && (this.corruptionMajeure || 0) >= 5;
-  }
-
   /* ----- Équipement (slots) -----
      Seuls les items placés dans un slot comptent pour les stats de combat.
      inventaireListe (simple sac) n'a aucun effet mécanique. */
@@ -1787,12 +1777,14 @@ class Personnage extends Entite {
   // PROCHAIN gain de PV, quelle qu'en soit la source, est ramené à 0 et la
   // dette s'efface — cf. js/app.js lancerTest/soigner, js/capacites.js
   // resoudreEffet("soin")/decompterEtatsDebutTour pour les points d'appel.
-  // opts.ignorerCorruption : utilisé par les ajustements MJ bruts
-  // (js/app.js ajusterPv/definirPv), qui n'ont jamais appliqué le halving
-  // Corruption persistante — la dette reste, elle, toujours active.
+  // opts.ignorerCorruption : conservé pour compat d'appel (cf. js/app.js
+  // ajusterPv/definirPv) — ne fait plus rien depuis le retrait de "Corruption
+  // persistante" (Prêtre, Voie du chaos rang 4, remplacée par "Corruption
+  // motivante", cf. prompt_pretre_voie_chaos.md) : le halving des soins reçus
+  // n'existe plus, aucune classe ne réduit plus ses soins de cette manière.
   static appliquerGainPv(pRaw, montantBrut, opts = {}) {
     const perso = Personnage.depuisJSON(pRaw);
-    let montant = (!opts.ignorerCorruption && perso.aCorruptionPersistante()) ? Math.floor(montantBrut / 2) : montantBrut;
+    let montant = montantBrut;
     // Mutation "Sang noir" (data/mutations.js: soinsRecusDelta) : réduit la
     // valeur ajoutée aux PV, jamais en-dessous de 0 — appliquée sur tout gain
     // positif, avant la dette du Soigneur (qui, elle, ramène à 0 sans notion

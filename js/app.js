@@ -1180,6 +1180,8 @@ const App = (() => {
         <h3 style="margin-top:0;">Capacités</h3>
         <div class="cible-capacite-form" style="display:none;">
           <select class="cible-capacite-select"></select>
+          <label class="option-payer-cs" style="display:none;"><input type="checkbox" class="check-payer-cs" /> Payer en CS (Don corrompu)</label>
+          <label class="option-supplement-cs" style="display:none;"><input type="checkbox" class="check-supplement-cs" /> Payer les points manquants en CS (Supplément corrompu)</label>
           <button class="btn petit or btn-confirmer-cible-capacite">Confirmer la cible</button>
           <button class="btn petit secondaire btn-annuler-cible-capacite">Annuler</button>
         </div>
@@ -1578,6 +1580,8 @@ const App = (() => {
       </div>
       <div class="cible-capacite-form" style="display:none;">
         <select class="cible-capacite-select"></select>
+        <label class="option-payer-cs" style="display:none;"><input type="checkbox" class="check-payer-cs" /> Payer en CS (Don corrompu)</label>
+        <label class="option-supplement-cs" style="display:none;"><input type="checkbox" class="check-supplement-cs" /> Payer les points manquants en CS (Supplément corrompu)</label>
         <button class="btn petit or btn-confirmer-cible-capacite">Confirmer la cible</button>
         <button class="btn petit secondaire btn-annuler-cible-capacite">Annuler</button>
       </div>
@@ -4489,6 +4493,15 @@ const App = (() => {
   function wireCapacitesEtEtats(racine, id, p, rafraichir) {
     const pickerForme = racine.querySelector(".cible-capacite-form");
     const pickerSelect = racine.querySelector(".cible-capacite-select");
+    // Prêtre — Voie du chaos rang 2/3 (Don corrompu/Supplément corrompu) :
+    // options de paiement en CS, affichées seulement si le personnage a le
+    // rang concerné (cf. procederCiblage ci-dessous pour la visibilité
+    // conditionnelle au coût réel de la capacité lancée).
+    const perso = Personnage.depuisJSON(p);
+    const optionPayerCS = racine.querySelector(".option-payer-cs");
+    const checkPayerCS = racine.querySelector(".check-payer-cs");
+    const optionSupplementCS = racine.querySelector(".option-supplement-cs");
+    const checkSupplementCS = racine.querySelector(".check-supplement-cs");
     let lancerCapaciteEnAttente = null;
 
     function fermerPickerCibleCapacite() {
@@ -4497,6 +4510,12 @@ const App = (() => {
       // pour ne jamais laisser un picker en mode multi-sélection pour la
       // capacité suivante.
       if (pickerSelect) { pickerSelect.multiple = false; pickerSelect.size = 1; }
+      // Reset des options CS (Prêtre — Voie du chaos rang 2/3) pour ne jamais
+      // laisser une case cochée/visible pour la capacité suivante.
+      if (optionPayerCS) optionPayerCS.style.display = "none";
+      if (checkPayerCS) checkPayerCS.checked = false;
+      if (optionSupplementCS) optionSupplementCS.style.display = "none";
+      if (checkSupplementCS) checkSupplementCS.checked = false;
       lancerCapaciteEnAttente = null;
       if (typeof Carte !== "undefined" && Carte.desactiverModeCiblage) Carte.desactiverModeCiblage();
     }
@@ -4513,6 +4532,8 @@ const App = (() => {
         cibleId,
         cibleIds,
         choixEffet: lancerCapaciteEnAttente.choixEffet,
+        payerEnCS: !!(checkPayerCS && checkPayerCS.checked),
+        payerSupplementCS: !!(checkSupplementCS && checkSupplementCS.checked),
       });
       fermerPickerCibleCapacite();
       toast(res.messages.join(" · "));
@@ -4625,6 +4646,18 @@ const App = (() => {
         if (!mecanique) { toast("Capacité introuvable."); return; }
 
         function procederCiblage() {
+          // Prêtre — Voie du chaos rang 2 "Don corrompu"/rang 3 "Supplément
+          // corrompu" : cases à cocher affichées seulement si le personnage a
+          // le rang concerné ET que la capacité lancée a un coût auquel la
+          // substitution s'applique (coutPP pour Don corrompu, un des 4
+          // coutPointsX pour Supplément corrompu).
+          if (optionPayerCS) {
+            optionPayerCS.style.display = (perso.classe === "pretre" && perso.estChoisie("Voie du chaos", 2) && mecanique.coutPP) ? "" : "none";
+          }
+          if (optionSupplementCS) {
+            const aCoutCercle = mecanique.coutPointsBenediction || mecanique.coutPointsConviction || mecanique.coutPointsBannissement || mecanique.coutPointsJugement;
+            optionSupplementCS.style.display = (perso.classe === "pretre" && perso.estChoisie("Voie du chaos", 3) && aCoutCercle) ? "" : "none";
+          }
           // Prêtre — Cercle de Vie, sort "Soins divins", choix "trois_cibles" :
           // jusqu'à 3 cibles indépendantes plutôt qu'une seule — réutilise
           // pickerSelect en <select multiple> (aucun nouveau composant), même
@@ -6051,6 +6084,8 @@ const App = (() => {
             <h3>Capacités</h3>
             <div class="cible-capacite-form" style="display:none;">
               <select class="cible-capacite-select"></select>
+              <label class="option-payer-cs" style="display:none;"><input type="checkbox" class="check-payer-cs" /> Payer en CS (Don corrompu)</label>
+              <label class="option-supplement-cs" style="display:none;"><input type="checkbox" class="check-supplement-cs" /> Payer les points manquants en CS (Supplément corrompu)</label>
               <button class="btn petit or btn-confirmer-cible-capacite">Confirmer la cible</button>
               <button class="btn petit secondaire btn-annuler-cible-capacite">Annuler</button>
             </div>
@@ -6577,8 +6612,14 @@ const App = (() => {
     p.pvTemporaires = pvTempAvant - absorbeParPvTemp;
     const degatsVersPvReels = degatsNets - absorbeParPvTemp;
 
+    // Prêtre — Voie du chaos, rang 5 "Le fléau, c'est moi !" : pendant sa
+    // durée (état 'increvable'), les PV ne peuvent pas descendre sous 1 —
+    // plancher spécial distinct du KO normal à 0 PV, détection automatique
+    // même principe que Sanctuaire/Forme du chaos sauvage ci-dessus.
+    const increvableActif = (p.etatsActifs || []).some((e) => e.idEtat === "increvable");
     const pvAvant = p.pvActuel;
-    p.pvActuel = Math.max(0, p.pvActuel - degatsVersPvReels);
+    const planchePv = (increvableActif && pvAvant > 0) ? 1 : 0;
+    p.pvActuel = Math.max(planchePv, p.pvActuel - degatsVersPvReels);
     const transition = _majEtatMourant(p, pvAvant);
     sauverPersos(persos);
     _syncPvAffichages(id, p);
