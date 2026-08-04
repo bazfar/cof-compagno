@@ -1440,6 +1440,17 @@ const Capacites = (() => {
     if (mecanique.origineGrimoire && !(p.grimoireSortsConnus || []).concat(perso.sortsGrimoireAccordes()).includes(source.idSort)) {
       return { ok: false, messages: [`Ce sort n'est pas (encore) inscrit dans le Grimoire.`] };
     }
+    // Emplacement compatible réellement disponible (cf. Personnage.
+    // sortGrimoireADesEmplacements/grimoireOccupationParTier) : un sort
+    // connu (appris OU accordé par la Voie/le Cercle) n'est castable que
+    // s'il obtient effectivement un palier sur l'objet de Grimoire
+    // actuellement porté — ex. un sort accordé de rang 5 (capstone de Voie)
+    // reste "connu" mais injouable tant que l'objet porté (Commun/Peu
+    // commun) n'a aucun emplacement 1-5 ; se débloque automatiquement avec
+    // un objet Rare/Légendaire, sans rien apprendre à nouveau.
+    if (mecanique.origineGrimoire && perso.sortGrimoireADesEmplacements && !perso.sortGrimoireADesEmplacements(source.idSort)) {
+      return { ok: false, messages: [`Ce sort n'a plus d'emplacement compatible sur ton objet de Grimoire actuel (rang trop élevé pour sa rareté) — équipe un objet de meilleure rareté pour pouvoir le lancer.`] };
+    }
 
     const cle = cleCapacite(source);
     const usage = verifierUsage(p, cle, mecanique);

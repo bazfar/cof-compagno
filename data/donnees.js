@@ -2408,7 +2408,8 @@ const SORTS_ACCORDES_PAR_VOIE = [
 
 /* Cercle de spécialisation (Partie 1, prompt_pretre_cercle_vie.md) : 1 sort
    de rang 1 de la famille choisie connu automatiquement dès la création,
-   hors slot de Grimoire (cf. Personnage.sortsGrimoireAccordes()). Choix non
+   occupant un emplacement de Grimoire s'il y en a un de compatible (cf.
+   Personnage.sortsGrimoireAccordes()/grimoireOccupationParTier). Choix non
    précisé par le prompt (pick libre vs fixe) — simplifié en un sort fixe par
    cercle, à trancher au cas par cas en jeu si le joueur préfère un autre
    sort de rang 1 de la même famille. */

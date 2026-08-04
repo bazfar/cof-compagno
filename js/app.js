@@ -1004,7 +1004,7 @@ const App = (() => {
     const appris = p.grimoireSortsConnus || [];
     const accordes = perso.sortsGrimoireAccordes();
     const idsAffiches = appris.concat(accordes.filter((sid) => !appris.includes(sid)));
-    const resume = `<div class="aide" style="margin-bottom:8px;">${appris.length}/${perso.slotsGrimoire()} sorts connus${perso.slotsGrimoire() === 0 ? ` — ajoute ${NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire"} à ton inventaire pour en apprendre.` : ""}</div>`;
+    const resume = `<div class="aide" style="margin-bottom:8px;">${perso.grimoireSlotsOccupes()}/${perso.slotsGrimoire()} sorts connus${perso.slotsGrimoire() === 0 ? ` — ajoute ${NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire"} à ton inventaire pour en apprendre.` : ""}</div>`;
     if (!idsAffiches.length) return resume + `<div class="vide">Aucun sort appris.</div>`;
     const listeHtml = idsAffiches.map((sortId) => {
       const sort = catalogue.find((s) => s.id === sortId);
@@ -1017,8 +1017,16 @@ const App = (() => {
         : sort.mecanique.coutPointsJugement ? `${sort.mecanique.coutPointsJugement} Pt. Jugement`
         : "gratuit";
       const tagAccorde = !appris.includes(sortId) ? " · accordé par la voie" : "";
+      // Emplacement réellement disponible (cf. Personnage.sortGrimoireADesEmplacements) :
+      // un sort "connu" (appris ou accordé) sans palier compatible sur l'objet
+      // porté reste listé, mais son bouton Lancer est remplacé par un badge
+      // explicatif — se débloque automatiquement avec un meilleur objet.
+      const dispo = perso.sortGrimoireADesEmplacements ? perso.sortGrimoireADesEmplacements(sortId) : true;
+      const boutonOuBadge = dispo
+        ? htmlLancerCapacite(source, sort.mecanique, p)
+        : ` <span class="loot-badge" style="opacity:.6;" title="Nécessite un objet de meilleure rareté pour ce rang">Sans emplacement</span>`;
       return `<div class="cap-fiche">
-        <div class="titre-cap">${echapper(sort.nom)}${htmlLancerCapacite(source, sort.mecanique, p)}</div>
+        <div class="titre-cap">${echapper(sort.nom)}${boutonOuBadge}</div>
         <div class="voie-source">Rang ${sort.rang} · ${coutTexte}${tagAccorde}</div>
         <div class="effet-cap">${echapper(sort.effet)}</div>
       </div>`;
@@ -6296,9 +6304,9 @@ const App = (() => {
                   <option value="bannissement"${p.cercleSpecialisation === "bannissement" ? " selected" : ""}>Bannissement</option>
                   <option value="jugement"${p.cercleSpecialisation === "jugement" ? " selected" : ""}>Jugement</option>
                 </select>
-                — accorde 1 sort de rang 1 de la famille choisie, hors slot de Grimoire.
+                — accorde 1 sort de rang 1 de la famille choisie (occupe un emplacement de Grimoire si un est disponible).
               </div>` : ""}
-              <div class="aide" style="margin-bottom:8px;">${(p.grimoireSortsConnus || []).length}/${perso.slotsGrimoire()} sorts connus${perso.slotsGrimoire() === 0 ? ` — ajoute ${NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire"} à ton inventaire pour en apprendre.` : ""}</div>
+              <div class="aide" style="margin-bottom:8px;">${perso.grimoireSlotsOccupes()}/${perso.slotsGrimoire()} sorts connus${perso.slotsGrimoire() === 0 ? ` — ajoute ${NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire"} à ton inventaire pour en apprendre.` : ""}</div>
               ${perso.slotsGrimoire() > 0 ? (function () {
                 const cap = perso.slotsGrimoireParTier();
                 const occ = perso.grimoireOccupationParTier();
@@ -6369,8 +6377,12 @@ const App = (() => {
                     : sort.mecanique.coutPointsJugement ? `${sort.mecanique.coutPointsJugement} Pt. Jugement`
                     : "gratuit";
                   const tagAccorde = !appris.includes(sortId) ? " · accordé par la voie" : "";
+                  const dispo = perso.sortGrimoireADesEmplacements ? perso.sortGrimoireADesEmplacements(sortId) : true;
+                  const boutonOuBadge = dispo
+                    ? htmlLancerCapacite(source, sort.mecanique, p)
+                    : ` <span class="loot-badge" style="opacity:.6;" title="Nécessite un objet de meilleure rareté pour ce rang">Sans emplacement</span>`;
                   return `<div class="cap-fiche">
-                    <div class="titre-cap">${echapper(sort.nom)}${htmlLancerCapacite(source, sort.mecanique, p)}</div>
+                    <div class="titre-cap">${echapper(sort.nom)}${boutonOuBadge}</div>
                     <div class="voie-source">Rang ${sort.rang} · ${coutTexte}${tagAccorde}</div>
                     <div class="effet-cap">${echapper(sort.effet)}</div>
                   </div>`;

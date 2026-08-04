@@ -220,8 +220,9 @@ class Personnage extends Entite {
     this.grimoireSortsConnus = d.grimoireSortsConnus || [];
     // Prêtre — Cercle de spécialisation (cf. prompt_pretre_cercle_vie.md
     // Partie 1) : "vie"/"foi"/"bannissement"/"jugement"/null, fixé à la
-    // création — donne 1 sort de la famille correspondante hors slot de
-    // Grimoire (cf. sortsGrimoireAccordes()).
+    // création — donne 1 sort de la famille correspondante, occupant un
+    // emplacement de Grimoire s'il y en a un de compatible (cf.
+    // sortsGrimoireAccordes()).
     this.cercleSpecialisation = d.cercleSpecialisation || null;
     // Points de Cercle (façon Channel Divinity D&D, cf. les 4 prompts
     // prompt_pretre_cercle_*.md) : 4 pools séparés du PP, un par Cercle,
@@ -545,20 +546,33 @@ class Personnage extends Entite {
     const t = this.slotsGrimoireParTier();
     return t["12"] + t["13"] + t["14"] + t["15"];
   }
+  // Liste ordonnée des ids de sorts en compétition pour un emplacement :
+  // les sorts ACCORDÉS (cf. sortsGrimoireAccordes, garantis par la Voie/le
+  // Cercle) passent en premier, avant les sorts appris manuellement — pour
+  // qu'en cas de capacité insuffisante, ce soit un choix du joueur qui
+  // reste sans emplacement plutôt qu'un octroi garanti par les règles.
+  // Dédoublonné (un id ne compte qu'une fois, même appris ET accordé).
+  _idsGrimoirePourOccupation() {
+    const accordes = this.sortsGrimoireAccordes();
+    const appris = (this.grimoireSortsConnus || []).filter((id) => !accordes.includes(id));
+    return accordes.concat(appris);
+  }
   // Recalcule l'occupation par palier À LA VOLÉE depuis grimoireSortsConnus
-  // (tableau plat d'ids, inchangé, dans l'ordre d'apprentissage) — AUCUN
-  // champ persisté supplémentaire : réappliquer le même remplissage glouton
-  // (plus petit plafond compatible libre) donne toujours le même résultat
-  // que celui obtenu au moment de l'apprentissage, tant que l'objet équipé
-  // ne change pas de rareté/classe entre-temps. Un sort dont le rang ne
-  // trouve plus AUCUN plafond compatible (objet retiré ou changé pour un
-  // moins bon après coup) n'est simplement compté dans aucun palier — pas
-  // d'erreur, juste absent du décompte d'occupation.
+  // + sortsGrimoireAccordes (cf. _idsGrimoirePourOccupation ci-dessus) —
+  // AUCUN champ persisté supplémentaire : réappliquer le même remplissage
+  // glouton (plus petit plafond compatible libre) donne toujours le même
+  // résultat, tant que l'objet équipé ne change pas de rareté/classe
+  // entre-temps. Un sort dont le rang ne trouve plus AUCUN plafond
+  // compatible (objet retiré/changé pour un moins bon, ou sort accordé de
+  // rang 5 sur un objet Commun qui n'a aucun emplacement 1-5) n'est
+  // simplement compté dans aucun palier — pas d'erreur, juste absent du
+  // décompte d'occupation (cf. sortGrimoireADesEmplacements, qui expose ce
+  // même calcul par sort individuel pour bloquer son lancer le cas échéant).
   grimoireOccupationParTier() {
     const capacites = this.slotsGrimoireParTier();
     const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[this.classe] || []) : [];
     const occ = { "12": 0, "13": 0, "14": 0, "15": 0 };
-    (this.grimoireSortsConnus || []).forEach((sortId) => {
+    this._idsGrimoirePourOccupation().forEach((sortId) => {
       const sort = catalogue.find((s) => s.id === sortId);
       if (!sort) return;
       const tier = Personnage._tierLibrePourRang(capacites, occ, sort.rang);
@@ -581,13 +595,52 @@ class Personnage extends Entite {
   emplacementLibrePourRang(rang) {
     return Personnage._tierLibrePourRang(this.slotsGrimoireParTier(), this.grimoireOccupationParTier(), rang);
   }
+  // Nombre total de sorts (appris + accordés) qui obtiennent effectivement
+  // un emplacement — numérateur de l'affichage "X/Y sorts connus" (cf.
+  // afficherFiche/htmlSortsGrimoireBattlemap) : un sort accordé de rang 5
+  // sans emplacement 1-5 disponible n'est pas compté ici (cohérent avec
+  // grimoireOccupationParTier), mais reste listé comme "connu" (juste
+  // injouable, cf. sortGrimoireADesEmplacements) — pas perdu, pas doublé.
+  grimoireSlotsOccupes() {
+    const occ = this.grimoireOccupationParTier();
+    return occ["12"] + occ["13"] + occ["14"] + occ["15"];
+  }
+  // Vrai si CE sort précis (identifié par id, appris ou accordé) obtient
+  // effectivement un emplacement compatible sur l'objet actuellement porté
+  // — rejoue le même remplissage glouton que grimoireOccupationParTier en
+  // s'arrêtant dès que `sortId` est atteint. Faux = le sort reste "connu"
+  // (visible, listé) mais son bouton Lancer doit être désactivé tant que ça
+  // reste vrai (ex. sort accordé de rang 5 sur un objet Commun, ou sort
+  // appris resté sans emplacement après un déséquipement de l'objet de
+  // Grimoire) — se débloque automatiquement dès qu'un objet de meilleure
+  // rareté (ou le bon objet) est porté, sans rien avoir à refaire.
+  sortGrimoireADesEmplacements(sortId) {
+    const capacites = this.slotsGrimoireParTier();
+    const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[this.classe] || []) : [];
+    const occ = { "12": 0, "13": 0, "14": 0, "15": 0 };
+    let dispo = false;
+    this._idsGrimoirePourOccupation().some((id) => {
+      const sort = catalogue.find((s) => s.id === id);
+      if (!sort) return false;
+      const tier = Personnage._tierLibrePourRang(capacites, occ, sort.rang);
+      if (tier) occ[tier]++;
+      if (id === sortId) { dispo = !!tier; return true; }
+      return false;
+    });
+    return dispo;
+  }
 
   // Sorts accordés directement par un rang de voie (cf. SORTS_ACCORDES_PAR_VOIE
-  // et CERCLE_SORT_GRATUIT, data/donnees.js) plutôt qu'appris via slot de
-  // Grimoire — même patron répété pour les 4 Cercles du Prêtre (chacun
-  // accorde son sort de rang 1, certains aussi un sort de rang 4/5). Fusionné
-  // avec grimoireSortsConnus côté app.js pour l'affichage/le lancement,
-  // jamais compté dans les slots.
+  // et CERCLE_SORT_GRATUIT, data/donnees.js) plutôt qu'appris manuellement
+  // via le Grimoire — même patron répété pour les 4 Cercles du Prêtre
+  // (chacun accorde son sort de rang 1, certains aussi un sort de rang 4/5).
+  // Garantis par les règles (aucun apprentissage requis), mais occupent
+  // quand même un emplacement de Grimoire s'il y en a un de compatible —
+  // priorité sur les sorts appris manuellement en cas de capacité
+  // insuffisante (cf. _idsGrimoirePourOccupation/grimoireOccupationParTier)
+  // — DEPUIS le 04/08/2026 (avant cette date, comptés "hors slot").
+  // Fusionné avec grimoireSortsConnus côté app.js pour l'affichage/le
+  // lancement.
   sortsGrimoireAccordes() {
     const ids = (typeof SORTS_ACCORDES_PAR_VOIE !== "undefined" ? SORTS_ACCORDES_PAR_VOIE : [])
       .filter((e) => e.classe === this.classe && this.rangMaxVoie(e.voie) >= e.rang)
