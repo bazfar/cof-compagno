@@ -606,6 +606,43 @@ const App = (() => {
     }, rayonZoneCases);
   }
 
+  // Variante automatisée de _armerCiblageCarte pour la règle générale
+  // zone/ligne (battlemap dd2vtt uniquement) : au clic sur un jeton valide,
+  // calcule TOUTES les cibles touchées (Carte.jetonsEnZoneCombat pour une
+  // zone circulaire, Carte.jetonsSurLigneCombat si mecanique.zone.forme ===
+  // "ligne") et résout directement via resoudreCapaciteEtRafraichir(null,
+  // cibleIds, cerclesParCible) — pas de relance manuelle par cible
+  // contrairement à _armerCiblageCarte. mecanique.cible vaut toujours "zone"
+  // dans les données (cf. eclair_localise/eclair_grand) : "ligne" n'est pas
+  // une valeur de cible séparée, seule mecanique.zone.forme distingue les
+  // deux formes.
+  function _armerCiblageCarteZoneAuto(persoId, mecanique, cibles, pickerSelect) {
+    if (typeof Carte === "undefined" || !Carte.activerModeCiblage) return;
+    const monTokenId = _monTokenId(persoId);
+    if (!monTokenId) { if (Carte.desactiverModeCiblage) Carte.desactiverModeCiblage(); return; }
+    const estLigne = !!(mecanique.zone && mecanique.zone.forme === "ligne");
+    const idsValides = new Set(cibles.map((c) => c.id));
+    const estValide = (tokId) => idsValides.has(tokId);
+    const rayonZoneCases = (!estLigne && mecanique.zone && typeof mecanique.zone.taille === "number")
+      ? mecanique.zone.taille : null;
+    Carte.activerModeCiblage(estValide, (tokId) => {
+      let cibleIds, cerclesParCible = {};
+      if (estLigne) {
+        // eclair_localise/eclair_grand gardent leur longueur propre
+        // (mecanique.zone.longueur) ; sinon LONGUEUR_LIGNE_CASES (règle
+        // générale, 5 cases).
+        const longueur = (typeof mecanique.zone.longueur === "number") ? mecanique.zone.longueur : LONGUEUR_LIGNE_CASES;
+        cibleIds = Carte.jetonsSurLigneCombat(monTokenId, tokId, longueur);
+      } else {
+        const rayon = rayonZoneCases ?? 2;
+        Carte.jetonsEnZoneCombat(tokId, rayon).forEach((r) => { cerclesParCible[r.id] = r.cercle; });
+        cibleIds = Object.keys(cerclesParCible);
+      }
+      if (!cibleIds.length) { toast("Aucune cible touchée."); return; }
+      resoudreCapaciteEtRafraichir(null, cibleIds, cerclesParCible);
+    }, rayonZoneCases);
+  }
+
   // Combine deux formules de dégâts (bi-arme : mêlée + arme courte en main
   // secondaire, cf. Personnage.armeCourteSecondaire) en une seule formule
   // lançable via lancerFormule (qui gère désormais plusieurs termes de dés).
@@ -4533,9 +4570,13 @@ const App = (() => {
       if (typeof Carte !== "undefined" && Carte.desactiverModeCiblage) Carte.desactiverModeCiblage();
     }
     // cibleIds (optionnel) : Prêtre — Voie de la guérison rang 4 "Bénédiction",
-    // choix "soin_partage" (jusqu'à 3 cibles indépendantes) — seul cas actuel
-    // à ne pas se résoudre sur UNE cible unique, cf. Capacites.lancer.
-    function resoudreCapaciteEtRafraichir(cibleId, cibleIds) {
+    // choix "soin_partage" (jusqu'à 3 cibles indépendantes) ; règle générale
+    // zone/ligne automatisée (cf. _armerCiblageCarteZoneAuto) — deux cas hors
+    // du schéma standard "une seule cible via cibleId", cf. Capacites.lancer.
+    // cerclesParCible (optionnel) : { cibleId: numéroDeCercle }, fourni par
+    // _armerCiblageCarteZoneAuto pour la pondération 100/75/50% des zones
+    // circulaires — ignoré par Capacites.lancer pour tout le reste.
+    function resoudreCapaciteEtRafraichir(cibleId, cibleIds, cerclesParCible) {
       const mecaniqueLancee = lancerCapaciteEnAttente.mecanique;
       const sourceLancee = lancerCapaciteEnAttente.source;
       const res = Capacites.lancer({
@@ -4544,6 +4585,7 @@ const App = (() => {
         mecanique: mecaniqueLancee,
         cibleId,
         cibleIds,
+        cerclesParCible,
         choixEffet: lancerCapaciteEnAttente.choixEffet,
         payerEnCS: !!(checkPayerCS && checkPayerCS.checked),
         payerSupplementCS: !!(checkSupplementCS && checkSupplementCS.checked),
@@ -4688,6 +4730,30 @@ const App = (() => {
               : `<option value="">Aucune cible disponible</option>`;
             if (troisCibles) toast("Sélectionne jusqu'à 3 alliés (Ctrl/Cmd + clic).");
             pickerForme.style.display = "flex";
+          } else if (mecanique.cible === "zone" && (mecanique.jetOppose || mecanique.portee)
+              && (_zoneCibleHostile(mecanique) || mecanique.cibleZoneHostile)
+              && (mecanique.effets || []).some((e) => e.type === "degats" && e.formule)
+              && typeof Carte !== "undefined" && Carte.jetonsEnZoneCombat) {
+            // Règle générale "zone/ligne automatisée" (battlemap dd2vtt
+            // uniquement, cf. js/carte.js jetonsEnZoneCombat/jetonsSurLigneCombat) :
+            // pour une capacité hostile en zone (circulaire OU ligne, cf.
+            // mecanique.zone.forme) avec un effet degats chiffré, un clic sur
+            // la carte choisit directement le CENTRE (zone) ou la CASE VISÉE
+            // (ligne) et l'app calcule elle-même TOUTES les cibles touchées —
+            // plus besoin de relancer manuellement cible par cible (cf.
+            // branche suivante, conservée comme repli pour tout le reste :
+            // zones alliées, effets non chiffrés, worldmap sans battlemap
+            // dd2vtt actif...). Carte.jetonsEnZoneCombat/jetonsSurLigneCombat
+            // renvoient [] hors battlemap dd2vtt — dans ce cas la présence
+            // même de Carte.jetonsEnZoneCombat ne suffit pas à garantir un
+            // résultat, géré côté _armerCiblageCarteZoneAuto (toast "Aucune
+            // cible touchée" plutôt qu'un blocage silencieux).
+            const cibles = Capacites.listeCibles(id).filter((cc) => cc.genre === "monstre");
+            pickerSelect.innerHTML = cibles.length
+              ? cibles.map((cc) => `<option value="${cc.id}">${echapper(cc.nom)}</option>`).join("")
+              : `<option value="">Aucune cible disponible</option>`;
+            pickerForme.style.display = "flex";
+            _armerCiblageCarteZoneAuto(id, mecanique, cibles, pickerSelect);
           } else if (mecanique.cible === "zone" && (mecanique.jetOppose || mecanique.portee) && (_zoneCibleHostile(mecanique) || mecanique.cibleZoneHostile)) {
             // Capacité de zone HOSTILE (cf. _zoneCibleHostile) avec une portée
             // définie — AVEC jet opposé (ex. Barde "Mélopée de la Folie"/

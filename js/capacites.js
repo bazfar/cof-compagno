@@ -1347,7 +1347,7 @@ const Capacites = (() => {
   // choix "soin_partage" — jusqu'à 3 cibles indépendantes, chacune avec son
   // propre jet de soin. Seul cas actuel hors du schéma standard "une seule
   // cible résolue par cibleId" (cf. son cas particulier plus bas).
-  function lancer({ persoId, source, mecanique, cibleId, cibleIds, choixEffet, payerEnCS, payerSupplementCS }) {
+  function lancer({ persoId, source, mecanique, cibleId, cibleIds, cerclesParCible, choixEffet, payerEnCS, payerSupplementCS }) {
     if (!mecanique || mecanique.type === "passive") {
       return { ok: false, messages: ["Cette capacité est passive : rien à lancer."] };
     }
@@ -1360,6 +1360,14 @@ const Capacites = (() => {
     if (!p) return { ok: false, messages: ["Personnage introuvable."] };
     const perso = Personnage.depuisJSON(p);
     const libelle = source.nomCap || "Capacité";
+    // Déclarés ici (pas plus bas comme avant) : plusieurs cas spéciaux
+    // court-circuitant lancer() avant le bloc générique (Bannissement,
+    // Supplément corrompu...) appellent messages.push() bien avant l'ancien
+    // point de déclaration — une const référencée avant son initialisation
+    // lève un ReferenceError (temporal dead zone), ce qui plantait ces
+    // chemins avant même d'écrire quoi que ce soit sur la fiche.
+    const messages = [];
+    let resolutionDegats = null;
 
     // Enchanteur — Voie de l'enchantement, rang 4 "Proficience" (passive) :
     // le coût PP du sort 'illusion' (rang 1, même voie — base ou évolué par
@@ -1528,6 +1536,46 @@ const Capacites = (() => {
       cible = { id: persoId, nom: p.nom, genre: "perso", soi: true };
     }
 
+    // Règle générale "zone/ligne automatisée" (battlemap dd2vtt uniquement,
+    // cf. js/carte.js DD2VTT.jetonsEnZoneCombat/jetonsSurLigneCombat, appelées
+    // par app.js AVANT ce point : cibleIds + cerclesParCible sont déjà
+    // calculés géométriquement côté carte, lancer() ne fait ici qu'appliquer
+    // les dégâts). cibleIds fourni ET mecanique.cible === "zone" ET un effet
+    // degats chiffré (formule de dés) -> UN SEUL jet, pondéré par cercle
+    // (DEGRADE_ZONE_PAR_CERCLE, zones circulaires uniquement — une ligne
+    // touche à 100%) puis arrondi à l'inférieur. Court-circuite le bloc
+    // jetOppose/effets générique (return immédiat), qui reste inchangé pour
+    // tous les autres cas (cible unique, zones alliées, effets non chiffrés,
+    // worldmap sans battlemap dd2vtt...). mecanique.jetOppose est ignoré ici
+    // si présent (ex. Boule de feu/Éclair : jet de sauvegarde Reflexes pour
+    // moitié) : automatiser un jet de sauvegarde différencié par cible aurait
+    // nécessité de relancer par cible, contraire au principe même de cette
+    // règle (un seul jet pour toute la zone/ligne) — simplification assumée
+    // par le prompt d'origine, dégâts pleins sans possibilité de sauvegarde
+    // individuelle une fois ce chemin emprunté.
+    if (cibleIds && cibleIds.length && mecanique.cible === "zone"
+        && (mecanique.effets || []).some((e) => e.type === "degats" && e.formule)) {
+      const effetDegats = mecanique.effets.find((e) => e.type === "degats" && e.formule);
+      const estLigne = !!(mecanique.zone && mecanique.zone.forme === "ligne");
+      const { total: degatsBruts, detail } = resoudreExpression(effetDegats.formule, { perso, rang: source.rang });
+      App.ajouterHisto(`${libelle} — Dégâts`, degatsBruts, false, false, detail);
+      cibleIds.forEach((cid) => {
+        const multiplicateur = estLigne ? 1 : (DEGRADE_ZONE_PAR_CERCLE[(cerclesParCible || {})[cid]] ?? 1);
+        const degatsFinal = Math.floor(degatsBruts * multiplicateur);
+        const res = Carte.appliquerDegatsCombat(cid, degatsFinal);
+        if (res) {
+          messages.push(`${res.nom} : ${degatsFinal} dégâts${multiplicateur < 1 ? ` (cercle, ${Math.round(multiplicateur * 100)}%)` : ""}${res.reduction ? ` (armure -${res.reduction})` : ""}`);
+        }
+      });
+      usage.appliquer && usage.appliquer();
+      if (coutPPReel) {
+        p.ppActuel = Math.max(0, (p.ppActuel || 0) - coutPPReel);
+        messages.push(`PP -${coutPPReel} (${p.ppActuel} restants).`);
+      }
+      App.sauverPersos(persos);
+      return { ok: true, messages: [`${libelle} : ${degatsBruts} dégâts de base (${detail}).`, ...messages] };
+    }
+
     // Prêtre — Cercle du Bannissement, sorts "Bannissement"/"Bannissement de
     // zone" : jet 1d20+Mod.CHA (+Mod.SAG en zone) vs DD variable selon la
     // dangerosité de la cible (cf. _ddBannissement) — hors du schéma
@@ -1594,9 +1642,6 @@ const Capacites = (() => {
         return { ok: false, messages: [`${cible.nom} n'est pas sous 50% PV (${pv.actuel}/${pv.max}) — Coup de grâce ne s'applique pas.`] };
       }
     }
-
-    const messages = [];
-    let resolutionDegats = null;
 
     // Chasseur — Voie de la gâchette, rang 3 "Tir mortel" : condition à
     // deux branches ("cible immobile OU n'a pas encore agi") — contrairement

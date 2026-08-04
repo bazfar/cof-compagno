@@ -577,6 +577,19 @@ const Carte = (() => {
     return DD2VTT.distanceCases(idA, idB);
   }
 
+  // Wrappers battlemap-only pour la règle générale zone/ligne automatisée —
+  // même garde _combatEnBattlemap() que distanceCasesEntre : [] hors dd2vtt
+  // (worldmap), le ciblage manuel reste le seul chemin dans ce cas (aucun
+  // changement pour la worldmap).
+  function jetonsSurLigneCombat(idLanceur, idVise, longueurCases) {
+    if (!_combatEnBattlemap()) return [];
+    return DD2VTT.jetonsSurLigne(idLanceur, idVise, longueurCases);
+  }
+  function jetonsEnZoneCombat(idCentre, rayonCases) {
+    if (!_combatEnBattlemap()) return [];
+    return DD2VTT.jetonsEnZone(idCentre, rayonCases);
+  }
+
   function appliquerDegatsCombat(id, degatsBruts) {
     if (_combatEnBattlemap() && DD2VTT.tokensMonstres().some((t) => t.id === id)) {
       return DD2VTT.appliquerDegats(id, degatsBruts);
@@ -3104,6 +3117,54 @@ const Carte = (() => {
       return Math.max(Math.abs(a.cx - b.cx), Math.abs(a.cy - b.cy));
     }
 
+    // Tracé de Bresenham entre deux cases (x0,y0)->(x1,y1), point de départ
+    // exclu. Utilisé par jetonsSurLigne ci-dessous.
+    function _traceBresenham(x0, y0, x1, y1) {
+      x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+      const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+      const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+      let err = dx - dy, x = x0, y = y0;
+      const cases = [];
+      while (!(x === x1 && y === y1)) {
+        const e2 = 2 * err;
+        if (e2 > -dy) { err -= dy; x += sx; }
+        if (e2 < dx) { err += dx; y += sy; }
+        cases.push({ x, y });
+      }
+      return cases;
+    }
+
+    // Règle générale "ligne fixe" : jetons touchés par une ligne de
+    // longueurCases tirée depuis idLanceur, dans la direction du jeton/de la
+    // case idVise — la ligne va TOUJOURS jusqu'au bout de sa longueur dans
+    // cette direction, même si idVise est plus proche (extrapolation du
+    // vecteur direction). Chebyshev/grille de cases (cx/cy), lanceur exclu du
+    // résultat. [] si un des deux tokens est introuvable ou si lanceur === visé.
+    function jetonsSurLigne(idLanceur, idVise, longueurCases) {
+      const src = tokensDD.find(t => t.id === idLanceur);
+      const dst = tokensDD.find(t => t.id === idVise);
+      if (!src || !dst || src.id === dst.id) return [];
+      const dx = dst.cx - src.cx, dy = dst.cy - src.cy;
+      const norme = Math.max(Math.hypot(dx, dy), 0.0001);
+      const finX = src.cx + (dx / norme) * longueurCases;
+      const finY = src.cy + (dy / norme) * longueurCases;
+      const cases = _traceBresenham(src.cx, src.cy, finX, finY).slice(0, longueurCases);
+      return tokensDD
+        .filter(t => t.id !== idLanceur && cases.some(c => c.x === t.cx && c.y === t.cy))
+        .map(t => t.id);
+    }
+
+    // Règle générale "zone dégressive" : liste des jetons dans un rayon de
+    // rayonCases autour de idCentre, avec leur cercle (0 = case ciblée, 1,
+    // 2...). Chebyshev (distanceCases), donc toujours un entier — pas
+    // d'arrondi à faire ici. idCentre lui-même inclus (cercle 0) s'il porte
+    // un token valide côté combat (PJ/monstre).
+    function jetonsEnZone(idCentre, rayonCases) {
+      return tokensDD
+        .map(t => ({ id: t.id, cercle: distanceCases(idCentre, t.id) }))
+        .filter(r => r.cercle !== null && r.cercle <= rayonCases);
+    }
+
     // Applique des dégâts bruts à un token monstre, réduits par son armure
     // (comme Personnage.reductionDegats côté fiche joueur). Renvoie le détail
     // pour le toast de l'appelant, ou null si le token n'existe pas/plus.
@@ -3698,7 +3759,7 @@ const Carte = (() => {
       init, scenes: () => scenes, sceneActive: () => sceneActive,
       ajouterToken: (sc) => ajouterTokenDD(sc),
       modeWorldmap: activerModeWorldmap, modeBattlemap: activerModeBattlemap, estActive, ajouterTokenData,
-      tokensMonstres, tokensPJ, distanceCases, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
+      tokensMonstres, tokensPJ, distanceCases, jetonsSurLigne, jetonsEnZone, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
       renommerToken, changerCouleurToken,
       ajouterEtat: ajouterEtatToken, retirerEtat: retirerEtatToken, decompterEtats: decompterEtatsToken,
       supprimerToken: supprimerTokenDD, onChange, actualiserTokens, reinitialiserExploration, revelerToutExploration,
@@ -3773,6 +3834,7 @@ const Carte = (() => {
     onOpen, onClose, definirRole, definirMonPerso, ajouterMonstre,
     listeMonstresCombat, listeTokensJoueursCombat, appliquerDegatsCombat, definirPvCombat, ajusterPvCombat,
     ajouterEtatCombat, retirerEtatCombat, decompterEtatsMonstre, distanceCasesEntre,
+    jetonsSurLigneCombat, jetonsEnZoneCombat,
     supprimerMonstreCombat, onMonstresChange, definirModeCarte,
     onMonstreDevientVisible, reinitialiserDetectionVisibilite, idPersoDepuisRef, tokenIdPourPerso, monstreEstVisible,
     initiales, rafraichirCouleurJoueur, COULEURS_JOUEURS,

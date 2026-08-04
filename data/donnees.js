@@ -1807,6 +1807,15 @@ const CLASSES = {
 /* Ordre d'affichage des classes */
 const ORDRE_CLASSES = ["guerrier", "chevalier", "barde", "chasseur", "moine", "druide", "pretre", "magicien", "enchanteur", "necromancien"];
 
+/* Règle générale "zone/ligne automatisée" (battlemap dd2vtt uniquement,
+   cf. js/carte.js DD2VTT.jetonsSurLigne/jetonsEnZone) : longueur fixe des
+   lignes sans longueur explicite et dégradé de dégâts par cercle des zones
+   circulaires. Les sorts qui posent déjà zone.longueur/zone.taille (ex.
+   eclair_localise à 6 cases, eclair_grand à 10) gardent leur valeur propre —
+   ces constantes ne servent que de valeur par défaut. */
+const LONGUEUR_LIGNE_CASES = 5;
+const DEGRADE_ZONE_PAR_CERCLE = [1, 0.75, 0.5]; // index = numéro de cercle (0/1/2)
+
 /* Liste autonome de sorts piochés par le Magicien (apprentissage via
    parchemin/recherche/montée de niveau, cf. reference_sorts_connus.md) —
    séparée des Voies de classe, à la manière d'un catalogue de sorts D&D.
