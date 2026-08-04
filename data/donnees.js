@@ -614,27 +614,30 @@ const CLASSES = {
         speciale: false,
         description: "Traque et châtiment — orientée combat, centrée sur la marque d'une cible plutôt que la détection passive.",
         rangs: [
-          { rang: 1, nom: "Œil de l'inquisiteur (1x/scène)", effet: "Test de SAG vs DEF de la cible suspectée : réussite → Marquée pour la scène/le combat",
-            mecanique: { type: "activable", usage: { frequence: "1x/scene" }, cible: "ennemi", portee: null, zone: null,
-              jetOppose: { caracAttaquant: "SAG", caracDefenseur: "DEF", difficulteFixe: null },
-              effets: [ { type: "etat", id: "marquee_pretre", duree: "finCombat" },
-                { type: "special", note: "Simplifié (validé avec Thomas) : caracDefenseur passé de 'SAG' à 'DEF' — data/bestiaire.json n'expose aucun modificateur de SAG par monstre, donc l'opposition SAG vs SAG d'origine ne pouvait jamais être automatisée. Contre 'DEF', le jet (1d20+Mod.SAG) est désormais pleinement automatisé (touché/raté/critique via obtenirDefCible)." } ] } },
-          { rang: 2, nom: "Frappe purificatrice (activable)", effet: "Les attaques contre une cible Marquée infligent +1d6 DM sacrés",
-            mecanique: { type: "activable", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "degats", formule: "1d6", elementaire: "sacre" },
-                { type: "special", note: "Corrige un bug de donnée : mecanique.type était 'passive' (bouton Lancer masqué partout dans l'app) alors que l'effet degats est réel — passé à 'activable'. Réservé à une cible déjà Marquée (marquee_pretre) — condition non vérifiée automatiquement, à activer manuellement sur une attaque réussie contre elle." } ] } },
-          { rang: 3, nom: "Confession forcée (L)", effet: "Attaque magique contre une cible Marquée : réponse honnête obligatoire + -2 DEF jusqu'à la fin du combat",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
-              jetOppose: { caracAttaquant: "attaqueMagique", caracDefenseur: "DEF", difficulteFixe: null },
-              effets: [ { type: "bonus", cible: "DEF", valeur: -2, duree: "finCombat", differe: true },
-                { type: "special", note: "Réponse honnête obligatoire de la cible — effet narratif non chiffrable. Réservé à une cible déjà Marquée (marquee_pretre). Bugfix (validé avec Thomas, trouvé en auditant le même bug côté Barde) : differe:true ajouté — le malus DEF s'appliquait jusqu'ici même sur un jet raté." } ] } },
-          { rang: 4, nom: "Chasse sans répit (passive)", effet: "Ignore la dissimulation/invisibilité d'une cible Marquée ; +2 m de déplacement en la poursuivant",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Ignore la dissimulation/invisibilité d'une cible Marquée ; +2 m de déplacement en la poursuivant — règles de perception/déplacement non chiffrables par le schéma standard." } ] } },
-          { rang: 5, nom: "Bûcher purificateur (L, 1x/scénario)", effet: "Attaque contre une cible Marquée : 5d6 DM sacrés, doublés si la culpabilité est confirmée dans la fiction",
-            mecanique: { type: "limitee", usage: { frequence: "1x/scenario" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "degats", formule: "5d6", elementaire: "sacre" },
-                { type: "special", note: "Dégâts doublés si la culpabilité de la cible est confirmée dans la fiction — condition narrative/MJ, non trackée automatiquement." } ] } },
+          { rang: 1, nom: "Œil de l'inquisiteur (passive + sort)", effet: "Débloque l'accès aux sorts de famille Jugement. Accorde directement le sort Œil de l'inquisiteur (Marque)",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Débloque famille 'jugement' ET accorde directement 'oeil_inquisiteur' (cf. SORTS_ACCORDES_PAR_VOIE), même patron que le rang 1 des 3 autres cercles." } ] } },
+
+          { rang: 2, nom: "Frappe purificatrice (passive)", effet: "Toutes vos attaques contre une cible Marquée infligent +1d6 dégâts sacrés",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "+1d6 dégâts sacrés automatique sur toute attaque du Prêtre contre la cible actuellement Marquée — passif, pas d'activation séparée (contrairement à l'ancien libellé '(activable)')." } ] } },
+
+          { rang: 3, nom: "Confession forcée (débloque un sort)", effet: "Débloque l'accès au sort Confession forcée dans le Grimoire",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Simple déblocage d'accès Grimoire (le sort lui-même, cf. SORTS_PRETRE, reste à apprendre normalement — pas accordé automatiquement comme au rang 1)." } ] } },
+
+          { rang: 4, nom: "Chasse sans répit (passive)", effet: "Ignore la dissimulation/invisibilité d'une cible Marquée ; +2 m de déplacement en la poursuivant. Débloque un pool de 2 Points de Jugement",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Effet de poursuite inchangé de l'original. Fixe pointsJugementMax à 2 (utilisés par 'Bûcher purificateur', cf. SORTS_PRETRE)." } ] } },
+
+          { rang: 5, nom: "Verdict final (passive)", effet: "+1 Point de Jugement (pool à 3). Débloque directement le sort Bûcher purificateur",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "pointsJugementMax passe à 3. Débloque directement 'bucher_purificateur' (accordé, pas appris via Grimoire — cf. SORTS_ACCORDES_PAR_VOIE)." } ] } },
         ],
       },
       {
@@ -2181,6 +2184,33 @@ const SORTS_PRETRE = [
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPointsBannissement: 1,
       cible: "zone", portee: 10, zone: { taille: 4 }, jetOppose: null,
       effets: [ { type: "special", note: "Jet 1d20+Mod.CHA+Mod.SAG (bonus cumulé, confirmé par Thomas — la version de zone est délibérément plus facile à réussir que la version cible unique) contre le même barème de DD que 'bannissement', appliqué indépendamment à chaque cible éligible de la zone." } ] } },
+
+  // --- Famille jugement (3 sorts, cf. prompt_pretre_cercle_jugement.md) ---
+  // Rang 1 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)
+  { id: "oeil_inquisiteur", nom: "Œil de l'inquisiteur", rang: 1, categorie: "jugement",
+    effet: "Test de SAG vs DEF de la cible suspectée : réussite → Marquée pour la scène/le combat. Coûte 2 PP",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "unique", portee: 15, zone: null,
+      jetOppose: { caracAttaquant: "SAG", caracDefenseur: "DEF" },
+      effets: [ { type: "etat", id: "marquee", duree: { motCle: "finScene" } } ] } },
+
+  // Rang 3
+  { id: "confession_forcee", nom: "Confession forcée", rang: 3, categorie: "jugement",
+    effet: "Attaque magique contre une cible Marquée : réponse honnête obligatoire + -2 CA jusqu'à la fin du combat",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "unique", portee: 10, zone: null,
+      jetOppose: { caracAttaquant: "SAG", caracDefenseur: "DEF" },
+      effets: [ { type: "bonusTemporaire", cle: "DEF", valeur: -2, duree: { motCle: "finCombat" } },
+        { type: "special", note: "Réponse honnête obligatoire — effet purement narratif, résolution manuelle par la table (pas de moteur de contrainte de dialogue dans l'app). Restriction 'cible déjà Marquée' non gatée automatiquement (cf. prompt, point à confirmer) : les tokens monstre ne suivent pas etatsActifs côté app (aucun suivi d'état automatique pour les monstres, même limite documentée ailleurs) — un gate bloquerait la plupart des usages légitimes en combat plutôt que d'aider, laissé au contrôle manuel de la table." } ] } },
+
+  // Rang 5 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)
+  { id: "bucher_purificateur", nom: "Bûcher purificateur", rang: 5, categorie: "jugement",
+    effet: "Attaque contre une cible Marquée : 5d6 dégâts sacrés, doublés si la culpabilité est confirmée dans la fiction. Coûte 2 Points de Jugement",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPointsJugement: 2,
+      cible: "unique", portee: 10, zone: null,
+      jetOppose: { caracAttaquant: "SAG", caracDefenseur: "DEF" },
+      effets: [ { type: "degats", formule: "5d6", typeDegats: "magique" },
+        { type: "special", note: "Doublement des dégâts (10d6) si la culpabilité de la cible est confirmée dans la fiction — jugement narratif de la table, pas de condition mécanique automatisable. Remplace l'ancienne limite '1x/scénario' par un coût de 2 Points de Jugement (pool de 3 max au rang 5). Restriction 'cible déjà Marquée' : même remarque que Confession forcée, non gatée automatiquement." } ] } },
 ];
 
 /* Table des sorts accordés directement par un rang de voie (pas appris via
