@@ -63,6 +63,7 @@ const BESTIAIRE = [
         "nom": "Couperet",
         "armeId": "couperet",
         "bonusAttaque": 3,
+        "bonusDegats": 1,
         "effetSpecial": null
       },
       {
@@ -105,6 +106,7 @@ const BESTIAIRE = [
         "nom": "Sabre récupéré",
         "armeId": "sabre_recupere",
         "bonusAttaque": 5,
+        "bonusDegats": 2,
         "effetSpecial": null
       },
       {
@@ -204,6 +206,7 @@ const BESTIAIRE = [
         "nom": "Morsure",
         "armeId": "morsure",
         "bonusAttaque": 3,
+        "bonusDegats": 1,
         "effetSpecial": null
       },
       {
@@ -253,6 +256,7 @@ const BESTIAIRE = [
         "nom": "Défenses",
         "armeId": "defenses",
         "bonusAttaque": 4,
+        "bonusDegats": 2,
         "effetSpecial": null
       }
     ],
@@ -387,12 +391,14 @@ const BESTIAIRE = [
         "nom": "Hache de guerre",
         "armeId": "hache_de_guerre",
         "bonusAttaque": 5,
+        "bonusDegats": 3,
         "effetSpecial": null
       },
       {
         "nom": "Lancer de hache",
         "armeId": "lancer_de_hache",
         "bonusAttaque": 3,
+        "bonusDegats": 1,
         "effetSpecial": "1 utilisation (récupère la hache si il ne subit pas de dégâts ce tour)."
       }
     ],
@@ -431,6 +437,7 @@ const BESTIAIRE = [
         "nom": "Liane de corruption",
         "armeId": "liane_de_corruption",
         "bonusAttaque": 6,
+        "bonusDegats": 2,
         "effetSpecial": "Si touché : test CON diff. 14 ou la cible est empoisonnée (1d4 dégâts par round, 3 rounds). L'antidote est de la Sève pure appliquée par un Druide ou Prêtre."
       },
       {
@@ -478,12 +485,14 @@ const BESTIAIRE = [
         "nom": "Épée longue solaire",
         "armeId": "epee_longue_solaire",
         "bonusAttaque": 5,
+        "bonusDegats": 2,
         "effetSpecial": "L'arme est bénie par Aethar. Elle inflige +1d4 dégâts supplémentaires contre les créatures du Chaos."
       },
       {
         "nom": "Bouclier-frappe",
         "armeId": "bouclier_frappe",
         "bonusAttaque": 4,
+        "bonusDegats": 1,
         "effetSpecial": "Test FOR diff. 12 ou la cible est repoussée de 1,5m et perd son action de déplacement."
       }
     ],
@@ -524,6 +533,7 @@ const BESTIAIRE = [
         "nom": "Poing de granit",
         "armeId": "poing_de_granit",
         "bonusAttaque": 6,
+        "bonusDegats": 4,
         "effetSpecial": "Si dégâts ≥ 10 en une frappe : test FOR diff. 15 ou la cible est projetée à 3m et renversée."
       },
       {
@@ -574,6 +584,7 @@ const BESTIAIRE = [
         "nom": "Lame d'ombre",
         "armeId": "lame_d_ombre",
         "bonusAttaque": 6,
+        "bonusDegats": 2,
         "effetSpecial": "En lumière faible ou obscurité : +1d4 dégâts supplémentaires."
       },
       {
@@ -628,7 +639,7 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Morsure",
-        "armeId": "morsure_2",
+        "armeId": "morsure",
         "bonusAttaque": 2,
         "effetSpecial": null
       }
@@ -677,6 +688,7 @@ const BESTIAIRE = [
         "nom": "Morsure",
         "armeId": "morsure",
         "bonusAttaque": 4,
+        "bonusDegats": 1,
         "effetSpecial": null
       },
       {
@@ -739,12 +751,14 @@ const BESTIAIRE = [
         "nom": "Morsure empoisonnée",
         "armeId": "morsure_empoisonnee",
         "bonusAttaque": 5,
+        "bonusDegats": 2,
         "effetSpecial": "Test CON diff. 12 ou -1 DEF pendant 3 rounds (Sève corrompue dans les crocs)."
       },
       {
         "nom": "Plaquage",
-        "armeId": "plaquage_2",
+        "armeId": "plaquage",
         "bonusAttaque": 4,
+        "bonusDegats": 1,
         "effetSpecial": "Test FOR diff. 12 ou renversé."
       }
     ],
@@ -824,12 +838,14 @@ const BESTIAIRE = [
         "nom": "Morsure déchirante",
         "armeId": "morsure_dechirante",
         "bonusAttaque": 7,
+        "bonusDegats": 3,
         "effetSpecial": "Saignement : 1d4 dégâts/round pendant 3 rounds (test CON diff. 13 pour stopper)."
       },
       {
         "nom": "Plaquage brutal",
         "armeId": "plaquage_brutal",
         "bonusAttaque": 6,
+        "bonusDegats": 2,
         "effetSpecial": "Test FOR diff. 15 ou renversé + désarmé."
       },
       {
@@ -884,12 +900,14 @@ const BESTIAIRE = [
         "nom": "Griffes",
         "armeId": "griffes",
         "bonusAttaque": 4,
+        "bonusDegats": 2,
         "effetSpecial": null
       },
       {
         "nom": "Morsure",
-        "armeId": "morsure_3",
+        "armeId": "morsure",
         "bonusAttaque": 4,
+        "bonusDegats": 2,
         "effetSpecial": null
       }
     ],
@@ -940,12 +958,14 @@ const BESTIAIRE = [
         "nom": "Griffes lacérantes",
         "armeId": "griffes_lacerantes",
         "bonusAttaque": 5,
+        "bonusDegats": 3,
         "effetSpecial": "Saignement : 1d4/round pendant 2 rounds (test CON diff. 11 pour stopper)."
       },
       {
         "nom": "Étreinte",
         "armeId": "etreinte",
         "bonusAttaque": 5,
+        "bonusDegats": 3,
         "effetSpecial": "Si touché : cible saisie. Test FOR diff. 14 par tour pour se libérer. L'ours inflige 1d6+3 dégâts automatiques à chaque tour sur une cible saisie."
       }
     ],
@@ -1005,12 +1025,14 @@ const BESTIAIRE = [
         "nom": "Griffes de guerre",
         "armeId": "griffes_de_guerre",
         "bonusAttaque": 6,
+        "bonusDegats": 3,
         "effetSpecial": null
       },
       {
         "nom": "Étreinte écrasante",
         "armeId": "etreinte_ecrasante",
         "bonusAttaque": 6,
+        "bonusDegats": 4,
         "effetSpecial": "Si touché : saisi. Test FOR diff. 16. L'ours inflige 1d8+4 dégâts auto par tour. Une cible saisie ne peut pas lancer de sorts."
       },
       {
@@ -1096,18 +1118,21 @@ const BESTIAIRE = [
         "nom": "Griffes dévastatrices",
         "armeId": "griffes_devastatrices",
         "bonusAttaque": 8,
+        "bonusDegats": 5,
         "effetSpecial": "Ignore 3 points de DEF (armure naturelle dépassée)."
       },
       {
         "nom": "Morsure broyante",
         "armeId": "morsure_broyante",
         "bonusAttaque": 7,
+        "bonusDegats": 5,
         "effetSpecial": "Si dégâts ≥ 12 : brise une armure (DEF réduite de 2 de façon permanente pour le combat)."
       },
       {
         "nom": "Dévastation (Voie Puissance r.3)",
         "armeId": "devastation_voie_puissance_r_3",
         "bonusAttaque": 8,
+        "bonusDegats": 5,
         "effetSpecial": "1 fois/combat. Attaque tous les ennemis adjacents (jet d'ATK séparé pour chacun)."
       },
       {
@@ -1166,11 +1191,12 @@ const BESTIAIRE = [
         "nom": "Hache",
         "armeId": "hache",
         "bonusAttaque": 4,
+        "bonusDegats": 2,
         "effetSpecial": null
       },
       {
         "nom": "Lancer de hache",
-        "armeId": "lancer_de_hache_2",
+        "armeId": "lancer_de_hache",
         "bonusAttaque": 2,
         "effetSpecial": "1 utilisation."
       }
@@ -1225,14 +1251,16 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Hache de guerre",
-        "armeId": "hache_de_guerre_2",
+        "armeId": "hache_de_guerre_lourde",
         "bonusAttaque": 6,
+        "bonusDegats": 3,
         "effetSpecial": null
       },
       {
         "nom": "Bouclier-frappe",
-        "armeId": "bouclier_frappe_2",
+        "armeId": "bouclier_frappe",
         "bonusAttaque": 5,
+        "bonusDegats": 2,
         "effetSpecial": "Test FOR diff. 12 ou repoussé 1,5m."
       }
     ],
@@ -1312,12 +1340,14 @@ const BESTIAIRE = [
         "nom": "Hache double",
         "armeId": "hache_double",
         "bonusAttaque": 7,
+        "bonusDegats": 4,
         "effetSpecial": null
       },
       {
         "nom": "Double frappe (Voie des Armes r.3)",
-        "armeId": "double_frappe_voie_des_armes_r_3",
+        "armeId": "double_frappe_armes_r3",
         "bonusAttaque": 7,
+        "bonusDegats": 4,
         "effetSpecial": "1 fois/round. Deux jets d'attaque séparés en une action."
       }
     ],
@@ -1411,12 +1441,14 @@ const BESTIAIRE = [
         "nom": "Masse de guerre runique",
         "armeId": "masse_de_guerre_runique",
         "bonusAttaque": 9,
+        "bonusDegats": 5,
         "effetSpecial": "L'arme est liée à Khoreth. Contre les Elfes et créatures de la Sève pure : +1d6 dégâts supplémentaires."
       },
       {
         "nom": "Double frappe",
-        "armeId": "double_frappe",
+        "armeId": "double_frappe_lourde",
         "bonusAttaque": 9,
+        "bonusDegats": 5,
         "effetSpecial": "1 fois/round."
       },
       {
@@ -1540,6 +1572,7 @@ const BESTIAIRE = [
         "nom": "Épée bâtarde",
         "armeId": "epee_batarde",
         "bonusAttaque": 4,
+        "bonusDegats": 1,
         "effetSpecial": null
       },
       {
@@ -1621,6 +1654,7 @@ const BESTIAIRE = [
         "nom": "Sabre de capitaine",
         "armeId": "sabre_de_capitaine",
         "bonusAttaque": 6,
+        "bonusDegats": 2,
         "effetSpecial": null
       },
       {
@@ -1736,18 +1770,21 @@ const BESTIAIRE = [
         "nom": "Épée longue enchantée +1",
         "armeId": "epee_longue_enchantee_1",
         "bonusAttaque": 8,
+        "bonusDegats": 4,
         "effetSpecial": "Le +1 vaut +1 dégât fixe (système d'enchantement COF)."
       },
       {
         "nom": "Double frappe",
-        "armeId": "double_frappe_2",
+        "armeId": "double_frappe",
         "bonusAttaque": 8,
+        "bonusDegats": 4,
         "effetSpecial": "1 fois/round."
       },
       {
         "nom": "Riposte (Voie du Duel r.2)",
-        "armeId": "riposte_voie_du_duel_r_2",
+        "armeId": "riposte_duel_r2",
         "bonusAttaque": 8,
+        "bonusDegats": 4,
         "effetSpecial": "Réaction si une attaque rate le Fléau. Gratuite, hors tour."
       },
       {
@@ -1806,8 +1843,9 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Épée courte",
-        "armeId": "epee_courte_2",
+        "armeId": "epee_courte",
         "bonusAttaque": 3,
+        "bonusDegats": 1,
         "effetSpecial": null
       },
       {
@@ -1869,12 +1907,14 @@ const BESTIAIRE = [
         "nom": "Épée longue",
         "armeId": "epee_longue",
         "bonusAttaque": 5,
+        "bonusDegats": 2,
         "effetSpecial": null
       },
       {
         "nom": "Bouclier-frappe",
         "armeId": "bouclier_frappe",
         "bonusAttaque": 4,
+        "bonusDegats": 1,
         "effetSpecial": "Test FOR diff. 11 ou repoussé 1,5m."
       }
     ],
@@ -1959,12 +1999,14 @@ const BESTIAIRE = [
         "nom": "Épée longue de maître",
         "armeId": "epee_longue_de_maitre",
         "bonusAttaque": 7,
+        "bonusDegats": 3,
         "effetSpecial": null
       },
       {
         "nom": "Bouclier héraldique",
         "armeId": "bouclier_heraldique",
         "bonusAttaque": 6,
+        "bonusDegats": 2,
         "effetSpecial": "Test FOR diff. 14 ou renversé. L'emblème de faction sur le bouclier peut intimider (test SAG diff. 10 ou -1 ATK)."
       }
     ],
@@ -2059,6 +2101,7 @@ const BESTIAIRE = [
         "nom": "Épée de la Couronne (enchantée +2)",
         "armeId": "epee_de_la_couronne_enchantee_2",
         "bonusAttaque": 9,
+        "bonusDegats": 5,
         "effetSpecial": "+2 dégâts fixes (enchantement). Contre les créatures du Chaos : +1d6 dégâts supplémentaires."
       },
       {
@@ -2133,6 +2176,7 @@ const BESTIAIRE = [
         "nom": "Lance",
         "armeId": "lance",
         "bonusAttaque": 3,
+        "bonusDegats": 1,
         "effetSpecial": "Peut attaquer une cible distante d'1 case supplémentaire. Si la cible charge vers lui, +1d4 dégâts supplémentaires (arme d'arrêt)."
       },
       {
@@ -2197,12 +2241,14 @@ const BESTIAIRE = [
         "nom": "Lance de guerre",
         "armeId": "lance_de_guerre",
         "bonusAttaque": 5,
+        "bonusDegats": 2,
         "effetSpecial": "Portée allongée. Si cible charge : +1d4 dégâts. Si 2 lanciers ciblent la même créature : elle doit tester FOR diff. 12 ou être repoussée de 1,5m."
       },
       {
         "nom": "Frappe de hampe",
         "armeId": "frappe_de_hampe",
         "bonusAttaque": 4,
+        "bonusDegats": 1,
         "effetSpecial": "Utilise l'extrémité de la lance au contact. Test FOR diff. 11 ou cible déséquilibrée (-1 DEF ce round)."
       }
     ],
@@ -2281,12 +2327,14 @@ const BESTIAIRE = [
         "nom": "Lance longue renforcée",
         "armeId": "lance_longue_renforcee",
         "bonusAttaque": 7,
+        "bonusDegats": 3,
         "effetSpecial": "Portée allongée. Charge ennemie : +1d6 dégâts. Peut cibler 2 créatures en ligne derrière l'autre (jet d'ATK séparé pour la seconde à -2)."
       },
       {
         "nom": "Frappe de hampe lourde",
         "armeId": "frappe_de_hampe_lourde",
         "bonusAttaque": 6,
+        "bonusDegats": 2,
         "effetSpecial": "Test FOR diff. 13 ou renversé."
       }
     ],
@@ -2379,12 +2427,14 @@ const BESTIAIRE = [
         "nom": "Lance de primus (enchantée +1)",
         "armeId": "lance_de_primus_enchantee_1",
         "bonusAttaque": 9,
+        "bonusDegats": 4,
         "effetSpecial": "Portée allongée. Charge : +1d8 dégâts. Percée : cible jusqu'à 2 créatures alignées (second jet à -1 ATK). +1 dégât fixe (enchantement)."
       },
       {
         "nom": "Balayage de hampe",
         "armeId": "balayage_de_hampe",
         "bonusAttaque": 8,
+        "bonusDegats": 3,
         "effetSpecial": "1 fois/round. Frappe toutes les créatures dans l'arc frontal (3m, 180°). Jet d'ATK séparé pour chacune."
       },
       {
@@ -2508,18 +2558,21 @@ const BESTIAIRE = [
         "nom": "Lance de chasse",
         "armeId": "lance_de_chasse",
         "bonusAttaque": 4,
+        "bonusDegats": 1,
         "effetSpecial": "Portée allongée. Peut lancer la lance (portée courte 6m, 1d8+1, 1 utilisation — récupérable)."
       },
       {
         "nom": "Lance jetée",
         "armeId": "lance_jetee",
         "bonusAttaque": 3,
+        "bonusDegats": 1,
         "effetSpecial": "1 utilisation/combat (récupérable si pas de combat à portée). Après lancer, combat au couteau."
       },
       {
         "nom": "Couteau de chasse",
         "armeId": "couteau_de_chasse",
         "bonusAttaque": 3,
+        "bonusDegats": 1,
         "effetSpecial": null
       }
     ],
@@ -2594,12 +2647,14 @@ const BESTIAIRE = [
         "nom": "Fauchard de bande",
         "armeId": "fauchard_de_bande",
         "bonusAttaque": 6,
+        "bonusDegats": 2,
         "effetSpecial": "Portée allongée. Charge : +1d6 dégâts. Peut effectuer une feinte (test CHA diff. 11 : cible perd sa DEF de bouclier ce round)."
       },
       {
         "nom": "Balayage bas",
         "armeId": "balayage_bas",
         "bonusAttaque": 5,
+        "bonusDegats": 1,
         "effetSpecial": "Test DEX diff. 12 ou cible renversée. Utilisable 1 fois/combat."
       }
     ],
@@ -2692,18 +2747,21 @@ const BESTIAIRE = [
         "nom": "Hallebarde de guerre",
         "armeId": "hallebarde_de_guerre",
         "bonusAttaque": 8,
+        "bonusDegats": 3,
         "effetSpecial": "Portée allongée. Charge : +1d8 dégâts. Tranchant : si dégâts totaux ≥ 12, saignement (1d4/round, 3 rounds, CON diff. 12 pour stopper)."
       },
       {
         "nom": "Double frappe (Voie des Armes r.3)",
-        "armeId": "double_frappe_voie_des_armes_r_3_2",
+        "armeId": "double_frappe_armes_r3_lance",
         "bonusAttaque": 8,
+        "bonusDegats": 3,
         "effetSpecial": "1 fois/round. Peut cibler deux créatures différentes si dans la portée."
       },
       {
         "nom": "Riposte (Voie du Duel r.2)",
-        "armeId": "riposte_voie_du_duel_r_2_2",
+        "armeId": "riposte_duel_r2_lance",
         "bonusAttaque": 8,
+        "bonusDegats": 3,
         "effetSpecial": "Réaction si attaque rate La Pointe. Gratuite, hors tour."
       }
     ],
@@ -2772,6 +2830,7 @@ const BESTIAIRE = [
         "nom": "Épée de jugement",
         "armeId": "epee_de_jugement",
         "bonusAttaque": 6,
+        "bonusDegats": 2,
         "effetSpecial": "+1d6 dégâts contre les créatures du Chaos ou les personnages ayant atteint le palier Marque/Fracture."
       },
       {
@@ -2845,6 +2904,7 @@ const BESTIAIRE = [
         "nom": "Épée de jugement (bénie)",
         "armeId": "epee_de_jugement_benie",
         "bonusAttaque": 8,
+        "bonusDegats": 3,
         "effetSpecial": "+1d6 dégâts contre les créatures du Chaos ou les personnages en Marque/Fracture."
       },
       {
@@ -2921,6 +2981,7 @@ const BESTIAIRE = [
         "nom": "Épée du Concile (enchantée +2)",
         "armeId": "epee_du_concile_enchantee_2",
         "bonusAttaque": 10,
+        "bonusDegats": 5,
         "effetSpecial": "+2 dégâts fixes (enchantement). +1d6 contre les créatures du Chaos ou personnages en Marque/Fracture."
       },
       {
@@ -3019,6 +3080,7 @@ const BESTIAIRE = [
         "nom": "Bâton béni (renforcé)",
         "armeId": "baton_beni_renforce",
         "bonusAttaque": 5,
+        "bonusDegats": 1,
         "effetSpecial": null
       },
       {
@@ -3091,12 +3153,14 @@ const BESTIAIRE = [
         "nom": "Épée du serment",
         "armeId": "epee_du_serment",
         "bonusAttaque": 6,
+        "bonusDegats": 2,
         "effetSpecial": null
       },
       {
         "nom": "Bouclier du Pont",
         "armeId": "bouclier_du_pont",
         "bonusAttaque": 5,
+        "bonusDegats": 1,
         "effetSpecial": "Test FOR diff. 12 ou la cible est repoussée de 1,5m."
       }
     ],
@@ -3166,6 +3230,7 @@ const BESTIAIRE = [
         "nom": "Épée du Serment (héritage de l'Ordre)",
         "armeId": "epee_du_serment_heritage_de_l_ordre",
         "bonusAttaque": 9,
+        "bonusDegats": 4,
         "effetSpecial": "+1d6 dégâts contre toute cible ayant porté un coup à un allié tombé à terre ce combat."
       },
       {
@@ -3215,6 +3280,7 @@ const BESTIAIRE = [
         "nom": "Hache à deux mains (trop grande pour lui)",
         "armeId": "hache_a_deux_mains_trop_grande_pour_lui",
         "bonusAttaque": 5,
+        "bonusDegats": 1,
         "effetSpecial": null
       }
     ],
@@ -3256,6 +3322,7 @@ const BESTIAIRE = [
         "nom": "Hache à deux mains",
         "armeId": "hache_a_deux_mains",
         "bonusAttaque": 8,
+        "bonusDegats": 3,
         "effetSpecial": null
       }
     ],
@@ -3313,8 +3380,9 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Hache à deux mains",
-        "armeId": "hache_a_deux_mains_2",
+        "armeId": "hache_a_deux_mains",
         "bonusAttaque": 6,
+        "bonusDegats": 2,
         "effetSpecial": null
       }
     ],
@@ -3402,6 +3470,7 @@ const BESTIAIRE = [
         "nom": "Estoc rouillé",
         "armeId": "squelette_estoc_rouille",
         "bonusAttaque": 5,
+        "bonusDegats": 1,
         "effetSpecial": "1 fois par round : peut refuser une attaque de contact reçue (test d'ATK de l'attaquant vs DEF+2 du Squelette-lame ; échec = attaque annulée)."
       }
     ],
@@ -3493,6 +3562,7 @@ const BESTIAIRE = [
         "nom": "Lame du serment brisé",
         "armeId": "connetable_lame",
         "bonusAttaque": 8,
+        "bonusDegats": 3,
         "effetSpecial": "Critique sur 19-20 (au lieu de 20 seul)."
       },
       {
@@ -3588,6 +3658,7 @@ const BESTIAIRE = [
         "nom": "Griffures frénétiques",
         "armeId": "charogne_griffures",
         "bonusAttaque": 5,
+        "bonusDegats": 1,
         "effetSpecial": "2 attaques par round contre une cible déjà infectée par la Morsure putride ou une capacité similaire."
       }
     ],
@@ -3632,6 +3703,7 @@ const BESTIAIRE = [
         "nom": "Poigne broyeuse",
         "armeId": "colosse_poigne",
         "bonusAttaque": 6,
+        "bonusDegats": 2,
         "effetSpecial": "Si touché : test FOR diff. 14 ou cible saisie (ne peut pas se déplacer, dégâts automatiques 1d6 au round suivant si toujours saisie)."
       }
     ],
@@ -3678,6 +3750,7 @@ const BESTIAIRE = [
         "nom": "Griffes voraces",
         "armeId": "goule_griffes",
         "bonusAttaque": 5,
+        "bonusDegats": 1,
         "effetSpecial": null
       },
       {
@@ -3773,6 +3846,7 @@ const BESTIAIRE = [
         "nom": "Étreinte racinaire",
         "armeId": "coeurpourri_etreinte",
         "bonusAttaque": 6,
+        "bonusDegats": 2,
         "effetSpecial": "Si touché : test FOR diff. 14 ou cible saisie ; 1d6 dégâts automatiques par round tant que la cible reste saisie (absorption de vitalité)."
       },
       {
@@ -3876,6 +3950,7 @@ const BESTIAIRE = [
         "nom": "Lame de la Gangrène",
         "armeId": "seigneur_lame",
         "bonusAttaque": 10,
+        "bonusDegats": 4,
         "effetSpecial": "Critique sur 19-20. Si touché : la cible est marquée par la corruption (conséquence narrative, à la discrétion du MJ)."
       },
       {
@@ -3987,6 +4062,7 @@ const BESTIAIRE = [
         "nom": "Sabre courbé",
         "armeId": "epee_batarde",
         "bonusAttaque": 5,
+        "bonusDegats": 1,
         "effetSpecial": null
       },
       {
@@ -4039,6 +4115,7 @@ const BESTIAIRE = [
         "nom": "Lame dorée",
         "armeId": "epee_longue",
         "bonusAttaque": 8,
+        "bonusDegats": 2,
         "effetSpecial": null
       }
     ],
@@ -4068,7 +4145,9 @@ const BESTIAIRE = [
     "nom": "Anselme Vaudrel",
     "famille": "cupide",
     "tier": "meneur",
-    "race": ["humanoïdes"],
+    "race": [
+      "humanoïdes"
+    ],
     "categorie": "Mission 2",
     "pv": 34,
     "def": 14,
@@ -4081,8 +4160,9 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Serpe de jardinier lourde",
-        "armeId": "hache_guerre",
+        "armeId": "serpe_lourde",
         "bonusAttaque": 5,
+        "bonusDegats": 1,
         "effetSpecial": null
       }
     ],

@@ -8900,9 +8900,26 @@ const App = (() => {
       const arme = typeof ArmesMonstres !== "undefined" ? ArmesMonstres.trouver(a.armeId) : null;
       if (!arme) return null;
       const bonusAttaque = a.bonusAttaque || 0;
+      // Le catalogue ne porte que le dé nu (cf. schema_cible_armes_monstres.md
+      // §1) — tout modificateur fixe vient de l'attaque qui référence l'arme
+      // (bonusDegats), jamais de l'arme elle-même : un futur monstre qui veut
+      // la même arme à un tarif différent réutilise l'armeId avec son propre
+      // bonusDegats, au lieu de créer un doublon "_2"/"_3" dans le catalogue.
+      const bonusDegats = a.bonusDegats || 0;
+      const expr = bonusDegats ? `${arme.degats}${signe(bonusDegats)}` : arme.degats;
+      // touches (§5.2) : une arme qui frappe N fois (ex. Double frappe) répète
+      // le même terme N fois plutôt que d'écrire un multiplicateur littéral
+      // ("(x2)") que lancerFormule ne sait pas interpréter — "1d12+4+1d12+4"
+      // reste une formule valide, produit un total unique, et double
+      // correctement CHAQUE terme de dé sur un critique (comportement de
+      // table déjà pratiqué : un seul jet d'attaque pour toute l'action, pas
+      // un jet par touche — cf. §5.2 pour la réserve assumée sur ce point).
+      const touches = arme.touches || 1;
       return {
         nom: a.nom, bonusAttaque,
-        degats: arme.degats, portee: arme.portee, typedegats: arme.typedegats,
+        degats: Array(touches).fill(expr).join("+"),
+        degatsTexte: touches > 1 ? `${expr} ×${touches}` : expr,
+        portee: arme.portee, typedegats: arme.typedegats, elementaire: arme.elementaire || null,
         jetTexte: `1d20${signe(bonusAttaque)} vs DEF`,
         effetSpecial: a.effetSpecial,
         // Aucune arme de monstre n'a de seuil de critique abaissé aujourd'hui
@@ -8913,7 +8930,7 @@ const App = (() => {
     }
     return {
       nom: a.nom, bonusAttaque: extraireBonusJetMonstre(a.jet),
-      degats: a.degats, portee: a.portee, typedegats: a.type,
+      degats: a.degats, degatsTexte: a.degats, portee: a.portee, typedegats: a.type, elementaire: null,
       jetTexte: a.jet,
       effetSpecial: a.effetSpecial,
       critMin: 20,
@@ -8982,7 +8999,7 @@ const App = (() => {
       const bonusAttaqueEffectif = r.bonusAttaque + _bonusEtatsMonstre(m, "attaque");
       return `<div class="cm-attaque-ligne">
         <button class="btn petit secondaire" data-monstre-jet="${m.id}" data-idx-attaque="${i}" title="${echapper(r.jetTexte || "")}">⚔ ${echapper(r.nom)} (${signe(bonusAttaqueEffectif)})</button>
-        ${etatDeg.visible ? `<button class="btn-de-cap" data-monstre-degats="${m.id}" data-idx-attaque="${i}" data-monstre-critique="${etatDeg.critique ? "1" : "0"}" title="Dégâts : ${echapper(r.degats || "")}">🎲${etatDeg.critique ? " CRIT" : ""}</button>` : ""}
+        ${etatDeg.visible ? `<button class="btn-de-cap" data-monstre-degats="${m.id}" data-idx-attaque="${i}" data-monstre-critique="${etatDeg.critique ? "1" : "0"}" title="Dégâts : ${echapper(r.degatsTexte || r.degats || "")}">🎲${etatDeg.critique ? " CRIT" : ""}</button>` : ""}
       </div>`;
     }).join("")}</div>`;
   }
@@ -9428,7 +9445,7 @@ const App = (() => {
       ? `<div class="monstre-section"><strong>Attaques</strong><ul>${m.attaques.map((a) => {
           const r = _resoudreAttaqueMonstre(a);
           if (!r) return `<li><em>${echapper(a.nom)}</em> — arme introuvable (armeId « ${echapper(a.armeId || "")} »)</li>`;
-          return `<li><em>${echapper(r.nom)}</em> — ${echapper(r.jetTexte || "")} · Dégâts ${echapper(r.degats || "")}${r.portee ? ` (${echapper(r.portee)})` : ""}${r.effetSpecial ? ` · ${echapper(r.effetSpecial)}` : ""}</li>`;
+          return `<li><em>${echapper(r.nom)}</em> — ${echapper(r.jetTexte || "")} · Dégâts ${echapper(r.degatsTexte || r.degats || "")}${r.portee ? ` (${echapper(r.portee)})` : ""}${r.effetSpecial ? ` · ${echapper(r.effetSpecial)}` : ""}</li>`;
         }).join("")}</ul></div>`
       : "";
 

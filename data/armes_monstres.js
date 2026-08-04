@@ -35,7 +35,7 @@ const ARMES_MONSTRES = [
     "id": "couperet",
     "nom": "Couperet",
     "type": "arme",
-    "degats": "1d6+1",
+    "degats": "1d6",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -51,7 +51,7 @@ const ARMES_MONSTRES = [
     "id": "sabre_recupere",
     "nom": "Sabre récupéré",
     "type": "arme",
-    "degats": "1d8+2",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -77,13 +77,14 @@ const ARMES_MONSTRES = [
     "type": "arme",
     "degats": "1d6",
     "portee": "courte (6m)",
-    "typedegats": "magique (Chaos corrompu)"
+    "typedegats": "magique",
+    "elementaire": "chaos"
   },
   {
     "id": "morsure",
     "nom": "Morsure",
     "type": "arme",
-    "degats": "1d6+1",
+    "degats": "1d6",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -107,7 +108,7 @@ const ARMES_MONSTRES = [
     "id": "defenses",
     "nom": "Défenses",
     "type": "arme",
-    "degats": "1d8+2",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -117,7 +118,8 @@ const ARMES_MONSTRES = [
     "type": "arme",
     "degats": "1d6",
     "portee": "contact",
-    "typedegats": "magique (froid)"
+    "typedegats": "magique",
+    "elementaire": "froid"
   },
   {
     "id": "hurlement_du_vide",
@@ -125,7 +127,8 @@ const ARMES_MONSTRES = [
     "type": "arme",
     "degats": "1d4",
     "portee": "courte (6m)",
-    "typedegats": "magique (mental)"
+    "typedegats": "magique",
+    "elementaire": "mental"
   },
   {
     "id": "fouet_de_racine",
@@ -147,7 +150,7 @@ const ARMES_MONSTRES = [
     "id": "hache_de_guerre",
     "nom": "Hache de guerre",
     "type": "arme",
-    "degats": "1d8+3",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -155,7 +158,7 @@ const ARMES_MONSTRES = [
     "id": "lancer_de_hache",
     "nom": "Lancer de hache",
     "type": "arme",
-    "degats": "1d8+1",
+    "degats": "1d8",
     "portee": "courte (6m)",
     "typedegats": "physique"
   },
@@ -163,9 +166,10 @@ const ARMES_MONSTRES = [
     "id": "liane_de_corruption",
     "nom": "Liane de corruption",
     "type": "arme",
-    "degats": "1d10+2",
+    "degats": "1d10",
     "portee": "courte (6m)",
-    "typedegats": "magique (Chaos végétal)"
+    "typedegats": "magique",
+    "elementaire": "chaos"
   },
   {
     "id": "explosion_de_spores",
@@ -173,13 +177,14 @@ const ARMES_MONSTRES = [
     "type": "arme",
     "degats": "2d6",
     "portee": "courte (6m)",
-    "typedegats": "magique (Chaos végétal)"
+    "typedegats": "magique",
+    "elementaire": "chaos"
   },
   {
     "id": "epee_longue_solaire",
     "nom": "Épée longue solaire",
     "type": "arme",
-    "degats": "1d8+2",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -187,7 +192,7 @@ const ARMES_MONSTRES = [
     "id": "bouclier_frappe",
     "nom": "Bouclier-frappe",
     "type": "arme",
-    "degats": "1d4+1",
+    "degats": "1d4",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -195,7 +200,7 @@ const ARMES_MONSTRES = [
     "id": "poing_de_granit",
     "nom": "Poing de granit",
     "type": "arme",
-    "degats": "2d8+4",
+    "degats": "2d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -211,9 +216,10 @@ const ARMES_MONSTRES = [
     "id": "lame_d_ombre",
     "nom": "Lame d'ombre",
     "type": "arme",
-    "degats": "1d6+2",
+    "degats": "1d6",
     "portee": "contact",
-    "typedegats": "physique + magique"
+    "typedegats": "magique",
+    "elementaire": "chaos"
   },
   {
     "id": "fleche_de_seve_noire",
@@ -221,29 +227,14 @@ const ARMES_MONSTRES = [
     "type": "arme",
     "degats": "1d8",
     "portee": "longue (36m)",
-    "typedegats": "magique (Chaos)"
-  },
-  {
-    "id": "morsure_2",
-    "nom": "Morsure",
-    "type": "arme",
-    "degats": "1d6",
-    "portee": "contact",
-    "typedegats": "physique"
+    "typedegats": "magique",
+    "elementaire": "chaos"
   },
   {
     "id": "morsure_empoisonnee",
     "nom": "Morsure empoisonnée",
     "type": "arme",
-    "degats": "1d6+2",
-    "portee": "contact",
-    "typedegats": "physique"
-  },
-  {
-    "id": "plaquage_2",
-    "nom": "Plaquage",
-    "type": "arme",
-    "degats": "1d4+1",
+    "degats": "1d6",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -251,7 +242,7 @@ const ARMES_MONSTRES = [
     "id": "morsure_dechirante",
     "nom": "Morsure déchirante",
     "type": "arme",
-    "degats": "2d6+3",
+    "degats": "2d6",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -259,7 +250,7 @@ const ARMES_MONSTRES = [
     "id": "plaquage_brutal",
     "nom": "Plaquage brutal",
     "type": "arme",
-    "degats": "1d6+2",
+    "degats": "1d6",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -267,15 +258,7 @@ const ARMES_MONSTRES = [
     "id": "griffes",
     "nom": "Griffes",
     "type": "arme",
-    "degats": "1d8+2",
-    "portee": "contact",
-    "typedegats": "physique"
-  },
-  {
-    "id": "morsure_3",
-    "nom": "Morsure",
-    "type": "arme",
-    "degats": "1d6+2",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -283,7 +266,7 @@ const ARMES_MONSTRES = [
     "id": "griffes_lacerantes",
     "nom": "Griffes lacérantes",
     "type": "arme",
-    "degats": "1d8+3",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -291,7 +274,7 @@ const ARMES_MONSTRES = [
     "id": "etreinte",
     "nom": "Étreinte",
     "type": "arme",
-    "degats": "1d6+3",
+    "degats": "1d6",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -299,7 +282,7 @@ const ARMES_MONSTRES = [
     "id": "griffes_de_guerre",
     "nom": "Griffes de guerre",
     "type": "arme",
-    "degats": "2d6+3",
+    "degats": "2d6",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -307,7 +290,7 @@ const ARMES_MONSTRES = [
     "id": "etreinte_ecrasante",
     "nom": "Étreinte écrasante",
     "type": "arme",
-    "degats": "1d8+4",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -323,7 +306,7 @@ const ARMES_MONSTRES = [
     "id": "griffes_devastatrices",
     "nom": "Griffes dévastatrices",
     "type": "arme",
-    "degats": "2d8+5",
+    "degats": "2d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -331,7 +314,7 @@ const ARMES_MONSTRES = [
     "id": "morsure_broyante",
     "nom": "Morsure broyante",
     "type": "arme",
-    "degats": "2d6+5",
+    "degats": "2d6",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -339,7 +322,7 @@ const ARMES_MONSTRES = [
     "id": "devastation_voie_puissance_r_3",
     "nom": "Dévastation (Voie Puissance r.3)",
     "type": "arme",
-    "degats": "2d6+5",
+    "degats": "2d6",
     "portee": "contact (zone adjacente)",
     "typedegats": "physique"
   },
@@ -347,31 +330,15 @@ const ARMES_MONSTRES = [
     "id": "hache",
     "nom": "Hache",
     "type": "arme",
-    "degats": "1d8+2",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
   {
-    "id": "lancer_de_hache_2",
-    "nom": "Lancer de hache",
-    "type": "arme",
-    "degats": "1d8",
-    "portee": "courte (6m)",
-    "typedegats": "physique"
-  },
-  {
-    "id": "hache_de_guerre_2",
+    "id": "hache_de_guerre_lourde",
     "nom": "Hache de guerre",
     "type": "arme",
-    "degats": "1d10+3",
-    "portee": "contact",
-    "typedegats": "physique"
-  },
-  {
-    "id": "bouclier_frappe_2",
-    "nom": "Bouclier-frappe",
-    "type": "arme",
-    "degats": "1d4+2",
+    "degats": "1d10",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -379,33 +346,35 @@ const ARMES_MONSTRES = [
     "id": "hache_double",
     "nom": "Hache double",
     "type": "arme",
-    "degats": "1d12+4",
+    "degats": "1d12",
     "portee": "contact",
     "typedegats": "physique"
   },
   {
-    "id": "double_frappe_voie_des_armes_r_3",
+    "id": "double_frappe_armes_r3",
     "nom": "Double frappe (Voie des Armes r.3)",
     "type": "arme",
-    "degats": "1d12+4 (x2)",
+    "degats": "1d12",
     "portee": "contact",
-    "typedegats": "physique"
+    "typedegats": "physique",
+    "touches": 2
   },
   {
     "id": "masse_de_guerre_runique",
     "nom": "Masse de guerre runique",
     "type": "arme",
-    "degats": "2d8+5",
+    "degats": "2d8",
     "portee": "contact",
     "typedegats": "physique"
   },
   {
-    "id": "double_frappe",
+    "id": "double_frappe_lourde",
     "nom": "Double frappe",
     "type": "arme",
-    "degats": "2d8+5 (x2)",
+    "degats": "2d8",
     "portee": "contact",
-    "typedegats": "physique"
+    "typedegats": "physique",
+    "touches": 2
   },
   {
     "id": "epee_courte",
@@ -427,7 +396,7 @@ const ARMES_MONSTRES = [
     "id": "epee_batarde",
     "nom": "Épée bâtarde",
     "type": "arme",
-    "degats": "1d8+1",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -443,7 +412,7 @@ const ARMES_MONSTRES = [
     "id": "sabre_de_capitaine",
     "nom": "Sabre de capitaine",
     "type": "arme",
-    "degats": "1d8+2",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -467,23 +436,24 @@ const ARMES_MONSTRES = [
     "id": "epee_longue_enchantee_1",
     "nom": "Épée longue enchantée +1",
     "type": "arme",
-    "degats": "1d8+4",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
   {
-    "id": "double_frappe_2",
+    "id": "double_frappe",
     "nom": "Double frappe",
     "type": "arme",
-    "degats": "1d8+4 (x2)",
+    "degats": "1d8",
     "portee": "contact",
-    "typedegats": "physique"
+    "typedegats": "physique",
+    "touches": 2
   },
   {
-    "id": "riposte_voie_du_duel_r_2",
+    "id": "riposte_duel_r2",
     "nom": "Riposte (Voie du Duel r.2)",
     "type": "arme",
-    "degats": "1d8+4",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -491,17 +461,10 @@ const ARMES_MONSTRES = [
     "id": "pistolets_jumeles",
     "nom": "Pistolets jumelés",
     "type": "arme",
-    "degats": "1d10 (x2)",
+    "degats": "1d10",
     "portee": "courte (6m)",
-    "typedegats": "physique"
-  },
-  {
-    "id": "epee_courte_2",
-    "nom": "Épée courte",
-    "type": "arme",
-    "degats": "1d6+1",
-    "portee": "contact",
-    "typedegats": "physique"
+    "typedegats": "physique",
+    "touches": 2
   },
   {
     "id": "arbalete_legere",
@@ -515,7 +478,7 @@ const ARMES_MONSTRES = [
     "id": "epee_longue",
     "nom": "Épée longue",
     "type": "arme",
-    "degats": "1d8+2",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -523,7 +486,7 @@ const ARMES_MONSTRES = [
     "id": "epee_longue_de_maitre",
     "nom": "Épée longue de maître",
     "type": "arme",
-    "degats": "1d8+3",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -531,7 +494,7 @@ const ARMES_MONSTRES = [
     "id": "bouclier_heraldique",
     "nom": "Bouclier héraldique",
     "type": "arme",
-    "degats": "1d6+2",
+    "degats": "1d6",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -539,7 +502,7 @@ const ARMES_MONSTRES = [
     "id": "epee_de_la_couronne_enchantee_2",
     "nom": "Épée de la Couronne (enchantée +2)",
     "type": "arme",
-    "degats": "1d8+5",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -547,7 +510,7 @@ const ARMES_MONSTRES = [
     "id": "lance",
     "nom": "Lance",
     "type": "arme",
-    "degats": "1d8+1",
+    "degats": "1d8",
     "portee": "contact +1 case (3m)",
     "typedegats": "physique"
   },
@@ -563,7 +526,7 @@ const ARMES_MONSTRES = [
     "id": "lance_de_guerre",
     "nom": "Lance de guerre",
     "type": "arme",
-    "degats": "1d8+2",
+    "degats": "1d8",
     "portee": "contact +1 case (3m)",
     "typedegats": "physique"
   },
@@ -571,7 +534,7 @@ const ARMES_MONSTRES = [
     "id": "frappe_de_hampe",
     "nom": "Frappe de hampe",
     "type": "arme",
-    "degats": "1d4+1",
+    "degats": "1d4",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -579,7 +542,7 @@ const ARMES_MONSTRES = [
     "id": "lance_longue_renforcee",
     "nom": "Lance longue renforcée",
     "type": "arme",
-    "degats": "1d10+3",
+    "degats": "1d10",
     "portee": "contact +1 case (3m)",
     "typedegats": "physique"
   },
@@ -587,7 +550,7 @@ const ARMES_MONSTRES = [
     "id": "frappe_de_hampe_lourde",
     "nom": "Frappe de hampe lourde",
     "type": "arme",
-    "degats": "1d6+2",
+    "degats": "1d6",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -595,7 +558,7 @@ const ARMES_MONSTRES = [
     "id": "lance_de_primus_enchantee_1",
     "nom": "Lance de primus (enchantée +1)",
     "type": "arme",
-    "degats": "1d10+4",
+    "degats": "1d10",
     "portee": "contact +1 case (3m)",
     "typedegats": "physique"
   },
@@ -603,7 +566,7 @@ const ARMES_MONSTRES = [
     "id": "balayage_de_hampe",
     "nom": "Balayage de hampe",
     "type": "arme",
-    "degats": "1d6+3",
+    "degats": "1d6",
     "portee": "contact (arc frontal)",
     "typedegats": "physique"
   },
@@ -627,7 +590,7 @@ const ARMES_MONSTRES = [
     "id": "lance_de_chasse",
     "nom": "Lance de chasse",
     "type": "arme",
-    "degats": "1d8+1",
+    "degats": "1d8",
     "portee": "contact +1 case (3m)",
     "typedegats": "physique"
   },
@@ -635,7 +598,7 @@ const ARMES_MONSTRES = [
     "id": "lance_jetee",
     "nom": "Lance jetée",
     "type": "arme",
-    "degats": "1d8+1",
+    "degats": "1d8",
     "portee": "courte (6m)",
     "typedegats": "physique"
   },
@@ -643,7 +606,7 @@ const ARMES_MONSTRES = [
     "id": "couteau_de_chasse",
     "nom": "Couteau de chasse",
     "type": "arme",
-    "degats": "1d4+1",
+    "degats": "1d4",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -651,7 +614,7 @@ const ARMES_MONSTRES = [
     "id": "fauchard_de_bande",
     "nom": "Fauchard de bande",
     "type": "arme",
-    "degats": "1d10+2",
+    "degats": "1d10",
     "portee": "contact +1 case (3m)",
     "typedegats": "physique"
   },
@@ -659,7 +622,7 @@ const ARMES_MONSTRES = [
     "id": "balayage_bas",
     "nom": "Balayage bas",
     "type": "arme",
-    "degats": "1d6+1",
+    "degats": "1d6",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -667,31 +630,32 @@ const ARMES_MONSTRES = [
     "id": "hallebarde_de_guerre",
     "nom": "Hallebarde de guerre",
     "type": "arme",
-    "degats": "1d12+3",
+    "degats": "1d12",
     "portee": "contact +1 case (3m)",
     "typedegats": "physique"
   },
   {
-    "id": "double_frappe_voie_des_armes_r_3_2",
+    "id": "double_frappe_armes_r3_lance",
     "nom": "Double frappe (Voie des Armes r.3)",
     "type": "arme",
-    "degats": "1d12+3 (x2)",
+    "degats": "1d12",
     "portee": "contact +1 case (3m)",
-    "typedegats": "physique"
+    "typedegats": "physique",
+    "touches": 2
   },
   {
-    "id": "riposte_voie_du_duel_r_2_2",
+    "id": "riposte_duel_r2_lance",
     "nom": "Riposte (Voie du Duel r.2)",
     "type": "arme",
-    "degats": "1d12+3",
-    "portee": "contact +1 case",
+    "degats": "1d12",
+    "portee": "contact +1 case (3m)",
     "typedegats": "physique"
   },
   {
     "id": "epee_de_jugement",
     "nom": "Épée de jugement",
     "type": "arme",
-    "degats": "1d8+2",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -699,7 +663,7 @@ const ARMES_MONSTRES = [
     "id": "epee_de_jugement_benie",
     "nom": "Épée de jugement (bénie)",
     "type": "arme",
-    "degats": "1d8+3",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -709,13 +673,14 @@ const ARMES_MONSTRES = [
     "type": "arme",
     "degats": "2d8",
     "portee": "courte (6m)",
-    "typedegats": "magique (sacré)"
+    "typedegats": "magique",
+    "elementaire": "sacre"
   },
   {
     "id": "epee_du_concile_enchantee_2",
     "nom": "Épée du Concile (enchantée +2)",
     "type": "arme",
-    "degats": "1d8+5",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -725,7 +690,8 @@ const ARMES_MONSTRES = [
     "type": "arme",
     "degats": "3d6",
     "portee": "moyenne (18m)",
-    "typedegats": "magique (feu sacré)"
+    "typedegats": "magique",
+    "elementaire": "feu"
   },
   {
     "id": "baton_beni",
@@ -739,7 +705,7 @@ const ARMES_MONSTRES = [
     "id": "baton_beni_renforce",
     "nom": "Bâton béni (renforcé)",
     "type": "arme",
-    "degats": "1d6+1",
+    "degats": "1d6",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -747,7 +713,7 @@ const ARMES_MONSTRES = [
     "id": "epee_du_serment",
     "nom": "Épée du serment",
     "type": "arme",
-    "degats": "1d8+2",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -755,7 +721,7 @@ const ARMES_MONSTRES = [
     "id": "bouclier_du_pont",
     "nom": "Bouclier du Pont",
     "type": "arme",
-    "degats": "1d4+1",
+    "degats": "1d4",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -763,7 +729,7 @@ const ARMES_MONSTRES = [
     "id": "epee_du_serment_heritage_de_l_ordre",
     "nom": "Épée du Serment (héritage de l'Ordre)",
     "type": "arme",
-    "degats": "1d8+4",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -771,7 +737,7 @@ const ARMES_MONSTRES = [
     "id": "hache_a_deux_mains_trop_grande_pour_lui",
     "nom": "Hache à deux mains (trop grande pour lui)",
     "type": "arme",
-    "degats": "1d8+1",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -779,15 +745,7 @@ const ARMES_MONSTRES = [
     "id": "hache_a_deux_mains",
     "nom": "Hache à deux mains",
     "type": "arme",
-    "degats": "1d10+3",
-    "portee": "contact",
-    "typedegats": "physique"
-  },
-  {
-    "id": "hache_a_deux_mains_2",
-    "nom": "Hache à deux mains",
-    "type": "arme",
-    "degats": "1d10+2",
+    "degats": "1d10",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -803,7 +761,7 @@ const ARMES_MONSTRES = [
     "id": "squelette_estoc_rouille",
     "nom": "Estoc rouillé",
     "type": "arme",
-    "degats": "1d8+1",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -827,7 +785,7 @@ const ARMES_MONSTRES = [
     "id": "connetable_lame",
     "nom": "Lame du serment brisé",
     "type": "arme",
-    "degats": "1d10+3",
+    "degats": "1d10",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -843,7 +801,7 @@ const ARMES_MONSTRES = [
     "id": "charogne_griffures",
     "nom": "Griffures frénétiques",
     "type": "arme",
-    "degats": "1d8+1",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -851,7 +809,7 @@ const ARMES_MONSTRES = [
     "id": "colosse_poigne",
     "nom": "Poigne broyeuse",
     "type": "arme",
-    "degats": "2d6+2",
+    "degats": "2d6",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -859,7 +817,7 @@ const ARMES_MONSTRES = [
     "id": "goule_griffes",
     "nom": "Griffes voraces",
     "type": "arme",
-    "degats": "1d6+1",
+    "degats": "1d6",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -883,7 +841,7 @@ const ARMES_MONSTRES = [
     "id": "coeurpourri_etreinte",
     "nom": "Étreinte racinaire",
     "type": "arme",
-    "degats": "1d8+2",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
@@ -907,7 +865,15 @@ const ARMES_MONSTRES = [
     "id": "seigneur_lame",
     "nom": "Lame de la Gangrène",
     "type": "arme",
-    "degats": "2d8+4",
+    "degats": "2d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "serpe_lourde",
+    "nom": "Serpe de jardinier lourde",
+    "type": "arme",
+    "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   }
