@@ -418,6 +418,38 @@ class Personnage extends Entite {
     return this.mod(caracCode) + this.bonusCompetence(nom) + malusProficience;
   }
 
+  // Modificateur total d'un jet de sauvegarde (cf. SAUVEGARDES, data/donnees.js :
+  // Reflexes→DEX, Vigueur→CON, Volonte→SAG). Modèle RÉACTIF assumé (décision du
+  // 04/08/2026) : c'est le DÉFENSEUR qui lance. Attention, js/capacites.js
+  // expose encore une défense mentale PASSIVE concurrente (obtenirVolonteCible,
+  // 10 + Mod.SAG, consommée par jetOppose.caracDefenseur === "defMentale") :
+  // les deux modèles coexistent tant que l'alignement de defMentale sur un jet
+  // (étape 2) n'est pas fait. Ne pas supposer que les deux donnent le même
+  // résultat — un PJ à Mod.SAG +3 a une défense passive de 13 et un jet moyen
+  // de 13,5, proche par construction mais avec une variance que le passif n'a pas.
+  //
+  // Composition (étape 1 — affichage seul, aucune mécanique nouvelle) :
+  //   - mod() de la carac porteuse ;
+  //   - bonusTestCaracCapacites() : déjà appliqué aux tests de carac bruts,
+  //     porte le Moine « Discipline du corps » (+2 sur SAG, donc sur Volonté) ;
+  //   - malus de proficience d'armure (-2) sur RÉFLEXES uniquement, même
+  //     patron que modCompetence() pour les compétences DEX (une armure trop
+  //     lourde gêne l'esquive comme elle gêne l'Acrobatie).
+  // NE COMPOSE PAS ENCORE : le champ bonusSauvegardes des objets (étape 3), les
+  // bonus conditionnels « vs magie / poison / corruption » des voies raciales
+  // (étape 3), l'aura Volonté du Chevalier (étape 4). Choix délibéré : un
+  // modificateur incomplet mais exact plutôt qu'un total qui mentirait.
+  //
+  // L'avantage automatique (Endurance de fer → Vigueur, Verdict/Vœu
+  // inébranlable → Volonté) n'est PAS un terme additif : il est appliqué au
+  // moment du jet via modeForce côté app.js, comme pour les tests de carac.
+  modSauvegarde(nom) {
+    const code = (typeof SAUVEGARDES !== "undefined" && SAUVEGARDES[nom]) || null;
+    if (!code) return 0;
+    const malusProficience = (nom === "Reflexes" && Personnage.estArmureNonMaitrisee(this)) ? -2 : 0;
+    return this.mod(code) + this.bonusTestCaracCapacites(code) + malusProficience;
+  }
+
   get classeDef() {
     return (typeof CLASSES !== "undefined" && CLASSES[this.classe]) || null;
   }

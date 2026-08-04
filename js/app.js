@@ -6419,6 +6419,20 @@ const App = (() => {
                 </div>`).join("")}
             </div>
 
+            <h3>Jets de sauvegarde</h3>
+            <div class="sauvegardes-liste">
+              ${Object.keys(SAUVEGARDES).map((nomSauv) => {
+                const libelleSauv = (typeof Sauvegardes !== "undefined" && Sauvegardes.LIBELLES[nomSauv]) || nomSauv;
+                const codeSauv = SAUVEGARDES[nomSauv];
+                return `<button type="button" class="sauvegarde-btn" data-sauvegarde="${nomSauv}" data-carac="${codeSauv}" title="Lancer un jet de sauvegarde de ${libelleSauv} (${codeSauv})">
+                  <span class="sauv-nom">${libelleSauv}</span>
+                  <span class="sauv-valeur">${signe(perso.modSauvegarde(nomSauv))}</span>
+                  <span class="sauv-carac">${codeSauv}</span>
+                </button>`;
+              }).join("")}
+            </div>
+            <p style="font-size:0.75rem;color:#8a8296;margin-top:6px;">Le défenseur lance : 1d20 + modificateur contre le DD annoncé par le MJ. Les bonus d'objets et les bonus conditionnels (vs magie, poison, corruption) ne sont pas encore chiffrés ici — à ajouter à la main au moment du jet.</p>
+
             <h3>Attaques rapides</h3>
             <div class="barre-actions">
               <button class="btn" data-attaque="contact" data-bonus="${attContact}">⚔️ Contact (${signe(attContact)})</button>
@@ -6547,6 +6561,22 @@ const App = (() => {
           ? "avantage" : null;
         if (COMPETENCES_DOUBLE_HERITAGE.includes(nom) && _armerAvantageJournalier("arme-double-heritage", "race:demi_elfe:5")) modeForce = "avantage";
         lancerTest(`Test de ${nom}`, bonus, null, modeForce, { persoId: perso.id, caracCode: code });
+        allerVers("des");
+      };
+    });
+    // Jets de sauvegarde (modèle réactif : le défenseur lance, cf.
+    // Personnage.modSauvegarde). Réutilise tel quel les avantages déjà câblés
+    // sur les tests de carac bruts — Endurance de fer (CON → Vigueur) et
+    // Verdict/Vœu inébranlable (SAG → Volonté) — plutôt que de redéclarer une
+    // seconde table de conditions qui divergerait à la première évolution.
+    zone.querySelectorAll(".sauvegarde-btn").forEach((el) => {
+      el.onclick = () => {
+        const nomSauv = el.dataset.sauvegarde;
+        const codeSauv = el.dataset.carac;
+        const libelleSauv = (typeof Sauvegardes !== "undefined" && Sauvegardes.LIBELLES[nomSauv]) || nomSauv;
+        const modeForce = (codeSauv === "CON" && perso.aEnduranceDeFer()) || (codeSauv === "SAG" && perso.aAvantageResistanceMentale())
+          ? "avantage" : null;
+        lancerTest(`Sauvegarde de ${libelleSauv}`, perso.modSauvegarde(nomSauv), null, modeForce, { persoId: perso.id, caracCode: codeSauv });
         allerVers("des");
       };
     });
