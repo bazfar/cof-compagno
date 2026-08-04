@@ -1406,7 +1406,8 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 
 /* ── Overlays battlemap dd2vtt ── */
 #carte-murs,
-#carte-los {
+#carte-los,
+#carte-ciblage {
   position: absolute;
   top: 0; left: 0;
   pointer-events: none;

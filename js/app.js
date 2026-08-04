@@ -625,14 +625,18 @@ const App = (() => {
     const estValide = (tokId) => idsValides.has(tokId);
     const rayonZoneCases = (!estLigne && mecanique.zone && typeof mecanique.zone.taille === "number")
       ? mecanique.zone.taille : null;
+    // eclair_localise/eclair_grand gardent leur longueur propre
+    // (mecanique.zone.longueur) ; sinon LONGUEUR_LIGNE_CASES (règle générale,
+    // 5 cases). Calculée ici et plus dans le callback : l'aperçu visuel (cf.
+    // Carte.activerModeCiblage/ligne) en a besoin dès l'armement du ciblage,
+    // pour tracer le rayon au survol avant tout clic.
+    const longueurLigne = estLigne
+      ? ((typeof mecanique.zone.longueur === "number") ? mecanique.zone.longueur : LONGUEUR_LIGNE_CASES)
+      : null;
     Carte.activerModeCiblage(estValide, (tokId) => {
       let cibleIds, cerclesParCible = {};
       if (estLigne) {
-        // eclair_localise/eclair_grand gardent leur longueur propre
-        // (mecanique.zone.longueur) ; sinon LONGUEUR_LIGNE_CASES (règle
-        // générale, 5 cases).
-        const longueur = (typeof mecanique.zone.longueur === "number") ? mecanique.zone.longueur : LONGUEUR_LIGNE_CASES;
-        cibleIds = Carte.jetonsSurLigneCombat(monTokenId, tokId, longueur);
+        cibleIds = Carte.jetonsSurLigneCombat(monTokenId, tokId, longueurLigne);
       } else {
         const rayon = rayonZoneCases ?? 2;
         Carte.jetonsEnZoneCombat(tokId, rayon).forEach((r) => { cerclesParCible[r.id] = r.cercle; });
@@ -640,7 +644,7 @@ const App = (() => {
       }
       if (!cibleIds.length) { toast("Aucune cible touchée."); return; }
       resoudreCapaciteEtRafraichir(null, cibleIds, cerclesParCible);
-    }, rayonZoneCases);
+    }, rayonZoneCases, estLigne ? { longueur: longueurLigne, idLanceur: monTokenId } : null);
   }
 
   // Combine deux formules de dégâts (bi-arme : mêlée + arme courte en main

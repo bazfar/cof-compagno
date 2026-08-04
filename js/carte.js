@@ -1108,7 +1108,7 @@ const Carte = (() => {
       if (vide) vide.style.display = 'none';
 
       // Cacher les éléments battlemap
-      const els = ['carte-image','carte-fog','carte-murs','carte-los','dd2vtt-tokens','carte-jetons'];
+      const els = ['carte-image','carte-fog','carte-murs','carte-los','carte-ciblage','dd2vtt-tokens','carte-jetons'];
       els.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -1487,6 +1487,11 @@ const Carte = (() => {
     let sceneActive = null;
     let canvasMurs = null;
     let ctxMurs = null;
+    // Canvas dédié à l'aperçu de ligne de sort (cf. _dessinerLigneCiblage) —
+    // séparé de canvasMurs, que rendreScene et les modes de dessin manuel
+    // réécrivent en permanence.
+    let canvasCiblage = null;
+    let ctxCiblage = null;
 
     // Sync des scènes importées à la main (chargerImage/chargerFichier) : à la
     // différence du catalogue (assets/battlemaps/, fetché par URL — donc déjà
@@ -1975,6 +1980,7 @@ const Carte = (() => {
           activerModeBattlemap();
           if (canvasMurs) canvasMurs.style.display = 'block';
           if (canvasLoS)  canvasLoS.style.display  = 'block';
+          if (canvasCiblage) canvasCiblage.style.display = 'block';
           const btnTok = document.getElementById('btn-token-dd');
           if (btnTok) btnTok.style.display = 'inline-block';
           let _t = 0;
@@ -2816,7 +2822,23 @@ const Carte = (() => {
         // CSS sur les éléments déjà rendus, pas de re-rendu complet (garde le
         // survol fluide).
         el.addEventListener('mouseenter', () => {
-          if (!modeCiblage || modeCiblage.rayonZoneCases === null || !modeCiblage.estValide(tok.id)) return;
+          if (!modeCiblage || !modeCiblage.estValide(tok.id)) return;
+          // Sort en ligne (mecanique.zone.forme === "ligne") : trace le rayon
+          // depuis le lanceur DANS LA DIRECTION du jeton survolé, et surligne
+          // les jetons réellement couverts. Un jeton situé derrière un mur
+          // n'est pas surligné : la ligne s'arrête sur l'obstacle, et c'est la
+          // même fonction (_ligneCases) qui décide du tracé ET des cibles —
+          // ce qui est affiché est donc exactement ce qui sera résolu.
+          if (modeCiblage.ligne) {
+            const idLanceur = modeCiblage.ligne.idLanceur;
+            const res = _dessinerLigneCiblage(scene, idLanceur, tok.id, modeCiblage.ligne.longueur);
+            const touches = new Set(tokensDD
+              .filter(t => t.id !== idLanceur && res.cases.some(c => c.x === t.cx && c.y === t.cy))
+              .map(t => t.id));
+            Array.from(conteneur.children).forEach(c => c.classList.toggle('zone-touchee', touches.has(c.dataset.id)));
+            return;
+          }
+          if (modeCiblage.rayonZoneCases === null) return;
           tokensDD.forEach(autre => {
             if (autre.id === tok.id) return;
             const d = distanceCases(tok.id, autre.id);
@@ -2826,7 +2848,8 @@ const Carte = (() => {
           });
         });
         el.addEventListener('mouseleave', () => {
-          if (!modeCiblage || modeCiblage.rayonZoneCases === null) return;
+          if (!modeCiblage) return;
+          if (modeCiblage.ligne) _effacerLigneCiblage();
           conteneur.querySelectorAll('.zone-touchee').forEach(e => e.classList.remove('zone-touchee'));
         });
         // Suppression (garde de rôle/propriété ci-dessus — bouton absent du DOM sinon)
@@ -3134,24 +3157,146 @@ const Carte = (() => {
       return cases;
     }
 
-    // Règle générale "ligne fixe" : jetons touchés par une ligne de
-    // longueurCases tirée depuis idLanceur, dans la direction du jeton/de la
-    // case idVise — la ligne va TOUJOURS jusqu'au bout de sa longueur dans
-    // cette direction, même si idVise est plus proche (extrapolation du
-    // vecteur direction). Chebyshev/grille de cases (cx/cy), lanceur exclu du
-    // résultat. [] si un des deux tokens est introuvable ou si lanceur === visé.
-    function jetonsSurLigne(idLanceur, idVise, longueurCases) {
+    // Cases réellement couvertes par une ligne de sort, occlusion comprise.
+    // Tracé de Bresenham depuis idLanceur dans la direction de idVise — la
+    // ligne va TOUJOURS jusqu'au bout de sa longueur dans cette direction,
+    // même si idVise est plus proche (extrapolation du vecteur direction) —
+    // puis TRONQUÉ à la première case dont le centre n'est plus en ligne de
+    // vue depuis le lanceur.
+    // Le test d'occlusion réutilise _segmentsBloquants, donc exactement les
+    // mêmes obstacles que la vision : murs importés (line_of_sight), murs
+    // dessinés à la main, objets/décor, portails FERMÉS. Une porte ouverte
+    // laisse donc passer le sort comme elle laisse passer le regard — et une
+    // seule source de vérité gouverne les deux, aucune divergence possible
+    // entre "je le vois" et "je peux le toucher".
+    // Renvoie { cases, impact } : impact = point d'arrêt en unités natives de
+    // la scène (scene.px) si la ligne a été coupée, null si elle est allée au
+    // bout de sa portée.
+    function _ligneCases(idLanceur, idVise, longueurCases) {
       const src = tokensDD.find(t => t.id === idLanceur);
       const dst = tokensDD.find(t => t.id === idVise);
-      if (!src || !dst || src.id === dst.id) return [];
+      const scene = scenes[sceneActive];
+      if (!src || !dst || !scene || src.id === dst.id) return { cases: [], impact: null };
       const dx = dst.cx - src.cx, dy = dst.cy - src.cy;
       const norme = Math.max(Math.hypot(dx, dy), 0.0001);
       const finX = src.cx + (dx / norme) * longueurCases;
       const finY = src.cy + (dy / norme) * longueurCases;
-      const cases = _traceBresenham(src.cx, src.cy, finX, finY).slice(0, longueurCases);
+      const brutes = _traceBresenham(src.cx, src.cy, finX, finY).slice(0, longueurCases);
+
+      const px = scene.px;
+      // Calculé UNE fois pour toute la ligne : _segmentsBloquants reconstruit
+      // un tableau complet (souvent des milliers de segments sur une scène
+      // Dungeondraft), le refaire par case rendrait le survol saccadé.
+      const segs = _segmentsBloquants(scene);
+      const p0 = [(src.cx + 0.5) * px, (src.cy + 0.5) * px];
+      const cases = [];
+      for (const c of brutes) {
+        const p1 = [(c.x + 0.5) * px, (c.y + 0.5) * px];
+        let impact = null, distImpact = Infinity;
+        for (const seg of segs) {
+          const pt = _pointIntersectionSegments(p0, p1, seg[0], seg[1]);
+          if (!pt) continue;
+          const d = Math.hypot(pt[0] - p0[0], pt[1] - p0[1]);
+          if (d < distImpact) { distImpact = d; impact = pt; }
+        }
+        // Case exclue : le sort s'arrête AVANT elle, sur l'obstacle. Un jeton
+        // qui s'y trouve n'est donc pas touché.
+        if (impact) return { cases, impact };
+        cases.push(c);
+      }
+      return { cases, impact: null };
+    }
+
+    // Règle générale "ligne fixe" : jetons touchés par une ligne de
+    // longueurCases tirée depuis idLanceur en direction de idVise. Grille de
+    // cases (cx/cy), lanceur exclu du résultat, obstacles pris en compte (cf.
+    // _ligneCases). [] si un des deux tokens est introuvable ou si
+    // lanceur === visé.
+    function jetonsSurLigne(idLanceur, idVise, longueurCases) {
+      const { cases } = _ligneCases(idLanceur, idVise, longueurCases);
       return tokensDD
         .filter(t => t.id !== idLanceur && cases.some(c => c.x === t.cx && c.y === t.cy))
         .map(t => t.id);
+    }
+
+    // ── Aperçu visuel de ligne de sort ───────────────────────
+    // Cale #carte-ciblage sur #carte-image exactement comme rendreScene le
+    // fait pour les murs (mêmes offsets, même échelle) et renvoie l'échelle
+    // d'affichage. null si aucun layout fiable (onglet caché, image pas encore
+    // chargée) — même garde que rendreScene, pour la même raison.
+    function _calerCanvasCiblage(scene) {
+      if (!canvasCiblage || !ctxCiblage) return null;
+      const imgEl = document.getElementById('carte-image');
+      const rect  = imgEl ? imgEl.getBoundingClientRect() : null;
+      if (!rect || rect.width === 0) return null;
+      const affW = Math.round(rect.width), affH = Math.round(rect.height);
+      const sceneEl = document.getElementById('carte-scene');
+      const sceneRect = sceneEl ? sceneEl.getBoundingClientRect() : null;
+      canvasCiblage.width  = affW;
+      canvasCiblage.height = affH;
+      canvasCiblage.style.width  = affW + 'px';
+      canvasCiblage.style.height = affH + 'px';
+      canvasCiblage.style.left = (sceneRect ? Math.round(rect.left - sceneRect.left) : 0) + 'px';
+      canvasCiblage.style.top  = (sceneRect ? Math.round(rect.top  - sceneRect.top)  : 0) + 'px';
+      return { sx: affW / scene.largeur, sy: affH / scene.hauteur };
+    }
+
+    function _effacerLigneCiblage() {
+      if (!canvasCiblage || !ctxCiblage) return;
+      ctxCiblage.clearRect(0, 0, canvasCiblage.width, canvasCiblage.height);
+    }
+
+    // Trait blanc du centre du lanceur jusqu'au bout de la portée du sort — ou
+    // jusqu'au point d'impact si un obstacle l'arrête —, cases couvertes
+    // surlignées pour lire d'un coup d'œil qui est dedans et qui est dehors.
+    // Renvoie le { cases, impact } de _ligneCases pour que l'appelant surligne
+    // les jetons touchés sans refaire le calcul.
+    function _dessinerLigneCiblage(scene, idLanceur, idVise, longueurCases) {
+      const res = _ligneCases(idLanceur, idVise, longueurCases);
+      const cal = _calerCanvasCiblage(scene);
+      if (!cal) return res;
+      const { sx, sy } = cal;
+      const px = scene.px;
+      const src = tokensDD.find(t => t.id === idLanceur);
+      _effacerLigneCiblage();
+      if (!src) return res;
+
+      // Cases couvertes
+      ctxCiblage.fillStyle = 'rgba(255,255,255,0.16)';
+      ctxCiblage.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctxCiblage.lineWidth = 1;
+      for (const c of res.cases) {
+        ctxCiblage.fillRect(c.x * px * sx, c.y * px * sy, px * sx, px * sy);
+        ctxCiblage.strokeRect(c.x * px * sx, c.y * px * sy, px * sx, px * sy);
+      }
+
+      // Trait central
+      const depart = [(src.cx + 0.5) * px, (src.cy + 0.5) * px];
+      const derniere = res.cases.length ? res.cases[res.cases.length - 1] : null;
+      const bout = res.impact
+        ? res.impact
+        : (derniere ? [(derniere.x + 0.5) * px, (derniere.y + 0.5) * px] : depart);
+      ctxCiblage.strokeStyle = '#ffffff';
+      ctxCiblage.lineWidth = Math.max(2, px * sx / 8);
+      ctxCiblage.lineCap = 'round';
+      ctxCiblage.shadowColor = 'rgba(255,255,255,0.9)';
+      ctxCiblage.shadowBlur = 8;
+      ctxCiblage.beginPath();
+      ctxCiblage.moveTo(depart[0] * sx, depart[1] * sy);
+      ctxCiblage.lineTo(bout[0] * sx, bout[1] * sy);
+      ctxCiblage.stroke();
+      ctxCiblage.shadowBlur = 0;
+
+      // Marqueur d'impact : signale explicitement que la portée n'a PAS été
+      // utilisée en entier parce qu'un mur/décor a arrêté le sort — sans lui,
+      // une ligne courte est indiscernable d'une erreur de portée.
+      if (res.impact) {
+        ctxCiblage.fillStyle = 'rgba(255,120,60,0.95)';
+        ctxCiblage.beginPath();
+        ctxCiblage.arc(res.impact[0] * sx, res.impact[1] * sy, Math.max(3, px * sx / 6), 0, Math.PI * 2);
+        ctxCiblage.fill();
+      }
+      return res;
     }
 
     // Règle générale "zone dégressive" : liste des jetons dans un rayon de
@@ -3512,15 +3657,17 @@ const Carte = (() => {
     function init() {
       canvasMurs = document.getElementById('carte-murs');
       canvasLoS  = document.getElementById('carte-los');
+      canvasCiblage = document.getElementById('carte-ciblage');
       canvasFog2 = document.createElement('canvas'); // offscreen persistant
 
       if (!canvasMurs) return;
       ctxMurs = canvasMurs.getContext('2d');
       ctxLoS  = canvasLoS  ? canvasLoS.getContext('2d')  : null;
+      ctxCiblage = canvasCiblage ? canvasCiblage.getContext('2d') : null;
       ctxFog2 = canvasFog2.getContext('2d');
 
       // Style commun canvas overlay
-      for (const cv of [canvasMurs, canvasLoS]) {
+      for (const cv of [canvasMurs, canvasLoS, canvasCiblage]) {
         if (!cv) continue;
         cv.style.display = 'none';
         cv.style.position = 'absolute';
@@ -3529,6 +3676,10 @@ const Carte = (() => {
         cv.style.pointerEvents = 'none';
         cv.style.zIndex = '5';
       }
+      // L'aperçu de ligne passe AU-DESSUS du brouillard (le MJ vise aussi dans
+      // une zone non explorée par les joueurs) mais reste SOUS #dd2vtt-tokens
+      // (z-index 10), qui doit garder ses jetons cliquables.
+      if (canvasCiblage) canvasCiblage.style.zIndex = '6';
 
       // Redimensionnement (fenêtre, ou bascule worldmap/battlemap qui change la
       // largeur dispo pour la scène, cf. _appliquerCarteMode côté app.js) : la
@@ -3537,6 +3688,10 @@ const Carte = (() => {
       window.addEventListener('resize', () => {
         if (!estActive()) return;
         const sc = scenes[sceneActive];
+        // L'aperçu de ligne n'est redessiné qu'au survol : après un
+        // redimensionnement il resterait affiché à l'ancienne échelle, décalé
+        // de la carte. On l'efface, le prochain survol le retracera.
+        _effacerLigneCiblage();
         rendreScene(sc);
         calculerEtRendreLoS(sc); // ré-applique aussi rendreTokensDD(sc) à la fin
       });
@@ -3654,6 +3809,7 @@ const Carte = (() => {
         if (imgEl) imgEl.style.display = 'block';
         if (canvasMurs) canvasMurs.style.display = 'block';
         if (canvasLoS)  canvasLoS.style.display  = 'block';
+        if (canvasCiblage) canvasCiblage.style.display = 'block';
         // Worldmap.charger() masque aussi #dd2vtt-tokens (cf. la liste `els`
         // dans Worldmap.charger) pour laisser la place au canvas pan/zoom —
         // sans ce réaffichage, les tokens dd2vtt restaient générés (présents
@@ -3702,6 +3858,7 @@ const Carte = (() => {
       // Cacher canvas battlemap
       if (canvasMurs) canvasMurs.style.display = 'none';
       if (canvasLoS)  canvasLoS.style.display  = 'none';
+      if (canvasCiblage) { canvasCiblage.style.display = 'none'; _effacerLigneCiblage(); }
       const tokensEl = document.getElementById('dd2vtt-tokens');
       if (tokensEl) tokensEl.innerHTML = '';
       // Cache l'image de scène de combat, partagée avec la worldmap (#carte-image) —
@@ -3732,14 +3889,28 @@ const Carte = (() => {
     // jeton valide, tous les AUTRES jetons à portée de ce rayon reçoivent la
     // classe 'zone-touchee' (cf. rendreTokensDD) pour prévisualiser qui serait
     // aussi touché si la capacité était centrée sur le jeton survolé.
-    function activerModeCiblage(estValide, onChoix, rayonZoneCases) {
-      modeCiblage = { estValide: estValide || (() => false), onChoix, rayonZoneCases: (typeof rayonZoneCases === "number") ? rayonZoneCases : null };
+    // ligne (optionnel) : { longueur, idLanceur } pour un sort en ligne (cf.
+    // mecanique.zone.forme === "ligne") — au survol d'un jeton valide, un
+    // rayon est tracé depuis idLanceur dans sa direction sur longueur cases,
+    // arrêté par les obstacles (cf. _dessinerLigneCiblage). Mutuellement
+    // exclusif avec rayonZoneCases en pratique : une mécanique est soit une
+    // zone circulaire, soit une ligne, jamais les deux.
+    function activerModeCiblage(estValide, onChoix, rayonZoneCases, ligne) {
+      const ligneOk = (ligne && typeof ligne.longueur === "number" && ligne.idLanceur) ? ligne : null;
+      modeCiblage = {
+        estValide: estValide || (() => false),
+        onChoix,
+        rayonZoneCases: (typeof rayonZoneCases === "number") ? rayonZoneCases : null,
+        ligne: ligneOk,
+      };
+      _effacerLigneCiblage();
       const sc = scenes[sceneActive];
       if (sc) rendreTokensDD(sc);
     }
     function desactiverModeCiblage() {
       if (!modeCiblage) return;
       modeCiblage = null;
+      _effacerLigneCiblage();
       const sc = scenes[sceneActive];
       if (sc) rendreTokensDD(sc);
     }
@@ -3815,8 +3986,8 @@ const Carte = (() => {
   // worldmap (aucun appelant ne devrait s'y attendre, mais ne casse rien).
   // estValide(tokenId) -> bool : rappelé à chaque rendu, PAS un ensemble figé
   // (cf. DD2VTT.activerModeCiblage pour le pourquoi).
-  function activerModeCiblage(estValide, onChoix, rayonZoneCases) {
-    if (typeof DD2VTT !== "undefined" && DD2VTT.activerModeCiblage) DD2VTT.activerModeCiblage(estValide, onChoix, rayonZoneCases);
+  function activerModeCiblage(estValide, onChoix, rayonZoneCases, ligne) {
+    if (typeof DD2VTT !== "undefined" && DD2VTT.activerModeCiblage) DD2VTT.activerModeCiblage(estValide, onChoix, rayonZoneCases, ligne);
   }
   function desactiverModeCiblage() {
     if (typeof DD2VTT !== "undefined" && DD2VTT.desactiverModeCiblage) DD2VTT.desactiverModeCiblage();

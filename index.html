@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=89" />
+  <link rel="stylesheet" href="css/style.css?v=90" />
 </head>
 <body>
   <header>
@@ -416,6 +416,10 @@
             <canvas id="carte-fog"></canvas>
             <canvas id="carte-murs"></canvas>
             <canvas id="carte-los"></canvas>
+            <!-- Aperçu de ligne de sort (cf. DD2VTT._dessinerLigneCiblage) : canvas
+                 dédié plutôt que #carte-murs, réécrit par rendreScene et par tous
+                 les modes de dessin manuel — l'aperçu y serait effacé en continu. -->
+            <canvas id="carte-ciblage"></canvas>
             <div id="dd2vtt-tokens"></div>
             <div id="carte-jetons"></div>
           </div>
@@ -816,7 +820,7 @@
   <script src="js/firebase-config.js?v=2"></script>
   <script src="js/depot.js?v=8"></script>
   <script src="js/sync.js?v=4"></script>
-  <script src="js/carte.js?v=79"></script>
+  <script src="js/carte.js?v=80"></script>
   <script src="js/raretes.js?v=9"></script>
   <script src="js/materiaux.js?v=1"></script>
   <script src="js/affixes.js?v=1"></script>
@@ -829,6 +833,6 @@
   <script src="js/reputation.js?v=1"></script>
   <script src="js/capacites.js?v=51"></script>
   <script src="js/combat.js?v=18"></script>
-  <script src="js/app.js?v=193"></script>
+  <script src="js/app.js?v=194"></script>
 </body>
 </html>
