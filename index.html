@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=88" />
+  <link rel="stylesheet" href="css/style.css?v=89" />
 </head>
 <body>
   <header>
@@ -575,6 +575,7 @@
         <nav class="sous-tabs" id="sous-onglets-regles">
           <button type="button" class="sous-tab actif" data-sous-panneau="general">Général</button>
           <button type="button" class="sous-tab" data-sous-panneau="classes">Classes</button>
+          <button type="button" class="sous-tab" data-sous-panneau="magie">Magie</button>
           <button type="button" class="sous-tab" data-sous-panneau="etats">États &amp; Malus</button>
         </nav>
       </div>
@@ -590,6 +591,15 @@
           <select id="select-regles-classe"></select>
         </div>
         <div id="zone-regles"></div>
+      </div>
+
+      <div class="sous-panneau" id="sous-panneau-regles-magie">
+        <div class="carte">
+          <h2 class="titre-bandeau">Sorts &amp; magie</h2>
+          <p class="aide" style="margin:0 0 4px;">Tous les sorts de Grimoire (Magicien, Enchanteur, Prêtre), filtrables par école.</p>
+          <div class="filtre-ecole" id="filtre-ecole"></div>
+        </div>
+        <div id="zone-regles-magie"></div>
       </div>
 
       <div class="sous-panneau" id="sous-panneau-regles-etats">
@@ -819,6 +829,6 @@
   <script src="js/reputation.js?v=1"></script>
   <script src="js/capacites.js?v=49"></script>
   <script src="js/combat.js?v=18"></script>
-  <script src="js/app.js?v=186"></script>
+  <script src="js/app.js?v=187"></script>
 </body>
 </html>

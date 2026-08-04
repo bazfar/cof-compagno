@@ -1766,6 +1766,36 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .btn-dang:hover { border-color: var(--or); background: #fdf5e8; }
 .btn-dang.actif { border-color: var(--or); background: var(--or); color: #fff; }
 
+/* Règles > Magie : filtre par école (même patron visuel que le filtre de
+   dangérosité du Bestiaire, cf. .filtre-dangerosite/.btn-dang ci-dessus). */
+.filtre-ecole {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.btn-ecole {
+  background: none;
+  border: 1.5px solid var(--parchemin-fonce);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  color: var(--or);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.btn-ecole:hover { border-color: var(--or); background: #fdf5e8; }
+.btn-ecole.actif { border-color: var(--or); background: var(--or); color: #fff; }
+
+.sort-regle-meta {
+  font-size: 0.78rem;
+  color: #8a8296;
+  margin-top: 2px;
+}
+
 .bestiaire-compteur {
   margin-left: auto;
   font-size: 0.82rem;

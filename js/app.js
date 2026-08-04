@@ -7489,10 +7489,12 @@ const App = (() => {
     initSousOnglets("sous-onglets-regles", {
       general: "sous-panneau-regles-general",
       classes: "sous-panneau-regles-classes",
+      magie: "sous-panneau-regles-magie",
       etats: "sous-panneau-regles-etats",
     });
 
     rendreReglesGeneral();
+    rendreReglesMagie();
     rendreReglesEtats();
 
     const select = document.getElementById("select-regles-classe");
@@ -7536,6 +7538,79 @@ const App = (() => {
     html = `<div>${html}</div>`;
     // On insère les voies dans une carte conteneur
     zone.innerHTML = html;
+  }
+
+  // Onglet "Magie" — recense tous les sorts de Grimoire (SORTS_PAR_CLASSE,
+  // data/donnees.js : magicien/enchanteur/prêtre) et permet de filtrer par
+  // école (mecanique.categorie de chaque sort), même patron visuel que le
+  // filtre de dangérosité du Bestiaire (cf. .filtre-dangerosite/.btn-dang).
+  const ORDRE_ECOLES_MAGIE = ["evocation", "abjuration", "enchantement", "illusion",
+    "divination", "transmutation", "divination_transmutation", "guerison", "foi", "bannissement", "jugement"];
+  const LIBELLES_ECOLES_MAGIE = {
+    evocation: "Évocation", abjuration: "Abjuration", enchantement: "Enchantement", illusion: "Illusion",
+    divination: "Divination", transmutation: "Transmutation", divination_transmutation: "Divination / Transmutation",
+    guerison: "Guérison", foi: "Foi", bannissement: "Bannissement", jugement: "Jugement",
+  };
+  let _regleMagieEcole = "";
+
+  // Coût affiché pour un sort : PP normalement, ou la ressource de Cercle du
+  // Prêtre si c'en est un (cf. prompt_pretre_cercle_vie.md et suivants —
+  // Soins divins/Voix du jugement/Aura divine/Bannissement(_zone)/Bûcher
+  // purificateur n'ont pas de coutPP, seulement une des 4 coutPointsX).
+  function _coutAffiche(mecanique) {
+    if (mecanique.coutPP) return `${mecanique.coutPP} PP`;
+    if (mecanique.coutPointsBenediction) return `${mecanique.coutPointsBenediction} Pt. Bénédiction`;
+    if (mecanique.coutPointsConviction) return `${mecanique.coutPointsConviction} Pt. Conviction`;
+    if (mecanique.coutPointsBannissement) return `${mecanique.coutPointsBannissement} Pt. Bannissement`;
+    if (mecanique.coutPointsJugement) return `${mecanique.coutPointsJugement} Pt. Jugement`;
+    return "gratuit";
+  }
+
+  function rendreReglesMagie() {
+    const filtreZone = document.getElementById("filtre-ecole");
+    if (!filtreZone || typeof SORTS_PAR_CLASSE === "undefined") return;
+
+    // Tous les sorts de toutes les classes casteuses (cf. SORTS_PAR_CLASSE),
+    // taggés avec leur classe d'origine pour l'affichage — reste générique à
+    // une nouvelle classe qui rejoindrait cette table plus tard.
+    const tousLesSorts = Object.keys(SORTS_PAR_CLASSE).flatMap((classe) =>
+      (SORTS_PAR_CLASSE[classe] || []).map((s) => Object.assign({ classe }, s))
+    );
+
+    // Écoles réellement présentes dans les données, dans l'ordre de
+    // ORDRE_ECOLES_MAGIE puis les éventuelles nouvelles écoles non listées
+    // (fallback alphabétique) — n'invente jamais une école sans sort.
+    const ecolesPresentes = [...new Set(tousLesSorts.map((s) => s.categorie))];
+    const ecolesTriees = ORDRE_ECOLES_MAGIE.filter((e) => ecolesPresentes.includes(e))
+      .concat(ecolesPresentes.filter((e) => !ORDRE_ECOLES_MAGIE.includes(e)).sort());
+
+    filtreZone.innerHTML = `<span>École :</span>` +
+      `<button type="button" class="btn-ecole${_regleMagieEcole === "" ? " actif" : ""}" data-ecole="">Toutes (${tousLesSorts.length})</button>` +
+      ecolesTriees.map((e) => {
+        const n = tousLesSorts.filter((s) => s.categorie === e).length;
+        return `<button type="button" class="btn-ecole${_regleMagieEcole === e ? " actif" : ""}" data-ecole="${e}">${LIBELLES_ECOLES_MAGIE[e] || e} (${n})</button>`;
+      }).join("");
+
+    filtreZone.querySelectorAll(".btn-ecole").forEach((btn) => {
+      btn.onclick = () => {
+        _regleMagieEcole = btn.dataset.ecole;
+        rendreReglesMagie();
+      };
+    });
+
+    const zone = document.getElementById("zone-regles-magie");
+    if (!zone) return;
+    const ecolesAffichees = _regleMagieEcole ? [_regleMagieEcole] : ecolesTriees;
+    zone.innerHTML = ecolesAffichees.map((ecole) => {
+      const sorts = tousLesSorts.filter((s) => s.categorie === ecole).sort((a, b) => a.rang - b.rang);
+      if (!sorts.length) return "";
+      const items = sorts.map((s) => `<div class="etat-regle">
+          <div class="etat-regle-nom">${echapper(s.nom)} <span class="badge-reserve">${echapper(CLASSES[s.classe] ? CLASSES[s.classe].nom_affiche : s.classe)}</span></div>
+          <div class="sort-regle-meta">Rang ${s.rang} · ${_coutAffiche(s.mecanique)}</div>
+          <div class="etat-regle-desc">${echapper(s.effet)}</div>
+        </div>`).join("");
+      return `<div class="carte"><h3 style="margin-top:0;">${LIBELLES_ECOLES_MAGIE[ecole] || ecole}</h3>${items}</div>`;
+    }).join("");
   }
 
   // Onglet "Général" — REGLES_GENERALES (data/donnees.js), même format que
