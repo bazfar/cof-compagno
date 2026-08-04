@@ -5321,19 +5321,14 @@ const App = (() => {
      accumuler les kits si le joueur change d'avis plusieurs fois. */
   function appliquerEquipementDepart(cle) {
     // Retire le kit précédent des slots qu'il peut occuper (tête/jambes
-    // (fusionné avec bottes)/avant-bras/bague ne sont jamais touchés : rien
-    // n'y est placé ici). collier : ajouté avec l'accessoire de Grimoire
-    // (Manuel d'incantation/Amulette de Bénédiction, cf.
-    // prompt_grimoire_v2_emplacements_typ_s.md) — même logique de reset
-    // que main_droite/main_gauche/torse, sûre pour la même raison (appelé
-    // uniquement à un vrai changement de classe en création, jamais après
-    // que le joueur ait pu équiper quoi que ce soit manuellement).
+    // (fusionné avec bottes)/avant-bras/collier/bague ne sont jamais
+    // touchés : rien n'y est placé ici).
     creation.equipement.main_droite = null;
     creation.equipement.main_gauche = null;
     creation.equipement.torse = null;
-    creation.equipement.collier = null;
-    // Retire les consommables du kit précédent (marqués _kitDepart), en
-    // laissant intacts les objets ajoutés manuellement par le joueur.
+    // Retire les consommables ET l'accessoire de Grimoire du kit précédent
+    // (marqués _kitDepart), en laissant intacts les objets ajoutés
+    // manuellement par le joueur.
     creation.inventaireListe = (creation.inventaireListe || []).filter((it) => !it._kitDepart);
 
     const kit = (typeof EQUIPEMENT_DEPART !== "undefined") ? EQUIPEMENT_DEPART[cle] : null;
@@ -5357,14 +5352,13 @@ const App = (() => {
       if (armure) creation.equipement.torse = Object.assign({}, armure, { _kitDepart: true });
     }
     // accessoire : objet de Grimoire donné Commun de base (cf.
-    // prompt_grimoire_v2_emplacements_typ_s.md) — résolu vers son premier
-    // slot compatible (Personnage.slotsPourType), pas un slot en dur, pour
-    // rester générique si un futur kit ajoute un accessoire avec un slot
-    // différent de "collier".
+    // prompt_grimoire_v2_emplacements_typ_s.md) — dans le SAC, pas équipé
+    // dans un slot : l'avoir sur soi suffit pour bénéficier du Grimoire
+    // (cf. Personnage._objetGrimoirePorte), aucun compromis d'emplacement
+    // à faire pour un Manuel/une Amulette de base.
     if (kit.accessoire) {
       const accessoire = depuisCatalogue(kit.accessoire);
-      const slotCible = accessoire ? Personnage.slotsPourType(accessoire)[0] : null;
-      if (slotCible) creation.equipement[slotCible] = Object.assign({}, accessoire, { _kitDepart: true });
+      if (accessoire) creation.inventaireListe.push(Object.assign({}, accessoire, { _kitDepart: true }));
     }
     (kit.consommables || []).forEach((id) => {
       const item = depuisCatalogue(id);
@@ -5953,9 +5947,9 @@ const App = (() => {
     const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
     const sort = catalogue.find((s) => s.id === item.sortAppris);
     if (!sort) { toast("Sort introuvable pour cette classe."); return; }
-    if (!perso._objetGrimoireEquipe()) {
+    if (!perso._objetGrimoirePorte()) {
       const nomAttendu = NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire";
-      toast(`Équipe d'abord ${nomAttendu} pour apprendre des sorts hors Voie.`);
+      toast(`Ajoute ${nomAttendu} à ton inventaire pour apprendre des sorts hors Voie.`);
       return;
     }
     const tierLibre = perso.emplacementLibrePourRang(sort.rang);
@@ -6170,7 +6164,7 @@ const App = (() => {
                 </select>
                 — accorde 1 sort de rang 1 de la famille choisie, hors slot de Grimoire.
               </div>` : ""}
-              <div class="aide" style="margin-bottom:8px;">${(p.grimoireSortsConnus || []).length}/${perso.slotsGrimoire()} sorts connus${perso.slotsGrimoire() === 0 ? ` — équipe ${NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire"} pour en apprendre.` : ""}</div>
+              <div class="aide" style="margin-bottom:8px;">${(p.grimoireSortsConnus || []).length}/${perso.slotsGrimoire()} sorts connus${perso.slotsGrimoire() === 0 ? ` — ajoute ${NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire"} à ton inventaire pour en apprendre.` : ""}</div>
               ${perso.slotsGrimoire() > 0 ? (function () {
                 const cap = perso.slotsGrimoireParTier();
                 const occ = perso.grimoireOccupationParTier();

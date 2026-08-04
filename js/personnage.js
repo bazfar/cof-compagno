@@ -520,20 +520,23 @@ class Personnage extends Entite {
     this.ppActuel = Math.min(max, (this.ppActuel || 0) + Math.ceil(max * 0.25));
   }
 
-  // Objet de Grimoire équipé pour CETTE classe — généralisé via le champ
-  // `grimoireClasses` (liste de classes autorisées) plutôt qu'un id en dur :
-  // Manuel d'incantation [magicien/enchanteur/necromancien] et Amulette de
+  // Objet de Grimoire PORTÉ pour CETTE classe — équipé OU simplement dans
+  // le sac (convenu : l'avoir sur soi suffit, pas besoin de lui dédier un
+  // emplacement d'équipement) — généralisé via le champ `grimoireClasses`
+  // (liste de classes autorisées) plutôt qu'un id en dur : Manuel
+  // d'incantation [magicien/enchanteur/necromancien] et Amulette de
   // Bénédiction [pretre] partagent ce même mécanisme, cf.
   // prompt_grimoire_v2_emplacements_typ_s.md. Tout futur objet du même
   // genre n'a qu'à porter ce champ, aucun code à toucher.
-  _objetGrimoireEquipe() {
-    return this._itemsEquipesUniques().find((it) => Array.isArray(it.grimoireClasses) && it.grimoireClasses.includes(this.classe));
+  _objetGrimoirePorte() {
+    const candidats = this._itemsEquipesUniques().concat(this.inventaireListe || []);
+    return candidats.find((it) => it && Array.isArray(it.grimoireClasses) && it.grimoireClasses.includes(this.classe));
   }
   // Emplacements de sorts hors Voies, typés par plafond de rang logeable
   // (cf. GRIMOIRE_TIERS_PAR_RARETE ci-dessus) — 0 partout sans objet
-  // compatible équipé pour cette classe.
+  // compatible sur soi pour cette classe.
   slotsGrimoireParTier() {
-    const objet = this._objetGrimoireEquipe();
+    const objet = this._objetGrimoirePorte();
     if (!objet) return { "12": 0, "13": 0, "14": 0, "15": 0 };
     return GRIMOIRE_TIERS_PAR_RARETE[objet.bonusRarete || 0];
   }
