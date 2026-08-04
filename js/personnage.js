@@ -1808,6 +1808,16 @@ class Personnage extends Entite {
     if (!cfg) return false;
     return this.rangMaxVoie(cfg.voie) >= cfg.rang;
   }
+  // Variante de ecoleDebloquee() compatible avec les catégories composées
+  // d'un sort (ex. "divination_transmutation", cf. 'detection_magie') :
+  // débloqué dès qu'AU MOINS une des écoles listées l'est. À utiliser avec
+  // le champ `categorie` d'une entrée SORTS_PAR_CLASSE plutôt qu'avec
+  // ecoleDebloquee() directement (cf. Capacites.lancer et la liste
+  // d'apprentissage du Grimoire, js/app.js).
+  ecoleSortDebloquee(categorie) {
+    if (!categorie) return false;
+    return categorie.split("_").some((e) => this.ecoleDebloquee(e));
+  }
   // Équivalents estChoisie/capaciteEntree pour la voie RACIALE (this.capacitesRace,
   // simple tableau de numéros de rang — contrairement aux voies de classe,
   // aucun objet {voie, rang} par entrée) : le choix éventuel (ex. Humain

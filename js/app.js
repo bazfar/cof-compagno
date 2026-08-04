@@ -218,6 +218,11 @@ const App = (() => {
     role = r;
     localStorage.setItem(STORAGE_ROLE, r);
     if (r === "joueur") assurerIdentiteJoueur();
+    // Rattrapage objets de Grimoire manquants (cf. rattraperObjetsGrimoireManquants) :
+    // aussi déclenché ici (pas seulement via l'abonnement DepotPersos.ecouter
+    // dans init()) pour couvrir le cas où les personnages étaient déjà
+    // synchronisés avant ce choix de rôle MJ.
+    if (r === "mj" && typeof rattraperObjetsGrimoireManquants === "function") rattraperObjetsGrimoireManquants();
     appliquerRole();
     allerVers("accueil");
   }
@@ -1272,6 +1277,7 @@ const App = (() => {
           </div>
           <div class="stat-box"><div class="label">CA</div><div class="valeur">${_defPjAvecAura(perso, id)}</div></div>
           <div class="stat-box"><div class="label">Init.</div><div class="valeur">${signe(init)}</div></div>
+          ${estCasterGrimoire ? `<div class="stat-box"><div class="label">PP</div><div class="valeur">${p.ppActuel != null ? p.ppActuel : perso.calculerPPMax()} / ${perso.calculerPPMax()}</div></div>` : ""}
         </div>
         <button class="btn petit secondaire" id="bm-voir-fiche-complete" style="width:100%;margin-top:6px;">Voir la fiche complète</button>
       </div>
@@ -1685,6 +1691,7 @@ const App = (() => {
             <span class="dock-chip" title="Défense">🛡 ${_defPjAvecAura(perso, id)}</span>
             ${reduction > 0 ? `<span class="dock-chip" title="Réduction de dégâts (armure)">🪖 ${reduction}</span>` : ""}
             <span class="dock-chip" title="Initiative">⚡ ${signe(perso.calculerInitiative())}</span>
+            ${(typeof SORTS_PAR_CLASSE !== "undefined" && SORTS_PAR_CLASSE[p.classe]) ? `<span class="dock-chip" title="Points de Pouvoir">✨ ${p.ppActuel != null ? p.ppActuel : perso.calculerPPMax()}/${perso.calculerPPMax()}</span>` : ""}
             ${aChaos ? `<span class="dock-chip chaos">${p.corruptionCombat || 0} CS</span>` : ""}
             ${entreeActions ? `
             <span class="dock-chip" title="Déplacement restant">🚶 ${entreeActions.deplacementRestant}</span>
@@ -6053,6 +6060,35 @@ const App = (() => {
     afficherFiche(persoId);
   }
 
+  // Rattrapage pour les personnages créés AVANT l'introduction de l'objet de
+  // Grimoire dans EQUIPEMENT_DEPART (cf. data/equipement_depart.js) : ceux-ci
+  // n'ont jamais reçu leur Manuel d'incantation/Amulette de Bénédiction —
+  // sans lui, _objetGrimoirePorte() reste faux et slotsGrimoire() = 0, donc
+  // aucun sort de Grimoire apprenable. Ajoute l'objet manquant à l'inventaire
+  // (jamais équipé dans un slot, comme le kit de départ — l'avoir sur soi
+  // suffit) pour toute classe concernée qui ne l'a pas déjà (équipé OU en
+  // inventaire, cf. Personnage._objetGrimoirePorte). Idempotent : ne fait
+  // rien pour un personnage qui l'a déjà, donc appelable sans risque à
+  // chaque démarrage. L'objet cible est déduit de LOOT_CATALOGUE
+  // (grimoireClasses), jamais d'un id/nom recopié ici, pour rester
+  // synchronisé si le catalogue change.
+  function rattraperObjetsGrimoireManquants() {
+    if (typeof LOOT_CATALOGUE === "undefined") return;
+    const persos = chargerPersos();
+    let modifie = false;
+    Object.keys(persos).forEach((id) => {
+      const p = persos[id];
+      const objetAttendu = LOOT_CATALOGUE.find((it) => Array.isArray(it.grimoireClasses) && it.grimoireClasses.includes(p.classe));
+      if (!objetAttendu) return; // classe sans Grimoire (guerrier, druide...)
+      const perso = Personnage.depuisJSON(p);
+      if (perso._objetGrimoirePorte()) return; // déjà équipé ou en inventaire
+      p.inventaireListe = (p.inventaireListe || []).concat([Object.assign({}, objetAttendu)]);
+      modifie = true;
+      console.info(`Rattrapage Grimoire : « ${objetAttendu.nom} » ajouté à l'inventaire de ${p.nom} (${p.classe}).`);
+    });
+    if (modifie) sauverPersos(persos);
+  }
+
   // Jet de mort (état Mourant, 0 PV, cf. REGLES_GENERALES "Mort et
   // stabilisation") : 1d20, ≥11 = succès. 3 succès = stabilisé à 1 PV
   // (jet de mort remis à zéro). 3 échecs = mort (etatMort, plus aucun jet,
@@ -6277,10 +6313,20 @@ const App = (() => {
                       : tierLibre
                         ? `<button type="button" class="btn petit or btn-apprendre-sort-direct" data-perso="${id}" data-sort="${sort.id}">Apprendre (1-${GRIMOIRE_PLAFOND_TIER[tierLibre]})</button>`
                         : `<span class="loot-badge" style="opacity:.6;">Aucun emplacement</span>`;
-                    return `<div class="cap-fiche" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                    // École débloquée (cf. ECOLE_VERS_VOIE_DEBLOCAGE, data/donnees.js
+                    // et Capacites.lancer, coutPPReel) : mise en avant + tag, pour
+                    // repérer avant d'apprendre les sorts au tarif PP normal de ceux
+                    // actuellement à ×2 (aucune école assignée = toujours verrouillée).
+                    const ecoleOk = sort.categorie && perso.ecoleSortDebloquee && perso.ecoleSortDebloquee(sort.categorie);
+                    const tagEcole = sort.categorie
+                      ? (ecoleOk
+                          ? `<span class="tag-ecole tag-ecole-debloquee" title="École débloquée : coût PP normal">🔓 débloquée</span>`
+                          : `<span class="tag-ecole tag-ecole-verrouillee" title="École non débloquée : coût PP ×2">🔒 verrouillée</span>`)
+                      : "";
+                    return `<div class="cap-fiche${ecoleOk ? " ecole-debloquee" : ""}" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
                       <div>
                         <div class="titre-cap">${echapper(sort.nom)}</div>
-                        <div class="voie-source">Rang ${sort.rang}${sort.categorie ? " · " + echapper(sort.categorie) : ""}</div>
+                        <div class="voie-source">Rang ${sort.rang}${sort.categorie ? " · " + echapper(sort.categorie) : ""} ${tagEcole}</div>
                       </div>
                       ${action}
                     </div>`;
@@ -8467,6 +8513,16 @@ const App = (() => {
       const panneauAtelier = document.getElementById("panneau-atelier");
       if (panneauAtelier && panneauAtelier.classList.contains("actif")) rendrePanneauAtelier();
     });
+
+    // Rattrapage objets de Grimoire manquants (cf. rattraperObjetsGrimoireManquants),
+    // réservé au MJ (seul client normalement unique sur une table — pas de
+    // garde anti-répétition nécessaire, la fonction est déjà un no-op dès que
+    // plus aucun personnage n'a l'objet manquant) : dès que le premier état
+    // des personnages est connu (ecouter() notifie immédiatement si déjà
+    // prêt) ET à chaque fois que le rôle MJ est choisi (cf. definirRole),
+    // pour couvrir aussi bien "MJ déjà choisi avant ce chargement" que
+    // "personnages pas encore synchronisés au moment du choix de rôle".
+    window.DepotPersos.ecouter(() => { if (role === "mj") rattraperObjetsGrimoireManquants(); });
 
     // Journal de dés partagé : re-rendu dès qu'un autre client lance un dé.
     // subscribeListe (sous-collection, cf. sync.js) au lieu de subscribe

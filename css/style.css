@@ -553,6 +553,14 @@ textarea { resize: vertical; min-height: 70px; }
 
 .cap-fiche { background: #fffdf7; border: 1px solid var(--parchemin-fonce); border-left: 4px solid var(--violet-accent); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; }
 .cap-fiche.chaos { border-left-color: var(--chaos); }
+/* Liste d'apprentissage du Grimoire (cf. ECOLE_VERS_VOIE_DEBLOCAGE,
+   data/donnees.js) : école débloquée mise en avant (bordure + fond dorés),
+   pour repérer d'un coup d'œil les sorts au tarif PP normal des sorts
+   actuellement à ×2 (école non débloquée). */
+.cap-fiche.ecole-debloquee { border-left-color: var(--or); background: #fdf8ea; }
+.tag-ecole { font-size: 0.62rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; white-space: nowrap; }
+.tag-ecole-debloquee { background: #f2e6c7; color: #6b4f14; }
+.tag-ecole-verrouillee { background: #e6e1ec; color: #55506a; }
 .cap-fiche .titre-cap { font-weight: 600; color: var(--violet); font-size: 0.92rem; }
 
 /* ---------- Table de combat (MJ) ---------- */

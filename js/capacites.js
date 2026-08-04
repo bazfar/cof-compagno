@@ -1400,14 +1400,10 @@ const Capacites = (() => {
     if (mecanique.typeSort === "majeur" && source.idSort && typeof SORTS_PAR_CLASSE !== "undefined") {
       const catalogueEcole = SORTS_PAR_CLASSE[perso.classe];
       const sortPourEcole = catalogueEcole && catalogueEcole.find((s) => s.id === source.idSort);
-      // Un sort à catégorie composée (ex. "divination_transmutation", cf.
-      // 'detection_magie') touche à plusieurs écoles à la fois — débloqué
-      // dès qu'AU MOINS une des écoles listées l'est, pas besoin des deux :
-      // sans ce découpage, une telle catégorie ne matcherait aucune clé de
-      // ECOLE_VERS_VOIE_DEBLOCAGE et resterait ×2 en permanence, même après
-      // déblocage réel d'une des deux écoles concernées.
-      const ecolesSort = sortPourEcole && sortPourEcole.categorie ? sortPourEcole.categorie.split("_") : [];
-      if (ecolesSort.length && perso.ecoleDebloquee && !ecolesSort.some((e) => perso.ecoleDebloquee(e))) {
+      // ecoleSortDebloquee (pas ecoleDebloquee) : gère aussi les catégories
+      // composées (ex. "divination_transmutation", cf. 'detection_magie'),
+      // débloquées dès qu'AU MOINS une des écoles listées l'est.
+      if (sortPourEcole && sortPourEcole.categorie && perso.ecoleSortDebloquee && !perso.ecoleSortDebloquee(sortPourEcole.categorie)) {
         coutPPReel *= 2;
       }
     }
