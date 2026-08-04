@@ -263,6 +263,10 @@ const Capacites = (() => {
   function _resoudreSauvegardeReactive({ perso, persos, cible, mecanique, nomSauvegarde, libelle, source }) {
     const messages = [];
     const libelleSauv = (typeof Sauvegardes !== "undefined" && Sauvegardes.LIBELLES[nomSauvegarde]) || nomSauvegarde;
+    // "moitie" (cf. lancer(), branche réactive) : une réussite n'annule pas
+    // les dégâts, elle les divise par deux — le libellé "aucun effet" serait
+    // trompeur pour ces sorts.
+    const suffixeReussite = mecanique.jetOppose.modeSauvegarde === "moitie" ? "dégâts pour moitié" : "aucun effet";
 
     // Bonus du lanceur : REPRIS du bloc jetOppose existant (cf.
     // _bonusAttaquantJetOppose ci-dessus) plutôt que d'en écrire un second
@@ -306,16 +310,16 @@ const Capacites = (() => {
     // précisément le cas où elle sauve la mise du boss.
     if (!reussite && tokMonstre && typeof Sauvegardes !== "undefined" && Sauvegardes.consommer(tokMonstre)) {
       const restant = Sauvegardes.restant(tokMonstre);
-      messages.push(`Sauvegarde de ${cible.nom} (${libelleSauv}) : ${total} vs DD ${dd} — échec, mais RÉSISTANCE LÉGENDAIRE : converti en réussite (${restant} usage${restant > 1 ? "s" : ""} restant${restant > 1 ? "s" : ""}).`);
+      messages.push(`Sauvegarde de ${cible.nom} (${libelleSauv}) : ${total} vs DD ${dd} — échec, mais RÉSISTANCE LÉGENDAIRE : converti en réussite (${restant} usage${restant > 1 ? "s" : ""} restant${restant > 1 ? "s" : ""}), ${suffixeReussite}.`);
       return { reussite: true, echecCritique: false, dd, modCible, messages };
     }
 
     if (reussiteAuto) {
-      messages.push(`Sauvegarde de ${cible.nom} (${libelleSauv}) : 20 naturel — réussite automatique, aucun effet.`);
+      messages.push(`Sauvegarde de ${cible.nom} (${libelleSauv}) : 20 naturel — réussite automatique, ${suffixeReussite}.`);
     } else if (echecCritique) {
       messages.push(`Sauvegarde de ${cible.nom} (${libelleSauv}) : 1 naturel — ÉCHEC CRITIQUE, effet appliqué et dégâts doublés.`);
     } else {
-      messages.push(`Sauvegarde de ${cible.nom} (${libelleSauv}) : ${total} (d20[${d20}] ${modCible >= 0 ? "+" : ""}${modCible}) vs DD ${dd} — ${reussite ? "réussie, aucun effet." : "échec."}`);
+      messages.push(`Sauvegarde de ${cible.nom} (${libelleSauv}) : ${total} (d20[${d20}] ${modCible >= 0 ? "+" : ""}${modCible}) vs DD ${dd} — ${reussite ? `réussie, ${suffixeReussite}.` : "échec."}`);
     }
     return { reussite, echecCritique, dd, modCible, messages };
   }
@@ -1012,7 +1016,7 @@ const Capacites = (() => {
   // texte destiné au joueur (toast) — ne journalise PAS lui-même dans
   // l'historique partagé pour les effets sans jet de dé (etat/bonus/special).
   function resoudreEffet(effet, ctx) {
-    const { perso, rang, voie, cible, libelle, persos, critique } = ctx;
+    const { perso, rang, voie, cible, libelle, persos, critique, multiplicateurDegats } = ctx;
     if (effet.type === "degats") {
       // critique (cf. liaison attaque->dégâts, lancer()/resoudreDegatsEnAttente)
       // double les termes de dés de la formule, pas les modificateurs fixes.
@@ -1098,7 +1102,14 @@ const Capacites = (() => {
         formuleAjustee = `${formuleAjustee}${modif >= 0 ? "+" : ""}${modif}`;
         noteMutationSauvage = ` [Mutation Sauvage : ${modif >= 0 ? "+" : ""}${modif}${note}]`;
       }
-      const { total, detail } = resoudreExpression(formuleAjustee, { perso, rang, critique });
+      const { total: totalBrutSauv, detail: detailBrutSauv } = resoudreExpression(formuleAjustee, { perso, rang, critique });
+      // multiplicateurDegats (sauvegarde réactive "moitie", cf. lancer() —
+      // branche réactive) : 0.5 sur une sauvegarde réussie, jamais posé
+      // (undefined -> 1) pour tout le reste des capacités à dégâts.
+      const total = (typeof multiplicateurDegats === "number" && multiplicateurDegats !== 1)
+        ? Math.floor(totalBrutSauv * multiplicateurDegats) : totalBrutSauv;
+      const detail = (typeof multiplicateurDegats === "number" && multiplicateurDegats !== 1)
+        ? `${detailBrutSauv} → ${total} (moitié, sauvegarde réussie)` : detailBrutSauv;
       App.ajouterHisto(`${libelle} — Dégâts`, total, false, false, detail);
       // Chasseur — Voie de la grande chasse, rang 5 "Trophée ultime" :
       // ignore la moitié de la RD (armure) de la cible pour CETTE attaque —
@@ -2161,12 +2172,22 @@ const Capacites = (() => {
       });
       messages.push(...resSauv.messages);
       if (resSauv.modCible !== null) {
+        // modeSauvegarde "moitie" (Boule de feu/Éclair localisé et les
+        // autres sorts de zone à dégâts, cf. data/donnees.js) : une
+        // sauvegarde réussie n'annule PAS les dégâts, elle les divise par
+        // deux — contrairement au reste du pipeline (touche === false =
+        // aucun dégât). `touche` reste donc vrai dans les deux cas pour
+        // que resoudreDegatsEnAttente() s'exécute ; seul le multiplicateur
+        // change (0.5 réussite / 1 échec, doublé sur 1 naturel comme
+        // d'habitude via `critique`).
+        const estMoitie = mecanique.jetOppose.modeSauvegarde === "moitie";
         resolutionDegats = {
-          touche: !resSauv.reussite,
+          touche: estMoitie ? true : !resSauv.reussite,
           critique: resSauv.echecCritique,
           echecCritique: false,
           totalAttaque: null,
           defCible: resSauv.dd,
+          multiplicateurDegats: (estMoitie && resSauv.reussite) ? 0.5 : 1,
           persoId, source, mecanique, cible, choixEffet,
         };
       }
@@ -2467,7 +2488,7 @@ const Capacites = (() => {
     if (!resolutionDegats || resolutionDegats.touche === false) {
       return { ok: false, messages: ["Cette attaque n'a pas touché — aucun dégât à résoudre."] };
     }
-    const { persoId, source, mecanique, cible, critique, choixEffet } = resolutionDegats;
+    const { persoId, source, mecanique, cible, critique, choixEffet, multiplicateurDegats } = resolutionDegats;
     const persos = App.chargerPersos();
     const p = persos[persoId];
     if (!p) return { ok: false, messages: ["Personnage introuvable."] };
@@ -2484,7 +2505,7 @@ const Capacites = (() => {
       // substitution que dans lancer() ci-dessus, à partir du choix capturé
       // au moment du jet d'attaque (resolutionDegats.choixEffet).
       const effetResolu = (effet.cible === "choix" && choixEffet) ? Object.assign({}, effet, { cible: choixEffet }) : effet;
-      const msg = resoudreEffet(effetResolu, { perso, rang: source.rang, voie: source.voie, cible, libelle, persos, critique });
+      const msg = resoudreEffet(effetResolu, { perso, rang: source.rang, voie: source.voie, cible, libelle, persos, critique, multiplicateurDegats });
       if (msg) messages.push(msg);
     });
 
