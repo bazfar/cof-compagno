@@ -1424,6 +1424,27 @@ const Capacites = (() => {
       }
     }
 
+    // Correctif d'équilibrage PP (cf. prompt_correctif_pp_nonlineaire.md) :
+    // palier de niveau minimum pour lancer un sort de Grimoire, indépendant
+    // des points de Voie déjà investis — empêche un build optimisé de
+    // débloquer un sort de rang 5 dès niveau 4 (cf. calcul de
+    // pointsVoieTotal). typeSort:"majeur" identifie exclusivement une entrée
+    // SORTS_MAGICIEN/SORTS_ENCHANTEUR/SORTS_PRETRE (jamais posé sur une
+    // capacité de Voie classique) — le rang du sort n'est pas porté par
+    // `source` pour cette origine (seul idSort l'est), il faut le relire
+    // dans SORTS_PAR_CLASSE[classe].
+    if (mecanique.typeSort === "majeur" && source.idSort && typeof SORTS_PAR_CLASSE !== "undefined") {
+      const catalogue = SORTS_PAR_CLASSE[perso.classe];
+      const sortLance = catalogue && catalogue.find((s) => s.id === source.idSort);
+      const rangSort = sortLance ? sortLance.rang : null;
+      if (rangSort) {
+        const niveauMin = (typeof NIVEAU_MIN_PAR_RANG !== "undefined" && NIVEAU_MIN_PAR_RANG[rangSort]) || 1;
+        if ((p.niveau || 1) < niveauMin) {
+          return { ok: false, messages: [`Ce sort (rang ${rangSort}) nécessite le niveau ${niveauMin} (actuellement niveau ${p.niveau || 1}).`] };
+        }
+      }
+    }
+
     // Coût en Points de Pouvoir (cf. reference_systeme_magie_pp.md) — bloque
     // AVANT résolution si le pool est insuffisant, même principe que
     // reactionCout ci-dessus. mecanique.coutPP absent ou 0 = capacité

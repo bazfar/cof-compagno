@@ -1918,41 +1918,41 @@ const SORTS_MAGICIEN = [
   // --- Rang 4 (coût PP: 8) ---
   { id: "eclair_grand", nom: "Éclair", rang: 4, categorie: "evocation",
     effet: "Ligne longue : 6d6 dégâts électriques, Réflexes pour moitié",
-    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
       cible: "ligne", portee: 20, zone: { forme: "ligne", longueur: 10 },
       jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", modeSauvegarde: "moitie" },
       effets: [ { type: "degats", formule: "6d6", typeDegats: "magique" } ] } },
 
   { id: "cecite_surdite", nom: "Cécité/Surdité", rang: 4, categorie: "enchantement",
     effet: "Jet Vigueur : aveugle ou assourdit 3 tours",
-    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
       cible: "unique", portee: 10, zone: null,
       jetOppose: { caracAttaquant: null, caracDefenseur: "Vigueur" },
       effets: [ { type: "etat", id: "aveugle_ou_sourd", duree: { tours: 3 } } ] } },
 
   { id: "mur_de_force", nom: "Mur de force", rang: 4, categorie: "abjuration",
     effet: "Érige un mur temporaire infranchissable",
-    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
       cible: "zone", portee: 10, zone: { taille: 3 }, jetOppose: null,
       effets: [ { type: "special", note: "Résolution manuelle par la table — pas de moteur d'obstacle bloquant LoS/mouvement dans l'app." } ] } },
 
   { id: "invisibilite_majeure", nom: "Invisibilité majeure", rang: 4, categorie: "illusion",
     effet: "Invisibilité complète prolongée, ne se rompt pas à la première action offensive",
-    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
       cible: "unique", portee: 5, zone: null, jetOppose: null,
       effets: [ { type: "etat", id: "invisible_majeur", duree: { tours: 5 } } ] } },
 
   // --- Rang 5 (coût PP: 10, 1x/scénario) ---
   { id: "meteore_mineur", nom: "Météore mineur", rang: 5, categorie: "evocation",
     effet: "Zone large : 8d6 dégâts, Réflexes pour moitié",
-    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
+    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 25, typeSort: "majeur",
       cible: "zone", portee: 20, zone: { taille: 4 },
       jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", modeSauvegarde: "moitie" },
       effets: [ { type: "degats", formule: "8d6", typeDegats: "magique" } ] } },
 
   { id: "teleportation", nom: "Téléportation", rang: 5, categorie: "divination_transmutation",
     effet: "Déplace le groupe vers un lieu connu",
-    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
+    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 25, typeSort: "majeur",
       cible: "groupe", portee: null, zone: null, jetOppose: null,
       effets: [ { type: "special", note: "Résolution narrative par la table — déplacement de groupe vers un lieu connu du lanceur." } ] } },
 
@@ -1967,7 +1967,7 @@ const SORTS_MAGICIEN = [
 
   { id: "orage_de_grele", nom: "Orage de grêle", rang: 4, categorie: "evocation",
     effet: "Zone 2 cases : 5d6 dégâts, Réflexes pour moitié",
-    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
       cible: "zone", portee: 18, zone: { taille: 2 },
       jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", modeSauvegarde: "moitie" },
       effets: [ { type: "degats", formule: "5d6", typeDegats: "magique" } ] } },
@@ -1993,7 +1993,7 @@ const SORTS_MAGICIEN = [
 
   { id: "bastion_arcanique", nom: "Bastion arcanique", rang: 5, categorie: "abjuration",
     effet: "Immunité totale aux dégâts magiques pendant [2+Mod.INT] tours",
-    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
+    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 25, typeSort: "majeur",
       cible: "soi", portee: null, zone: null, jetOppose: null,
       effets: [ { type: "special", note: "Immunité totale aux dégâts magiques pendant 2+Mod.INT tours — même patron que 'Sanctuaire' (capstone rang 5 de la Voie de la magie protectrice, capacité distincte non affectée par cet ajout) mais accessible via Grimoire indépendamment de la voie." } ] } },
 ];
@@ -2065,7 +2065,7 @@ const SORTS_ENCHANTEUR = [
 
   { id: "suggestion", nom: "Suggestion", rang: 4, categorie: "enchantement",
     effet: "Attaque magique vs DEF : la cible exécute une action raisonnable dans l'heure, sans se souvenir d'avoir été influencée",
-    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
       cible: "unique", portee: 10, zone: null,
       jetOppose: { caracAttaquant: "CHA", caracDefenseur: "DEF" },
       effets: [ { type: "special", note: "Résolution narrative par la table (action raisonnable, pas de moteur de comportement automatisé)." } ] } },
@@ -2092,7 +2092,7 @@ const SORTS_ENCHANTEUR = [
 
   { id: "metamorphose_bestiale", nom: "Métamorphose bestiale", rang: 4, categorie: "transmutation",
     effet: "Jet opposé CHA vs Volonté : transforme la cible en créature inoffensive pendant [1d4+Mod.CHA] tours",
-    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
       cible: "unique", portee: 10, zone: null,
       jetOppose: { caracAttaquant: "CHA", caracDefenseur: "Volonte" },
       effets: [ { type: "etat", id: "metamorphosee", duree: { tours: "1d4+Mod.CHA" } } ] } },
@@ -2119,7 +2119,7 @@ const SORTS_ENCHANTEUR = [
 
   { id: "vision_du_passe_grimoire", nom: "Vision du passé", rang: 4, categorie: "divination",
     effet: "En touchant un objet ou lieu, perçoit les événements marquants qui s'y sont déroulés (jusqu'à [niveau×10] ans)",
-    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
       cible: "unique", portee: "contact", zone: null, jetOppose: null,
       effets: [ { type: "special", note: "Rituel narratif (10 min), information résolue par la table." } ] } },
 ];
@@ -2207,13 +2207,13 @@ const SORTS_PRETRE = [
 
   { id: "guerison_de_masse", nom: "Guérison de masse", rang: 4, categorie: "guerison",
     effet: "Tous les alliés dans une zone de 4 cases sont soignés de 3d8",
-    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
       cible: "zone", portee: 10, zone: { taille: 4 }, jetOppose: null,
       effets: [ { type: "soin", formule: "3d8", cible: "zone" } ] } },
 
   { id: "regeneration", nom: "Régénération", rang: 4, categorie: "guerison",
     effet: "La cible régénère 1d6 PV par tour pendant 5 tours ; un membre perdu repousse en 1 minute",
-    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
       cible: "allie", portee: 5, zone: null, jetOppose: null,
       effets: [ { type: "soin", formule: "1d6", recurrence: { tours: 5, frequence: "debutTour" } },
         { type: "special", note: "Repousse de membre : effet narratif, pas de mécanique chiffrée (pas de système de perte de membre modélisé dans l'app actuellement)." } ] } },
@@ -2221,14 +2221,14 @@ const SORTS_PRETRE = [
   // Rang 5
   { id: "resurrection", nom: "Résurrection", rang: 5, categorie: "guerison",
     effet: "Ramène un mort depuis moins de [Mod.SAG] heures, relique et lien personnel requis. Revient avec 1d6 PV",
-    mecanique: { type: "rituel", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
+    mecanique: { type: "rituel", usage: { frequence: "1x/scenario" }, coutPP: 25, typeSort: "majeur",
       cible: "allie", portee: 5, zone: null, jetOppose: null,
       effets: [ { type: "soin", formule: "1d6" },
         { type: "special", note: "Ramène un mort depuis moins de Mod.SAG heures ; nécessite une relique et un lien personnel avec la cible ; rituel de 10 minutes — conditions non modélisées par le schéma standard, résolution manuelle par la table pour ces prérequis narratifs." } ] } },
 
   { id: "miracle", nom: "Miracle", rang: 5, categorie: "guerison",
     effet: "Effet puissant à négocier avec le MJ : soin de zone massif, résurrection sans condition, ou tout autre effet narratif exceptionnel",
-    mecanique: { type: "rituel", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
+    mecanique: { type: "rituel", usage: { frequence: "1x/scenario" }, coutPP: 25, typeSort: "majeur",
       cible: "zone", portee: null, zone: null, jetOppose: null,
       effets: [ { type: "special", note: "Wildcard narratif — l'effet exact est arbitré à la table au moment de l'usage, pas de formule fixe. Cohérent avec l'esprit du sort Miracle en D&D (effet quasi-illimité mais rarissime)." } ] } },
 
@@ -2316,7 +2316,7 @@ const SORTS_PRETRE = [
   // Rang 4 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)
   { id: "exorcisme", nom: "Exorcisme", rang: 4, categorie: "bannissement",
     effet: "Attaque magique opposée à l'entité possédant un hôte : réussite → entité expulsée, hôte survit",
-    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
       cible: "unique", portee: 5, zone: null,
       jetOppose: { caracAttaquant: "SAG", caracDefenseur: "Volonte" },
       effets: [ { type: "special", note: "Nécessite une notion de 'possession' (entité liée à un hôte) — vérifier si un tel état existe déjà dans le système, sinon résolution entièrement narrative par la table." } ] } },
@@ -2330,7 +2330,7 @@ const SORTS_PRETRE = [
   // Rang 5 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)
   { id: "sceau_inviolable", nom: "Sceau inviolable", rang: 5, categorie: "bannissement",
     effet: "Empêche toute entité démoniaque/morte-vivante d'entrer/sortir d'une zone de 10 cases pendant [niveau] heures",
-    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
+    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 25, typeSort: "majeur",
       cible: "zone", portee: null, zone: { taille: 10 }, jetOppose: null,
       effets: [ { type: "special", note: "Effet de zone narratif de longue durée — pas de moteur de blocage de mouvement conditionnel par race dans l'app, résolution manuelle par la table." } ] } },
 
@@ -2398,11 +2398,26 @@ const CERCLE_SORT_GRATUIT = {
 
 /* Catalogue de sorts par classe (cf. reference_sorts_connus.md) — le Grimoire
    (js/app.js) lit cette table plutôt qu'une constante SORTS_* hardcodée, pour
-   rester générique à travers les classes casteuses pures. */
+   rester générique à travers les classes casteuses pures. Ajout de
+   `enchanteur: SORTS_ENCHANTEUR` (cf. prompt_correctif_pp_nonlineaire.md) :
+   absente jusqu'ici de cette table malgré l'existence de SORTS_ENCHANTEUR,
+   le garde-fou de niveau minimum (js/capacites.js) ne pouvait pas retrouver
+   le rang des sorts Enchanteur sans elle. */
 const SORTS_PAR_CLASSE = {
   magicien: SORTS_MAGICIEN,
   pretre: SORTS_PRETRE,
+  enchanteur: SORTS_ENCHANTEUR,
 };
+
+/* Correctif d'équilibrage PP (cf. prompt_correctif_pp_nonlineaire.md) : coût
+   non-linéaire par rang de sort (rang 1-3 inchangés, rang 4-5 quadratiques
+   plutôt que linéaires — déjà répercuté directement sur le champ coutPP de
+   chaque sort concerné dans SORTS_MAGICIEN/SORTS_ENCHANTEUR/SORTS_PRETRE,
+   cette table sert de référence documentaire) et palier de niveau minimum
+   pour apprendre un sort, indépendant des points de Voie déjà investis (lu
+   par le garde-fou de js/capacites.js, fonction lancer()). */
+const COUT_PP_PAR_RANG = { 1: 2, 2: 4, 3: 6, 4: 16, 5: 25 };
+const NIVEAU_MIN_PAR_RANG = { 1: 1, 2: 1, 3: 4, 4: 6, 5: 8 };
 
 /* ============================================================
    VOIES RACIALES (homebrew)
