@@ -1385,6 +1385,32 @@ const Capacites = (() => {
     // de famille du Magicien/des autres voies Enchanteur, non câblées faute
     // de Grimoire branché pour ces classes).
     let coutPPReel = mecanique.coutPP;
+    // Déblocage d'école (cf. ECOLE_VERS_VOIE_DEBLOCAGE, data/donnees.js et
+    // Personnage.ecoleDebloquee) : ×2 générique si l'école du sort n'est
+    // pas débloquée pour ce personnage. Uniquement pour les sorts de
+    // Grimoire (typeSort:"majeur", categorie renseignée sur l'entrée
+    // SORTS_PAR_CLASSE) — jamais sur les capacités de Voie classiques, qui
+    // n'ont pas de champ `categorie` d'école. Les sorts ACCORDÉS par une
+    // Voie (sortsGrimoireAccordes(), jamais appris via slot) restent
+    // logiquement toujours dans une école déjà investie par construction
+    // (le rang qui les accorde EST souvent le rang de déblocage lui-même,
+    // cf. Imposition des mains/Flamme sacrée/Œil de l'inquisiteur) — pas de
+    // vérification spéciale nécessaire pour eux, le calcul générique
+    // donne déjà le bon résultat.
+    if (mecanique.typeSort === "majeur" && source.idSort && typeof SORTS_PAR_CLASSE !== "undefined") {
+      const catalogueEcole = SORTS_PAR_CLASSE[perso.classe];
+      const sortPourEcole = catalogueEcole && catalogueEcole.find((s) => s.id === source.idSort);
+      // Un sort à catégorie composée (ex. "divination_transmutation", cf.
+      // 'detection_magie') touche à plusieurs écoles à la fois — débloqué
+      // dès qu'AU MOINS une des écoles listées l'est, pas besoin des deux :
+      // sans ce découpage, une telle catégorie ne matcherait aucune clé de
+      // ECOLE_VERS_VOIE_DEBLOCAGE et resterait ×2 en permanence, même après
+      // déblocage réel d'une des deux écoles concernées.
+      const ecolesSort = sortPourEcole && sortPourEcole.categorie ? sortPourEcole.categorie.split("_") : [];
+      if (ecolesSort.length && perso.ecoleDebloquee && !ecolesSort.some((e) => perso.ecoleDebloquee(e))) {
+        coutPPReel *= 2;
+      }
+    }
     const estSortFamilleIllusion = perso.classe === "enchanteur" && source.voie === "Voie de l'enchantement"
       && (source.rang === 1 || source.rang === 2);
     // Enchanteur — Voie du chaos, rang 1 "Éclat chaotique" (passive) : +2 PP

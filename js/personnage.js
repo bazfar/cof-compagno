@@ -1797,6 +1797,17 @@ class Personnage extends Entite {
     const rangs = (this.capacites || []).filter((c) => c.voie === voieNom).map((c) => c.rang);
     return rangs.length ? Math.max(...rangs) : 0;
   }
+  // École débloquée (cf. ECOLE_VERS_VOIE_DEBLOCAGE, data/donnees.js) : vrai
+  // si le personnage a investi au moins le rang requis dans la Voie
+  // "Initiation X" correspondante — native à sa classe OU acquise via
+  // voiesHorsProfil, rangMaxVoie() ne fait aucune différence d'origine.
+  // Une école absente de la table (pas encore de rang assigné) n'est
+  // JAMAIS débloquée.
+  ecoleDebloquee(ecole) {
+    const cfg = (typeof ECOLE_VERS_VOIE_DEBLOCAGE !== "undefined") ? ECOLE_VERS_VOIE_DEBLOCAGE[ecole] : null;
+    if (!cfg) return false;
+    return this.rangMaxVoie(cfg.voie) >= cfg.rang;
+  }
   // Équivalents estChoisie/capaciteEntree pour la voie RACIALE (this.capacitesRace,
   // simple tableau de numéros de rang — contrairement aux voies de classe,
   // aucun objet {voie, rang} par entrée) : le choix éventuel (ex. Humain

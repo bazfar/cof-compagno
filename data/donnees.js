@@ -2436,6 +2436,31 @@ const SORTS_PAR_CLASSE = {
 const COUT_PP_PAR_RANG = { 1: 2, 2: 4, 3: 6, 4: 16, 5: 25 };
 const NIVEAU_MIN_PAR_RANG = { 1: 1, 2: 1, 3: 4, 4: 6, 5: 8 };
 
+/* Déblocage d'école (cf. discussion du 04/08/2026) : chaque école (champ
+   `categorie` des sorts) est débloquée par un rang de Voie "Initiation X"
+   déjà existant dans les données — natif à la classe du personnage OU
+   acquis via une Voie hors profil (voiesHorsProfil, cf. Personnage.
+   rangMaxVoie() qui ne distingue pas l'origine). Une école ABSENTE de
+   cette table reste TOUJOURS non débloquée tant qu'elle n'y est pas
+   ajoutée : ne pas ajouter d'entrée par défaut à false, Personnage.
+   ecoleDebloquee() gère déjà ce cas (cf. js/personnage.js). */
+const ECOLE_VERS_VOIE_DEBLOCAGE = {
+  evocation: { voie: "Voie de la magie élémentaire", rang: 1 },       // Initiation élémentaire (Magicien)
+  abjuration: { voie: "Voie de la magie protectrice", rang: 1 },      // Initiation protectrice (Magicien)
+  enchantement: { voie: "Voie du spectacle", rang: 1 },               // Initiation au spectacle (Enchanteur)
+  illusion: { voie: "Voie de l'enchantement", rang: 1 },              // rang 1 (Enchanteur) — accorde aussi directement "illusion"
+  transmutation: { voie: "Voie de la transfiguration", rang: 1 },     // rang 1 (Enchanteur)
+  divination: { voie: "Voie de l'historien", rang: 1 },               // rang 1 (Enchanteur)
+  guerison: { voie: "Voie de la guérison", rang: 1 },                 // Imposition des mains (Prêtre)
+  // "Voie de la Foi" n'existe pas dans les données — "Ferveur du croisé"
+  // (rang qui débloque la famille 'foi' sans consommer de slot) appartient
+  // en réalité à "Voie de la conversion", rang 3 (vérifié par grep avant de
+  // coller, cf. prompt_deblocage_ecole_cout_pp.md §1).
+  foi: { voie: "Voie de la conversion", rang: 3 },                    // Ferveur du croisé (Prêtre)
+  bannissement: { voie: "Voie de l'exorcisme", rang: 1 },             // Lumière sacrée (Prêtre)
+  jugement: { voie: "Voie de l'inquisition", rang: 1 },               // Œil de l'inquisiteur (Prêtre)
+};
+
 /* ============================================================
    VOIES RACIALES (homebrew)
    Chaque personnage dispose d'une Voie Raciale gratuite, en plus
