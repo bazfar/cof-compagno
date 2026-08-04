@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=90" />
+  <link rel="stylesheet" href="css/style.css?v=91" />
 </head>
 <body>
   <header>
@@ -395,12 +395,21 @@
           <button class="btn petit danger" id="btn-carte-reset">Réinitialiser</button>
         </div>
         <div class="carte-aide" id="carte-aide"></div>
+        <!-- Ordre d'initiative : au-dessus de la battlemap (pleine largeur),
+             plutôt que dans une des colonnes latérales — visible sans avoir à
+             faire défiler la fiche/table de combat pour savoir qui joue.
+             Version MJ (interactive) et version joueur (lecture seule,
+             cf. _htmlOrdreInitiativeLecture) mutuellement exclusives via le
+             même mécanisme data-role que le reste de l'app. -->
+        <div id="battlemap-zone-ordre-initiative-globale" class="battlemap-only">
+          <div id="battlemap-zone-ordre-initiative" data-role="mj"></div>
+          <div id="battlemap-zone-ordre-initiative-joueur" data-role="joueur"></div>
+        </div>
         <div class="battlemap-layout" id="battlemap-layout">
           <!-- Fiche du joueur, visible en continu à côté de la battlemap -->
           <aside class="battlemap-fiche-sidebar battlemap-only" id="battlemap-fiche-sidebar" data-role="joueur"></aside>
           <!-- Table de combat (monstres), visible en continu côté MJ -->
           <aside class="battlemap-fiche-sidebar battlemap-only" id="battlemap-mj-sidebar" data-role="mj">
-            <div id="battlemap-zone-ordre-initiative"></div>
             <div class="carte">
               <h3 style="margin-top:0;">⚔ Table de combat</h3>
               <button class="btn petit secondaire btn-ajouter-malus" style="width:100%;margin-bottom:8px;">☣ Ajouter malus</button>
@@ -833,6 +842,6 @@
   <script src="js/reputation.js?v=1"></script>
   <script src="js/capacites.js?v=51"></script>
   <script src="js/combat.js?v=18"></script>
-  <script src="js/app.js?v=194"></script>
+  <script src="js/app.js?v=195"></script>
 </body>
 </html>

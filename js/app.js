@@ -989,6 +989,38 @@ const App = (() => {
     return { visible: e.touche !== false, critique: e.touche === true && !!e.critique };
   }
 
+  // Sorts de Grimoire (appris + accordés par la voie) pour la mini-fiche
+  // battlemap d'un casteur (cf. estCasterGrimoire ci-dessous) — reprend
+  // l'énumération de la carte "📖 Grimoire" de la fiche complète
+  // (afficherFiche), sans le sélecteur de Cercle de spécialisation ni la
+  // liste "Apprentissage" (gestion hors combat, hors de propos ici).
+  function htmlSortsGrimoireBattlemap(p, perso) {
+    const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
+    const appris = p.grimoireSortsConnus || [];
+    const accordes = perso.sortsGrimoireAccordes();
+    const idsAffiches = appris.concat(accordes.filter((sid) => !appris.includes(sid)));
+    const resume = `<div class="aide" style="margin-bottom:8px;">${appris.length}/${perso.slotsGrimoire()} sorts connus${perso.slotsGrimoire() === 0 ? ` — ajoute ${NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire"} à ton inventaire pour en apprendre.` : ""}</div>`;
+    if (!idsAffiches.length) return resume + `<div class="vide">Aucun sort appris.</div>`;
+    const listeHtml = idsAffiches.map((sortId) => {
+      const sort = catalogue.find((s) => s.id === sortId);
+      if (!sort) return "";
+      const source = { origine: "grimoire", cle: sort.id, nomCap: sort.nom };
+      const coutTexte = sort.mecanique.coutPP ? `${sort.mecanique.coutPP} PP`
+        : sort.mecanique.coutPointsBenediction ? `${sort.mecanique.coutPointsBenediction} Pt. Bénédiction`
+        : sort.mecanique.coutPointsConviction ? `${sort.mecanique.coutPointsConviction} Pt. Conviction`
+        : sort.mecanique.coutPointsBannissement ? `${sort.mecanique.coutPointsBannissement} Pt. Bannissement`
+        : sort.mecanique.coutPointsJugement ? `${sort.mecanique.coutPointsJugement} Pt. Jugement`
+        : "gratuit";
+      const tagAccorde = !appris.includes(sortId) ? " · accordé par la voie" : "";
+      return `<div class="cap-fiche">
+        <div class="titre-cap">${echapper(sort.nom)}${htmlLancerCapacite(source, sort.mecanique, p)}</div>
+        <div class="voie-source">Rang ${sort.rang} · ${coutTexte}${tagAccorde}</div>
+        <div class="effet-cap">${echapper(sort.effet)}</div>
+      </div>`;
+    }).join("");
+    return resume + listeHtml;
+  }
+
   // Mini-fiche affichée en permanence à gauche de la battlemap (joueur
   // uniquement) : suit le personnage sélectionné dans "Mon personnage",
   // le même que celui dont le jeton est posé sur la scène.
@@ -996,14 +1028,16 @@ const App = (() => {
     const sidebar = document.getElementById("battlemap-fiche-sidebar");
     if (!sidebar) return;
     ficheSidebarActiveId = id || null;
-    // Ordre d'initiative (lecture seule) en tête de la sidebar joueur pendant un
-    // combat — re-rendu en temps réel car cette fonction est rappelée à chaque
+    // Ordre d'initiative (lecture seule) au-dessus de la battlemap (cf.
+    // #battlemap-zone-ordre-initiative-joueur, index.html) pendant un combat —
+    // re-rendu en temps réel car cette fonction est rappelée à chaque
     // Combat.onChange (cf. init()).
-    const ordreHtml = _htmlOrdreInitiativeLecture(id);
+    const zoneOrdreJoueur = document.getElementById("battlemap-zone-ordre-initiative-joueur");
+    if (zoneOrdreJoueur) zoneOrdreJoueur.innerHTML = _htmlOrdreInitiativeLecture(id);
     const persos = chargerPersos();
     const p = id && persos[id];
     if (!p) {
-      sidebar.innerHTML = ordreHtml + `<div class="carte"><p class="aide">Choisis ton personnage dans « Mon personnage » ci-dessus pour afficher sa fiche ici.</p></div>`;
+      sidebar.innerHTML = `<div class="carte"><p class="aide">Choisis ton personnage dans « Mon personnage » ci-dessus pour afficher sa fiche ici.</p></div>`;
       rendreDockCombat(); // masque le dock si aucun perso sélectionné
       if (typeof Carte !== "undefined" && Carte.desactiverModeCiblage) Carte.desactiverModeCiblage();
       return;
@@ -1011,6 +1045,12 @@ const App = (() => {
     const c = CLASSES[p.classe];
     const race = p.race ? RACES[p.race] : null;
     const perso = Personnage.depuisJSON(p);
+    // Casteur de Grimoire (cf. SORTS_PAR_CLASSE) : au combat, ce qui compte
+    // est la liste de sorts à lancer, pas le texte des voies (déjà
+    // consultable sur la fiche complète) — la carte "Capacités" de cette
+    // mini-fiche affiche donc les sorts (appris + accordés) à la place,
+    // cf. htmlSortsGrimoireBattlemap ci-dessous.
+    const estCasterGrimoire = typeof SORTS_PAR_CLASSE !== "undefined" && !!SORTS_PAR_CLASSE[p.classe];
     const mods = {};
     CARACS.forEach((cc) => (mods[cc.code] = perso.mod(cc.code)));
     const init = perso.calculerInitiative();
@@ -1207,7 +1247,7 @@ const App = (() => {
       }
     }
 
-    sidebar.innerHTML = ordreHtml + `
+    sidebar.innerHTML = `
       <div class="carte">
         <div class="entete-fiche">
           <div class="tete-gauche">
@@ -1271,7 +1311,7 @@ const App = (() => {
       ${htmlBlocIllusions(p, perso)}
       ${htmlBlocAmes(p, perso)}
       <div class="carte">
-        <h3 style="margin-top:0;">Capacités</h3>
+        <h3 style="margin-top:0;">${estCasterGrimoire ? "📖 Sorts" : "Capacités"}</h3>
         <div class="cible-capacite-form" style="display:none;">
           <select class="cible-capacite-select"></select>
           <label class="option-payer-cs" style="display:none;"><input type="checkbox" class="check-payer-cs" /> Payer en CS (Don corrompu)</label>
@@ -1280,7 +1320,7 @@ const App = (() => {
           <button class="btn petit secondaire btn-annuler-cible-capacite">Annuler</button>
         </div>
         ${htmlDegatsCapaciteEnAttente(id)}
-        ${htmlCapacitesClasse(p, c)}
+        ${estCasterGrimoire ? htmlSortsGrimoireBattlemap(p, perso) : htmlCapacitesClasse(p, c)}
       </div>
       ${race ? `<div class="carte"><h3>Capacités raciales — ${race.voie_nom}</h3>${htmlCapacitesRace(p, race)}</div>` : ""}
     `;
@@ -1418,6 +1458,24 @@ const App = (() => {
         if (!t.mecanique || t.mecanique.type === "passive") return;
         const src = Object.assign({ cle: p.race, voie: race.voie_nom, nomCap: t.nom || `Rang ${rangNum}` }, t.source);
         out.push({ source: src, mecanique: t.mecanique, nom: t.nom || `Rang ${rangNum}` });
+      });
+    }
+    // Sorts de Grimoire (appris + accordés par la voie, cf. SORTS_PAR_CLASSE)
+    // — aussi affichés dans le dock, à côté des capacités : même tuile
+    // compacte (nom + badge d'usage), même clic pour lancer/jeter les dés
+    // (wireCapacitesEtEtats gère déjà data-lancer-origine="grimoire", cf.
+    // la carte "📖 Grimoire" de la fiche complète). Vide pour toute classe
+    // sans catalogue (non-casteur) — aucun changement pour elles.
+    const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
+    if (catalogue.length) {
+      const perso = Personnage.depuisJSON(p);
+      const appris = p.grimoireSortsConnus || [];
+      const accordes = perso.sortsGrimoireAccordes();
+      const idsAffiches = appris.concat(accordes.filter((sid) => !appris.includes(sid)));
+      idsAffiches.forEach((sortId) => {
+        const sort = catalogue.find((s) => s.id === sortId);
+        if (!sort) return;
+        out.push({ source: { origine: "grimoire", cle: sort.id, nomCap: sort.nom }, mecanique: sort.mecanique, nom: sort.nom });
       });
     }
     return out;

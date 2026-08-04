@@ -1208,6 +1208,11 @@ main:has(#panneau-lore.actif) { max-width: 1400px; }
 .carte-toolbar .btn.actif-bouton { background: var(--or); color: var(--encre); }
 .carte-aide { font-size: 0.8rem; color: #6a6278; margin-bottom: 10px; min-height: 1.2em; }
 
+/* Ordre d'initiative : bandeau pleine largeur au-dessus de la battlemap
+   (cf. #battlemap-zone-ordre-initiative-globale, index.html), plutôt que
+   dans une colonne latérale — visible sans avoir à faire défiler. */
+#battlemap-zone-ordre-initiative-globale { margin-bottom: 12px; }
+
 /* En battlemap, la fiche du joueur reste affichée à gauche, en tête ; la
    carte occupe le reste de la largeur à droite. */
 .battlemap-layout { display: flex; gap: 16px; align-items: flex-start; }
