@@ -942,6 +942,15 @@ const Capacites = (() => {
         ? effet.formuleAlternative.formule : effet.formule;
       const bonusChaos = perso.bonusDegatsSortsChaos && perso.bonusDegatsSortsChaos();
       let formuleAjustee = bonusChaos ? `${baseFormule}+${bonusChaos}` : baseFormule;
+      // Prêtre — Voie du chaos, rang 5 "Le fléau, c'est moi !" (et toute
+      // future capacité "bonus"/cible:"degats") : bonusTemporaire("degats")
+      // n'était lu jusqu'ici que par les 3 sites app.js qui construisent
+      // dmgContact (attaque rapide au contact) — jamais par la résolution de
+      // dégâts d'un sort/capacité via Capacites.lancer(). Ajouté ici pour que
+      // "vos attaques (sorts ET attaque rapide) infligent +X" s'applique
+      // réellement aux deux, pas seulement aux attaques rapides.
+      const bonusDegatsTemp = perso.bonusTemporaire && perso.bonusTemporaire("degats");
+      if (bonusDegatsTemp) formuleAjustee = `${formuleAjustee}+${bonusDegatsTemp}`;
       // Enchanteur — Voie de l'enchantement, rang 5 "Illusion vivante" : +1d6
       // dégâts magiques par illusion liée encore vivante (jusqu'à 2), cf.
       // Personnage.bonusDegatsMagiquesIllusionsLiees() — s'applique à tout

@@ -4688,7 +4688,7 @@ const App = (() => {
               : `<option value="">Aucune cible disponible</option>`;
             if (troisCibles) toast("Sélectionne jusqu'à 3 alliés (Ctrl/Cmd + clic).");
             pickerForme.style.display = "flex";
-          } else if (mecanique.cible === "zone" && (mecanique.jetOppose || mecanique.portee) && _zoneCibleHostile(mecanique)) {
+          } else if (mecanique.cible === "zone" && (mecanique.jetOppose || mecanique.portee) && (_zoneCibleHostile(mecanique) || mecanique.cibleZoneHostile)) {
             // Capacité de zone HOSTILE (cf. _zoneCibleHostile) avec une portée
             // définie — AVEC jet opposé (ex. Barde "Mélopée de la Folie"/
             // "Requiem du silence") OU sans (ex. Barde "Chant brisant",

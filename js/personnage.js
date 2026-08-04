@@ -1803,6 +1803,20 @@ class Personnage extends Entite {
       pvTemporaires: this.pvTemporaires,
       pvTemporairesExpiration: this.pvTemporairesExpiration,
       mutations: this.mutations,
+      // Bug trouvé lors de l'audit post-chantier Prêtre (cf. prompt de
+      // vérification) : ces champs manquaient ici, alors que 4 sites app.js
+      // (equiperItem/desequiperItem/ajouterItemInventaire/jeterItem) font
+      // TOUS un aller-retour Personnage.depuisJSON(p).versJSON() avant de
+      // sauver — sans ces lignes, équiper ou ramasser un simple objet
+      // effaçait silencieusement les sorts de Grimoire appris ainsi que le
+      // Cercle de spécialisation et les 4 pools de Points de Cercle du
+      // Prêtre au prochain aller-retour.
+      grimoireSortsConnus: this.grimoireSortsConnus,
+      cercleSpecialisation: this.cercleSpecialisation,
+      pointsBenediction: this.pointsBenediction,
+      pointsConviction: this.pointsConviction,
+      pointsBannissement: this.pointsBannissement,
+      pointsJugement: this.pointsJugement,
     };
     // Firestore refuse un champ explicitement à `undefined` dans .set() et
     // lève une exception SYNCHRONE — via DepotDistant.remplacerTout (qui

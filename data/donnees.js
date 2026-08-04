@@ -661,9 +661,10 @@ const CLASSES = {
           { rang: 1, nom: "Affaiblissement (sort)", effet: "Pour 1 CS : inflige à un ennemi, au choix, -1 CA OU -1 attaque OU -1 dégâts, pendant 1 tour",
             mecanique: { type: "activable", usage: { frequence: "libre" }, corruptionCout: 1,
               cible: "ennemi", portee: 10, zone: null, jetOppose: null,
-              effets: [ { type: "bonusTemporaire", cle: "auChoix", valeur: -1, duree: { tours: 1 },
-                choix: { titre: "Affaiblissement", consigne: "Choisis le malus infligé :",
-                  options: [ { valeur: "ca", label: "-1 CA" }, { valeur: "attaque", label: "-1 attaque" }, { valeur: "degats", label: "-1 dégâts" } ] } } ] } },
+              effets: [ { type: "bonus", cible: "choix",
+                  choix: { titre: "Affaiblissement", consigne: "Choisis le malus infligé :",
+                    options: [ { valeur: "DEF", label: "-1 CA" }, { valeur: "attaque", label: "-1 attaque" }, { valeur: "degats", label: "-1 dégâts" } ] },
+                  valeur: -1, duree: "1" } ] } },
 
           { rang: 2, nom: "Don corrompu (passive)", effet: "Peut lancer n'importe quel sort de sa classe en payant son coût en CS (= rang du sort) au lieu de PP",
             mecanique: { type: "passive", usage: { frequence: "permanente" },
@@ -683,8 +684,8 @@ const CLASSES = {
           { rang: 5, nom: "Le fléau, c'est moi ! (activable)", effet: "Prenez 4 CS immédiatement. Pendant 3 tours : vos attaques (sorts et attaque rapide) infligent +1d8 dégâts, vos PV ne peuvent pas descendre sous 1, +1 CA",
             mecanique: { type: "limitee", usage: { frequence: "1x/combat" }, corruption: 4,
               cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "bonusTemporaire", cle: "degatsToutesAttaques", valeur: "1d8", duree: { tours: 3 } },
-                { type: "bonusTemporaire", cle: "DEF", valeur: 1, duree: { tours: 3 } },
+              effets: [ { type: "bonus", cible: "degats", valeur: "1d8", duree: "3" },
+                { type: "bonus", cible: "DEF", valeur: 1, duree: "3" },
                 { type: "etat", id: "increvable", duree: { tours: 3 } },
                 { type: "special", note: "'increvable' : les PV ne peuvent pas descendre sous 1 pendant la durée — plancher spécial dans subirDegats() côté app.js, distinct du KO normal à 0 PV. Usage 1x/combat proposé par défaut (non précisé explicitement par Thomas), à confirmer." } ] } },
         ],
@@ -1045,7 +1046,7 @@ const CLASSES = {
               effets: [ { type: "bonus", cible: "DEF", valeur: 1, duree: "3" } ] } },
           { rang: 2, nom: "Fascination (sort)", effet: "Attaque magique (INT, pas CHA) vs DEF + PV actuels/2 de la cible : Fascinée tant que maintenue (2 PP au lancer, puis 2 PP/tour de maintien). Coûte 2 PP",
             mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
-              cible: "unique", portee: 5, zone: null,
+              cible: "ennemi", portee: 5, zone: null,
               jetOppose: { caracAttaquant: "INT", caracDefenseurCalcule: "DEF+PVactuels/2" },
               effets: [ { type: "etat", id: "fascinee_illusoire", duree: "maintenue", coutMaintienPP: 2 } ] } },
           { rang: 3, nom: "Image décalée (évolution)", effet: "Le sort Illusion remplace son +1 CA par : la prochaine attaque contre le bénéficiaire rate automatiquement",
@@ -1362,8 +1363,8 @@ const CLASSES = {
           { rang: 5, nom: "Souverain du champ de bataille (L, 1x/scénario)", effet: "Le Chevalier et ses alliés à ≤5 cases gagnent +2 attaque et +2 CA pendant [3+Mod.CHA] tours",
             mecanique: { type: "activable", usage: { frequence: "1x/scenario" },
               cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
-              effets: [ { type: "bonusTemporaire", cle: "attaque", valeur: 2, duree: { tours: "3+Mod.CHA" } },
-                { type: "bonusTemporaire", cle: "DEF", valeur: 2, duree: { tours: "3+Mod.CHA" } } ] } },
+              effets: [ { type: "bonus", cible: "attaque", valeur: 2, duree: "3+Mod.CHA" },
+                { type: "bonus", cible: "DEF", valeur: 2, duree: "3+Mod.CHA" } ] } },
         ],
       },
       {
@@ -1374,7 +1375,7 @@ const CLASSES = {
           { rang: 1, nom: "Ordre bref (activable)", effet: "Désigne un allié à portée de vue : il gagne +2 à son prochain jet d'attaque",
             mecanique: { type: "activable", usage: { frequence: "libre" },
               cible: "allie", portee: "vue", zone: null, jetOppose: null,
-              effets: [ { type: "bonusTemporaire", cle: "attaque", valeur: 2, duree: { motCle: "prochaineAttaque" } } ] } },
+              effets: [ { type: "bonus", cible: "attaque", valeur: 2, duree: "prochainTour" } ] } },
           { rang: 2, nom: "Coordination (passive)", effet: "Alliés à ≤2 cases du Chevalier gagnent +1 CA tant que le Chevalier n'a pas entamé son déplacement ce tour",
             mecanique: { type: "passive", usage: { frequence: "permanente" },
               cible: "zone", portee: null, zone: { taille: 2 }, jetOppose: null,
@@ -1825,22 +1826,22 @@ const SORTS_MAGICIEN = [
   { id: "trait_de_feu", nom: "Trait de feu", rang: 1, categorie: "evocation",
     effet: "Attaque magique à distance : 1d10 dégâts de feu",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
-      cible: "unique", portee: 15, zone: null,
+      cible: "ennemi", portee: 15, zone: null,
       jetOppose: { caracAttaquant: "INT", caracDefenseur: "DEF" },
       effets: [ { type: "degats", formule: "1d10", typeDegats: "magique" } ] } },
 
   { id: "projectile_magique", nom: "Projectile magique", rang: 1, categorie: "evocation",
     effet: "Touche automatiquement (pas de jet d'attaque) : 3×(1d4+1) dégâts de force",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
-      cible: "unique", portee: 20, zone: null,
+      cible: "ennemi", portee: 20, zone: null,
       jetOppose: null,
-      effets: [ { type: "degats", formule: "3*(1d4+1)", typeDegats: "magique", note: "touche automatique, pas de jetOppose" } ] } },
+      effets: [ { type: "degats", formule: "3d4+3", typeDegats: "magique", note: "touche automatique, pas de jetOppose — formule équivalente à 3×(1d4+1) : resoudreExpression() ne supporte pas la multiplication/parenthésage, seulement NdM/Mod.X/niveau/rang/constantes." } ] } },
 
   { id: "bouclier_arcanique_mineur", nom: "Bouclier arcanique mineur", rang: 1, categorie: "abjuration",
     effet: "Réaction : +2 CA jusqu'au prochain tour du Magicien",
     mecanique: { type: "activable", usage: { frequence: "libre" }, reactionCout: 1, coutPP: 2, typeSort: "majeur",
       cible: "soi", portee: null, zone: null, jetOppose: null,
-      effets: [ { type: "bonusTemporaire", cle: "DEF", valeur: 2, duree: { motCle: "prochainTour" } } ] } },
+      effets: [ { type: "bonus", cible: "DEF", valeur: 2, duree: "prochainTour" } ] } },
 
   { id: "detection_magie", nom: "Détection de la magie", rang: 1, categorie: "divination_transmutation",
     effet: "Révèle les auras magiques dans la zone (rituel)",
@@ -1859,7 +1860,7 @@ const SORTS_MAGICIEN = [
   { id: "eclair_localise", nom: "Éclair localisé", rang: 2, categorie: "evocation",
     effet: "Ligne : 2d8 dégâts électriques",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "ligne", portee: 15, zone: { forme: "ligne", longueur: 6 },
+      cible: "zone", portee: 15, zone: { forme: "ligne", longueur: 6 },
       jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", modeSauvegarde: "moitie" },
       effets: [ { type: "degats", formule: "2d8", typeDegats: "magique" } ] } },
 
@@ -1873,13 +1874,13 @@ const SORTS_MAGICIEN = [
   { id: "peau_de_pierre", nom: "Peau de pierre", rang: 2, categorie: "abjuration",
     effet: "+2 réduction de dégâts pendant 3 tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "unique", portee: 5, zone: null, jetOppose: null,
-      effets: [ { type: "bonusTemporaire", cle: "reduction_degats", valeur: 2, duree: { tours: 3 } } ] } },
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "bonus", cible: "reduction_degats", valeur: 2, duree: "3" } ] } },
 
   { id: "invisibilite_mineure", nom: "Invisibilité mineure", rang: 2, categorie: "illusion",
     effet: "Invisible jusqu'à la prochaine action offensive",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
       effets: [ { type: "etat", id: "invisible", duree: { motCle: "jusquaActionOffensive" } } ] } },
 
   { id: "image_miroir", nom: "Image miroir", rang: 2, categorie: "illusion",
@@ -1906,27 +1907,27 @@ const SORTS_MAGICIEN = [
   { id: "contresort", nom: "Contresort", rang: 3, categorie: "abjuration",
     effet: "Réaction : annule un sort ennemi en cours de résolution",
     mecanique: { type: "activable", usage: { frequence: "libre" }, reactionCout: 1, coutPP: 6, typeSort: "majeur",
-      cible: "unique", portee: 15, zone: null, jetOppose: null,
+      cible: "ennemi", portee: 15, zone: null, jetOppose: null,
       effets: [ { type: "special", note: "Résolution manuelle par la table — pas de moteur d'annulation de sort en cours dans l'app." } ] } },
 
   { id: "vol", nom: "Vol", rang: 3, categorie: "divination_transmutation",
     effet: "La cible gagne la capacité de voler pendant plusieurs tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
-      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
       effets: [ { type: "etat", id: "vol", duree: { tours: 5 } } ] } },
 
   // --- Rang 4 (coût PP: 8) ---
   { id: "eclair_grand", nom: "Éclair", rang: 4, categorie: "evocation",
     effet: "Ligne longue : 6d6 dégâts électriques, Réflexes pour moitié",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
-      cible: "ligne", portee: 20, zone: { forme: "ligne", longueur: 10 },
+      cible: "zone", portee: 20, zone: { forme: "ligne", longueur: 10 },
       jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", modeSauvegarde: "moitie" },
       effets: [ { type: "degats", formule: "6d6", typeDegats: "magique" } ] } },
 
   { id: "cecite_surdite", nom: "Cécité/Surdité", rang: 4, categorie: "enchantement",
     effet: "Jet Vigueur : aveugle ou assourdit 3 tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
-      cible: "unique", portee: 10, zone: null,
+      cible: "ennemi", portee: 10, zone: null,
       jetOppose: { caracAttaquant: null, caracDefenseur: "Vigueur" },
       effets: [ { type: "etat", id: "aveugle_ou_sourd", duree: { tours: 3 } } ] } },
 
@@ -1939,7 +1940,7 @@ const SORTS_MAGICIEN = [
   { id: "invisibilite_majeure", nom: "Invisibilité majeure", rang: 4, categorie: "illusion",
     effet: "Invisibilité complète prolongée, ne se rompt pas à la première action offensive",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
-      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
       effets: [ { type: "etat", id: "invisible_majeur", duree: { tours: 5 } } ] } },
 
   // --- Rang 5 (coût PP: 10, 1x/scénario) ---
@@ -1960,7 +1961,7 @@ const SORTS_MAGICIEN = [
   { id: "fleche_de_givre", nom: "Flèche de givre", rang: 2, categorie: "evocation",
     effet: "Attaque magique à distance : 2d6 dégâts de givre, cible Ralentie 1 tour (-2 CA)",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "unique", portee: 15, zone: null,
+      cible: "ennemi", portee: 15, zone: null,
       jetOppose: { caracAttaquant: "INT", caracDefenseur: "DEF" },
       effets: [ { type: "degats", formule: "2d6", typeDegats: "magique" },
         { type: "etat", id: "ralentie", duree: { tours: 1 } } ] } },
@@ -1976,12 +1977,12 @@ const SORTS_MAGICIEN = [
     effet: "+2 CA pendant 5 tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
       cible: "soi", portee: null, zone: null, jetOppose: null,
-      effets: [ { type: "bonusTemporaire", cle: "DEF", valeur: 2, duree: { tours: 5 } } ] } },
+      effets: [ { type: "bonus", cible: "DEF", valeur: 2, duree: "5" } ] } },
 
   { id: "dissipation_mineure", nom: "Dissipation mineure", rang: 2, categorie: "abjuration",
     effet: "Jet opposé INT contre le lanceur d'un effet magique mineur à portée : succès = annule",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "unique", portee: 10, zone: null,
+      cible: "ennemi", portee: 10, zone: null,
       jetOppose: { caracAttaquant: "INT", caracDefenseur: "INT" },
       effets: [ { type: "special", note: "Annule un effet magique mineur en cours si le jet opposé réussit — résolution manuelle par la table pour juger ce qui compte comme 'mineur', pas de liste fermée." } ] } },
 
@@ -1989,7 +1990,7 @@ const SORTS_MAGICIEN = [
     effet: "Alliés à ≤2 cases du lanceur gagnent +1 CA pendant 3 tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
       cible: "zone", portee: null, zone: { taille: 2 }, jetOppose: null,
-      effets: [ { type: "bonusTemporaire", cle: "DEF", valeur: 1, duree: { tours: 3 } } ] } },
+      effets: [ { type: "bonus", cible: "DEF", valeur: 1, duree: "3" } ] } },
 
   { id: "bastion_arcanique", nom: "Bastion arcanique", rang: 5, categorie: "abjuration",
     effet: "Immunité totale aux dégâts magiques pendant [2+Mod.INT] tours",
@@ -2001,24 +2002,21 @@ const SORTS_MAGICIEN = [
 /* Liste autonome de sorts piochés par l'Enchanteur (même principe que
    SORTS_MAGICIEN ci-dessus, cf. prompt_enchanteur_familles.md) — 13 sorts
    répartis en 3 familles (enchantement/transmutation/divination), coût PP =
-   rang×2. Carac de lancer : CHA (CARAC_MAGIE.enchanteur). Comme
-   SORTS_MAGICIEN, cette liste n'est pas encore utilisable en jeu tant que le
-   Grimoire/PP/slots ne sont pas branchés pour l'Enchanteur (même chantier
-   séparé, cf. reference_systeme_magie_pp.md) — sauf les 2 sorts de la Voie de
-   l'enchantement (cf. plus bas, prompt_enchanteur_voie_illusion.md), qui
-   utilisent un schéma d'effets fonctionnel (type "bonus"/"etat" avec durée en
-   chaîne) plutôt que "bonusTemporaire"/durée-objet, seul schéma résolu par
-   Capacites.resoudreEffet aujourd'hui. */
+   rang×2. Carac de lancer : CHA (CARAC_MAGIE.enchanteur). Cette liste EST
+   désormais branchée sur le Grimoire (cf. SORTS_PAR_CLASSE plus bas) et
+   passée en audit de correction (cf. prompt de vérification post-chantier
+   Prêtre) : le schéma "bonusTemporaire"/durée-objet, jamais résolu par
+   Capacites.resoudreEffet, a été corrigé en "bonus"/"etat"/"special"
+   (schéma réellement résolu, durée en chaîne) sur toute la liste — plus de
+   sort mort ici. Les 2 sorts de la Voie de l'enchantement (cf. plus bas,
+   prompt_enchanteur_voie_illusion.md) restent en plus dupliqués tels quels
+   dans CLASSES.enchanteur.voies["Voie de l'enchantement"] (rangs 1/2), qui
+   les accorde directement. */
 const SORTS_ENCHANTEUR = [
   // --- Famille illusion (2, Voie de l'enchantement, cf. prompt_enchanteur_voie_illusion.md) ---
-  // Contrairement au reste de cette liste (schéma "bonusTemporaire"/durée-objet,
-  // pas encore résolu par Capacites.resoudreEffet), ces 2 sorts utilisent le
-  // schéma fonctionnel (type "bonus"/"etat", durée en chaîne) : dupliqués tels
-  // quels dans CLASSES.enchanteur.voies["Voie de l'enchantement"] (rangs 1/2),
-  // seule voie d'accès réellement jouable aujourd'hui (le Grimoire n'est câblé
-  // côté app.js que pour SORTS_MAGICIEN — brancher SORTS_ENCHANTEUR sur le
-  // Grimoire reste un chantier séparé). Présents ici pour la complétude du
-  // catalogue de famille, cf. Voie du spectacle rang 1 "Initiation au
+  // Dupliqués tels quels dans CLASSES.enchanteur.voies["Voie de
+  // l'enchantement"] (rangs 1/2), qui les accorde directement — présents ici
+  // pour la complétude du catalogue de famille, cf. Voie du spectacle rang 1 "Initiation au
   // spectacle" qui référence la famille 'illusion' au même titre que
   // 'enchantement'.
   { id: "illusion", nom: "Illusion", rang: 1, categorie: "illusion",
@@ -2030,7 +2028,7 @@ const SORTS_ENCHANTEUR = [
   { id: "fascination_illusoire", nom: "Fascination", rang: 2, categorie: "illusion",
     effet: "Attaque magique (INT, pas CHA) vs DEF + PV actuels/2 de la cible : Fascinée tant que maintenue (coût de maintien : 2 PP/tour)",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
-      cible: "unique", portee: 5, zone: null,
+      cible: "ennemi", portee: 5, zone: null,
       jetOppose: { caracAttaquant: "INT", caracDefenseurCalcule: "DEF+PVactuels/2" },
       effets: [ { type: "etat", id: "fascinee_illusoire", duree: "maintenue", coutMaintienPP: 2 } ] } },
 
@@ -2038,35 +2036,35 @@ const SORTS_ENCHANTEUR = [
   { id: "fascination", nom: "Fascination", rang: 1, categorie: "enchantement",
     effet: "Attaque magique vs DEF : Fascinée (immobile) tant que l'Enchanteur maintient (action L/tour). Brisée par toute attaque ou événement brutal",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
-      cible: "unique", portee: 15, zone: null,
+      cible: "ennemi", portee: 15, zone: null,
       jetOppose: { caracAttaquant: "CHA", caracDefenseur: "DEF" },
       effets: [ { type: "etat", id: "fascinee", duree: { motCle: "maintenue" } } ] } },
 
   { id: "charme_mineur", nom: "Charme mineur", rang: 1, categorie: "enchantement",
     effet: "Jet opposé CHA vs Volonté : la cible vous considère comme un ami de confiance pendant [1+Mod.CHA] tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
-      cible: "unique", portee: 10, zone: null,
+      cible: "ennemi", portee: 10, zone: null,
       jetOppose: { caracAttaquant: "CHA", caracDefenseur: "Volonte" },
       effets: [ { type: "etat", id: "charmee", duree: { tours: "1+Mod.CHA" } } ] } },
 
   { id: "manipulation_emotions", nom: "Manipulation des émotions", rang: 2, categorie: "enchantement",
     effet: "Une cible à portée subit -2 ou +2 (au choix) à son prochain jet, selon l'émotion insufflée (peur/confiance)",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "unique", portee: 12, zone: null,
+      cible: "ennemi", portee: 12, zone: null,
       jetOppose: { caracAttaquant: "CHA", caracDefenseur: "Volonte" },
-      effets: [ { type: "bonusTemporaire", cle: "tousTests", valeur: -2, duree: { motCle: "prochainJet" } } ] } },
+      effets: [ { type: "special", note: "-2 ou +2 (au choix du lanceur à l'activation) au prochain jet de la cible, selon l'émotion insufflée — 'tous les tests' et la polarité au choix ne sont pas modélisables par le type 'bonus' standard (une seule stat, une seule valeur fixe), même limite que l'ancienne Voix de la foi du Prêtre. Résolution manuelle par la table." } ] } },
 
   { id: "sommeil_enchanteur", nom: "Sommeil", rang: 3, categorie: "enchantement",
     effet: "Attaque magique contre une cible avec moins de [Mod.CHA×5] PV actuels : endormie jusqu'à blessure ou réveil manuel",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
-      cible: "unique", portee: 15, zone: null,
+      cible: "ennemi", portee: 15, zone: null,
       jetOppose: { caracAttaquant: "CHA", caracDefenseur: "DEF" },
       effets: [ { type: "etat", id: "endormi", duree: { motCle: "jusquaBlessure" } } ] } },
 
   { id: "suggestion", nom: "Suggestion", rang: 4, categorie: "enchantement",
     effet: "Attaque magique vs DEF : la cible exécute une action raisonnable dans l'heure, sans se souvenir d'avoir été influencée",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
-      cible: "unique", portee: 10, zone: null,
+      cible: "ennemi", portee: 10, zone: null,
       jetOppose: { caracAttaquant: "CHA", caracDefenseur: "DEF" },
       effets: [ { type: "special", note: "Résolution narrative par la table (action raisonnable, pas de moteur de comportement automatisé)." } ] } },
 
@@ -2074,26 +2072,26 @@ const SORTS_ENCHANTEUR = [
   { id: "alteration_mineure", nom: "Altération mineure", rang: 1, categorie: "transmutation",
     effet: "Change temporairement une propriété mineure d'un objet ou d'une créature (poids, texture, couleur) pendant [niveau] heures",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
-      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      cible: "aucune", portee: 5, zone: null, jetOppose: null,
       effets: [ { type: "special", note: "Effet narratif/cosmétique, pas de bonus chiffré." } ] } },
 
   { id: "vitesse_transmutee", nom: "Vitesse transmutée", rang: 2, categorie: "transmutation",
     effet: "La cible gagne +2 cases de déplacement pendant 3 tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
       effets: [ { type: "special", note: "+2 à Combat._deplacementMax() du bénéficiaire pendant 3 tours — nécessite un hook dans combat.js/etatsActifs, même famille de patron que les autres bonus temporaires de déplacement déjà gérés (cf. don Mobile)." } ] } },
 
   { id: "arme_enchantee_grimoire", nom: "Arme enchantée", rang: 3, categorie: "transmutation",
     effet: "Une arme ou objet gagne +2 attaque et +1d6 DM magiques pendant [3+Mod.CHA] tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
       cible: "allie", portee: "contact", zone: null, jetOppose: null,
-      effets: [ { type: "bonusTemporaire", cle: "attaque", valeur: 2, duree: { tours: "3+Mod.CHA" } },
+      effets: [ { type: "bonus", cible: "attaque", valeur: 2, duree: "3+Mod.CHA" },
         { type: "etat", id: "arme_enchantee", duree: { tours: "3+Mod.CHA" } } ] } },
 
   { id: "metamorphose_bestiale", nom: "Métamorphose bestiale", rang: 4, categorie: "transmutation",
     effet: "Jet opposé CHA vs Volonté : transforme la cible en créature inoffensive pendant [1d4+Mod.CHA] tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
-      cible: "unique", portee: 10, zone: null,
+      cible: "ennemi", portee: 10, zone: null,
       jetOppose: { caracAttaquant: "CHA", caracDefenseur: "Volonte" },
       effets: [ { type: "etat", id: "metamorphosee", duree: { tours: "1d4+Mod.CHA" } } ] } },
 
@@ -2107,20 +2105,20 @@ const SORTS_ENCHANTEUR = [
   { id: "lecture_aura_grimoire", nom: "Lecture d'aura", rang: 2, categorie: "divination",
     effet: "Révèle la nature magique d'un objet ou créature (école de magie, niveau approximatif, malédictions actives)",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "unique", portee: 5, zone: null, jetOppose: null,
+      cible: "aucune", portee: 5, zone: null, jetOppose: null,
       effets: [ { type: "special", note: "Information narrative, pas d'effet chiffré." } ] } },
 
   { id: "detection_pensees", nom: "Détection des pensées", rang: 3, categorie: "divination",
     effet: "Jet opposé CHA vs Volonté : perçoit les intentions superficielles d'une cible à portée",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
-      cible: "unique", portee: 10, zone: null,
+      cible: "ennemi", portee: 10, zone: null,
       jetOppose: { caracAttaquant: "CHA", caracDefenseur: "Volonte" },
       effets: [ { type: "special", note: "Information narrative en cas de succès, résolue par la table." } ] } },
 
   { id: "vision_du_passe_grimoire", nom: "Vision du passé", rang: 4, categorie: "divination",
     effet: "En touchant un objet ou lieu, perçoit les événements marquants qui s'y sont déroulés (jusqu'à [niveau×10] ans)",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
-      cible: "unique", portee: "contact", zone: null, jetOppose: null,
+      cible: "aucune", portee: "contact", zone: null, jetOppose: null,
       effets: [ { type: "special", note: "Rituel narratif (10 min), information résolue par la table." } ] } },
 ];
 
@@ -2149,7 +2147,8 @@ const SORTS_PRETRE = [
     effet: "Un allié gagne +1d4 à ses jets d'attaque et de Sauvegarde pendant 10 tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
       cible: "allie", portee: 10, zone: null, jetOppose: null,
-      effets: [ { type: "bonusTemporaire", cle: "attaqueEtSauvegarde", valeur: "1d4", duree: { tours: 10 } } ] } },
+      effets: [ { type: "bonus", cible: "attaque", valeur: "1d4", duree: "10" },
+        { type: "special", note: "+1d4 (même montant que le bonus d'attaque ci-dessus) aux jets de Sauvegarde — l'app ne modélise aucun jet de sauvegarde générique côté PJ, seul le volet attaque est automatisable." } ] } },
 
   { id: "premiers_secours", nom: "Premiers secours", rang: 1, categorie: "guerison",
     effet: "Stabilise une cible à 0 PV (ne la soigne pas, l'empêche de mourir)",
@@ -2237,7 +2236,7 @@ const SORTS_PRETRE = [
   { id: "mot_de_commandement", nom: "Mot de commandement", rang: 1, categorie: "foi",
     effet: "Un mot simple (Fuis/Tombe/Arrête-toi) forcé sur une cible. Jet de Sauvegarde Volonté",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
-      cible: "unique", portee: 10, zone: null,
+      cible: "ennemi", portee: 10, zone: null,
       jetOppose: { caracAttaquant: "SAG", caracDefenseur: "Volonte" },
       effets: [ { type: "special", note: "Effet narratif selon le mot choisi (Fuis = déplacement forcé, Tombe = à terre, Arrête-toi = ne peut plus agir 1 tour) — résolution manuelle par la table pour le comportement exact." } ] } },
 
@@ -2245,13 +2244,13 @@ const SORTS_PRETRE = [
     effet: "+2 CA à un allié pendant 3 tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
       cible: "allie", portee: 10, zone: null, jetOppose: null,
-      effets: [ { type: "bonusTemporaire", cle: "DEF", valeur: 2, duree: { tours: 3 } } ] } },
+      effets: [ { type: "bonus", cible: "DEF", valeur: 2, duree: "3" } ] } },
 
   // Rang 2
   { id: "reprimande_divine", nom: "Réprimande divine", rang: 2, categorie: "foi",
     effet: "Attaque magique : 2d6 dégâts radiants, doublés si la cible est maléfique ou morte-vivante",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "unique", portee: 15, zone: null,
+      cible: "ennemi", portee: 15, zone: null,
       jetOppose: { caracAttaquant: "SAG", caracDefenseur: "DEF" },
       effets: [ { type: "degats", formule: "2d6", typeDegats: "magique",
         formuleAlternative: { condition: "race:mort_vivant|demon", formule: "4d6" } },
@@ -2275,7 +2274,7 @@ const SORTS_PRETRE = [
   { id: "voix_du_jugement", nom: "Voix du jugement", rang: 4, categorie: "foi",
     effet: "Déclare un ennemi 'hérétique' pendant 2 tours : tout dégât qu'il subit lui inflige +1d4 dégâts (+1d8 si mort-vivant). Coûte 1 Point de Conviction",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPointsConviction: 1,
-      cible: "unique", portee: 15, zone: null, jetOppose: null,
+      cible: "ennemi", portee: 15, zone: null, jetOppose: null,
       effets: [ { type: "etat", id: "heretique", duree: { tours: 2 } },
         { type: "special", note: "État temporaire standard 'heretique', même mécanisme que les autres malus/tags temporaires déjà en jeu (confirmé par Thomas) — pas de nouveau hook générique à inventer, réutiliser le système d'état existant. Le bonus de dégâts (+1d4, +1d8 si race mort_vivant) se vérifie au moment de la résolution des dégâts subis par une cible portant ce tag, quelle que soit la source d'attaque." } ] } },
 
@@ -2284,15 +2283,14 @@ const SORTS_PRETRE = [
     effet: "+2 CA à vous et vos alliés, -2 CA aux ennemis, en zone, pendant 3 tours. Coûte 2 Points de Conviction",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPointsConviction: 2,
       cible: "zone", portee: null, zone: { taille: 3 }, jetOppose: null,
-      effets: [ { type: "bonusTemporaire", cle: "DEF", valeur: 2, duree: { tours: 3 }, cible: "allies" },
-        { type: "bonusTemporaire", cle: "DEF", valeur: -2, duree: { tours: 3 }, cible: "ennemis" } ] } },
+      effets: [ { type: "special", note: "+2 CA aux alliés et -2 CA aux ennemis dans la zone, pendant 3 tours — double polarité et ciblage multiple non modélisés par le type 'bonus' standard (une seule cible résolue, une seule stat). Résolution manuelle par la table, même limite que l'ancienne 'Voix de la foi' que ce sort remplace." } ] } },
 
   // --- Famille bannissement (7 sorts, cf. prompt_pretre_cercle_bannissement.md) ---
   // Rang 1 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)
   { id: "flamme_sacree", nom: "Flamme sacrée", rang: 1, categorie: "bannissement",
     effet: "1d6 dégâts sacrés (1d12 si la cible est mort-vivante ou démon). Coûte 2 PP",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
-      cible: "unique", portee: 10, zone: null,
+      cible: "ennemi", portee: 10, zone: null,
       jetOppose: { caracAttaquant: "SAG", caracDefenseur: "DEF" },
       effets: [ { type: "degats", formule: "1d6", typeDegats: "magique",
         formuleAlternative: { condition: "race:mort_vivant|demon", formule: "1d12" } } ] } },
@@ -2301,7 +2299,7 @@ const SORTS_PRETRE = [
   { id: "rite_de_bannissement", nom: "Rite de bannissement", rang: 2, categorie: "bannissement",
     effet: "Attaque magique : échec → Immobilisée [1+Mod.SAG] tours. Si invoquée et niveau inférieur : bannissement complet immédiat",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "unique", portee: 10, zone: null,
+      cible: "ennemi", portee: 10, zone: null,
       jetOppose: { caracAttaquant: "SAG", caracDefenseur: "DEF" },
       effets: [ { type: "etat", id: "immobilisee", duree: { tours: "1+Mod.SAG" } },
         { type: "special", note: "Bannissement complet immédiat si la cible est une invocation de niveau inférieur au lanceur — condition non chiffrée par un mécanisme générique existant, à vérifier/résoudre manuellement." } ] } },
@@ -2317,14 +2315,14 @@ const SORTS_PRETRE = [
   { id: "exorcisme", nom: "Exorcisme", rang: 4, categorie: "bannissement",
     effet: "Attaque magique opposée à l'entité possédant un hôte : réussite → entité expulsée, hôte survit",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
-      cible: "unique", portee: 5, zone: null,
+      cible: "ennemi", portee: 5, zone: null,
       jetOppose: { caracAttaquant: "SAG", caracDefenseur: "Volonte" },
       effets: [ { type: "special", note: "Nécessite une notion de 'possession' (entité liée à un hôte) — vérifier si un tel état existe déjà dans le système, sinon résolution entièrement narrative par la table." } ] } },
 
   { id: "bannissement", nom: "Bannissement", rang: 4, categorie: "bannissement",
     effet: "Tente de renvoyer une créature morte-vivante/démoniaque de dangerosité ≤5 vers son plan d'origine. Jet d20+Mod.CHA : DD 14 (dangerosité 1-2), DD 16 (dangerosité 3), DD 17 (dangerosité 4, interpolé), DD 18 (dangerosité 5). Coûte 1 Point de Bannissement",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPointsBannissement: 1,
-      cible: "unique", portee: 10, zone: null, jetOppose: null,
+      cible: "ennemi", portee: 10, zone: null, jetOppose: null,
       effets: [ { type: "special", note: "Jet 1d20+Mod.CHA (PAS Mod.SAG) contre un DD variable selon la dangerosité de la cible (table ci-dessus, DD dangerosité 4 = 17 interpolé, à confirmer par Thomas). Réussite = créature renvoyée (retirée du combat). Réservé aux cibles race:'mort_vivant'/'demon', dangerosité ≤5." } ] } },
 
   // Rang 5 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)
@@ -2337,15 +2335,20 @@ const SORTS_PRETRE = [
   { id: "bannissement_zone", nom: "Bannissement de zone", rang: 5, categorie: "bannissement",
     effet: "Comme Bannissement, mais tente l'effet sur toutes les cibles éligibles d'une zone de 4 cases, avec Mod.SAG ajouté au jet en plus de Mod.CHA. Coûte 1 Point de Bannissement",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPointsBannissement: 1,
-      cible: "zone", portee: 10, zone: { taille: 4 }, jetOppose: null,
+      cible: "zone", portee: 10, zone: { taille: 4 }, jetOppose: null, cibleZoneHostile: true,
       effets: [ { type: "special", note: "Jet 1d20+Mod.CHA+Mod.SAG (bonus cumulé, confirmé par Thomas — la version de zone est délibérément plus facile à réussir que la version cible unique) contre le même barème de DD que 'bannissement', appliqué indépendamment à chaque cible éligible de la zone." } ] } },
+  // cibleZoneHostile: true (ci-dessus) — sans jetOppose ni effet degats/bonus
+  // négatif, _zoneCibleHostile (app.js) ne peut pas deviner que cette zone
+  // vise des ennemis (résolution custom par idSort dans Capacites.lancer,
+  // pas le pipeline jetOppose générique) : ce flag explicite comble le trou
+  // pour que le picker de cible s'affiche quand même.
 
   // --- Famille jugement (3 sorts, cf. prompt_pretre_cercle_jugement.md) ---
   // Rang 1 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)
   { id: "oeil_inquisiteur", nom: "Œil de l'inquisiteur", rang: 1, categorie: "jugement",
     effet: "Test de SAG vs DEF de la cible suspectée : réussite → Marquée pour la scène/le combat. Coûte 2 PP",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
-      cible: "unique", portee: 15, zone: null,
+      cible: "ennemi", portee: 15, zone: null,
       jetOppose: { caracAttaquant: "SAG", caracDefenseur: "DEF" },
       effets: [ { type: "etat", id: "marquee", duree: { motCle: "finScene" } } ] } },
 
@@ -2353,16 +2356,16 @@ const SORTS_PRETRE = [
   { id: "confession_forcee", nom: "Confession forcée", rang: 3, categorie: "jugement",
     effet: "Attaque magique contre une cible Marquée : réponse honnête obligatoire + -2 CA jusqu'à la fin du combat",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
-      cible: "unique", portee: 10, zone: null,
+      cible: "ennemi", portee: 10, zone: null,
       jetOppose: { caracAttaquant: "SAG", caracDefenseur: "DEF" },
-      effets: [ { type: "bonusTemporaire", cle: "DEF", valeur: -2, duree: { motCle: "finCombat" } },
-        { type: "special", note: "Réponse honnête obligatoire — effet purement narratif, résolution manuelle par la table (pas de moteur de contrainte de dialogue dans l'app). Restriction 'cible déjà Marquée' non gatée automatiquement (cf. prompt, point à confirmer) : les tokens monstre ne suivent pas etatsActifs côté app (aucun suivi d'état automatique pour les monstres, même limite documentée ailleurs) — un gate bloquerait la plupart des usages légitimes en combat plutôt que d'aider, laissé au contrôle manuel de la table." } ] } },
+      effets: [ { type: "bonus", cible: "DEF", valeur: -2, duree: "finCombat", differe: true },
+        { type: "special", note: "Réponse honnête obligatoire — effet purement narratif, résolution manuelle par la table (pas de moteur de contrainte de dialogue dans l'app). Restriction 'cible déjà Marquée' non gatée automatiquement (cf. prompt, point à confirmer) : les tokens monstre ne suivent pas etatsActifs côté app (aucun suivi d'état automatique pour les monstres, même limite documentée ailleurs) — un gate bloquerait la plupart des usages légitimes en combat plutôt que d'aider, laissé au contrôle manuel de la table. differe:true : le malus DEF ne s'applique que sur un jet réussi (même bugfix que Toucher flétrissant du Nécromancien/Note discordante du Barde)." } ] } },
 
   // Rang 5 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)
   { id: "bucher_purificateur", nom: "Bûcher purificateur", rang: 5, categorie: "jugement",
     effet: "Attaque contre une cible Marquée : 5d6 dégâts sacrés, doublés si la culpabilité est confirmée dans la fiction. Coûte 2 Points de Jugement",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPointsJugement: 2,
-      cible: "unique", portee: 10, zone: null,
+      cible: "ennemi", portee: 10, zone: null,
       jetOppose: { caracAttaquant: "SAG", caracDefenseur: "DEF" },
       effets: [ { type: "degats", formule: "5d6", typeDegats: "magique" },
         { type: "special", note: "Doublement des dégâts (10d6) si la culpabilité de la cible est confirmée dans la fiction — jugement narratif de la table, pas de condition mécanique automatisable. Remplace l'ancienne limite '1x/scénario' par un coût de 2 Points de Jugement (pool de 3 max au rang 5). Restriction 'cible déjà Marquée' : même remarque que Confession forcée, non gatée automatiquement." } ] } },
