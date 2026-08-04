@@ -2393,6 +2393,17 @@ const SORTS_ACCORDES_PAR_VOIE = [
   { classe: "pretre", voie: "Voie de l'exorcisme", rang: 5, idSort: "bannissement_zone" },
   { classe: "pretre", voie: "Voie de l'inquisition", rang: 1, idSort: "oeil_inquisiteur" },
   { classe: "pretre", voie: "Voie de l'inquisition", rang: 5, idSort: "bucher_purificateur" },
+  // Enchanteur — Voie de l'enchantement rangs 1/2 (cf. lignes ~1039 plus
+  // haut) : ces rangs sont eux-mêmes directement castables (mecanique
+  // activable posée sur le rang, origine:"classe", cf. estSortFamilleIllusion
+  // dans capacites.js) ET existent en parallèle comme entrées catalogue
+  // SORTS_ENCHANTEUR (categorie:"illusion", pour le calcul du coût ×2
+  // école non débloquée et l'affichage dans la liste d'apprentissage) —
+  // sans ces 2 lignes, sortsGrimoireAccordes() ne les reconnaissait pas et
+  // la liste d'apprentissage proposait de les "Apprendre" comme s'ils
+  // n'étaient pas déjà acquis via la Voie (bug identifié le 04/08/2026).
+  { classe: "enchanteur", voie: "Voie de l'enchantement", rang: 1, idSort: "illusion" },
+  { classe: "enchanteur", voie: "Voie de l'enchantement", rang: 2, idSort: "fascination_illusoire" },
 ];
 
 /* Cercle de spécialisation (Partie 1, prompt_pretre_cercle_vie.md) : 1 sort

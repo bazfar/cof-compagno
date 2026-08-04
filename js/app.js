@@ -6025,6 +6025,16 @@ const App = (() => {
       toast(`Ajoute ${nomAttendu} à ton inventaire pour apprendre des sorts hors Voie.`);
       return null;
     }
+    // Palier de niveau minimum par rang (cf. NIVEAU_MIN_PAR_RANG,
+    // data/donnees.js) : même garde-fou que Capacites.lancer (qui bloque le
+    // LANCER d'un sort trop haut niveau), appliqué ici à l'APPRENTISSAGE —
+    // inutile de laisser un joueur occuper un emplacement avec un sort
+    // qu'il ne pourra de toute façon pas lancer avant d'avoir pris du niveau.
+    const niveauMin = (typeof NIVEAU_MIN_PAR_RANG !== "undefined" && NIVEAU_MIN_PAR_RANG[sort.rang]) || 1;
+    if ((p.niveau || 1) < niveauMin) {
+      toast(`Ce sort (rang ${sort.rang}) nécessite le niveau ${niveauMin} (actuellement niveau ${p.niveau || 1}).`);
+      return null;
+    }
     const tierLibre = perso.emplacementLibrePourRang(sort.rang);
     if (!tierLibre) {
       toast(`Plus d'emplacement compatible avec un sort de rang ${sort.rang} — équipe un objet de meilleure rareté, ou n'apprends pas de nouveau sort pour l'instant.`);
@@ -6307,12 +6317,21 @@ const App = (() => {
                   const tries = catalogue.slice().sort((a, b) => a.rang - b.rang);
                   return tries.map((sort) => {
                     const dejaConnu = connus.includes(sort.id) || accordes.includes(sort.id);
-                    const tierLibre = dejaConnu ? null : perso.emplacementLibrePourRang(sort.rang);
+                    // Palier de niveau minimum par rang (cf. NIVEAU_MIN_PAR_RANG,
+                    // data/donnees.js — rang 3 : niveau 4, rang 4 : niveau 6,
+                    // rang 5 : niveau 8) : même garde-fou que Capacites.lancer/
+                    // _apprendreSortGrimoireLocal, affiché ici pour ne pas laisser
+                    // le joueur tenter d'apprendre un sort qu'il ne peut pas encore.
+                    const niveauMin = (typeof NIVEAU_MIN_PAR_RANG !== "undefined" && NIVEAU_MIN_PAR_RANG[sort.rang]) || 1;
+                    const niveauInsuffisant = !dejaConnu && (p.niveau || 1) < niveauMin;
+                    const tierLibre = dejaConnu || niveauInsuffisant ? null : perso.emplacementLibrePourRang(sort.rang);
                     const action = dejaConnu
                       ? `<span class="loot-badge">Connu</span>`
-                      : tierLibre
-                        ? `<button type="button" class="btn petit or btn-apprendre-sort-direct" data-perso="${id}" data-sort="${sort.id}">Apprendre (1-${GRIMOIRE_PLAFOND_TIER[tierLibre]})</button>`
-                        : `<span class="loot-badge" style="opacity:.6;">Aucun emplacement</span>`;
+                      : niveauInsuffisant
+                        ? `<span class="loot-badge" style="opacity:.6;" title="Nécessite le niveau ${niveauMin}">Trop haut niveau</span>`
+                        : tierLibre
+                          ? `<button type="button" class="btn petit or btn-apprendre-sort-direct" data-perso="${id}" data-sort="${sort.id}">Apprendre (1-${GRIMOIRE_PLAFOND_TIER[tierLibre]})</button>`
+                          : `<span class="loot-badge" style="opacity:.6;">Aucun emplacement</span>`;
                     // École débloquée (cf. ECOLE_VERS_VOIE_DEBLOCAGE, data/donnees.js
                     // et Capacites.lancer, coutPPReel) : mise en avant + tag, pour
                     // repérer avant d'apprendre les sorts au tarif PP normal de ceux
