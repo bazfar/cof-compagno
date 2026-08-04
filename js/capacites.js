@@ -1359,6 +1359,13 @@ const Capacites = (() => {
     const p = persos[persoId];
     if (!p) return { ok: false, messages: ["Personnage introuvable."] };
     const perso = Personnage.depuisJSON(p);
+    // p.ppActuel n'existe dans le JSON brut qu'après un premier repos long/
+    // court (seuls chemins qui l'écrivent, cf. js/app.js) — un personnage tout
+    // juste créé n'a jamais ce champ, alors que Personnage.depuisJSON() le
+    // calcule déjà correctement (fallback calculerPPMax() dans le
+    // constructeur). Sans cette ligne, tout accès direct à p.ppActuel
+    // ci-dessous lisait 0 au lieu du max pour un casteur jamais reposé.
+    if (p.ppActuel == null) p.ppActuel = perso.ppActuel;
     const libelle = source.nomCap || "Capacité";
     // Déclarés ici (pas plus bas comme avant) : plusieurs cas spéciaux
     // court-circuitant lancer() avant le bloc générique (Bannissement,
@@ -2267,6 +2274,9 @@ const Capacites = (() => {
     const p = persos[persoId];
     if (!p) return { ok: false, messages: ["Personnage introuvable."] };
     const perso = Personnage.depuisJSON(p);
+    // cf. commentaire équivalent dans lancer() : p.ppActuel peut être absent
+    // du JSON brut pour un personnage jamais reposé.
+    if (p.ppActuel == null) p.ppActuel = perso.ppActuel;
     const libelle = source.nomCap || "Capacité";
 
     const messages = [];
