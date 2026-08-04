@@ -34,12 +34,20 @@ const EQUIPEMENT_DEPART = {
   // (cf. Personnage.slotsGrimoireParTier). Placé dans l'inventaire (comme
   // les consommables), pas équipé dans un slot : avoir l'objet sur soi
   // suffit, cf. appliquerEquipementDepart (js/app.js).
-  pretre:       { arme: "masse",        armure: "armure_cloute",     bouclier: "bouclier_acier", accessoire: "amulette_benediction", consommables: ["huile_sainte", "potion_soin", "parchemin_resurrection"] },
+  // parchemin_benediction/parchemin_charme_mineur/parchemin_trait_de_feu
+  // (au lieu du générique "parchemin_sort", qui n'a pas de champ
+  // `sortAppris` et ne déclenche donc jamais le bouton "Apprendre") :
+  // un sort de rang 1 RÉELLEMENT apprenable dès la création, plutôt qu'un
+  // Manuel/Amulette vide dont l'utilité n'est pas évidente au premier
+  // coup d'œil. N'importe quel autre sort reste accessible ensuite via le
+  // bouton "📖 Apprentissage" de la carte Grimoire (liste complète du
+  // catalogue, aucun parchemin requis) ou via un parchemin acheté/trouvé.
+  pretre:       { arme: "masse",        armure: "armure_cloute",     bouclier: "bouclier_acier", accessoire: "amulette_benediction", consommables: ["parchemin_benediction", "huile_sainte", "potion_soin", "parchemin_resurrection"] },
   druide:       { arme: "francisque",   armure: "armure_druidique",  bouclier: "bouclier_seve",  consommables: ["antidote", "potion_soin"] },
-  magicien:     { arme: "grimoire",     armure: "robe_mage",         bouclier: null,             accessoire: "manuel_incantation", consommables: ["parchemin_sort", "potion_soin"] },
-  necromancien: { arme: "baton",        armure: "armure_ombre",      bouclier: null,             accessoire: "manuel_incantation", consommables: ["parchemin_sort", "potion_soin"] },
+  magicien:     { arme: "grimoire",     armure: "robe_mage",         bouclier: null,             accessoire: "manuel_incantation", consommables: ["parchemin_trait_de_feu", "potion_soin"] },
+  necromancien: { arme: "baton",        armure: "armure_ombre",      bouclier: null,             accessoire: "manuel_incantation", consommables: ["parchemin_trait_de_feu", "potion_soin"] },
   barde:        { arme: "rapiere",      armure: "manteau_voyageur",  bouclier: null,             consommables: ["corde_enchantee", "potion_soin"] },
-  enchanteur:   { arme: "dague",        armure: "robe_mage",         bouclier: null,             accessoire: "manuel_incantation", consommables: ["parchemin_sort", "potion_soin"] },
+  enchanteur:   { arme: "dague",        armure: "robe_mage",         bouclier: null,             accessoire: "manuel_incantation", consommables: ["parchemin_charme_mineur", "potion_soin"] },
   chasseur:     { arme: "arc_long",     armure: "armure_ecailles",   bouclier: null,             consommables: ["fumigene", "potion_soin"] },
 };
 

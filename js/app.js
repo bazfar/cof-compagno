@@ -5934,35 +5934,61 @@ const App = (() => {
     magicien: "Manuel d'incantation", enchanteur: "Manuel d'incantation", necromancien: "Manuel d'incantation",
     pretre: "Amulette de Bénédiction",
   };
+  // Cœur partagé par apprendreSortDepuisParchemin (consomme un parchemin
+  // précis) et apprendreSortDirectementDuGrimoire (bouton "Apprentissage"
+  // de la carte Grimoire, liste complète du catalogue, aucune consommation
+  // d'objet) : mute `p` déjà chargé par l'appelant, ne sauve/rafraîchit
+  // PAS elle-même — même principe de passage local unique que
+  // _gererDeclencheursEquipement plus haut, pour que l'appelant puisse
+  // encore consommer un parchemin dans la MÊME transaction sans écraser
+  // grimoireSortsConnus au second sauverPersos(). Renvoie le sort appris
+  // (truthy) ou null si bloqué (message déjà toasté).
+  function _apprendreSortGrimoireLocal(p, sortId) {
+    if (typeof CARAC_MAGIE === "undefined" || !CARAC_MAGIE[p.classe]) { toast("Seul un casteur pur peut apprendre ce sort."); return null; }
+    const perso = Personnage.depuisJSON(p);
+    const connus = p.grimoireSortsConnus || [];
+    if (connus.includes(sortId)) { toast("Ce sort est déjà connu."); return null; }
+    const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
+    const sort = catalogue.find((s) => s.id === sortId);
+    if (!sort) { toast("Sort introuvable pour cette classe."); return null; }
+    if (!perso._objetGrimoirePorte()) {
+      const nomAttendu = NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire";
+      toast(`Ajoute ${nomAttendu} à ton inventaire pour apprendre des sorts hors Voie.`);
+      return null;
+    }
+    const tierLibre = perso.emplacementLibrePourRang(sort.rang);
+    if (!tierLibre) {
+      toast(`Plus d'emplacement compatible avec un sort de rang ${sort.rang} — équipe un objet de meilleure rareté, ou n'apprends pas de nouveau sort pour l'instant.`);
+      return null;
+    }
+    p.grimoireSortsConnus = connus.concat([sortId]);
+    const slots = perso.slotsGrimoire();
+    toast(`📖 « ${sort.nom} » ajouté au Grimoire, emplacement 1-${GRIMOIRE_PLAFOND_TIER[tierLibre]} (${p.grimoireSortsConnus.length}/${slots} au total).`);
+    return sort;
+  }
   function apprendreSortDepuisParchemin(persoId, idx) {
     const persos = chargerPersos();
     const p = persos[persoId];
     if (!p) return;
     const item = p.inventaireListe[idx];
     if (!item || !estParcheminSort(item)) return;
-    if (typeof CARAC_MAGIE === "undefined" || !CARAC_MAGIE[p.classe]) { toast("Seul un casteur pur peut apprendre ce sort."); return; }
-    const perso = Personnage.depuisJSON(p);
-    const connus = p.grimoireSortsConnus || [];
-    if (connus.includes(item.sortAppris)) { toast("Ce sort est déjà connu."); return; }
-    const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
-    const sort = catalogue.find((s) => s.id === item.sortAppris);
-    if (!sort) { toast("Sort introuvable pour cette classe."); return; }
-    if (!perso._objetGrimoirePorte()) {
-      const nomAttendu = NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire";
-      toast(`Ajoute ${nomAttendu} à ton inventaire pour apprendre des sorts hors Voie.`);
-      return;
-    }
-    const tierLibre = perso.emplacementLibrePourRang(sort.rang);
-    if (!tierLibre) {
-      toast(`Plus d'emplacement compatible avec un sort de rang ${sort.rang} — équipe un objet de meilleure rareté, ou n'apprends pas de nouveau sort pour l'instant.`);
-      return;
-    }
-    p.grimoireSortsConnus = connus.concat([item.sortAppris]);
+    if (!_apprendreSortGrimoireLocal(p, item.sortAppris)) return;
     _consommerUnite(p, idx);
     sauverPersos(persos);
     afficherFiche(persoId);
-    const slots = perso.slotsGrimoire();
-    toast(`📖 « ${sort.nom} » ajouté au Grimoire, emplacement 1-${GRIMOIRE_PLAFOND_TIER[tierLibre]} (${p.grimoireSortsConnus.length}/${slots} au total).`);
+  }
+  // Bouton "📖 Apprentissage" de la carte Grimoire (liste complète du
+  // catalogue de classe, cf. bloc HTML dans afficherFiche ci-dessous) :
+  // apprend directement un sort choisi dans la liste, sans consommer de
+  // parchemin — l'objet de Grimoire porté (Manuel/Amulette) suffit, comme
+  // convenu.
+  function apprendreSortDirectementDuGrimoire(persoId, sortId) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    if (!_apprendreSortGrimoireLocal(p, sortId)) return;
+    sauverPersos(persos);
+    afficherFiche(persoId);
   }
 
   // Jet de mort (état Mourant, 0 PV, cf. REGLES_GENERALES "Mort et
@@ -6170,6 +6196,35 @@ const App = (() => {
                 const occ = perso.grimoireOccupationParTier();
                 return `<div class="aide" style="margin-bottom:8px;font-size:0.78rem;">Par rang max. logeable — 1-2 : ${occ["12"]}/${cap["12"]} · 1-3 : ${occ["13"]}/${cap["13"]} · 1-4 : ${occ["14"]}/${cap["14"]} · 1-5 : ${occ["15"]}/${cap["15"]}</div>`;
               })() : ""}
+              ${perso.slotsGrimoire() > 0 ? `
+              <div class="barre-actions" style="margin-bottom:8px;">
+                <button type="button" class="btn petit secondaire btn-toggle-apprentissage-grimoire" data-perso="${id}">📖 Apprentissage</button>
+              </div>
+              <div class="grimoire-apprentissage" id="grimoire-apprentissage-${id}" style="display:none;margin-bottom:8px;">
+                ${(function () {
+                  const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
+                  if (!catalogue.length) return `<div class="vide">Catalogue vide pour cette classe.</div>`;
+                  const connus = p.grimoireSortsConnus || [];
+                  const accordes = perso.sortsGrimoireAccordes();
+                  const tries = catalogue.slice().sort((a, b) => a.rang - b.rang);
+                  return tries.map((sort) => {
+                    const dejaConnu = connus.includes(sort.id) || accordes.includes(sort.id);
+                    const tierLibre = dejaConnu ? null : perso.emplacementLibrePourRang(sort.rang);
+                    const action = dejaConnu
+                      ? `<span class="loot-badge">Connu</span>`
+                      : tierLibre
+                        ? `<button type="button" class="btn petit or btn-apprendre-sort-direct" data-perso="${id}" data-sort="${sort.id}">Apprendre (1-${GRIMOIRE_PLAFOND_TIER[tierLibre]})</button>`
+                        : `<span class="loot-badge" style="opacity:.6;">Aucun emplacement</span>`;
+                    return `<div class="cap-fiche" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                      <div>
+                        <div class="titre-cap">${echapper(sort.nom)}</div>
+                        <div class="voie-source">Rang ${sort.rang}${sort.categorie ? " · " + echapper(sort.categorie) : ""}</div>
+                      </div>
+                      ${action}
+                    </div>`;
+                  }).join("");
+                })()}
+              </div>` : ""}
               ${(function () {
                 const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
                 const appris = p.grimoireSortsConnus || [];
@@ -6520,6 +6575,19 @@ const App = (() => {
     // Inventaire — apprendre un sort depuis un parchemin (Grimoire)
     zone.querySelectorAll(".btn-apprendre-sort").forEach((el) => {
       el.onclick = () => apprendreSortDepuisParchemin(id, parseInt(el.dataset.idx, 10));
+    });
+    // Carte Grimoire — bouton "Apprentissage" : replie/déplie la liste
+    // complète du catalogue de classe (cf. rendu ci-dessus).
+    zone.querySelectorAll(".btn-toggle-apprentissage-grimoire").forEach((el) => {
+      el.onclick = () => {
+        const liste = document.getElementById(`grimoire-apprentissage-${el.dataset.perso}`);
+        if (liste) liste.style.display = liste.style.display === "none" ? "block" : "none";
+      };
+    });
+    // Carte Grimoire — apprendre directement un sort choisi dans la liste
+    // (pas de parchemin à consommer, cf. apprendreSortDirectementDuGrimoire).
+    zone.querySelectorAll(".btn-apprendre-sort-direct").forEach((el) => {
+      el.onclick = () => apprendreSortDirectementDuGrimoire(el.dataset.perso, el.dataset.sort);
     });
     // Inventaire — formulaire d'ajout, lié au catalogue loot (+ option "divers")
     const btnAjouterItem = document.getElementById("btn-ajouter-item");

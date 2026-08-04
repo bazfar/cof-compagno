@@ -132,6 +132,8 @@ const LOOT_CATALOGUE = [
   { "id": "parchemin_sommeil", "nom": "Parchemin — Sommeil", "type": "consommable", "porte": false, "description": "Rouleau scellé, incantation de Sommeil prête à être copiée dans un Manuel d'incantation.", "sortAppris": "sommeil", "quantite": 1, "prixPo": 30 },
   { "id": "parchemin_peau_de_pierre", "nom": "Parchemin — Peau de pierre", "type": "consommable", "porte": false, "description": "Rouleau scellé, incantation de Peau de pierre prête à être copiée dans un Manuel d'incantation.", "sortAppris": "peau_de_pierre", "quantite": 1, "prixPo": 60 },
   { "id": "parchemin_boule_de_feu", "nom": "Parchemin — Boule de feu", "type": "consommable", "porte": false, "description": "Rouleau scellé, incantation de Boule de feu prête à être copiée dans un Manuel d'incantation.", "sortAppris": "boule_de_feu", "quantite": 1, "prixPo": 120 },
+  { "id": "parchemin_charme_mineur", "nom": "Parchemin — Charme mineur", "type": "consommable", "porte": false, "description": "Rouleau scellé, incantation de Charme mineur prête à être copiée dans un Manuel d'incantation.", "sortAppris": "charme_mineur", "quantite": 1, "prixPo": 30 },
+  { "id": "parchemin_benediction", "nom": "Parchemin — Bénédiction", "type": "consommable", "porte": false, "description": "Rouleau scellé, incantation de Bénédiction prête à être copiée dans une Amulette de Bénédiction.", "sortAppris": "benediction", "quantite": 1, "prixPo": 30 },
 
   // Accessoires : seuls ceux portant un champ bonusCarac/bonusDEF sont
   // chiffrés automatiquement (cf. Personnage.bonusCaracEquipement/
