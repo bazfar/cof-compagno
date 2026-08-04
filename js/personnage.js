@@ -804,6 +804,13 @@ class Personnage extends Entite {
     if (this.classe === "pretre" && this.estChoisie("Voie de la conversion", 1) && !this.equipement.torse) {
       bonus += 5;
     }
+    // Prêtre — Cercle du Bannissement, rang 2 "Armure de foi" (passive) :
+    // +1 CA permanent (partie chiffrable). Le +2 CA supplémentaire contre un
+    // attaquant mort-vivant/démon reste hors schéma — le calcul de CA n'a
+    // aucune connaissance de l'attaquant en cours au moment du jet.
+    if (this.classe === "pretre" && this.estChoisie("Voie de l'exorcisme", 2)) {
+      bonus += 1;
+    }
     // Barde — Voie de la rapière, rang 2 "Intelligence du combat" (passive) :
     // ajoute le Mod. d'INT à la DEF, en plus du Mod. de DEX.
     if (this.classe === "barde" && this.estChoisie("Voie de la rapière", 2)) {

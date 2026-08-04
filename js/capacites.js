@@ -322,6 +322,27 @@ const Capacites = (() => {
     return race.includes("mort-vivant") || race.includes("démon");
   }
 
+  // Prêtre — Cercle du Bannissement, sorts "Bannissement"/"Bannissement de
+  // zone" : dangerosité de la cible (champ 'dangerosite' du bestiaire, cf.
+  // data/bestiaire.json), même patron de lookup que _raceMonstreCible. null
+  // pour une cible PJ ou hors-bestiaire (jamais une dangerosité valide).
+  function _dangerositeCible(cible) {
+    if (!cible || cible.genre !== "monstre" || typeof Carte === "undefined" || !Carte.listeMonstresCombat) return null;
+    const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
+    const entree = tok && tok.monstreId && typeof BESTIAIRE_INDEX !== "undefined" && BESTIAIRE_INDEX[tok.monstreId];
+    return (entree && typeof entree.dangerosite === "number") ? entree.dangerosite : null;
+  }
+  // DD par dangerosité (barème donné par Thomas, dangerosité 4 interpolée
+  // entre 3 et 5, non confirmée explicitement) — null si hors barème (>5 ou
+  // inconnue), auquel cas le Bannissement échoue automatiquement.
+  function _ddBannissement(dangerosite) {
+    if (dangerosite == null || dangerosite > 5) return null;
+    if (dangerosite <= 2) return 14;
+    if (dangerosite === 3) return 16;
+    if (dangerosite === 4) return 17;
+    return 18; // dangerosite === 5
+  }
+
   // Table de mutation Palier 1 (data/mutations.js, fournie par Thomas) : au
   // moins 7 capacités rang 3 de "Voie du chaos", toutes classes confondues,
   // déclenchent un jet forcé sur cette table (indépendamment du palier de
@@ -1305,16 +1326,50 @@ const Capacites = (() => {
       cible = { id: persoId, nom: p.nom, genre: "perso", soi: true };
     }
 
-    // Prêtre — Voie de l'exorcisme, rang 1 "Symbole sacré" : réservé aux
-    // cibles démoniaques/mortes-vivantes (cf. _cibleEstDemonOuMortVivant,
-    // champ 'race' du bestiaire) — bloque AVANT résolution si la cible ne
-    // correspond pas, plutôt que de laisser un jet se dérouler pour rien.
-    // DEF inconnue (cible === null via cibleId manquant) : laissé passer,
-    // rien à vérifier automatiquement.
-    if (source.voie === "Voie de l'exorcisme" && source.rang === 1 && perso.classe === "pretre" &&
-        cible && !_cibleEstDemonOuMortVivant(cible)) {
-      return { ok: false, messages: [`${cible.nom} n'est ni démoniaque ni morte-vivante — Symbole sacré n'a aucun effet sur cette cible.`] };
+    // Prêtre — Cercle du Bannissement, sorts "Bannissement"/"Bannissement de
+    // zone" : jet 1d20+Mod.CHA (+Mod.SAG en zone) vs DD variable selon la
+    // dangerosité de la cible (cf. _ddBannissement) — hors du schéma
+    // jetOppose standard (toujours vs DEF), résolu ici en cas spécial
+    // identifié par idSort, cible déjà résolue ci-dessus. Réservé aux cibles
+    // race:'mort_vivant'/'demon', dangerosité ≤5. Court-circuite le reste de
+    // lancer() (return immédiat) : décompte lui-même usage + Points de
+    // Bannissement plutôt que de traverser le flux générique plus bas.
+    if ((source.idSort === "bannissement" || source.idSort === "bannissement_zone") && cible) {
+      if (!_cibleEstDemonOuMortVivant(cible)) {
+        return { ok: false, messages: [`${cible.nom} n'est ni démoniaque ni morte-vivante — le Bannissement n'a aucun effet sur cette cible.`] };
+      }
+      const dangerosite = _dangerositeCible(cible);
+      const dd = _ddBannissement(dangerosite);
+      if (dd === null) {
+        return { ok: false, messages: [`${cible.nom} a une dangerosité trop élevée (>5) ou inconnue — le Bannissement échoue automatiquement.`] };
+      }
+      const enZone = source.idSort === "bannissement_zone";
+      const modTotal = perso.mod("CHA") + (enZone ? perso.mod("SAG") : 0);
+      const d20v = App.lancerDe(20);
+      const total = d20v + modTotal;
+      const reussite = total >= dd;
+      App.ajouterHisto(`${libelle} — Bannissement`, total, false, false,
+        `d20[${d20v}] ${modTotal >= 0 ? "+" : ""}${modTotal} (${enZone ? "Mod.CHA+Mod.SAG" : "Mod.CHA"}) vs DD${dd} (dangerosité ${dangerosite})`);
+      messages.push(reussite
+        ? `Bannissement réussi : ${total} vs DD${dd} — ${cible.nom} est renvoyé(e) vers son plan d'origine.`
+        : `Bannissement raté : ${total} vs DD${dd} — aucun effet sur ${cible.nom}.`);
+      usage.appliquer();
+      if (mecanique.coutPointsBannissement) {
+        p.pointsBannissement = Math.max(0, (p.pointsBannissement || 0) - mecanique.coutPointsBannissement);
+        messages.push(`Points de Bannissement -${mecanique.coutPointsBannissement} (${p.pointsBannissement} restants).`);
+      }
+      App.sauverPersos(persos);
+      return { ok: true, messages };
     }
+
+    // Prêtre — Cercle du Bannissement, sort "Flamme sacrée" (rang 1,
+    // accordé) : contrairement à l'ex-"Symbole sacré" qu'il remplace (rang 1
+    // de l'ancienne voie, réservé aux cibles démoniaques/mortes-vivantes),
+    // Flamme sacrée se lance sur N'IMPORTE QUELLE cible — seul le bonus de
+    // dégâts est conditionnel (1d6→1d12 vs démon/mort-vivant), via le même
+    // mécanisme formuleAlternative que Réprimande divine (cf. resoudreEffet,
+    // branche "degats"). Pas de garde-fou de ciblage ici : l'ancien blocage
+    // de Symbole sacré est donc entièrement retiré plutôt que reporté.
 
     // Chasseur — Voie de la traque, rang 3 "Premier coup" : condition unique
     // ("cible qui n'a pas encore agi ce combat") entièrement vérifiable via

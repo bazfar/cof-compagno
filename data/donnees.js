@@ -583,26 +583,30 @@ const CLASSES = {
         speciale: false,
         description: "Contrôle pur — pas de dégâts directs, tout en bannissement, immobilisation et purification. Laisse le combat à l'Inquisition.",
         rangs: [
-          { rang: 1, nom: "Symbole sacré (activable, 10 m)", effet: "Attaque magique contre une cible démoniaque/morte-vivante : Repoussée (6 m), ne peut s'approcher à moins de 3 m pendant 1 tour",
-            mecanique: { type: "activable", usage: { frequence: "libre" }, cible: "ennemi", portee: 5, zone: null,
-              jetOppose: { caracAttaquant: "attaqueMagique", caracDefenseur: "DEF", difficulteFixe: null },
-              effets: [ { type: "etat", id: "repoussee", duree: "1" },
-                { type: "special", note: "Mécanisé (validé avec Thomas) : l'éligibilité de la cible (démoniaque/morte-vivante) est désormais vérifiée automatiquement via le champ 'race' du bestiaire (_cibleEstDemonOuMortVivant, capacites.js) — bloque l'activation avec un message clair si la cible ne correspond pas, plutôt que de laisser un jet se dérouler pour rien. Repousse de 6 m ; la cible ne peut s'approcher à moins de 3 m pendant 1 tour (restriction additionnelle non capturée par l'état seul)." } ] } },
-          { rang: 2, nom: "Rite de bannissement (L)", effet: "Attaque magique : échec → Immobilisée [1+Mod. de SAG] tours. Si invoquée et niveau inférieur : bannissement complet immédiat",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
-              jetOppose: { caracAttaquant: "attaqueMagique", caracDefenseur: "DEF", difficulteFixe: null },
-              effets: [ { type: "etat", id: "immobilisee", duree: "1+Mod.SAG" },
-                { type: "special", note: "Si la cible est invoquée et de niveau inférieur au Prêtre : bannissement complet immédiat au lieu de l'immobilisation — non modélisé par le schéma standard." } ] } },
-          { rang: 3, nom: "Purification du lieu (rituel, 10 min)", effet: "Purifie une zone de 5 cases de toute corruption mineure ambiante",
-            mecanique: { type: "rituel", usage: { frequence: "libre" }, cible: "zone", portee: null, zone: 5, jetOppose: null,
-              effets: [ { type: "special", note: "Purifie une zone de 10 m de toute corruption mineure ambiante — effet narratif/environnemental, pas un effet de combat chiffrable." } ] } },
-          { rang: 4, nom: "Exorcisme (L)", effet: "Attaque magique opposée à l'entité possédant un hôte : réussite → entité expulsée, hôte survit",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null,
-              jetOppose: { caracAttaquant: "attaqueMagique", caracDefenseur: "DEF", difficulteFixe: null },
-              effets: [ { type: "special", note: "Simplifié (validé avec Thomas, trouvé lors de la vérification finale) : caracDefenseur passé de 'Volonte' à 'DEF' — data/bestiaire.json n'expose aucun modificateur de Volonté/SAG par monstre, donc l'opposition d'origine ne pouvait jamais être automatisée. Contre 'DEF', le jet magique est désormais pleinement automatisé (touché/raté/critique via obtenirDefCible), même simplification que Chant corrupteur (Barde)/Manipulation mentale (Nécromancien) et consorts. Réussite : l'entité possédant l'hôte est expulsée, l'hôte survit — pas d'état dédié 'possédé/expulsé' dans le catalogue, reste narratif." } ] } },
-          { rang: 5, nom: "Sceau inviolable (L, 1x/scénario)", effet: "Empêche toute entité démoniaque/morte-vivante d'entrer/sortir d'une zone (10 cases) pendant [Niveau] heures",
-            mecanique: { type: "limitee", usage: { frequence: "1x/scenario" }, cible: "zone", portee: null, zone: 10, jetOppose: null,
-              effets: [ { type: "special", note: "Empêche toute entité démoniaque/morte-vivante d'entrer/sortir de la zone pendant [Niveau] heures — durée en heures hors combat, hors du vocabulaire de durée standard (tours/finCombat/finScenario)." } ] } },
+          { rang: 1, nom: "Lumière sacrée (passive + sort)", effet: "Débloque l'accès aux sorts de famille Bannissement. Accorde directement le sort Flamme sacrée",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Débloque famille 'bannissement' ET accorde directement 'flamme_sacree' (cf. SORTS_ACCORDES_PAR_VOIE), même patron que le rang 1 du Cercle de Vie (Imposition des mains)." } ] } },
+
+          { rang: 2, nom: "Armure de foi (passive)", effet: "+1 CA en permanence ; +2 CA supplémentaires (donc +3 au total) si l'attaquant est mort-vivant ou démon",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "+1 CA permanent (lu par bonusDefCapacites()) ; +2 CA conditionnels supplémentaires si l'attaquant en cours a race:'mort_vivant' ou race:'demon' — nécessite que le calcul de CA connaisse le type de l'attaquant au moment du jet, pas juste un bonus statique." } ] } },
+
+          { rang: 3, nom: "Arme sacrée (passive)", effet: "+1 aux jets d'attaque et +2 dégâts contre les créatures mortes-vivantes ou démoniaques",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "+1 attaque/+2 dégâts conditionnels si la cible de l'attaque a race:'mort_vivant' ou race:'demon' — permanent, pas besoin d'activer un sort contrairement à 'Arme bénie' du Cercle de la Foi (différence assumée entre les deux cercles)." } ] } },
+
+          { rang: 4, nom: "Bannissement (passive + sort)", effet: "Débloque un pool de 2 Points de Bannissement et le sort Bannissement (cible unique)",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Fixe pointsBannissementMax à 2. Débloque directement le sort 'bannissement' (cf. Partie 4)." } ] } },
+
+          { rang: 5, nom: "Exil de masse (passive + sort)", effet: "+1 Point de Bannissement (pool à 3). Débloque Bannissement de zone (4 cases, +Mod.SAG au jet)",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "pointsBannissementMax passe à 3. Débloque directement 'bannissement_zone' (cf. Partie 4)." } ] } },
         ],
       },
       {
@@ -2124,6 +2128,59 @@ const SORTS_PRETRE = [
       cible: "zone", portee: null, zone: { taille: 3 }, jetOppose: null,
       effets: [ { type: "bonusTemporaire", cle: "DEF", valeur: 2, duree: { tours: 3 }, cible: "allies" },
         { type: "bonusTemporaire", cle: "DEF", valeur: -2, duree: { tours: 3 }, cible: "ennemis" } ] } },
+
+  // --- Famille bannissement (7 sorts, cf. prompt_pretre_cercle_bannissement.md) ---
+  // Rang 1 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)
+  { id: "flamme_sacree", nom: "Flamme sacrée", rang: 1, categorie: "bannissement",
+    effet: "1d6 dégâts sacrés (1d12 si la cible est mort-vivante ou démon). Coûte 2 PP",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "unique", portee: 10, zone: null,
+      jetOppose: { caracAttaquant: "SAG", caracDefenseur: "DEF" },
+      effets: [ { type: "degats", formule: "1d6", typeDegats: "magique",
+        formuleAlternative: { condition: "race:mort_vivant|demon", formule: "1d12" } } ] } },
+
+  // Rang 2
+  { id: "rite_de_bannissement", nom: "Rite de bannissement", rang: 2, categorie: "bannissement",
+    effet: "Attaque magique : échec → Immobilisée [1+Mod.SAG] tours. Si invoquée et niveau inférieur : bannissement complet immédiat",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "unique", portee: 10, zone: null,
+      jetOppose: { caracAttaquant: "SAG", caracDefenseur: "DEF" },
+      effets: [ { type: "etat", id: "immobilisee", duree: { tours: "1+Mod.SAG" } },
+        { type: "special", note: "Bannissement complet immédiat si la cible est une invocation de niveau inférieur au lanceur — condition non chiffrée par un mécanisme générique existant, à vérifier/résoudre manuellement." } ] } },
+
+  // Rang 3
+  { id: "purification_du_lieu", nom: "Purification du lieu", rang: 3, categorie: "bannissement",
+    effet: "Purifie une zone de 5 cases de toute corruption mineure ambiante (rituel, 10 min)",
+    mecanique: { type: "rituel", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
+      effets: [ { type: "special", note: "Effet narratif de nettoyage de zone — pas de mécanique chiffrée existante pour 'corruption ambiante'." } ] } },
+
+  // Rang 4 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)
+  { id: "exorcisme", nom: "Exorcisme", rang: 4, categorie: "bannissement",
+    effet: "Attaque magique opposée à l'entité possédant un hôte : réussite → entité expulsée, hôte survit",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+      cible: "unique", portee: 5, zone: null,
+      jetOppose: { caracAttaquant: "SAG", caracDefenseur: "Volonte" },
+      effets: [ { type: "special", note: "Nécessite une notion de 'possession' (entité liée à un hôte) — vérifier si un tel état existe déjà dans le système, sinon résolution entièrement narrative par la table." } ] } },
+
+  { id: "bannissement", nom: "Bannissement", rang: 4, categorie: "bannissement",
+    effet: "Tente de renvoyer une créature morte-vivante/démoniaque de dangerosité ≤5 vers son plan d'origine. Jet d20+Mod.CHA : DD 14 (dangerosité 1-2), DD 16 (dangerosité 3), DD 17 (dangerosité 4, interpolé), DD 18 (dangerosité 5). Coûte 1 Point de Bannissement",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPointsBannissement: 1,
+      cible: "unique", portee: 10, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "Jet 1d20+Mod.CHA (PAS Mod.SAG) contre un DD variable selon la dangerosité de la cible (table ci-dessus, DD dangerosité 4 = 17 interpolé, à confirmer par Thomas). Réussite = créature renvoyée (retirée du combat). Réservé aux cibles race:'mort_vivant'/'demon', dangerosité ≤5." } ] } },
+
+  // Rang 5 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)
+  { id: "sceau_inviolable", nom: "Sceau inviolable", rang: 5, categorie: "bannissement",
+    effet: "Empêche toute entité démoniaque/morte-vivante d'entrer/sortir d'une zone de 10 cases pendant [niveau] heures",
+    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
+      cible: "zone", portee: null, zone: { taille: 10 }, jetOppose: null,
+      effets: [ { type: "special", note: "Effet de zone narratif de longue durée — pas de moteur de blocage de mouvement conditionnel par race dans l'app, résolution manuelle par la table." } ] } },
+
+  { id: "bannissement_zone", nom: "Bannissement de zone", rang: 5, categorie: "bannissement",
+    effet: "Comme Bannissement, mais tente l'effet sur toutes les cibles éligibles d'une zone de 4 cases, avec Mod.SAG ajouté au jet en plus de Mod.CHA. Coûte 1 Point de Bannissement",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPointsBannissement: 1,
+      cible: "zone", portee: 10, zone: { taille: 4 }, jetOppose: null,
+      effets: [ { type: "special", note: "Jet 1d20+Mod.CHA+Mod.SAG (bonus cumulé, confirmé par Thomas — la version de zone est délibérément plus facile à réussir que la version cible unique) contre le même barème de DD que 'bannissement', appliqué indépendamment à chaque cible éligible de la zone." } ] } },
 ];
 
 /* Table des sorts accordés directement par un rang de voie (pas appris via
