@@ -26,6 +26,8 @@
      idPersoDepuisRef/monstreEstVisible/onMonstreDevientVisible/onMonstresChange/
      reinitialiserDetectionVisibilite
    - js/capacites.js   → Capacites.decompterEtatsDebutTour/retirerEtatsFinCombat
+   - js/sauvegardes.js → Sauvegardes.reinitialiser (résistance légendaire,
+     compteur remis à zéro à la fin de terminerCombat)
    - js/app.js (chargé APRÈS ce fichier, référencé seulement à l'exécution,
      jamais à la définition du module) → App.chargerPersos/sauverPersos/
      lancerDe/ajouterHisto, déjà exposés pour js/capacites.js — réutilisés ici
@@ -549,6 +551,11 @@ const Combat = (() => {
     });
     if (modifie) App.sauverPersos(persos);
     if (typeof Carte !== "undefined" && Carte.reinitialiserDetectionVisibilite) Carte.reinitialiserDetectionVisibilite();
+    // Résistance légendaire (js/sauvegardes.js, 04/08/2026) : compteur par
+    // combat, remis à zéro ici (une seule fois par combat, comme le reste de
+    // cette fonction) plutôt que dans Capacites.retirerEtatsFinCombat (qui
+    // boucle par PJ) — le compteur est côté monstre, indépendant des PJ.
+    if (typeof Sauvegardes !== "undefined") Sauvegardes.reinitialiser();
     _sauver(_etatVide());
   }
 

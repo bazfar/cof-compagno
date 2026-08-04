@@ -239,6 +239,87 @@ const Capacites = (() => {
     return null;
   }
 
+  // Bonus de l'ATTAQUANT dans un jetOppose — extrait du bloc historique
+  // vs DEF pour être réutilisé tel quel par la branche réactive
+  // (_resoudreSauvegardeReactive) sans dupliquer/diverger le calcul.
+  // N'inclut PAS typeAttaque (seuil de critique) : ce n'est pertinent que
+  // pour la résolution touché/critique vs DEF, jamais pour un DD de
+  // sauvegarde, qui n'a pas de notion de critique côté lanceur.
+  function _bonusAttaquantJetOppose(perso, jetOppose) {
+    const ca = jetOppose && jetOppose.caracAttaquant;
+    if (ca === "attaqueMagique") return perso.bonusAttaque("magique") || 0;
+    if (ca === "attaqueContact") return perso.bonusAttaque("contact");
+    if (ca === "attaqueDistance") return perso.bonusAttaque("distance");
+    // Moine — Voie de l'élévation, rang 3 : test de Perception (SAG + comp.) vs DEF.
+    if (ca === "Perception") return perso.modCompetence("Perception", "SAG");
+    if (ca) return perso.mod(ca.replace(/^Mod\./i, "").toUpperCase());
+    return 0;
+  }
+
+  // Résolution d'une sauvegarde réactive. Renvoie { reussite, echecCritique,
+  // dd, modCible, messages }. modCible === null signale un modificateur
+  // introuvable : l'appelant ne doit alors PAS gater d'effet, le DD est affiché
+  // et la table tranche (même politique que defCible === null côté attaque).
+  function _resoudreSauvegardeReactive({ perso, persos, cible, mecanique, nomSauvegarde, libelle, source }) {
+    const messages = [];
+    const libelleSauv = (typeof Sauvegardes !== "undefined" && Sauvegardes.LIBELLES[nomSauvegarde]) || nomSauvegarde;
+
+    // Bonus du lanceur : REPRIS du bloc jetOppose existant (cf.
+    // _bonusAttaquantJetOppose ci-dessus) plutôt que d'en écrire un second
+    // qui divergerait.
+    const bonusLanceur = _bonusAttaquantJetOppose(perso, mecanique.jetOppose);
+    const dd = (mecanique.jetOppose.difficulteFixe != null)
+      ? mecanique.jetOppose.difficulteFixe
+      : DD_SAUVEGARDE_BASE + bonusLanceur;
+
+    // Modificateur de la cible : PJ via Personnage.modSauvegarde, monstre via
+    // la dérivation de js/sauvegardes.js (le bestiaire n'a aucune carac).
+    let modCible = null;
+    let tokMonstre = null;
+    if (cible && cible.genre === "perso" && persos[cible.id]) {
+      modCible = Personnage.depuisJSON(persos[cible.id]).modSauvegarde(nomSauvegarde);
+    } else if (cible && cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
+      tokMonstre = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id) || null;
+      if (tokMonstre && typeof Sauvegardes !== "undefined") {
+        modCible = Sauvegardes.modMonstre(tokMonstre, nomSauvegarde);
+      }
+    }
+
+    if (modCible === null) {
+      messages.push(`Sauvegarde de ${libelleSauv} — DD ${dd}. Modificateur de ${cible ? cible.nom : "la cible"} inconnu : à résoudre par la table.`);
+      return { reussite: true, echecCritique: false, dd, modCible: null, messages };
+    }
+
+    const d20 = App.lancerDe(20);
+    const total = d20 + modCible;
+    // 20 naturel = réussite automatique (contrepartie exacte du « 1 naturel du
+    // lanceur = échec critique » de l'ancien pipeline d'attaque).
+    // 1 naturel = échec critique : effet appliqué ET dégâts doublés.
+    const reussiteAuto = d20 === 20;
+    const echecCritique = d20 === 1;
+    let reussite = reussiteAuto || (!echecCritique && total >= dd);
+
+    App.ajouterHisto(`${libelle} — Sauvegarde de ${cible.nom} (${libelleSauv})`, total, reussiteAuto, echecCritique,
+      `d20[${d20}] ${modCible >= 0 ? "+" : ""}${modCible} vs DD ${dd}`);
+
+    // Résistance légendaire : APRÈS le jet, y compris sur un 1 naturel — c'est
+    // précisément le cas où elle sauve la mise du boss.
+    if (!reussite && tokMonstre && typeof Sauvegardes !== "undefined" && Sauvegardes.consommer(tokMonstre)) {
+      const restant = Sauvegardes.restant(tokMonstre);
+      messages.push(`Sauvegarde de ${cible.nom} (${libelleSauv}) : ${total} vs DD ${dd} — échec, mais RÉSISTANCE LÉGENDAIRE : converti en réussite (${restant} usage${restant > 1 ? "s" : ""} restant${restant > 1 ? "s" : ""}).`);
+      return { reussite: true, echecCritique: false, dd, modCible, messages };
+    }
+
+    if (reussiteAuto) {
+      messages.push(`Sauvegarde de ${cible.nom} (${libelleSauv}) : 20 naturel — réussite automatique, aucun effet.`);
+    } else if (echecCritique) {
+      messages.push(`Sauvegarde de ${cible.nom} (${libelleSauv}) : 1 naturel — ÉCHEC CRITIQUE, effet appliqué et dégâts doublés.`);
+    } else {
+      messages.push(`Sauvegarde de ${cible.nom} (${libelleSauv}) : ${total} (d20[${d20}] ${modCible >= 0 ? "+" : ""}${modCible}) vs DD ${dd} — ${reussite ? "réussie, aucun effet." : "échec."}`);
+    }
+    return { reussite, echecCritique, dd, modCible, messages };
+  }
+
   // Guerrier — Voie du peuple, rang 2 "L'exemple" (passive) : +1 DEF à tout PJ
   // à 2 cases (cf. Carte.distanceCasesEntre) d'un Guerrier possédant ce rang,
   // tant que ce Guerrier reste immobile ce tour (Combat.estImmobile, même
@@ -845,6 +926,12 @@ const Capacites = (() => {
   // reactionsUtilisees) : les âmes stockées persistent d'un combat à l'autre,
   // conformément au texte ("réceptacle").
   const AMES_MAX = 3;
+
+  // Sauvegardes réactives (04/08/2026) : DD passif opposé au jet de la cible.
+  // 12 préserve à l'unité près les probabilités de l'ancien modèle defMentale
+  // (cf. prompt_sauvegardes_phaseB_moteur.md §1). Seule constante à ajuster si
+  // la calibration se révèle trop dure en jeu.
+  const DD_SAUVEGARDE_BASE = 12;
 
   // Moine — Voie des éléments, rang 4 "Fusion élémentaire" (1x/combat) :
   // table des 6 combos de paires fournie par Thomas, lue par lancer() selon
@@ -1700,10 +1787,11 @@ const Capacites = (() => {
     // suivi, en cas d'ÉCHEC, d'un second jet 1d20 sur une table à 3 paliers —
     // hors du schéma jetSauvegardeFixe générique plus bas (celui-ci ne gère
     // qu'un succès/échec binaire), donc résolu ici en cas particulier, avant
-    // le reste du pipeline. Non automatisable pour un monstre (le bestiaire
-    // n'expose pas ses modificateurs de caractéristique, même limite que
-    // partout ailleurs dans ce fichier) : message manuel, sans jet. Retourne
-    // toujours tôt : ne passe jamais par le bloc générique jetOppose/effets.
+    // le reste du pipeline. Résolu aussi contre un monstre (04/08/2026) via
+    // js/sauvegardes.js (Sauvegardes.modMonstre, résistance légendaire
+    // comprise) — le bestiaire n'a toujours aucune caractéristique propre,
+    // d'où la dérivation plutôt qu'un jet direct. Retourne toujours tôt : ne
+    // passe jamais par le bloc générique jetOppose/effets.
     if (source.voie === "Voie du chaos" && source.rang === 4 && perso.classe === "enchanteur") {
       if (!cible) return { ok: false, messages: ["Choisis une cible avant d'activer Murmure terrifiant."] };
       // Coût en jauge de combat (4 CS) : décompté ici puisque ce cas
@@ -1715,40 +1803,79 @@ const Capacites = (() => {
         messages.push(`Corruption -${mecanique.corruptionCout} (jauge de combat : ${p.corruptionCombat}).`);
       }
       const { carac, dd } = mecanique.jetSauvegardeFixe;
-      if (!(cible.genre === "perso" && persos[cible.id])) {
-        messages.push(`Sauvegarde (${carac}) DD ${dd} — non automatisable pour ${cible.nom} (monstre) : le bestiaire n'expose pas ses modificateurs de caractéristique. Résolution manuelle par la table (3 paliers : 19-20 mort, 16-18 1d10 DM, <16 folie 3 tours).`);
+      // Côté monstre (04/08/2026) : modificateur dérivé via js/sauvegardes.js
+      // (le bestiaire n'expose aucune caractéristique) au lieu du message
+      // manuel d'origine — la table à 3 paliers ci-dessous reste identique
+      // en cas d'échec, la résistance légendaire s'applique après le jet.
+      let modCible = null;
+      let tokMonstre = null;
+      if (cible.genre === "perso" && persos[cible.id]) {
+        // carac (ex. "Volonte") est un NOM DE SAUVEGARDE (cf. SAUVEGARDES,
+        // data/donnees.js), pas un code de caractéristique brut — Personnage.
+        // mod() n'accepte que FOR/DEX/CON/INT/SAG/CHA, d'où la traduction.
+        modCible = Personnage.depuisJSON(persos[cible.id]).mod((typeof SAUVEGARDES !== "undefined" && SAUVEGARDES[carac]) || carac);
+      } else if (cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
+        tokMonstre = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id) || null;
+        if (tokMonstre && typeof Sauvegardes !== "undefined") modCible = Sauvegardes.modMonstre(tokMonstre, carac);
+      }
+      if (modCible === null) {
+        messages.push(`Sauvegarde (${carac}) DD ${dd} — modificateur de ${cible.nom} inconnu : résolution manuelle par la table (3 paliers : 19-20 mort, 16-18 1d10 DM, <16 folie 3 tours).`);
         usage.appliquer && usage.appliquer();
         App.sauverPersos(persos);
         return { ok: true, messages };
       }
-      const cibPerso = Personnage.depuisJSON(persos[cible.id]);
-      // carac (ex. "Volonte") est un NOM DE SAUVEGARDE (cf. SAUVEGARDES,
-      // data/donnees.js), pas un code de caractéristique brut — Personnage.
-      // mod() n'accepte que FOR/DEX/CON/INT/SAG/CHA, d'où la traduction.
-      const modCible = cibPerso.mod((typeof SAUVEGARDES !== "undefined" && SAUVEGARDES[carac]) || carac);
       const d20c = App.lancerDe(20);
       const totalC = d20c + modCible;
-      const reussite = totalC >= dd;
+      let reussite = totalC >= dd;
       App.ajouterHisto(`${libelle} — Sauvegarde de ${cible.nom} (${carac})`, totalC, false, false, `d20[${d20c}] ${modCible >= 0 ? "+" : ""}${modCible} vs ${dd}`);
       messages.push(`Sauvegarde de ${cible.nom} (${carac}) : ${totalC} vs ${dd} — ${reussite ? "réussie, aucun effet." : "échec."}`);
+      // Résistance légendaire : après le jet, avant la table à paliers — un
+      // boss qui échoue au premier jet consomme un usage plutôt que de
+      // risquer la mort directe sur un 19-20.
+      if (!reussite && tokMonstre && typeof Sauvegardes !== "undefined" && Sauvegardes.consommer(tokMonstre)) {
+        const restant = Sauvegardes.restant(tokMonstre);
+        messages.push(`RÉSISTANCE LÉGENDAIRE : échec converti en réussite (${restant} usage${restant > 1 ? "s" : ""} restant${restant > 1 ? "s" : ""}).`);
+        reussite = true;
+      }
       if (reussite) {
         usage.appliquer && usage.appliquer();
         App.sauverPersos(persos);
         return { ok: true, messages };
       }
-      const pCible = persos[cible.id];
       const d20t = App.lancerDe(20);
       App.ajouterHisto(`${libelle} — Table des paliers`, d20t, false, false, `1d20[${d20t}]`);
-      if (d20t >= 19) {
-        pCible.pvActuel = 0;
-        messages.push(`Table (1d20=${d20t}, 19-20) : ${cible.nom} se suicide de folie — mort (PV à 0, cause narrative distincte d'un KO de combat).`);
+      // La table applique directement pvActuel/etatsActifs sur un objet PJ
+      // (persos[cible.id]) — un monstre n'a ni l'un ni l'autre par ce biais
+      // (cf. Carte.listeMonstresCombat/appliquerDegatsCombat, un modèle
+      // séparé). Seul le palier "dégâts" (16-18) a un équivalent monstre
+      // direct (Carte.appliquerDegatsCombat) ; mort (19-20, via
+      // Carte.definirPvCombat) et folie (<16, aucun état de monstre suivi
+      // par l'app) restent décrits pour résolution manuelle par la table —
+      // découvert en testant Murmure terrifiant contre un monstre (crash
+      // sur persos[cible.id] undefined avant ce correctif).
+      if (cible.genre === "perso") {
+        const pCible = persos[cible.id];
+        if (d20t >= 19) {
+          pCible.pvActuel = 0;
+          messages.push(`Table (1d20=${d20t}, 19-20) : ${cible.nom} se suicide de folie — mort (PV à 0, cause narrative distincte d'un KO de combat).`);
+        } else if (d20t >= 16) {
+          const { total, detail } = resoudreExpression("1d10", { perso, rang: source.rang });
+          const resDeg = appliquerDegatsPersoLocal(pCible, total);
+          messages.push(`Table (1d20=${d20t}, 16-18) : ${total} dégâts (${detail}) → ${cible.nom} : ${resDeg.pvActuel} PV restants.`);
+        } else {
+          appliquerEtatSurPerso(pCible, { id: "folie_illusoire", duree: "3" }, libelle, { perso, rang: source.rang });
+          messages.push(`Table (1d20=${d20t}, <16) : ${cible.nom} sombre dans la folie (état 'folie_illusoire', attaque la créature la plus proche pendant 3 tours).`);
+        }
+      } else if (d20t >= 19) {
+        messages.push(`Table (1d20=${d20t}, 19-20) : ${cible.nom} se suicide de folie — mort. Applique manuellement (Carte.definirPvCombat à 0 ou ✕ sur le jeton) : aucun état de monstre suivi par l'app pour automatiser une "mort narrative" distincte d'un KO de combat.`);
       } else if (d20t >= 16) {
         const { total, detail } = resoudreExpression("1d10", { perso, rang: source.rang });
-        const resDeg = appliquerDegatsPersoLocal(pCible, total);
-        messages.push(`Table (1d20=${d20t}, 16-18) : ${total} dégâts (${detail}) → ${cible.nom} : ${resDeg.pvActuel} PV restants.`);
+        const resMonstre = typeof Carte !== "undefined" && Carte.appliquerDegatsCombat ? Carte.appliquerDegatsCombat(cible.id, total) : null;
+        messages.push(resMonstre
+          ? `Table (1d20=${d20t}, 16-18) : ${total} dégâts (${detail}) → ${resMonstre.nom} : ${resMonstre.pvActuel} PV restants.`
+          : `Table (1d20=${d20t}, 16-18) : ${total} dégâts (${detail}) → à appliquer manuellement à ${cible.nom} (jeton introuvable).`);
       } else {
-        appliquerEtatSurPerso(pCible, { id: "folie_illusoire", duree: "3" }, libelle, { perso, rang: source.rang });
-        messages.push(`Table (1d20=${d20t}, <16) : ${cible.nom} sombre dans la folie (état 'folie_illusoire', attaque la créature la plus proche pendant 3 tours).`);
+        messages.push(`Table (1d20=${d20t}, <16) : ${cible.nom} sombre dans la folie — applique manuellement l'équivalent de l'état 'folie_illusoire' (attaque la créature la plus proche pendant 3 tours) : aucun suivi d'état pour les monstres.`);
       }
       usage.appliquer && usage.appliquer();
       App.sauverPersos(persos);
@@ -2003,27 +2130,56 @@ const Capacites = (() => {
     // pareil : 1d20+attaque vs une valeur cible. Seuls la valeur opposée et
     // le libellé changent.
     const cd0 = mecanique.jetOppose && mecanique.jetOppose.caracDefenseur;
-    const attaqueVsDef = !!(mecanique.jetOppose &&
-      (cd0 === "DEF" || cd0 === "defMentale" || mecanique.jetOppose.caracDefenseurCalcule));
+    // Sauvegardes RÉACTIVES (04/08/2026) : defMentale et les clés de
+    // SAUVEGARDES ne passent plus par le pipeline d'attaque — le lanceur ne
+    // jette plus, il pose un DD que la cible tente de battre. defMentale est
+    // un alias historique de "Volonte" : les données le portent encore sur
+    // Domination / Éclat chaotique / Drain d'âme, inutile de les migrer tant
+    // que l'alias est traité ici.
+    const nomSauvegarde = cd0 === "defMentale" ? "Volonte"
+      : (cd0 && typeof SAUVEGARDES !== "undefined" && SAUVEGARDES[cd0]) ? cd0
+      : null;
+    const attaqueVsDef = !!(mecanique.jetOppose && !nomSauvegarde &&
+      (cd0 === "DEF" || mecanique.jetOppose.caracDefenseurCalcule));
+    // estDefMentale : conservée pour la branche attaqueVsDef ci-dessous
+    // (bloc non modifié par ce chantier) même si elle ne peut plus valoir
+    // true en pratique — cd0 === "defMentale" rend nomSauvegarde truthy,
+    // donc bascule désormais dans la branche réactive avant d'atteindre ce
+    // code. La retirer casserait la référence plus bas (obtenirVolonteCible).
     const estDefMentale = cd0 === "defMentale";
-    const libelleDef = estDefMentale ? "SAG" : "DEF";
+    const libelleDef = "DEF";
 
-    if (mecanique.jetOppose) {
+    if (mecanique.jetOppose && nomSauvegarde) {
+      // --- Branche réactive -------------------------------------------
+      // Court-circuite entièrement le bloc jetOppose classique ci-dessous :
+      // aucun jet du lanceur, donc ni critique ni échec critique de son côté.
+      // Le critique est déplacé sur le 1 naturel de la CIBLE (compensation
+      // validée le 04/08/2026), pour conserver un taux de 5 % de dégâts
+      // doublés sur ces sorts.
+      const resSauv = _resoudreSauvegardeReactive({
+        perso, persos, cible, mecanique, nomSauvegarde, libelle, source,
+      });
+      messages.push(...resSauv.messages);
+      if (resSauv.modCible !== null) {
+        resolutionDegats = {
+          touche: !resSauv.reussite,
+          critique: resSauv.echecCritique,
+          echecCritique: false,
+          totalAttaque: null,
+          defCible: resSauv.dd,
+          persoId, source, mecanique, cible, choixEffet,
+        };
+      }
+    } else if (mecanique.jetOppose) {
       const ca = mecanique.jetOppose.caracAttaquant;
-      let bonus = 0;
+      const bonus = _bonusAttaquantJetOppose(perso, mecanique.jetOppose);
       // typeAttaque : "contact"/"distance"/"magique", pour Personnage.
       // critMinAttaque(type) — les 28 rangs jetOppose vs DEF du jeu ont
       // toujours un caracAttaquant parmi ces trois valeurs (vérifié dans
-      // data/donnees.js), jamais un Mod.XXX brut.
-      let typeAttaque = null;
-      if (ca === "attaqueMagique") { bonus = perso.bonusAttaque("magique") || 0; typeAttaque = "magique"; }
-      else if (ca === "attaqueContact") { bonus = perso.bonusAttaque("contact"); typeAttaque = "contact"; }
-      else if (ca === "attaqueDistance") { bonus = perso.bonusAttaque("distance"); typeAttaque = "distance"; }
-      // Moine — Voie de l'élévation, rang 3 : test de Perception (SAG + comp.)
-      // vs DEF, pas une attaque — pas de seuil de critique dédié (typeAttaque
-      // reste null, critMin retombe sur 20 plus bas).
-      else if (ca === "Perception") bonus = perso.modCompetence("Perception", "SAG");
-      else if (ca) bonus = perso.mod(ca.replace(/^Mod\./i, "").toUpperCase());
+      // data/donnees.js), jamais un Mod.XXX brut. Calculé séparément de
+      // _bonusAttaquantJetOppose (qui ne renvoie que le bonus) : ce n'est
+      // qu'un aiguillage sur `ca`, pas une seconde source de vérité.
+      const typeAttaque = (ca === "attaqueMagique") ? "magique" : (ca === "attaqueContact") ? "contact" : (ca === "attaqueDistance") ? "distance" : null;
       const d20 = App.lancerDe(20);
       const total = d20 + bonus;
       App.ajouterHisto(`${libelle} — Jet d'attaque`, total, d20 === 20, d20 === 1, `d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}`);
@@ -2138,7 +2294,16 @@ const Capacites = (() => {
       // documenté plus haut) — sans changer ce comportement par défaut pour
       // toutes les autres capacités 'bonus' déjà en jeu.
       if (saveBloqueEffets) return;
-      if (attaqueVsDef && (TYPES_EFFETS_DIFFERES.includes(effet.type) || effet.differe)) return;
+      // resolutionDegats (pas attaqueVsDef seul, depuis les sauvegardes
+      // réactives du 04/08/2026) : signale qu'une résolution différée est
+      // effectivement en attente — attaqueVsDef le pose toujours (branche
+      // historique vs DEF), la branche réactive seulement si modCible !==
+      // null (cf. _resoudreSauvegardeReactive). Sans ce garde-fou sur
+      // resolutionDegats, un sort à sauvegarde (defMentale/SAUVEGARDES)
+      // appliquait ses dégâts ICI en plus de leur ré-application par
+      // resoudreDegatsEnAttente() — double comptage découvert en testant
+      // Drain d'âme.
+      if (resolutionDegats && (TYPES_EFFETS_DIFFERES.includes(effet.type) || effet.differe)) return;
       // Enchanteur — Voie de l'enchantement, rang 3 "Image décalée
       // (évolution)" : remplace le bonus DEF+1 du sort 'illusion' (rang 1,
       // même voie) par l'état 'image_decalee' (déjà au catalogue js/etats.js
