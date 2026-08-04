@@ -105,6 +105,16 @@ const ETATS = {
     description: "+2d6 DM à toutes les attaques au contact (cf. Personnage.bonusDegatsAvatarPacte) et immunité à la Peur (cf. Personnage.aImmuniteEtat) tant que l'état dure (Chevalier, Voie du chaos rang 5). Le +4 DEF est posé séparément. Contrecoup (perd son action de mouvement au tour suivant) non modélisé." },
   vol: { nom: "Vol", categorie: "buff",
     description: "Peut voler librement tant que l'état dure (Magicien, sort Vol, rang 3)." },
+  arme_benie: { nom: "Arme bénie", categorie: "buff",
+    description: "+1 attaque et +2 dégâts au contact contre les créatures maléfiques/mortes-vivantes tant que l'état dure (Prêtre, Cercle de la Foi, sort Arme bénie, rang 3) — cf. Personnage.aArmeBenie." },
+  increvable: { nom: "Increvable", categorie: "buff",
+    description: "Les PV ne peuvent pas descendre sous 1 tant que l'état dure (Prêtre, Voie du chaos rang 5 « Le fléau, c'est moi ! ») — plancher spécial, distinct du KO normal à 0 PV, cf. subirDegats côté app.js." },
+  protection_mort: { nom: "Protection contre la mort", categorie: "buff",
+    description: "La prochaine fois que la cible tomberait à 0 PV ce combat, elle reste à 1 PV à la place (Prêtre, Cercle de Vie, sort Protection contre la mort, rang 3) — résolution manuelle, non chiffrée." },
+  apaise: { nom: "Apaisé", categorie: "controle",
+    description: "Ne peut pas attaquer ce tour, sauf en cas de légitime défense (Prêtre, Cercle de la Foi, sort Calme les esprits, rang 2)." },
+  heretique: { nom: "Hérétique", categorie: "malus",
+    description: "Tout dégât subi par la cible est augmenté de +1d4 (+1d8 si mort-vivante) tant que l'état dure (Prêtre, Cercle de la Foi, sort Voix du jugement, rang 4) — bonus appliqué manuellement à chaque source de dégâts, quelle qu'elle soit." },
 };
 
 const ORDRE_CATEGORIES_ETATS = ["controle", "malus", "dot", "physique", "buff"];

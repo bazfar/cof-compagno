@@ -647,7 +647,7 @@ const CLASSES = {
         rangs: [
           { rang: 1, nom: "Affaiblissement (sort)", effet: "Pour 1 CS : inflige à un ennemi, au choix, -1 CA OU -1 attaque OU -1 dégâts, pendant 1 tour",
             mecanique: { type: "activable", usage: { frequence: "libre" }, corruptionCout: 1,
-              cible: "unique", portee: 10, zone: null, jetOppose: null,
+              cible: "ennemi", portee: 10, zone: null, jetOppose: null,
               effets: [ { type: "bonusTemporaire", cle: "auChoix", valeur: -1, duree: { tours: 1 },
                 choix: { titre: "Affaiblissement", consigne: "Choisis le malus infligé :",
                   options: [ { valeur: "ca", label: "-1 CA" }, { valeur: "attaque", label: "-1 attaque" }, { valeur: "degats", label: "-1 dégâts" } ] } } ] } },
@@ -1943,7 +1943,7 @@ const SORTS_MAGICIEN = [
       cible: "unique", portee: 15, zone: null,
       jetOppose: { caracAttaquant: "INT", caracDefenseur: "DEF" },
       effets: [ { type: "degats", formule: "2d6", typeDegats: "magique" },
-        { type: "etat", id: "ralenti", duree: { tours: 1 } } ] } },
+        { type: "etat", id: "ralentie", duree: { tours: 1 } } ] } },
 
   { id: "orage_de_grele", nom: "Orage de grêle", rang: 4, categorie: "evocation",
     effet: "Zone 2 cases : 5d6 dégâts, Réflexes pour moitié",
