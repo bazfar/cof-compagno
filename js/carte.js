@@ -372,6 +372,14 @@ const Carte = (() => {
       attaqueBonus += 2;
       pvMaxFinal += 5;
     }
+    // Enchanteur — Voie de l'enchantement, rang 5 "Illusion vivante" : PV =
+    // floor(PV actuels du lanceur / 2) AU MOMENT de l'invocation — déroge au
+    // repli générique "niveau×2" (pvMax===null sans pvMaxFormule) ci-dessus,
+    // seule invocation du jeu dont les PV dépendent des PV ACTUELS (pas
+    // maximum) du lanceur plutôt que de son niveau.
+    if (inv.id === "illusion_liee_enchanteur") {
+      pvMaxFinal = Math.floor((p.pvActuel || 0) / 2);
+    }
     return { pvMax: pvMaxFinal, attaqueBonus };
   }
 
@@ -722,8 +730,12 @@ const Carte = (() => {
       const jetonToken = j.pj && typeof cheminTokenPersonnage === "function" ? cheminTokenPersonnage(infosToken) : null;
       const jetonIconeMonstre = (!j.pj && j.monstreId && typeof cheminIconeMonstre === "function") ? cheminIconeMonstre(j.monstreId) : null;
       const classePourEmbleme = infosToken.classe || j.classe;
-      const interieur = j.portrait
-        ? `<img src="${j.portrait}" alt="" />`
+      // infosToken.portrait (pas j.portrait) : pour un PJ, infosToken = perso
+      // (la fiche vivante) — c'est SON portrait uploadé à la création qui doit
+      // primer sur le token générique race/genre/classe, pas un champ "portrait"
+      // du jeton lui-même (jamais renseigné pour un PJ, cf. j.pj ci-dessus).
+      const interieur = infosToken.portrait
+        ? `<img src="${infosToken.portrait}" alt="" />`
         : jetonToken
         ? `<img src="${jetonToken}" alt="" onerror="this.outerHTML=embleme('${classePourEmbleme}',40)" />`
         : jetonIconeMonstre
@@ -2552,6 +2564,20 @@ const Carte = (() => {
     // cx/cy en coordonnées cases (pas pixels)
     let tokensDD = [];
     let tokenSelectionne = null;
+    // Repositionne la bulle de sélection (cf. _rendreBulleSelection) au
+    // scroll de la page : elle est en position:fixed, calculée une seule
+    // fois via getBoundingClientRect() du token au moment du clic — sans ce
+    // ré-alignement, elle restait figée à l'écran pendant qu'un scroll
+    // déplaçait le token sous elle (bug rencontré). Un seul listener,
+    // jamais désinscrit (le module Carte vit toute la session) ; passive
+    // (ne bloque jamais le scroll) et no-op tant qu'aucun token n'est
+    // sélectionné (cf. garde en tête de _rendreBulleSelection).
+    let _bulleSelectionEcouteScroll = false;
+    function _assurerEcouteScrollBulle() {
+      if (_bulleSelectionEcouteScroll) return;
+      _bulleSelectionEcouteScroll = true;
+      window.addEventListener('scroll', () => { if (tokenSelectionne) _rendreBulleSelection(); }, { passive: true, capture: true });
+    }
     // Mode de ciblage carte (clic sur un jeton pour cibler, cf.
     // activerModeCiblage/js/app.js _armerCiblageCarte + le vérificateur de
     // portée des attaques rapides) : estValide(tokenId) = PRÉDICAT réévalué
@@ -2715,9 +2741,13 @@ const Carte = (() => {
         el.style.fontSize = Math.max(8, tc * 0.35) + 'px';
         el.title = tok.nom;
         const perso = tok.pj && tok.ref ? personasPJ2[idPersoDepuisRef(tok.ref)] : null;
+        // Portrait uploadé à la création (perso.portrait) prioritaire sur le
+        // token générique race/genre/classe — jamais vérifié ici jusqu'ici
+        // (contrairement à rendreJetons/worldmap, cf. son propre correctif).
+        const tokImgPortrait = (tok.pj && perso && perso.portrait) ? perso.portrait : null;
         const tokImgPJ = (tok.pj && typeof cheminTokenPersonnage === 'function') ? cheminTokenPersonnage(perso || tok) : null;
         const tokImgMonstre = (!tok.pj && tok.monstreId && typeof cheminIconeMonstre === 'function') ? cheminIconeMonstre(tok.monstreId) : null;
-        const tokImg = tokImgPJ || tokImgMonstre;
+        const tokImg = tokImgPortrait || tokImgPJ || tokImgMonstre;
         const contenuTok = tokImg
           ? '<img class="dd-token-img" src="' + tokImg + '" alt="" data-initiale="' + tok.nom.charAt(0).toUpperCase() + '" onerror="ddTokenFallback(this)" />'
           : '<span class="dd-token-initiale">' + tok.nom.charAt(0).toUpperCase() + '</span>';
@@ -2750,10 +2780,16 @@ const Carte = (() => {
         // plein choix de cible).
         el.addEventListener('click', ev => {
           ev.stopPropagation();
+          // Un mode de ciblage (attaque/capacité en cours de résolution, cf.
+          // activerModeCiblage) est actif une bonne partie du combat — le clic
+          // choisit alors AUSSI la cible, mais ne doit plus empêcher la bulle
+          // d'info (cf. _rendreBulleSelection) de s'afficher : sans le retour
+          // anticipé qu'il y avait ici, la bulle ne s'affichait jamais tant
+          // qu'un ciblage était armé, soit l'essentiel du temps en combat —
+          // bug rencontré ("la bulle ne marche pas en phase de combat").
           if (modeCiblage) {
             if (modeCiblage.estValide(tok.id)) modeCiblage.onChoix(tok.id);
             else toastCarte('Hors de portée.');
-            return;
           }
           tokenSelectionne = tokenSelectionne === tok.id ? null : tok.id;
           rendreTokensDD(scene);
@@ -2789,6 +2825,79 @@ const Carte = (() => {
 
         conteneur.appendChild(el);
       });
+      _rendreBulleSelection(scene);
+    }
+
+    // ── Bulle "fiche rapide" au clic sur un token (cf. tokenSelectionne) ──
+    // Nom en haut, portrait à gauche, barre de PV en haut à droite du
+    // portrait, DEF (icône bouclier) juste en dessous — façon bulle de
+    // dialogue au-dessus du token sélectionné. Repositionnée à chaque
+    // rendreTokensDD (PV qui changent, drag...), et masquée automatiquement
+    // dès que tokenSelectionne redevient null (tous les chemins de
+    // désélection re-rendent déjà via rendreTokensDD, cf. commentaires plus
+    // haut) : pas de logique de fermeture séparée à maintenir.
+    function _rendreBulleSelection(scene) {
+      const ancienne = document.getElementById('dd-fiche-bulle');
+      if (ancienne) ancienne.remove();
+      if (!tokenSelectionne) return;
+      _assurerEcouteScrollBulle();
+      const tok = tokensDD.find(t => t.id === tokenSelectionne);
+      const conteneur = document.getElementById('dd2vtt-tokens');
+      const el = conteneur && conteneur.querySelector('[data-id="' + tokenSelectionne + '"]');
+      if (!tok || !el) return;
+
+      const personasPJ = (typeof window.DepotPersos !== 'undefined') ? window.DepotPersos.charger() : {};
+      const perso = tok.pj && tok.ref ? personasPJ[idPersoDepuisRef(tok.ref)] : null;
+      const infosPv = _infosPv(tok, personasPJ);
+      const pct = infosPv ? Math.max(0, Math.min(100, (infosPv.pvActuel / infosPv.pvMax) * 100)) : 0;
+      const classePv = infosPv ? _classePv(infosPv.pvActuel, infosPv.pvMax) : '';
+      const def = tok.pj ? (perso && typeof perso.def === 'number' ? perso.def : null) : (typeof tok.def === 'number' ? tok.def : null);
+      // Même priorité portrait > token race/genre/classe > icône monstre que
+      // le rendu du token lui-même (cf. correctif ci-dessus, tokImgPortrait).
+      const portrait = (tok.pj && perso && perso.portrait) ? perso.portrait
+        : (tok.pj && typeof cheminTokenPersonnage === 'function' ? cheminTokenPersonnage(perso || tok) : null)
+          || (!tok.pj && tok.monstreId && typeof cheminIconeMonstre === 'function' ? cheminIconeMonstre(tok.monstreId) : null);
+      const initiale = tok.nom.charAt(0).toUpperCase();
+      const nomEchappe = document.createElement('div');
+      nomEchappe.textContent = tok.nom;
+
+      const bulle = document.createElement('div');
+      bulle.id = 'dd-fiche-bulle';
+      bulle.innerHTML =
+        '<div class="dd-fiche-bulle-nom">' + nomEchappe.innerHTML + '</div>' +
+        '<div class="dd-fiche-bulle-corps">' +
+          (portrait
+            ? '<img class="dd-fiche-bulle-portrait" src="' + portrait + '" alt="" onerror="this.outerHTML=\'<span class=&quot;dd-fiche-bulle-portrait dd-fiche-bulle-portrait-vide&quot;>' + initiale + '</span>\'" />'
+            : '<span class="dd-fiche-bulle-portrait dd-fiche-bulle-portrait-vide">' + initiale + '</span>') +
+          '<div class="dd-fiche-bulle-stats">' +
+            (infosPv
+              ? '<div class="dd-fiche-bulle-hp"><div class="rempli ' + classePv + '" style="width:' + pct + '%"></div></div>' +
+                '<div class="dd-fiche-bulle-hp-valeur">' + infosPv.pvActuel + '/' + infosPv.pvMax + '</div>'
+              : '<div class="dd-fiche-bulle-hp dd-fiche-bulle-hp-vide"></div>') +
+            (def !== null ? '<div class="dd-fiche-bulle-def"><span class="dd-fiche-bulle-def-icone">🛡</span>' + def + '</div>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="dd-fiche-bulle-fleche"></div>';
+      document.body.appendChild(bulle);
+
+      // Positionnement écran (getBoundingClientRect, même principe que
+      // Carte.afficherNombreFlottant) : au-dessus du token par défaut, bascule
+      // en dessous s'il n'y a pas la place (token proche du haut de l'écran).
+      const rect = el.getBoundingClientRect();
+      const bulleRect = bulle.getBoundingClientRect();
+      let left = rect.left + rect.width / 2 - bulleRect.width / 2;
+      left = Math.max(6, Math.min(window.innerWidth - bulleRect.width - 6, left));
+      let top = rect.top - bulleRect.height - 12;
+      let enDessous = false;
+      if (top < 6) { top = rect.bottom + 12; enDessous = true; }
+      bulle.style.left = left + 'px';
+      bulle.style.top = top + 'px';
+      bulle.classList.toggle('dd-fiche-bulle-en-dessous', enDessous);
+      const fleche = bulle.querySelector('.dd-fiche-bulle-fleche');
+      if (fleche) {
+        const flecheOffset = (rect.left + rect.width / 2) - left;
+        fleche.style.left = Math.max(12, Math.min(bulleRect.width - 12, flecheOffset)) + 'px';
+      }
     }
 
     // ── Drag tokens sur grille ───────────────────────────────
@@ -3574,6 +3683,17 @@ const Carte = (() => {
       if (sc) rendreTokensDD(sc);
     }
 
+    // Désélectionne le token actif et retire la bulle d'info tout de suite
+    // (pas via un rendreTokensDD complet) — appelé en quittant l'onglet
+    // Carte (cf. Carte.onClose / app.js allerVers) : sans ça, la bulle
+    // (position:fixed sur document.body, hors du panneau Carte) restait
+    // affichée par-dessus n'importe quel autre onglet — bug rencontré.
+    function _effacerSelection() {
+      tokenSelectionne = null;
+      const bulle = document.getElementById('dd-fiche-bulle');
+      if (bulle) bulle.remove();
+    }
+
     return {
       init, scenes: () => scenes, sceneActive: () => sceneActive,
       ajouterToken: (sc) => ajouterTokenDD(sc),
@@ -3583,7 +3703,7 @@ const Carte = (() => {
       ajouterEtat: ajouterEtatToken, retirerEtat: retirerEtatToken, decompterEtats: decompterEtatsToken,
       supprimerToken: supprimerTokenDD, onChange, actualiserTokens, reinitialiserExploration, revelerToutExploration,
       onMonstreDevientVisible, reinitialiserDetectionVisibilite, estMonstreVisible,
-      activerModeCiblage, desactiverModeCiblage,
+      activerModeCiblage, desactiverModeCiblage, effacerSelection: _effacerSelection,
     };
   })();
   // Un changement de token dd2vtt (ajout/dégâts/suppression, local ou distant
@@ -3641,8 +3761,16 @@ const Carte = (() => {
     if (typeof DD2VTT !== "undefined" && DD2VTT.desactiverModeCiblage) DD2VTT.desactiverModeCiblage();
   }
 
+  // Appelé en quittant l'onglet Carte (cf. app.js allerVers) : referme la
+  // bulle "fiche rapide" d'un token sélectionné (cf. DD2VTT.effacerSelection)
+  // — sans ça elle restait affichée par-dessus les autres onglets, étant en
+  // position:fixed sur document.body plutôt que dans le panneau Carte lui-même.
+  function onClose() {
+    if (typeof DD2VTT !== "undefined" && DD2VTT.effacerSelection) DD2VTT.effacerSelection();
+  }
+
   return {
-    onOpen, definirRole, definirMonPerso, ajouterMonstre,
+    onOpen, onClose, definirRole, definirMonPerso, ajouterMonstre,
     listeMonstresCombat, listeTokensJoueursCombat, appliquerDegatsCombat, definirPvCombat, ajusterPvCombat,
     ajouterEtatCombat, retirerEtatCombat, decompterEtatsMonstre, distanceCasesEntre,
     supprimerMonstreCombat, onMonstresChange, definirModeCarte,

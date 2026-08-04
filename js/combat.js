@@ -154,6 +154,39 @@ const Combat = (() => {
     if (p && typeof Capacites !== "undefined" && Capacites.reinitialiserUsagesPeriode) {
       Capacites.reinitialiserUsagesPeriode(p, "tour");
     }
+    // Coût de maintien PP (ex. Fascination illusoire, Enchanteur — Voie de
+    // l'enchantement rang 2, cf. etat.coutMaintienPP posé par Capacites.
+    // resoudreEffet) : déduit au début de CHAQUE tour du personnage qui
+    // maintient l'effet, tant qu'il reste actif. PP insuffisants -> l'effet
+    // est rompu immédiatement (retiré d'etatsActifs) — aucun patron existant
+    // de purge différée pour un état "rompu" trouvé ailleurs dans le code,
+    // suppression directe ici plutôt que poser un drapeau qu'aucun autre
+    // code ne consommerait. Sans effet persistant si p vient d'un appel sans
+    // sauvegarde ultérieure (ex. _fusionnerCombattants/reinitialiserActions,
+    // cf. leurs commentaires) — seul l'appel depuis tourSuivant() (qui
+    // sauvegarde persos juste après) rend cette déduction durable, comme le
+    // reste de l'économie d'action remise à zéro ici.
+    if (p && (p.etatsActifs || []).length) {
+      const rompus = [];
+      p.etatsActifs = p.etatsActifs.filter((etat) => {
+        if (!etat.coutMaintienPP) return true;
+        if ((p.ppActuel || 0) >= etat.coutMaintienPP) {
+          p.ppActuel -= etat.coutMaintienPP;
+          return true;
+        }
+        rompus.push(etat);
+        return false;
+      });
+      if (rompus.length && typeof App !== "undefined" && App.ajouterHisto) {
+        rompus.forEach((etat) => {
+          const idCatalogue = /^marquee_.+/.test(etat.idEtat || "") ? "marquee" : etat.idEtat;
+          const nomEtat = (typeof getEtat === "function" && typeof ETATS !== "undefined" && ETATS[idCatalogue])
+            ? getEtat(idCatalogue).nom : (etat.idEtat || "État");
+          App.ajouterHisto(`${nomEtat} — Maintien rompu`, p.ppActuel || 0, false, false,
+            `PP insuffisants pour maintenir (${p.nom})`);
+        });
+      }
+    }
   }
 
   // `indexActuel` est un index brut dans `ordre` : insérer une entrée qui se

@@ -70,6 +70,12 @@ const Capacites = (() => {
         libelle = `Mod.${mod[1].toUpperCase()}(${valeur >= 0 ? "+" : ""}${valeur})`;
       } else if (/^niveau$/i.test(brut)) {
         valeur = (ctx.perso && ctx.perso.niveau) || 1;
+      } else if (/^floor\(niveau\/2\)$/i.test(brut)) {
+        // Enchanteur — Voie du chaos, rang 2 "Drain d'âme" : seul terme du
+        // jeu à utiliser une syntaxe floor(...) — reconnu ici spécifiquement
+        // plutôt que d'ajouter un vrai évaluateur d'expressions générique
+        // (hors de portée d'un simple terme de formule).
+        valeur = Math.floor(((ctx.perso && ctx.perso.niveau) || 1) / 2);
       } else if (/^rang$/i.test(brut)) {
         valeur = ctx.rang || 0;
       } else if (/^\d+$/.test(brut)) {
@@ -182,6 +188,53 @@ const Capacites = (() => {
     if (cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
       const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
       return tok && typeof tok.def === "number" ? tok.def : null;
+    }
+    return null;
+  }
+
+  // Enchanteur — Voie de l'enchantement, rang 2 "Fascination" (jetOppose.
+  // caracDefenseurCalcule === "DEF+PVactuels/2", cf. lancer()) : seuil à
+  // battre = DEF de la cible + moitié de ses PV ACTUELS (pas une simple DEF)
+  // — même principe qu'obtenirDefCible ci-dessus (PJ recalculé via
+  // calculerCA(), monstre lu depuis le token), plus l'ajout de floor(PV/2).
+  function obtenirDefPlusPvMoitieCible(cible, persos) {
+    if (!cible) return null;
+    if (cible.genre === "perso") {
+      const p = persos[cible.id];
+      if (!p) return null;
+      const perso = Personnage.depuisJSON(p);
+      return perso.calculerCA() + Math.floor((p.pvActuel || 0) / 2);
+    }
+    if (cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
+      const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
+      if (!tok || typeof tok.def !== "number") return null;
+      return tok.def + Math.floor((tok.pvActuel ?? tok.pvMax ?? 0) / 2);
+    }
+    return null;
+  }
+
+  // Défense mentale (Volonté), opposée aux sorts mentaux (jetOppose.
+  // caracDefenseur === "defMentale" : Fascination, Sommeil, Domination,
+  // Terreur...). Les monstres n'ont aucune carac mentale dans le bestiaire :
+  //   PJ      → 10 + Mod.SAG (vraie sauvegarde de Volonté) ;
+  //   monstre → defMentale explicite si fournie, sinon DÉRIVÉE de la
+  //             dangerosité (10 + dangerosité) — proxy raisonnable et gratuit.
+  // Évite que la DEF (armure) serve de défense mentale (un monstre blindé mais
+  // bête résistait à tort à la Domination).
+  function obtenirVolonteCible(cible, persos) {
+    if (!cible) return null;
+    if (cible.genre === "perso") {
+      const p = persos[cible.id];
+      return p ? 10 + Personnage.depuisJSON(p).mod("SAG") : null;
+    }
+    if (cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
+      const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
+      if (!tok) return null;
+      const base = (typeof BESTIAIRE_INDEX !== "undefined" && tok.monstreId) ? BESTIAIRE_INDEX[tok.monstreId] : null;
+      const dm = tok.defMentale != null ? tok.defMentale : (base && base.defMentale != null ? base.defMentale : null);
+      if (dm != null) return dm;
+      const dang = tok.dangerosite != null ? tok.dangerosite : (base && base.dangerosite != null ? base.dangerosite : 1);
+      return 10 + dang;
     }
     return null;
   }
@@ -403,6 +456,21 @@ const Capacites = (() => {
     return note;
   }
 
+  // Enchanteur — Voie du chaos, rang 2 "Drain d'âme" : récupère en PP un
+  // montant égal aux dégâts RÉELLEMENT infligés (degatsNets, pas la formule
+  // brute) — même principe que _appliquerVolDeVie ci-dessus mais en PP
+  // plutôt qu'en PV, plafonné au ppMax du lanceur (pas de perte si le gain
+  // dépasserait le max, simple plafonnement comme un soin sur des PV pleins).
+  function _appliquerGainPPDrainAme(persos, perso, degatsNets) {
+    const pCaster = persos[perso.id];
+    if (!(degatsNets > 0) || !pCaster) return "";
+    const ppMax = perso.calculerPPMax();
+    const avant = pCaster.ppActuel || 0;
+    pCaster.ppActuel = Math.min(ppMax, avant + degatsNets);
+    const gainReel = pCaster.ppActuel - avant;
+    return gainReel > 0 ? ` Drain d'âme : ${perso.nom} récupère ${gainReel} PP (${pCaster.ppActuel}/${ppMax}).` : "";
+  }
+
   // Chasseur — Voie de la grande chasse rang 4 "Coup de grâce" (condition
   // "cible sous 50% PV") : PV actuels/max d'une cible PJ ou monstre, ou null
   // si indéterminable (ex. monstre hors table de combat) — ne jamais bloquer
@@ -452,6 +520,12 @@ const Capacites = (() => {
     if (dureeExpr === "finCombat") return { tours: null, motCle: "finCombat" };
     if (dureeExpr === "24h") return { tours: null, motCle: "horsTour" };
     if (dureeExpr === "prochainTour") return { tours: 1, motCle: null };
+    // "maintenue" (Enchanteur — Voie de l'enchantement rang 2 "Fascination",
+    // cf. effet.coutMaintienPP) : jamais décompté tour par tour (comme
+    // "permanente"/"finCombat"), se termine par le hook de maintien PP de
+    // Combat._reinitialiserActionsEntree (PP insuffisants -> état retiré) ou
+    // par la fin du combat (cf. ETATS_RETIRES_FIN_COMBAT_MEME_SI_NUMERIQUE).
+    if (dureeExpr === "maintenue") return { tours: null, motCle: "maintenue" };
     const { total } = resoudreExpression(dureeExpr, ctx);
     return { tours: total, motCle: null };
   }
@@ -472,6 +546,11 @@ const Capacites = (() => {
       dureeRestante: Object.assign(resoudreDureeInitiale(effet.duree, ctx), { dureeAffichee: effet.duree }),
       formuleDot: effet.formuleDot || null,
       formuleSoin: effet.formuleSoin || null,
+      // coutMaintienPP (Enchanteur — Voie de l'enchantement rang 2
+      // "Fascination") : coût en PP déduit à chaque début de tour du
+      // personnage qui maintient l'effet, cf. Combat._reinitialiserActionsEntree.
+      // extra peut le surcharger (rang 4 "Proficience", cf. resoudreEffet).
+      coutMaintienPP: effet.coutMaintienPP || null,
       source,
       poseLe: Date.now(),
     }, extra || {}));
@@ -723,11 +802,15 @@ const Capacites = (() => {
   // - sanctuaire_gardien (Druide, Voie du protecteur r5, 1x/scénario)
   // - sanctuaire_magicien (Magicien, Voie de la magie protectrice r5, 1x/scénario)
   // - arme_enchantee (Enchanteur, Voie de la transfiguration r3)
+  // - fascinee_illusoire (Enchanteur, Voie de l'enchantement r2, motCle
+  //   "maintenue" plutôt que numérique — mais la liste ci-dessous ne filtre
+  //   que par idEtat, motCle importe peu : même besoin de nettoyage fin de
+  //   combat qu'un état numérique "qui n'a de sens qu'en combat")
   const ETATS_RETIRES_FIN_COMBAT_MEME_SI_NUMERIQUE = [
     "image_decalee", "maitrise_tactique", "apogee_physique", "dechainement",
     "avatar_du_chaos", "avatar_du_pacte", "avatar_du_vide", "forme_chaos_sauvage",
     "totem_velocite", "forme_ours", "forme_loup", "sanctuaire_gardien",
-    "sanctuaire_magicien", "arme_enchantee",
+    "sanctuaire_magicien", "arme_enchantee", "fascinee_illusoire", "ascension_chaotique",
   ];
   function retirerEtatsFinCombat(p) {
     p.etatsActifs = (p.etatsActifs || []).filter((e) =>
@@ -859,6 +942,12 @@ const Capacites = (() => {
         ? effet.formuleAlternative.formule : effet.formule;
       const bonusChaos = perso.bonusDegatsSortsChaos && perso.bonusDegatsSortsChaos();
       let formuleAjustee = bonusChaos ? `${baseFormule}+${bonusChaos}` : baseFormule;
+      // Enchanteur — Voie de l'enchantement, rang 5 "Illusion vivante" : +1d6
+      // dégâts magiques par illusion liée encore vivante (jusqu'à 2), cf.
+      // Personnage.bonusDegatsMagiquesIllusionsLiees() — s'applique à tout
+      // sort à dégâts de l'Enchanteur, même canal que bonusChaos ci-dessus.
+      const nbIllusionsLiees = perso.bonusDegatsMagiquesIllusionsLiees && perso.bonusDegatsMagiquesIllusionsLiees();
+      if (nbIllusionsLiees) formuleAjustee = `${formuleAjustee}+${nbIllusionsLiees}d6`;
       // Moine — Voie des éléments, rang 2 "Maîtrise élémentaire" (passive) :
       // même principe qu'Intensité élémentaire ci-dessus, remplace le 1d4
       // initial de l'option Feu de Poing élémentaire (rang 1, seule option
@@ -967,17 +1056,33 @@ const Capacites = (() => {
         return `${total} dégâts (${detail}) — aucune cible sélectionnée, à appliquer manuellement.`;
       }
       const volDeVieActif = perso.classe === "necromancien" && voie === "Voie du sang" && [1, 3, 5].includes(rang);
+      // Enchanteur — Voie du chaos, rang 2 "Drain d'âme" : récupère en PP un
+      // montant égal aux dégâts RÉELLEMENT infligés (degatsNets) — même
+      // déclenchement que volDeVieActif ci-dessus (dégâts appliqués avec
+      // succès), mais en PP plutôt qu'en PV, cf. _appliquerGainPPDrainAme.
+      const drainAmeActif = perso.classe === "enchanteur" && voie === "Voie du chaos" && rang === 2;
       if (cible && cible.genre === "monstre" && typeof Carte !== "undefined") {
+        // pvAvant : capturé AVANT résolution pour plafonner le gain PP de
+        // Drain d'âme au PV réellement retiré (pas les dégâts bruts post-RD,
+        // qui peuvent dépasser les PV restants de la cible — "overkill").
+        const tokAvant = Carte.listeMonstresCombat && (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
+        const pvAvantM = tokAvant ? (tokAvant.pvActuel ?? tokAvant.pvMax ?? 0) : null;
         const res = Carte.appliquerDegatsCombat(cible.id, total);
         const noteVol = (res && volDeVieActif) ? _appliquerVolDeVie(persos, perso, rang, res.degatsNets, res.pvActuel) : "";
+        const degatsReelsM = (res && pvAvantM !== null) ? Math.min(res.degatsNets, pvAvantM) : (res ? res.degatsNets : 0);
+        const noteDrain = (res && drainAmeActif) ? _appliquerGainPPDrainAme(persos, perso, degatsReelsM) : "";
         return res
-          ? `${total} dégâts (${detail}) → ${res.nom} : ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}${noteVol}`
+          ? `${total} dégâts (${detail}) → ${res.nom} : ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}${noteVol}${noteDrain}`
           : `${total} dégâts (${detail}) — cible introuvable sur la table de combat.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}`;
       }
       if (cible && cible.genre === "perso" && persos[cible.id]) {
+        // pvAvant : même plafonnement que ci-dessus, côté PJ.
+        const pvAvantP = persos[cible.id].pvActuel || 0;
         const res = appliquerDegatsPersoLocal(persos[cible.id], total);
         const noteVol = volDeVieActif ? _appliquerVolDeVie(persos, perso, rang, res.degatsNets, res.pvActuel) : "";
-        return `${total} dégâts (${detail}) → ${cible.nom} : -${res.degatsNets} après réduction (${res.reduction}), ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}${noteVol}`;
+        const degatsReelsP = Math.min(res.degatsNets, pvAvantP);
+        const noteDrain = drainAmeActif ? _appliquerGainPPDrainAme(persos, perso, degatsReelsP) : "";
+        return `${total} dégâts (${detail}) → ${cible.nom} : -${res.degatsNets} après réduction (${res.reduction}), ${res.pvActuel} PV restants.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}${noteVol}${noteDrain}`;
       }
       return `${total} dégâts (${detail}) — aucune cible sélectionnée, à appliquer manuellement.${noteMutationSauvage}${noteElementActif}${noteTypeCreature}`;
     }
@@ -1060,8 +1165,38 @@ const Capacites = (() => {
         // reste actif, contrairement à mecanique.testVolonte qui ne teste
         // qu'une fois, à l'activation.
         if (effet.testVolonte) extra = Object.assign({}, extra, { testVolonte: effet.testVolonte });
+        // Enchanteur — Voie de l'enchantement, rang 4 "Proficience" (passive) :
+        // le coût de MAINTIEN de Fascination (effet.coutMaintienPP, base 2)
+        // passe à 1 PP/tour dès ce rang 4 acquis — le coût de LANCEMENT
+        // initial (coutPPReel dans lancer()) n'est volontairement pas touché
+        // ici, seul le maintien récurrent baisse (cf. donnée, rang 4).
+        if (effet.id === "fascinee_illusoire" && perso.classe === "enchanteur"
+            && perso.rangMaxVoie("Voie de l'enchantement") >= 4) {
+          extra = Object.assign({}, extra, { coutMaintienPP: 1 });
+        }
         appliquerEtatSurPerso(cibleP, effet, libelle, { perso, rang }, extra);
-        return `État « ${etat.nom} » appliqué à ${cible.nom} (${effet.duree}).`;
+        let noteAscension = "";
+        // Enchanteur — Voie du chaos, rang 5 "Ascension chaotique" : une fois
+        // l'état posé (etatsActifs déjà à jour ci-dessus), recalcule le pool
+        // de PP via une NOUVELLE instance Personnage (le multiplicateur ×2
+        // vit dans Personnage._multiplicateurAscension, lu par mod(), cf. son
+        // commentaire sur le risque de double-comptage) et le remplit
+        // immédiatement au nouveau max (texte source, "confirmé par Thomas").
+        // PV max : PAS mutés directement ici (pvMax est un champ stocké, pas
+        // recalculé en direct comme calculerCA()/calculerPPMax() — un
+        // doublement puis un retour en arrière fiable à l'expiration de
+        // l'état exigerait une vraie infrastructure de sauvegarde/restauration
+        // absente du code) — approximé par un gain de PV temporaires égal au
+        // pvMax actuel (mécanisme existant, non cumulatif, s'estompe avec
+        // l'état sans risque de corrompre les PV réels du personnage).
+        if (effet.id === "ascension_chaotique") {
+          const perso2 = Personnage.depuisJSON(cibleP);
+          const nouveauMax = perso2.calculerPPMax();
+          cibleP.ppActuel = nouveauMax;
+          const resPvTemp = appliquerPvTemporairesSurPerso(cibleP, cibleP.pvMax || 0, effet.duree, { perso, rang });
+          noteAscension = ` PP rempli au nouveau max (${nouveauMax}). +${resPvTemp.montant} PV temporaires (approximation du doublement de PV max, cf. commentaire).`;
+        }
+        return `État « ${etat.nom} » appliqué à ${cible.nom} (${effet.duree}).${noteAscension}`;
       }
       return `État « ${etat.nom} » (${effet.duree}) à appliquer manuellement à ${cible ? cible.nom : "la cible"} (pas de suivi d'état automatique pour les monstres).`;
     }
@@ -1217,6 +1352,41 @@ const Capacites = (() => {
     const perso = Personnage.depuisJSON(p);
     const libelle = source.nomCap || "Capacité";
 
+    // Enchanteur — Voie de l'enchantement, rang 4 "Proficience" (passive) :
+    // le coût PP du sort 'illusion' (rang 1, même voie — base ou évolué par
+    // le rang 3) passe de 2 à 1 dès ce rang 4 acquis. Condition étroite
+    // (voie+rang+classe, comme les autres réductions ponctuelles déjà en
+    // jeu) plutôt qu'un champ générique, cette capacité étant directement
+    // castable (pas de dépendance au Grimoire, contrairement aux réductions
+    // de famille du Magicien/des autres voies Enchanteur, non câblées faute
+    // de Grimoire branché pour ces classes).
+    let coutPPReel = mecanique.coutPP;
+    const estSortFamilleIllusion = perso.classe === "enchanteur" && source.voie === "Voie de l'enchantement"
+      && (source.rang === 1 || source.rang === 2);
+    // Enchanteur — Voie du chaos, rang 1 "Éclat chaotique" (passive) : +2 PP
+    // malus PERMANENT sur tout sort de famille Illusion ('illusion' rang 1
+    // ET 'fascination_illusoire' rang 2, Voie de l'enchantement) — pas
+    // conditionné à l'utilisation d'Éclat chaotique elle-même, se cumule
+    // avec la réduction de Proficience (rang 4) ci-dessous si les deux voies
+    // sont acquises. Ne touche que le coût de LANCEMENT (mecanique.coutPP),
+    // jamais coutMaintienPP (Fascination), non mentionné par le texte source.
+    if (estSortFamilleIllusion && perso.rangMaxVoie("Voie du chaos") >= 1) {
+      coutPPReel += 2;
+    }
+    if (source.rang === 1 && estSortFamilleIllusion && perso.rangMaxVoie("Voie de l'enchantement") >= 4) {
+      coutPPReel = Math.max(1, coutPPReel - 1);
+    }
+    // Enchanteur — Voie du chaos, rang 5 "Ascension chaotique" : coutPP:
+    // "tout" (mot-clé, pas un nombre) — le PP est intégralement redéfini par
+    // l'effet 'etat' lui-même (drain implicite puis remplissage au nouveau
+    // max doublé, cf. resoudreEffet), donc coutPPReel = 0 ici plutôt qu'un
+    // montant à faire re-décompter par le bloc générique plus bas : celui-ci
+    // s'exécute APRÈS la boucle d'effets (donc après le remplissage) et
+    // soustrairait sinon l'ancien montant du nouveau pool déjà rempli.
+    if (mecanique.coutPP === "tout") {
+      coutPPReel = 0;
+    }
+
     // Gate d'accès Grimoire (cf. reference_sorts_connus.md) : un sort hors
     // Voies (SORTS_MAGICIEN ou équivalent) ne peut être lancé que s'il est
     // effectivement appris — vérifié avant tout le reste (usage, PP...),
@@ -1259,20 +1429,22 @@ const Capacites = (() => {
     // reactionCout ci-dessus. mecanique.coutPP absent ou 0 = capacité
     // gratuite (martiale, ou sort mineur type degatsMagiques()).
     // Prêtre — Voie du chaos, rang 2 "Don corrompu" (passive) : peut payer le
-    // coût d'un sort en CS (= rang du sort, dérivé de coutPP/2 — convention
-    // constante sur tout SORTS_MAGICIEN/SORTS_PRETRE, rang×2 PP) plutôt qu'en
-    // PP, si le joueur active l'option (payerEnCS) à l'activation.
+    // coût d'un sort en CS (= rang du sort, dérivé de coutPPReel/2 —
+    // convention constante sur tout SORTS_MAGICIEN/SORTS_PRETRE, rang×2 PP,
+    // appliquée au coût RÉEL après modificateurs éventuels comme Proficience/
+    // Éclat chaotique de l'Enchanteur) plutôt qu'en PP, si le joueur active
+    // l'option (payerEnCS) à l'activation.
     const donCorrompu = perso.classe === "pretre" && perso.estChoisie("Voie du chaos", 2);
-    const substitutionCS = !!(mecanique.coutPP && donCorrompu && payerEnCS);
+    const substitutionCS = !!(coutPPReel && donCorrompu && payerEnCS);
     if (substitutionCS) {
-      const coutCS = Math.max(1, Math.round(mecanique.coutPP / 2));
+      const coutCS = Math.max(1, Math.round(coutPPReel / 2));
       if ((p.corruptionCombat || 0) < coutCS) {
         return { ok: false, messages: [`Pas assez de jauge de combat (${coutCS} CS requis pour Don corrompu, ${p.corruptionCombat || 0} disponibles).`] };
       }
-    } else if (mecanique.coutPP) {
+    } else if (coutPPReel) {
       const ppRestants = (p.ppActuel || 0);
-      if (ppRestants < mecanique.coutPP) {
-        return { ok: false, messages: [`Pas assez de Points de Pouvoir (${mecanique.coutPP} requis, ${ppRestants} disponibles).`] };
+      if (ppRestants < coutPPReel) {
+        return { ok: false, messages: [`Pas assez de Points de Pouvoir (${coutPPReel} requis, ${ppRestants} disponibles).`] };
       }
     }
 
@@ -1407,6 +1579,65 @@ const Capacites = (() => {
       messages.push(Combat.aDejaAgiCeCombat(cible.id)
         ? `${cible.nom} a déjà agi ce combat — vérifie qu'elle est immobile pour que Tir mortel s'applique quand même.`
         : `${cible.nom} n'a pas encore agi ce combat — condition de Tir mortel remplie.`);
+    }
+
+    // Enchanteur — Voie du chaos, rang 4 "Murmure terrifiant" : jetSauvegardeFixe
+    // suivi, en cas d'ÉCHEC, d'un second jet 1d20 sur une table à 3 paliers —
+    // hors du schéma jetSauvegardeFixe générique plus bas (celui-ci ne gère
+    // qu'un succès/échec binaire), donc résolu ici en cas particulier, avant
+    // le reste du pipeline. Non automatisable pour un monstre (le bestiaire
+    // n'expose pas ses modificateurs de caractéristique, même limite que
+    // partout ailleurs dans ce fichier) : message manuel, sans jet. Retourne
+    // toujours tôt : ne passe jamais par le bloc générique jetOppose/effets.
+    if (source.voie === "Voie du chaos" && source.rang === 4 && perso.classe === "enchanteur") {
+      if (!cible) return { ok: false, messages: ["Choisis une cible avant d'activer Murmure terrifiant."] };
+      // Coût en jauge de combat (4 CS) : décompté ici puisque ce cas
+      // particulier retourne tôt, avant le décompte générique de fin de
+      // fonction (cf. mecanique.corruptionCout plus bas, jamais atteint ici).
+      if (mecanique.corruptionCout) {
+        p.corruptionCombat = Math.max(0, (p.corruptionCombat || 0) - mecanique.corruptionCout);
+        App.ajouterHisto(`${libelle} — Corruption`, p.corruptionCombat, false, false, `-${mecanique.corruptionCout} (jauge de combat, ${p.nom})`);
+        messages.push(`Corruption -${mecanique.corruptionCout} (jauge de combat : ${p.corruptionCombat}).`);
+      }
+      const { carac, dd } = mecanique.jetSauvegardeFixe;
+      if (!(cible.genre === "perso" && persos[cible.id])) {
+        messages.push(`Sauvegarde (${carac}) DD ${dd} — non automatisable pour ${cible.nom} (monstre) : le bestiaire n'expose pas ses modificateurs de caractéristique. Résolution manuelle par la table (3 paliers : 19-20 mort, 16-18 1d10 DM, <16 folie 3 tours).`);
+        usage.appliquer && usage.appliquer();
+        App.sauverPersos(persos);
+        return { ok: true, messages };
+      }
+      const cibPerso = Personnage.depuisJSON(persos[cible.id]);
+      // carac (ex. "Volonte") est un NOM DE SAUVEGARDE (cf. SAUVEGARDES,
+      // data/donnees.js), pas un code de caractéristique brut — Personnage.
+      // mod() n'accepte que FOR/DEX/CON/INT/SAG/CHA, d'où la traduction.
+      const modCible = cibPerso.mod((typeof SAUVEGARDES !== "undefined" && SAUVEGARDES[carac]) || carac);
+      const d20c = App.lancerDe(20);
+      const totalC = d20c + modCible;
+      const reussite = totalC >= dd;
+      App.ajouterHisto(`${libelle} — Sauvegarde de ${cible.nom} (${carac})`, totalC, false, false, `d20[${d20c}] ${modCible >= 0 ? "+" : ""}${modCible} vs ${dd}`);
+      messages.push(`Sauvegarde de ${cible.nom} (${carac}) : ${totalC} vs ${dd} — ${reussite ? "réussie, aucun effet." : "échec."}`);
+      if (reussite) {
+        usage.appliquer && usage.appliquer();
+        App.sauverPersos(persos);
+        return { ok: true, messages };
+      }
+      const pCible = persos[cible.id];
+      const d20t = App.lancerDe(20);
+      App.ajouterHisto(`${libelle} — Table des paliers`, d20t, false, false, `1d20[${d20t}]`);
+      if (d20t >= 19) {
+        pCible.pvActuel = 0;
+        messages.push(`Table (1d20=${d20t}, 19-20) : ${cible.nom} se suicide de folie — mort (PV à 0, cause narrative distincte d'un KO de combat).`);
+      } else if (d20t >= 16) {
+        const { total, detail } = resoudreExpression("1d10", { perso, rang: source.rang });
+        const resDeg = appliquerDegatsPersoLocal(pCible, total);
+        messages.push(`Table (1d20=${d20t}, 16-18) : ${total} dégâts (${detail}) → ${cible.nom} : ${resDeg.pvActuel} PV restants.`);
+      } else {
+        appliquerEtatSurPerso(pCible, { id: "folie_illusoire", duree: "3" }, libelle, { perso, rang: source.rang });
+        messages.push(`Table (1d20=${d20t}, <16) : ${cible.nom} sombre dans la folie (état 'folie_illusoire', attaque la créature la plus proche pendant 3 tours).`);
+      }
+      usage.appliquer && usage.appliquer();
+      App.sauverPersos(persos);
+      return { ok: true, messages };
     }
 
     // Chasseur — Voie du chaos, rang 5 "Chasse ultime" : contrecoup garanti
@@ -1618,7 +1849,49 @@ const Capacites = (() => {
       }
     }
 
-    const attaqueVsDef = !!(mecanique.jetOppose && mecanique.jetOppose.caracDefenseur === "DEF");
+    // jetSauvegardeFixe (Enchanteur — Voie du chaos, rang 3 "Illusion de
+    // masse") : DD FIXE (pas calculé depuis une carac de l'attaquant comme
+    // jetOppose) — la CIBLE fait elle-même le jet de résistance. Bloque
+    // l'application des effets etat/degats de mecanique.effets (boucle plus
+    // bas) sur une réussite ; non automatisable pour un monstre (le
+    // bestiaire n'expose pas ses modificateurs de caractéristique, même
+    // limite que jetOppose.caracDefenseur ≠ "DEF"/"defMentale" plus bas) —
+    // les effets ne sont alors jamais appliqués automatiquement. Rang 4
+    // "Murmure terrifiant" (jetSauvegardeFixe + table à paliers) est un cas
+    // particulier distinct, déjà résolu plus haut, retourné tôt.
+    let saveBloqueEffets = false;
+    if (mecanique.jetSauvegardeFixe) {
+      const { carac, dd } = mecanique.jetSauvegardeFixe;
+      if (cible && cible.genre === "perso" && persos[cible.id]) {
+        const cibPerso = Personnage.depuisJSON(persos[cible.id]);
+        // carac (ex. "Volonte") est un NOM DE SAUVEGARDE (cf. SAUVEGARDES,
+        // data/donnees.js), pas un code de caractéristique brut.
+        const modCible = cibPerso.mod((typeof SAUVEGARDES !== "undefined" && SAUVEGARDES[carac]) || carac);
+        const d20c = App.lancerDe(20);
+        const totalC = d20c + modCible;
+        const reussite = totalC >= dd;
+        App.ajouterHisto(`${libelle} — Sauvegarde de ${cible.nom} (${carac})`, totalC, false, false, `d20[${d20c}] ${modCible >= 0 ? "+" : ""}${modCible} vs ${dd}`);
+        messages.push(`Sauvegarde de ${cible.nom} (${carac}) : ${totalC} vs ${dd} — ${reussite ? "réussie, aucun effet." : "échec, effets appliqués ci-dessous."}`);
+        saveBloqueEffets = reussite;
+      } else {
+        messages.push(`Sauvegarde (${carac}) DD ${dd} — non automatisable ${cible ? `pour ${cible.nom} (monstre)` : "(aucune cible sélectionnée)"} : le bestiaire n'expose pas ses modificateurs de caractéristique. Effets à appliquer manuellement selon le jet fait à la table.`);
+        saveBloqueEffets = true;
+      }
+    }
+
+    // caracDefenseurCalcule (Enchanteur — Voie de l'enchantement rang 2
+    // "Fascination", cf. obtenirDefPlusPvMoitieCible) : même pipeline
+    // touché/critique/dégâts qu'une attaque vs DEF classique, mais le seuil
+    // à battre est un DEF+PV/2 calculé plutôt que la simple DEF de la cible.
+    // "DEF" (armure) et "defMentale" (Volonté dérivée, cf. obtenirVolonteCible,
+    // ajouté en parallèle sur origin/thomas/contributions) se résolvent
+    // pareil : 1d20+attaque vs une valeur cible. Seuls la valeur opposée et
+    // le libellé changent.
+    const cd0 = mecanique.jetOppose && mecanique.jetOppose.caracDefenseur;
+    const attaqueVsDef = !!(mecanique.jetOppose &&
+      (cd0 === "DEF" || cd0 === "defMentale" || mecanique.jetOppose.caracDefenseurCalcule));
+    const estDefMentale = cd0 === "defMentale";
+    const libelleDef = estDefMentale ? "SAG" : "DEF";
 
     if (mecanique.jetOppose) {
       const ca = mecanique.jetOppose.caracAttaquant;
@@ -1648,22 +1921,24 @@ const Capacites = (() => {
         const critMin = typeAttaque ? perso.critMinAttaque(typeAttaque) : 20;
         const echecCritique = d20 === 1;
         const critique = !echecCritique && (d20 === 20 || d20 >= critMin);
-        const defCible = obtenirDefCible(cible, persos);
+        const defCible = estDefMentale ? obtenirVolonteCible(cible, persos)
+          : mecanique.jetOppose.caracDefenseurCalcule === "DEF+PVactuels/2" ? obtenirDefPlusPvMoitieCible(cible, persos)
+          : obtenirDefCible(cible, persos);
         let touche;
         if (echecCritique) touche = false;
         else if (critique) touche = true;
-        else if (defCible === null) touche = null; // DEF inconnue : ne pas bloquer, à trancher manuellement
+        else if (defCible === null) touche = null; // valeur inconnue : ne pas bloquer, à trancher manuellement
         else touche = total >= defCible;
 
         if (echecCritique) {
           messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) — 1 naturel, échec critique automatique.`);
         } else if (critique) {
           messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) — CRITIQUE !` +
-            (defCible !== null ? ` (DEF cible ${defCible})` : ""));
+            (defCible !== null ? ` (${libelleDef} cible ${defCible})` : ""));
         } else if (defCible === null) {
-          messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) — DEF de la cible inconnue, à comparer manuellement.`);
+          messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) — ${libelleDef} de la cible inconnue, à comparer manuellement.`);
         } else {
-          messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) vs DEF ${defCible} — ${touche ? "Touché !" : "Raté."}`);
+          messages.push(`Jet d'attaque : ${total} (d20[${d20}] ${bonus >= 0 ? "+" : ""}${bonus}) vs ${libelleDef} ${defCible} — ${touche ? "Touché !" : "Raté."}`);
         }
 
         // Table de mutation Palier 1 (cf. MUTATION_PALIER1_TRIGGERS/
@@ -1747,11 +2022,24 @@ const Capacites = (() => {
       // effets 'bonus' (toujours appliqués, cf. Requiem du silence du Barde,
       // documenté plus haut) — sans changer ce comportement par défaut pour
       // toutes les autres capacités 'bonus' déjà en jeu.
+      if (saveBloqueEffets) return;
       if (attaqueVsDef && (TYPES_EFFETS_DIFFERES.includes(effet.type) || effet.differe)) return;
+      // Enchanteur — Voie de l'enchantement, rang 3 "Image décalée
+      // (évolution)" : remplace le bonus DEF+1 du sort 'illusion' (rang 1,
+      // même voie) par l'état 'image_decalee' (déjà au catalogue js/etats.js
+      // — "prochaine attaque ratée", même sémantique que l'ancien rang 1
+      // qu'il remplace) dès ce rang 3 acquis. Coût PP inchangé (géré par
+      // coutPPReel plus haut, indépendant du choix d'effet).
+      let effetVoieAjuste = effet;
+      if (perso.classe === "enchanteur" && source.voie === "Voie de l'enchantement" && source.rang === 1
+          && effet.type === "bonus" && effet.cible === "DEF"
+          && perso.rangMaxVoie("Voie de l'enchantement") >= 3) {
+        effetVoieAjuste = { type: "etat", id: "image_decalee", duree: "3" };
+      }
       // effet.cible === "choix" : substitue la vraie cible choisie à l'activation
       // (copie superficielle — ne jamais muter l'objet effet d'origine, partagé
       // par tous les personnages via data/donnees.js).
-      const effetResolu = (effet.cible === "choix" && choixEffet) ? Object.assign({}, effet, { cible: choixEffet }) : effet;
+      const effetResolu = (effetVoieAjuste.cible === "choix" && choixEffet) ? Object.assign({}, effetVoieAjuste, { cible: choixEffet }) : effetVoieAjuste;
       const msg = resoudreEffet(effetResolu, { perso, rang: source.rang, voie: source.voie, cible, libelle, persos });
       if (msg) messages.push(msg);
     });
@@ -1844,15 +2132,15 @@ const Capacites = (() => {
     // Coût en Points de Pouvoir (cf. le garde-fou plus haut) : décompté une
     // fois l'activation confirmée, même logique que reactionCout ci-dessus.
     // Prêtre "Don corrompu" (substitutionCS, cf. garde-fou plus haut) :
-    // décompte des CS à la place, même coût dérivé (rang du sort = coutPP/2).
+    // décompte des CS à la place, même coût dérivé (rang du sort = coutPPReel/2).
     if (substitutionCS) {
-      const coutCS = Math.max(1, Math.round(mecanique.coutPP / 2));
+      const coutCS = Math.max(1, Math.round(coutPPReel / 2));
       p.corruptionCombat = (p.corruptionCombat || 0) - coutCS;
       messages.push(`Don corrompu : ${coutCS} CS payés à la place des PP (${p.corruptionCombat} CS restants).`);
-    } else if (mecanique.coutPP) {
-      p.ppActuel = (p.ppActuel || 0) - mecanique.coutPP;
-      App.ajouterHisto(`${libelle} — PP`, p.ppActuel, false, false, `-${mecanique.coutPP} PP (${p.nom}, ${p.ppActuel} restants)`);
-      messages.push(`PP -${mecanique.coutPP} (${p.ppActuel} restants).`);
+    } else if (coutPPReel) {
+      p.ppActuel = (p.ppActuel || 0) - coutPPReel;
+      App.ajouterHisto(`${libelle} — PP`, p.ppActuel, false, false, `-${coutPPReel} PP (${p.nom}, ${p.ppActuel} restants)`);
+      messages.push(`PP -${coutPPReel} (${p.ppActuel} restants).`);
     }
     // Points de Cercle (cf. le garde-fou plus haut, RESSOURCES_CERCLE) :
     // décompté une fois l'activation confirmée. Le Supplément corrompu

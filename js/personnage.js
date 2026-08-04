@@ -229,6 +229,17 @@ class Personnage extends Entite {
   }
 
   /* ----- Caractéristiques ----- */
+  // Enchanteur — Voie du chaos, rang 5 "Ascension chaotique" (L, 1x/scénario) :
+  // état 'ascension_chaotique' — double TOUS les modificateurs de
+  // caractéristique tant qu'il est actif (cf. mod() ci-dessous). Volontairement
+  // PAS de multiplicateur supplémentaire dans calculerPPMax() (qui appelle déjà
+  // mod() en interne) : un second ×2 par-dessus produirait un double-comptage
+  // (le pool de PP augmente donc via la cascade du mod doublé, pas d'un
+  // strict ×2 du total — simplification assumée pour éviter ce risque signalé
+  // par le design). Même principe pour tout autre calcul qui passe par mod().
+  _multiplicateurAscension() {
+    return (this.etatsActifs || []).some((e) => e.idEtat === "ascension_chaotique") ? 2 : 1;
+  }
   mod(code) {
     const base = Entite.modCarac(this.caracs[code] + this.bonusCaracCapacites(code) + this.bonusCaracDons(code) + this.bonusCaracEquipement(code) + this.bonusCaracMutations(code) + this.bonusTemporaire(code)) - this.penaliteContratDemoniaque(code);
     // Guerrier — Voie de l'élite, rang 5 "Apogée physique" (L, 1x/combat) :
@@ -237,7 +248,7 @@ class Personnage extends Entite {
     // posé avec un champ 'carac' dynamique (cf. resoudreEffet côté
     // capacites.js, qui va chercher le choix fait au rang 1 à la pose).
     const apogeeActif = (this.etatsActifs || []).some((e) => e.idEtat === "apogee_physique" && e.carac === code);
-    return apogeeActif ? base * 2 : base;
+    return (apogeeActif ? base * 2 : base) * this._multiplicateurAscension();
   }
 
   // Bonus permanent à une caractéristique de base, accordé par un choix fixé
@@ -252,13 +263,6 @@ class Personnage extends Entite {
     if (this.classe === "guerrier") {
       const cap = this.capaciteEntree("Voie de l'élite", 1);
       if (cap && cap.choix === code) bonus += 1;
-    }
-    // Enchanteur — Voie du chaos, rang 4 "Réalité fracturée" (passive, dès
-    // Corruption d'Âme 5+) : -2 SAG permanent, contrepartie fixe (pas de
-    // choix) tant que corruptionMajeure n'a pas atteint 5 — ne redescend
-    // jamais en-dessous une fois franchi (corruptionMajeure ne diminue jamais).
-    if (code === "SAG" && this.classe === "enchanteur" && this.estChoisie("Voie du chaos", 4) && (this.corruptionMajeure || 0) >= 5) {
-      bonus -= 2;
     }
     // Voies raciales (homebrew) à bonus de caractéristique permanent — cf.
     // estChoisieRace/choixCapaciteRace, RACE_CAPACITES_A_CHOIX côté app.js
@@ -1295,6 +1299,20 @@ class Personnage extends Entite {
   bonusDegatsArmeEnchantee() {
     return (this.etatsActifs || []).some((e) => e.idEtat === "arme_enchantee") ? "1d6" : null;
   }
+  // Enchanteur — Voie de l'enchantement, rang 5 "Illusion vivante" : +1d6
+  // dégâts magiques par illusion liée encore vivante (jusqu'à 2, cf.
+  // catalogue INVOCATIONS "illusion_liee_enchanteur") — dépend d'un jeton
+  // posé sur la carte (invocateur/invocationId/pvActuel), pas d'un état sur
+  // this, même schéma dépendance-Carte que bonusDefDuel/bonusDefPhalange
+  // ci-dessus : 0 sans Carte chargée ou hors combat sur grille.
+  bonusDegatsMagiquesIllusionsLiees() {
+    if (this.classe !== "enchanteur") return 0;
+    if (typeof Carte === "undefined" || !Carte.listeMonstresCombat) return 0;
+    const nbVivantes = (Carte.listeMonstresCombat() || []).filter((m) =>
+      m.invocateur === this.id && m.invocationId === "illusion_liee_enchanteur" && (m.pvActuel || 0) > 0
+    ).length;
+    return nbVivantes; // nombre de d6 à ajouter, résolu comme `${n}d6` par l'appelant
+  }
   // Chevalier — Voie du chaos, rang 5 "Avatar du pacte" : +2d6 DM à toutes
   // les attaques au contact tant que l'état 'avatar_du_pacte' reste actif —
   // même canal que bonusDegatsDechainement (câblé aux mêmes 3 sites app.js).
@@ -1321,8 +1339,31 @@ class Personnage extends Entite {
     const armure = this._itemsEquipesUniques().find((it) => it.type === "armure");
     return (armure && armure.categorie === "lourde" && (this.dons || []).includes("maitre_armures_lourdes")) ? 3 : 0;
   }
+  // Somme des formules de scaling des objets équipés visant `cible` (et, pour
+  // carac/competence, la sous-clé `cle`) — cf. js/forge.js (champ `formules`)
+  // et js/formule.js (évaluateur @variables). Un objet du catalogue classique
+  // n'a pas de `formules` → contribue 0, aucun changement pour l'existant.
+  bonusFormuleEquipement(cible, cle) {
+    if (typeof Formule === "undefined") return 0;
+    let t = 0;
+    this._itemsEquipesUniques().forEach((it) => {
+      (it.formules || []).forEach((f) => {
+        if (!f || f.cible !== cible) return;
+        if (cle != null && (f.competence || f.carac) !== cle) return;
+        t += Formule.evaluer(f.expr, { perso: this }) || 0;
+      });
+    });
+    return t;
+  }
+  // Bonus de dégâts dérivé d'une formule d'objet (ex. Épée « +dmg par or »),
+  // ajouté à la formule de dégâts côté app.js (même canal que les autres
+  // bonusDegats*). Renvoie un entier (arrondi au plus proche).
+  bonusDegatsFormuleEquipement() {
+    return Math.round(this.bonusFormuleEquipement("degats"));
+  }
   bonusDefEquipement() {
-    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDEF || 0), 0);
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDEF || 0), 0)
+      + this.bonusFormuleEquipement("DEF");
   }
   // Bonus de caractéristique porté par un accessoire équipé (ex. Anneau de
   // force : { bonusCarac: { FOR: 1 } }, cf. data/loot.js/json) — lu
@@ -1334,18 +1375,21 @@ class Personnage extends Entite {
   // affiché en badge sur la fiche (badgeEffetItem côté app.js) mais non
   // chiffré — audit du 2026-07-18, à étendre au cas par cas.
   bonusCaracEquipement(code) {
-    return this._itemsEquipesUniques().reduce((t, it) => t + ((it.bonusCarac && it.bonusCarac[code]) || 0), 0);
+    return this._itemsEquipesUniques().reduce((t, it) => t + ((it.bonusCarac && it.bonusCarac[code]) || 0), 0)
+      + this.bonusFormuleEquipement("carac", code);
   }
   // Même principe que bonusCaracEquipement, pour les accessoires qui donnent
   // un bonus fixe à une compétence nommée (ex. Cape de camouflage :
   // { bonusCompetences: { "Discrétion": 1 } }) — lu par bonusCompetence().
   bonusCompetenceEquipement(nom) {
-    return this._itemsEquipesUniques().reduce((t, it) => t + ((it.bonusCompetences && it.bonusCompetences[nom]) || 0), 0);
+    return this._itemsEquipesUniques().reduce((t, it) => t + ((it.bonusCompetences && it.bonusCompetences[nom]) || 0), 0)
+      + this.bonusFormuleEquipement("competence", nom);
   }
   // Bonus d'initiative porté par un accessoire équipé (ex. Bottes légères :
   // { bonusInitiative: 1 }) — lu par calculerInitiative().
   bonusInitiativeEquipement() {
-    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusInitiative || 0), 0);
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusInitiative || 0), 0)
+      + this.bonusFormuleEquipement("initiative");
   }
 
   // Résout l'entrée CANONIQUE (avec caracDelta/competenceDelta/etc.) d'une
@@ -1582,6 +1626,12 @@ class Personnage extends Entite {
     // données mais jamais lu par aucune fonction.
     if (type === "distance" && this.classe === "chasseur" && this.estChoisie("Voie de la gâchette", 1)) {
       bonus += 1;
+    }
+    // Enchanteur — Voie du chaos, rang 5 "Ascension chaotique" : +4 à tous
+    // les jets d'attaque rapide (contact/distance/magique/lancer) tant que
+    // l'état 'ascension_chaotique' reste actif.
+    if ((this.etatsActifs || []).some((e) => e.idEtat === "ascension_chaotique")) {
+      bonus += 4;
     }
     return bonus;
   }

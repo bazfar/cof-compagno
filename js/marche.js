@@ -40,7 +40,13 @@ const Marche = (() => {
     setTimeout(() => t.classList.remove("visible"), 2800);
   }
 
-  function _catalogue() { return (typeof LOOT_CATALOGUE !== "undefined") ? LOOT_CATALOGUE : []; }
+  function _catalogue() {
+    const base = (typeof LOOT_CATALOGUE !== "undefined") ? LOOT_CATALOGUE : [];
+    // Objets forgés par le MJ (cf. js/forge.js) : fusionnés au catalogue pour
+    // être résolus (prix/stock) et vendables via la mise en vente manuelle.
+    const custom = (typeof Forge !== "undefined" && Forge.catalogueCustom) ? Forge.catalogueCustom() : [];
+    return custom.length ? base.concat(custom) : base;
+  }
   function _itemCatalogue(id) { return _catalogue().find((i) => i.id === id); }
   function _localite(id) { return LOCALITES_MARCHE.find((l) => l.id === id); }
   function _marchand(localite, id) { return localite ? localite.marchands.find((m) => m.id === id) : null; }
@@ -334,7 +340,7 @@ const Marche = (() => {
     const stats = _statsItem(item);
     return `<div class="loot-item">
       <div class="loot-item-header">
-        <span class="loot-item-nom">${echapper(item.nom)}</span>
+        <span class="loot-item-nom">${item.icone ? `<img class="loot-item-icone" src="${item.icone}" alt="" />` : ""}${echapper(item.nom)}</span>
         <span class="loot-badge loot-badge-${item.type}">${item.type}</span>
         ${item.enchantement ? `<span class="loot-badge loot-badge-magic">+${item.enchantement}</span>` : ""}
         ${_badgeRarete(item, slot.rareteId)}
@@ -356,7 +362,7 @@ const Marche = (() => {
     const afficheRarete = _peutAvoirRarete(item);
     return `<div class="loot-item">
       <div class="loot-item-header">
-        <span class="loot-item-nom">${echapper(item.nom)}</span>
+        <span class="loot-item-nom">${item.icone ? `<img class="loot-item-icone" src="${item.icone}" alt="" />` : ""}${echapper(item.nom)}</span>
         <span class="loot-badge loot-badge-${item.type}">${item.type}</span>
         ${item.enchantement ? `<span class="loot-badge loot-badge-magic">+${item.enchantement}</span>` : ""}
         ${_badgeRarete(item, slot.rareteId)}
@@ -597,7 +603,39 @@ const Marche = (() => {
       _peuplerAjoutManuel(marchand);
       _wireAjoutManuel(marchand);
     }
+    if (typeof Forge !== "undefined") Forge.rendre(); // Forge du MJ (guarde le rôle en interne)
   }
 
-  return { rendrePanneauMarche, acheterObjetMarche, demanderAchatMarche, calculerPrix };
+  // ── API pour la Forge (js/forge.js) : mise en vente / retrait direct ──
+  // Met un objet en vente chez le marchand actuellement sélectionné.
+  function mettreEnVente(itemId) {
+    const localite = _localite(_localiteId);
+    const marchand = _marchand(localite, _marchandId);
+    if (!marchand) { toast("Choisis d'abord une localité et un marchand."); return; }
+    _ajouterItemAuStock(marchand, itemId, "commun");
+    rendrePanneauMarche();
+  }
+  // Retire un objet du stock de TOUS les marchands. Renvoie le nombre retiré.
+  function retirerDuMarche(itemId) {
+    const stock = lireStock();
+    let retires = 0;
+    Object.keys(stock).forEach((mid) => {
+      const avant = (stock[mid] || []).map(_normStockEntry);
+      const apres = avant.filter((e) => e.itemId !== itemId);
+      retires += avant.length - apres.length;
+      stock[mid] = apres;
+    });
+    if (retires) { sauverStock(stock); toast(`Retiré du marché (${retires}).`); }
+    else toast("Cet objet n'était pas en vente.");
+    rendrePanneauMarche();
+  }
+  // Combien de fois cet objet est en vente (tous marchands confondus).
+  function estEnVente(itemId) {
+    const stock = lireStock();
+    let n = 0;
+    Object.keys(stock).forEach((mid) => (stock[mid] || []).map(_normStockEntry).forEach((e) => { if (e.itemId === itemId) n++; }));
+    return n;
+  }
+
+  return { rendrePanneauMarche, acheterObjetMarche, demanderAchatMarche, calculerPrix, mettreEnVente, retirerDuMarche, estEnVente };
 })();

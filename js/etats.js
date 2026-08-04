@@ -115,6 +115,12 @@ const ETATS = {
     description: "Ne peut pas attaquer ce tour, sauf en cas de légitime défense (Prêtre, Cercle de la Foi, sort Calme les esprits, rang 2)." },
   heretique: { nom: "Hérétique", categorie: "malus",
     description: "Tout dégât subi par la cible est augmenté de +1d4 (+1d8 si mort-vivante) tant que l'état dure (Prêtre, Cercle de la Foi, sort Voix du jugement, rang 4) — bonus appliqué manuellement à chaque source de dégâts, quelle qu'elle soit." },
+  fascinee_illusoire: { nom: "Fascinée (illusion)", categorie: "controle",
+    description: "Immobile tant que l'effet est maintenu (Enchanteur, Voie de l'enchantement rang 2 « Fascination ») — motCle 'maintenue', jamais décompté tour par tour. Coûte coutMaintienPP en PP à chaque début de tour du lanceur (cf. Combat._reinitialiserActionsEntree) ; PP insuffisants = état rompu et retiré immédiatement." },
+  folie_illusoire: { nom: "Folie illusoire", categorie: "controle",
+    description: "Sombre dans la folie et attaque la créature la plus proche (allié compris), sur échec d'une Sauvegarde Volonté (Enchanteur, Voie du chaos rang 3 « Illusion de masse » DD 15, ou rang 4 « Murmure terrifiant » DD 16 sur le palier <16). La redirection d'attaque reste une application manuelle par la table (pas de moteur de ciblage automatique d'attaque adverse dans l'app), même limite que le reste des redirections non modélisées (cf. Rage incontrôlée)." },
+  ascension_chaotique: { nom: "Ascension chaotique", categorie: "buff",
+    description: "Double tous les modificateurs de caractéristique (cf. Personnage.mod()/_multiplicateurAscension) et +4 à tous les jets d'attaque rapide, tant que l'état dure (Enchanteur, Voie du chaos rang 5, 1x/scénario). Le doublement du pool de PP est posé séparément à l'activation (rempli au nouveau max). Le doublement de PV max est approximé par un gain de PV temporaires égal au pvMax du personnage — cf. commentaire de Capacites.resoudreEffet." },
 };
 
 const ORDRE_CATEGORIES_ETATS = ["controle", "malus", "dot", "physique", "buff"];
