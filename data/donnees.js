@@ -2419,6 +2419,11 @@ const SORTS_PAR_CLASSE = {
   magicien: SORTS_MAGICIEN,
   pretre: SORTS_PRETRE,
   enchanteur: SORTS_ENCHANTEUR,
+  // Nécromancien n'a pas encore sa propre liste (cf. discussion du
+  // 04/08/2026) — réutilise SORTS_MAGICIEN en attendant. À remplacer par
+  // SORTS_NECROMANCIEN le jour où cette liste existera (juste cette ligne
+  // à changer, rien d'autre ne dépend de l'identité du tableau).
+  necromancien: SORTS_MAGICIEN,
 };
 
 /* Correctif d'équilibrage PP (cf. prompt_correctif_pp_nonlineaire.md) : coût

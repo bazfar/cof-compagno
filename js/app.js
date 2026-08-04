@@ -5321,11 +5321,17 @@ const App = (() => {
      accumuler les kits si le joueur change d'avis plusieurs fois. */
   function appliquerEquipementDepart(cle) {
     // Retire le kit précédent des slots qu'il peut occuper (tête/jambes
-    // (fusionné avec bottes)/avant-bras/collier/bague ne sont jamais
-    // touchés : rien n'y est placé ici).
+    // (fusionné avec bottes)/avant-bras/bague ne sont jamais touchés : rien
+    // n'y est placé ici). collier : ajouté avec l'accessoire de Grimoire
+    // (Manuel d'incantation/Amulette de Bénédiction, cf.
+    // prompt_grimoire_v2_emplacements_typ_s.md) — même logique de reset
+    // que main_droite/main_gauche/torse, sûre pour la même raison (appelé
+    // uniquement à un vrai changement de classe en création, jamais après
+    // que le joueur ait pu équiper quoi que ce soit manuellement).
     creation.equipement.main_droite = null;
     creation.equipement.main_gauche = null;
     creation.equipement.torse = null;
+    creation.equipement.collier = null;
     // Retire les consommables du kit précédent (marqués _kitDepart), en
     // laissant intacts les objets ajoutés manuellement par le joueur.
     creation.inventaireListe = (creation.inventaireListe || []).filter((it) => !it._kitDepart);
@@ -5349,6 +5355,16 @@ const App = (() => {
     if (kit.armure) {
       const armure = depuisCatalogue(kit.armure);
       if (armure) creation.equipement.torse = Object.assign({}, armure, { _kitDepart: true });
+    }
+    // accessoire : objet de Grimoire donné Commun de base (cf.
+    // prompt_grimoire_v2_emplacements_typ_s.md) — résolu vers son premier
+    // slot compatible (Personnage.slotsPourType), pas un slot en dur, pour
+    // rester générique si un futur kit ajoute un accessoire avec un slot
+    // différent de "collier".
+    if (kit.accessoire) {
+      const accessoire = depuisCatalogue(kit.accessoire);
+      const slotCible = accessoire ? Personnage.slotsPourType(accessoire)[0] : null;
+      if (slotCible) creation.equipement[slotCible] = Object.assign({}, accessoire, { _kitDepart: true });
     }
     (kit.consommables || []).forEach((id) => {
       const item = depuisCatalogue(id);
@@ -5917,6 +5933,13 @@ const App = (() => {
   // canonique pour "apprendre un sort à un allié" dans la référence).
   // Consommé uniquement en cas de succès (sort déjà connu ou plus de slot
   // disponible = tentative refusée, le parchemin reste dans l'inventaire).
+  // Nom de l'objet attendu pour CETTE classe (juste pour les messages —
+  // aucune logique de jeu ne dépend de ce nom, seulement de grimoireClasses
+  // sur l'item réellement équipé).
+  const NOM_OBJET_GRIMOIRE_PAR_CLASSE = {
+    magicien: "Manuel d'incantation", enchanteur: "Manuel d'incantation", necromancien: "Manuel d'incantation",
+    pretre: "Amulette de Bénédiction",
+  };
   function apprendreSortDepuisParchemin(persoId, idx) {
     const persos = chargerPersos();
     const p = persos[persoId];
@@ -5925,17 +5948,27 @@ const App = (() => {
     if (!item || !estParcheminSort(item)) return;
     if (typeof CARAC_MAGIE === "undefined" || !CARAC_MAGIE[p.classe]) { toast("Seul un casteur pur peut apprendre ce sort."); return; }
     const perso = Personnage.depuisJSON(p);
-    const slots = perso.slotsGrimoire();
     const connus = p.grimoireSortsConnus || [];
     if (connus.includes(item.sortAppris)) { toast("Ce sort est déjà connu."); return; }
-    if (connus.length >= slots) { toast(`Plus de slot disponible dans le Grimoire (${connus.length}/${slots}) — équipe un Manuel d'incantation de meilleure rareté, ou n'apprends pas de nouveau sort pour l'instant.`); return; }
-    const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? SORTS_PAR_CLASSE[p.classe] : null;
-    const sort = catalogue ? catalogue.find((s) => s.id === item.sortAppris) : null;
+    const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
+    const sort = catalogue.find((s) => s.id === item.sortAppris);
+    if (!sort) { toast("Sort introuvable pour cette classe."); return; }
+    if (!perso._objetGrimoireEquipe()) {
+      const nomAttendu = NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire";
+      toast(`Équipe d'abord ${nomAttendu} pour apprendre des sorts hors Voie.`);
+      return;
+    }
+    const tierLibre = perso.emplacementLibrePourRang(sort.rang);
+    if (!tierLibre) {
+      toast(`Plus d'emplacement compatible avec un sort de rang ${sort.rang} — équipe un objet de meilleure rareté, ou n'apprends pas de nouveau sort pour l'instant.`);
+      return;
+    }
     p.grimoireSortsConnus = connus.concat([item.sortAppris]);
     _consommerUnite(p, idx);
     sauverPersos(persos);
     afficherFiche(persoId);
-    toast(`📖 « ${sort ? sort.nom : item.sortAppris} » ajouté au Grimoire (${p.grimoireSortsConnus.length}/${slots}).`);
+    const slots = perso.slotsGrimoire();
+    toast(`📖 « ${sort.nom} » ajouté au Grimoire, emplacement 1-${GRIMOIRE_PLAFOND_TIER[tierLibre]} (${p.grimoireSortsConnus.length}/${slots} au total).`);
   }
 
   // Jet de mort (état Mourant, 0 PV, cf. REGLES_GENERALES "Mort et
@@ -6137,7 +6170,12 @@ const App = (() => {
                 </select>
                 — accorde 1 sort de rang 1 de la famille choisie, hors slot de Grimoire.
               </div>` : ""}
-              <div class="aide" style="margin-bottom:8px;">${(p.grimoireSortsConnus || []).length}/${perso.slotsGrimoire()} sorts connus${perso.slotsGrimoire() === 0 ? " — équipe un Manuel d'incantation pour en apprendre." : ""}</div>
+              <div class="aide" style="margin-bottom:8px;">${(p.grimoireSortsConnus || []).length}/${perso.slotsGrimoire()} sorts connus${perso.slotsGrimoire() === 0 ? ` — équipe ${NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire"} pour en apprendre.` : ""}</div>
+              ${perso.slotsGrimoire() > 0 ? (function () {
+                const cap = perso.slotsGrimoireParTier();
+                const occ = perso.grimoireOccupationParTier();
+                return `<div class="aide" style="margin-bottom:8px;font-size:0.78rem;">Par rang max. logeable — 1-2 : ${occ["12"]}/${cap["12"]} · 1-3 : ${occ["13"]}/${cap["13"]} · 1-4 : ${occ["14"]}/${cap["14"]} · 1-5 : ${occ["15"]}/${cap["15"]}</div>`;
+              })() : ""}
               ${(function () {
                 const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
                 const appris = p.grimoireSortsConnus || [];

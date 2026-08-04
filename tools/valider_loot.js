@@ -46,15 +46,18 @@ function chargerGlobals(fichiers, noms) {
   return ctx;
 }
 
-const ctx = chargerGlobals(["data/donnees.js"], ["COMPETENCES_PAR_CARAC", "SAUVEGARDES"]);
+const ctx = chargerGlobals(["data/donnees.js"], ["COMPETENCES_PAR_CARAC", "SAUVEGARDES", "ORDRE_CLASSES"]);
 const COMPETENCES_PAR_CARAC = ctx.COMPETENCES_PAR_CARAC;
 const SAUVEGARDES = ctx.SAUVEGARDES;
+const ORDRE_CLASSES = ctx.ORDRE_CLASSES;
 if (!COMPETENCES_PAR_CARAC) { console.error("❌ COMPETENCES_PAR_CARAC introuvable (data/donnees.js n'a pas chargé)."); process.exit(1); }
 if (!SAUVEGARDES) { console.error("❌ SAUVEGARDES introuvable (data/donnees.js n'a pas chargé)."); process.exit(1); }
+if (!ORDRE_CLASSES) { console.error("❌ ORDRE_CLASSES introuvable (data/donnees.js n'a pas chargé)."); process.exit(1); }
 
 const COMPETENCES_VALIDES = new Set(Object.values(COMPETENCES_PAR_CARAC).flat());
 const CARACS_VALIDES = ["FOR", "DEX", "CON", "INT", "SAG", "CHA"];
 const SAUVEGARDES_VALIDES = Object.keys(SAUVEGARDES);
+const CLASSES_VALIDES = ORDRE_CLASSES;
 
 // data/loot.json : source de vérité éditée à la main (data/loot.js en est
 // une copie générée, chargée par l'app au runtime — cf. son propre
@@ -83,7 +86,7 @@ const PAR_TYPE = {
   arme: ["degats", "portee", "typedegats", "enchantement", "deuxMains", "categorieArme", "porteeMinCases", "porteeMaxCases", "rechargement", "degatsAuMoinsRare", "bonusAttaqueMagique", "bonusDegatsMagiques"],
   armure: ["valeurCA", "malusDEX", "categorie", "reductionDegats"],
   bouclier: ["bonusDEF", "categorieBouclier"],
-  accessoire: ["slot", "bonusCarac", "bonusCompetences", "bonusInitiative", "bonusDEF", "bonusAttaqueMagique", "bonusAttaqueDistance", "bonusDegatsMagiques", "bonusDegatsMainsNues", "bonusPvMaxDe", "rariteFixe", "sansModificateurRegional"],
+  accessoire: ["slot", "bonusCarac", "bonusCompetences", "bonusInitiative", "bonusDEF", "bonusAttaqueMagique", "bonusAttaqueDistance", "bonusDegatsMagiques", "bonusDegatsMainsNues", "bonusPvMaxDe", "rariteFixe", "sansModificateurRegional", "grimoireClasses"],
   consommable: ["quantite", "sortAppris", "dureeEtat", "formuleDot", "jetable"],
 };
 // Champs qui, s'ils sont présents, doivent être de type number — "degats"/
@@ -137,6 +140,17 @@ items.forEach((it, index) => {
         signaler(cle, `bonusCarac référence une caractéristique inconnue : "${carac}".`);
       }
     });
+  }
+
+  // 4bis. grimoireClasses (Grimoire v2, cf. prompt_grimoire_v2_emplacements_typ_s.md)
+  if (it.grimoireClasses !== undefined) {
+    if (!Array.isArray(it.grimoireClasses)) {
+      signaler(cle, `grimoireClasses devrait être un tableau, reçu ${typeof it.grimoireClasses}.`);
+    } else {
+      it.grimoireClasses.forEach((c) => {
+        if (!CLASSES_VALIDES.includes(c)) signaler(cle, `grimoireClasses référence une classe inconnue : "${c}".`);
+      });
+    }
   }
 
   // 5. bonusSauvegardes (aucun item actuel n'en porte, vérifié quand même si présent)

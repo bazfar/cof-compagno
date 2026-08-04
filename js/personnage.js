@@ -14,6 +14,25 @@
 // vit dans inventaireListe, un simple sac sans effet mécanique.
 const SLOTS_EQUIPEMENT = ["tete", "torse", "jambe", "avant_bras", "main_droite", "main_gauche", "collier", "bague", "mains"];
 
+// Grimoire v2 (04/08/2026, cf. prompt_grimoire_v2_emplacements_typ_s.md) —
+// emplacements de sorts hors Voies typés par plafond de rang logeable
+// ("12" = rang 1 ou 2, "13" = rang 1 à 3, etc.), qui scalent par palier de
+// RARETÉ de l'objet porteur (Manuel d'incantation / Amulette de
+// Bénédiction, cf. grimoireClasses) — pas par niveau du perso. Constantes
+// module-level (pas des static class fields) pour rester cohérent avec le
+// reste du fichier, qui n'utilise que des static METHODS sur Personnage.
+const GRIMOIRE_TIERS_PAR_RARETE = [
+  { "12": 4, "13": 1, "14": 1, "15": 0 }, // Commun      (6 au total)
+  { "12": 4, "13": 3, "14": 2, "15": 0 }, // Peu commun  (9 au total)
+  { "12": 4, "13": 4, "14": 3, "15": 1 }, // Rare        (12 au total)
+  { "12": 4, "13": 5, "14": 4, "15": 2 }, // Légendaire  (15 au total)
+];
+// Ordre de préférence de remplissage : le plus petit plafond compatible
+// d'abord, pour préserver les emplacements élevés aux sorts qui en ont
+// vraiment besoin.
+const GRIMOIRE_ORDRE_TIERS = ["12", "13", "14", "15"];
+const GRIMOIRE_PLAFOND_TIER = { "12": 2, "13": 3, "14": 4, "15": 5 };
+
 function equipementVide() {
   const e = {};
   SLOTS_EQUIPEMENT.forEach((s) => (e[s] = null));
@@ -501,17 +520,63 @@ class Personnage extends Entite {
     this.ppActuel = Math.min(max, (this.ppActuel || 0) + Math.ceil(max * 0.25));
   }
 
-  // Nombre de sorts hors Voies que le personnage peut connaître à la fois
-  // (cf. reference_sorts_connus.md) : 0 sans Manuel d'incantation équipé
-  // (data/loot.json: manuel_incantation, type "accessoire") — 3 de base,
-  // +2 par palier de rareté de l'exemplaire réellement porté (Commun 3,
-  // Peu commun 5, Rare 7, Légendaire 9, cf. bonusRarete posé par
-  // Raretes.appliquer à l'instanciation).
+  // Objet de Grimoire équipé pour CETTE classe — généralisé via le champ
+  // `grimoireClasses` (liste de classes autorisées) plutôt qu'un id en dur :
+  // Manuel d'incantation [magicien/enchanteur/necromancien] et Amulette de
+  // Bénédiction [pretre] partagent ce même mécanisme, cf.
+  // prompt_grimoire_v2_emplacements_typ_s.md. Tout futur objet du même
+  // genre n'a qu'à porter ce champ, aucun code à toucher.
+  _objetGrimoireEquipe() {
+    return this._itemsEquipesUniques().find((it) => Array.isArray(it.grimoireClasses) && it.grimoireClasses.includes(this.classe));
+  }
+  // Emplacements de sorts hors Voies, typés par plafond de rang logeable
+  // (cf. GRIMOIRE_TIERS_PAR_RARETE ci-dessus) — 0 partout sans objet
+  // compatible équipé pour cette classe.
+  slotsGrimoireParTier() {
+    const objet = this._objetGrimoireEquipe();
+    if (!objet) return { "12": 0, "13": 0, "14": 0, "15": 0 };
+    return GRIMOIRE_TIERS_PAR_RARETE[objet.bonusRarete || 0];
+  }
+  // Total agrégé, conservé pour l'affichage existant ("X/Y sorts connus").
   slotsGrimoire() {
-    const manuel = this._itemsEquipesUniques().find((it) => it.type === "accessoire" && it.id === "manuel_incantation");
-    if (!manuel) return 0;
-    const bonusRarete = manuel.bonusRarete || 0;
-    return 3 + 2 * bonusRarete;
+    const t = this.slotsGrimoireParTier();
+    return t["12"] + t["13"] + t["14"] + t["15"];
+  }
+  // Recalcule l'occupation par palier À LA VOLÉE depuis grimoireSortsConnus
+  // (tableau plat d'ids, inchangé, dans l'ordre d'apprentissage) — AUCUN
+  // champ persisté supplémentaire : réappliquer le même remplissage glouton
+  // (plus petit plafond compatible libre) donne toujours le même résultat
+  // que celui obtenu au moment de l'apprentissage, tant que l'objet équipé
+  // ne change pas de rareté/classe entre-temps. Un sort dont le rang ne
+  // trouve plus AUCUN plafond compatible (objet retiré ou changé pour un
+  // moins bon après coup) n'est simplement compté dans aucun palier — pas
+  // d'erreur, juste absent du décompte d'occupation.
+  grimoireOccupationParTier() {
+    const capacites = this.slotsGrimoireParTier();
+    const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[this.classe] || []) : [];
+    const occ = { "12": 0, "13": 0, "14": 0, "15": 0 };
+    (this.grimoireSortsConnus || []).forEach((sortId) => {
+      const sort = catalogue.find((s) => s.id === sortId);
+      if (!sort) return;
+      const tier = Personnage._tierLibrePourRang(capacites, occ, sort.rang);
+      if (tier) occ[tier]++;
+    });
+    return occ;
+  }
+  // Plus petit plafond compatible ENCORE LIBRE pour un sort de `rang` donné,
+  // ou null si aucun (capacités saturées ou aucun palier assez haut).
+  static _tierLibrePourRang(capacites, occupation, rang) {
+    for (const tier of GRIMOIRE_ORDRE_TIERS) {
+      if (GRIMOIRE_PLAFOND_TIER[tier] < rang) continue;
+      if ((occupation[tier] || 0) < (capacites[tier] || 0)) return tier;
+    }
+    return null;
+  }
+  // Emplacement disponible pour apprendre un NOUVEAU sort de `rang` donné —
+  // utilisé par apprendreSortDepuisParchemin (js/app.js) avant d'ajouter à
+  // grimoireSortsConnus.
+  emplacementLibrePourRang(rang) {
+    return Personnage._tierLibrePourRang(this.slotsGrimoireParTier(), this.grimoireOccupationParTier(), rang);
   }
 
   // Sorts accordés directement par un rang de voie (cf. SORTS_ACCORDES_PAR_VOIE
@@ -1864,4 +1929,7 @@ class Personnage extends Entite {
 if (typeof window !== "undefined") {
   window.Personnage = Personnage;
   window.SLOTS_EQUIPEMENT = SLOTS_EQUIPEMENT;
+  window.GRIMOIRE_TIERS_PAR_RARETE = GRIMOIRE_TIERS_PAR_RARETE;
+  window.GRIMOIRE_ORDRE_TIERS = GRIMOIRE_ORDRE_TIERS;
+  window.GRIMOIRE_PLAFOND_TIER = GRIMOIRE_PLAFOND_TIER;
 }
