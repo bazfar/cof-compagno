@@ -199,6 +199,21 @@ class Personnage extends Entite {
     // de SORTS_MAGICIEN (ou liste équivalente future Nécro/Enchanteur),
     // distinct de capacites[] (réservé aux rangs de Voie classiques).
     this.grimoireSortsConnus = d.grimoireSortsConnus || [];
+    // Prêtre — Cercle de spécialisation (cf. prompt_pretre_cercle_vie.md
+    // Partie 1) : "vie"/"foi"/"bannissement"/"jugement"/null, fixé à la
+    // création — donne 1 sort de la famille correspondante hors slot de
+    // Grimoire (cf. sortsGrimoireAccordes()).
+    this.cercleSpecialisation = d.cercleSpecialisation || null;
+    // Points de Cercle (façon Channel Divinity D&D, cf. les 4 prompts
+    // prompt_pretre_cercle_*.md) : 4 pools séparés du PP, un par Cercle,
+    // jamais prélevés sur la même action. Reconstitution repos long
+    // uniquement (cf. reposLongPointsCercle()). Positionnés en fin de
+    // constructeur comme ppActuel : leurs Max() dépendent de estChoisie/
+    // rangMaxVoie, donc de capacites déjà posé plus haut.
+    this.pointsBenediction = d.pointsBenediction !== undefined ? d.pointsBenediction : this.pointsBenedictionMax();
+    this.pointsConviction = d.pointsConviction !== undefined ? d.pointsConviction : this.pointsConvictionMax();
+    this.pointsBannissement = d.pointsBannissement !== undefined ? d.pointsBannissement : this.pointsBannissementMax();
+    this.pointsJugement = d.pointsJugement !== undefined ? d.pointsJugement : this.pointsJugementMax();
 
     // Migration douce : l'ancien champ libre `inventaire` (string) devient un
     // item texte libre dans inventaireListe, pour ne rien perdre à la casse
@@ -269,6 +284,11 @@ class Personnage extends Entite {
     }
     if (this.race === "demi_gobelin" && code === "DEX" && this.estChoisieRace(2)) {
       // Instinct de Fuite : +1 DEX fixe (pas de choix).
+      bonus += 1;
+    }
+    // Prêtre — Cercle de Vie, rang 5 "Faveur divine" (passive) : +1 CON et
+    // +1 CHA permanents, cf. prompt_pretre_cercle_vie.md Partie 4.
+    if (this.classe === "pretre" && this.estChoisie("Voie de la guérison", 5) && (code === "CON" || code === "CHA")) {
       bonus += 1;
     }
     return bonus;
@@ -488,6 +508,70 @@ class Personnage extends Entite {
     if (!manuel) return 0;
     const bonusRarete = manuel.bonusRarete || 0;
     return 3 + 2 * bonusRarete;
+  }
+
+  // Sorts accordés directement par un rang de voie (cf. SORTS_ACCORDES_PAR_VOIE
+  // et CERCLE_SORT_GRATUIT, data/donnees.js) plutôt qu'appris via slot de
+  // Grimoire — même patron répété pour les 4 Cercles du Prêtre (chacun
+  // accorde son sort de rang 1, certains aussi un sort de rang 4/5). Fusionné
+  // avec grimoireSortsConnus côté app.js pour l'affichage/le lancement,
+  // jamais compté dans les slots.
+  sortsGrimoireAccordes() {
+    const ids = (typeof SORTS_ACCORDES_PAR_VOIE !== "undefined" ? SORTS_ACCORDES_PAR_VOIE : [])
+      .filter((e) => e.classe === this.classe && this.rangMaxVoie(e.voie) >= e.rang)
+      .map((e) => e.idSort);
+    const sortCercle = typeof CERCLE_SORT_GRATUIT !== "undefined" ? CERCLE_SORT_GRATUIT[this.cercleSpecialisation] : null;
+    if (sortCercle && !ids.includes(sortCercle)) ids.push(sortCercle);
+    return ids;
+  }
+
+  // Prêtre — sort mineur gratuit (cf. prompt_pretre_cercle_vie.md Partie 2) :
+  // dé de soin de base scalant par palier de niveau, même paliers que
+  // "Spécialisation de soin" (Cercle de Vie rang 2).
+  soinsMineurs() {
+    if (this.classe !== "pretre") return null;
+    const n = this.niveau || 1;
+    if (n >= 10) return "1d10";
+    if (n >= 7) return "1d8";
+    if (n >= 4) return "1d6";
+    return "1d4";
+  }
+
+  // Points de Cercle (cf. constructeur) : 0 sans le rang 4 de la voie
+  // correspondante, 2 avec le rang 4 seul, 3 avec le rang 5 (même barème
+  // pour les 4 Cercles).
+  pointsBenedictionMax() {
+    if (this.classe !== "pretre") return 0;
+    if (this.estChoisie("Voie de la guérison", 5)) return 3;
+    if (this.estChoisie("Voie de la guérison", 4)) return 2;
+    return 0;
+  }
+  pointsConvictionMax() {
+    if (this.classe !== "pretre") return 0;
+    if (this.estChoisie("Voie de la conversion", 5)) return 3;
+    if (this.estChoisie("Voie de la conversion", 4)) return 2;
+    return 0;
+  }
+  pointsBannissementMax() {
+    if (this.classe !== "pretre") return 0;
+    if (this.estChoisie("Voie de l'exorcisme", 5)) return 3;
+    if (this.estChoisie("Voie de l'exorcisme", 4)) return 2;
+    return 0;
+  }
+  pointsJugementMax() {
+    if (this.classe !== "pretre") return 0;
+    if (this.estChoisie("Voie de l'inquisition", 5)) return 3;
+    if (this.estChoisie("Voie de l'inquisition", 4)) return 2;
+    return 0;
+  }
+  // Repos long (bouton manuel, même principe que reposLongPP) : restaure les
+  // 4 pools de Points de Cercle au maximum. Pas de repos court équivalent
+  // (non demandé par les prompts, contrairement au PP).
+  reposLongPointsCercle() {
+    this.pointsBenediction = this.pointsBenedictionMax();
+    this.pointsConviction = this.pointsConvictionMax();
+    this.pointsBannissement = this.pointsBannissementMax();
+    this.pointsJugement = this.pointsJugementMax();
   }
 
   /* ----- Défense ----- */

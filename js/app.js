@@ -4519,16 +4519,18 @@ const App = (() => {
       });
       fermerPickerCibleCapacite();
       toast(res.messages.join(" · "));
-      // Prêtre — Voie de la guérison rang 5 "Résurrection" : au-delà du soin
-      // générique (1d6 PV, déjà résolu par Capacites.lancer ci-dessus via le
-      // canal "soin" standard, qui ne touche que pvActuel), lève aussi l'état
-      // Mort de la cible (etatMort/mortSucces/mortEchecs) — sans quoi le
-      // personnage resterait affiché "Mort" malgré ses PV retrouvés, le
+      // Prêtre — Cercle de Vie, sort "Résurrection" (Grimoire, rang 5) : au-delà
+      // du soin générique (1d6 PV, déjà résolu par Capacites.lancer ci-dessus
+      // via le canal "soin" standard, qui ne touche que pvActuel), lève aussi
+      // l'état Mort de la cible (etatMort/mortSucces/mortEchecs) — sans quoi
+      // le personnage resterait affiché "Mort" malgré ses PV retrouvés, le
       // moteur générique de soin n'ayant aucune notion de "ramène un mort"
-      // propre à ce rang précis. Même mécanique que reanimerAllie (objet de
-      // réanimation), appliquée ici après un cast réussi de la capacité.
-      if (res.ok && cibleId && mecaniqueLancee.cible === "allie" &&
-          sourceLancee.voie === "Voie de la guérison" && sourceLancee.rang === 5) {
+      // propre à ce sort précis. Même mécanique que reanimerAllie (objet de
+      // réanimation), appliquée ici après un cast réussi. Identifié par
+      // idSort plutôt que voie+rang depuis que Résurrection a rejoint le
+      // Grimoire (cf. prompt_pretre_cercle_vie.md) — "Miracle" (même rang 5)
+      // reste un wildcard narratif, volontairement exclu de ce déclenchement.
+      if (res.ok && cibleId && mecaniqueLancee.cible === "allie" && sourceLancee.idSort === "resurrection") {
         const persosApresSoin = chargerPersos();
         const cibleResurrection = persosApresSoin[cibleId];
         if (cibleResurrection && cibleResurrection.etatMort) {
@@ -4612,11 +4614,12 @@ const App = (() => {
           mecanique = v && v.mecanique;
           source.code = d.lancerCode;
         } else if (d.lancerOrigine === "grimoire") {
-          // Sort connu hors Voies (cf. reference_sorts_connus.md, SORTS_MAGICIEN,
-          // data/donnees.js) — cloné pour poser origineGrimoire sans muter
-          // l'entrée partagée SORTS_MAGICIEN. source.idSort : lu par le gate
-          // dans Capacites.lancer() (mecanique.origineGrimoire).
-          const sort = (typeof SORTS_MAGICIEN !== "undefined") ? SORTS_MAGICIEN.find((s) => s.id === d.lancerCle) : null;
+          // Sort connu hors Voies (cf. reference_sorts_connus.md,
+          // SORTS_PAR_CLASSE, data/donnees.js) — cloné pour poser
+          // origineGrimoire sans muter l'entrée partagée. source.idSort : lu
+          // par le gate dans Capacites.lancer() (mecanique.origineGrimoire).
+          const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? SORTS_PAR_CLASSE[p.classe] : null;
+          const sort = catalogue ? catalogue.find((s) => s.id === d.lancerCle) : null;
           if (sort) {
             mecanique = Object.assign({}, sort.mecanique, { origineGrimoire: true });
             source.idSort = sort.id;
@@ -4625,13 +4628,14 @@ const App = (() => {
         if (!mecanique) { toast("Capacité introuvable."); return; }
 
         function procederCiblage() {
-          // Prêtre — Voie de la guérison rang 4 "Bénédiction", choix
-          // "soin_partage" : jusqu'à 3 cibles indépendantes plutôt qu'une
-          // seule — réutilise pickerSelect en <select multiple> (aucun
-          // nouveau composant), plutôt qu'un ciblage classique à une cible.
-          const soinPartage = mecanique.cible === "allie" && lancerCapaciteEnAttente.choixEffet === "soin_partage";
-          pickerSelect.multiple = soinPartage;
-          pickerSelect.size = soinPartage ? 5 : 1;
+          // Prêtre — Cercle de Vie, sort "Soins divins", choix "trois_cibles" :
+          // jusqu'à 3 cibles indépendantes plutôt qu'une seule — réutilise
+          // pickerSelect en <select multiple> (aucun nouveau composant), même
+          // mécanisme que l'ancienne Bénédiction/"soin_partage" (cf.
+          // prompt_pretre_cercle_vie.md Partie 6).
+          const troisCibles = mecanique.cible === "allie" && lancerCapaciteEnAttente.choixEffet === "trois_cibles";
+          pickerSelect.multiple = troisCibles;
+          pickerSelect.size = troisCibles ? 5 : 1;
           if (mecanique.cible === "allie" || mecanique.cible === "ennemi") {
             const cibles = Capacites.listeCibles(id).filter((cc) =>
               mecanique.cible === "allie" ? cc.genre === "perso" : cc.genre === "monstre"
@@ -4639,7 +4643,7 @@ const App = (() => {
             pickerSelect.innerHTML = cibles.length
               ? cibles.map((cc) => `<option value="${cc.id}">${echapper(cc.nom)}${cc.soi ? " (soi-même)" : ""}</option>`).join("")
               : `<option value="">Aucune cible disponible</option>`;
-            if (soinPartage) toast("Sélectionne jusqu'à 3 alliés (Ctrl/Cmd + clic).");
+            if (troisCibles) toast("Sélectionne jusqu'à 3 alliés (Ctrl/Cmd + clic).");
             pickerForme.style.display = "flex";
           } else if (mecanique.cible === "zone" && (mecanique.jetOppose || mecanique.portee) && _zoneCibleHostile(mecanique)) {
             // Capacité de zone HOSTILE (cf. _zoneCibleHostile) avec une portée
@@ -5536,9 +5540,10 @@ const App = (() => {
   }
 
   // Parchemin d'apprentissage (cf. reference_sorts_connus.md) : consommable
-  // référençant un id de SORTS_MAGICIEN via sortAppris — identifié par champ
-  // plutôt que par id explicite (contrairement à estParcheminResurrection),
-  // pour ne pas devoir lister chaque parchemin un par un.
+  // référençant un id de SORTS_PAR_CLASSE[classe] via sortAppris — identifié
+  // par champ plutôt que par id explicite (contrairement à
+  // estParcheminResurrection), pour ne pas devoir lister chaque parchemin un
+  // par un.
   function estParcheminSort(it) {
     return !!it && it.type === "consommable" && typeof it.sortAppris === "string";
   }
@@ -5765,7 +5770,8 @@ const App = (() => {
     const connus = p.grimoireSortsConnus || [];
     if (connus.includes(item.sortAppris)) { toast("Ce sort est déjà connu."); return; }
     if (connus.length >= slots) { toast(`Plus de slot disponible dans le Grimoire (${connus.length}/${slots}) — équipe un Manuel d'incantation de meilleure rareté, ou n'apprends pas de nouveau sort pour l'instant.`); return; }
-    const sort = (typeof SORTS_MAGICIEN !== "undefined") ? SORTS_MAGICIEN.find((s) => s.id === item.sortAppris) : null;
+    const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? SORTS_PAR_CLASSE[p.classe] : null;
+    const sort = catalogue ? catalogue.find((s) => s.id === item.sortAppris) : null;
     p.grimoireSortsConnus = connus.concat([item.sortAppris]);
     _consommerUnite(p, idx);
     sauverPersos(persos);
@@ -5888,6 +5894,16 @@ const App = (() => {
     // classes sans CARAC_MAGIE (cf. Personnage.calculerPPMax) — zone entière
     // masquée pour elles, pas de bloc vide.
     const ppMax = perso.calculerPPMax();
+    // Prêtre — Points de Cercle (cf. les 4 prompts prompt_pretre_cercle_*.md) :
+    // 4 pools indépendants du PP, un par Cercle, affichés seulement si leur
+    // max > 0 (rang 4+ acquis dans la voie correspondante). Repos long
+    // uniquement (cf. reposLongPointsCercle(), même bouton que le PP).
+    const poolsCercle = [
+      { nom: "Bénédiction", val: p.pointsBenediction, max: perso.pointsBenedictionMax() },
+      { nom: "Conviction", val: p.pointsConviction, max: perso.pointsConvictionMax() },
+      { nom: "Bannissement", val: p.pointsBannissement, max: perso.pointsBannissementMax() },
+      { nom: "Jugement", val: p.pointsJugement, max: perso.pointsJugementMax() },
+    ].filter((x) => x.max > 0);
 
     const zone = document.getElementById("zone-fiche-active");
 
@@ -5942,24 +5958,51 @@ const App = (() => {
                   <span style="font-weight:700;">${p.ppActuel != null ? p.ppActuel : ppMax} / ${ppMax}</span>
                 </div>
                 <div class="barre-actions" style="margin-top:6px;">
-                  <button class="btn petit secondaire" id="btn-repos-long-pp" title="Reset complet des PP">🌙 Repos long</button>
+                  <button class="btn petit secondaire" id="btn-repos-long-pp" title="Reset complet des PP et Points de Cercle">🌙 Repos long</button>
                   <button class="btn petit secondaire" id="btn-repos-court-pp" title="+25% des PP max, arrondi supérieur, plafonné">☕ Repos court</button>
                 </div>
               </div>
+              ${poolsCercle.map((x) => `<div class="stat-box"><div class="label">Points de ${x.nom}</div><div class="valeur">${x.val != null ? x.val : x.max} / ${x.max}</div></div>`).join("")}
             </div>
             <div class="carte" style="margin-top:10px;">
               <h3 style="margin-top:0;">📖 Grimoire</h3>
+              ${p.classe === "pretre" ? `
+              <div class="aide" style="margin-bottom:8px;">
+                Cercle de spécialisation :
+                <select id="select-cercle-specialisation">
+                  <option value="">Aucun</option>
+                  <option value="vie"${p.cercleSpecialisation === "vie" ? " selected" : ""}>Vie</option>
+                  <option value="foi"${p.cercleSpecialisation === "foi" ? " selected" : ""}>Foi</option>
+                  <option value="bannissement"${p.cercleSpecialisation === "bannissement" ? " selected" : ""}>Bannissement</option>
+                  <option value="jugement"${p.cercleSpecialisation === "jugement" ? " selected" : ""}>Jugement</option>
+                </select>
+                — accorde 1 sort de rang 1 de la famille choisie, hors slot de Grimoire.
+              </div>` : ""}
               <div class="aide" style="margin-bottom:8px;">${(p.grimoireSortsConnus || []).length}/${perso.slotsGrimoire()} sorts connus${perso.slotsGrimoire() === 0 ? " — équipe un Manuel d'incantation pour en apprendre." : ""}</div>
-              ${(p.grimoireSortsConnus || []).length ? (p.grimoireSortsConnus || []).map((sortId) => {
-                const sort = (typeof SORTS_MAGICIEN !== "undefined") ? SORTS_MAGICIEN.find((s) => s.id === sortId) : null;
-                if (!sort) return "";
-                const source = { origine: "grimoire", cle: sort.id, nomCap: sort.nom };
-                return `<div class="cap-fiche">
-                  <div class="titre-cap">${echapper(sort.nom)}${htmlLancerCapacite(source, sort.mecanique, p)}</div>
-                  <div class="voie-source">Rang ${sort.rang} · ${sort.mecanique.coutPP} PP</div>
-                  <div class="effet-cap">${echapper(sort.effet)}</div>
-                </div>`;
-              }).join("") : `<div class="vide">Aucun sort appris.</div>`}
+              ${(function () {
+                const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
+                const appris = p.grimoireSortsConnus || [];
+                const accordes = perso.sortsGrimoireAccordes();
+                const idsAffiches = appris.concat(accordes.filter((sid) => !appris.includes(sid)));
+                if (!idsAffiches.length) return `<div class="vide">Aucun sort appris.</div>`;
+                return idsAffiches.map((sortId) => {
+                  const sort = catalogue.find((s) => s.id === sortId);
+                  if (!sort) return "";
+                  const source = { origine: "grimoire", cle: sort.id, nomCap: sort.nom };
+                  const coutTexte = sort.mecanique.coutPP ? `${sort.mecanique.coutPP} PP`
+                    : sort.mecanique.coutPointsBenediction ? `${sort.mecanique.coutPointsBenediction} Pt. Bénédiction`
+                    : sort.mecanique.coutPointsConviction ? `${sort.mecanique.coutPointsConviction} Pt. Conviction`
+                    : sort.mecanique.coutPointsBannissement ? `${sort.mecanique.coutPointsBannissement} Pt. Bannissement`
+                    : sort.mecanique.coutPointsJugement ? `${sort.mecanique.coutPointsJugement} Pt. Jugement`
+                    : "gratuit";
+                  const tagAccorde = !appris.includes(sortId) ? " · accordé par la voie" : "";
+                  return `<div class="cap-fiche">
+                    <div class="titre-cap">${echapper(sort.nom)}${htmlLancerCapacite(source, sort.mecanique, p)}</div>
+                    <div class="voie-source">Rang ${sort.rang} · ${coutTexte}${tagAccorde}</div>
+                    <div class="effet-cap">${echapper(sort.effet)}</div>
+                  </div>`;
+                }).join("");
+              })()}
             </div>
             ` : ""}
 
@@ -6152,6 +6195,19 @@ const App = (() => {
       afficherFiche(id);
       toast(`PV recalculés : ${ancienMax} → ${nouveauMax} (${delta >= 0 ? "+" : ""}${delta}).`);
     };
+    // Prêtre — Cercle de spécialisation (cf. prompt_pretre_cercle_vie.md
+    // Partie 1) : select libre, éditable à tout moment (pas verrouillé à la
+    // création — cohérent avec le reste des choix de la fiche, ex. dons).
+    const selectCercle = document.getElementById("select-cercle-specialisation");
+    if (selectCercle) selectCercle.onchange = () => {
+      const persos = chargerPersos();
+      const pp = persos[id];
+      if (!pp) return;
+      pp.cercleSpecialisation = selectCercle.value || null;
+      sauverPersos(persos);
+      afficherFiche(id);
+      toast(pp.cercleSpecialisation ? `Cercle de spécialisation : ${selectCercle.value}.` : "Cercle de spécialisation retiré.");
+    };
     // Repos long/court PP (cf. reference_systeme_magie_pp.md) : boutons
     // manuels, comme Capacites.reinitialiserUsage — pas de cycle jour/nuit
     // automatique dans l'app. Absents du DOM pour les classes sans PP
@@ -6163,10 +6219,15 @@ const App = (() => {
       if (!pp) return;
       const instance = new Personnage(pp);
       instance.reposLongPP();
+      instance.reposLongPointsCercle();
       pp.ppActuel = instance.ppActuel;
+      pp.pointsBenediction = instance.pointsBenediction;
+      pp.pointsConviction = instance.pointsConviction;
+      pp.pointsBannissement = instance.pointsBannissement;
+      pp.pointsJugement = instance.pointsJugement;
       sauverPersos(persos);
       afficherFiche(id);
-      toast("Repos long : Points de Pouvoir restaurés au maximum.");
+      toast("Repos long : Points de Pouvoir et Points de Cercle restaurés au maximum.");
     };
     const btnReposCourtPP = document.getElementById("btn-repos-court-pp");
     if (btnReposCourtPP) btnReposCourtPP.onclick = () => {
@@ -6728,19 +6789,25 @@ const App = (() => {
     // d'apprentissage forcé (fermer le modal sans choisir ne fait rien, cf.
     // ouvrirModalChoixCapacite/btn-fermer-modal-choix-capacite). Recherche
     // via parchemin (Partie 2 point 1) reste le seul autre canal.
-    if (typeof CARAC_MAGIE !== "undefined" && CARAC_MAGIE[creation.classe] && typeof SORTS_MAGICIEN !== "undefined") {
+    if (typeof CARAC_MAGIE !== "undefined" && CARAC_MAGIE[creation.classe] && typeof SORTS_PAR_CLASSE !== "undefined" && SORTS_PAR_CLASSE[creation.classe]) {
+      const catalogue = SORTS_PAR_CLASSE[creation.classe];
       const slots = new Personnage(creation).slotsGrimoire();
       const connus = creation.grimoireSortsConnus || [];
-      const disponibles = SORTS_MAGICIEN.filter((s) => !connus.includes(s.id));
+      // Exclut les sorts accordés directement par un rang de voie (cf.
+      // SORTS_ACCORDES_PAR_VOIE, data/donnees.js) — pas d'intérêt à proposer
+      // de les apprendre via un slot, ils sont déjà connus autrement.
+      const accordes = (typeof SORTS_ACCORDES_PAR_VOIE !== "undefined" ? SORTS_ACCORDES_PAR_VOIE : [])
+        .filter((e) => e.classe === creation.classe).map((e) => e.idSort);
+      const disponibles = catalogue.filter((s) => !connus.includes(s.id) && !accordes.includes(s.id));
       if (slots > connus.length && disponibles.length) {
         ouvrirModalChoixCapacite({
           titre: "Nouveau sort disponible",
           consigne: `Slot de Grimoire libre (${connus.length}/${slots}) — apprends un nouveau sort, ou ferme cette fenêtre pour l'apprendre plus tard (parchemin) :`,
-          options: disponibles.map((s) => ({ label: `${s.nom} (rang ${s.rang}, ${s.mecanique.coutPP} PP) — ${s.effet}`, valeur: s.id })),
+          options: disponibles.map((s) => ({ label: `${s.nom} (rang ${s.rang}, ${s.mecanique.coutPP || 0} PP) — ${s.effet}`, valeur: s.id })),
         }, (sortId) => {
           creation.grimoireSortsConnus = (creation.grimoireSortsConnus || []).concat([sortId]);
           _persisterNiveauEtPv(id);
-          const sort = SORTS_MAGICIEN.find((s) => s.id === sortId);
+          const sort = catalogue.find((s) => s.id === sortId);
           toast(`📖 « ${sort ? sort.nom : sortId} » ajouté au Grimoire. Déjà enregistré.`);
         });
       }

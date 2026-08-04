@@ -1175,7 +1175,7 @@ const Capacites = (() => {
   // choix "soin_partage" — jusqu'à 3 cibles indépendantes, chacune avec son
   // propre jet de soin. Seul cas actuel hors du schéma standard "une seule
   // cible résolue par cibleId" (cf. son cas particulier plus bas).
-  function lancer({ persoId, source, mecanique, cibleId, cibleIds, choixEffet }) {
+  function lancer({ persoId, source, mecanique, cibleId, cibleIds, choixEffet, payerEnCS, payerSupplementCS }) {
     if (!mecanique || mecanique.type === "passive") {
       return { ok: false, messages: ["Cette capacité est passive : rien à lancer."] };
     }
@@ -1193,7 +1193,7 @@ const Capacites = (() => {
     // Voies (SORTS_MAGICIEN ou équivalent) ne peut être lancé que s'il est
     // effectivement appris — vérifié avant tout le reste (usage, PP...),
     // pas de sens à décompter quoi que ce soit pour un sort non appris.
-    if (mecanique.origineGrimoire && !(p.grimoireSortsConnus || []).includes(source.idSort)) {
+    if (mecanique.origineGrimoire && !(p.grimoireSortsConnus || []).concat(perso.sortsGrimoireAccordes()).includes(source.idSort)) {
       return { ok: false, messages: [`Ce sort n'est pas (encore) inscrit dans le Grimoire.`] };
     }
 
@@ -1230,10 +1230,57 @@ const Capacites = (() => {
     // AVANT résolution si le pool est insuffisant, même principe que
     // reactionCout ci-dessus. mecanique.coutPP absent ou 0 = capacité
     // gratuite (martiale, ou sort mineur type degatsMagiques()).
-    if (mecanique.coutPP) {
+    // Prêtre — Voie du chaos, rang 2 "Don corrompu" (passive) : peut payer le
+    // coût d'un sort en CS (= rang du sort, dérivé de coutPP/2 — convention
+    // constante sur tout SORTS_MAGICIEN/SORTS_PRETRE, rang×2 PP) plutôt qu'en
+    // PP, si le joueur active l'option (payerEnCS) à l'activation.
+    const donCorrompu = perso.classe === "pretre" && perso.estChoisie("Voie du chaos", 2);
+    const substitutionCS = !!(mecanique.coutPP && donCorrompu && payerEnCS);
+    if (substitutionCS) {
+      const coutCS = Math.max(1, Math.round(mecanique.coutPP / 2));
+      if ((p.corruptionCombat || 0) < coutCS) {
+        return { ok: false, messages: [`Pas assez de jauge de combat (${coutCS} CS requis pour Don corrompu, ${p.corruptionCombat || 0} disponibles).`] };
+      }
+    } else if (mecanique.coutPP) {
       const ppRestants = (p.ppActuel || 0);
       if (ppRestants < mecanique.coutPP) {
         return { ok: false, messages: [`Pas assez de Points de Pouvoir (${mecanique.coutPP} requis, ${ppRestants} disponibles).`] };
+      }
+    }
+
+    // Prêtre — Points de Cercle (Bénédiction/Conviction/Bannissement/
+    // Jugement, cf. les 4 prompts prompt_pretre_cercle_*.md) : même principe
+    // que coutPP ci-dessus, pool séparé par Cercle. Voie du chaos rang 3
+    // "Supplément corrompu" ajoute une porte de sortie si le pool est
+    // insuffisant (payer 2 CS/point manquant) — vérifiée d'abord si le
+    // lanceur a ce rang, cf. plus bas.
+    const RESSOURCES_CERCLE = [
+      { cout: "coutPointsBenediction", champ: "pointsBenediction", nom: "Points de Bénédiction" },
+      { cout: "coutPointsConviction", champ: "pointsConviction", nom: "Points de Conviction" },
+      { cout: "coutPointsBannissement", champ: "pointsBannissement", nom: "Points de Bannissement" },
+      { cout: "coutPointsJugement", champ: "pointsJugement", nom: "Points de Jugement" },
+    ];
+    for (const r of RESSOURCES_CERCLE) {
+      if (!mecanique[r.cout]) continue;
+      const restants = p[r.champ] || 0;
+      const manquants = mecanique[r.cout] - restants;
+      if (manquants <= 0) continue;
+      // Prêtre — Voie du chaos, rang 3 "Supplément corrompu" (passive) :
+      // supplée les points manquants en payant 2 CS chacun, si le lanceur a
+      // ce rang et suffisamment de jauge de combat.
+      const supplementCorrompu = perso.classe === "pretre" && perso.estChoisie("Voie du chaos", 3);
+      const coutCSSupplement = manquants * 2;
+      if (supplementCorrompu && (p.corruptionCombat || 0) >= coutCSSupplement && payerSupplementCS) {
+        // Complète le pool tout juste assez pour couvrir mecanique[r.cout] —
+        // le décompte normal plus bas (Math.max(0, avant - cout)) le ramènera
+        // exactement à 0, pas de double comptage.
+        p.corruptionCombat -= coutCSSupplement;
+        p[r.champ] = (p[r.champ] || 0) + manquants;
+        messages.push(`Supplément corrompu : ${manquants} ${r.nom} manquant(s) suppléé(s) avec ${coutCSSupplement} CS (${p.corruptionCombat} CS restants).`);
+      } else if (supplementCorrompu && (p.corruptionCombat || 0) >= coutCSSupplement) {
+        return { ok: false, messages: [`Pas assez de ${r.nom} (${mecanique[r.cout]} requis, ${restants} disponibles) — Supplément corrompu permettrait de payer ${coutCSSupplement} CS à la place (relance avec l'option activée).`] };
+      } else {
+        return { ok: false, messages: [`Pas assez de ${r.nom} (${mecanique[r.cout]} requis, ${restants} disponibles).`] };
       }
     }
 
@@ -1310,23 +1357,26 @@ const Capacites = (() => {
       messages.push(`Contrecoup : la prochaine attaque doit viser ${forcee ? forcee.nom : "la créature la plus proche (aucune détectée sur la table de combat)"}, allié compris.`);
     }
 
-    // Prêtre — Voie de la guérison, rang 4 "Bénédiction", choix
-    // "soin_partage" : jusqu'à 3 cibles indépendantes (cibleIds), chacune
-    // reçoit son propre jet de soin (1d8+Mod.SAG) — hors du schéma standard
-    // (lancer() ne résout normalement qu'UNE cible via cibleId). L'autre
-    // choix ("grand_soin", 1 cible, 3d8+niveau) traverse le reste de
-    // lancer() sans changement (cible déjà résolue ci-dessus via cibleId).
-    // Usage consommé UNE SEULE FOIS pour l'activation entière, pas par
-    // cible soignée.
-    if (source.voie === "Voie de la guérison" && source.rang === 4 && perso.classe === "pretre" && choixEffet === "soin_partage") {
-      if (!cibleIds || !cibleIds.length) return { ok: false, messages: ["Choisis au moins un allié pour le Soin partagé."] };
+    // Prêtre — Cercle de Vie, sort "Soins divins" (accordé rang 4), choix
+    // "trois_cibles" : jusqu'à 3 cibles indépendantes (cibleIds), chacune
+    // reçoit son propre jet de soin (1d8) — hors du schéma standard (lancer()
+    // ne résout normalement qu'UNE cible via cibleId). Reprend le patron de
+    // ciblage multiple de l'ancienne Bénédiction/"soin_partage" (cf.
+    // prompt_pretre_cercle_vie.md Partie 6) — seule la condition de
+    // déclenchement (idSort au lieu de voie+rang) et le coût (Points de
+    // Bénédiction au lieu d'usages/jour) changent. L'autre choix
+    // ("cible_unique", 1 cible, 2d10) traverse le reste de lancer() sans
+    // changement (cible déjà résolue ci-dessus via cibleId).
+    if (source.idSort === "soins_divins" && choixEffet === "trois_cibles") {
+      if (!cibleIds || !cibleIds.length) return { ok: false, messages: ["Choisis au moins un allié pour Soins divins."] };
       const ciblesPartage = cibleIds.slice(0, 3).map((cid) => listeCibles(persoId).find((c) => c.id === cid)).filter(Boolean);
       if (!ciblesPartage.length) return { ok: false, messages: ["Cible(s) introuvable(s)."] };
       ciblesPartage.forEach((c) => {
-        const msg = resoudreEffet({ type: "soin", formule: "1d8+Mod.SAG" }, { perso, rang: source.rang, voie: source.voie, cible: c, libelle, persos });
+        const msg = resoudreEffet({ type: "soin", formule: "1d8" }, { perso, rang: null, voie: null, cible: c, libelle, persos });
         if (msg) messages.push(msg);
       });
-      usage.appliquer();
+      p.pointsBenediction = (p.pointsBenediction || 0) - mecanique.coutPointsBenediction;
+      messages.push(`Points de Bénédiction -${mecanique.coutPointsBenediction} (${p.pointsBenediction} restants).`);
       App.sauverPersos(persos);
       return { ok: true, messages };
     }
@@ -1731,11 +1781,31 @@ const Capacites = (() => {
     }
     // Coût en Points de Pouvoir (cf. le garde-fou plus haut) : décompté une
     // fois l'activation confirmée, même logique que reactionCout ci-dessus.
-    if (mecanique.coutPP) {
+    // Prêtre "Don corrompu" (substitutionCS, cf. garde-fou plus haut) :
+    // décompte des CS à la place, même coût dérivé (rang du sort = coutPP/2).
+    if (substitutionCS) {
+      const coutCS = Math.max(1, Math.round(mecanique.coutPP / 2));
+      p.corruptionCombat = (p.corruptionCombat || 0) - coutCS;
+      messages.push(`Don corrompu : ${coutCS} CS payés à la place des PP (${p.corruptionCombat} CS restants).`);
+    } else if (mecanique.coutPP) {
       p.ppActuel = (p.ppActuel || 0) - mecanique.coutPP;
       App.ajouterHisto(`${libelle} — PP`, p.ppActuel, false, false, `-${mecanique.coutPP} PP (${p.nom}, ${p.ppActuel} restants)`);
       messages.push(`PP -${mecanique.coutPP} (${p.ppActuel} restants).`);
     }
+    // Points de Cercle (cf. le garde-fou plus haut, RESSOURCES_CERCLE) :
+    // décompté une fois l'activation confirmée. Le Supplément corrompu
+    // éventuel a déjà été appliqué au garde-fou (jauge CS + pool ramené à 0) —
+    // ici on ne décompte que ce qu'il restait à payer normalement.
+    [
+      { cout: "coutPointsBenediction", champ: "pointsBenediction", nom: "Points de Bénédiction" },
+      { cout: "coutPointsConviction", champ: "pointsConviction", nom: "Points de Conviction" },
+      { cout: "coutPointsBannissement", champ: "pointsBannissement", nom: "Points de Bannissement" },
+      { cout: "coutPointsJugement", champ: "pointsJugement", nom: "Points de Jugement" },
+    ].forEach((r) => {
+      if (!mecanique[r.cout]) return;
+      p[r.champ] = Math.max(0, (p[r.champ] || 0) - mecanique[r.cout]);
+      messages.push(`${r.nom} -${mecanique[r.cout]} (${p[r.champ]} restants).`);
+    });
     // Gain/coût en âmes stockées (cf. AMES_MAX plus haut) : décompté une fois
     // l'activation confirmée, même logique que corruptionCout/reactionCout.
     if (mecanique.ameGain) {

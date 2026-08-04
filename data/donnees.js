@@ -522,27 +522,31 @@ const CLASSES = {
         speciale: false,
         description: "Adaptation de la Voie des soins officielle, ajustée pour éviter la frustration des soins limités en début de partie.",
         rangs: [
-          { rang: 1, nom: "Soins légers", effet: "1d8 + niveau PV par le toucher. Utilisable [rang+Mod. de SAG] fois/jour",
-            mecanique: { type: "activable", usage: { frequence: "libre", formuleUsage: "rang+Mod.SAG" }, cible: "allie", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "soin", formule: "1d8+niveau" } ] } },
-          { rang: 2, nom: "Soins modérés", effet: "Version plus puissante, même limite [rang+Mod. de SAG] fois/jour",
-            mecanique: { type: "activable", usage: { frequence: "libre", formuleUsage: "rang+Mod.SAG" }, cible: "allie", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "soin", formule: "2d8+niveau" },
-                { type: "special", note: "Formule interpolée entre Soins légers (1d8+niveau) et Grand Soin du rang 4 (3d8+niveau) — le texte ne donne pas de valeur exacte, à confirmer avec Thomas." } ] } },
-          { rang: 3, nom: "Purification", effet: "Neutralise un poison ou une maladie par le toucher (enlève un état néfaste actif)",
-            mecanique: { type: "activable", usage: { frequence: "libre" }, cible: "allie", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "retraitEtat" },
-                { type: "special", note: "Mécanisé (validé avec Thomas), même schéma que Jeûne purificateur (Moine, Voie de l'ascétisme rang 3) : retire le plus ancien état actif de catégorie non-buff sur la cible (poison/maladie repliés sur 'un état néfaste', l'app n'ayant pas de sous-catégorie dédiée)." } ] } },
-          { rang: 4, nom: "Bénédiction (L)", effet: "Au choix : Grand Soin (3d8+niveau, 1 cible) OU Soin partagé (1d8+Mod. de SAG, jusqu'à 3 cibles). [rang+Mod. de SAG] fois/jour",
-            mecanique: { type: "limitee", usage: { frequence: "libre", formuleUsage: "rang+Mod.SAG" }, cible: "allie", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "soin", formule: "3d8+niveau",
-                  choix: { titre: "Bénédiction", consigne: "Choisis le mode de soin :",
-                    options: [ { valeur: "grand_soin", label: "Grand Soin (1 cible, 3d8+niveau)" }, { valeur: "soin_partage", label: "Soin partagé (jusqu'à 3 cibles, 1d8+Mod.SAG chacune)" } ] } },
-                { type: "special", note: "Mécanisé (validé avec Thomas) : ouvre un overlay de choix à l'activation (modal générique déjà utilisé par Toucher flétrissant/Poing élémentaire). 'Grand Soin' traverse le flux standard (1 cible via le sélecteur habituel, formule 3d8+niveau). 'Soin partagé' est résolu par un cas particulier dédié dans Capacites.lancer() (nouveau paramètre cibleIds, jusqu'à 3 cibles indépendantes via un <select multiple> côté app.js, chacune reçoit son propre jet de 1d8+Mod.SAG) — seule capacité du jeu à cibler plusieurs alliés en une seule activation." } ] } },
-          { rang: 5, nom: "Résurrection (rituel, 10 min)", effet: "Ramène un mort depuis moins de [Mod. de SAG] heures, relique et lien personnel requis. Revient avec 1d6 PV",
-            mecanique: { type: "rituel", usage: { frequence: "libre" }, cible: "allie", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "soin", formule: "1d6" },
-                { type: "special", note: "Ramène un mort depuis moins de [Mod.SAG] heures ; nécessite une relique et un lien personnel avec la cible ; rituel de 10 minutes — conditions non modélisées par le schéma standard." } ] } },
+          { rang: 1, nom: "Imposition des mains (sort)", effet: "Débloque et accorde directement le sort Imposition des mains (1d6 PV, corps à corps)",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Débloque l'accès à la famille 'guerison' du Grimoire ET accorde directement le sort 'imposition_des_mains' (pas besoin de l'apprendre séparément — seul sort de la famille acquis automatiquement par l'investissement de voie plutôt que par le Grimoire, cohérent avec le fait que ce rang EST le sort)." } ] } },
+
+          { rang: 2, nom: "Spécialisation de soin (passive)", effet: "Vos sorts de soin de famille Guérison soignent +1d4 en plus (scale avec le niveau : 1d4 niv.1-3, 1d6 niv.4-6, 1d8 niv.7-9, 1d10 niv.10+)",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "+1dX (X selon palier de niveau, même paliers que soinsMineurs()) ajouté au montant soigné par tout sort categorie:'guerison' — inspiré de Disciple of Life (D&D), mais scaling par palier de niveau plutôt que par rang du sort lancé." } ] } },
+
+          { rang: 3, nom: "Je te soigne, tu me soigne (passive)", effet: "Vos sorts de soin lancés sur un allié vous soignent aussi de 1d6",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "+1d6 PV pour le lanceur à chaque fois qu'un sort categorie:'guerison' soigne un allié (pas soi-même) — inspiré de Blessed Healer (D&D)." } ] } },
+
+          { rang: 4, nom: "Bénédiction des dieux (passive + sort)", effet: "Débloque le sort Soins divins. Accorde un pool de 2 Points de Bénédiction",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Débloque l'accès direct à 'soins_divins' (accordé comme le rang 1, pas via apprentissage Grimoire) ET fixe pointsBenedictionMax à 2 pour ce Prêtre — nouvelle ressource, cf. Personnage.pointsBenedictionMax()." } ] } },
+
+          { rang: 5, nom: "Faveur divine (passive)", effet: "+1 Point de Bénédiction (pool à 3), +1 CON et +1 CHA permanents",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "bonusCarac", carac: "CON", valeur: 1 }, { type: "bonusCarac", carac: "CHA", valeur: 1 },
+                { type: "special", note: "pointsBenedictionMax passe à 3 (2 du rang 4 + 1 ici)." } ] } },
         ],
       },
       {
@@ -1954,6 +1958,151 @@ const SORTS_MAGICIEN = [
       cible: "soi", portee: null, zone: null, jetOppose: null,
       effets: [ { type: "special", note: "Immunité totale aux dégâts magiques pendant 2+Mod.INT tours — même patron que 'Sanctuaire' (capstone rang 5 de la Voie de la magie protectrice, capacité distincte non affectée par cet ajout) mais accessible via Grimoire indépendamment de la voie." } ] } },
 ];
+
+/* ============================================================
+   SORTS_PRETRE — Grimoire du Prêtre (cf. prompt_pretre_cercle_*.md),
+   même mécanisme que SORTS_MAGICIEN : appris via slot de Grimoire
+   (Personnage.slotsGrimoire(), Manuel d'incantation équipé), carac
+   de lancer SAG. Certains sorts sont accordés directement par un rang
+   de voie plutôt qu'appris (cf. SORTS_ACCORDES_PAR_VOIE ci-dessous et
+   Personnage.sortsGrimoireAccordes()) — même id, même entrée, juste
+   une voie d'acquisition différente.
+   Portée par défaut 5 cases sauf contre-indication explicite (choix
+   de conception, validé avec Thomas) ; Imposition des mains fait
+   exception à 1 case (corps à corps strict).
+   ============================================================ */
+const SORTS_PRETRE = [
+  // --- Famille guerison (14 sorts, cf. prompt_pretre_cercle_vie.md) ---
+  // Rang 1
+  { id: "imposition_des_mains", nom: "Imposition des mains", rang: 1, categorie: "guerison",
+    effet: "1d6 PV — nécessite d'être au corps à corps avec la cible",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "allie", portee: 1, zone: null, jetOppose: null,
+      effets: [ { type: "soin", formule: "1d6" } ] } },
+
+  { id: "benediction", nom: "Bénédiction", rang: 1, categorie: "guerison",
+    effet: "Un allié gagne +1d4 à ses jets d'attaque et de Sauvegarde pendant 10 tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "allie", portee: 10, zone: null, jetOppose: null,
+      effets: [ { type: "bonusTemporaire", cle: "attaqueEtSauvegarde", valeur: "1d4", duree: { tours: 10 } } ] } },
+
+  { id: "premiers_secours", nom: "Premiers secours", rang: 1, categorie: "guerison",
+    effet: "Stabilise une cible à 0 PV (ne la soigne pas, l'empêche de mourir)",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "Retire l'état 'mourant'/stabilise à 0 PV — réutiliser le mécanisme de stabilisation déjà existant dans l'app si un patron équivalent existe (ex. jet de stabilisation automatique), sinon état dédié à ajouter." } ] } },
+
+  // Rang 2
+  { id: "soins_moderes", nom: "Soins modérés", rang: 2, categorie: "guerison",
+    effet: "2d8 + niveau PV par le toucher",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "soin", formule: "2d8+niveau" } ] } },
+
+  { id: "restauration_mineure", nom: "Restauration mineure", rang: 2, categorie: "guerison",
+    effet: "Retire un effet de paralysie, cécité ou faiblesse actif sur la cible",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "retraitEtat" } ] } },
+
+  { id: "chaine_de_vie", nom: "Chaîne de vie", rang: 2, categorie: "guerison",
+    effet: "Soigne jusqu'à 3 alliés à portée de 1d6 chacun",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "zone", portee: 10, zone: { taille: 3, ciblesMax: 3 }, jetOppose: null,
+      effets: [ { type: "soin", formule: "1d6", cible: "multiple" } ] } },
+
+  // Rang 3
+  { id: "purification", nom: "Purification", rang: 3, categorie: "guerison",
+    effet: "Neutralise un poison ou une maladie par le toucher (enlève un état néfaste actif)",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "retraitEtat" } ] } },
+
+  { id: "cercle_de_guerison", nom: "Cercle de guérison", rang: 3, categorie: "guerison",
+    effet: "Tous les alliés dans une zone de 3 cases sont soignés de 2d6",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "zone", portee: 8, zone: { taille: 3 }, jetOppose: null,
+      effets: [ { type: "soin", formule: "2d6", cible: "zone" } ] } },
+
+  { id: "protection_contre_la_mort", nom: "Protection contre la mort", rang: 3, categorie: "guerison",
+    effet: "La prochaine fois que la cible tomberait à 0 PV ce combat, elle reste à 1 PV à la place",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "etat", id: "protection_mort", duree: { motCle: "finCombat" } } ] } },
+
+  // Rang 4
+  { id: "soins_divins", nom: "Soins divins", rang: 4, categorie: "guerison",
+    effet: "Au choix : 3 cibles différentes soignées de 1d8 chacune, OU 1 cible soignée de 2d10. Coûte 1 Point de Bénédiction",
+    mecanique: { type: "limitee", usage: { frequence: "libre" }, coutPointsBenediction: 1, typeSort: "majeur",
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "soin", formule: "2d10",
+        choix: { titre: "Soins divins", consigne: "Choisis le mode de soin :",
+          options: [ { valeur: "cible_unique", label: "1 cible (2d10)" }, { valeur: "trois_cibles", label: "3 cibles (1d8 chacune)" } ] } },
+        { type: "special", note: "Reprend le patron de résolution à choix multiple déjà utilisé par l'ancienne Bénédiction (overlay de choix, cibleIds pour le mode 3 cibles) — mécanisme technique conservé, seul le coût (Points de Bénédiction au lieu d'usages/jour) et les formules changent." } ] } },
+
+  { id: "guerison_de_masse", nom: "Guérison de masse", rang: 4, categorie: "guerison",
+    effet: "Tous les alliés dans une zone de 4 cases sont soignés de 3d8",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+      cible: "zone", portee: 10, zone: { taille: 4 }, jetOppose: null,
+      effets: [ { type: "soin", formule: "3d8", cible: "zone" } ] } },
+
+  { id: "regeneration", nom: "Régénération", rang: 4, categorie: "guerison",
+    effet: "La cible régénère 1d6 PV par tour pendant 5 tours ; un membre perdu repousse en 1 minute",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 8, typeSort: "majeur",
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "soin", formule: "1d6", recurrence: { tours: 5, frequence: "debutTour" } },
+        { type: "special", note: "Repousse de membre : effet narratif, pas de mécanique chiffrée (pas de système de perte de membre modélisé dans l'app actuellement)." } ] } },
+
+  // Rang 5
+  { id: "resurrection", nom: "Résurrection", rang: 5, categorie: "guerison",
+    effet: "Ramène un mort depuis moins de [Mod.SAG] heures, relique et lien personnel requis. Revient avec 1d6 PV",
+    mecanique: { type: "rituel", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "soin", formule: "1d6" },
+        { type: "special", note: "Ramène un mort depuis moins de Mod.SAG heures ; nécessite une relique et un lien personnel avec la cible ; rituel de 10 minutes — conditions non modélisées par le schéma standard, résolution manuelle par la table pour ces prérequis narratifs." } ] } },
+
+  { id: "miracle", nom: "Miracle", rang: 5, categorie: "guerison",
+    effet: "Effet puissant à négocier avec le MJ : soin de zone massif, résurrection sans condition, ou tout autre effet narratif exceptionnel",
+    mecanique: { type: "rituel", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
+      cible: "zone", portee: null, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "Wildcard narratif — l'effet exact est arbitré à la table au moment de l'usage, pas de formule fixe. Cohérent avec l'esprit du sort Miracle en D&D (effet quasi-illimité mais rarissime)." } ] } },
+];
+
+/* Table des sorts accordés directement par un rang de voie (pas appris via
+   Grimoire) — cf. Personnage.sortsGrimoireAccordes(). Même entrée SORTS_PRETRE,
+   juste une voie d'acquisition alternative aux slots de Grimoire. */
+const SORTS_ACCORDES_PAR_VOIE = [
+  { classe: "pretre", voie: "Voie de la guérison", rang: 1, idSort: "imposition_des_mains" },
+  { classe: "pretre", voie: "Voie de la guérison", rang: 4, idSort: "soins_divins" },
+  { classe: "pretre", voie: "Voie de la conversion", rang: 4, idSort: "voix_du_jugement" },
+  { classe: "pretre", voie: "Voie de la conversion", rang: 5, idSort: "aura_divine" },
+  { classe: "pretre", voie: "Voie de l'exorcisme", rang: 1, idSort: "flamme_sacree" },
+  { classe: "pretre", voie: "Voie de l'exorcisme", rang: 4, idSort: "bannissement" },
+  { classe: "pretre", voie: "Voie de l'exorcisme", rang: 5, idSort: "bannissement_zone" },
+  { classe: "pretre", voie: "Voie de l'inquisition", rang: 1, idSort: "oeil_inquisiteur" },
+  { classe: "pretre", voie: "Voie de l'inquisition", rang: 5, idSort: "bucher_purificateur" },
+];
+
+/* Cercle de spécialisation (Partie 1, prompt_pretre_cercle_vie.md) : 1 sort
+   de rang 1 de la famille choisie connu automatiquement dès la création,
+   hors slot de Grimoire (cf. Personnage.sortsGrimoireAccordes()). Choix non
+   précisé par le prompt (pick libre vs fixe) — simplifié en un sort fixe par
+   cercle, à trancher au cas par cas en jeu si le joueur préfère un autre
+   sort de rang 1 de la même famille. */
+const CERCLE_SORT_GRATUIT = {
+  vie: "benediction",
+  foi: "bouclier_de_la_foi",
+  bannissement: "flamme_sacree",
+  jugement: "oeil_inquisiteur",
+};
+
+/* Catalogue de sorts par classe (cf. reference_sorts_connus.md) — le Grimoire
+   (js/app.js) lit cette table plutôt qu'une constante SORTS_* hardcodée, pour
+   rester générique à travers les classes casteuses pures. */
+const SORTS_PAR_CLASSE = {
+  magicien: SORTS_MAGICIEN,
+  pretre: SORTS_PRETRE,
+};
 
 /* ============================================================
    VOIES RACIALES (homebrew)
