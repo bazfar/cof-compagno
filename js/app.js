@@ -63,8 +63,10 @@ const App = (() => {
   let ficheSidebarActiveId = null;  // id du perso affiché dans la mini-fiche battlemap (sidebar)
   // Bascules manuelles des dons Frappe puissante / Tir de précision (-2 attaque
   // / +4 dégâts) dans le dock de combat — état de session, pas persisté, ne
-  // distingue pas les personnages (cf. rendreDockCombat).
-  const togglesDons = { frappe_puissante: false, tir_precision: false, arme_benie: false };
+  // distingue pas les personnages (cf. rendreDockCombat). Arme bénie n'en fait
+  // plus partie (cf. Personnage.aArmeBenie) : sort activé via le Grimoire,
+  // posant un état 'arme_benie' persisté et décompté automatiquement.
+  const togglesDons = { frappe_puissante: false, tir_precision: false };
   // Résolution d'une capacité d'attaque vs DEF qui vient de toucher (ou dont
   // la DEF cible est inconnue), en attente du clic sur "Lancer les dégâts"
   // (cf. Capacites.lancer/resoudreDegatsEnAttente, wireCapacitesEtEtats) —
@@ -956,12 +958,11 @@ const App = (() => {
     const peutTirPrecision = dons.includes("tir_precision") && !!armeDistance;
     const actifFrappePuissante = peutFrappePuissante && togglesDons.frappe_puissante;
     const actifTirPrecision = peutTirPrecision && togglesDons.tir_precision;
-    // Prêtre — Voie de la conversion rang 3 "Arme bénie" : bascule manuelle
-    // (cf. Personnage.aArmeBenie), même mécanisme que Frappe puissante/Tir
-    // de précision ci-dessus — le joueur déclare que la cible actuelle est
-    // maléfique/morte-vivante, faute de cibleId résolu à cet endroit.
-    const peutArmeBenie = perso.aArmeBenie();
-    const actifArmeBenie = peutArmeBenie && togglesDons.arme_benie;
+    // Prêtre — Cercle de la Foi, sort "Arme bénie" (cf. Personnage.aArmeBenie) :
+    // +1 attaque/+2 DM tant que l'état posé par le sort reste actif — plus une
+    // bascule manuelle, la cible maléfique/morte-vivante reste déclarée par le
+    // joueur au moment de résoudre l'attaque, faute de cibleId résolu ici.
+    const actifArmeBenie = perso.aArmeBenie();
     const attContact = perso.bonusAttaque("contact") - (actifFrappePuissante ? 2 : 0) + (actifArmeBenie ? 1 : 0);
     const attDistance = armeDistance ? perso.bonusAttaque("distance") - (actifTirPrecision ? 2 : 0) : null;
     const armeCourteSecondaire = perso.armeCourteSecondaire();
@@ -1396,11 +1397,9 @@ const App = (() => {
     const peutTirPrecision = dons.includes("tir_precision") && !!armeDistance;
     const actifFrappePuissante = peutFrappePuissante && togglesDons.frappe_puissante;
     const actifTirPrecision = peutTirPrecision && togglesDons.tir_precision;
-    // Prêtre — Voie de la conversion rang 3 "Arme bénie" : bascule manuelle
-    // (cf. Personnage.aArmeBenie), même mécanisme que Frappe puissante/Tir
-    // de précision ci-dessus.
-    const peutArmeBenie = perso.aArmeBenie();
-    const actifArmeBenie = peutArmeBenie && togglesDons.arme_benie;
+    // Prêtre — Cercle de la Foi, sort "Arme bénie" (cf. Personnage.aArmeBenie) :
+    // +1 attaque/+2 DM tant que l'état posé par le sort reste actif.
+    const actifArmeBenie = perso.aArmeBenie();
 
     const attContact = perso.bonusAttaque("contact") - (actifFrappePuissante ? 2 : 0) + (actifArmeBenie ? 1 : 0);
     const attDistance = armeDistance ? perso.bonusAttaque("distance") - (actifTirPrecision ? 2 : 0) : null;
@@ -1488,11 +1487,9 @@ const App = (() => {
     // équipée (cf. peutFrappePuissante/peutTirPrecision ci-dessus).
     if (peutFrappePuissante) attTiles.push(`<button class="dock-tuile" data-toggle-don="frappe_puissante" style="${actifFrappePuissante ? "outline:2px solid var(--or);" : ""}"><span class="dock-ic">💥</span><span class="dock-lbl">Frappe puissante ${actifFrappePuissante ? "ON" : "OFF"}</span></button>`);
     if (peutTirPrecision) attTiles.push(`<button class="dock-tuile" data-toggle-don="tir_precision" style="${actifTirPrecision ? "outline:2px solid var(--or);" : ""}"><span class="dock-ic">🎯</span><span class="dock-lbl">Tir de précision ${actifTirPrecision ? "ON" : "OFF"}</span></button>`);
-    // Prêtre — Voie de la conversion rang 3 "Arme bénie" : +1 attaque/+2 DM
-    // au contact tant qu'active, bascule manuelle (cf. peutArmeBenie
-    // ci-dessus) — la cible maléfique/morte-vivante est déclarée par le
-    // joueur, faute de cibleId résolu à cet endroit.
-    if (peutArmeBenie) attTiles.push(`<button class="dock-tuile" data-toggle-don="arme_benie" style="${actifArmeBenie ? "outline:2px solid var(--or);" : ""}"><span class="dock-ic">✝️</span><span class="dock-lbl">Arme bénie ${actifArmeBenie ? "ON" : "OFF"}</span></button>`);
+    // Prêtre — Cercle de la Foi, sort "Arme bénie" : plus de bascule manuelle
+    // ici (cf. actifArmeBenie ci-dessus, activé/désactivé par le sort
+    // lui-même depuis le Grimoire) — rien à pousser dans attTiles.
 
     const sorts = _capacitesLancablesPerso(p);
     const sortTiles = sorts.map((s) => {

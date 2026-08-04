@@ -1305,16 +1305,14 @@ class Personnage extends Entite {
     if (this.classe === "chevalier" && (this.etatsActifs || []).some((e) => e.idEtat === "avatar_du_pacte")) return "2d6";
     return null;
   }
-  // Prêtre — Voie de la conversion, rang 3 "Arme bénie" : +1 attaque et +2 DM
-  // au contact contre les créatures maléfiques/mortes-vivantes. La cible
-  // réelle n'est jamais résolue au moment du calcul du panneau d'attaque
-  // rapide (pas de cibleId disponible à cet endroit, contrairement aux
-  // capacités résolues via Capacites.lancer()) — gate seule (comme
-  // aEnduranceDeFer/aAvantageResistanceMentale) ; l'activation proprement
-  // dite passe par une bascule manuelle côté joueur (togglesDons.arme_benie,
-  // même mécanisme que Frappe puissante/Tir de précision, cf. app.js).
+  // Prêtre — Cercle de la Foi, sort "Arme bénie" (rang 3, appris via
+  // Grimoire) : +1 attaque et +2 DM au contact contre les créatures
+  // maléfiques/mortes-vivantes, tant que l'état 'arme_benie' posé par
+  // l'activation du sort reste actif — condition désormais l'état actif
+  // plutôt que le simple rang de voie (cf. prompt_pretre_cercle_foi.md,
+  // remplace l'ancienne bascule manuelle togglesDons.arme_benie).
   aArmeBenie() {
-    return this.classe === "pretre" && this.estChoisie("Voie de la conversion", 3);
+    return this.classe === "pretre" && (this.etatsActifs || []).some((e) => e.idEtat === "arme_benie");
   }
   // Don Maître des armures lourdes : -3 dégâts physiques subis, appliqué
   // AVANT reductionDegats (cf. subirDegats côté app.js — pas inclus dans

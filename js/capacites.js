@@ -829,8 +829,15 @@ const Capacites = (() => {
       // Esprit fissuré, choix "degats", dès CA 5+) : +1d6 DM à TOUS les sorts,
       // cf. Personnage.bonusDegatsSortsChaos() — toutes leurs capacités
       // "degats" sont des sorts, pas besoin de distinguer par voie/rang.
+      // Prêtre — Réprimande divine (Cercle de la Foi) / Flamme sacrée (Cercle
+      // du Bannissement) : formule alternative si la cible est démoniaque ou
+      // morte-vivante (cf. _cibleEstDemonOuMortVivant, champ 'race' du
+      // bestiaire) — factorisé en un seul point plutôt que dupliqué (cf.
+      // prompt_pretre_cercle_bannissement.md).
+      const baseFormule = (effet.formuleAlternative && _cibleEstDemonOuMortVivant(cible))
+        ? effet.formuleAlternative.formule : effet.formule;
       const bonusChaos = perso.bonusDegatsSortsChaos && perso.bonusDegatsSortsChaos();
-      let formuleAjustee = bonusChaos ? `${effet.formule}+${bonusChaos}` : effet.formule;
+      let formuleAjustee = bonusChaos ? `${baseFormule}+${bonusChaos}` : baseFormule;
       // Moine — Voie des éléments, rang 2 "Maîtrise élémentaire" (passive) :
       // même principe qu'Intensité élémentaire ci-dessus, remplace le 1d4
       // initial de l'option Feu de Poing élémentaire (rang 1, seule option

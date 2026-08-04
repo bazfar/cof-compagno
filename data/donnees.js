@@ -562,17 +562,20 @@ const CLASSES = {
             mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "soi", portee: null, zone: null, jetOppose: null,
               effets: [ { type: "bonus", cible: "Persuasion", valeur: 2, duree: "permanente" },
                 { type: "special", note: "+2 par rang atteint (pas une valeur fixe) déjà codé dans Personnage.bonusCompetence('Persuasion')." } ] } },
-          { rang: 3, nom: "Arme bénie", effet: "+1 attaque et +2 DM au contact contre les créatures maléfiques ou mortes-vivantes",
-            mecanique: { type: "passive", usage: { frequence: "libre" }, cible: "ennemi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "special", note: "Mécanisé (validé avec Thomas, valeurs +1 attaque/+2 DM). Contrairement à Poing béni (Moine)/Sentence finale (Chevalier) — résolus via Capacites.lancer() avec une cible connue — le panneau d'attaque rapide (armes) ne résout jamais de cibleId : implémenté comme une bascule manuelle (togglesDons.arme_benie, même mécanisme que les dons Frappe puissante/Tir de précision), le joueur déclarant lui-même que la cible visée est maléfique/morte-vivante. Câblé dans Personnage.aArmeBenie() (gate) + les 2 sites app.js qui construisent attContact/dmgContact (rendreFicheSidebarBattlemap, rendreDockCombat)." } ] } },
-          { rang: 4, nom: "Conviction avancée (L, 15 m)", effet: "Attaque magique vs DEF : la cible accomplit une action raisonnable demandée dans l'heure. Refuse le suicidaire. Immunité 24h après résistance",
-            mecanique: { type: "limitee", usage: { frequence: "libre" }, cible: "ennemi", portee: 7, zone: null,
-              jetOppose: { caracAttaquant: "attaqueMagique", caracDefenseur: "DEF", difficulteFixe: null },
-              effets: [ { type: "etat", id: "charmee", duree: "1" },
-                { type: "special", note: "Simplifié (validé avec Thomas) : caracDefenseur passé de null (difficulté réelle 10+Mod.SAG de la cible, non modélisable) à 'DEF' — même principe qu'Enchanteur Fascination/Suggestion. Contre 'DEF', le jet magique est désormais pleinement automatisé. Refuse le suicidaire. Immunité 24h après résistance réussie (non trackée)." } ] } },
-          { rang: 5, nom: "Voix de la foi (L, 1x/scénario, 10 m)", effet: "Alliés/réceptifs : +2 à tous les tests pendant [5+Mod. de SAG] tours. Hostiles/opposés à sa foi : -2, même durée",
-            mecanique: { type: "limitee", usage: { frequence: "1x/scenario" }, cible: "zone", portee: 5, zone: 5, jetOppose: null,
-              effets: [ { type: "special", note: "Alliés/réceptifs dans la zone : +2 à TOUS les tests pendant [5+Mod.SAG] tours. Hostiles/opposés à sa foi : -2, même durée — portée sur 'tous les tests' et double polarité non modélisées par le type 'bonus' standard." } ] } },
+          { rang: 3, nom: "Ferveur du croisé (passive)", effet: "Débloque l'accès aux sorts de famille Foi sans consommer de slot ; -2 PP sur tout sort de famille Foi (min 1)",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Débloque famille 'foi' (jusqu'à 1 sort sans slot) ET réduit de 2 (plancher 1) le coutPP de tout sort categorie:'foi', y compris 'arme_benie'." } ] } },
+
+          { rang: 4, nom: "Voix du jugement (passive + sort)", effet: "Débloque un pool de 2 Points de Conviction. Pour 1 point : déclare un ennemi 'hérétique' pendant 2 tours — tout dégât qu'il subit lui inflige +1d4 dégâts supplémentaires (+1d8 si mort-vivant)",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "Fixe pointsConvictionMax à 2. Débloque directement le sort 'voix_du_jugement' (accordé, pas appris via Grimoire — même patron que Bénédiction des dieux côté Cercle de Vie)." } ] } },
+
+          { rang: 5, nom: "Transcendance (passive + sort)", effet: "+1 Point de Conviction (pool à 3). Débloque Aura divine : pour 2 points, +2 CA à vous et vos alliés / -2 CA aux ennemis en zone, pendant 3 tours",
+            mecanique: { type: "passive", usage: { frequence: "permanente" },
+              cible: "soi", portee: null, zone: null, jetOppose: null,
+              effets: [ { type: "special", note: "pointsConvictionMax passe à 3. Débloque directement le sort 'aura_divine' (accordé). Remplace entièrement l'ancienne 'Voix de la foi' (bonus/malus à TOUS les tests) par un effet plus ciblé (CA uniquement)." } ] } },
         ],
       },
       {
@@ -2066,6 +2069,61 @@ const SORTS_PRETRE = [
     mecanique: { type: "rituel", usage: { frequence: "1x/scenario" }, coutPP: 10, typeSort: "majeur",
       cible: "zone", portee: null, zone: null, jetOppose: null,
       effets: [ { type: "special", note: "Wildcard narratif — l'effet exact est arbitré à la table au moment de l'usage, pas de formule fixe. Cohérent avec l'esprit du sort Miracle en D&D (effet quasi-illimité mais rarissime)." } ] } },
+
+  // --- Famille foi (7 sorts, cf. prompt_pretre_cercle_foi.md) ---
+  // Rang 1
+  { id: "mot_de_commandement", nom: "Mot de commandement", rang: 1, categorie: "foi",
+    effet: "Un mot simple (Fuis/Tombe/Arrête-toi) forcé sur une cible. Jet de Sauvegarde Volonté",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "unique", portee: 10, zone: null,
+      jetOppose: { caracAttaquant: "SAG", caracDefenseur: "Volonte" },
+      effets: [ { type: "special", note: "Effet narratif selon le mot choisi (Fuis = déplacement forcé, Tombe = à terre, Arrête-toi = ne peut plus agir 1 tour) — résolution manuelle par la table pour le comportement exact." } ] } },
+
+  { id: "bouclier_de_la_foi", nom: "Bouclier de la foi", rang: 1, categorie: "foi",
+    effet: "+2 CA à un allié pendant 3 tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "allie", portee: 10, zone: null, jetOppose: null,
+      effets: [ { type: "bonusTemporaire", cle: "DEF", valeur: 2, duree: { tours: 3 } } ] } },
+
+  // Rang 2
+  { id: "reprimande_divine", nom: "Réprimande divine", rang: 2, categorie: "foi",
+    effet: "Attaque magique : 2d6 dégâts radiants, doublés si la cible est maléfique ou morte-vivante",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "unique", portee: 15, zone: null,
+      jetOppose: { caracAttaquant: "SAG", caracDefenseur: "DEF" },
+      effets: [ { type: "degats", formule: "2d6", typeDegats: "magique",
+        formuleAlternative: { condition: "race:mort_vivant|demon", formule: "4d6" } },
+        { type: "special", note: "Dégâts doublés (4d6 au lieu de 2d6) si la cible est de race 'mort_vivant' ou taguée maléfique — confirmé par Thomas : ce tag existe déjà sur le champ 'race' des monstres côté bestiaire, à lire directement plutôt qu'à vérifier son existence." } ] } },
+
+  { id: "calme_les_esprits", nom: "Calme les esprits", rang: 2, categorie: "foi",
+    effet: "Empêche une situation de dégénérer en violence : zone, jet de Sauvegarde Volonté ou ne peut pas attaquer ce tour",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "zone", portee: 10, zone: { taille: 3 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Volonte" },
+      effets: [ { type: "etat", id: "apaise", duree: { tours: 1 } } ] } },
+
+  // Rang 3
+  { id: "arme_benie", nom: "Arme bénie", rang: 3, categorie: "foi",
+    effet: "Une arme gagne +1 attaque et +2 dégâts contre les créatures maléfiques ou mortes-vivantes, pendant [3+Mod.SAG] tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "soi", portee: null, zone: null, jetOppose: null,
+      effets: [ { type: "etat", id: "arme_benie", duree: { tours: "3+Mod.SAG" } } ] } },
+
+  // Rang 4 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)
+  { id: "voix_du_jugement", nom: "Voix du jugement", rang: 4, categorie: "foi",
+    effet: "Déclare un ennemi 'hérétique' pendant 2 tours : tout dégât qu'il subit lui inflige +1d4 dégâts (+1d8 si mort-vivant). Coûte 1 Point de Conviction",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPointsConviction: 1,
+      cible: "unique", portee: 15, zone: null, jetOppose: null,
+      effets: [ { type: "etat", id: "heretique", duree: { tours: 2 } },
+        { type: "special", note: "État temporaire standard 'heretique', même mécanisme que les autres malus/tags temporaires déjà en jeu (confirmé par Thomas) — pas de nouveau hook générique à inventer, réutiliser le système d'état existant. Le bonus de dégâts (+1d4, +1d8 si race mort_vivant) se vérifie au moment de la résolution des dégâts subis par une cible portant ce tag, quelle que soit la source d'attaque." } ] } },
+
+  // Rang 5 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)
+  { id: "aura_divine", nom: "Aura divine", rang: 5, categorie: "foi",
+    effet: "+2 CA à vous et vos alliés, -2 CA aux ennemis, en zone, pendant 3 tours. Coûte 2 Points de Conviction",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPointsConviction: 2,
+      cible: "zone", portee: null, zone: { taille: 3 }, jetOppose: null,
+      effets: [ { type: "bonusTemporaire", cle: "DEF", valeur: 2, duree: { tours: 3 }, cible: "allies" },
+        { type: "bonusTemporaire", cle: "DEF", valeur: -2, duree: { tours: 3 }, cible: "ennemis" } ] } },
 ];
 
 /* Table des sorts accordés directement par un rang de voie (pas appris via
