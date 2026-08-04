@@ -45,6 +45,7 @@ const Forge = (() => {
   // compétence et PLUSIEURS formules) — figées dans l'objet au moment de forger.
   let _competencesEnCours = []; // [{ competence, valeur }]
   let _formulesEnCours = [];    // [{ cible, expr, carac?, competence? }]
+  let _declencheursEnCours = []; // [{ evenement, ressource, operation, valeur, repli? }]
   let _editionId = null;        // id de l'objet en cours d'édition (sinon création)
   let _editionData = null;      // données de l'objet en cours d'édition (pour remplir le form)
 
@@ -118,6 +119,9 @@ const Forge = (() => {
     // Formules de scaling (plusieurs possibles) — appliquées par le moteur via
     // bonusFormuleEquipement (cf. personnage.js) / le hook dégâts (app.js).
     if (_formulesEnCours.length) item.formules = _formulesEnCours.map((f) => Object.assign({}, f));
+    // Déclencheurs (plusieurs possibles) — appliqués par le moteur via
+    // _gererDeclencheursEquipement (cf. js/app.js), sur touche/rate/critique.
+    if (_declencheursEnCours.length) item.declencheurs = _declencheursEnCours.map((d) => Object.assign({}, d, d.repli ? { repli: Object.assign({}, d.repli) } : {}));
     // Champs selon le type
     if (type === "accessoire") item.slot = v("forge-slot");
     const def = n("forge-def"); if (def) item.bonusDEF = def;
@@ -143,6 +147,7 @@ const Forge = (() => {
     // champs sont vidés après un Ajouter, donc pas de double-comptage).
     if (v("forge-comp") && n("forge-comp-val")) _competencesEnCours.push({ competence: v("forge-comp"), valeur: n("forge-comp-val") });
     { const c = v("forge-f-cible"), e = v("forge-f-expr"); if (c && e) { const f = { cible: c, expr: e }; if (c === "carac") f.carac = v("forge-f-carac"); if (c === "competence") f.competence = v("forge-f-comp"); _formulesEnCours.push(f); } }
+    { const ev = v("forge-d-evenement"), val = v("forge-d-valeur"); if (ev && val) _declencheursEnCours.push(_lireDeclencheurForm()); }
     const item = _construireItem();
     if (!item.nom) { toast("Donne un nom à l'objet."); return; }
     if (!item.prixPo) { toast("Indique un prix (po)."); return; }
@@ -155,7 +160,7 @@ const Forge = (() => {
     }
     ecrire(cat);
     const enEdition = !!_editionId;
-    _iconeEnCours = null; _competencesEnCours = []; _formulesEnCours = []; _editionId = null; _editionData = null; // reset
+    _iconeEnCours = null; _competencesEnCours = []; _formulesEnCours = []; _declencheursEnCours = []; _editionId = null; _editionData = null; // reset
     toast(enEdition ? "💾 « " + item.nom + " » mis à jour." : "⚒️ « " + item.nom + " » forgé !");
     // Rafraîchit tout le marché (liste des forgés + dropdown « Mettre en vente »).
     if (typeof Marche !== "undefined") Marche.rendrePanneauMarche(); else rendre();
@@ -184,6 +189,7 @@ const Forge = (() => {
     if (it.malusDEX) bits.push(`malus DEX -${it.malusDEX}`);
     if (it.type === "arme") bits.push(`${it.degats} · ${it.portee}` + (it.deuxMains ? " · 2 mains" : ""));
     (it.formules || []).forEach((f) => bits.push(`⚙ ${f.cible}${f.carac ? " " + f.carac : ""}${f.competence ? " " + f.competence : ""} = ${echapper(f.expr)}`));
+    (it.declencheurs || []).forEach((d) => bits.push(`⚡ ${_labelDeclencheur(d)}`));
     if (it.effet) bits.push(echapper(it.effet));
     return bits.join(" · ");
   }
@@ -261,6 +267,39 @@ const Forge = (() => {
         <div class="forge-f-apercu" id="forge-f-apercu">Aperçu : —</div>
         <div class="barre-actions" style="margin-top:8px;"><button type="button" class="btn petit secondaire" id="btn-forge-f-add">➕ Ajouter la formule</button></div>
         <div class="forge-chips" id="forge-formules-liste"></div>
+      </div>
+      <div class="forge-caracs-bloc">
+        <span class="forge-sous-titre">Déclencheur — sur touche/rate/critique, perte ou gain d'une ressource (porteur uniquement) — plusieurs possibles</span>
+        <div class="forge-grille">
+          <label>Événement<select id="forge-d-evenement">
+            <option value="touche">Touche</option>
+            <option value="rate">Rate</option>
+            <option value="critique">Critique</option>
+          </select></label>
+          <label>Ressource<select id="forge-d-ressource">
+            <option value="or">Or</option>
+            <option value="argent">Argent</option>
+            <option value="bronze">Bronze</option>
+            <option value="pv">PV</option>
+          </select></label>
+          <label>Opération<select id="forge-d-operation">
+            <option value="perte">Perte</option>
+            <option value="gain">Gain</option>
+          </select></label>
+          <label>Valeur (ex. 25 ou 1d4)<input type="text" id="forge-d-valeur" placeholder="25" /></label>
+        </div>
+        <label class="forge-check"><input type="checkbox" id="forge-d-repli-active" /> Repli si la ressource est déjà à 0 (perte seulement)</label>
+        <div class="forge-grille f-drepli" style="display:none;">
+          <label>Ressource de repli<select id="forge-d-repli-ressource">
+            <option value="or">Or</option>
+            <option value="argent">Argent</option>
+            <option value="bronze">Bronze</option>
+            <option value="pv">PV</option>
+          </select></label>
+          <label>Valeur de repli<input type="text" id="forge-d-repli-valeur" placeholder="1d4" /></label>
+        </div>
+        <div class="barre-actions" style="margin-top:8px;"><button type="button" class="btn petit secondaire" id="btn-forge-d-add">➕ Ajouter le déclencheur</button></div>
+        <div class="forge-chips" id="forge-declencheurs-liste"></div>
       </div>
       <label class="forge-full">Icône (image, petite)
         <input type="file" accept="image/*" id="forge-icone-file" />
@@ -346,6 +385,37 @@ const Forge = (() => {
     const ap = $("forge-f-apercu"); if (ap) ap.textContent = "Aperçu : —";
     _rendreFormulesListe();
   }
+  const LABELS_RESSOURCE = { or: "or", argent: "argent", bronze: "bronze", pv: "PV" };
+  const LABELS_EVENEMENT = { touche: "Touche", rate: "Rate", critique: "Critique" };
+  function _labelDeclencheur(d) {
+    const base = `${LABELS_EVENEMENT[d.evenement] || d.evenement} → ${d.operation === "gain" ? "+" : "-"}${echapper(d.valeur)} ${LABELS_RESSOURCE[d.ressource] || d.ressource}`;
+    const repli = d.repli ? ` (repli : -${echapper(d.repli.valeur)} ${LABELS_RESSOURCE[d.repli.ressource] || d.repli.ressource})` : "";
+    return base + repli;
+  }
+  function _rendreDeclencheursListe() {
+    const el = $("forge-declencheurs-liste"); if (!el) return;
+    el.innerHTML = _declencheursEnCours.map((d, i) =>
+      `<span class="forge-chip">${_labelDeclencheur(d)} <button type="button" data-i="${i}" class="forge-chip-x">×</button></span>`).join("");
+    el.querySelectorAll(".forge-chip-x").forEach((b) => { b.onclick = () => { _declencheursEnCours.splice(+b.dataset.i, 1); _rendreDeclencheursListe(); }; });
+  }
+  function _lireDeclencheurForm() {
+    const d = { evenement: v("forge-d-evenement"), ressource: v("forge-d-ressource"), operation: v("forge-d-operation"), valeur: v("forge-d-valeur") };
+    if (d.operation === "perte" && chk("forge-d-repli-active")) {
+      const rv = v("forge-d-repli-valeur");
+      if (rv) d.repli = { ressource: v("forge-d-repli-ressource"), valeur: rv };
+    }
+    return d;
+  }
+  function _ajouterDeclencheur() {
+    const evenement = v("forge-d-evenement"); const valeur = v("forge-d-valeur");
+    if (!evenement || !valeur) { toast("Choisis un événement et une valeur."); return; }
+    _declencheursEnCours.push(_lireDeclencheurForm());
+    const inp = $("forge-d-valeur"); if (inp) inp.value = "";
+    const rinp = $("forge-d-repli-valeur"); if (rinp) rinp.value = "";
+    const rchk = $("forge-d-repli-active"); if (rchk) rchk.checked = false;
+    const repliZone = document.querySelector(".f-drepli"); if (repliZone) repliZone.style.display = "none";
+    _rendreDeclencheursListe();
+  }
 
   // ── Édition d'un objet existant ──
   function _editer(id) {
@@ -356,11 +426,12 @@ const Forge = (() => {
     _iconeEnCours = it.icone || null;
     _competencesEnCours = Object.keys(it.bonusCompetences || {}).map((competence) => ({ competence, valeur: it.bonusCompetences[competence] }));
     _formulesEnCours = (it.formules || []).map((f) => Object.assign({}, f));
+    _declencheursEnCours = (it.declencheurs || []).map((d) => Object.assign({}, d, d.repli ? { repli: Object.assign({}, d.repli) } : {}));
     if (typeof Marche !== "undefined") Marche.rendrePanneauMarche(); else rendre();
     const zone = $("zone-forge"); if (zone && zone.scrollIntoView) zone.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   function _annulerEdition() {
-    _editionId = null; _editionData = null; _iconeEnCours = null; _competencesEnCours = []; _formulesEnCours = [];
+    _editionId = null; _editionData = null; _iconeEnCours = null; _competencesEnCours = []; _formulesEnCours = []; _declencheursEnCours = [];
     if (typeof Marche !== "undefined") Marche.rendrePanneauMarche(); else rendre();
   }
   // Remplit les champs scalaires du formulaire depuis un objet (les listes
@@ -385,6 +456,10 @@ const Forge = (() => {
     S("forge-atkdist", it.bonusAttaqueDistance || 0);
     S("forge-degmag", it.bonusDegatsMagiques || 0);
     _majVisibilite();
+    // Note : les champs forge-d-* (déclencheur en cours de saisie) ne sont
+    // volontairement PAS pré-remplis depuis un item existant — seule la
+    // LISTE (_declencheursEnCours, restaurée dans _editer) l'est, comme pour
+    // les formules. Le formulaire "ajout" reste vierge après une édition.
   }
 
   // Point d'entrée : rend le formulaire + la liste dans #zone-forge (MJ only).
@@ -420,8 +495,15 @@ const Forge = (() => {
     // Listes multi : boutons Ajouter + rendu (restauré depuis l'état en cours)
     const bCompAdd = $("btn-forge-comp-add"); if (bCompAdd) bCompAdd.onclick = _ajouterComp;
     const bFAdd = $("btn-forge-f-add"); if (bFAdd) bFAdd.onclick = _ajouterFormule;
+    const bDAdd = $("btn-forge-d-add"); if (bDAdd) bDAdd.onclick = _ajouterDeclencheur;
+    const chkRepli = $("forge-d-repli-active");
+    if (chkRepli) chkRepli.onchange = () => {
+      const repliZone = zone.querySelector(".f-drepli");
+      if (repliZone) repliZone.style.display = chkRepli.checked ? "" : "none";
+    };
     _rendreCompListe();
     _rendreFormulesListe();
+    _rendreDeclencheursListe();
 
     // Formule dynamique : visibilité carac/compétence, aperçu, insertion de @variables
     const majF = () => {
@@ -433,7 +515,7 @@ const Forge = (() => {
       const ap = $("forge-f-apercu"); if (!ap) return;
       const expr = v("forge-f-expr");
       if (!expr) { ap.textContent = "Aperçu : —"; return; }
-      const r = (typeof Formule !== "undefined") ? Formule.apercuDemo(expr) : 0;
+      const r = (typeof Formule !== "undefined") ? Math.round(Formule.apercuDemo(expr)) : 0;
       ap.textContent = `Aperçu (or=350, niv=3, PV=18/30, CHA=16) → ${r}`;
     };
     majF();

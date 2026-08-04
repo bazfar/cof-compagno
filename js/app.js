@@ -877,6 +877,84 @@ const App = (() => {
     }
   }
 
+  // Déclencheurs génériques d'objets forgés (cf. js/forge.js, champ
+  // `declencheurs`) : sur touche/rate/critique d'une attaque (contact ou
+  // distance), perte/gain d'une ressource sur le PORTEUR uniquement.
+  // N'existait pas avant le 04/08/2026 : un objet du catalogue classique
+  // ou forgé sans `declencheurs` ne change rien au comportement existant.
+  // Volontairement séparé de _gererMalusEpeeCupidite (non touchée) : deux
+  // chemins qui coexistent, l'un en dur pour l'Épée, l'autre générique pour
+  // tout objet forgé à venir.
+  //
+  // Un seul passage local (persos/p chargés UNE fois, sauvés UNE fois à la
+  // fin) : évite la course entre ajusterPv (qui recharge/sauve séparément)
+  // et une mutation directe de piecesOr/Argent/Bronze sur le même perso
+  // dans le même événement — sinon le second sauverPersos() écraserait le
+  // premier avec des données obsolètes.
+  function _valeurDeclencheur(expr) {
+    if (typeof expr !== "string") return Number(expr) || 0;
+    const m = expr.trim().match(/^(\d+)d(\d+)$/i);
+    if (!m) return parseInt(expr, 10) || 0;
+    const nb = parseInt(m[1], 10), faces = parseInt(m[2], 10);
+    let total = 0;
+    for (let i = 0; i < nb; i++) total += lancerDe(faces);
+    return total;
+  }
+  const _CHAMP_RESSOURCE = { or: "piecesOr", argent: "piecesArgent", bronze: "piecesBronze", pv: "pvActuel" };
+  function _gererDeclencheursEquipement(persoId, type, resolution) {
+    if (type !== "contact" && type !== "distance") return;
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const perso = Personnage.depuisJSON(p);
+    const armeUtilisee = type === "contact" ? perso.armeContactEquipee() : perso.armeDistanceEquipee();
+    const pvAvant = p.pvActuel;
+    let modifie = false, pvTouche = false;
+    perso._itemsEquipesUniques().forEach((it) => {
+      if (!it.declencheurs || !it.declencheurs.length) return;
+      if (it.type === "arme" && (!armeUtilisee || armeUtilisee.id !== it.id)) return; // pas la bonne arme
+      it.declencheurs.forEach((d) => {
+        const evenementOk =
+          (d.evenement === "touche" && resolution.touche === true) ||
+          (d.evenement === "rate" && resolution.touche === false) ||
+          (d.evenement === "critique" && resolution.critique === true);
+        if (!evenementOk) return;
+        const champActuel = _CHAMP_RESSOURCE[d.ressource];
+        const actuel = champActuel ? (p[champActuel] || 0) : 0;
+        let ressourceAppliquee = d.ressource, deltaLog, valLog;
+        if (d.operation === "perte" && d.repli && actuel <= 0) {
+          ressourceAppliquee = d.repli.ressource;
+          valLog = _valeurDeclencheur(d.repli.valeur);
+          deltaLog = -valLog;
+        } else {
+          valLog = _valeurDeclencheur(d.valeur);
+          deltaLog = d.operation === "gain" ? valLog : -valLog;
+        }
+        const champ = _CHAMP_RESSOURCE[ressourceAppliquee];
+        if (!champ) return;
+        if (ressourceAppliquee === "pv") {
+          if (deltaLog > 0) Personnage.appliquerGainPv(p, deltaLog, { ignorerCorruption: true });
+          else p.pvActuel = Math.max(0, Math.min(p.pvMax, p.pvActuel + deltaLog));
+          pvTouche = true;
+        } else {
+          p[champ] = Math.max(0, (p[champ] || 0) + deltaLog);
+        }
+        toast(`⚡ ${it.nom} : ${p.nom} ${deltaLog >= 0 ? "gagne" : "perd"} ${Math.abs(deltaLog)} ${LABELS_RESSOURCE_TOAST[ressourceAppliquee] || ressourceAppliquee}.`);
+        modifie = true;
+      });
+    });
+    if (!modifie) return;
+    if (pvTouche) {
+      const transition = _majEtatMourant(p, pvAvant);
+      sauverPersos(persos);
+      _syncPvAffichages(persoId, p);
+      if (transition) _rerendreApresTransitionMourant(persoId);
+    } else {
+      sauverPersos(persos);
+    }
+  }
+  const LABELS_RESSOURCE_TOAST = { or: "PO", argent: "PA", bronze: "PB", pv: "PV" };
+
   // Résout un token de battlemap (cibleId, cf. _ciblesPortee) vers la clé
   // composite attendue par ouvrirModalMalus/appliquerMalus ("pj:id" ou
   // "monstre:id") — même logique de résolution que _resoudreAttaqueRapide.
@@ -1274,6 +1352,7 @@ const App = (() => {
         }
         _gererPremierSangChasseur(id, type, resolution.touche);
         _gererMalusEpeeCupidite(id, type, resolution.touche);
+        _gererDeclencheursEquipement(id, type, resolution);
         if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
         rendreFicheSidebarBattlemap(id);
       };
@@ -1665,6 +1744,7 @@ const App = (() => {
         }
         _gererPremierSangChasseur(id, type, resolution.touche);
         _gererMalusEpeeCupidite(id, type, resolution.touche);
+        _gererDeclencheursEquipement(id, type, resolution);
         if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
         rendreFicheSidebarBattlemap(id);
       };

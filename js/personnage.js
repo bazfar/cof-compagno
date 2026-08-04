@@ -1353,13 +1353,19 @@ class Personnage extends Entite {
         t += Formule.evaluer(f.expr, { perso: this }) || 0;
       });
     });
-    return t;
+    // Arrondi ICI (unique point d'entrée pour les 5 cibles : degats, DEF,
+    // carac, competence, initiative) — avant ce fix, seul degats arrondissait
+    // (via bonusDegatsFormuleEquipement ci-dessous), les 4 autres cibles
+    // pouvaient renvoyer un bonus fractionnaire si la formule ne contenait
+    // pas explicitement floor()/round()/ceil(). Aucun changement de
+    // comportement pour degats (déjà arrondi, au même endroit fonctionnellement).
+    return Math.round(t);
   }
   // Bonus de dégâts dérivé d'une formule d'objet (ex. Épée « +dmg par or »),
   // ajouté à la formule de dégâts côté app.js (même canal que les autres
-  // bonusDegats*). Renvoie un entier (arrondi au plus proche).
+  // bonusDegats*).
   bonusDegatsFormuleEquipement() {
-    return Math.round(this.bonusFormuleEquipement("degats"));
+    return this.bonusFormuleEquipement("degats");
   }
   bonusDefEquipement() {
     return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDEF || 0), 0)
