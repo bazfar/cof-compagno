@@ -72,7 +72,12 @@ const CATEGORIES_ARMURE_VALIDES = ["legere", "moyenne", "lourde"];
 const COMMUN = ["id", "nom", "type", "porte", "description", "prixPo"];
 // Champs valides sur plusieurs types sans être universels (cf. usage réel
 // dans le catalogue et dans le code de résolution des raretés/effets).
-const COMMUN_MULTI_TYPE = ["horsMarche", "effet", "rarete", "rareteNom", "rareteCouleur"];
+const COMMUN_MULTI_TYPE = ["horsMarche", "effet", "rarete", "rareteNom", "rareteCouleur",
+  // formules/declencheurs : mêmes champs data-driven que la Forge du MJ (cf.
+  // js/forge.js, prompt_declencheurs_forge.md) — génériques par nature (pas
+  // liés à un type d'objet précis), utilisables aussi bien sur un objet du
+  // catalogue statique (ex. epee_cupidite) que sur un objet forgé.
+  "formules", "declencheurs"];
 // Champs spécifiques à chaque type.
 const PAR_TYPE = {
   arme: ["degats", "portee", "typedegats", "enchantement", "deuxMains", "categorieArme", "porteeMinCases", "porteeMaxCases", "rechargement", "degatsAuMoinsRare", "bonusAttaqueMagique", "bonusDegatsMagiques"],
@@ -160,6 +165,29 @@ items.forEach((it, index) => {
   // 8. id unique — comptage, rapport après la boucle
   if (it.id) idsVus.set(it.id, (idsVus.get(it.id) || 0) + 1);
   else signaler(cle, "id manquant.");
+
+  // 9. formules/declencheurs (cf. js/forge.js, même schéma que les objets
+  // forgés — reproduit ici pour un item du catalogue statique).
+  const CIBLES_FORMULE_VALIDES = ["degats", "DEF", "initiative", "carac", "competence"];
+  (it.formules || []).forEach((f, i) => {
+    if (!f || typeof f.expr !== "string" || !f.expr) signaler(cle, `formules[${i}] sans expr valide.`);
+    if (!f || !CIBLES_FORMULE_VALIDES.includes(f.cible)) signaler(cle, `formules[${i}].cible invalide : "${f && f.cible}" (attendu : ${CIBLES_FORMULE_VALIDES.join("|")}).`);
+    if (f && f.cible === "carac" && !CARACS_VALIDES.includes(f.carac)) signaler(cle, `formules[${i}].carac invalide : "${f.carac}".`);
+    if (f && f.cible === "competence" && !COMPETENCES_VALIDES.has(f.competence)) signaler(cle, `formules[${i}].competence inconnue : "${f.competence}".`);
+  });
+  const EVENEMENTS_VALIDES = ["touche", "rate", "critique"];
+  const RESSOURCES_VALIDES = ["or", "argent", "bronze", "pv"];
+  const OPERATIONS_VALIDES = ["perte", "gain"];
+  (it.declencheurs || []).forEach((d, i) => {
+    if (!d || !EVENEMENTS_VALIDES.includes(d.evenement)) signaler(cle, `declencheurs[${i}].evenement invalide : "${d && d.evenement}" (attendu : ${EVENEMENTS_VALIDES.join("|")}).`);
+    if (!d || !RESSOURCES_VALIDES.includes(d.ressource)) signaler(cle, `declencheurs[${i}].ressource invalide : "${d && d.ressource}" (attendu : ${RESSOURCES_VALIDES.join("|")}).`);
+    if (!d || !OPERATIONS_VALIDES.includes(d.operation)) signaler(cle, `declencheurs[${i}].operation invalide : "${d && d.operation}" (attendu : ${OPERATIONS_VALIDES.join("|")}).`);
+    if (!d || (typeof d.valeur !== "string" && typeof d.valeur !== "number") || d.valeur === "") signaler(cle, `declencheurs[${i}].valeur manquante/invalide.`);
+    if (d && d.repli) {
+      if (!RESSOURCES_VALIDES.includes(d.repli.ressource)) signaler(cle, `declencheurs[${i}].repli.ressource invalide : "${d.repli.ressource}".`);
+      if ((typeof d.repli.valeur !== "string" && typeof d.repli.valeur !== "number") || d.repli.valeur === "") signaler(cle, `declencheurs[${i}].repli.valeur manquante/invalide.`);
+    }
+  });
 });
 
 idsVus.forEach((n, id) => {

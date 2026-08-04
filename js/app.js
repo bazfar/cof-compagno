@@ -849,42 +849,16 @@ const App = (() => {
     if (franchi) toast(`⚠️ ${p.nom} franchit le seuil de Corruption d'Âme (Corruption d'Âme +1, total ${p.corruptionMajeure}).`);
   }
 
-  // Épée de Cupidité (data/loot.json: epee_cupidite) : en cas d'échec au jet
-  // d'ATTAQUE DE CONTACT avec cette épée effectivement équipée en main de
-  // contact, le porteur perd 25 PO ; s'il n'a déjà plus aucun or, il perd
-  // 1d4 PV à la place — dégâts bruts appliqués directement (cf. ajusterPv),
-  // sans réduction d'armure : c'est une malédiction, pas un coup encaissé.
-  // Perte partielle si moins de 25 PO en poche (ex. 10 PO → perd les 10,
-  // pas de dégâts de repli) : seul un porteur DÉJÀ à 0 PO avant ce jet
-  // subit les PV — cf. bonusDegatsEpeeCupidite pour le volet dégâts du
-  // même objet. Même schéma d'appel que _gererPremierSangChasseur ci-dessus.
-  function _gererMalusEpeeCupidite(persoId, type, touche) {
-    if (type !== "contact" || touche !== false) return;
-    const persos = chargerPersos();
-    const p = persos[persoId];
-    if (!p) return;
-    const perso = Personnage.depuisJSON(p);
-    const arme = perso.armeContactEquipee();
-    if (!arme || arme.id !== "epee_cupidite") return;
-    if ((p.piecesOr || 0) > 0) {
-      p.piecesOr = Math.max(0, (p.piecesOr || 0) - 25);
-      sauverPersos(persos);
-      toast(`💰 Épée de Cupidité : ${p.nom} perd de l'or (reste ${p.piecesOr} PO).`);
-    } else {
-      const degats = lancerDe(4);
-      ajusterPv(persoId, -degats);
-      toast(`🗡️ Épée de Cupidité : plus d'or, ${p.nom} subit ${degats} dégâts.`);
-    }
-  }
-
-  // Déclencheurs génériques d'objets forgés (cf. js/forge.js, champ
-  // `declencheurs`) : sur touche/rate/critique d'une attaque (contact ou
-  // distance), perte/gain d'une ressource sur le PORTEUR uniquement.
-  // N'existait pas avant le 04/08/2026 : un objet du catalogue classique
-  // ou forgé sans `declencheurs` ne change rien au comportement existant.
-  // Volontairement séparé de _gererMalusEpeeCupidite (non touchée) : deux
-  // chemins qui coexistent, l'un en dur pour l'Épée, l'autre générique pour
-  // tout objet forgé à venir.
+  // Déclencheurs génériques d'objets forgés OU du catalogue statique (cf.
+  // js/forge.js, champ `declencheurs`) : sur touche/rate/critique d'une
+  // attaque (contact ou distance), perte/gain d'une ressource sur le
+  // PORTEUR uniquement. N'existait pas avant le 04/08/2026 : un objet sans
+  // `declencheurs` ne change rien au comportement existant.
+  // Épée de Cupidité (data/loot.json: epee_cupidite) migrée vers ce système
+  // le 04/08/2026 — son malus (perte de 25 PO à un échec d'attaque de
+  // contact, repli en 1d4 PV si déjà à 0 PO) était auparavant en dur ici
+  // même (_gererMalusEpeeCupidite, retirée), le volet dégâts (+1/100 PO)
+  // passant déjà par `formules`/bonusDegatsFormuleEquipement.
   //
   // Un seul passage local (persos/p chargés UNE fois, sauvés UNE fois à la
   // fin) : évite la course entre ajusterPv (qui recharge/sauve séparément)
@@ -1092,7 +1066,6 @@ const App = (() => {
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
-    if (dmgContact && perso.bonusDegatsEpeeCupidite()) dmgContact += "+" + perso.bonusDegatsEpeeCupidite();
     if (dmgContact && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
@@ -1351,7 +1324,6 @@ const App = (() => {
           toast(resultatMsg);
         }
         _gererPremierSangChasseur(id, type, resolution.touche);
-        _gererMalusEpeeCupidite(id, type, resolution.touche);
         _gererDeclencheursEquipement(id, type, resolution);
         if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
         rendreFicheSidebarBattlemap(id);
@@ -1539,7 +1511,6 @@ const App = (() => {
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
-    if (dmgContact && perso.bonusDegatsEpeeCupidite()) dmgContact += "+" + perso.bonusDegatsEpeeCupidite();
     if (dmgContact && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
@@ -1743,7 +1714,6 @@ const App = (() => {
           toast(resultatMsg);
         }
         _gererPremierSangChasseur(id, type, resolution.touche);
-        _gererMalusEpeeCupidite(id, type, resolution.touche);
         _gererDeclencheursEquipement(id, type, resolution);
         if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
         rendreFicheSidebarBattlemap(id);
@@ -5150,7 +5120,6 @@ const App = (() => {
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
-    if (dmgContact && perso.bonusDegatsEpeeCupidite()) dmgContact += "+" + perso.bonusDegatsEpeeCupidite();
     if (dmgContact && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état

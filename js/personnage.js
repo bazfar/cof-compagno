@@ -1269,17 +1269,6 @@ class Personnage extends Entite {
   bonusDegatsForceHerculeenne() {
     return this.classe === "guerrier" && this.estChoisie("Voie de l'élite", 4) ? "1d4" : null;
   }
-  // Épée de Cupidité (data/loot.json: epee_cupidite) : +1 dégât par tranche
-  // de 100 PO possédées par le porteur, arrondi à l'inférieur (350 PO →
-  // +3). Lu seulement si cette épée précise est bien l'arme de CONTACT
-  // effectivement équipée (armeContactEquipee) — jamais si elle traîne en
-  // inventaire ou en main secondaire. Cf. app.js _gererMalusEpeeCupidite
-  // pour le volet malus (échec d'attaque) du même objet.
-  bonusDegatsEpeeCupidite() {
-    const arme = this.armeContactEquipee();
-    if (!arme || arme.id !== "epee_cupidite") return 0;
-    return Math.floor((this.piecesOr || 0) / 100);
-  }
   // Guerrier — Voie du chaos, rang 5 "Déchaînement" : +2d6 DM à toutes les
   // attaques au contact tant que l'état 'dechainement' reste actif (posé par
   // Capacites.lancer/decompterEtatsDebutTour, cf. js/etats.js) — même canal
