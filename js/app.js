@@ -8940,6 +8940,10 @@ const App = (() => {
     const type = cibleRaw.slice(0, sep);
     const id = cibleRaw.slice(sep + 1);
     const entree = _entreeMalusMj(idEtat, duree, formuleDot);
+    // Suffixe ajouté au toast final de confirmation (branche monstre,
+    // immunité conditionnelle) — #toast est un élément unique, un second
+    // appel synchrone à toast() écraserait le premier avant qu'il soit lu.
+    let suffixeToastFinal = "";
 
     if (type === "pj") {
       const persos = chargerPersos();
@@ -8971,11 +8975,23 @@ const App = (() => {
       if (ficheActiveId === id) afficherFiche(id);
       if (ficheSidebarActiveId === id) rendreFicheSidebarBattlemap(id);
     } else if (type === "monstre" && typeof Carte !== "undefined") {
+      // Symétrique de la garde d'immunité de la branche pj ci-dessus : sans
+      // ça, rien n'empêche de poser « effrayée » sur un orc, dont tout le
+      // lore dit qu'il en est incapable (cf. schema_cible_capacites_monstres.md §5).
+      const jetonCible = Carte.listeMonstresCombat ? Carte.listeMonstresCombat().find((mm) => mm.id === id) : null;
+      const imm = typeof CapacitesMonstres !== "undefined"
+        ? CapacitesMonstres.immunite(jetonCible, idEtat) : { bloquee: false, condition: null };
+      if (imm.bloquee) {
+        toast(`${jetonCible ? jetonCible.nom : "Ce monstre"} est immunisé à « ${ETATS[idEtat].nom} » — aucun effet appliqué.`);
+        fermerModalMalus();
+        return;
+      }
+      if (imm.condition) suffixeToastFinal = ` — immunité conditionnelle : ${imm.condition} À arbitrer.`;
       Carte.ajouterEtatCombat(id, entree);
       rendreTableCombat();
       rendreTableCombat("battlemap-zone-table-combat");
     }
-    toast(`${ETATS[idEtat].nom} appliqué.`);
+    toast(`${ETATS[idEtat].nom} appliqué.${suffixeToastFinal}`);
     fermerModalMalus();
   }
 
@@ -9117,6 +9133,29 @@ const App = (() => {
       return `<div class="cm-attaque-ligne">
         <button class="btn petit secondaire" data-monstre-jet="${m.id}" data-idx-attaque="${i}" title="${echapper(r.jetTexte || "")}">⚔ ${echapper(r.nom)} (${signe(bonusAttaqueEffectif)})</button>
         ${etatDeg.visible ? `<button class="btn-de-cap" data-monstre-degats="${m.id}" data-idx-attaque="${i}" data-monstre-critique="${etatDeg.critique ? "1" : "0"}" title="Dégâts : ${echapper(r.degatsTexte || r.degats || "")}">🎲${etatDeg.critique ? " CRIT" : ""}</button>` : ""}
+      </div>`;
+    }).join("")}</div>`;
+  }
+
+  // Capacités actives d'un monstre (cf. js/capacites_monstres.js,
+  // schema_cible_capacites_monstres.md §6) — un bouton par entrée de
+  // CapacitesMonstres.capacitesDe(m), grisé quand preparer() refuse (usage
+  // épuisé), avec un résumé compact en title. Bouton ↻ à côté des capacités
+  // en "1x/recharge" (recharge purement déclarative — le MJ débloque à la
+  // main, cf. §7 du schéma : aucune période nommée n'est réinitialisée
+  // automatiquement).
+  function capacitesMonstreHtml(m) {
+    if (typeof CapacitesMonstres === "undefined") return "";
+    const capacites = CapacitesMonstres.capacitesDe(m);
+    if (!capacites.length) return "";
+    return `<div class="cm-capacites">${capacites.map((cap, i) => {
+      const prep = CapacitesMonstres.preparer(m, i);
+      const grise = !prep.ok;
+      const titre = [CapacitesMonstres.resume(cap.mecanique), cap.description, prep.raison].filter(Boolean).join(" — ");
+      const enRecharge = cap.mecanique && cap.mecanique.usage && cap.mecanique.usage.frequence === "1x/recharge";
+      return `<div class="cm-capacite-ligne">
+        <button class="btn petit or${grise ? " grise" : ""}" data-capacite-monstre="${m.id}" data-idx-capacite="${i}" ${grise ? "disabled" : ""} title="${echapper(titre)}">✨ ${echapper(cap.nom)}</button>
+        ${enRecharge ? `<button class="btn petit secondaire" data-recharge-capacite="${m.id}" data-idx-capacite="${i}" title="Débloque manuellement cette capacité (recharge non décomptée automatiquement).">↻</button>` : ""}
       </div>`;
     }).join("")}</div>`;
   }
@@ -9289,6 +9328,7 @@ const App = (() => {
           </div>
           ${cibleHtml}
           ${attaquesMonstreHtml(m)}
+          ${capacitesMonstreHtml(m)}
           <div class="pv-control">
             <button data-pv-moins="${m.id}">−</button>
             <input type="number" value="${pvActuel}" data-pv-input="${m.id}" />
@@ -9363,6 +9403,103 @@ const App = (() => {
           const typeDegatsNormalise = r.typedegats && r.typedegats.startsWith("physique") ? "physique" : "magique";
           subirDegats(pjId, total, typeDegatsNormalise);
         }
+      };
+    });
+    // Capacités actives (cf. js/capacites_monstres.js) : un clic prépare le
+    // plan (CapacitesMonstres.preparer, qui gate déjà l'usage) puis l'exécute
+    // intégralement — un seul bouton, pas de second clic "Lancer les dégâts"
+    // comme pour une attaque, cf. schema_cible_capacites_monstres.md §6.
+    zone.querySelectorAll("[data-capacite-monstre]").forEach((btn) => {
+      btn.onclick = () => {
+        const m = monstres.find((mm) => mm.id === btn.dataset.capaciteMonstre);
+        if (!m) return;
+        const indice = parseInt(btn.dataset.idxCapacite, 10);
+        const prep = CapacitesMonstres.preparer(m, indice);
+        if (!prep.ok) { toast(prep.raison); return; }
+        const cap = prep.capacite;
+        const mecanique = prep.mecanique;
+        const libelle = `${m.nom} — ${cap.nom}`;
+        const pjId = ciblesMonstres[m.id] || null;
+        const cibleSoi = !!(mecanique && mecanique.cible === "soi");
+
+        // jetAttaque (Sceau du silence / Marque du jugement) : jet 1d20+bonus
+        // vs DEF avant le reste du plan — même pipeline qu'une attaque d'arme
+        // (_resoudreAttaqueMonstreVsPJ). jetSauvegardeFixe reste un jet CÔTÉ
+        // CIBLE, non automatisable pour un monstre (cf. §3 du schéma) :
+        // affiché dans le résumé du bouton, jamais roulé ici.
+        let toucheOk = true;
+        if (mecanique && mecanique.jetAttaque !== undefined) {
+          const resAtt = _resoudreAttaqueMonstreVsPJ(libelle, mecanique.jetAttaque + _bonusEtatsMonstre(m, "attaque"), 20, pjId);
+          toast(resAtt.echecCritique ? "1 naturel — échec critique automatique, effet non appliqué."
+            : resAtt.critique ? `CRITIQUE !${resAtt.defCible !== null ? ` (DEF ${resAtt.defCible})` : ""}`
+            : resAtt.defCible === null ? "DEF de la cible inconnue — effet appliqué, à confirmer manuellement."
+            : (resAtt.touche ? `Touché ! (DEF ${resAtt.defCible})` : `Raté (DEF ${resAtt.defCible}) — effet non appliqué.`));
+          toucheOk = resAtt.touche !== false;
+        }
+
+        if (toucheOk) {
+          prep.plan.forEach((action) => {
+            if (action.action === "degats" || action.action === "soin") {
+              const suffixe = action.surReussite === "demi" ? " — moitié si sauvegarde réussie" : "";
+              lancerFormule(action.formule, `${libelle} (${action.action === "degats" ? "dégâts" : "soin"})${suffixe}`, false, { estMonstre: true });
+            } else if (action.action === "etat") {
+              const entree = { idEtat: action.idEtat, dureeRestante: _resoudreDureeToursMonstre(action.duree || "", null), source: cap.nom, poseLe: Date.now() };
+              if (cibleSoi) {
+                const imm = CapacitesMonstres.immunite(m, action.idEtat);
+                if (imm.bloquee) { toast(`${m.nom} est immunisé à « ${ETATS[action.idEtat].nom} ».`); return; }
+                if (imm.condition) toast(`Immunité conditionnelle : ${imm.condition} — à arbitrer.`);
+                Carte.ajouterEtatCombat(m.id, entree);
+              } else if (pjId) {
+                const persos = chargerPersos();
+                const p = persos[pjId];
+                if (p) {
+                  const perso = Personnage.depuisJSON(p);
+                  if (perso.aImmuniteEtat(action.idEtat)) {
+                    toast(`${p.nom} est immunisé·e à « ${ETATS[action.idEtat].nom} » (Liberté d'action).`);
+                  } else {
+                    p.etatsActifs = p.etatsActifs || [];
+                    p.etatsActifs.push(entree);
+                    sauverPersos(persos);
+                    if (ficheActiveId === pjId) afficherFiche(pjId);
+                    if (ficheSidebarActiveId === pjId) rendreFicheSidebarBattlemap(pjId);
+                  }
+                }
+              } else {
+                toast(`${ETATS[action.idEtat].nom} (${cap.nom}) — aucune cible 🎯 choisie ci-dessus : à appliquer manuellement.`);
+              }
+            } else if (action.action === "bonus") {
+              if (cibleSoi) {
+                Carte.ajouterEtatCombat(m.id, {
+                  idEtat: null, bonus: { cible: action.cible, valeur: action.valeur },
+                  dureeRestante: _resoudreDureeToursMonstre(action.duree || "", null), source: cap.nom, poseLe: Date.now(),
+                });
+              } else {
+                // "allie" (Cri de ralliement, Cri de commandement des os...) :
+                // pas de sélecteur multi-cible pour les autres monstres —
+                // laissé à la table, cf. §4 "Partiellement mécanisables" du
+                // schéma (même limite que les redirections d'attaque PJ).
+                toast(`Bonus ${action.cible} ${signe(action.valeur)} (${cap.nom}) — cible(s) alliée(s) à appliquer manuellement (pas de sélecteur multi-cible).`);
+              }
+            } else if (action.action === "retraitEtat") {
+              toast(`${cap.nom} : retrait d'état — à appliquer manuellement.`);
+            } else if (action.action === "note") {
+              toast(action.texte);
+              ajouterHisto(libelle, 0, false, false, action.texte);
+            }
+          });
+        }
+
+        prep.appliquerUsage();
+        rendreTableCombat(targetId);
+      };
+    });
+    zone.querySelectorAll("[data-recharge-capacite]").forEach((btn) => {
+      btn.onclick = () => {
+        const m = monstres.find((mm) => mm.id === btn.dataset.rechargeCapacite);
+        if (!m || typeof Capacites === "undefined" || !Capacites.reinitialiserUsage) return;
+        const indice = parseInt(btn.dataset.idxCapacite, 10);
+        Capacites.reinitialiserUsage(m, CapacitesMonstres.cleCapacite(m.monstreId || m.id, indice));
+        rendreTableCombat(targetId);
       };
     });
     zone.querySelectorAll("[data-pv-moins]").forEach((btn) => {
@@ -9566,6 +9703,16 @@ const App = (() => {
         }).join("")}</ul></div>`
       : "";
 
+    // Capacités actives : entre les attaques et les passifs, lecture seule
+    // hors combat (aucun bouton — cf. capacitesMonstreHtml pour la table de
+    // combat, seul endroit où elles sont réellement déclenchables).
+    const activesHtml = m.capacitesActives && m.capacitesActives.length
+      ? `<div class="monstre-section"><strong>Capacités actives</strong><ul>${m.capacitesActives.map((c) => {
+          const resume = typeof CapacitesMonstres !== "undefined" ? CapacitesMonstres.resume(c.mecanique) : "";
+          return `<li><em>✨ ${echapper(c.nom)}</em>${resume ? ` (${echapper(resume)})` : ""}${c.description ? ` — ${echapper(c.description)}` : ""}</li>`;
+        }).join("")}</ul></div>`
+      : "";
+
     const capHtml = m.capacitesSpeciales && m.capacitesSpeciales.length
       ? `<div class="monstre-section"><strong>Capacités spéciales</strong><ul>${m.capacitesSpeciales.map(c =>
           `<li><em>${echapper(c.nom)}</em>${c.description ? ` — ${echapper(c.description)}` : ""}</li>`
@@ -9582,6 +9729,7 @@ const App = (() => {
       ${m.categorie || m.faction ? `<div class="monstre-sous">${[m.categorie, m.faction].filter(Boolean).map(echapper).join(" · ")}</div>` : ""}
       ${statsHtml}
       ${atqHtml}
+      ${activesHtml}
       ${capHtml}
       ${loreHtml}
       ${enEdition ? "" : `<div class="monstre-actions"><button class="btn petit secondaire btn-monstre-editer" data-id="${echapper(m.id)}">✏️ Modifier les stats</button></div>`}

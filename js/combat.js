@@ -397,6 +397,18 @@ const Combat = (() => {
       const retires = Carte.decompterEtatsMonstre(actif.id);
       retires.forEach((libelle) => App.ajouterHisto(`${libelle} s'est dissipé sur ${actif.nom}`, 0, false, false, ""));
     }
+    // Compteurs d'usage "Nx/tour" des capacités actives de monstre (cf.
+    // js/capacites_monstres.js — ex. Rempart vivant "2x/tour", Pas d'ombre
+    // "1x/tour") — même pendant que la réinitialisation "tour" des PJ
+    // ci-dessus, jamais fait jusqu'ici côté monstre puisque Capacites.
+    // verifierUsage est agnostique (lit/écrit usagesCapacites sur N'IMPORTE
+    // QUEL objet, jeton compris) mais rien n'appelait encore
+    // reinitialiserUsagesPeriode pour un jeton.
+    if (actif && actif.type === "monstre" && typeof Capacites !== "undefined" && Capacites.reinitialiserUsagesPeriode
+        && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
+      const jetonActif = Carte.listeMonstresCombat().find((mm) => mm.id === actif.id);
+      if (jetonActif) Capacites.reinitialiserUsagesPeriode(jetonActif, "tour");
+    }
 
     _sauver(etat);
   }

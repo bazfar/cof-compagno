@@ -590,6 +590,13 @@ textarea { resize: vertical; min-height: 70px; }
 .cm-attaques { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 .cm-attaque-ligne { display: flex; align-items: center; gap: 6px; }
 .cm-attaque-ligne .btn { flex: 1; text-align: left; font-size: 0.78rem; padding: 5px 8px; }
+/* Capacités actives de monstre (cf. js/capacites_monstres.js) — même gabarit
+   que les lignes d'attaque ci-dessus, bouton grisé quand l'usage est épuisé. */
+.cm-capacites { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.cm-capacite-ligne { display: flex; align-items: center; gap: 6px; }
+.cm-capacite-ligne .btn { flex: 1; text-align: left; font-size: 0.78rem; padding: 5px 8px; }
+.cm-capacite-ligne .btn.grise,
+.cm-capacite-ligne .btn:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.6); }
 .badge-mort { display: inline-block; margin-top: 8px; font-size: 0.78rem; font-weight: 700; color: var(--chaos); }
 
 /* ---------- Ordre d'initiative (tracker de combat, MJ + fiche joueur) ---------- */
