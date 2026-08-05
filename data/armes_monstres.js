@@ -876,6 +876,33 @@ const ARMES_MONSTRES = [
     "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
+  },
+  {
+    "id": "etreinte_du_charnier",
+    "nom": "Étreinte du charnier",
+    "type": "arme",
+    "degats": "1d10",
+    "portee": "contact",
+    "typedegats": "physique",
+    "touches": 2
+  },
+  {
+    "id": "flammes_dirigees",
+    "nom": "Flammes dirigées",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "moyenne (18m)",
+    "typedegats": "magique",
+    "elementaire": "feu"
+  },
+  {
+    "id": "etincelle_sacree",
+    "nom": "Étincelle sacrée",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "courte (6m)",
+    "typedegats": "magique",
+    "elementaire": "feu"
   }
 ];
 

@@ -3970,6 +3970,763 @@ const BESTIAIRE = [
     ],
     "lore": "Ancien serviteur/jardinier du domaine familial des Orfeuil, abandonné sur place quand la famille a quitté les lieux. Sa rancune contre les Orfeuil ne l'a jamais quitté — et depuis peu, sans qu'il comprenne pourquoi, elle s'accompagne de tics étranges annonçant une corruption naissante (aspect cristallisé de Khoreth, cf. chambre cultiste Mission 1). Boss unique de la Mission 2 « Le Poids de l'Or » — statistiques identiques au Meneur avide standard, ne pas réutiliser ce PNJ nommé ailleurs (contrairement aux tiers génériques recrue/meneur/grand_hote de la famille cupide, prévus pour être rebaptisés librement).",
     "emoji": "🥀"
+  },
+  {
+    "id": "charogne_du_chaos_champion",
+    "nom": "Le Charnier Ambulant",
+    "famille": "charogne_du_chaos",
+    "tier": "champion",
+    "faction": "La Gangrène du Chaos",
+    "race": [
+      "mort-vivant",
+      "corrompu"
+    ],
+    "pv": 93,
+    "def": 15,
+    "init": 4,
+    "atk": 10,
+    "dangerosite": 4,
+    "boss": true,
+    "role": "brute",
+    "taille": "grande",
+    "attaques": [
+      {
+        "nom": "Étreinte du charnier",
+        "armeId": "etreinte_du_charnier",
+        "bonusAttaque": 10,
+        "bonusDegats": 5,
+        "effetSpecial": "Deux membres agrippent simultanément. Si touché : test CON diff. 12 ou -2 aux tests physiques pendant 1 round (infection majeure)."
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Lenteur cadavérique",
+        "description": "-2 à l'initiative. Ne peut jamais agir avant les créatures vivantes dans le même round."
+      },
+      {
+        "nom": "Ne ressent pas la douleur",
+        "description": "Immunisée aux effets de peur. Agit normalement même sous 25% de ses PV maximum, sans malus."
+      },
+      {
+        "nom": "Corps disloqué",
+        "description": "Immunisée aux effets qui ciblent une anatomie cohérente (agrippement précis, point faible unique) : sa masse de cadavres n'en a pas."
+      }
+    ],
+    "lore": "Ce qui reste de plusieurs corps que la Gangrène n'a pas pris la peine de séparer avant de les relever — bras, jambes et torses fusionnés en une masse qui avance sans jamais s'arrêter. Plus la horde traverse de champs de bataille, plus elle grossit.",
+    "emoji": "🧟",
+    "immunites": [
+      "effrayee"
+    ]
+  },
+  {
+    "id": "chevalier_inquisiteur_basique",
+    "nom": "Inquisiteur",
+    "famille": "chevalier_inquisiteur",
+    "tier": "basique",
+    "faction": "Église de Solvarn — Sacerdoce Solaire",
+    "race": [
+      "humanoïdes"
+    ],
+    "pv": 15,
+    "def": 13,
+    "init": 2,
+    "atk": 3,
+    "dangerosite": 1,
+    "boss": false,
+    "role": "soldat",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Épée longue solaire",
+        "armeId": "epee_longue_solaire",
+        "bonusAttaque": 3,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Détection d'hérésie (novice)",
+        "description": "Test Perception diff. 12 pour repérer un personnage en Marque ou Fracture à 9m."
+      }
+    ],
+    "lore": "Fraîchement sorti du séminaire de l'Ordre, encore sous la tutelle d'un Chevalier-Inquisiteur pour ses premières traques. Le doute n'a pas encore eu le temps de s'endurcir en dogme — mais la discipline, elle, est déjà là.",
+    "emoji": "🔥⚔️",
+    "armureId": "armure_de_cuir_cloute"
+  },
+  {
+    "id": "cupide_basique",
+    "nom": "Fidèle de Khoreth",
+    "famille": "cupide",
+    "tier": "basique",
+    "faction": "Culte de Khoreth",
+    "race": [
+      "humanoïdes"
+    ],
+    "pv": 15,
+    "def": 13,
+    "init": 2,
+    "atk": 3,
+    "dangerosite": 1,
+    "boss": false,
+    "role": "soldat",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Épée courte",
+        "armeId": "epee_courte",
+        "bonusAttaque": 3,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Ferveur aveugle",
+        "description": "Insensible aux tests de moral tant qu'un Serviteur de Khoreth ou un supérieur du culte est visible sur le champ de bataille."
+      },
+      {
+        "nom": "Marque dissimulée (note MJ)",
+        "description": "Porte un sceau de Khoreth tatoué sous les vêtements — invisible sauf fouille ou détection explicite. Premier indice tangible que la Cupidité a une organisation derrière elle, pas seulement des opportunistes isolés."
+      }
+    ],
+    "lore": "Contrairement au hors-la-loi ordinaire, il ne se bat pas pour l'or qu'il pourrait voler — il sert déjà quelque chose de plus grand, et n'en a pas encore pleinement conscience. Khoreth cultive la cupidité comme d'autres cultivent la peur : discrètement, un cœur à la fois.",
+    "emoji": "🗡️"
+  },
+  {
+    "id": "cupide_veteran",
+    "nom": "Serviteur de Khoreth",
+    "famille": "cupide",
+    "tier": "veteran",
+    "faction": "Culte de Khoreth",
+    "race": [
+      "humanoïdes"
+    ],
+    "pv": 26,
+    "def": 15,
+    "init": 3,
+    "atk": 5,
+    "dangerosite": 2,
+    "boss": false,
+    "role": "soldat",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Sabre courbé",
+        "armeId": "epee_batarde",
+        "bonusAttaque": 5,
+        "bonusDegats": 2,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Ferveur aveugle",
+        "description": "Insensible aux tests de moral tant qu'un Serviteur de Khoreth ou un supérieur du culte est visible sur le champ de bataille."
+      },
+      {
+        "nom": "Rite mineur (note MJ)",
+        "description": "1 fois par combat, murmure un mot en langue morte avant de frapper : aucun effet mécanique, mais un PJ qui comprend le Bas-Chaotique (rare) saisit qu'il s'agit d'une offrande à Khoreth, pas d'une simple insulte."
+      }
+    ],
+    "lore": "A gravi les échelons du culte assez pour qu'on lui confie une lame et une mission. Contrairement au Fidèle, il sait précisément ce qu'il sert — et pourquoi la cupidité des autres est la porte d'entrée la plus fiable de Khoreth.",
+    "emoji": "🗡️",
+    "armureId": "cuir_renforce_cloue_d_or"
+  },
+  {
+    "id": "flambeau_elite",
+    "nom": "Mage vétéran du feu",
+    "famille": "flambeau",
+    "tier": "elite",
+    "faction": "Église de Solvarn — Sacerdoce Solaire",
+    "race": [
+      "humanoïdes"
+    ],
+    "pv": 26,
+    "def": 15,
+    "init": 5,
+    "atk": 6,
+    "dangerosite": 3,
+    "boss": false,
+    "role": "controleur",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Flammes dirigées",
+        "armeId": "flammes_dirigees",
+        "bonusAttaque": 6,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesActives": [
+      {
+        "nom": "Voile de braises",
+        "description": "Applique l'état aveuglee pour 1 round à une cible touchée à 9m.",
+        "mecanique": {
+          "type": "activable",
+          "usage": {
+            "frequence": "libre"
+          },
+          "cible": "ennemi",
+          "portee": 9,
+          "zone": null,
+          "jetAttaque": 6,
+          "effets": [
+            {
+              "type": "etat",
+              "id": "aveuglee",
+              "duree": "1"
+            }
+          ]
+        }
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Détection d'hérésie",
+        "description": "Perçoit sans jet tout personnage ayant atteint le palier Marque ou Fracture de corruption du Chaos, à 9m."
+      }
+    ],
+    "lore": "Formé dans l'arrière-garde du Sacerdoce Solaire quand la doctrine a décidé que le feu purificateur méritait ses propres praticiens, pas seulement des chants et des bénédictions.",
+    "emoji": "🕯️🔥",
+    "armureId": "robe_renforcee_de_plaques_legeres"
+  },
+  {
+    "id": "flambeau_champion",
+    "nom": "Mage de combat",
+    "famille": "flambeau",
+    "tier": "champion",
+    "faction": "Église de Solvarn — Sacerdoce Solaire",
+    "race": [
+      "humanoïdes"
+    ],
+    "pv": 40,
+    "def": 17,
+    "init": 6,
+    "atk": 9,
+    "dangerosite": 4,
+    "boss": true,
+    "role": "controleur",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Bûcher purificateur",
+        "armeId": "bucher_purificateur",
+        "bonusAttaque": 9,
+        "bonusDegats": 1,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesActives": [
+      {
+        "nom": "Brasier de contrôle",
+        "description": "1 fois par combat : zone de 9m, test CON diff. 14 ou brûlure (2 rounds) et 2d6 dégâts de feu (moitié si réussi).",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "zone",
+          "portee": null,
+          "zone": 9,
+          "jetSauvegardeFixe": {
+            "carac": "CON",
+            "dd": 14
+          },
+          "effets": [
+            {
+              "type": "etat",
+              "id": "brulure",
+              "duree": "2"
+            },
+            {
+              "type": "degats",
+              "formule": "2d6",
+              "elementaire": "feu",
+              "surReussite": "demi"
+            }
+          ]
+        }
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Détection d'hérésie",
+        "description": "Perçoit sans jet tout personnage ayant atteint le palier Marque ou Fracture de corruption du Chaos, à 9m."
+      },
+      {
+        "nom": "Discipline du Sacerdoce",
+        "description": "+1 aux jets de Volonté de tous les alliés de l'Église de Solvarn à 9m."
+      }
+    ],
+    "lore": "Une réponse directe à la Gangrène — combattre la corruption avec une autre force qui ne pardonne pas non plus. Formé dans l'arrière-garde du Sacerdoce quand la doctrine a admis que chants et bénédictions ne suffisaient plus.",
+    "emoji": "🕯️🔥",
+    "armureId": "robe_renforcee_de_plaques_legeres"
+  },
+  {
+    "id": "ordre_pont_basique",
+    "nom": "Écuyer",
+    "famille": "ordre_pont",
+    "tier": "basique",
+    "faction": "Valdorne — Ordre du Pont",
+    "race": [
+      "humanoïdes"
+    ],
+    "pv": 15,
+    "def": 13,
+    "init": 2,
+    "atk": 3,
+    "dangerosite": 1,
+    "boss": false,
+    "role": "soldat",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Lance d'entraînement",
+        "armeId": "lance",
+        "bonusAttaque": 3,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Fraternité d'armes",
+        "description": "+1 DEF tant qu'un autre chevalier de l'Ordre du Pont est adjacent."
+      }
+    ],
+    "lore": "N'a pas encore prêté le serment complet, mais porte déjà les couleurs de l'Ordre en formation. Beaucoup meurent à ce stade — c'est précisément pourquoi les chevaliers confirmés les couvrent en priorité.",
+    "emoji": "🛡️⚜️",
+    "armureId": "armure_composite_cuir_plaques"
+  },
+  {
+    "id": "ordre_pont_elite",
+    "nom": "Chevalier de la bravoure",
+    "famille": "ordre_pont",
+    "tier": "elite",
+    "faction": "Valdorne — Ordre du Pont",
+    "race": [
+      "humanoïdes"
+    ],
+    "pv": 40,
+    "def": 17,
+    "init": 4,
+    "atk": 7,
+    "dangerosite": 3,
+    "boss": false,
+    "role": "soldat",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Épée du serment",
+        "armeId": "epee_du_serment",
+        "bonusAttaque": 7,
+        "bonusDegats": 4,
+        "effetSpecial": null
+      },
+      {
+        "nom": "Bouclier du Pont",
+        "armeId": "bouclier_du_pont",
+        "bonusAttaque": 6,
+        "bonusDegats": 2,
+        "effetSpecial": "Test FOR diff. 12 ou la cible est repoussée de 1,5m."
+      }
+    ],
+    "capacitesActives": [
+      {
+        "nom": "Couverture du sacrifice",
+        "description": "1 fois/round : intercepte une attaque ciblant un allié adjacent, prend les dégâts à sa place.",
+        "mecanique": {
+          "type": "activable",
+          "reactionCout": 1,
+          "usage": {
+            "frequence": "1x/tour"
+          },
+          "cible": "allie",
+          "portee": "adjacent",
+          "zone": null,
+          "effets": [
+            {
+              "type": "special",
+              "note": "Intercepte une attaque ciblant un allié adjacent et prend les dégâts à sa place — redirection manuelle."
+            }
+          ]
+        }
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Serment du Pont",
+        "description": "+2 DEF tant qu'il protège un allié à terre ou en fuite adjacent."
+      }
+    ],
+    "lore": "A survécu à assez de batailles pour qu'on lui confie la garde d'un flanc entier. La bravoure du titre n'est pas un compliment gratuit — chaque chevalier de ce rang a payé le droit de le porter.",
+    "emoji": "🛡️⚜️",
+    "armureId": "harnois_de_l_ordre_grave_du_pont_brise"
+  },
+  {
+    "id": "chirurgien_basique",
+    "nom": "Apprenti soigneur",
+    "famille": "chirurgien",
+    "tier": "basique",
+    "faction": "Garde Citoyenne de Liberra",
+    "race": [
+      "humanoïdes"
+    ],
+    "pv": 10,
+    "def": 12,
+    "init": 2,
+    "atk": 2,
+    "dangerosite": 1,
+    "boss": false,
+    "role": "soigneur",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Dague de ceinture",
+        "armeId": "dague_de_ceinture",
+        "bonusAttaque": 2,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesActives": [
+      {
+        "nom": "Premiers soins",
+        "description": "1 fois par combat : soigne un allié adjacent de 1d6 PV.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "allie",
+          "portee": "adjacent",
+          "zone": null,
+          "effets": [
+            {
+              "type": "soin",
+              "formule": "1d6"
+            }
+          ]
+        }
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Poste de secours",
+        "description": "+2 DEF tant qu'il est adjacent à un allié de la Garde Citoyenne de Liberra."
+      }
+    ],
+    "lore": "Formé à la va-vite dans les postes de secours improvisés de Liberra — la cité n'a pas le temps d'attendre que la théorie précède la pratique. Aucune magie, aucune bénédiction : juste des bandages, une lame propre, et l'obstination de ceux qui refusent de laisser mourir.",
+    "emoji": "⚕️"
+  },
+  {
+    "id": "chirurgien_veteran",
+    "nom": "Soigneur",
+    "famille": "chirurgien",
+    "tier": "veteran",
+    "faction": "Garde Citoyenne de Liberra",
+    "race": [
+      "humanoïdes"
+    ],
+    "pv": 18,
+    "def": 14,
+    "init": 3,
+    "atk": 4,
+    "dangerosite": 2,
+    "boss": false,
+    "role": "soigneur",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Dague de ceinture",
+        "armeId": "dague_de_ceinture",
+        "bonusAttaque": 4,
+        "bonusDegats": 2,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesActives": [
+      {
+        "nom": "Premiers soins",
+        "description": "2 fois par combat : soigne un allié adjacent de 2d6 PV.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "2x/combat"
+          },
+          "cible": "allie",
+          "portee": "adjacent",
+          "zone": null,
+          "effets": [
+            {
+              "type": "soin",
+              "formule": "2d6"
+            }
+          ]
+        }
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Poste de secours",
+        "description": "+2 DEF tant qu'il est adjacent à un allié de la Garde Citoyenne de Liberra."
+      }
+    ],
+    "lore": "A vu assez de champs de bataille pour ne plus hésiter sur qui stabiliser en premier. La Garde Citoyenne le déploie en priorité dès qu'un affrontement s'annonce — sa présence, à elle seule, change le calcul du risque que prennent les gardes autour de lui.",
+    "emoji": "⚕️"
+  },
+  {
+    "id": "chirurgien_elite",
+    "nom": "Soigneur de guerre",
+    "famille": "chirurgien",
+    "tier": "elite",
+    "faction": "Garde Citoyenne de Liberra",
+    "race": [
+      "humanoïdes"
+    ],
+    "pv": 28,
+    "def": 16,
+    "init": 4,
+    "atk": 6,
+    "dangerosite": 3,
+    "boss": false,
+    "role": "soigneur",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Couperet",
+        "armeId": "couperet",
+        "bonusAttaque": 6,
+        "bonusDegats": 4,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesActives": [
+      {
+        "nom": "Premiers soins",
+        "description": "3 fois par combat : soigne un allié adjacent de 2d8 PV.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "3x/combat"
+          },
+          "cible": "allie",
+          "portee": "adjacent",
+          "zone": null,
+          "effets": [
+            {
+              "type": "soin",
+              "formule": "2d8"
+            }
+          ]
+        }
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Poste de secours",
+        "description": "+2 DEF tant qu'il est adjacent à un allié de la Garde Citoyenne de Liberra."
+      }
+    ],
+    "lore": "Le grade le plus élevé qu'un soigneur laïc puisse atteindre à Liberra sans que l'Église de Solvarn ne s'en mêle — un choix assumé, pas un manque d'ambition. Là où d'autres prient pour un miracle, il compte ses réserves de bandages et ne compte jamais sur la chance.",
+    "emoji": "⚕️"
+  },
+  {
+    "id": "pretre_du_feu_basique",
+    "nom": "Diacre du feu",
+    "famille": "flambeau",
+    "tier": "basique",
+    "faction": "Église de Solvarn — Sacerdoce Solaire",
+    "race": [
+      "humanoïdes"
+    ],
+    "pv": 10,
+    "def": 12,
+    "init": 2,
+    "atk": 2,
+    "dangerosite": 1,
+    "boss": false,
+    "role": "soigneur",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Étincelle sacrée",
+        "armeId": "etincelle_sacree",
+        "bonusAttaque": 2,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesActives": [
+      {
+        "nom": "Cautérisation",
+        "description": "1 fois par combat, à distance : soigne un allié de 1d6 PV. Le soin inflige aussi 1 point de dégâts irréductible à la cible.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "allie",
+          "portee": 9,
+          "zone": null,
+          "effets": [
+            {
+              "type": "soin",
+              "formule": "1d6"
+            },
+            {
+              "type": "degats",
+              "formule": "1",
+              "elementaire": "feu"
+            },
+            {
+              "type": "special",
+              "note": "Dégâts irréductibles (ignorent la réduction d'armure). Une même cible ne peut être cautérisée qu'une fois par combat — au-delà du compteur d'usage de la capacité elle-même, à suivre manuellement."
+            }
+          ]
+        }
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Détection d'hérésie (novice)",
+        "description": "Test Perception diff. 12 pour repérer un personnage en Marque ou Fracture à 9m."
+      }
+    ],
+    "lore": "Le feu purifie, dit la doctrine — même quand il soigne. Le Diacre applique cette logique au pied de la lettre : une plaie cautérisée cicatrise vite, même si la douleur, elle, ne ment jamais sur le prix payé.",
+    "emoji": "🩹🔥",
+    "armureId": "robe_de_clerc"
+  },
+  {
+    "id": "pretre_du_feu_veteran",
+    "nom": "Prêtre du feu",
+    "famille": "flambeau",
+    "tier": "veteran",
+    "faction": "Église de Solvarn — Sacerdoce Solaire",
+    "race": [
+      "humanoïdes"
+    ],
+    "pv": 18,
+    "def": 14,
+    "init": 3,
+    "atk": 4,
+    "dangerosite": 2,
+    "boss": false,
+    "role": "soigneur",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Étincelle sacrée",
+        "armeId": "etincelle_sacree",
+        "bonusAttaque": 4,
+        "bonusDegats": 2,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesActives": [
+      {
+        "nom": "Cautérisation",
+        "description": "2 fois par combat, à distance : soigne un allié de 2d6 PV. Le soin inflige aussi 1 point de dégâts irréductible à la cible.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "2x/combat"
+          },
+          "cible": "allie",
+          "portee": 9,
+          "zone": null,
+          "effets": [
+            {
+              "type": "soin",
+              "formule": "2d6"
+            },
+            {
+              "type": "degats",
+              "formule": "1",
+              "elementaire": "feu"
+            },
+            {
+              "type": "special",
+              "note": "Dégâts irréductibles (ignorent la réduction d'armure). Une même cible ne peut être cautérisée qu'une fois par combat — au-delà du compteur d'usage de la capacité elle-même, à suivre manuellement."
+            }
+          ]
+        }
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Détection d'hérésie",
+        "description": "Perçoit sans jet tout personnage ayant atteint le palier Marque ou Fracture de corruption du Chaos, à 9m."
+      }
+    ],
+    "lore": "A conduit assez de rites de cautérisation pour que les soldats du Sacerdoce le réclament par son nom avant une bataille. Il ne prétend pas que la méthode est douce — seulement qu'elle fonctionne, et que Solvarn préfère l'efficacité au confort.",
+    "emoji": "🩹🔥",
+    "armureId": "robe_renforcee_de_plaques_legeres"
+  },
+  {
+    "id": "pretre_du_feu_elite",
+    "nom": "Évêque du feu",
+    "famille": "flambeau",
+    "tier": "elite",
+    "faction": "Église de Solvarn — Sacerdoce Solaire",
+    "race": [
+      "humanoïdes"
+    ],
+    "pv": 28,
+    "def": 16,
+    "init": 4,
+    "atk": 6,
+    "dangerosite": 3,
+    "boss": false,
+    "role": "soigneur",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Flammes dirigées",
+        "armeId": "flammes_dirigees",
+        "bonusAttaque": 6,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesActives": [
+      {
+        "nom": "Cautérisation",
+        "description": "3 fois par combat, à distance : soigne un allié de 2d8 PV. Le soin inflige aussi 1 point de dégâts irréductible à la cible.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "3x/combat"
+          },
+          "cible": "allie",
+          "portee": 9,
+          "zone": null,
+          "effets": [
+            {
+              "type": "soin",
+              "formule": "2d8"
+            },
+            {
+              "type": "degats",
+              "formule": "1",
+              "elementaire": "feu"
+            },
+            {
+              "type": "special",
+              "note": "Dégâts irréductibles (ignorent la réduction d'armure). Une même cible ne peut être cautérisée qu'une fois par combat — au-delà du compteur d'usage de la capacité elle-même, à suivre manuellement."
+            }
+          ]
+        }
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Détection d'hérésie",
+        "description": "Perçoit sans jet tout personnage ayant atteint le palier Marque ou Fracture de corruption du Chaos, à 9m."
+      },
+      {
+        "nom": "Autorité du Sacerdoce",
+        "description": "+1 aux jets de Volonté de tous les alliés de l'Église de Solvarn à 9m."
+      }
+    ],
+    "lore": "Un rang que peu atteignent — la plupart des prêtres du feu meurent en soignant avant d'y parvenir. L'Évêque a survécu à ses propres cautérisations les plus risquées, et cette réputation seule suffit à raffermir le moral des troupes du Sacerdoce autour de lui.",
+    "emoji": "🩹🔥",
+    "armureId": "robe_renforcee_de_plaques_legeres"
   }
 ];
 const BESTIAIRE_INDEX = Object.fromEntries(BESTIAIRE.map(function(m){ return [m.id, m]; }));
