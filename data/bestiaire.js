@@ -693,7 +693,6 @@ const BESTIAIRE = [
     "dangerosite": 1,
     "boss": false,
     "taille": "moyenne",
-    "voies": [],
     "attaques": [
       {
         "nom": "Morsure",
@@ -728,19 +727,6 @@ const BESTIAIRE = [
     "dangerosite": 1,
     "boss": false,
     "taille": "moyenne",
-    "voies": [
-      {
-        "voieRef": "chasseur.voie_predateur",
-        "rang": 1,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Pistage",
-            "effet": "Piste une cible blessée sans test. Ne peut pas être surpris par odorat."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Morsure",
@@ -762,7 +748,7 @@ const BESTIAIRE = [
         "description": "+1 ATK par loup allié adjacent à la même cible (max +3)."
       },
       {
-        "nom": "Pistage (Voie du Prédateur r.1)",
+        "nom": "Pistage",
         "description": "Piste une cible blessée sans test. Ne peut pas être surpris par odorat."
       }
     ],
@@ -786,24 +772,6 @@ const BESTIAIRE = [
     "dangerosite": 2,
     "boss": false,
     "taille": "moyenne",
-    "voies": [
-      {
-        "voieRef": "chasseur.voie_predateur",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Pistage",
-            "effet": "Piste sans test, immunisé à la surprise par odorat."
-          },
-          {
-            "rang": 2,
-            "nom": "Frappe précise",
-            "effet": "1 fois/combat, attaque avec +4 ATK et ignore 2 points de DEF."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Morsure empoisonnée",
@@ -826,12 +794,16 @@ const BESTIAIRE = [
         "description": "+2 ATK par loup allié adjacent (max +4). La mort du loup de Sève disperse le reste de la meute (test SAG diff. 10 sinon fuite)."
       },
       {
-        "nom": "Frappe précise (Voie du Prédateur r.2)",
+        "nom": "Frappe précise",
         "description": "1 fois/combat : +4 ATK et ignore 2 points de DEF."
       },
       {
         "nom": "Imprégnation de Sève",
         "description": "Immunisé aux effets de peur naturels. Son pelage brille faiblement de vert dans l'obscurité."
+      },
+      {
+        "nom": "Pistage",
+        "description": "Piste une cible sans test. Ne peut pas être surpris par odorat."
       }
     ],
     "lore": "Loup dont la Sève de l'Arbre-Monde a amplifié les instincts. Parfois gardien d'un nœud de Sève — tuer l'un d'eux sans raison irrite les Druides locaux.",
@@ -865,40 +837,6 @@ const BESTIAIRE = [
     "dangerosite": 3,
     "boss": true,
     "taille": "grande",
-    "voies": [
-      {
-        "voieRef": "chasseur.voie_predateur",
-        "rang": 3,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Pistage",
-            "effet": "Piste sans test, immunisé surprise odorat."
-          },
-          {
-            "rang": 2,
-            "nom": "Frappe précise",
-            "effet": "1 fois/combat : +4 ATK, ignore 2 DEF."
-          },
-          {
-            "rang": 3,
-            "nom": "Mise à mort",
-            "effet": "Si cible sous 25% PV : attaque bonus gratuite en fin de tour."
-          }
-        ]
-      },
-      {
-        "voieRef": "chasseur.voie_nature",
-        "rang": 1,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Communion animale",
-            "effet": "Communique avec les animaux de sa forêt. Convoque 1d4 loups en 2 rounds (1 fois/combat)."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Morsure déchirante",
@@ -945,20 +883,43 @@ const BESTIAIRE = [
             }
           ]
         }
+      },
+      {
+        "nom": "Frappe précise",
+        "description": "1 fois par combat : +4 ATK et ignore 2 points de DEF.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "soi",
+          "portee": null,
+          "zone": null,
+          "effets": [
+            {
+              "type": "special",
+              "note": "+4 ATK et ignore 2 points de DEF sur la prochaine attaque."
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
       {
-        "nom": "Mise à mort (Voie du Prédateur r.3)",
+        "nom": "Mise à mort",
         "description": "Attaque bonus gratuite en fin de tour si la cible est sous 25% de ses PV max."
       },
       {
-        "nom": "Communion animale (Voie de la Nature r.1)",
+        "nom": "Communion animale",
         "description": "Convoque 1d4 loups basiques en 2 rounds, 1 fois/combat."
       },
       {
         "nom": "Régénération sauvage",
         "description": "Récupère 3 PV au début de son tour si en contact avec la terre naturelle."
+      },
+      {
+        "nom": "Pistage",
+        "description": "Piste une cible sans test. Ne peut pas être surpris par odorat."
       }
     ],
     "lore": "Créature semi-légendaire — à la croisée de l'animal et de l'esprit forestier. Certains Druides affirment qu'il est l'avatar vivant d'un nœud de Sève. Le tuer sans motif légitime peut avoir des conséquences narratives durables.",
@@ -984,7 +945,6 @@ const BESTIAIRE = [
     "dangerosite": 2,
     "boss": false,
     "taille": "grande",
-    "voies": [],
     "attaques": [
       {
         "nom": "Griffes",
@@ -1030,19 +990,6 @@ const BESTIAIRE = [
     "dangerosite": 2,
     "boss": false,
     "taille": "grande",
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_puissance",
-        "rang": 1,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Frappe puissante",
-            "effet": "1 fois/round, peut choisir d'infliger +1d6 dégâts mais prend -2 ATK sur ce jet."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Griffes lacérantes",
@@ -1065,7 +1012,7 @@ const BESTIAIRE = [
         "description": "Réduit les dégâts physiques de 2 (min 1)."
       },
       {
-        "nom": "Frappe puissante (Voie de la Puissance r.1)",
+        "nom": "Frappe puissante",
         "description": "1 fois/round : +1d6 dégâts mais -2 ATK sur ce jet."
       }
     ],
@@ -1092,24 +1039,6 @@ const BESTIAIRE = [
     "dangerosite": 3,
     "boss": false,
     "taille": "grande",
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_puissance",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Frappe puissante",
-            "effet": "1 fois/round : +1d6 dégâts, -2 ATK."
-          },
-          {
-            "rang": 2,
-            "nom": "Brise-bouclier",
-            "effet": "1 fois/combat : attaque ignorant totalement la DEF de l'armure (utilise uniquement la DEF de base 10 + bonus DEX)."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Griffes de guerre",
@@ -1138,7 +1067,7 @@ const BESTIAIRE = [
         "description": "Armure de guerre clouée sur l'ours. Réduit les dégâts physiques de 3 (min 1). Vulnérable au feu (+1d4 dégâts)."
       },
       {
-        "nom": "Brise-bouclier (Voie de la Puissance r.2)",
+        "nom": "Brise-bouclier",
         "description": "1 fois/combat : ignore DEF armure, ne conserve que DEF de base."
       },
       {
@@ -1151,7 +1080,33 @@ const BESTIAIRE = [
       "valeur": 5,
       "description": "Armure de guerre clouée sur une fourrure épaisse — réduit 5 points de dégâts physiques."
     },
-    "emoji": "🐻"
+    "emoji": "🐻",
+    "capacitesActives": [
+      {
+        "nom": "Frappe puissante",
+        "description": "1 fois par round : +1d6 dégâts, −2 ATK sur ce jet.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/tour"
+          },
+          "cible": "ennemi",
+          "portee": "adjacent",
+          "zone": null,
+          "effets": [
+            {
+              "type": "degats",
+              "formule": "1d6",
+              "elementaire": null
+            },
+            {
+              "type": "special",
+              "note": "Dégâts additionnels à l'attaque en cours, au prix de −2 ATK sur ce jet."
+            }
+          ]
+        }
+      }
+    ]
   },
   {
     "id": "ours_champion",
@@ -1169,40 +1124,6 @@ const BESTIAIRE = [
     "dangerosite": 4,
     "boss": true,
     "taille": "très grande",
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_puissance",
-        "rang": 3,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Frappe puissante",
-            "effet": "1 fois/round : +1d6 dégâts, -2 ATK."
-          },
-          {
-            "rang": 2,
-            "nom": "Brise-bouclier",
-            "effet": "1 fois/combat : ignore DEF armure."
-          },
-          {
-            "rang": 3,
-            "nom": "Dévastation",
-            "effet": "1 fois/combat : attaque tous les ennemis adjacents en un seul jet (ATK séparé pour chacun)."
-          }
-        ]
-      },
-      {
-        "voieRef": "druide.voie_nature_brute",
-        "rang": 1,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Âme de la forêt",
-            "effet": "Immunisé aux illusions et charmes naturels. Peut communiquer rudimentairement avec les animaux et les Druides."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Griffes dévastatrices",
@@ -1219,8 +1140,8 @@ const BESTIAIRE = [
         "effetSpecial": "Si dégâts ≥ 12 : brise une armure (DEF réduite de 2 de façon permanente pour le combat)."
       },
       {
-        "nom": "Dévastation (Voie Puissance r.3)",
-        "armeId": "devastation_voie_puissance_r_3",
+        "nom": "Dévastation",
+        "armeId": "devastation",
         "bonusAttaque": 8,
         "bonusDegats": 5,
         "effetSpecial": "1 fois/combat. Attaque tous les ennemis adjacents (jet d'ATK séparé pour chacun)."
@@ -1254,15 +1175,58 @@ const BESTIAIRE = [
             }
           ]
         }
+      },
+      {
+        "nom": "Frappe puissante",
+        "description": "1 fois par round : +1d6 dégâts, −2 ATK sur ce jet.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/tour"
+          },
+          "cible": "ennemi",
+          "portee": "adjacent",
+          "zone": null,
+          "effets": [
+            {
+              "type": "degats",
+              "formule": "1d6",
+              "elementaire": null
+            },
+            {
+              "type": "special",
+              "note": "Dégâts additionnels à l'attaque en cours, au prix de −2 ATK sur ce jet."
+            }
+          ]
+        }
+      },
+      {
+        "nom": "Brise-bouclier",
+        "description": "1 fois par combat : ignore la réduction d'armure de la cible.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "ennemi",
+          "portee": "adjacent",
+          "zone": null,
+          "effets": [
+            {
+              "type": "special",
+              "note": "Ignore la réduction de dégâts d'armure sur cette attaque."
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
       {
-        "nom": "Dévastation (Voie de la Puissance r.3)",
+        "nom": "Dévastation",
         "description": "1 fois/combat : frappe tous les ennemis adjacents."
       },
       {
-        "nom": "Âme de la forêt (Voie de la Nature r.1)",
+        "nom": "Âme de la forêt",
         "description": "Immunisé aux illusions et charmes naturels. Peut communiquer avec animaux et Druides."
       },
       {
@@ -1307,7 +1271,6 @@ const BESTIAIRE = [
     "dangerosite": 1,
     "boss": false,
     "taille": "grande",
-    "voies": [],
     "attaques": [
       {
         "nom": "Hache",
@@ -1355,24 +1318,6 @@ const BESTIAIRE = [
     "dangerosite": 2,
     "boss": false,
     "taille": "grande",
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_armes",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Maîtrise des armes",
-            "effet": "Relance 1 dé de dégâts par attaque (garde le meilleur)."
-          },
-          {
-            "rang": 2,
-            "nom": "Attaque en puissance",
-            "effet": "Peut sacrifier -2 DEF ce round pour gagner +2 ATK et +2 dégâts sur toutes ses attaques."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Hache de guerre",
@@ -1395,11 +1340,11 @@ const BESTIAIRE = [
         "description": "Immunisé à tous les effets de peur."
       },
       {
-        "nom": "Maîtrise des armes (Voie des Armes r.1)",
+        "nom": "Maîtrise des armes",
         "description": "Relance 1 dé de dégâts par attaque, conserve le meilleur résultat."
       },
       {
-        "nom": "Attaque en puissance (Voie des Armes r.2)",
+        "nom": "Attaque en puissance",
         "description": "Sacrifice -2 DEF pour +2 ATK et +2 dégâts ce round."
       }
     ],
@@ -1429,40 +1374,6 @@ const BESTIAIRE = [
     "dangerosite": 3,
     "boss": false,
     "taille": "grande",
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_armes",
-        "rang": 3,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Maîtrise des armes",
-            "effet": "Relance 1 dé de dégâts."
-          },
-          {
-            "rang": 2,
-            "nom": "Attaque en puissance",
-            "effet": "-2 DEF pour +2 ATK et +2 dégâts."
-          },
-          {
-            "rang": 3,
-            "nom": "Double frappe",
-            "effet": "1 fois/round, attaque deux fois en une action (2 jets séparés)."
-          }
-        ]
-      },
-      {
-        "voieRef": "guerrier.voie_chaos",
-        "rang": 1,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Furie de guerre",
-            "effet": "En dessous de 50% PV : +2 ATK, +1d4 dégâts et immunité à la douleur (ignore les malus de blessure). Ne peut plus battre en retraite."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Hache double",
@@ -1472,8 +1383,8 @@ const BESTIAIRE = [
         "effetSpecial": null
       },
       {
-        "nom": "Double frappe (Voie des Armes r.3)",
-        "armeId": "double_frappe_armes_r3",
+        "nom": "Double frappe",
+        "armeId": "double_frappe_hache_double",
         "bonusAttaque": 7,
         "bonusDegats": 4,
         "effetSpecial": "1 fois/round. Deux jets d'attaque séparés en une action."
@@ -1485,16 +1396,24 @@ const BESTIAIRE = [
         "description": "Immunisé à tous les effets de peur."
       },
       {
-        "nom": "Double frappe (Voie des Armes r.3)",
+        "nom": "Double frappe",
         "description": "1 fois/round : deux attaques en une action."
       },
       {
-        "nom": "Furie de guerre (Voie du Chaos r.1)",
+        "nom": "Furie de guerre",
         "description": "Sous 50% PV : +2 ATK, +1d4 dégâts, immunité douleur, ne peut pas fuir."
       },
       {
         "nom": "Cicatrices de combat",
         "description": "Réduit les dégâts physiques de 1 (peau durcie par les batailles)."
+      },
+      {
+        "nom": "Maîtrise des armes",
+        "description": "Relance 1 dé de dégâts."
+      },
+      {
+        "nom": "Attaque en puissance",
+        "description": "−2 DEF pour +2 ATK et +2 dégâts."
       }
     ],
     "lore": "Les berserkers orques ont laissé la rage de guerre consumé leur raison. Ils frappent jusqu'à la mort — la leur ou celle de l'ennemi. Certains sont liés au Chaos de Khoreth par des rituels tribaux.",
@@ -1523,50 +1442,6 @@ const BESTIAIRE = [
     "dangerosite": 4,
     "boss": true,
     "taille": "très grande",
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_armes",
-        "rang": 4,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Maîtrise des armes",
-            "effet": "Relance 1 dé de dégâts."
-          },
-          {
-            "rang": 2,
-            "nom": "Attaque en puissance",
-            "effet": "-2 DEF pour +2 ATK et +2 dégâts."
-          },
-          {
-            "rang": 3,
-            "nom": "Double frappe",
-            "effet": "1 fois/round : deux attaques en une action."
-          },
-          {
-            "rang": 4,
-            "nom": "Frappe légendaire",
-            "effet": "1 fois/combat : attaque automatiquement réussie (pas de jet), dégâts maximaux."
-          }
-        ]
-      },
-      {
-        "voieRef": "chevalier.voie_commandement",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Présence martiale",
-            "effet": "Alliés à 9m gagnent +1 ATK tant que le chef est debout."
-          },
-          {
-            "rang": 2,
-            "nom": "Cri de guerre",
-            "effet": "1 fois/combat : tous les alliés à 12m font une attaque bonus immédiate."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Masse de guerre runique",
@@ -1609,7 +1484,7 @@ const BESTIAIRE = [
         }
       },
       {
-        "nom": "Cri de guerre (Commandement r.2)",
+        "nom": "Cri de guerre",
         "description": "1 fois/combat. Tous les alliés à portée effectuent une attaque bonus immédiate (hors tour).",
         "mecanique": {
           "type": "limitee",
@@ -1634,20 +1509,28 @@ const BESTIAIRE = [
         "description": "Immunisé à tous les effets de peur."
       },
       {
-        "nom": "Frappe légendaire (Voie des Armes r.4)",
+        "nom": "Frappe légendaire",
         "description": "1 fois/combat : succès automatique, dégâts maximaux."
       },
       {
-        "nom": "Présence martiale (Voie du Commandement r.1)",
+        "nom": "Présence martiale",
         "description": "Alliés à 9m : +1 ATK tant qu'il est debout."
       },
       {
-        "nom": "Cri de guerre (Voie du Commandement r.2)",
+        "nom": "Cri de guerre",
         "description": "1 fois/combat : attaque bonus immédiate pour tous les alliés à 12m."
       },
       {
         "nom": "Aura de Khoreth",
         "description": "Dans un rayon de 6m, les tests de résistance au Chaos sont à -2 pour les non-orques."
+      },
+      {
+        "nom": "Maîtrise des armes",
+        "description": "Relance 1 dé de dégâts."
+      },
+      {
+        "nom": "Attaque en puissance",
+        "description": "−2 DEF pour +2 ATK et +2 dégâts."
       }
     ],
     "lore": "Le Warchief est l'incarnation vivante de Khoreth, dieu de la guerre né du Chaos après la Fracture. Il ne dirige pas par peur mais par légitimité — c'est lui qui forge l'unité entre les tribus. Sa mort crée un vide de pouvoir dangereux, souvent pire que sa survie.",
@@ -1676,7 +1559,6 @@ const BESTIAIRE = [
     "dangerosite": 1,
     "boss": false,
     "taille": "moyenne",
-    "voies": [],
     "attaques": [
       {
         "nom": "Épée courte",
@@ -1717,19 +1599,6 @@ const BESTIAIRE = [
     "dangerosite": 2,
     "boss": false,
     "taille": "moyenne",
-    "voies": [
-      {
-        "voieRef": "chasseur.voie_ombre",
-        "rang": 1,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Attaque sournoise",
-            "effet": "Si attaque depuis l'ombre ou en flanquement : +1d6 dégâts."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Épée bâtarde",
@@ -1747,7 +1616,7 @@ const BESTIAIRE = [
     ],
     "capacitesSpeciales": [
       {
-        "nom": "Attaque sournoise (Voie de l'Ombre r.1)",
+        "nom": "Attaque sournoise",
         "description": "En flanquement ou depuis l'obscurité : +1d6 dégâts."
       },
       {
@@ -1778,40 +1647,6 @@ const BESTIAIRE = [
     "dangerosite": 3,
     "boss": false,
     "taille": "moyenne",
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_armes",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Maîtrise des armes",
-            "effet": "Relance 1 dé de dégâts."
-          },
-          {
-            "rang": 2,
-            "nom": "Attaque en puissance",
-            "effet": "-2 DEF pour +2 ATK et +2 dégâts."
-          }
-        ]
-      },
-      {
-        "voieRef": "chasseur.voie_ombre",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Attaque sournoise",
-            "effet": "+1d6 dégâts en flanquement / ombre."
-          },
-          {
-            "rang": 2,
-            "nom": "Désengagement",
-            "effet": "Peut se déplacer sans provoquer d'attaque d'opportunité 1 fois/round."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Sabre de capitaine",
@@ -1835,19 +1670,19 @@ const BESTIAIRE = [
     ],
     "capacitesSpeciales": [
       {
-        "nom": "Maîtrise des armes (Voie des Armes r.1)",
+        "nom": "Maîtrise des armes",
         "description": "Relance 1 dé de dégâts, conserve le meilleur."
       },
       {
-        "nom": "Attaque en puissance (Voie des Armes r.2)",
+        "nom": "Attaque en puissance",
         "description": "-2 DEF pour +2 ATK et +2 dégâts ce round."
       },
       {
-        "nom": "Attaque sournoise (Voie de l'Ombre r.1)",
+        "nom": "Attaque sournoise",
         "description": "+1d6 dégâts en flanquement ou obscurité."
       },
       {
-        "nom": "Désengagement (Voie de l'Ombre r.2)",
+        "nom": "Désengagement",
         "description": "1 fois/round : déplacement sans attaque d'opportunité."
       },
       {
@@ -1878,56 +1713,6 @@ const BESTIAIRE = [
     "dangerosite": 4,
     "boss": true,
     "taille": "moyenne",
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_armes",
-        "rang": 3,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Maîtrise des armes",
-            "effet": "Relance 1 dé de dégâts."
-          },
-          {
-            "rang": 2,
-            "nom": "Attaque en puissance",
-            "effet": "-2 DEF pour +2 ATK et +2 dégâts."
-          },
-          {
-            "rang": 3,
-            "nom": "Double frappe",
-            "effet": "1 fois/round : deux attaques en une action."
-          }
-        ]
-      },
-      {
-        "voieRef": "chevalier.voie_duel",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Défi",
-            "effet": "Désigne un adversaire : +2 ATK et +2 DEF contre lui uniquement jusqu'à la fin du combat."
-          },
-          {
-            "rang": 2,
-            "nom": "Riposte",
-            "effet": "Réaction, 1 fois/round : si une attaque le rate, effectue une attaque de contact gratuite."
-          }
-        ]
-      },
-      {
-        "voieRef": "chasseur.voie_ombre",
-        "rang": 1,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Attaque sournoise",
-            "effet": "+1d6 dégâts en flanquement."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Épée longue enchantée +1",
@@ -1944,8 +1729,8 @@ const BESTIAIRE = [
         "effetSpecial": "1 fois/round."
       },
       {
-        "nom": "Riposte (Voie du Duel r.2)",
-        "armeId": "riposte_duel_r2",
+        "nom": "Riposte",
+        "armeId": "riposte",
         "bonusAttaque": 8,
         "bonusDegats": 4,
         "effetSpecial": "Réaction si une attaque rate le Fléau. Gratuite, hors tour."
@@ -1959,24 +1744,32 @@ const BESTIAIRE = [
     ],
     "capacitesSpeciales": [
       {
-        "nom": "Double frappe (Voie des Armes r.3)",
+        "nom": "Double frappe",
         "description": "1 fois/round : deux attaques en une action."
       },
       {
-        "nom": "Défi (Voie du Duel r.1)",
+        "nom": "Défi",
         "description": "+2 ATK et +2 DEF contre une cible désignée jusqu'à fin de combat."
       },
       {
-        "nom": "Riposte (Voie du Duel r.2)",
+        "nom": "Riposte",
         "description": "Si une attaque le rate : attaque de contact gratuite en réaction."
       },
       {
-        "nom": "Attaque sournoise (Voie de l'Ombre r.1)",
+        "nom": "Attaque sournoise",
         "description": "+1d6 dégâts en flanquement."
       },
       {
         "nom": "Réputation sinistre",
         "description": "À l'ouverture du combat, tous les ennemis testent SAG diff. 11 ou subissent -1 ATK au premier round (intimidation)."
+      },
+      {
+        "nom": "Maîtrise des armes",
+        "description": "Relance 1 dé de dégâts."
+      },
+      {
+        "nom": "Attaque en puissance",
+        "description": "−2 DEF pour +2 ATK et +2 dégâts."
       }
     ],
     "lore": "Le Fléau opère dans les angles morts des trois grandes factions humaines. Trop utile pour être arrêté (il transporte des informations pour qui paie), trop dangereux pour être ignoré. Son vrai nom est inconnu. Potentiellement un allié de circonstance.",
@@ -2002,7 +1795,6 @@ const BESTIAIRE = [
     "dangerosite": 1,
     "boss": false,
     "taille": "moyenne",
-    "voies": [],
     "attaques": [
       {
         "nom": "Épée courte",
@@ -2047,24 +1839,6 @@ const BESTIAIRE = [
     "dangerosite": 2,
     "boss": false,
     "taille": "moyenne",
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_defense",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Parade",
-            "effet": "Réaction 1 fois/round : annule une attaque physique (jet DEX diff. 12)."
-          },
-          {
-            "rang": 2,
-            "nom": "Contre-attaque",
-            "effet": "Si la Parade réussit : attaque de contact gratuite en réaction."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Épée longue",
@@ -2083,11 +1857,11 @@ const BESTIAIRE = [
     ],
     "capacitesSpeciales": [
       {
-        "nom": "Parade (Voie de la Défense r.1)",
+        "nom": "Parade",
         "description": "Réaction 1 fois/round : test DEX diff. 12 pour annuler une attaque physique."
       },
       {
-        "nom": "Contre-attaque (Voie de la Défense r.2)",
+        "nom": "Contre-attaque",
         "description": "Si Parade réussit : attaque de contact gratuite."
       },
       {
@@ -2126,45 +1900,6 @@ const BESTIAIRE = [
     "dangerosite": 3,
     "boss": false,
     "taille": "moyenne",
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_defense",
-        "rang": 3,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Parade",
-            "effet": "Réaction : test DEX diff. 12 pour annuler une attaque physique."
-          },
-          {
-            "rang": 2,
-            "nom": "Contre-attaque",
-            "effet": "Si Parade réussit : attaque gratuite."
-          },
-          {
-            "rang": 3,
-            "nom": "Forteresse",
-            "effet": "1 fois/combat : pendant 2 rounds, DEF +4 et toute attaque ratée de 3 ou moins est automatiquement contrée."
-          }
-        ]
-      },
-      {
-        "voieRef": "chevalier.voie_commandement",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Présence martiale",
-            "effet": "Alliés à 9m : +1 ATK tant que le capitaine est debout."
-          },
-          {
-            "rang": 2,
-            "nom": "Cri de ralliement",
-            "effet": "1 fois/combat : alliés à 12m regagnent 1d6 PV et ignorent leur prochain test de moral."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Épée longue de maître",
@@ -2183,16 +1918,20 @@ const BESTIAIRE = [
     ],
     "capacitesSpeciales": [
       {
-        "nom": "Forteresse (Voie de la Défense r.3)",
+        "nom": "Forteresse",
         "description": "1 fois/combat, 2 rounds : DEF +4, toute attaque ratée de 3 ou moins est contrée automatiquement."
       },
       {
-        "nom": "Présence martiale (Voie du Commandement r.1)",
+        "nom": "Présence martiale",
         "description": "Alliés à 9m : +1 ATK tant qu'il est debout."
       },
       {
-        "nom": "Cri de ralliement (Voie du Commandement r.2)",
+        "nom": "Cri de ralliement",
         "description": "1 fois/combat : alliés à 12m regagnent 1d6 PV et ignorent leur prochain test de moral."
+      },
+      {
+        "nom": "Contre-attaque",
+        "description": "Si Parade réussit : attaque gratuite."
       }
     ],
     "lore": "Commande une garnison entière. Présent dans les villes importantes des Royaumes Coalisés ou de l'Empire de Solvarn. Combat uniquement si nécessaire — il préfère la résolution diplomatique ou déléguer.",
@@ -2200,7 +1939,29 @@ const BESTIAIRE = [
       "valeur": 6,
       "description": "Armure de plates complète — réduit 6 points de dégâts physiques."
     },
-    "emoji": "🛡️"
+    "emoji": "🛡️",
+    "capacitesActives": [
+      {
+        "nom": "Parade",
+        "description": "Réaction : annule une attaque physique (test DEX diff. 12).",
+        "mecanique": {
+          "type": "activable",
+          "reactionCout": 1,
+          "usage": {
+            "frequence": "libre"
+          },
+          "cible": "soi",
+          "portee": null,
+          "zone": null,
+          "effets": [
+            {
+              "type": "special",
+              "note": "Annule une attaque physique sur un test DEX diff. 12 — arbitrage manuel."
+            }
+          ]
+        }
+      }
+    ]
   },
   {
     "id": "garde_champion",
@@ -2218,55 +1979,6 @@ const BESTIAIRE = [
     "dangerosite": 4,
     "boss": true,
     "taille": "moyenne",
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_defense",
-        "rang": 4,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Parade",
-            "effet": "Réaction : annule une attaque physique."
-          },
-          {
-            "rang": 2,
-            "nom": "Contre-attaque",
-            "effet": "Si Parade réussit : attaque gratuite."
-          },
-          {
-            "rang": 3,
-            "nom": "Forteresse",
-            "effet": "1 fois/combat, 2 rounds : DEF +4, attaques manquées de 3 ou moins contrées."
-          },
-          {
-            "rang": 4,
-            "nom": "Rempart vivant",
-            "effet": "Peut intercepter toute attaque ciblant un allié adjacent (prend les dégâts à sa place). 2 fois/round."
-          }
-        ]
-      },
-      {
-        "voieRef": "chevalier.voie_commandement",
-        "rang": 3,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Présence martiale",
-            "effet": "+1 ATK aux alliés à 9m."
-          },
-          {
-            "rang": 2,
-            "nom": "Cri de ralliement",
-            "effet": "Alliés à 12m : 1d6 PV + ignorent prochain test de moral."
-          },
-          {
-            "rang": 3,
-            "nom": "Stratège de champ",
-            "effet": "1 fois/combat : réorganise l'ordre d'initiative (lui et tous ses alliés agissent en premier ce round)."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Épée de la Couronne (enchantée +2)",
@@ -2278,7 +1990,7 @@ const BESTIAIRE = [
     ],
     "capacitesActives": [
       {
-        "nom": "Rempart vivant (Voie Défense r.4)",
+        "nom": "Rempart vivant",
         "description": "2 fois/round : intercepte une attaque ciblant un allié, prend les dégâts à sa place.",
         "mecanique": {
           "type": "activable",
@@ -2298,7 +2010,7 @@ const BESTIAIRE = [
         }
       },
       {
-        "nom": "Stratège de champ (Voie Commandement r.3)",
+        "nom": "Stratège de champ",
         "description": "1 fois/combat : lui et tous ses alliés agissent en premier ce round, quel que soit l'ordre d'initiative.",
         "mecanique": {
           "type": "limitee",
@@ -2315,28 +2027,75 @@ const BESTIAIRE = [
             }
           ]
         }
+      },
+      {
+        "nom": "Parade",
+        "description": "Réaction : annule une attaque physique (test DEX diff. 12).",
+        "mecanique": {
+          "type": "activable",
+          "reactionCout": 1,
+          "usage": {
+            "frequence": "libre"
+          },
+          "cible": "soi",
+          "portee": null,
+          "zone": null,
+          "effets": [
+            {
+              "type": "special",
+              "note": "Annule une attaque physique sur un test DEX diff. 12 — arbitrage manuel."
+            }
+          ]
+        }
+      },
+      {
+        "nom": "Cri de ralliement",
+        "description": "Alliés à 12 m : 1d6 PV et ignorent le prochain test de moral.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "allie",
+          "portee": null,
+          "zone": 12,
+          "effets": [
+            {
+              "type": "soin",
+              "formule": "1d6"
+            },
+            {
+              "type": "special",
+              "note": "Les alliés à portée ignorent aussi leur prochain test de moral."
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
       {
-        "nom": "Rempart vivant (Voie de la Défense r.4)",
+        "nom": "Rempart vivant",
         "description": "2 fois/round : intercepte une attaque ciblant un allié adjacent, prend les dégâts à sa place."
       },
       {
-        "nom": "Forteresse (Voie de la Défense r.3)",
+        "nom": "Forteresse",
         "description": "1 fois/combat, 2 rounds : DEF +4, attaques ratées de 3 ou moins contrées."
       },
       {
-        "nom": "Stratège de champ (Voie du Commandement r.3)",
+        "nom": "Stratège de champ",
         "description": "1 fois/combat : lui et alliés agissent en premier ce round."
       },
       {
-        "nom": "Présence martiale (Voie du Commandement r.1)",
+        "nom": "Présence martiale",
         "description": "Alliés à 9m : +1 ATK tant qu'il est debout."
       },
       {
         "nom": "Aura de légitimité",
         "description": "Sa présence seule force un test CHA diff. 13 pour tout ennemi voulant l'attaquer en premier (hésitation devant l'autorité). Immunisé à l'intimidation."
+      },
+      {
+        "nom": "Contre-attaque",
+        "description": "Si Parade réussit : attaque gratuite."
       }
     ],
     "lore": "Le Maréchal représente la loi absolue d'un royaume. Dans les Royaumes Coalisés, il répond directement au conseil des rois. Dans l'Empire de Solvarn, il est aussi prêtre d'Aethar. Combattre un Maréchal, c'est combattre une institution — les conséquences politiques durent des années.",
@@ -2366,7 +2125,6 @@ const BESTIAIRE = [
       "valeur": 3,
       "description": "Cotte de mailles standard — réduit 3 points de dégâts physiques."
     },
-    "voies": [],
     "attaques": [
       {
         "nom": "Lance",
@@ -2419,19 +2177,6 @@ const BESTIAIRE = [
       "valeur": 4,
       "description": "Demi-armure de plates — réduit 4 points de dégâts physiques."
     },
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_defense",
-        "rang": 1,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Parade",
-            "effet": "Réaction 1 fois/round : test DEX diff. 12 pour annuler une attaque physique."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Lance de guerre",
@@ -2462,7 +2207,7 @@ const BESTIAIRE = [
         "description": "Si 3 lanciers vétérans ou plus sont en ligne : toute créature voulant les charger doit tester FOR diff. 13 ou stopper et perdre son action de déplacement."
       },
       {
-        "nom": "Parade (Voie de la Défense r.1)",
+        "nom": "Parade",
         "description": "Réaction 1 fois/round : test DEX diff. 12 pour annuler une attaque physique."
       }
     ],
@@ -2489,35 +2234,6 @@ const BESTIAIRE = [
       "valeur": 6,
       "description": "Armure de plates complète — réduit 6 points de dégâts physiques."
     },
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_defense",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Parade",
-            "effet": "Réaction : annule une attaque physique (DEX diff. 12)."
-          },
-          {
-            "rang": 2,
-            "nom": "Contre-attaque",
-            "effet": "Si Parade réussit : attaque de contact gratuite."
-          }
-        ]
-      },
-      {
-        "voieRef": "chevalier.voie_commandement",
-        "rang": 1,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Présence martiale",
-            "effet": "Alliés à 9m : +1 ATK tant qu'il est debout."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Lance longue renforcée",
@@ -2544,15 +2260,15 @@ const BESTIAIRE = [
         "description": "Charge ennemie : +1d6 dégâts (au lieu de +1d4)."
       },
       {
-        "nom": "Parade (Voie de la Défense r.1)",
+        "nom": "Parade",
         "description": "Réaction : annule une attaque physique."
       },
       {
-        "nom": "Contre-attaque (Voie de la Défense r.2)",
+        "nom": "Contre-attaque",
         "description": "Si Parade réussit : attaque gratuite."
       },
       {
-        "nom": "Présence martiale (Voie du Commandement r.1)",
+        "nom": "Présence martiale",
         "description": "Alliés à 9m : +1 ATK tant qu'il est debout."
       }
     ],
@@ -2579,45 +2295,6 @@ const BESTIAIRE = [
       "valeur": 8,
       "description": "Armure de plates de maître — réduit 8 points de dégâts physiques."
     },
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_defense",
-        "rang": 3,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Parade",
-            "effet": "Réaction : annule une attaque physique."
-          },
-          {
-            "rang": 2,
-            "nom": "Contre-attaque",
-            "effet": "Si Parade réussit : attaque gratuite."
-          },
-          {
-            "rang": 3,
-            "nom": "Forteresse",
-            "effet": "1 fois/combat, 2 rounds : DEF +4, attaques ratées de 3 ou moins contrées."
-          }
-        ]
-      },
-      {
-        "voieRef": "chevalier.voie_commandement",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Présence martiale",
-            "effet": "+1 ATK aux alliés à 9m."
-          },
-          {
-            "rang": 2,
-            "nom": "Cri de guerre",
-            "effet": "1 fois/combat : tous les alliés à 12m effectuent une attaque bonus immédiate."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Lance de primus (enchantée +1)",
@@ -2636,7 +2313,7 @@ const BESTIAIRE = [
     ],
     "capacitesActives": [
       {
-        "nom": "Cri de guerre (Commandement r.2)",
+        "nom": "Cri de guerre",
         "description": "1 fois/combat : tous les alliés à portée effectuent une attaque bonus immédiate.",
         "mecanique": {
           "type": "limitee",
@@ -2653,6 +2330,26 @@ const BESTIAIRE = [
             }
           ]
         }
+      },
+      {
+        "nom": "Parade",
+        "description": "Réaction : annule une attaque physique (test DEX diff. 12).",
+        "mecanique": {
+          "type": "activable",
+          "reactionCout": 1,
+          "usage": {
+            "frequence": "libre"
+          },
+          "cible": "soi",
+          "portee": null,
+          "zone": null,
+          "effets": [
+            {
+              "type": "special",
+              "note": "Annule une attaque physique sur un test DEX diff. 12 — arbitrage manuel."
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -2665,20 +2362,24 @@ const BESTIAIRE = [
         "description": "Charge ennemie : +1d8 dégâts. Si les dégâts totaux dépassent 15 en une frappe d'arrêt : la cible est renversée automatiquement."
       },
       {
-        "nom": "Forteresse (Voie de la Défense r.3)",
+        "nom": "Forteresse",
         "description": "1 fois/combat, 2 rounds : DEF +4, attaques ratées de 3 ou moins contrées."
       },
       {
-        "nom": "Présence martiale (Voie du Commandement r.1)",
+        "nom": "Présence martiale",
         "description": "Alliés à 9m : +1 ATK tant qu'il est debout."
       },
       {
-        "nom": "Cri de guerre (Voie du Commandement r.2)",
+        "nom": "Cri de guerre",
         "description": "1 fois/combat : attaque bonus immédiate pour tous les alliés à 12m."
       },
       {
         "nom": "Balayage de hampe",
         "description": "1 fois/round : frappe tous les ennemis dans l'arc frontal (180°, 3m)."
+      },
+      {
+        "nom": "Contre-attaque",
+        "description": "Si Parade réussit : attaque gratuite."
       }
     ],
     "lore": "Le Primus est le commandant de terrain absolu d'une légion. Il n'est jamais loin du premier rang — sa lance est une extension de sa volonté autant qu'une arme. Affronter un Primus en formation, c'est se battre contre toute une institution militaire.",
@@ -2701,7 +2402,6 @@ const BESTIAIRE = [
     "boss": false,
     "taille": "moyenne",
     "armure": null,
-    "voies": [],
     "attaques": [
       {
         "nom": "Pique improvisée",
@@ -2749,19 +2449,6 @@ const BESTIAIRE = [
       "valeur": 1,
       "description": "Cuir tanné et rembourrage — réduit 1 point de dégâts physiques."
     },
-    "voies": [
-      {
-        "voieRef": "chasseur.voie_predateur",
-        "rang": 1,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Pistage",
-            "effet": "Piste une cible sans test. Ne peut pas être surpris en milieu naturel."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Lance de chasse",
@@ -2791,7 +2478,7 @@ const BESTIAIRE = [
         "description": "Attaque jusqu'à 3m. Peut aussi lancer la lance (portée courte, 1 fois)."
       },
       {
-        "nom": "Pistage (Voie du Prédateur r.1)",
+        "nom": "Pistage",
         "description": "Piste sans test. Immunisé à la surprise en milieu naturel."
       },
       {
@@ -2822,35 +2509,6 @@ const BESTIAIRE = [
       "valeur": 3,
       "description": "Cotte de mailles légère volée — réduit 3 points de dégâts physiques."
     },
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_armes",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Maîtrise des armes",
-            "effet": "Relance 1 dé de dégâts, conserve le meilleur."
-          },
-          {
-            "rang": 2,
-            "nom": "Attaque en puissance",
-            "effet": "-2 DEF pour +2 ATK et +2 dégâts."
-          }
-        ]
-      },
-      {
-        "voieRef": "chasseur.voie_predateur",
-        "rang": 1,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Pistage",
-            "effet": "Piste sans test. Immunisé à la surprise en milieu naturel."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Fauchard de bande",
@@ -2873,15 +2531,15 @@ const BESTIAIRE = [
         "description": "Attaque jusqu'à 3m avec le fauchard."
       },
       {
-        "nom": "Maîtrise des armes (Voie des Armes r.1)",
+        "nom": "Maîtrise des armes",
         "description": "Relance 1 dé de dégâts."
       },
       {
-        "nom": "Attaque en puissance (Voie des Armes r.2)",
+        "nom": "Attaque en puissance",
         "description": "-2 DEF pour +2 ATK et +2 dégâts."
       },
       {
-        "nom": "Pistage (Voie du Prédateur r.1)",
+        "nom": "Pistage",
         "description": "Piste sans test, immunisé surprise en milieu naturel."
       },
       {
@@ -2912,45 +2570,6 @@ const BESTIAIRE = [
       "valeur": 4,
       "description": "Armure composite assemblée pièce à pièce — réduit 4 points de dégâts physiques."
     },
-    "voies": [
-      {
-        "voieRef": "guerrier.voie_armes",
-        "rang": 3,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Maîtrise des armes",
-            "effet": "Relance 1 dé de dégâts."
-          },
-          {
-            "rang": 2,
-            "nom": "Attaque en puissance",
-            "effet": "-2 DEF pour +2 ATK et +2 dégâts."
-          },
-          {
-            "rang": 3,
-            "nom": "Double frappe",
-            "effet": "1 fois/round : deux attaques en une action."
-          }
-        ]
-      },
-      {
-        "voieRef": "chevalier.voie_duel",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Défi",
-            "effet": "+2 ATK et +2 DEF contre une cible désignée."
-          },
-          {
-            "rang": 2,
-            "nom": "Riposte",
-            "effet": "Réaction : si une attaque rate, attaque gratuite."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Hallebarde de guerre",
@@ -2960,15 +2579,15 @@ const BESTIAIRE = [
         "effetSpecial": "Portée allongée. Charge : +1d8 dégâts. Tranchant : si dégâts totaux ≥ 12, saignement (1d4/round, 3 rounds, CON diff. 12 pour stopper)."
       },
       {
-        "nom": "Double frappe (Voie des Armes r.3)",
-        "armeId": "double_frappe_armes_r3_lance",
+        "nom": "Double frappe",
+        "armeId": "double_frappe_hallebarde",
         "bonusAttaque": 8,
         "bonusDegats": 3,
         "effetSpecial": "1 fois/round. Peut cibler deux créatures différentes si dans la portée."
       },
       {
-        "nom": "Riposte (Voie du Duel r.2)",
-        "armeId": "riposte_duel_r2_lance",
+        "nom": "Riposte",
+        "armeId": "riposte_hallebarde",
         "bonusAttaque": 8,
         "bonusDegats": 3,
         "effetSpecial": "Réaction si attaque rate La Pointe. Gratuite, hors tour."
@@ -2980,20 +2599,28 @@ const BESTIAIRE = [
         "description": "Attaque jusqu'à 3m. La double frappe peut cibler deux créatures différentes dans cette portée."
       },
       {
-        "nom": "Double frappe (Voie des Armes r.3)",
+        "nom": "Double frappe",
         "description": "1 fois/round : deux attaques en une action, cibles différentes possibles."
       },
       {
-        "nom": "Défi (Voie du Duel r.1)",
+        "nom": "Défi",
         "description": "+2 ATK et +2 DEF contre une cible désignée jusqu'à fin de combat."
       },
       {
-        "nom": "Riposte (Voie du Duel r.2)",
+        "nom": "Riposte",
         "description": "Si une attaque rate : attaque de contact gratuite en réaction."
       },
       {
         "nom": "Zone de contrôle",
         "description": "Toute créature entrant dans les 3m de La Pointe provoque une attaque d'opportunité gratuite (hallebarde, portée allongée utilisée)."
+      },
+      {
+        "nom": "Maîtrise des armes",
+        "description": "Relance 1 dé de dégâts."
+      },
+      {
+        "nom": "Attaque en puissance",
+        "description": "−2 DEF pour +2 ATK et +2 dégâts."
       }
     ],
     "lore": "La Pointe commande une compagnie de piquiers hors-la-loi avec une précision chirurgicale. Ancien officier disgracié, il a retourné sa formation militaire contre les institutions qui l'ont trahi. Potentiellement recruté comme mercenaire par les PJ si les circonstances s'y prêtent.",
@@ -3016,24 +2643,6 @@ const BESTIAIRE = [
     "dangerosite": 2,
     "boss": false,
     "taille": "moyenne",
-    "voies": [
-      {
-        "voieRef": "pretre.voie_jugement",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Zèle",
-            "effet": "+1 ATK contre toute cible ayant atteint au moins le palier Marque de corruption du Chaos."
-          },
-          {
-            "rang": 2,
-            "nom": "Sceau du silence",
-            "effet": "1 fois/combat : applique l'état Réduite au silence à une cible à 6m (test Volonté diff. 13 pour résister)."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Épée de jugement",
@@ -3074,6 +2683,10 @@ const BESTIAIRE = [
       {
         "nom": "Formation du Concile",
         "description": "3 Chevaliers-Inquisiteurs ou plus adjacents : DEF +2 pour tous, immunité à la peur."
+      },
+      {
+        "nom": "Zèle",
+        "description": "+1 ATK contre toute cible ayant atteint au moins le palier Marque de corruption du Chaos."
       }
     ],
     "lore": "Recrutés jeunes dans les provinces les plus dévotes, formés à traquer l'hérésie autant qu'à combattre. Depuis l'échec de Corvain Ashe au Pont-Rompu, l'ordre a durci sa doctrine : le doute est traité comme une faiblesse à extirper, chez l'ennemi comme chez soi.",
@@ -3108,29 +2721,6 @@ const BESTIAIRE = [
     "dangerosite": 3,
     "boss": false,
     "taille": "moyenne",
-    "voies": [
-      {
-        "voieRef": "pretre.voie_jugement",
-        "rang": 3,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Zèle",
-            "effet": "+1 ATK contre toute cible ayant atteint au moins le palier Marque de corruption du Chaos."
-          },
-          {
-            "rang": 2,
-            "nom": "Sceau du silence",
-            "effet": "1 fois/combat : applique silencieuse à 2 cibles à 6m."
-          },
-          {
-            "rang": 3,
-            "nom": "Jugement",
-            "effet": "1 fois/combat : jet 1d20+8 vs DEF ; touche automatiquement une cible en palier Fracture. 2d8 dégâts sacrés."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Épée de jugement (bénie)",
@@ -3154,6 +2744,10 @@ const BESTIAIRE = [
       {
         "nom": "Commandement de l'Inquisition",
         "description": "Chevaliers-Inquisiteurs vétérans adjacents : +1 ATK tant qu'il est debout."
+      },
+      {
+        "nom": "Zèle",
+        "description": "+1 ATK contre toute cible ayant atteint au moins le palier Marque de corruption du Chaos."
       }
     ],
     "lore": "Dirige une cellule d'Inquisiteurs en campagne. Rapporte directement au Concile des Flammes. Considère toute négociation avec un suspect comme une compromission personnelle.",
@@ -3161,7 +2755,33 @@ const BESTIAIRE = [
       "valeur": 7,
       "description": "Harnois de capitaine, béni deux fois — réduit 7 points de dégâts physiques."
     },
-    "emoji": "🔥⚔️"
+    "emoji": "🔥⚔️",
+    "capacitesActives": [
+      {
+        "nom": "Sceau du silence",
+        "description": "1 fois par combat : applique l'état silencieuse à 2 cibles à 6 m.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "ennemi",
+          "portee": 6,
+          "zone": null,
+          "effets": [
+            {
+              "type": "etat",
+              "id": "silencieuse",
+              "duree": "1"
+            },
+            {
+              "type": "special",
+              "note": "Frappe 2 cibles — appliquer l'état une seconde fois manuellement."
+            }
+          ]
+        }
+      }
+    ]
   },
   {
     "id": "chevalier_inquisiteur_champion",
@@ -3180,34 +2800,6 @@ const BESTIAIRE = [
     "dangerosite": 4,
     "boss": true,
     "taille": "moyenne",
-    "voies": [
-      {
-        "voieRef": "pretre.voie_jugement",
-        "rang": 4,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Zèle",
-            "effet": "+1 ATK contre toute cible en Marque."
-          },
-          {
-            "rang": 2,
-            "nom": "Sceau du silence",
-            "effet": "1 fois/combat : silencieuse à 2 cibles à 6m."
-          },
-          {
-            "rang": 3,
-            "nom": "Jugement",
-            "effet": "1 fois/combat : 2d8 dégâts sacrés, touche automatiquement une cible en Fracture."
-          },
-          {
-            "rang": 4,
-            "nom": "Bûcher purificateur",
-            "effet": "1 fois/combat : zone de 3m à 18m, 3d6 dégâts de feu sacré, ignore la moitié de l'armure des créatures du Chaos."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Épée du Concile (enchantée +2)",
@@ -3231,6 +2823,10 @@ const BESTIAIRE = [
       {
         "nom": "Détection d'hérésie",
         "description": "Perçoit sans jet tout personnage en Marque ou Fracture, à 18m."
+      },
+      {
+        "nom": "Zèle",
+        "description": "+1 ATK contre toute cible ayant atteint au moins le palier Marque de corruption du Chaos."
       }
     ],
     "lore": "Membre du Concile des Flammes, envoyé personnellement traquer une hérésie jugée prioritaire. Sa légitimité vient directement du Flambeau Suprême — s'en prendre à lui, c'est s'en prendre à l'Église elle-même. Convaincu, sincèrement, d'agir pour le salut de ceux qu'il exécute.",
@@ -3238,7 +2834,57 @@ const BESTIAIRE = [
       "valeur": 9,
       "description": "Harnois du Concile, béni par le Flambeau Suprême en personne — réduit 9 points de dégâts physiques."
     },
-    "emoji": "🔥⚔️"
+    "emoji": "🔥⚔️",
+    "capacitesActives": [
+      {
+        "nom": "Sceau du silence",
+        "description": "1 fois par combat : applique l'état silencieuse à 2 cibles à 6 m.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "ennemi",
+          "portee": 6,
+          "zone": null,
+          "effets": [
+            {
+              "type": "etat",
+              "id": "silencieuse",
+              "duree": "1"
+            },
+            {
+              "type": "special",
+              "note": "Frappe 2 cibles — appliquer l'état une seconde fois manuellement."
+            }
+          ]
+        }
+      },
+      {
+        "nom": "Jugement",
+        "description": "1 fois par combat : 2d8 dégâts sacrés, touche automatiquement une cible en Fracture.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "ennemi",
+          "portee": 6,
+          "zone": null,
+          "effets": [
+            {
+              "type": "degats",
+              "formule": "2d8",
+              "elementaire": "sacre"
+            },
+            {
+              "type": "special",
+              "note": "Touche automatiquement une cible ayant atteint le palier Fracture."
+            }
+          ]
+        }
+      }
+    ]
   },
   {
     "id": "flambeau_basique",
@@ -3392,24 +3038,6 @@ const BESTIAIRE = [
     "dangerosite": 2,
     "boss": false,
     "taille": "moyenne",
-    "voies": [
-      {
-        "voieRef": "chevalier.voie_sacrifice",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Couverture du sacrifice",
-            "effet": "Réaction, 1 fois/round : intercepte une attaque visant un allié adjacent, en prend les dégâts à sa place."
-          },
-          {
-            "rang": 2,
-            "nom": "Serment du Pont",
-            "effet": "+2 DEF tant qu'il protège un allié à terre ou en fuite adjacent."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Épée du serment",
@@ -3464,29 +3092,6 @@ const BESTIAIRE = [
     "dangerosite": 4,
     "boss": true,
     "taille": "moyenne",
-    "voies": [
-      {
-        "voieRef": "chevalier.voie_sacrifice",
-        "rang": 3,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Couverture du sacrifice",
-            "effet": "Réaction, 2 fois/round : intercepte une attaque visant un allié adjacent."
-          },
-          {
-            "rang": 2,
-            "nom": "Serment du Pont",
-            "effet": "+2 DEF tant qu'il protège un allié à terre ou en fuite adjacent."
-          },
-          {
-            "rang": 3,
-            "nom": "Le prix de l'honneur",
-            "effet": "1 fois/combat : sacrifie la moitié de ses PV actuels pour stabiliser instantanément, sans jet, un allié tombé à 0 PV."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Épée du Serment (héritage de l'Ordre)",
@@ -3526,6 +3131,10 @@ const BESTIAIRE = [
       {
         "nom": "Doute silencieux (roleplay)",
         "description": "Aucun effet mécanique — Tristan commence à douter que l'honneur seul suffise face à la Rupture actuelle. À utiliser pour teinter ses dialogues (hésitation face à un compromis, question directe posée aux PJ), pas en combat."
+      },
+      {
+        "nom": "Serment du Pont",
+        "description": "+2 DEF tant qu'il protège un allié à terre ou en fuite adjacent."
       }
     ],
     "lore": "Voir la fiche PNJ Tristan d'Aurvel (PNJ_CLES, id tristan-daurvel) pour le contexte narratif complet. Ce statblock sert aux scènes où il combat réellement — allié en renfort, ou adversaire de duel si un scénario l'exige.",
@@ -3635,24 +3244,6 @@ const BESTIAIRE = [
     "dangerosite": 2,
     "boss": false,
     "taille": "moyenne",
-    "voies": [
-      {
-        "voieRef": "chasseur.voie_meute",
-        "rang": 2,
-        "capacites": [
-          {
-            "rang": 1,
-            "nom": "Lien de meute",
-            "effet": "+1 ATK et +1 Initiative pour toute créature Faune alliée à 9m."
-          },
-          {
-            "rang": 2,
-            "nom": "Chasse coordonnée",
-            "effet": "1 fois/combat : lui et une créature Faune alliée attaquent la même cible ensemble ; +1d4 dégâts supplémentaires si les deux touchent."
-          }
-        ]
-      }
-    ],
     "attaques": [
       {
         "nom": "Hache à deux mains",
@@ -4419,7 +4010,6 @@ const BESTIAIRE = [
     "dangerosite": 1,
     "boss": false,
     "taille": "moyenne",
-    "voies": [],
     "attaques": [
       {
         "nom": "Épée courte",
@@ -4464,7 +4054,6 @@ const BESTIAIRE = [
     "dangerosite": 3,
     "boss": false,
     "taille": "moyenne",
-    "voies": [],
     "attaques": [
       {
         "nom": "Sabre courbé",
@@ -4517,7 +4106,6 @@ const BESTIAIRE = [
     "dangerosite": 4,
     "boss": true,
     "taille": "moyenne",
-    "voies": [],
     "attaques": [
       {
         "nom": "Lame dorée",
@@ -4564,7 +4152,6 @@ const BESTIAIRE = [
     "dangerosite": 3,
     "boss": true,
     "taille": "moyenne",
-    "voies": [],
     "attaques": [
       {
         "nom": "Serpe de jardinier lourde",

@@ -319,8 +319,8 @@ const ARMES_MONSTRES = [
     "typedegats": "physique"
   },
   {
-    "id": "devastation_voie_puissance_r_3",
-    "nom": "Dévastation (Voie Puissance r.3)",
+    "id": "devastation",
+    "nom": "Dévastation",
     "type": "arme",
     "degats": "2d6",
     "portee": "contact (zone adjacente)",
@@ -351,8 +351,8 @@ const ARMES_MONSTRES = [
     "typedegats": "physique"
   },
   {
-    "id": "double_frappe_armes_r3",
-    "nom": "Double frappe (Voie des Armes r.3)",
+    "id": "double_frappe_hache_double",
+    "nom": "Double frappe",
     "type": "arme",
     "degats": "1d12",
     "portee": "contact",
@@ -450,8 +450,8 @@ const ARMES_MONSTRES = [
     "touches": 2
   },
   {
-    "id": "riposte_duel_r2",
-    "nom": "Riposte (Voie du Duel r.2)",
+    "id": "riposte",
+    "nom": "Riposte",
     "type": "arme",
     "degats": "1d8",
     "portee": "contact",
@@ -635,8 +635,8 @@ const ARMES_MONSTRES = [
     "typedegats": "physique"
   },
   {
-    "id": "double_frappe_armes_r3_lance",
-    "nom": "Double frappe (Voie des Armes r.3)",
+    "id": "double_frappe_hallebarde",
+    "nom": "Double frappe",
     "type": "arme",
     "degats": "1d12",
     "portee": "contact +1 case (3m)",
@@ -644,8 +644,8 @@ const ARMES_MONSTRES = [
     "touches": 2
   },
   {
-    "id": "riposte_duel_r2_lance",
-    "nom": "Riposte (Voie du Duel r.2)",
+    "id": "riposte_hallebarde",
+    "nom": "Riposte",
     "type": "arme",
     "degats": "1d12",
     "portee": "contact +1 case (3m)",
