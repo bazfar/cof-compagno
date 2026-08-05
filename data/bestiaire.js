@@ -3,7 +3,6 @@ const BESTIAIRE = [
   {
     "id": "goblin_eclaireur",
     "nom": "Gobelin éclaireur",
-    "categorie": "Session 1",
     "faction": "Tribu Rochedent",
     "race": [
       "humanoïdes"
@@ -40,13 +39,11 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Sentinelles légères de la tribu Rochedent, les éclaireurs gobelins patrouillent en binôme. Ils évitent le combat frontal mais n'hésitent pas à décrocher pour prévenir leurs congénères. Leur équipement est de mauvaise qualité mais leur connaissance du terrain est redoutable.",
-    "armure": null,
     "emoji": "👺"
   },
   {
     "id": "goblin_garde",
     "nom": "Gobelin garde",
-    "categorie": "Session 1",
     "faction": "Tribu Rochedent",
     "race": [
       "humanoïdes"
@@ -80,16 +77,12 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Plus lourdement équipés que les éclaireurs, les gardes portent un équipement de fortune récupéré sur des voyageurs. Ils défendent les points stratégiques du campement avec une discipline surprenante pour des gobelins.",
-    "armure": {
-      "valeur": 1,
-      "description": "Armure de cuir rapiécée — réduit 1 point de dégâts physiques."
-    },
-    "emoji": "👺"
+    "emoji": "👺",
+    "armureId": "armure_de_cuir_rapiecee"
   },
   {
     "id": "goblin_chef",
     "nom": "Kratz, chef de la tribu Rochedent",
-    "categorie": "Session 1",
     "faction": "Tribu Rochedent",
     "race": [
       "humanoïdes"
@@ -159,17 +152,13 @@ const BESTIAIRE = [
     ],
     "lore": "Kratz n'est pas le plus fort de sa tribu, mais le plus rusé. Il a orchestré le rapt du charretier Aldric pour rançonner la ville voisine, une initiative sans précédent pour les Rochedent. Il négocie en broken Common et pourrait être un informateur involontaire sur d'autres menaces dans la région.",
     "roleNarratif": "Boss de scène. Peut être capturé vivant pour interrogatoire. Connaît l'emplacement d'Aldric.",
-    "armure": {
-      "valeur": 2,
-      "description": "Cottes de mailles de récupération — réduit 2 points de dégâts physiques."
-    },
     "emoji": "👺",
-    "tier": "meneur"
+    "tier": "meneur",
+    "armureId": "cottes_de_mailles_de_recuperation"
   },
   {
     "id": "goblin_chaman",
     "nom": "Gobelin chaman",
-    "categorie": "Session 1",
     "faction": "Tribu Rochedent",
     "race": [
       "humanoïdes"
@@ -207,13 +196,11 @@ const BESTIAIRE = [
     ],
     "lore": "Rare gobelin touchant à la Sève corrompue — un éclat du Chaos filtré à travers la terre. Les chamans gobelins sont craints même au sein de leur tribu. Celui-ci a convaincu Kratz que le rapt était 'voulu par les esprits', ce qui est faux : il cherche à tester les défenses humaines pour une puissance extérieure encore inconnue.",
     "roleNarratif": "Optionnel. Révèle l'implication d'une menace plus grande si capturé et interrogé.",
-    "armure": null,
     "emoji": "👺"
   },
   {
     "id": "loup_des_bois",
     "nom": "Loup des bois",
-    "categorie": "Bestiaire général — Tier 1",
     "faction": null,
     "race": [
       "monstres"
@@ -251,13 +238,11 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Prédateurs naturels des forêts de l'Arbre-Monde, les loups obéissent à la hiérarchie de la Sève — ils se montrent rarement agressifs envers ceux qui ne perturbent pas l'équilibre. Un loup qui attaque de jour est souvent enragé ou manipulé.",
-    "armure": null,
     "emoji": "🐺"
   },
   {
     "id": "sanglier_de_rage",
     "nom": "Sanglier de rage",
-    "categorie": "Bestiaire général — Tier 1",
     "faction": null,
     "race": [
       "monstres"
@@ -295,16 +280,12 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Les sangliers de l'Arbre-Monde sont imprégnés de Sève brute. Normalement paisibles, ils deviennent incontrôlables si leur territoire est souillé par le Chaos — leur pelage vire alors au noir et leurs yeux rougissent.",
-    "armure": {
-      "valeur": 2,
-      "description": "Peau épaisse et couche de graisse — réduit 2 points de dégâts physiques."
-    },
-    "emoji": "🐗"
+    "emoji": "🐗",
+    "armureId": "peau_epaisse_et_couche_de_graisse"
   },
   {
     "id": "spectre_de_ruine",
     "nom": "Spectre de ruine",
-    "categorie": "Bestiaire général — Tier 1",
     "faction": "Échos du Chaos",
     "race": [
       "corrompu"
@@ -341,13 +322,11 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Les spectres de ruine sont des fragments d'âme coincés dans les zones où le Chaos a touché la Sève. Ce ne sont pas des morts-vivants au sens classique — ils sont l'écho d'une terreur figée dans le bois même du monde. On les trouve dans les ruines pré-Fracture ou près des arbres-cicatrices.",
-    "armure": null,
     "emoji": "👻"
   },
   {
     "id": "racine_eveille",
     "nom": "Racine éveillée",
-    "categorie": "Bestiaire général — Tier 1",
     "faction": "Gardiens corrompus de la Sève",
     "race": [
       "monstres",
@@ -389,20 +368,16 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Quand la Sève d'un arbre ancien est corrompue par un éclat du Chaos, ses racines développent parfois une conscience rudimentaire et hostile. Ce n'est pas un monstre à proprement parler — c'est un arbre qui souffre et qui attaque tout ce qui approche. Les Druides peuvent tenter de le purifier (test SAG diff. 15, action complète) plutôt que de le tuer.",
-    "armure": {
-      "valeur": 3,
-      "description": "Écorce vivante — réduit 3 points de dégâts physiques. Pas d'effet contre le feu."
-    },
     "emoji": "🌳",
     "immunites": [
       "renversee",
       "repoussee"
-    ]
+    ],
+    "armureId": "ecorce_vivante"
   },
   {
     "id": "orc_pillard",
     "nom": "Orc pillard",
-    "categorie": "Bestiaire général — Tier 1",
     "faction": "Tribus orques libres",
     "race": [
       "humanoïdes"
@@ -441,7 +416,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Les orcs du monde sont les émotions de guerre que les dieux ont chassées de leur panthéon lors de la Fracture — des êtres de pure violence cristallisée en chair. Les pillards sont les individus les moins organisés, souvent mercenaires ou bandits, mais certaines tribus ont développé des codes d'honneur complexes.",
-    "armure": null,
     "emoji": "🪓",
     "immunites": [
       "effrayee"
@@ -450,7 +424,6 @@ const BESTIAIRE = [
   {
     "id": "sylvath_fragment",
     "nom": "Fragment de Sylvath",
-    "categorie": "Bestiaire général — Tier 2",
     "faction": "Dieux du Chaos (Enfants de la Sève)",
     "race": [
       "monstres",
@@ -493,13 +466,11 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Sylvath, dieu de la croissance devenu dieu du Chaos après la Fracture, projette des fragments de sa conscience dans le monde sous forme de masses végétales animées. Ces fragments cherchent à corrompre les nœuds de Sève pure — les vieux arbres, les sources, les sanctuaires Druides. Ils ne sont pas vraiment intelligents mais obéissent à une pulsion divine.",
-    "armure": null,
     "emoji": "🌿"
   },
   {
     "id": "garde_solvarn",
     "nom": "Garde impérial de Solvarn",
-    "categorie": "Bestiaire général — Tier 2",
     "faction": "Empire de Solvarn",
     "race": [
       "humanoïdes"
@@ -538,19 +509,15 @@ const BESTIAIRE = [
       }
     ],
     "lore": "L'Empire de Solvarn entraîne ses légionnaires dès l'enfance dans la doctrine du Soleil Éternel d'Aethar. Ces gardes sont fanatiques mais disciplinés — ils ne tuent pas aveuglément mais n'hésitent pas à arrêter quiconque est suspecté de contact avec la Sève corrompue, elfe ou humain.",
-    "armure": {
-      "valeur": 5,
-      "description": "Armure légionnaire solaire (plates + cotte) — réduit 5 points de dégâts physiques."
-    },
     "emoji": "🛡️",
     "immunites": [
       "effrayee"
-    ]
+    ],
+    "armureId": "armure_legionnaire_solaire_plates_cotte"
   },
   {
     "id": "golem_de_pierre_naine",
     "nom": "Golem de pierre (artisanat nain)",
-    "categorie": "Bestiaire général — Tier 2",
     "faction": "Khazrak Dûm (variante)",
     "race": [
       "monstres"
@@ -592,10 +559,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Les nains de Khazrak Dûm sculptent ces gardiens dans la roche-mère de l'Arbre-Monde, animés par un fragment de la Pierre divine de Valdaan. Les golems des Évolutionnistes (qui s'allient aux orques) sont souvent souillés d'échos de Chaos — moins obéissants, plus violents.",
-    "armure": {
-      "valeur": 10,
-      "description": "Corps de granit — réduit 10 points de dégâts physiques. Vulnérable à la foudre (annule la réduction)."
-    },
     "emoji": "🗿",
     "immunites": [
       "charmee",
@@ -607,12 +570,12 @@ const BESTIAIRE = [
       "confuse",
       "influencee",
       "hallucinee"
-    ]
+    ],
+    "armureId": "corps_de_granit"
   },
   {
     "id": "elfe_du_crepuscule_renegat",
     "nom": "Elfe du Crépuscule renégat",
-    "categorie": "Bestiaire général — Tier 2",
     "faction": "Mordanel (renégats)",
     "race": [
       "humanoïdes"
@@ -672,11 +635,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Mordanel, nation des Elfes du Crépuscule, est officiellement neutre. Mais certains de ses membres — tentés par le pouvoir de la Sève noire ou mercenaires sans scrupules — opèrent dans les zones grises. Ce ne sont pas des monstres mais des ennemis circonstanciels, souvent récupérables par la diplomatie.",
-    "armure": {
-      "valeur": 1,
-      "description": "Armure d'ombre elfique légère — réduit 1 point de dégâts physiques."
-    },
-    "emoji": "🧝"
+    "emoji": "🧝",
+    "armureId": "armure_d_ombre_elfique_legere"
   },
   {
     "id": "loup_basique",
@@ -686,7 +646,6 @@ const BESTIAIRE = [
     "race": [
       "monstres"
     ],
-    "categorie": "Bestiaire général — Faune",
     "pv": 12,
     "def": 11,
     "init": 5,
@@ -709,7 +668,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Prédateur de base des forêts. Attaque rarement seul.",
-    "armure": null,
     "emoji": "🐺"
   },
   {
@@ -720,7 +678,6 @@ const BESTIAIRE = [
     "race": [
       "monstres"
     ],
-    "categorie": "Bestiaire général — Faune",
     "pv": 20,
     "def": 12,
     "init": 6,
@@ -754,7 +711,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Loup alpha ou survivant endurci. Plus méthodique, cible les flancs.",
-    "armure": null,
     "emoji": "🐺"
   },
   {
@@ -765,7 +721,6 @@ const BESTIAIRE = [
     "race": [
       "monstres"
     ],
-    "categorie": "Bestiaire général — Faune",
     "pv": 28,
     "def": 13,
     "init": 6,
@@ -808,10 +763,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Loup dont la Sève de l'Arbre-Monde a amplifié les instincts. Parfois gardien d'un nœud de Sève — tuer l'un d'eux sans raison irrite les Druides locaux.",
-    "armure": {
-      "valeur": 1,
-      "description": "Fourrure dense — réduit 1 point de dégâts physiques."
-    },
     "emoji": "🐺",
     "immunitesConditionnelles": [
       {
@@ -820,7 +771,8 @@ const BESTIAIRE = [
         ],
         "condition": "Origine non magique (intimidation) uniquement."
       }
-    ]
+    ],
+    "armureId": "fourrure_dense"
   },
   {
     "id": "loup_champion",
@@ -830,7 +782,6 @@ const BESTIAIRE = [
     "race": [
       "monstres"
     ],
-    "categorie": "Bestiaire général — Faune",
     "pv": 42,
     "def": 15,
     "init": 7,
@@ -924,11 +875,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Créature semi-légendaire — à la croisée de l'animal et de l'esprit forestier. Certains Druides affirment qu'il est l'avatar vivant d'un nœud de Sève. Le tuer sans motif légitime peut avoir des conséquences narratives durables.",
-    "armure": {
-      "valeur": 2,
-      "description": "Fourrure épaisse imprégnée de Sève — réduit 2 points de dégâts physiques."
-    },
-    "emoji": "🐺"
+    "emoji": "🐺",
+    "armureId": "fourrure_epaisse_impregnee_de_seve"
   },
   {
     "id": "ours_basique",
@@ -938,7 +886,6 @@ const BESTIAIRE = [
     "race": [
       "monstres"
     ],
-    "categorie": "Bestiaire général — Faune",
     "pv": 30,
     "def": 12,
     "init": 1,
@@ -969,11 +916,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Défensif par nature. N'attaque que si menacé ou si ses petits sont en danger.",
-    "armure": {
-      "valeur": 2,
-      "description": "Fourrure et graisse naturelle — réduit 2 points de dégâts physiques."
-    },
-    "emoji": "🐻"
+    "emoji": "🐻",
+    "armureId": "fourrure_et_graisse_naturelle"
   },
   {
     "id": "ours_veteran",
@@ -983,7 +927,6 @@ const BESTIAIRE = [
     "race": [
       "monstres"
     ],
-    "categorie": "Bestiaire général — Faune",
     "pv": 44,
     "def": 13,
     "init": 2,
@@ -1018,11 +961,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Ours des grottes profondes, adapté à un environnement hostile. Plus agressif, marque son territoire avec violence.",
-    "armure": {
-      "valeur": 3,
-      "description": "Fourrure des cavernes très dense — réduit 3 points de dégâts physiques."
-    },
-    "emoji": "🐻"
+    "emoji": "🐻",
+    "armureId": "fourrure_des_cavernes_tres_dense"
   },
   {
     "id": "ours_elite",
@@ -1032,7 +972,6 @@ const BESTIAIRE = [
     "race": [
       "monstres"
     ],
-    "categorie": "Bestiaire général — Faune / Créatures dressées",
     "pv": 55,
     "def": 14,
     "init": 2,
@@ -1077,10 +1016,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Utilisé par certains seigneurs de guerre orques ou des mercenaires de haut rang. Rare dans les Royaumes Coalisés, plus commun dans les zones de conflit frontalières.",
-    "armure": {
-      "valeur": 5,
-      "description": "Armure de guerre clouée sur une fourrure épaisse — réduit 5 points de dégâts physiques."
-    },
     "emoji": "🐻",
     "capacitesActives": [
       {
@@ -1107,7 +1042,8 @@ const BESTIAIRE = [
           ]
         }
       }
-    ]
+    ],
+    "armureId": "armure_de_guerre_clouee_sur_une_fourrure_epaisse"
   },
   {
     "id": "ours_champion",
@@ -1117,7 +1053,6 @@ const BESTIAIRE = [
     "race": [
       "monstres"
     ],
-    "categorie": "Bestiaire général — Faune / Créatures légendaires",
     "pv": 80,
     "def": 16,
     "init": 3,
@@ -1236,10 +1171,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Urskar est un ours dont la conscience a fusionné avec un nœud de Sève ancien lors de la Fracture. Il n'est ni animal ni esprit — quelque chose d'entre-deux. Les Druides d'Aelindra le connaissent et le respectent. L'attaquer sans raison vaut excommunication dans les Royaumes Sylvains.",
-    "armure": {
-      "valeur": 6,
-      "description": "Fourrure de Sève + peau durcie par des décennies — réduit 6 points de dégâts physiques."
-    },
     "emoji": "🐻",
     "immunitesConditionnelles": [
       {
@@ -1250,7 +1181,8 @@ const BESTIAIRE = [
         ],
         "condition": "Origine non magique uniquement."
       }
-    ]
+    ],
+    "armureId": "fourrure_de_seve_peau_durcie_par_des_decennies"
   },
   {
     "id": "orc_basique",
@@ -1260,7 +1192,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes",
     "pv": 18,
     "def": 12,
     "init": 2,
@@ -1290,14 +1221,11 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Guerrier de base d'une tribu orque. Brutal mais prévisible.",
-    "armure": {
-      "valeur": 2,
-      "description": "Armure de cuir clouté — réduit 2 points de dégâts physiques."
-    },
     "emoji": "🪓",
     "immunites": [
       "effrayee"
-    ]
+    ],
+    "armureId": "armure_de_cuir_cloute"
   },
   {
     "id": "orc_veteran",
@@ -1307,7 +1235,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes",
     "pv": 32,
     "def": 14,
     "init": 3,
@@ -1346,14 +1273,11 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Survivant de dizaines de combats. Souvent sous-chef d'un groupe de pillards.",
-    "armure": {
-      "valeur": 3,
-      "description": "Cotte de mailles orque — réduit 3 points de dégâts physiques."
-    },
     "emoji": "🪓",
     "immunites": [
       "effrayee"
-    ]
+    ],
+    "armureId": "cotte_de_mailles_orque"
   },
   {
     "id": "orc_elite",
@@ -1363,7 +1287,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes",
     "pv": 48,
     "def": 13,
     "init": 4,
@@ -1410,14 +1333,11 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Les berserkers orques ont laissé la rage de guerre consumé leur raison. Ils frappent jusqu'à la mort — la leur ou celle de l'ennemi. Certains sont liés au Chaos de Khoreth par des rituels tribaux.",
-    "armure": {
-      "valeur": 2,
-      "description": "Aucune armure lourde — peau durcie par le combat réduit 2 points. Mobilité conservée pour la furie."
-    },
     "emoji": "🪓",
     "immunites": [
       "effrayee"
-    ]
+    ],
+    "armureId": "aucune_armure_lourde"
   },
   {
     "id": "orc_champion",
@@ -1427,7 +1347,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes",
     "pv": 70,
     "def": 16,
     "init": 4,
@@ -1519,14 +1438,11 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Le Warchief est l'incarnation vivante de Khoreth, dieu de la guerre né du Chaos après la Fracture. Il ne dirige pas par peur mais par légitimité — c'est lui qui forge l'unité entre les tribus. Sa mort crée un vide de pouvoir dangereux, souvent pire que sa survie.",
-    "armure": {
-      "valeur": 5,
-      "description": "Armure de plaques runiques liée à Khoreth — réduit 5 points de dégâts physiques."
-    },
     "emoji": "🪓",
     "immunites": [
       "effrayee"
-    ]
+    ],
+    "armureId": "armure_de_plaques_runiques_liee_a_khoreth"
   },
   {
     "id": "bandit_basique",
@@ -1536,7 +1452,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes",
     "pv": 10,
     "def": 11,
     "init": 3,
@@ -1565,7 +1480,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Déserteur, paysan ruiné ou aventurier raté. Attaque par nécessité, se rend facilement.",
-    "armure": null,
     "emoji": "🗡️"
   },
   {
@@ -1576,7 +1490,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes",
     "pv": 20,
     "def": 13,
     "init": 4,
@@ -1610,11 +1523,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Criminel expérimenté. Choisit ses cibles et se bat intelligemment — fuit si le rapport de force tourne.",
-    "armure": {
-      "valeur": 1,
-      "description": "Cuir tanné — réduit 1 point de dégâts physiques."
-    },
-    "emoji": "🗡️"
+    "emoji": "🗡️",
+    "armureId": "cuir_tanne"
   },
   {
     "id": "bandit_elite",
@@ -1624,7 +1534,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes",
     "pv": 34,
     "def": 15,
     "init": 5,
@@ -1672,11 +1581,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Ancien soldat, mercenaire ou noble déchu. Dirige sa bande avec un mélange de charisme et de brutalité. Peut être un contact, un rival ou un employeur selon le contexte.",
-    "armure": {
-      "valeur": 2,
-      "description": "Cotte de mailles légère — réduit 2 points de dégâts physiques."
-    },
-    "emoji": "🗡️"
+    "emoji": "🗡️",
+    "armureId": "cotte_de_mailles_legere"
   },
   {
     "id": "bandit_champion",
@@ -1686,7 +1592,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes",
     "pv": 55,
     "def": 16,
     "init": 6,
@@ -1746,11 +1651,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Le Fléau opère dans les angles morts des trois grandes factions humaines. Trop utile pour être arrêté (il transporte des informations pour qui paie), trop dangereux pour être ignoré. Son vrai nom est inconnu. Potentiellement un allié de circonstance.",
-    "armure": {
-      "valeur": 3,
-      "description": "Armure composite (cuir + plaques) — réduit 3 points de dégâts physiques."
-    },
-    "emoji": "🗡️"
+    "emoji": "🗡️",
+    "armureId": "armure_composite_cuir_plaques"
   },
   {
     "id": "garde_basique",
@@ -1760,7 +1662,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 14,
     "def": 13,
     "init": 1,
@@ -1790,11 +1691,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Garde de milice locale. Applique la loi sans zèle particulier. Se bat pour son salaire, pas par conviction.",
-    "armure": {
-      "valeur": 3,
-      "description": "Cotte de mailles standard — réduit 3 points de dégâts physiques."
-    },
-    "emoji": "🛡️"
+    "emoji": "🛡️",
+    "armureId": "cotte_de_mailles_standard"
   },
   {
     "id": "garde_veteran",
@@ -1804,7 +1702,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 26,
     "def": 15,
     "init": 2,
@@ -1843,10 +1740,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "10 ans de service minimum. Connaît son métier, respecte la chaîne de commandement. Peut être corrompu ou intègre selon la faction.",
-    "armure": {
-      "valeur": 4,
-      "description": "Demi-armure de plates — réduit 4 points de dégâts physiques."
-    },
     "emoji": "🛡️",
     "immunitesConditionnelles": [
       {
@@ -1855,7 +1748,8 @@ const BESTIAIRE = [
         ],
         "condition": "Seulement si 3 gardes vétérans ou plus sont adjacents."
       }
-    ]
+    ],
+    "armureId": "demi_armure_de_plates"
   },
   {
     "id": "garde_elite",
@@ -1865,7 +1759,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 40,
     "def": 17,
     "init": 3,
@@ -1908,10 +1801,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Commande une garnison entière. Présent dans les villes importantes des Royaumes Coalisés ou de l'Empire de Solvarn. Combat uniquement si nécessaire — il préfère la résolution diplomatique ou déléguer.",
-    "armure": {
-      "valeur": 6,
-      "description": "Armure de plates complète — réduit 6 points de dégâts physiques."
-    },
     "emoji": "🛡️",
     "capacitesActives": [
       {
@@ -1934,7 +1823,8 @@ const BESTIAIRE = [
           ]
         }
       }
-    ]
+    ],
+    "armureId": "armure_de_plates_complete"
   },
   {
     "id": "garde_champion",
@@ -1944,7 +1834,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 65,
     "def": 19,
     "init": 3,
@@ -2064,11 +1953,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Le Maréchal représente la loi absolue d'un royaume. Dans les Royaumes Coalisés, il répond directement au conseil des rois. Dans l'Empire de Solvarn, il est aussi prêtre d'Aethar. Combattre un Maréchal, c'est combattre une institution — les conséquences politiques durent des années.",
-    "armure": {
-      "valeur": 8,
-      "description": "Armure de plates de maître, bénie d'Aethar — réduit 8 points de dégâts physiques."
-    },
-    "emoji": "🛡️"
+    "emoji": "🛡️",
+    "armureId": "armure_de_plates_de_maitre_benie_d_aethar"
   },
   {
     "id": "garde_lancier_basique",
@@ -2078,7 +1964,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 14,
     "def": 12,
     "init": 1,
@@ -2086,10 +1971,6 @@ const BESTIAIRE = [
     "dangerosite": 1,
     "boss": false,
     "taille": "moyenne",
-    "armure": {
-      "valeur": 3,
-      "description": "Cotte de mailles standard — réduit 3 points de dégâts physiques."
-    },
     "attaques": [
       {
         "nom": "Lance",
@@ -2120,7 +2001,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Les gardes lanciers forment la première ligne défensive des villes. Leur lance maintient les assaillants à distance et désorganise les charges ennemies.",
-    "emoji": "🛡️🔱"
+    "emoji": "🛡️🔱",
+    "armureId": "cotte_de_mailles_standard"
   },
   {
     "id": "garde_lancier_veteran",
@@ -2130,7 +2012,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 24,
     "def": 14,
     "init": 2,
@@ -2138,10 +2019,6 @@ const BESTIAIRE = [
     "dangerosite": 2,
     "boss": false,
     "taille": "moyenne",
-    "armure": {
-      "valeur": 4,
-      "description": "Demi-armure de plates — réduit 4 points de dégâts physiques."
-    },
     "attaques": [
       {
         "nom": "Lance de guerre",
@@ -2177,7 +2054,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Le vétéran maîtrise la discipline de la ligne. Il ne recule jamais — il sait que la cohésion de la formation vaut plus que sa survie individuelle.",
-    "emoji": "🛡️🔱"
+    "emoji": "🛡️🔱",
+    "armureId": "demi_armure_de_plates"
   },
   {
     "id": "garde_lancier_elite",
@@ -2187,7 +2065,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 38,
     "def": 16,
     "init": 3,
@@ -2195,10 +2072,6 @@ const BESTIAIRE = [
     "dangerosite": 3,
     "boss": false,
     "taille": "moyenne",
-    "armure": {
-      "valeur": 6,
-      "description": "Armure de plates complète — réduit 6 points de dégâts physiques."
-    },
     "attaques": [
       {
         "nom": "Lance longue renforcée",
@@ -2238,7 +2111,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Les lanciers d'élite sont formés à percer les formations denses et à arrêter les créatures de grande taille. On les déploie face aux cavaleries et aux monstres.",
-    "emoji": "🛡️🔱"
+    "emoji": "🛡️🔱",
+    "armureId": "armure_de_plates_complete"
   },
   {
     "id": "garde_lancier_champion",
@@ -2248,7 +2122,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "pv": 60,
     "def": 18,
     "init": 3,
@@ -2256,10 +2129,6 @@ const BESTIAIRE = [
     "dangerosite": 4,
     "boss": true,
     "taille": "moyenne",
-    "armure": {
-      "valeur": 8,
-      "description": "Armure de plates de maître — réduit 8 points de dégâts physiques."
-    },
     "attaques": [
       {
         "nom": "Lance de primus (enchantée +1)",
@@ -2340,7 +2209,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Le Primus est le commandant de terrain absolu d'une légion. Il n'est jamais loin du premier rang — sa lance est une extension de sa volonté autant qu'une arme. Affronter un Primus en formation, c'est se battre contre toute une institution militaire.",
-    "emoji": "🛡️🔱"
+    "emoji": "🛡️🔱",
+    "armureId": "armure_de_plates_de_maitre"
   },
   {
     "id": "bandit_lancier_basique",
@@ -2350,7 +2220,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes",
     "pv": 10,
     "def": 10,
     "init": 3,
@@ -2358,7 +2227,6 @@ const BESTIAIRE = [
     "dangerosite": 1,
     "boss": false,
     "taille": "moyenne",
-    "armure": null,
     "attaques": [
       {
         "nom": "Pique improvisée",
@@ -2394,7 +2262,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes",
     "pv": 19,
     "def": 12,
     "init": 4,
@@ -2402,10 +2269,6 @@ const BESTIAIRE = [
     "dangerosite": 2,
     "boss": false,
     "taille": "moyenne",
-    "armure": {
-      "valeur": 1,
-      "description": "Cuir tanné et rembourrage — réduit 1 point de dégâts physiques."
-    },
     "attaques": [
       {
         "nom": "Lance de chasse",
@@ -2444,7 +2307,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Ancien chasseur ou déserteur de milice. Utilise la lance comme un outil de chasse autant que comme une arme. Préfère tendre des embuscades à combattre en ligne ouverte.",
-    "emoji": "🗡️🔱"
+    "emoji": "🗡️🔱",
+    "armureId": "cuir_tanne_et_rembourrage"
   },
   {
     "id": "bandit_lancier_elite",
@@ -2454,7 +2318,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes",
     "pv": 32,
     "def": 14,
     "init": 5,
@@ -2462,10 +2325,6 @@ const BESTIAIRE = [
     "dangerosite": 3,
     "boss": false,
     "taille": "moyenne",
-    "armure": {
-      "valeur": 3,
-      "description": "Cotte de mailles légère volée — réduit 3 points de dégâts physiques."
-    },
     "attaques": [
       {
         "nom": "Fauchard de bande",
@@ -2505,7 +2364,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Mercenaire reconverti en hors-la-loi. Commande un groupe de piquiers avec une discipline militaire que les autorités locales sous-estiment toujours.",
-    "emoji": "🗡️🔱"
+    "emoji": "🗡️🔱",
+    "armureId": "cotte_de_mailles_legere_volee"
   },
   {
     "id": "bandit_lancier_champion",
@@ -2515,7 +2375,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes",
     "pv": 50,
     "def": 15,
     "init": 6,
@@ -2523,10 +2382,6 @@ const BESTIAIRE = [
     "dangerosite": 4,
     "boss": true,
     "taille": "moyenne",
-    "armure": {
-      "valeur": 4,
-      "description": "Armure composite assemblée pièce à pièce — réduit 4 points de dégâts physiques."
-    },
     "attaques": [
       {
         "nom": "Hallebarde de guerre",
@@ -2573,14 +2428,14 @@ const BESTIAIRE = [
       }
     ],
     "lore": "La Pointe commande une compagnie de piquiers hors-la-loi avec une précision chirurgicale. Ancien officier disgracié, il a retourné sa formation militaire contre les institutions qui l'ont trahi. Potentiellement recruté comme mercenaire par les PJ si les circonstances s'y prêtent.",
-    "emoji": "🗡️🔱"
+    "emoji": "🗡️🔱",
+    "armureId": "armure_composite_assemblee_piece_a_piece"
   },
   {
     "id": "chevalier_inquisiteur_veteran",
     "nom": "Chevalier-Inquisiteur",
     "famille": "chevalier_inquisiteur",
     "tier": "veteran",
-    "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
     "faction": "Église de Solvarn — Sacerdoce Solaire",
     "race": [
       "humanoïdes"
@@ -2639,10 +2494,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Recrutés jeunes dans les provinces les plus dévotes, formés à traquer l'hérésie autant qu'à combattre. Depuis l'échec de Corvain Ashe au Pont-Rompu, l'ordre a durci sa doctrine : le doute est traité comme une faiblesse à extirper, chez l'ennemi comme chez soi.",
-    "armure": {
-      "valeur": 5,
-      "description": "Harnois bénis de l'Ordre — réduit 5 points de dégâts physiques."
-    },
     "emoji": "🔥⚔️",
     "immunitesConditionnelles": [
       {
@@ -2651,14 +2502,14 @@ const BESTIAIRE = [
         ],
         "condition": "Seulement si 3 Chevaliers-Inquisiteurs ou plus sont adjacents."
       }
-    ]
+    ],
+    "armureId": "harnois_benis_de_l_ordre"
   },
   {
     "id": "chevalier_inquisiteur_elite",
     "nom": "Inquisiteur-capitaine",
     "famille": "chevalier_inquisiteur",
     "tier": "elite",
-    "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
     "faction": "Église de Solvarn — Sacerdoce Solaire",
     "race": [
       "humanoïdes"
@@ -2700,10 +2551,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Dirige une cellule d'Inquisiteurs en campagne. Rapporte directement au Concile des Flammes. Considère toute négociation avec un suspect comme une compromission personnelle.",
-    "armure": {
-      "valeur": 7,
-      "description": "Harnois de capitaine, béni deux fois — réduit 7 points de dégâts physiques."
-    },
     "emoji": "🔥⚔️",
     "capacitesActives": [
       {
@@ -2730,14 +2577,14 @@ const BESTIAIRE = [
           ]
         }
       }
-    ]
+    ],
+    "armureId": "harnois_de_capitaine_beni_deux_fois"
   },
   {
     "id": "chevalier_inquisiteur_champion",
     "nom": "Grand Inquisiteur Bastian Vorn",
     "famille": "chevalier_inquisiteur",
     "tier": "champion",
-    "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
     "faction": "Église de Solvarn — Sacerdoce Solaire",
     "race": [
       "humanoïdes"
@@ -2779,10 +2626,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Membre du Concile des Flammes, envoyé personnellement traquer une hérésie jugée prioritaire. Sa légitimité vient directement du Flambeau Suprême — s'en prendre à lui, c'est s'en prendre à l'Église elle-même. Convaincu, sincèrement, d'agir pour le salut de ceux qu'il exécute.",
-    "armure": {
-      "valeur": 9,
-      "description": "Harnois du Concile, béni par le Flambeau Suprême en personne — réduit 9 points de dégâts physiques."
-    },
     "emoji": "🔥⚔️",
     "capacitesActives": [
       {
@@ -2833,14 +2676,14 @@ const BESTIAIRE = [
           ]
         }
       }
-    ]
+    ],
+    "armureId": "harnois_du_concile_beni_par_le_flambeau_supreme_en_personne"
   },
   {
     "id": "flambeau_basique",
     "nom": "Flambeau (clerc de paroisse)",
     "famille": "flambeau",
     "tier": "basique",
-    "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
     "faction": "Église de Solvarn — Sacerdoce Solaire",
     "race": [
       "humanoïdes"
@@ -2894,18 +2737,14 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Tient les paroisses et accompagne parfois les Chevaliers-Inquisiteurs en soutien. Pas un combattant — sa présence est surtout un signal : là où il y a un Flambeau, l'Inquisition n'est jamais loin.",
-    "armure": {
-      "valeur": 1,
-      "description": "Robe de clerc — réduit 1 point de dégâts physiques."
-    },
-    "emoji": "🕯️"
+    "emoji": "🕯️",
+    "armureId": "robe_de_clerc"
   },
   {
     "id": "flambeau_veteran",
     "nom": "Flambeau zélé",
     "famille": "flambeau",
     "tier": "veteran",
-    "categorie": "Bestiaire général — Humanoïdes / Église de Solvarn",
     "faction": "Église de Solvarn — Sacerdoce Solaire",
     "race": [
       "humanoïdes"
@@ -2964,18 +2803,14 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Envoyé en accompagnement de cellules d'Inquisiteurs plus offensives. Sa foi est sincère — il se voit comme un soin apporté à des âmes égarées, pas comme un simple soutien de combat.",
-    "armure": {
-      "valeur": 2,
-      "description": "Robe renforcée de plaques légères — réduit 2 points de dégâts physiques."
-    },
-    "emoji": "🕯️"
+    "emoji": "🕯️",
+    "armureId": "robe_renforcee_de_plaques_legeres"
   },
   {
     "id": "ordre_pont_veteran",
     "nom": "Chevalier de l'Ordre du Pont",
     "famille": "ordre_pont",
     "tier": "veteran",
-    "categorie": "Bestiaire général — Humanoïdes / Valdorne (Ordre du Pont)",
     "faction": "Valdorne — Ordre du Pont",
     "race": [
       "humanoïdes"
@@ -3018,18 +2853,14 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Fondé en mémoire du sacrifice d'Alaric de Valdorne à Pont-Rompu. Vœu : couvrir la retraite des faibles, quel qu'en soit le prix personnel. Peu nombreux, mais leur seule réputation impressionne autant l'ennemi que l'allié.",
-    "armure": {
-      "valeur": 5,
-      "description": "Harnois de l'Ordre, gravé du pont brisé — réduit 5 points de dégâts physiques."
-    },
-    "emoji": "🛡️⚜️"
+    "emoji": "🛡️⚜️",
+    "armureId": "harnois_de_l_ordre_grave_du_pont_brise"
   },
   {
     "id": "ordre_pont_champion",
     "nom": "Tristan d'Aurvel — Chevalier de l'Ordre du Pont",
     "famille": "ordre_pont",
     "tier": "champion",
-    "categorie": "Bestiaire général — Humanoïdes / Valdorne (Ordre du Pont)",
     "faction": "Valdorne — Ordre du Pont",
     "race": [
       "humanoïdes"
@@ -3087,17 +2918,13 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Voir la fiche PNJ Tristan d'Aurvel (PNJ_CLES, id tristan-daurvel) pour le contexte narratif complet. Ce statblock sert aux scènes où il combat réellement — allié en renfort, ou adversaire de duel si un scénario l'exige.",
-    "armure": {
-      "valeur": 7,
-      "description": "Harnois de l'Ordre du Pont, porté depuis des années — réduit 7 points de dégâts physiques."
-    },
-    "emoji": "⚜️🛡️"
+    "emoji": "⚜️🛡️",
+    "armureId": "harnois_de_l_ordre_du_pont_porte_depuis_des_annees"
   },
   {
     "id": "maitre_betes_gobelin",
     "nom": "Maître des bêtes gobelin",
     "famille": "maitre_betes",
-    "categorie": "Bestiaire général — Humanoïdes / Factions sauvages",
     "faction": null,
     "race": [
       "humanoïdes"
@@ -3129,17 +2956,13 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Chef de meute improvisé, souvent accompagné de loups ou de gros gibier dressé. Son autorité tient davantage à son lien avec les bêtes qu'à sa force brute — beaucoup de gobelins le suivent précisément parce que les loups, eux, ne le contestent jamais.",
-    "armure": {
-      "valeur": 1,
-      "description": "Peaux et cuirs rapiécés — réduit 1 point de dégâts physiques."
-    },
-    "emoji": "🐺🪓"
+    "emoji": "🐺🪓",
+    "armureId": "peaux_et_cuirs_rapieces"
   },
   {
     "id": "maitre_betes_orc",
     "nom": "Maître des bêtes orc",
     "famille": "maitre_betes",
-    "categorie": "Bestiaire général — Humanoïdes / Factions sauvages",
     "faction": null,
     "race": [
       "humanoïdes"
@@ -3171,17 +2994,13 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Impose son autorité aux bêtes par la peur autant que par le lien — un Maître des bêtes orc dresse ses créatures à coups de hache plutôt qu'à la patience. Efficace au combat, mais ses bêtes désertent souvent dès qu'il tombe.",
-    "armure": {
-      "valeur": 3,
-      "description": "Cuirasse de peaux cloutées — réduit 3 points de dégâts physiques."
-    },
-    "emoji": "🐗🪓"
+    "emoji": "🐗🪓",
+    "armureId": "cuirasse_de_peaux_cloutees"
   },
   {
     "id": "maitre_betes_humain",
     "nom": "Maître des bêtes",
     "famille": "maitre_betes",
-    "categorie": "Bestiaire général — Humanoïdes / Factions humaines",
     "faction": null,
     "race": [
       "humanoïdes"
@@ -3217,18 +3036,14 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Rôdeur solitaire ou mercenaire, il ne commande pas ses bêtes — il chasse avec elles. Le lien est réciproque : il protège autant qu'il dirige, ce qui rend ses compagnons redoutablement loyaux, même face à la mort.",
-    "armure": {
-      "valeur": 4,
-      "description": "Cuir renforcé de chasse — réduit 4 points de dégâts physiques."
-    },
-    "emoji": "🐻🪓"
+    "emoji": "🐻🪓",
+    "armureId": "cuir_renforce_de_chasse"
   },
   {
     "id": "squelette_corrompu_basique",
     "nom": "Squelette corrompu",
     "famille": "squelette_corrompu",
     "tier": "basique",
-    "categorie": "Bestiaire général — Morts-vivants",
     "faction": "La Gangrène du Chaos",
     "race": [
       "mort-vivant",
@@ -3260,7 +3075,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Ossements de champs de bataille oubliés, relevés lorsque la Sève corrompue par le Chaos s'infiltre dans la terre gorgée de sang. Ils frappent avec la mémoire mécanique d'un dernier combat, sans plus de volonté qu'un réflexe.",
-    "armure": null,
     "emoji": "💀",
     "immunites": [
       "empoisonnee",
@@ -3272,7 +3086,6 @@ const BESTIAIRE = [
     "nom": "Squelette-lame",
     "famille": "squelette_corrompu",
     "tier": "veteran",
-    "categorie": "Bestiaire général — Morts-vivants",
     "faction": "La Gangrène du Chaos",
     "race": [
       "mort-vivant",
@@ -3305,7 +3118,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Une conscience martiale résiduelle habite encore ces ossements — le dernier réflexe d'un soldat qui a passé sa vie à parer et frapper. Il garde encore la posture d'une garde qu'il ne quittera jamais.",
-    "armure": null,
     "emoji": "💀",
     "immunites": [
       "empoisonnee",
@@ -3317,7 +3129,6 @@ const BESTIAIRE = [
     "nom": "Ossuaire ambulant",
     "famille": "squelette_corrompu",
     "tier": "elite",
-    "categorie": "Bestiaire général — Morts-vivants",
     "faction": "La Gangrène du Chaos",
     "race": [
       "mort-vivant",
@@ -3359,7 +3170,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Ce ne sont plus des ossements isolés mais un amas grouillant de squelettes fusionnés par la corruption, une masse informe qui se déplace comme un seul organisme aux dizaines de membres.",
-    "armure": null,
     "emoji": "💀",
     "immunites": [
       "empoisonnee",
@@ -3372,7 +3182,6 @@ const BESTIAIRE = [
     "nom": "Le Connétable Cendre",
     "famille": "squelette_corrompu",
     "tier": "champion",
-    "categorie": "Bestiaire général — Morts-vivants",
     "faction": "La Gangrène du Chaos",
     "race": [
       "mort-vivant",
@@ -3438,23 +3247,19 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Autrefois connétable d'une garnison oubliée avant la Fracture, il a juré de tenir sa position jusqu'à la mort — un serment que la Gangrène a pris au pied de la lettre. Il commande encore ses troupes d'ossements avec la même discipline glaciale.",
-    "armure": {
-      "valeur": 2,
-      "description": "Fragments d'armure de plaques fusionnés à l'os — réduit 2 points de dégâts physiques."
-    },
     "emoji": "💀",
     "immunites": [
       "empoisonnee",
       "effrayee",
       "charmee"
-    ]
+    ],
+    "armureId": "fragments_d_armure_de_plaques_fusionnes_a_l_os"
   },
   {
     "id": "charogne_du_chaos",
     "nom": "Charogne du Chaos",
     "famille": "charogne_du_chaos",
     "tier": "basique",
-    "categorie": "Bestiaire général — Morts-vivants",
     "faction": "La Gangrène du Chaos",
     "race": [
       "mort-vivant",
@@ -3486,7 +3291,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Chair et Sève corrompue au même rythme : ces cadavres relevés par la Gangrène errent lentement, poussés par une faim qui ne s'éteint jamais vraiment.",
-    "armure": null,
     "emoji": "🧟",
     "immunites": [
       "effrayee"
@@ -3497,7 +3301,6 @@ const BESTIAIRE = [
     "nom": "Charogne enragée",
     "famille": "charogne_du_chaos",
     "tier": "veteran",
-    "categorie": "Bestiaire général — Morts-vivants",
     "faction": "La Gangrène du Chaos",
     "race": [
       "mort-vivant",
@@ -3534,7 +3337,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "La corruption progresse plus vite chez certaines charognes, qui se déchirent presque elles-mêmes à force de frénésie. Leur odeur seule suffit à faire fuir le gibier sur des kilomètres.",
-    "armure": null,
     "emoji": "🧟",
     "immunites": [
       "effrayee"
@@ -3545,7 +3347,6 @@ const BESTIAIRE = [
     "nom": "Colosse charognard",
     "famille": "charogne_du_chaos",
     "tier": "elite",
-    "categorie": "Bestiaire général — Morts-vivants",
     "faction": "La Gangrène du Chaos",
     "race": [
       "mort-vivant",
@@ -3586,7 +3387,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Plusieurs cadavres fusionnés en une seule masse difforme par la corruption la plus dense — ce que devient une charogne qui n'a jamais cessé de se nourrir.",
-    "armure": null,
     "emoji": "🧟",
     "immunites": [
       "effrayee"
@@ -3595,7 +3395,6 @@ const BESTIAIRE = [
   {
     "id": "goule_des_cendres",
     "nom": "Goule des Cendres",
-    "categorie": "Bestiaire général — Morts-vivants",
     "faction": "La Gangrène du Chaos",
     "race": [
       "mort-vivant",
@@ -3634,13 +3433,11 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Plus rusées que les charognes, les goules chassent en petits groupes autour des zones de corruption, se disputant les dépouilles fraîches avec une intelligence rampante et cruelle.",
-    "armure": null,
     "emoji": "👹"
   },
   {
     "id": "faucheur_de_brume",
     "nom": "Faucheur de Brume",
-    "categorie": "Bestiaire général — Morts-vivants",
     "faction": "La Gangrène du Chaos",
     "race": [
       "mort-vivant",
@@ -3697,13 +3494,11 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Il glisse sans bruit dans les brumes des zones corrompues, faux à la main, moissonnant la vitalité de tout ce qui approche. Certains disent que ce sont les Spectres de ruine les plus anciens, achevés par le temps.",
-    "armure": null,
     "emoji": "👻"
   },
   {
     "id": "coeur_pourri",
     "nom": "Cœur-Pourri",
-    "categorie": "Bestiaire général — Morts-vivants",
     "faction": "La Gangrène du Chaos",
     "race": [
       "monstres",
@@ -3747,20 +3542,16 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Là où une fosse commune a nourri un arbre déjà touché par le Chaos, quelque chose de pire qu'une Racine éveillée a pu germer : un tronc hérissé d'os, dont les racines se nourrissent autant de sève que de chair morte. Ni tout à fait plante, ni tout à fait mort-vivant — un pont vivant entre les deux visages de la Gangrène.",
-    "armure": {
-      "valeur": 3,
-      "description": "Écorce et os fusionnés — réduit 3 points de dégâts physiques. Pas d'effet contre le feu."
-    },
     "emoji": "🌳",
     "immunites": [
       "renversee",
       "repoussee"
-    ]
+    ],
+    "armureId": "ecorce_et_os_fusionnes"
   },
   {
     "id": "vestige_hallucine",
     "nom": "Vestige Halluciné",
-    "categorie": "Bestiaire général — Morts-vivants",
     "faction": "La Gangrène du Chaos",
     "race": [
       "humanoïdes",
@@ -3830,7 +3621,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Ce qui reste d'un lanceur de sorts — Druide ou Nécromancien, on ne sait plus — dont l'esprit a cédé sous la corruption sans que le corps ne meure vraiment. Il marmonne des fragments de sorts oubliés, et parfois l'un d'eux fonctionne encore.",
-    "armure": null,
     "emoji": "🔮",
     "immunites": [
       "charmee",
@@ -3841,7 +3631,6 @@ const BESTIAIRE = [
   {
     "id": "seigneur_gangrene",
     "nom": "Le Seigneur de la Gangrène",
-    "categorie": "Bestiaire général — Morts-vivants",
     "faction": "La Gangrène du Chaos",
     "race": [
       "humanoïdes",
@@ -3934,16 +3723,13 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Un héros ou un seigneur de guerre déchu, corrompu jusqu'à devenir le cœur battant — ou plutôt, le cœur pourrissant — de toute une zone de Gangrène. Le vaincre ne suffit pas toujours à purifier les terres qu'il a corrompues ; il n'en est que le symptôme le plus visible.",
-    "armure": {
-      "valeur": 3,
-      "description": "Armure noircie fusionnée à la chair corrompue — réduit 3 points de dégâts physiques."
-    },
     "emoji": "☠️",
     "immunites": [
       "effrayee",
       "charmee"
     ],
-    "tier": "grand_hote"
+    "tier": "grand_hote",
+    "armureId": "armure_noircie_fusionnee_a_la_chair_corrompue"
   },
   {
     "id": "cupide_recrue",
@@ -3953,7 +3739,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes",
     "pv": 10,
     "def": 11,
     "init": 3,
@@ -3986,7 +3771,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Recrue récente, appâtée par la promesse d'un gain facile. Rien ne la distingue encore d'un bandit ou d'un pirate ordinaire — la corruption qui l'anime n'est pas encore assez ancrée pour se manifester. Selon le contexte, rebaptiser 'Bandit' (route) ou 'Pirate' (mer), sans changer les statistiques.",
-    "armure": null,
     "emoji": "🗡️"
   },
   {
@@ -3997,7 +3781,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes",
     "pv": 34,
     "def": 14,
     "init": 5,
@@ -4035,11 +3818,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Corrompu depuis plus longtemps que ses hommes, il dirige sa bande avec un mélange de charisme et d'appétit insatiable. Selon le contexte, rebaptiser 'Chef de bande' (route) ou 'Capitaine corsaire' (mer), sans changer les statistiques.",
-    "armure": {
-      "valeur": 1,
-      "description": "Cuir renforcé cloué d'or — réduit 1 point de dégâts physiques."
-    },
-    "emoji": "🗡️"
+    "emoji": "🗡️",
+    "armureId": "cuir_renforce_cloue_d_or"
   },
   {
     "id": "cupide_grand_hote",
@@ -4049,7 +3829,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Bestiaire général — Humanoïdes",
     "pv": 75,
     "def": 18,
     "init": 6,
@@ -4081,11 +3860,8 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Ici, la corruption ne se cache plus. Un hôte de longue date, dévoré par ce qu'il croyait maîtriser — richesse, pouvoir, ou toute autre obsession qui l'a consumé. Boss de campagne, révélation tardive : c'est la première fois que les PJ voient la vraie nature de la menace qu'ils traquaient depuis le début. Selon le contexte, rebaptiser 'Seigneur hors-la-loi' (route) ou 'Amiral corsaire' (mer), sans changer les statistiques.",
-    "armure": {
-      "valeur": 3,
-      "description": "Cuirasse sertie d'or et de gemmes volées — réduit 3 points de dégâts physiques."
-    },
-    "emoji": "👑"
+    "emoji": "👑",
+    "armureId": "cuirasse_sertie_d_or_et_de_gemmes_volees"
   },
   {
     "id": "anselme_vaudrel",
@@ -4095,7 +3871,6 @@ const BESTIAIRE = [
     "race": [
       "humanoïdes"
     ],
-    "categorie": "Mission 2",
     "pv": 34,
     "def": 14,
     "init": 5,
@@ -4127,7 +3902,6 @@ const BESTIAIRE = [
       }
     ],
     "lore": "Ancien serviteur/jardinier du domaine familial des Orfeuil, abandonné sur place quand la famille a quitté les lieux. Sa rancune contre les Orfeuil ne l'a jamais quitté — et depuis peu, sans qu'il comprenne pourquoi, elle s'accompagne de tics étranges annonçant une corruption naissante (aspect cristallisé de Khoreth, cf. chambre cultiste Mission 1). Boss unique de la Mission 2 « Le Poids de l'Or » — statistiques identiques au Meneur avide standard, ne pas réutiliser ce PNJ nommé ailleurs (contrairement aux tiers génériques recrue/meneur/grand_hote de la famille cupide, prévus pour être rebaptisés librement).",
-    "armure": null,
     "emoji": "🥀"
   }
 ];
