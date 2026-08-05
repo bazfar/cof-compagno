@@ -6,8 +6,14 @@ const SOCLE_DANGEROSITE = {
   1: { pv: 15, def: 11, atk: 3, init: 2, dpt: 4 },
   2: { pv: 26, def: 13, atk: 5, init: 3, dpt: 7 },
   3: { pv: 40, def: 15, atk: 7, init: 4, dpt: 11 },
-  4: { pv: 62, def: 17, atk: 9, init: 5, dpt: 17 },
-  5: { pv: 90, def: 19, atk: 11, init: 6, dpt: 25 },
+  // ATK relevée aux hauts paliers (+3 par cran au lieu de +2 au-delà de la
+  // dangerosité 3) : les CA de personnages progressent plus vite que
+  // l'échelle de monstres, mesuré sur la compagnie niveau 6 (CA 11 à 18) —
+  // le Prêtre à CA 18 n'était touché qu'une fois sur deux par un Soldat
+  // dangerosité 3. Recalibrage du socle uniquement : ne se répercute pas
+  // sur les monstres existants (passera par le rapport d'écarts).
+  4: { pv: 62, def: 17, atk: 10, init: 5, dpt: 17 },
+  5: { pv: 90, def: 19, atk: 13, init: 6, dpt: 25 },
 };
 
 // Le rôle est un écart au socle, jamais une échelle parallèle : un monstre
