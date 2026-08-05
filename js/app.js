@@ -126,6 +126,11 @@ const App = (() => {
   let overlayJetTimer = null;
   let overlayJetRevealTimer = null;
   let overlayJetDuoTimer = null; // phase "2 dés visibles" avant fusion, cf. afficherOverlayJet (avantage/désavantage)
+  let overlayJetRevealTimerP2 = null; // équivalent overlayJetRevealTimer, pour la boîte B (cf. groupeJetId)
+  // groupeJetId actuellement ancré sur la boîte A, tant qu'elle reste
+  // affichée — un second jet du même groupe rejoint la boîte B au lieu de
+  // remplacer la boîte A (cf. afficherOverlayJet).
+  let paireJetGroupeActif = null;
   let _sonsDe = null; // instances Audio réutilisées (une par fichier), cf. SONS_DE
   // Même principe que SONS_ECHEC_CRITIQUE, pour le bruit de dé qui roule joué
   // à chaque jet — dossier assets/sounds/de/.
@@ -192,11 +197,16 @@ const App = (() => {
     return m ? parseInt(m[1], 10) : 6;
   }
 
+  let toastTimer = null;
   function toast(msg) {
     const t = document.getElementById("toast");
     t.textContent = msg;
     t.classList.add("visible");
-    setTimeout(() => t.classList.remove("visible"), 2200);
+    if (toastTimer) clearTimeout(toastTimer);
+    // 4000ms (pas 2200) : assez long pour lire un résultat de jet
+    // ("Touché ! (DEF 14)") sans qu'il disparaisse avant l'overlay de dé
+    // associé (5000ms pour un jet simple, cf. afficherOverlayJet).
+    toastTimer = setTimeout(() => { t.classList.remove("visible"); toastTimer = null; }, 4000);
   }
 
   /* ---------- Persistance ---------- */
@@ -7596,6 +7606,11 @@ const App = (() => {
       mode: opts.mode || null, d1: typeof opts.d1 === "number" ? opts.d1 : null, d2: typeof opts.d2 === "number" ? opts.d2 : null,
       estMonstre: !!opts.estMonstre,
       skinDe: _skinDeActuel(),
+      // groupeJetId (cf. Capacites.lancer, sauvegardes réactives) : deux jets
+      // du même cast (sauvegarde puis dégâts) partagent cet id pour que
+      // l'overlay les affiche côte à côte plutôt que le second n'écrase le
+      // premier, cf. afficherOverlayJet.
+      groupeJetId: opts.groupeJetId || null,
     }, 40);
     rendreHisto();
   }
@@ -7733,18 +7748,48 @@ const App = (() => {
     const overlay = document.getElementById("overlay-jet");
     const d20 = document.getElementById("overlay-jet-d20");
     if (!overlay || !d20 || !entree) return;
-    const skinImg = document.getElementById("overlay-jet-d20-img");
-    if (skinImg) skinImg.src = _skinDeImg(entree.skinDe);
 
     const estAuteur = !!(entree.joueurId && entree.joueurId === joueurId);
     const masque = !!entree.cache && role !== "mj" && !estAuteur;
+
+    // Paire (sauvegarde réactive + dégâts, cf. groupeJetId posé par
+    // Capacites.lancer, js/capacites.js) : le second jet du même cast
+    // rejoint la boîte B À CÔTÉ de la boîte A déjà affichée, au lieu de
+    // l'écraser — pour que tout le monde voie le jet de sauvegarde ET le
+    // jet de dégâts en même temps. Seulement si la boîte A affiche encore
+    // CE groupe (sinon, fenêtre expirée ou jet indépendant : traité comme
+    // un jet normal plus bas, qui repart de zéro et masque la boîte B).
+    if (!masque && entree.groupeJetId && entree.groupeJetId === paireJetGroupeActif
+        && overlay.classList.contains("visible")) {
+      _afficherBoiteJetP2(entree);
+      // Reprend la fenêtre d'affichage à partir de CE second jet plutôt que
+      // de laisser le minuteur déjà posé par la boîte A l'interrompre en
+      // plein roulement/lecture.
+      if (overlayJetTimer) clearTimeout(overlayJetTimer);
+      overlayJetTimer = setTimeout(() => {
+        overlay.classList.remove("visible");
+        overlayJetTimer = null;
+        paireJetGroupeActif = null;
+      }, 5000);
+      return;
+    }
+
+    // Jet indépendant, ou premier jet d'une nouvelle paire : repart de
+    // zéro — masque toute boîte B résiduelle d'un groupe précédent.
+    paireJetGroupeActif = (!masque && entree.groupeJetId) ? entree.groupeJetId : null;
+    _cacherBoiteJetP2();
+
+    const boiteA = document.getElementById("overlay-jet-boite-a");
+    const skinImg = document.getElementById("overlay-jet-d20-img");
+    if (skinImg) skinImg.src = _skinDeImg(entree.skinDe);
 
     document.getElementById("overlay-jet-auteur").textContent = masque ? "" : (entree.auteur || "");
     document.getElementById("overlay-jet-label").textContent = masque ? "" : (entree.label || "");
     document.getElementById("overlay-jet-detail").textContent = masque ? "" : (entree.detail || "");
     document.getElementById("overlay-jet-total").textContent = "";
     document.getElementById("overlay-jet-badge").textContent = "";
-    overlay.classList.remove("cache", "crit", "echec");
+    overlay.classList.remove("cache");
+    if (boiteA) boiteA.classList.remove("crit", "echec");
     overlay.classList.toggle("masque", masque);
     overlay.classList.add("visible");
 
@@ -7789,8 +7834,8 @@ const App = (() => {
         document.getElementById("overlay-jet-total").textContent = entree.total;
         document.getElementById("overlay-jet-badge").textContent =
           entree.crit ? "CRITIQUE ! 🎉" : entree.echec ? "Échec critique 💀" : "";
-        if (entree.crit) { overlay.classList.add("crit"); _jouerSonSucces(entree.sonSucces); }
-        else if (entree.echec) { overlay.classList.add("echec"); _jouerSonEchec(entree.sonEchec); }
+        if (entree.crit) { if (boiteA) boiteA.classList.add("crit"); _jouerSonSucces(entree.sonSucces); }
+        else if (entree.echec) { if (boiteA) boiteA.classList.add("echec"); _jouerSonEchec(entree.sonEchec); }
         // Durée d'affichage du total final : 5s pour un jet normal, 2s pour
         // un duo (cf. DUREE_DUO_MS ci-dessous) — la lecture des 2 dés a déjà
         // pris son temps, pas besoin de laisser le total affiché aussi
@@ -7817,6 +7862,48 @@ const App = (() => {
         finPhaseRoulement();
       }
     }, 620);
+  }
+
+  // Boîte B de la paire sauvegarde+dégâts (cf. groupeJetId, afficherOverlayJet
+  // ci-dessus) : jamais de duo avantage/désavantage ici (un jet de dégâts n'a
+  // pas ce mode) — juste un roulement puis révélation, indépendant de la
+  // boîte A pour ne jamais couper sa propre lecture.
+  function _afficherBoiteJetP2(entree) {
+    const boite = document.getElementById("overlay-jet-boite-p2");
+    const d20 = document.getElementById("overlay-jet-d20-p2");
+    if (!boite || !d20) return;
+    const skinImg = document.getElementById("overlay-jet-d20-img-p2");
+    if (skinImg) skinImg.src = _skinDeImg(entree.skinDe);
+
+    document.getElementById("overlay-jet-auteur-p2").textContent = entree.auteur || "";
+    document.getElementById("overlay-jet-label-p2").textContent = entree.label || "";
+    document.getElementById("overlay-jet-detail-p2").textContent = entree.detail || "";
+    document.getElementById("overlay-jet-total-p2").textContent = "";
+    document.getElementById("overlay-jet-badge-p2").textContent = "";
+    boite.classList.remove("crit", "echec");
+    boite.classList.add("visible");
+
+    if (overlayJetRevealTimerP2) clearTimeout(overlayJetRevealTimerP2);
+    d20.classList.remove("en-cours");
+    void d20.offsetWidth;
+    d20.classList.add("en-cours");
+    _jouerSonDe(entree.sonDe);
+
+    overlayJetRevealTimerP2 = setTimeout(() => {
+      d20.classList.remove("en-cours");
+      overlayJetRevealTimerP2 = null;
+      document.getElementById("overlay-jet-total-p2").textContent = entree.total;
+      document.getElementById("overlay-jet-badge-p2").textContent =
+        entree.crit ? "CRITIQUE ! 🎉" : entree.echec ? "Échec critique 💀" : "";
+      if (entree.crit) { boite.classList.add("crit"); _jouerSonSucces(entree.sonSucces); }
+      else if (entree.echec) { boite.classList.add("echec"); _jouerSonEchec(entree.sonEchec); }
+    }, 620);
+  }
+
+  function _cacherBoiteJetP2() {
+    const boite = document.getElementById("overlay-jet-boite-p2");
+    if (boite) boite.classList.remove("visible", "crit", "echec");
+    if (overlayJetRevealTimerP2) { clearTimeout(overlayJetRevealTimerP2); overlayJetRevealTimerP2 = null; }
   }
 
   // Appelé à chaque synchro de l'historique partagé (voir subscribe plus

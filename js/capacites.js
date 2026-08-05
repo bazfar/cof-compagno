@@ -260,7 +260,7 @@ const Capacites = (() => {
   // dd, modCible, messages }. modCible === null signale un modificateur
   // introuvable : l'appelant ne doit alors PAS gater d'effet, le DD est affiché
   // et la table tranche (même politique que defCible === null côté attaque).
-  function _resoudreSauvegardeReactive({ perso, persos, cible, mecanique, nomSauvegarde, libelle, source }) {
+  function _resoudreSauvegardeReactive({ perso, persos, cible, mecanique, nomSauvegarde, libelle, source, groupeJetId }) {
     const messages = [];
     const libelleSauv = (typeof Sauvegardes !== "undefined" && Sauvegardes.LIBELLES[nomSauvegarde]) || nomSauvegarde;
     // "moitie" (cf. lancer(), branche réactive) : une réussite n'annule pas
@@ -304,7 +304,7 @@ const Capacites = (() => {
     let reussite = reussiteAuto || (!echecCritique && total >= dd);
 
     App.ajouterHisto(`${libelle} — Sauvegarde de ${cible.nom} (${libelleSauv})`, total, reussiteAuto, echecCritique,
-      `d20[${d20}] ${modCible >= 0 ? "+" : ""}${modCible} vs DD ${dd}`);
+      `d20[${d20}] ${modCible >= 0 ? "+" : ""}${modCible} vs DD ${dd}`, { groupeJetId });
 
     // Résistance légendaire : APRÈS le jet, y compris sur un 1 naturel — c'est
     // précisément le cas où elle sauve la mise du boss.
@@ -1016,7 +1016,7 @@ const Capacites = (() => {
   // texte destiné au joueur (toast) — ne journalise PAS lui-même dans
   // l'historique partagé pour les effets sans jet de dé (etat/bonus/special).
   function resoudreEffet(effet, ctx) {
-    const { perso, rang, voie, cible, libelle, persos, critique, multiplicateurDegats } = ctx;
+    const { perso, rang, voie, cible, libelle, persos, critique, multiplicateurDegats, groupeJetId } = ctx;
     if (effet.type === "degats") {
       // critique (cf. liaison attaque->dégâts, lancer()/resoudreDegatsEnAttente)
       // double les termes de dés de la formule, pas les modificateurs fixes.
@@ -1110,7 +1110,7 @@ const Capacites = (() => {
         ? Math.floor(totalBrutSauv * multiplicateurDegats) : totalBrutSauv;
       const detail = (typeof multiplicateurDegats === "number" && multiplicateurDegats !== 1)
         ? `${detailBrutSauv} → ${total} (moitié, sauvegarde réussie)` : detailBrutSauv;
-      App.ajouterHisto(`${libelle} — Dégâts`, total, false, false, detail);
+      App.ajouterHisto(`${libelle} — Dégâts`, total, false, false, detail, { groupeJetId });
       // Chasseur — Voie de la grande chasse, rang 5 "Trophée ultime" :
       // ignore la moitié de la RD (armure) de la cible pour CETTE attaque —
       // calcul dédié (PAS Carte.appliquerDegatsCombat/appliquerDegatsPersoLocal,
@@ -1473,6 +1473,12 @@ const Capacites = (() => {
     // chemins avant même d'écrire quoi que ce soit sur la fiche.
     const messages = [];
     let resolutionDegats = null;
+    // true dès que la branche réactive (cf. plus bas) a déjà résolu et
+    // appliqué elle-même les effets différés (degats/etat) — distinct de
+    // resolutionDegats (mis à null ensuite pour ne PAS afficher le bouton
+    // "Lancer les dégâts", déjà inutile), pour que la boucle générique
+    // plus bas ne les réapplique pas une seconde fois.
+    let effetsReactifsDejaResolus = false;
 
     // Enchanteur — Voie de l'enchantement, rang 4 "Proficience" (passive) :
     // le coût PP du sort 'illusion' (rang 1, même voie — base ou évolué par
@@ -2167,8 +2173,13 @@ const Capacites = (() => {
       // Le critique est déplacé sur le 1 naturel de la CIBLE (compensation
       // validée le 04/08/2026), pour conserver un taux de 5 % de dégâts
       // doublés sur ces sorts.
+      // groupeJetId : tag partagé entre le jet de sauvegarde ci-dessous et le
+      // jet de dégâts/effet qui le suit immédiatement (cf. plus bas) — permet
+      // à l'overlay de dés (js/app.js, afficherOverlayJet) d'afficher les
+      // deux jets côte à côte plutôt que le second n'écrase le premier.
+      const groupeJetId = `${persoId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const resSauv = _resoudreSauvegardeReactive({
-        perso, persos, cible, mecanique, nomSauvegarde, libelle, source,
+        perso, persos, cible, mecanique, nomSauvegarde, libelle, source, groupeJetId,
       });
       messages.push(...resSauv.messages);
       if (resSauv.modCible !== null) {
@@ -2176,10 +2187,7 @@ const Capacites = (() => {
         // autres sorts de zone à dégâts, cf. data/donnees.js) : une
         // sauvegarde réussie n'annule PAS les dégâts, elle les divise par
         // deux — contrairement au reste du pipeline (touche === false =
-        // aucun dégât). `touche` reste donc vrai dans les deux cas pour
-        // que resoudreDegatsEnAttente() s'exécute ; seul le multiplicateur
-        // change (0.5 réussite / 1 échec, doublé sur 1 naturel comme
-        // d'habitude via `critique`).
+        // aucun dégât). `touche` reste donc vrai dans les deux cas.
         const estMoitie = mecanique.jetOppose.modeSauvegarde === "moitie";
         resolutionDegats = {
           touche: estMoitie ? true : !resSauv.reussite,
@@ -2190,6 +2198,29 @@ const Capacites = (() => {
           multiplicateurDegats: (estMoitie && resSauv.reussite) ? 0.5 : 1,
           persoId, source, mecanique, cible, choixEffet,
         };
+        // Résolution IMMÉDIATE des effets différés (degats/etat) : contrairement
+        // à l'ancien pipeline vs DEF (où une DEF cible inconnue pouvait laisser
+        // `touche` incertain, d'où le bouton "Lancer les dégâts" pour un second
+        // clic explicite), la branche réactive connaît déjà `touche` de façon
+        // définitive dès que modCible !== null — plus besoin d'attendre un
+        // second clic. Tagué avec le même groupeJetId que la sauvegarde
+        // ci-dessus, pour l'overlay à deux dés côte à côte.
+        if (resolutionDegats.touche !== false) {
+          const aEffetsDifferes = (mecanique.effets || []).some((e) => TYPES_EFFETS_DIFFERES.includes(e.type) || e.differe);
+          if (aEffetsDifferes) {
+            (mecanique.effets || []).forEach((effet) => {
+              if (!TYPES_EFFETS_DIFFERES.includes(effet.type) && !effet.differe) return;
+              const effetResolu = (effet.cible === "choix" && choixEffet) ? Object.assign({}, effet, { cible: choixEffet }) : effet;
+              const msg = resoudreEffet(effetResolu, {
+                perso, rang: source.rang, voie: source.voie, cible, libelle, persos,
+                critique: resolutionDegats.critique, multiplicateurDegats: resolutionDegats.multiplicateurDegats, groupeJetId,
+              });
+              if (msg) messages.push(msg);
+            });
+            effetsReactifsDejaResolus = true;
+            resolutionDegats = null;
+          }
+        }
       }
     } else if (mecanique.jetOppose) {
       const ca = mecanique.jetOppose.caracAttaquant;
@@ -2323,8 +2354,12 @@ const Capacites = (() => {
       // resolutionDegats, un sort à sauvegarde (defMentale/SAUVEGARDES)
       // appliquait ses dégâts ICI en plus de leur ré-application par
       // resoudreDegatsEnAttente() — double comptage découvert en testant
-      // Drain d'âme.
-      if (resolutionDegats && (TYPES_EFFETS_DIFFERES.includes(effet.type) || effet.differe)) return;
+      // Drain d'âme. effetsReactifsDejaResolus : même garde-fou pour la
+      // branche réactive "moitie" ci-dessus, qui résout ses effets différés
+      // immédiatement et remet resolutionDegats à null ensuite (plus de
+      // bouton "Lancer les dégâts" à afficher) — sans ce second drapeau,
+      // resolutionDegats étant redevenu null, cette boucle les réappliquerait.
+      if ((resolutionDegats || effetsReactifsDejaResolus) && (TYPES_EFFETS_DIFFERES.includes(effet.type) || effet.differe)) return;
       // Enchanteur — Voie de l'enchantement, rang 3 "Image décalée
       // (évolution)" : remplace le bonus DEF+1 du sort 'illusion' (rang 1,
       // même voie) par l'état 'image_decalee' (déjà au catalogue js/etats.js

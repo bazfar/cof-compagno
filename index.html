@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=93" />
+  <link rel="stylesheet" href="css/style.css?v=94" />
 </head>
 <body>
   <header>
@@ -657,7 +657,7 @@
 
   <!-- Overlay de jet de dé, visible par tous les joueurs quel que soit l'onglet actif -->
   <div id="overlay-jet" class="overlay-jet cache">
-    <div class="overlay-jet-boite">
+    <div class="overlay-jet-boite" id="overlay-jet-boite-a">
       <div class="overlay-jet-auteur" id="overlay-jet-auteur"></div>
       <div class="overlay-jet-label" id="overlay-jet-label"></div>
       <!-- Duo (avantage/désavantage) : les 2 d20 individuels, affichés un instant
@@ -678,6 +678,19 @@
       </div>
       <div class="overlay-jet-detail" id="overlay-jet-detail"></div>
       <div class="overlay-jet-badge" id="overlay-jet-badge"></div>
+    </div>
+    <!-- Boîte B (paire sauvegarde + dégâts, cf. groupeJetId dans js/capacites.js
+         et afficherOverlayJet dans js/app.js) : masquée par défaut, affichée à
+         côté de la boîte A quand un second jet du même groupe arrive. -->
+    <div class="overlay-jet-boite overlay-jet-boite-p2" id="overlay-jet-boite-p2">
+      <div class="overlay-jet-auteur" id="overlay-jet-auteur-p2"></div>
+      <div class="overlay-jet-label" id="overlay-jet-label-p2"></div>
+      <div class="overlay-jet-d20" id="overlay-jet-d20-p2">
+        <img class="overlay-jet-d20-svg" id="overlay-jet-d20-img-p2" alt="" aria-hidden="true" />
+        <span id="overlay-jet-total-p2"></span>
+      </div>
+      <div class="overlay-jet-detail" id="overlay-jet-detail-p2"></div>
+      <div class="overlay-jet-badge" id="overlay-jet-badge-p2"></div>
     </div>
   </div>
 
@@ -841,8 +854,8 @@
   <script src="js/forge.js?v=8"></script>
   <script src="js/repos.js?v=1"></script>
   <script src="js/reputation.js?v=1"></script>
-  <script src="js/capacites.js?v=57"></script>
+  <script src="js/capacites.js?v=58"></script>
   <script src="js/combat.js?v=19"></script>
-  <script src="js/app.js?v=200"></script>
+  <script src="js/app.js?v=201"></script>
 </body>
 </html>
