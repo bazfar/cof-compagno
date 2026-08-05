@@ -33,6 +33,15 @@ function chargerArmuresMonstres() {
   return eval(s);
 }
 
+// Pour la liste blanche des rôles (cf. data/equilibrage.js) — le validateur
+// contrôle le schéma (role ∈ ROLES_MONSTRE), pas l'écart au socle, cf. note
+// en tête de fichier "aucune règle de conformité au socle".
+function chargerRolesMonstre() {
+  let s = fs.readFileSync(path.join(RACINE, "data", "equilibrage.js"), "utf8");
+  s = s.replace(/^[\s\S]*?const\s+ROLES_MONSTRE\s*=\s*/, "").replace(/;\s*\nconst PM_DANGEROSITE[\s\S]*/, "");
+  return eval("(" + s + ")");
+}
+
 // Catalogue des états (cf. js/etats.js) — pour vérifier que effets[].id /
 // immunites[] / immunitesConditionnelles[].etats[] pointent vers un état
 // réel, plutôt qu'un id fautif qui ne se verrait qu'en séance.
@@ -45,6 +54,8 @@ function chargerEtats() {
 const ARMES_MONSTRES = chargerArmesMonstres();
 const ARMURES_MONSTRES = chargerArmuresMonstres();
 const ETATS = chargerEtats();
+const ROLES_MONSTRE = chargerRolesMonstre();
+const ROLES_VALIDES = Object.keys(ROLES_MONSTRE);
 // Convention établie (cf. js/capacites.js, js/app.js _appliquerBonusMonstreDepuisMessages) :
 // un état posé "par source" porte un id suffixé (marquee_pretre...) qui
 // retombe sur l'entrée catalogue générique "marquee".
@@ -210,7 +221,7 @@ ARMURES_MONSTRES.forEach((a, index) => {
 // filtres du bestiaire portent sur famille et race) ; armure était un objet
 // libre {valeur, description} non typé, remplacé par armureId vers
 // data/armures_monstres.js — même patron que armeId.
-const CHAMPS_MONSTRE_OBLIGATOIRES = ["id", "nom", "race", "pv", "def", "init", "atk", "dangerosite", "boss", "taille", "attaques", "capacitesSpeciales", "lore", "emoji"];
+const CHAMPS_MONSTRE_OBLIGATOIRES = ["id", "nom", "race", "pv", "def", "init", "atk", "dangerosite", "boss", "role", "taille", "attaques", "capacitesSpeciales", "lore", "emoji"];
 const CHAMPS_MONSTRE_OPTIONNELS = ["famille", "tier", "voies", "faction", "roleNarratif",
   "capacitesActives", "immunites", "immunitesConditionnelles",
   // Échappatoire MJ lue par js/sauvegardes.js:86, sans usage à ce jour.
@@ -268,6 +279,9 @@ monstres.forEach((m, index) => {
     signalerMonstre(cle, `dangerosite devrait être un entier 1-5, reçu ${JSON.stringify(m.dangerosite)}.`);
   }
   if (m.boss !== undefined && typeof m.boss !== "boolean") signalerMonstre(cle, `boss devrait être un booléen, reçu ${typeof m.boss}.`);
+  if (m.role !== undefined && !ROLES_VALIDES.includes(m.role)) {
+    signalerMonstre(cle, `role invalide : "${m.role}" (attendu : ${ROLES_VALIDES.join(" | ")}).`);
+  }
   ["pv", "def", "atk"].forEach((champ) => {
     if (m[champ] !== undefined && !Number.isInteger(m[champ])) signalerMonstre(cle, `${champ} devrait être un entier, reçu ${JSON.stringify(m[champ])}.`);
   });

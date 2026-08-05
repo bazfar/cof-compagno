@@ -13,6 +13,7 @@ const BESTIAIRE = [
     "atk": 2,
     "dangerosite": 1,
     "boss": false,
+    "role": "controleur",
     "taille": "petite",
     "attaques": [
       {
@@ -54,6 +55,7 @@ const BESTIAIRE = [
     "atk": 3,
     "dangerosite": 1,
     "boss": false,
+    "role": "soldat",
     "taille": "petite",
     "attaques": [
       {
@@ -93,6 +95,7 @@ const BESTIAIRE = [
     "atk": 5,
     "dangerosite": 2,
     "boss": true,
+    "role": "soldat",
     "taille": "petite",
     "attaques": [
       {
@@ -169,6 +172,7 @@ const BESTIAIRE = [
     "atk": 1,
     "dangerosite": 2,
     "boss": false,
+    "role": "artilleur",
     "taille": "petite",
     "attaques": [
       {
@@ -211,6 +215,7 @@ const BESTIAIRE = [
     "atk": 3,
     "dangerosite": 1,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -253,6 +258,7 @@ const BESTIAIRE = [
     "atk": 4,
     "dangerosite": 2,
     "boss": false,
+    "role": "escarmoucheur",
     "taille": "grande",
     "attaques": [
       {
@@ -296,6 +302,7 @@ const BESTIAIRE = [
     "atk": 3,
     "dangerosite": 2,
     "boss": false,
+    "role": "controleur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -338,6 +345,7 @@ const BESTIAIRE = [
     "atk": 4,
     "dangerosite": 2,
     "boss": false,
+    "role": "artilleur",
     "taille": "grande",
     "attaques": [
       {
@@ -388,6 +396,7 @@ const BESTIAIRE = [
     "atk": 5,
     "dangerosite": 2,
     "boss": false,
+    "role": "escarmoucheur",
     "taille": "grande",
     "attaques": [
       {
@@ -435,6 +444,7 @@ const BESTIAIRE = [
     "atk": 6,
     "dangerosite": 3,
     "boss": false,
+    "role": "escarmoucheur",
     "taille": "grande",
     "attaques": [
       {
@@ -481,6 +491,7 @@ const BESTIAIRE = [
     "atk": 5,
     "dangerosite": 2,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -528,6 +539,7 @@ const BESTIAIRE = [
     "atk": 6,
     "dangerosite": 3,
     "boss": false,
+    "role": "soldat",
     "taille": "grande",
     "attaques": [
       {
@@ -586,6 +598,7 @@ const BESTIAIRE = [
     "atk": 6,
     "dangerosite": 3,
     "boss": false,
+    "role": "artilleur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -652,6 +665,7 @@ const BESTIAIRE = [
     "atk": 2,
     "dangerosite": 1,
     "boss": false,
+    "role": "escarmoucheur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -684,6 +698,7 @@ const BESTIAIRE = [
     "atk": 4,
     "dangerosite": 1,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -727,6 +742,7 @@ const BESTIAIRE = [
     "atk": 5,
     "dangerosite": 2,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -788,6 +804,7 @@ const BESTIAIRE = [
     "atk": 7,
     "dangerosite": 3,
     "boss": true,
+    "role": "soldat",
     "taille": "grande",
     "attaques": [
       {
@@ -892,6 +909,7 @@ const BESTIAIRE = [
     "atk": 4,
     "dangerosite": 2,
     "boss": false,
+    "role": "brute",
     "taille": "grande",
     "attaques": [
       {
@@ -933,6 +951,7 @@ const BESTIAIRE = [
     "atk": 5,
     "dangerosite": 2,
     "boss": false,
+    "role": "brute",
     "taille": "grande",
     "attaques": [
       {
@@ -978,6 +997,7 @@ const BESTIAIRE = [
     "atk": 6,
     "dangerosite": 3,
     "boss": false,
+    "role": "brute",
     "taille": "grande",
     "attaques": [
       {
@@ -1059,6 +1079,7 @@ const BESTIAIRE = [
     "atk": 8,
     "dangerosite": 4,
     "boss": true,
+    "role": "brute",
     "taille": "très grande",
     "attaques": [
       {
@@ -1198,6 +1219,7 @@ const BESTIAIRE = [
     "atk": 4,
     "dangerosite": 1,
     "boss": false,
+    "role": "soldat",
     "taille": "grande",
     "attaques": [
       {
@@ -1241,6 +1263,7 @@ const BESTIAIRE = [
     "atk": 6,
     "dangerosite": 2,
     "boss": false,
+    "role": "soldat",
     "taille": "grande",
     "attaques": [
       {
@@ -1293,6 +1316,7 @@ const BESTIAIRE = [
     "atk": 7,
     "dangerosite": 3,
     "boss": false,
+    "role": "brute",
     "taille": "grande",
     "attaques": [
       {
@@ -1353,6 +1377,7 @@ const BESTIAIRE = [
     "atk": 9,
     "dangerosite": 4,
     "boss": true,
+    "role": "soldat",
     "taille": "très grande",
     "attaques": [
       {
@@ -1458,6 +1483,7 @@ const BESTIAIRE = [
     "atk": 2,
     "dangerosite": 1,
     "boss": false,
+    "role": "controleur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -1496,6 +1522,7 @@ const BESTIAIRE = [
     "atk": 4,
     "dangerosite": 2,
     "boss": false,
+    "role": "escarmoucheur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -1540,6 +1567,7 @@ const BESTIAIRE = [
     "atk": 6,
     "dangerosite": 3,
     "boss": false,
+    "role": "escarmoucheur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -1598,6 +1626,7 @@ const BESTIAIRE = [
     "atk": 8,
     "dangerosite": 4,
     "boss": true,
+    "role": "escarmoucheur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -1668,6 +1697,7 @@ const BESTIAIRE = [
     "atk": 3,
     "dangerosite": 1,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -1708,6 +1738,7 @@ const BESTIAIRE = [
     "atk": 5,
     "dangerosite": 2,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -1765,6 +1796,7 @@ const BESTIAIRE = [
     "atk": 7,
     "dangerosite": 3,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -1840,6 +1872,7 @@ const BESTIAIRE = [
     "atk": 9,
     "dangerosite": 4,
     "boss": true,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -1970,6 +2003,7 @@ const BESTIAIRE = [
     "atk": 3,
     "dangerosite": 1,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -2018,6 +2052,7 @@ const BESTIAIRE = [
     "atk": 5,
     "dangerosite": 2,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -2071,6 +2106,7 @@ const BESTIAIRE = [
     "atk": 7,
     "dangerosite": 3,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -2128,6 +2164,7 @@ const BESTIAIRE = [
     "atk": 9,
     "dangerosite": 4,
     "boss": true,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -2226,6 +2263,7 @@ const BESTIAIRE = [
     "atk": 2,
     "dangerosite": 1,
     "boss": false,
+    "role": "artilleur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -2268,6 +2306,7 @@ const BESTIAIRE = [
     "atk": 4,
     "dangerosite": 2,
     "boss": false,
+    "role": "artilleur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -2324,6 +2363,7 @@ const BESTIAIRE = [
     "atk": 6,
     "dangerosite": 3,
     "boss": false,
+    "role": "escarmoucheur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -2381,6 +2421,7 @@ const BESTIAIRE = [
     "atk": 8,
     "dangerosite": 4,
     "boss": true,
+    "role": "escarmoucheur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -2446,6 +2487,7 @@ const BESTIAIRE = [
     "atk": 6,
     "dangerosite": 2,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -2520,6 +2562,7 @@ const BESTIAIRE = [
     "atk": 8,
     "dangerosite": 3,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -2595,6 +2638,7 @@ const BESTIAIRE = [
     "atk": 10,
     "dangerosite": 4,
     "boss": true,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -2694,6 +2738,7 @@ const BESTIAIRE = [
     "atk": 3,
     "dangerosite": 1,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -2755,6 +2800,7 @@ const BESTIAIRE = [
     "atk": 5,
     "dangerosite": 2,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -2821,6 +2867,7 @@ const BESTIAIRE = [
     "atk": 6,
     "dangerosite": 2,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -2871,6 +2918,7 @@ const BESTIAIRE = [
     "atk": 9,
     "dangerosite": 4,
     "boss": true,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -2935,6 +2983,7 @@ const BESTIAIRE = [
     "atk": 5,
     "dangerosite": 2,
     "boss": false,
+    "role": "escarmoucheur",
     "taille": "petite",
     "attaques": [
       {
@@ -2973,6 +3022,7 @@ const BESTIAIRE = [
     "atk": 8,
     "dangerosite": 3,
     "boss": false,
+    "role": "soldat",
     "taille": "grande",
     "attaques": [
       {
@@ -3011,6 +3061,7 @@ const BESTIAIRE = [
     "atk": 6,
     "dangerosite": 2,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -3055,6 +3106,7 @@ const BESTIAIRE = [
     "atk": 3,
     "dangerosite": 1,
     "boss": false,
+    "role": "escarmoucheur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -3097,6 +3149,7 @@ const BESTIAIRE = [
     "atk": 5,
     "dangerosite": 2,
     "boss": false,
+    "role": "escarmoucheur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -3140,6 +3193,7 @@ const BESTIAIRE = [
     "atk": 6,
     "dangerosite": 3,
     "boss": false,
+    "role": "escarmoucheur",
     "taille": "grande",
     "attaques": [
       {
@@ -3194,6 +3248,7 @@ const BESTIAIRE = [
     "atk": 8,
     "dangerosite": 4,
     "boss": true,
+    "role": "escarmoucheur",
     "taille": "grande",
     "attaques": [
       {
@@ -3271,6 +3326,7 @@ const BESTIAIRE = [
     "atk": 3,
     "dangerosite": 1,
     "boss": false,
+    "role": "brute",
     "taille": "moyenne",
     "attaques": [
       {
@@ -3312,6 +3368,7 @@ const BESTIAIRE = [
     "atk": 5,
     "dangerosite": 2,
     "boss": false,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -3358,6 +3415,7 @@ const BESTIAIRE = [
     "atk": 6,
     "dangerosite": 3,
     "boss": false,
+    "role": "soldat",
     "taille": "grande",
     "attaques": [
       {
@@ -3406,6 +3464,7 @@ const BESTIAIRE = [
     "atk": 5,
     "dangerosite": 2,
     "boss": false,
+    "role": "escarmoucheur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -3449,6 +3508,7 @@ const BESTIAIRE = [
     "atk": 6,
     "dangerosite": 3,
     "boss": false,
+    "role": "artilleur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -3511,6 +3571,7 @@ const BESTIAIRE = [
     "atk": 6,
     "dangerosite": 3,
     "boss": false,
+    "role": "brute",
     "taille": "très grande",
     "attaques": [
       {
@@ -3564,6 +3625,7 @@ const BESTIAIRE = [
     "atk": 6,
     "dangerosite": 4,
     "boss": false,
+    "role": "artilleur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -3643,6 +3705,7 @@ const BESTIAIRE = [
     "atk": 10,
     "dangerosite": 5,
     "boss": true,
+    "role": "soldat",
     "taille": "grande",
     "attaques": [
       {
@@ -3745,6 +3808,7 @@ const BESTIAIRE = [
     "atk": 2,
     "dangerosite": 1,
     "boss": false,
+    "role": "controleur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -3787,6 +3851,7 @@ const BESTIAIRE = [
     "atk": 5,
     "dangerosite": 3,
     "boss": false,
+    "role": "escarmoucheur",
     "taille": "moyenne",
     "attaques": [
       {
@@ -3835,6 +3900,7 @@ const BESTIAIRE = [
     "atk": 8,
     "dangerosite": 4,
     "boss": true,
+    "role": "soldat",
     "taille": "moyenne",
     "attaques": [
       {
@@ -3877,6 +3943,7 @@ const BESTIAIRE = [
     "atk": 5,
     "dangerosite": 3,
     "boss": true,
+    "role": "escarmoucheur",
     "taille": "moyenne",
     "attaques": [
       {
