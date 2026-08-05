@@ -49,7 +49,11 @@ const RARETES = [
 // d'entrée dans EFFETS_PAR_ITEM (objets déjà nommés/enchantés, ou
 // tout futur ajout au catalogue non encore couvert ci-dessous).
 const EFFETS_RARETE = {
-  arme:     { rare: "Saignement : +1d4 dégâts pendant 2 tours", legendaire: "Saignement aggravé : +1d6 dégâts pendant 3 tours" },
+  arme:     { rare: "Saignement : +1d4 dégâts pendant 2 tours", legendaire: "Saignement aggravé : +1d6 dégâts pendant 3 tours",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "dot", formule: "1d4", duree: 2 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "dot", formule: "1d6", duree: 3 }] },
+      } },
   armure:   { rare: "Renvoie 1 point de dégâts à l'attaquant au contact", legendaire: "Renvoie 2 points de dégâts à l'attaquant au contact" },
   bouclier: { rare: "1 fois par combat : annule totalement une attaque de contact", legendaire: "2 fois par combat : annule totalement une attaque de contact" },
 };
@@ -59,92 +63,228 @@ const EFFETS_RARETE = {
 const EFFETS_PAR_ITEM = {
   // ── Armes ──────────────────────────────────────────────────
   dague: [
-    { id: "vampirique", nom: "vampirique", rare: "Soigne 1d4 PV au porteur à chaque coup porté", legendaire: "Soigne 1d6 PV et régénère 1 PV par tour pendant 3 tours" },
-    { id: "corruptrice", nom: "corruptrice", rare: "+1d8 dégâts, mais 1 chance sur 2 de gagner 1 point de Corruption", legendaire: "+1d10 dégâts, mais 1 chance sur 2 de gagner 2 points de Corruption" },
+    { id: "vampirique", nom: "vampirique", rare: "Soigne 1d4 PV au porteur à chaque coup porté", legendaire: "Soigne 1d6 PV et régénère 1 PV par tour pendant 3 tours",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "soin", formule: "1d4" }] },
+        legendaire: { evenement: "touche", effets: [{ type: "soin", formule: "1d6" }, { type: "special", note: "Régénère aussi 1 PV au porteur au début de chacun de ses 3 prochains tours — pas de dot positif dans le vocabulaire actuel, à suivre manuellement." }] },
+      } },
+    { id: "corruptrice", nom: "corruptrice", rare: "+1d8 dégâts, mais 1 chance sur 2 de gagner 1 point de Corruption", legendaire: "+1d10 dégâts, mais 1 chance sur 2 de gagner 2 points de Corruption",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "degats", formule: "1d8" }, { type: "special", note: "1 chance sur 2 de gagner 1 point de Corruption pour le porteur — à arbitrer/lancer manuellement." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "degats", formule: "1d10" }, { type: "special", note: "1 chance sur 2 de gagner 2 points de Corruption pour le porteur — à arbitrer/lancer manuellement." }] },
+      } },
   ],
   epee_courte: [
-    { id: "precise", nom: "précise", rare: "+2 au jet d'attaque contre une cible déjà blessée", legendaire: "+4 au jet d'attaque contre une cible déjà blessée, critique sur 19-20" },
+    { id: "precise", nom: "précise", rare: "+2 au jet d'attaque contre une cible déjà blessée", legendaire: "+4 au jet d'attaque contre une cible déjà blessée, critique sur 19-20",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "+2 au jet d'attaque contre une cible déjà blessée — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "+4 au jet d'attaque contre une cible déjà blessée, critique sur 19-20 — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+      } },
     { id: "vive", nom: "vive", rare: "Permet une attaque supplémentaire à -4 une fois par tour", legendaire: "Permet une attaque supplémentaire sans malus une fois par tour" },
   ],
   epee_longue: [
-    { id: "tranchante", nom: "tranchante", rare: "Saignement : +1d4 dégâts pendant 2 tours", legendaire: "Saignement aggravé : +1d6 dégâts pendant 3 tours" },
-    { id: "brise_garde", nom: "brise-garde", rare: "Réduit la DEF de la cible de 1 pendant 2 tours", legendaire: "Réduit la DEF de la cible de 2 pendant 3 tours" },
+    { id: "tranchante", nom: "tranchante", rare: "Saignement : +1d4 dégâts pendant 2 tours", legendaire: "Saignement aggravé : +1d6 dégâts pendant 3 tours",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "dot", formule: "1d4", duree: 2 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "dot", formule: "1d6", duree: 3 }] },
+      } },
+    { id: "brise_garde", nom: "brise-garde", rare: "Réduit la DEF de la cible de 1 pendant 2 tours", legendaire: "Réduit la DEF de la cible de 2 pendant 3 tours",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "bonus", cible: "DEF", valeur: -1, duree: "2" }] },
+        legendaire: { evenement: "touche", effets: [{ type: "bonus", cible: "DEF", valeur: -2, duree: "3" }] },
+      } },
   ],
   hache_guerre: [
-    { id: "sauvage", nom: "sauvage", rare: "+1d6 dégâts contre une cible à moins de la moitié de ses PV max", legendaire: "+2d6 dégâts contre une cible à moins de la moitié de ses PV max" },
-    { id: "broyeuse", nom: "broyeuse", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible" },
+    { id: "sauvage", nom: "sauvage", rare: "+1d6 dégâts contre une cible à moins de la moitié de ses PV max", legendaire: "+2d6 dégâts contre une cible à moins de la moitié de ses PV max",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "+1d6 dégâts contre une cible à moins de la moitié de ses PV max — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "+2d6 dégâts contre une cible à moins de la moitié de ses PV max — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+      } },
+    { id: "broyeuse", nom: "broyeuse", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 2 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 4 }] },
+      } },
   ],
   arc_court: [
-    { id: "precise", nom: "précis", rare: "Ignore les bonus de couverture partielle", legendaire: "Ignore toute couverture, même totale, une fois par combat" },
-    { id: "empoisonnee", nom: "empoisonné", rare: "1 chance sur 2 d'infliger 1d4 dégâts de poison pendant 2 tours", legendaire: "1 chance sur 2 d'infliger 1d6 dégâts de poison pendant 3 tours" },
+    { id: "precise", nom: "précis", rare: "Ignore les bonus de couverture partielle", legendaire: "Ignore toute couverture, même totale, une fois par combat",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "Ignore les bonus de couverture partielle — pas de système de couverture automatisé, à arbitrer manuellement." }] },
+      } },
+    { id: "empoisonnee", nom: "empoisonné", rare: "1 chance sur 2 d'infliger 1d4 dégâts de poison pendant 2 tours", legendaire: "1 chance sur 2 d'infliger 1d6 dégâts de poison pendant 3 tours",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "dot", formule: "1d4", duree: 2, probabilite: 0.5 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "dot", formule: "1d6", duree: 3, probabilite: 0.5 }] },
+      } },
   ],
   arc_long: [
-    { id: "perforante", nom: "perforant", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible" },
-    { id: "enflammee", nom: "enflammé", rare: "1 chance sur 2 d'infliger 1d4 dégâts de feu supplémentaires", legendaire: "1 chance sur 2 d'infliger 1d6 dégâts de feu supplémentaires" },
+    { id: "perforante", nom: "perforant", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 2 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 4 }] },
+      } },
+    { id: "enflammee", nom: "enflammé", rare: "1 chance sur 2 d'infliger 1d4 dégâts de feu supplémentaires", legendaire: "1 chance sur 2 d'infliger 1d6 dégâts de feu supplémentaires",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "degats", formule: "1d4", elementaire: "feu", probabilite: 0.5 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "degats", formule: "1d6", elementaire: "feu", probabilite: 0.5 }] },
+      } },
   ],
   lance: [
-    { id: "empaleuse", nom: "empaleuse", rare: "Immobilise la cible 1 tour sur un coup critique", legendaire: "Immobilise la cible 1 tour sur tout coup touché" },
-    { id: "repousse", nom: "repousse", rare: "Repousse la cible d'1 case après un coup réussi", legendaire: "Repousse la cible de 2 cases et lui inflige 1d4 dégâts de chute potentiels" },
+    { id: "empaleuse", nom: "empaleuse", rare: "Immobilise la cible 1 tour sur un coup critique", legendaire: "Immobilise la cible 1 tour sur tout coup touché",
+      mecanique: {
+        legendaire: { evenement: "touche", effets: [{ type: "etat", id: "immobilisee", duree: "1" }] },
+      } },
+    { id: "repousse", nom: "repousse", rare: "Repousse la cible d'1 case après un coup réussi", legendaire: "Repousse la cible de 2 cases et lui inflige 1d4 dégâts de chute potentiels",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "Repousse la cible d'1 case après un coup réussi — pas de mécanique de déplacement forcé automatisée, à positionner manuellement sur la battlemap." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "Repousse la cible de 2 cases (positionnement manuel) et lui inflige potentiellement 1d4 dégâts de chute si le terrain s'y prête — à l'appréciation du MJ." }] },
+      } },
   ],
   masse: [
-    { id: "etourdissante", nom: "étourdissante", rare: "1 chance sur 2 d'étourdir la cible 1 tour", legendaire: "1 chance sur 2 d'étourdir la cible 2 tours" },
-    { id: "sacree", nom: "sacrée", rare: "+1d6 dégâts contre les créatures du Chaos ou morts-vivants", legendaire: "+2d6 dégâts contre les créatures du Chaos ou morts-vivants" },
+    { id: "etourdissante", nom: "étourdissante", rare: "1 chance sur 2 d'étourdir la cible 1 tour", legendaire: "1 chance sur 2 d'étourdir la cible 2 tours",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "etat", id: "etourdie", duree: "1", probabilite: 0.5 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "etat", id: "etourdie", duree: "2", probabilite: 0.5 }] },
+      } },
+    { id: "sacree", nom: "sacrée", rare: "+1d6 dégâts contre les créatures du Chaos ou morts-vivants", legendaire: "+2d6 dégâts contre les créatures du Chaos ou morts-vivants",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "+1d6 dégâts contre les créatures du Chaos ou morts-vivants — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "+2d6 dégâts contre les créatures du Chaos ou morts-vivants — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+      } },
   ],
   marteau_guerre: [
-    { id: "sismique", nom: "sismique", rare: "Sur coup critique, renverse la cible (elle perd son tour)", legendaire: "Renverse la cible sur tout coup touché" },
-    { id: "briseuse", nom: "briseuse", rare: "Ignore 2 points de bonusDEF d'un bouclier adverse", legendaire: "Ignore totalement le bonusDEF d'un bouclier adverse" },
+    { id: "sismique", nom: "sismique", rare: "Sur coup critique, renverse la cible (elle perd son tour)", legendaire: "Renverse la cible sur tout coup touché",
+      mecanique: {
+        legendaire: { evenement: "touche", effets: [{ type: "etat", id: "renversee", duree: "1" }] },
+      } },
+    { id: "briseuse", nom: "briseuse", rare: "Ignore 2 points de bonusDEF d'un bouclier adverse", legendaire: "Ignore totalement le bonusDEF d'un bouclier adverse",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "Ignore 2 points de bonusDEF d'un bouclier adverse — pas de mécanique bonusDEF-cible dans ce vocabulaire (ignoreReduction ne porte que sur reductionDegats), à appliquer manuellement au jet d'attaque." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "Ignore totalement le bonusDEF d'un bouclier adverse — à appliquer manuellement au jet d'attaque." }] },
+      } },
   ],
   rapiere: [
     { id: "gracieuse", nom: "gracieuse", rare: "+1 initiative tant que l'arme est équipée", legendaire: "+2 initiative, agit en premier au premier tour de tout combat" },
-    { id: "perfide", nom: "perfide", rare: "Critique sur 19-20", legendaire: "Critique sur 18-20" },
+    { id: "perfide", nom: "perfide", rare: "Critique sur 19-20", legendaire: "Critique sur 18-20",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "critique", seuil: 19 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "critique", seuil: 18 }] },
+      } },
   ],
   arbalete: [
-    { id: "perforante", nom: "perforante", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible" },
+    { id: "perforante", nom: "perforante", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 2 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 4 }] },
+      } },
     { id: "a_repetition", nom: "à répétition", rare: "Peut tirer deux fois par tour à -4 aux deux jets", legendaire: "Peut tirer deux fois par tour sans malus" },
   ],
   cimeterre: [
     { id: "tourbillonnante", nom: "tourbillonnante", rare: "Une fois par tour, touche un second adversaire adjacent à demi-dégâts", legendaire: "Touche un second adversaire adjacent à dégâts complets" },
-    { id: "ensanglantee", nom: "ensanglantée", rare: "Saignement : +1d4 dégâts pendant 2 tours", legendaire: "Saignement aggravé : +1d6 dégâts pendant 3 tours" },
+    { id: "ensanglantee", nom: "ensanglantée", rare: "Saignement : +1d4 dégâts pendant 2 tours", legendaire: "Saignement aggravé : +1d6 dégâts pendant 3 tours",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "dot", formule: "1d4", duree: 2 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "dot", formule: "1d6", duree: 3 }] },
+      } },
   ],
   hallebarde: [
-    { id: "fauchante", nom: "fauchante", rare: "Touche tous les adversaires adjacents en ligne à demi-dégâts", legendaire: "Touche tous les adversaires adjacents en ligne à dégâts complets" },
-    { id: "crochue", nom: "crochue", rare: "Peut désarmer la cible sur un coup critique", legendaire: "Peut désarmer la cible sur tout coup touché" },
+    { id: "fauchante", nom: "fauchante", rare: "Touche tous les adversaires adjacents en ligne à demi-dégâts", legendaire: "Touche tous les adversaires adjacents en ligne à dégâts complets",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "Touche tous les adversaires adjacents en ligne à demi-dégâts — attaque en zone non automatisée, à résoudre manuellement." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "Touche tous les adversaires adjacents en ligne à dégâts complets — attaque en zone non automatisée, à résoudre manuellement." }] },
+      } },
+    { id: "crochue", nom: "crochue", rare: "Peut désarmer la cible sur un coup critique", legendaire: "Peut désarmer la cible sur tout coup touché",
+      mecanique: {
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "Désarme la cible — pas de mécanique de désarmement (retrait d'arme équipée) automatisée, à appliquer manuellement." }] },
+      } },
   ],
   fleau_armes: [
-    { id: "imprevisible", nom: "imprévisible", rare: "Ignore le bonusDEF des boucliers", legendaire: "Ignore le bonusDEF des boucliers et -2 DEF cible pendant 1 tour" },
-    { id: "brutale", nom: "brutale", rare: "1 chance sur 2 d'étourdir la cible 1 tour", legendaire: "1 chance sur 2 d'étourdir la cible 2 tours" },
+    { id: "imprevisible", nom: "imprévisible", rare: "Ignore le bonusDEF des boucliers", legendaire: "Ignore le bonusDEF des boucliers et -2 DEF cible pendant 1 tour",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "Ignore le bonusDEF des boucliers — pas de mécanique bonusDEF-cible dans ce vocabulaire, à appliquer manuellement au jet d'attaque." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "bonus", cible: "DEF", valeur: -2, duree: "1" }, { type: "special", note: "Ignore aussi le bonusDEF des boucliers adverses — à ajuster manuellement au jet d'attaque." }] },
+      } },
+    { id: "brutale", nom: "brutale", rare: "1 chance sur 2 d'étourdir la cible 1 tour", legendaire: "1 chance sur 2 d'étourdir la cible 2 tours",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "etat", id: "etourdie", duree: "1", probabilite: 0.5 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "etat", id: "etourdie", duree: "2", probabilite: 0.5 }] },
+      } },
   ],
   francisque: [
     { id: "tournoyante", nom: "tournoyante", rare: "Peut être relancée pour toucher une cible à distance courte, 1 fois par combat", legendaire: "Peut être relancée sans limite, revient dans la main du porteur" },
-    { id: "feroce", nom: "féroce", rare: "+1d4 dégâts contre une cible à moins de la moitié de ses PV max", legendaire: "+1d8 dégâts contre une cible à moins de la moitié de ses PV max" },
+    { id: "feroce", nom: "féroce", rare: "+1d4 dégâts contre une cible à moins de la moitié de ses PV max", legendaire: "+1d8 dégâts contre une cible à moins de la moitié de ses PV max",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "+1d4 dégâts contre une cible à moins de la moitié de ses PV max — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "+1d8 dégâts contre une cible à moins de la moitié de ses PV max — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+      } },
   ],
   poignards_jumeaux: [
     { id: "duelliste", nom: "de duelliste", rare: "Deuxième attaque à -4 dans le même tour", legendaire: "Deuxième attaque sans malus dans le même tour" },
-    { id: "toxique", nom: "toxique", rare: "1 chance sur 2 d'infliger 1d4 dégâts de poison pendant 2 tours", legendaire: "1 chance sur 2 d'infliger 1d6 dégâts de poison pendant 3 tours" },
+    { id: "toxique", nom: "toxique", rare: "1 chance sur 2 d'infliger 1d4 dégâts de poison pendant 2 tours", legendaire: "1 chance sur 2 d'infliger 1d6 dégâts de poison pendant 3 tours",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "dot", formule: "1d4", duree: 2, probabilite: 0.5 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "dot", formule: "1d6", duree: 3, probabilite: 0.5 }] },
+      } },
   ],
   pique: [
-    { id: "ancree", nom: "ancrée", rare: "+2 à l'attaque contre une cible qui charge", legendaire: "+4 à l'attaque et dégâts doublés contre une cible qui charge" },
-    { id: "transpercante", nom: "transperçante", rare: "Touche deux cibles alignées à demi-dégâts", legendaire: "Touche deux cibles alignées à dégâts complets" },
+    { id: "ancree", nom: "ancrée", rare: "+2 à l'attaque contre une cible qui charge", legendaire: "+4 à l'attaque et dégâts doublés contre une cible qui charge",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "+2 à l'attaque contre une cible qui charge — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "+4 à l'attaque et dégâts doublés contre une cible qui charge — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+      } },
+    { id: "transpercante", nom: "transperçante", rare: "Touche deux cibles alignées à demi-dégâts", legendaire: "Touche deux cibles alignées à dégâts complets",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "Touche deux cibles alignées à demi-dégâts — attaque multi-cible non automatisée, à résoudre manuellement." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "Touche deux cibles alignées à dégâts complets — attaque multi-cible non automatisée, à résoudre manuellement." }] },
+      } },
   ],
   epee_batarde: [
-    { id: "polyvalente", nom: "polyvalente", rare: "+1 dégât si maniée à deux mains ce tour", legendaire: "+2 dégâts et +1 DEF si maniée à deux mains ce tour" },
-    { id: "implacable", nom: "implacable", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible" },
+    { id: "polyvalente", nom: "polyvalente", rare: "+1 dégât si maniée à deux mains ce tour", legendaire: "+2 dégâts et +1 DEF si maniée à deux mains ce tour",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "+1 dégât si maniée à deux mains ce tour — condition de posture non automatisée, à appliquer manuellement." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "+2 dégâts et +1 DEF si maniée à deux mains ce tour — condition de posture non automatisée, à appliquer manuellement." }] },
+      } },
+    { id: "implacable", nom: "implacable", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 2 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 4 }] },
+      } },
   ],
   arbalete_lourde: [
-    { id: "devastatrice", nom: "dévastatrice", rare: "+1d6 dégâts si la cible n'a pas encore agi ce tour", legendaire: "+2d6 dégâts si la cible n'a pas encore agi ce tour" },
-    { id: "perforante", nom: "perforante", rare: "Ignore 3 points de reductionDegats de la cible", legendaire: "Ignore 6 points de reductionDegats de la cible" },
+    { id: "devastatrice", nom: "dévastatrice", rare: "+1d6 dégâts si la cible n'a pas encore agi ce tour", legendaire: "+2d6 dégâts si la cible n'a pas encore agi ce tour",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "+1d6 dégâts si la cible n'a pas encore agi ce tour — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "+2d6 dégâts si la cible n'a pas encore agi ce tour — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+      } },
+    { id: "perforante", nom: "perforante", rare: "Ignore 3 points de reductionDegats de la cible", legendaire: "Ignore 6 points de reductionDegats de la cible",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 3 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 6 }] },
+      } },
   ],
   // 3 variantes plutôt que 2 (rien n'empêche d'en avoir plus, cf. en-tête de fichier).
   grimoire: [
     { id: "embrasement", nom: "d'embrasement",
       rare: "+1 dégâts au jet de dégâts, et applique l'état Brûlure (1d4 dégâts en début de tour) au toucher",
-      legendaire: "+1 dégâts au jet de dégâts, et applique l'état Brûlure aggravée (1d6 dégâts en début de tour, 3 tours minimum) au toucher" },
+      legendaire: "+1 dégâts au jet de dégâts, et applique l'état Brûlure aggravée (1d6 dégâts en début de tour, 3 tours minimum) au toucher",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "degats", formule: "1" }, { type: "dot", formule: "1d4", duree: 2 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "degats", formule: "1" }, { type: "dot", formule: "1d6", duree: 3 }, { type: "special", note: "3 tours minimum au lieu d'un plafond fixe — le MJ peut prolonger si le texte d'origine le justifie." }] },
+      } },
     { id: "effrayante", nom: "effrayante",
       rare: "+1 dégâts au jet de dégâts, 1 chance sur 4 d'infliger l'état Effrayée (Fuite) à la cible pendant 1d4 tours",
-      legendaire: "+1 dégâts au jet de dégâts, 1 chance sur 2 d'infliger l'état Effrayée (Fuite) à la cible pendant 1d4 tours" },
+      legendaire: "+1 dégâts au jet de dégâts, 1 chance sur 2 d'infliger l'état Effrayée (Fuite) à la cible pendant 1d4 tours",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "degats", formule: "1" }, { type: "etat", id: "effrayee", duree: "2", probabilite: 0.25 }, { type: "special", note: "Durée normalement 1d4 tours (variable) — fixée à 2 tours (moyenne) pour l'automatisation, à ajuster manuellement si besoin." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "degats", formule: "1" }, { type: "etat", id: "effrayee", duree: "2", probabilite: 0.5 }, { type: "special", note: "Durée normalement 1d4 tours (variable) — fixée à 2 tours (moyenne) pour l'automatisation, à ajuster manuellement si besoin." }] },
+      } },
     { id: "affaiblissante", nom: "affaiblissante",
       rare: "+1 dégâts au jet de dégâts, 1 chance sur 4 de réduire la DEF de la cible de 1 pendant 2 tours",
-      legendaire: "+1 dégâts au jet de dégâts, 1 chance sur 2 de réduire la DEF de la cible de 1 pendant 3 tours" },
+      legendaire: "+1 dégâts au jet de dégâts, 1 chance sur 2 de réduire la DEF de la cible de 1 pendant 3 tours",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "degats", formule: "1" }, { type: "bonus", cible: "DEF", valeur: -1, duree: "2", probabilite: 0.25 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "degats", formule: "1" }, { type: "bonus", cible: "DEF", valeur: -1, duree: "3", probabilite: 0.5 }] },
+      } },
   ],
 
   // ── Armures ────────────────────────────────────────────────
@@ -271,23 +411,53 @@ const EFFETS_PAR_ITEM = {
 
   // ── Armes (suite) ──────────────────────────────────────────
   trident: [
-    { id: "des_profondeurs", nom: "des profondeurs", rare: "+1d4 dégâts contre les créatures aquatiques ou en zone immergée", legendaire: "+1d8 dégâts dans les mêmes conditions, ignore les malus de combat en zone immergée" },
-    { id: "immobilisante", nom: "immobilisante", rare: "1 chance sur 2 d'immobiliser la cible 1 tour sur un coup critique", legendaire: "Immobilise la cible 1 tour sur tout coup touché" },
+    { id: "des_profondeurs", nom: "des profondeurs", rare: "+1d4 dégâts contre les créatures aquatiques ou en zone immergée", legendaire: "+1d8 dégâts dans les mêmes conditions, ignore les malus de combat en zone immergée",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "+1d4 dégâts contre les créatures aquatiques ou en zone immergée — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "+1d8 dégâts dans les mêmes conditions, ignore les malus de combat en zone immergée — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+      } },
+    { id: "immobilisante", nom: "immobilisante", rare: "1 chance sur 2 d'immobiliser la cible 1 tour sur un coup critique", legendaire: "Immobilise la cible 1 tour sur tout coup touché",
+      mecanique: {
+        legendaire: { evenement: "touche", effets: [{ type: "etat", id: "immobilisee", duree: "1" }] },
+      } },
   ],
   fouet: [
-    { id: "desarmant", nom: "désarmant", rare: "1 chance sur 2 de désarmer la cible sur un coup touché", legendaire: "Désarme automatiquement la cible sur tout coup touché" },
-    { id: "entravant", nom: "entravant", rare: "1 chance sur 2 d'immobiliser la cible 1 tour", legendaire: "Immobilise la cible 1 tour sur tout coup touché, 2 tours sur critique" },
+    { id: "desarmant", nom: "désarmant", rare: "1 chance sur 2 de désarmer la cible sur un coup touché", legendaire: "Désarme automatiquement la cible sur tout coup touché",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "1 chance sur 2 de désarmer la cible — pas de mécanique de désarmement automatisée, à appliquer manuellement.", probabilite: 0.5 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "Désarme automatiquement la cible — pas de mécanique de désarmement automatisée, à appliquer manuellement." }] },
+      } },
+    { id: "entravant", nom: "entravant", rare: "1 chance sur 2 d'immobiliser la cible 1 tour", legendaire: "Immobilise la cible 1 tour sur tout coup touché, 2 tours sur critique",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "etat", id: "immobilisee", duree: "1", probabilite: 0.5 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "etat", id: "immobilisee", duree: "1" }, { type: "special", note: "2 tours au lieu d'1 si le coup est critique — non distingué automatiquement, à ajuster manuellement sur un critique." }] },
+      } },
   ],
   javelot: [
-    { id: "percant", nom: "perçant", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible" },
+    { id: "percant", nom: "perçant", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 2 }] },
+        legendaire: { evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 4 }] },
+      } },
     { id: "revenant", nom: "revenant", rare: "Revient dans la main du porteur après un lancer réussi, 1 fois par combat", legendaire: "Revient systématiquement dans la main du porteur après chaque lancer" },
   ],
   fronde: [
-    { id: "precise", nom: "précise", rare: "+2 au jet d'attaque à longue portée", legendaire: "+4 au jet d'attaque à longue portée, critique sur 19-20" },
-    { id: "etourdissante", nom: "étourdissante", rare: "1 chance sur 2 d'étourdir la cible 1 tour sur un coup critique", legendaire: "Étourdit la cible 1 tour sur tout coup touché" },
+    { id: "precise", nom: "précise", rare: "+2 au jet d'attaque à longue portée", legendaire: "+4 au jet d'attaque à longue portée, critique sur 19-20",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "+2 au jet d'attaque à longue portée — condition de portée non automatisée, à appliquer manuellement." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "+4 au jet d'attaque à longue portée, critique sur 19-20 — condition de portée non automatisée, à appliquer manuellement." }] },
+      } },
+    { id: "etourdissante", nom: "étourdissante", rare: "1 chance sur 2 d'étourdir la cible 1 tour sur un coup critique", legendaire: "Étourdit la cible 1 tour sur tout coup touché",
+      mecanique: {
+        legendaire: { evenement: "touche", effets: [{ type: "etat", id: "etourdie", duree: "1" }] },
+      } },
   ],
   glaive_guerre: [
-    { id: "decapitant", nom: "décapitant", rare: "Critique sur 19-20 contre les cibles sans casque ni armure lourde", legendaire: "Critique sur 18-20 dans les mêmes conditions, dégâts doublés sur critique" },
+    { id: "decapitant", nom: "décapitant", rare: "Critique sur 19-20 contre les cibles sans casque ni armure lourde", legendaire: "Critique sur 18-20 dans les mêmes conditions, dégâts doublés sur critique",
+      mecanique: {
+        rare: { evenement: "touche", effets: [{ type: "special", note: "Critique sur 19-20 contre les cibles sans casque ni armure lourde — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+        legendaire: { evenement: "touche", effets: [{ type: "special", note: "Critique sur 18-20 dans les mêmes conditions, dégâts doublés sur critique — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+      } },
     { id: "imperial", nom: "impérial", rare: "+1 en intimidation tant que l'arme est visible", legendaire: "+2 en intimidation, effraie les créatures de faible dangerosité au 1er round" },
   ],
 
@@ -392,6 +562,24 @@ const Raretes = (() => {
           if (item.degatsAuMoinsRare) clone.degats = item.degatsAuMoinsRare;
           if (variante) { clone.effetRarete = variante[rarete.id]; clone.varianteNom = variante.nom; }
           else clone.effetRarete = _effetGenerique("arme", rarete.id);
+          // mecanique (cf. "Mécaniser les affixes de rareté") : le texte
+          // rare/legendaire reste affiché tel quel ci-dessus, la mécanique
+          // s'ajoute. EFFETS_RARETE (repli générique) porte aussi sa propre
+          // clé mecanique, même format que les variantes.
+          const source = variante || EFFETS_RARETE.arme;
+          const meca = source && source.mecanique && source.mecanique[rarete.id];
+          if (meca) {
+            // declencheurs[] : lu par _gererDeclencheursEquipement (js/app.js)
+            // sur l'item équipé — même schéma que les objets forgés (Épée de
+            // Cupidité), juste produit ici plutôt que par la Forge du MJ.
+            clone.declencheurs = [{ evenement: meca.evenement, effets: meca.effets }];
+            // critique{seuil} (cf. Rapière perfide) : résolu STATIQUEMENT ici,
+            // pas par le déclencheur (le jet est déjà fait au moment où
+            // "touche" se résout) — lu ensuite par Personnage.critMinAttaque()
+            // via arme.critMin, mécanisme déjà existant.
+            const effetCritique = meca.effets.find((e) => e.type === "critique");
+            if (effetCritique) clone.critMin = Math.min(item.critMin || 20, effetCritique.seuil);
+          }
         }
         break;
       case "armure":

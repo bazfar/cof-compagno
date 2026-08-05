@@ -847,17 +847,17 @@ const App = (() => {
   // Même distinction monstre/PJ que _resoudreAttaqueRapide (defCible) : un
   // monstre passe par Carte.appliquerDegatsCombat (armure du token), un PJ
   // par subirDegats (réduction complète du personnage, cf. Personnage).
-  function _appliquerDegatsCibleRapide(cibleId, total) {
+  function _appliquerDegatsCibleRapide(cibleId, total, ignoreReduction) {
     if (!cibleId || typeof total !== "number" || typeof Carte === "undefined") return;
     const monstre = (Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : []).find((t) => t.id === cibleId);
     if (monstre) {
-      const info = Carte.appliquerDegatsCombat(cibleId, total);
+      const info = Carte.appliquerDegatsCombat(cibleId, total, ignoreReduction);
       if (info) toast(`${info.nom} subit ${info.degatsNets} dégâts (PV ${info.pvActuel}).`);
       return;
     }
     const pjTok = (Carte.listeTokensJoueursCombat ? Carte.listeTokensJoueursCombat() : []).find((t) => t.id === cibleId);
     if (pjTok && pjTok.ref && pjTok.ref.startsWith("pj-")) {
-      subirDegats(pjTok.ref.slice(3), total, null);
+      subirDegats(pjTok.ref.slice(3), total, null, null, null, ignoreReduction);
     }
   }
 
@@ -906,7 +906,88 @@ const App = (() => {
     return total;
   }
   const _CHAMP_RESSOURCE = { or: "piecesOr", argent: "piecesArgent", bronze: "piecesBronze", pv: "pvActuel" };
-  function _gererDeclencheursEquipement(persoId, type, resolution) {
+
+  // Résout la branche `effets[]` d'un déclencheur (cf. "Mécaniser les affixes
+  // de rareté" — vocabulaire mecanique.effets[] de data/donnees.js, réutilisé
+  // ici tel quel, troisième usage après les capacités PJ et monstres).
+  // Contrairement à l'ancien chemin ressource/operation (mouvement sur le
+  // PORTEUR uniquement), degats/dot/etat/bonus ciblent la CIBLE de l'attaque
+  // (cibleId) — soin cible le porteur (p, déjà chargé par l'appelant : aucun
+  // affixe converti ne soigne un tiers). Chaque effet applicable pousse un
+  // message dans messagesToast plutôt que d'appeler toast() lui-même : un
+  // seul toast final composé par l'appelant (même anti-écrasement que
+  // appliquerMalus/le clic des capacités de monstre, cf. suffixeToastFinal/
+  // messagesToast ailleurs dans ce fichier).
+  function _resoudreEffetsDeclencheur(effets, ctx) {
+    const cibleRaw = ctx.cibleId ? _cibleRawDepuisToken(ctx.cibleId) : null;
+    effets.forEach((e) => {
+      // probabilite (cf. schéma) : enveloppe générique, pas un type d'effet —
+      // s'applique à n'importe quel effet qui la porte. Raté = silencieux,
+      // comme un jet de dé qui ne produit rien.
+      if (typeof e.probabilite === "number" && Math.random() >= e.probabilite) return;
+      if (e.type === "degats") {
+        if (!cibleRaw) { ctx.messagesToast.push(`${ctx.itNom} : cible inconnue — ${e.formule} dégâts à appliquer manuellement.`); return; }
+        const total = lancerFormule(e.formule, `${ctx.itNom} — Dégâts`, false);
+        if (typeof total === "number") {
+          _appliquerDegatsCibleRapide(ctx.cibleId, total, ctx.ignoreReductionCourant);
+          ctx.messagesToast.push(`${ctx.itNom} : +${total} dégâts${e.elementaire ? ` (${e.elementaire})` : ""}.`);
+        }
+      } else if (e.type === "dot") {
+        // "Saignement"/"Brûlure"/poison de prose : mécaniquement le même DOT
+        // (empoisonnee + formuleDot), déjà structuré sur les 15 consommables
+        // empoisonnés — cf. _resoudreConsommationLancer/decompterEtatsDebutTour.
+        if (!cibleRaw) { ctx.messagesToast.push(`${ctx.itNom} : cible inconnue — effet à appliquer manuellement.`); return; }
+        const entree = {
+          idEtat: "empoisonnee",
+          dureeRestante: Object.assign(_resoudreDureeToursMonstre(String(e.duree), null), { dureeAffichee: `${e.duree} tours` }),
+          formuleDot: e.formule,
+          source: ctx.itNom, poseLe: Date.now(),
+        };
+        const res = _appliquerEtatSurCibleRaw(cibleRaw, "empoisonnee", entree);
+        if (res.message) ctx.messagesToast.push(`${ctx.itNom} : ${res.message}`);
+      } else if (e.type === "soin") {
+        const total = lancerFormule(e.formule, `${ctx.itNom} — Soin`, false);
+        if (typeof total === "number") {
+          Personnage.appliquerGainPv(ctx.p, total, { ignorerCorruption: true });
+          ctx.pvPorteurTouche = true;
+          ctx.messagesToast.push(`${ctx.itNom} : ${ctx.p.nom} regagne ${total} PV.`);
+        }
+      } else if (e.type === "bonus") {
+        if (!cibleRaw) { ctx.messagesToast.push(`${ctx.itNom} : cible inconnue — bonus ${e.cible} ${e.valeur >= 0 ? "+" : ""}${e.valeur} à appliquer manuellement.`); return; }
+        _appliquerBonusSurCibleRaw(cibleRaw, e.cible, e.valeur, String(e.duree), ctx.itNom);
+        ctx.messagesToast.push(`${ctx.itNom} : ${e.cible} ${e.valeur >= 0 ? "+" : ""}${e.valeur} sur la cible.`);
+      } else if (e.type === "etat") {
+        if (!cibleRaw) { ctx.messagesToast.push(`${ctx.itNom} : cible inconnue — état « ${ETATS[e.id] ? ETATS[e.id].nom : e.id} » à appliquer manuellement.`); return; }
+        const entree = {
+          idEtat: e.id,
+          dureeRestante: Object.assign(_resoudreDureeToursMonstre(e.duree || "", null), { dureeAffichee: e.duree || null }),
+          source: ctx.itNom, poseLe: Date.now(),
+        };
+        const res = _appliquerEtatSurCibleRaw(cibleRaw, e.id, entree);
+        if (res.message) ctx.messagesToast.push(`${ctx.itNom} : ${res.message}`);
+      } else if (e.type === "ignoreReduction") {
+        // Touche le calcul de dégâts, pas un mouvement de ressource : stocké
+        // sur attaquesRapidesEnAttente[type] (déjà peuplé par l'appelant AVANT
+        // ce déclenchement, cf. les deux handlers data-bm-attaque) pour que le
+        // clic "Dégâts" qui suit (_appliquerDegatsCibleRapide) le lise et le
+        // soustraie à reductionDegats de la cible AVANT application.
+        if (attaquesRapidesEnAttente[ctx.type]) attaquesRapidesEnAttente[ctx.type].ignoreReduction = e.valeur;
+        ctx.ignoreReductionCourant = e.valeur; // pour un éventuel "degats" du MÊME déclenchement
+        ctx.messagesToast.push(`${ctx.itNom} : ignore ${e.valeur} points de réduction de la cible.`);
+      } else if (e.type === "critique") {
+        // Seuil de critique élargi (ex. Rapière perfide, "Critique sur
+        // 19-20") : PAS résolu ici — le jet est déjà fait au moment où ce
+        // déclencheur "touche" s'exécute, trop tard pour changer si CETTE
+        // attaque était critique. Raretes.appliquer() pose déjà clone.critMin
+        // directement depuis ce même effet, lu statiquement et EN AMONT par
+        // Personnage.critMinAttaque() (js/personnage.js) — no-op volontaire ici.
+      } else if (e.type === "special") {
+        ctx.messagesToast.push(`${ctx.itNom} : ${e.note}`);
+      }
+    });
+  }
+
+  function _gererDeclencheursEquipement(persoId, type, resolution, cibleId) {
     if (type !== "contact" && type !== "distance") return;
     const persos = chargerPersos();
     const p = persos[persoId];
@@ -915,6 +996,7 @@ const App = (() => {
     const armeUtilisee = type === "contact" ? perso.armeContactEquipee() : perso.armeDistanceEquipee();
     const pvAvant = p.pvActuel;
     let modifie = false, pvTouche = false;
+    const messagesToast = [];
     perso._itemsEquipesUniques().forEach((it) => {
       if (!it.declencheurs || !it.declencheurs.length) return;
       if (it.type === "arme" && (!armeUtilisee || armeUtilisee.id !== it.id)) return; // pas la bonne arme
@@ -924,6 +1006,16 @@ const App = (() => {
           (d.evenement === "rate" && resolution.touche === false) ||
           (d.evenement === "critique" && resolution.critique === true);
         if (!evenementOk) return;
+        if (Array.isArray(d.effets)) {
+          // Nouvelle branche (cf. schéma étendu) : vocabulaire effets[],
+          // ctx.p/pvPorteurTouche partagés avec le reste de la fonction pour
+          // qu'un seul sauverPersos() ferme le passage, comme l'ancien chemin.
+          const ctx = { persoId, p, perso, persos, cibleId, itNom: it.nom, type, messagesToast, pvPorteurTouche: false };
+          _resoudreEffetsDeclencheur(d.effets, ctx);
+          if (ctx.pvPorteurTouche) pvTouche = true;
+          modifie = true;
+          return;
+        }
         const champActuel = _CHAMP_RESSOURCE[d.ressource];
         const actuel = champActuel ? (p[champActuel] || 0) : 0;
         let ressourceAppliquee = d.ressource, deltaLog, valLog;
@@ -957,6 +1049,11 @@ const App = (() => {
     } else {
       sauverPersos(persos);
     }
+    // messagesToast : uniquement rempli par la branche effets[] (l'ancien
+    // chemin ressource/operation appelle toast() lui-même par déclencheur,
+    // comportement inchangé) — un seul toast final, même principe que
+    // appliquerMalus/le clic des capacités de monstre.
+    if (messagesToast.length) toast(messagesToast.join(" — "));
   }
   const LABELS_RESSOURCE_TOAST = { or: "PO", argent: "PA", bronze: "PB", pv: "PV" };
 
@@ -970,6 +1067,86 @@ const App = (() => {
     const pjTok = (Carte.listeTokensJoueursCombat ? Carte.listeTokensJoueursCombat() : []).find((t) => t.id === cibleId);
     if (pjTok && pjTok.ref && pjTok.ref.startsWith("pj-")) return `pj:${pjTok.ref.slice(3)}`;
     return null;
+  }
+
+  // Applique `entree` (déjà construite, forme etatsActifs — idEtat/dureeRestante/
+  // formuleDot...) sur cibleRaw ("pj:id" ou "monstre:id"), avec les MÊMES gardes
+  // d'immunité que le panneau Malus MJ (appliquerMalus, plus bas) — factorisé
+  // ici pour qu'un déclenchement AUTOMATIQUE (affixe de loot sur touche,
+  // cf. _resoudreEffetsDeclencheur) applique un état sans passer par la modale
+  // ni dupliquer une troisième fois la garde déjà écrite deux fois (ici et dans
+  // le clic des capacités de monstre). Ne fait AUCUN toast lui-même : renvoie
+  // { applique, message } pour que l'appelant compose un seul toast final
+  // (cf. la bascule messagesToast déjà en place ailleurs dans ce fichier).
+  function _appliquerEtatSurCibleRaw(cibleRaw, idEtat, entree) {
+    if (!cibleRaw || !ETATS[idEtat]) return { applique: false, message: null };
+    const sep = cibleRaw.indexOf(":");
+    const type = cibleRaw.slice(0, sep);
+    const id = cibleRaw.slice(sep + 1);
+    if (type === "pj") {
+      const persos = chargerPersos();
+      const p = persos[id];
+      if (!p) return { applique: false, message: null };
+      const perso = Personnage.depuisJSON(p);
+      if (perso.aImmuniteEtat(idEtat)) {
+        return { applique: false, message: `${p.nom} est immunisé·e à « ${ETATS[idEtat].nom} » (Liberté d'action).` };
+      }
+      p.etatsActifs = p.etatsActifs || [];
+      p.etatsActifs.push(entree);
+      sauverPersos(persos);
+      if (ficheActiveId === id) afficherFiche(id);
+      if (ficheSidebarActiveId === id) rendreFicheSidebarBattlemap(id);
+      return { applique: true, message: `${ETATS[idEtat].nom} appliqué à ${p.nom}.` };
+    }
+    if (type === "monstre" && typeof Carte !== "undefined") {
+      const jetonCible = Carte.listeMonstresCombat ? Carte.listeMonstresCombat().find((mm) => mm.id === id) : null;
+      const imm = typeof CapacitesMonstres !== "undefined" ? CapacitesMonstres.immunite(jetonCible, idEtat) : { bloquee: false, condition: null };
+      if (imm.bloquee) {
+        return { applique: false, message: `${jetonCible ? jetonCible.nom : "Ce monstre"} est immunisé à « ${ETATS[idEtat].nom} ».` };
+      }
+      Carte.ajouterEtatCombat(id, entree);
+      rendreTableCombat();
+      rendreTableCombat("battlemap-zone-table-combat");
+      return { applique: true, message: `${ETATS[idEtat].nom} appliqué${imm.condition ? ` (immunité conditionnelle : ${imm.condition} À arbitrer)` : ""}.` };
+    }
+    return { applique: false, message: null };
+  }
+
+  // Pose une entrée "bonus" pure (idEtat: null, cf. _appliquerBonusMonstreDepuisMessages
+  // pour l'équivalent monstre "manuel") sur cibleRaw — même format lu par
+  // htmlEtatsActifs côté PJ et _bonusEtatsMonstre côté monstre. Pas de garde
+  // d'immunité ici : un bonus/malus générique (ex. -1 DEF) n'est pas un état
+  // nommé, rien dans le catalogue ETATS ne peut s'y opposer.
+  function _appliquerBonusSurCibleRaw(cibleRaw, cible, valeur, dureeExpr, source) {
+    if (!cibleRaw) return false;
+    const sep = cibleRaw.indexOf(":");
+    const type = cibleRaw.slice(0, sep);
+    const id = cibleRaw.slice(sep + 1);
+    const entree = {
+      idEtat: null,
+      bonus: { cible, valeur },
+      dureeRestante: Object.assign(_resoudreDureeToursMonstre(dureeExpr, null), { dureeAffichee: dureeExpr }),
+      source,
+      poseLe: Date.now(),
+    };
+    if (type === "pj") {
+      const persos = chargerPersos();
+      const p = persos[id];
+      if (!p) return false;
+      p.etatsActifs = p.etatsActifs || [];
+      p.etatsActifs.push(entree);
+      sauverPersos(persos);
+      if (ficheActiveId === id) afficherFiche(id);
+      if (ficheSidebarActiveId === id) rendreFicheSidebarBattlemap(id);
+      return true;
+    }
+    if (type === "monstre" && typeof Carte !== "undefined" && Carte.ajouterEtatCombat) {
+      Carte.ajouterEtatCombat(id, entree);
+      rendreTableCombat();
+      rendreTableCombat("battlemap-zone-table-combat");
+      return true;
+    }
+    return false;
   }
 
   // Action de Lancer (data-bm-attaque="lancer", cf. rendreFicheSidebarBattlemap/
@@ -1404,7 +1581,7 @@ const App = (() => {
           toast(resultatMsg);
         }
         _gererPremierSangChasseur(id, type, resolution.touche);
-        _gererDeclencheursEquipement(id, type, resolution);
+        _gererDeclencheursEquipement(id, type, resolution, cibleId);
         if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
         rendreFicheSidebarBattlemap(id);
       };
@@ -1424,7 +1601,7 @@ const App = (() => {
         const type = el.dataset.bmDegatsType;
         const attente = type && attaquesRapidesEnAttente[type];
         if (attente && attente.persoId === id && attente.touche === true && attente.cibleId) {
-          _appliquerDegatsCibleRapide(attente.cibleId, total);
+          _appliquerDegatsCibleRapide(attente.cibleId, total, attente.ignoreReduction);
         }
       };
     });
@@ -1813,7 +1990,7 @@ const App = (() => {
           toast(resultatMsg);
         }
         _gererPremierSangChasseur(id, type, resolution.touche);
-        _gererDeclencheursEquipement(id, type, resolution);
+        _gererDeclencheursEquipement(id, type, resolution, cibleId);
         if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(id);
         rendreFicheSidebarBattlemap(id);
       };
@@ -1827,7 +2004,7 @@ const App = (() => {
         const type = el.dataset.bmDegatsType;
         const attente = type && attaquesRapidesEnAttente[type];
         if (attente && attente.persoId === id && attente.touche === true && attente.cibleId) {
-          _appliquerDegatsCibleRapide(attente.cibleId, total);
+          _appliquerDegatsCibleRapide(attente.cibleId, total, attente.ignoreReduction);
         }
       };
     });
@@ -6964,7 +7141,7 @@ const App = (() => {
   // peuple rang 3, cf. Personnage.aRempart()) — condition "protège
   // activement un allié" non trackable automatiquement, déclarée par le
   // joueur à chaque jet, réduit de 2 les dégâts (tout type confondu).
-  function subirDegats(id, degatsBruts, typeDegats, coeurMontagneArme, rempartArme) {
+  function subirDegats(id, degatsBruts, typeDegats, coeurMontagneArme, rempartArme, ignoreReduction) {
     degatsBruts = parseInt(degatsBruts, 10);
     if (isNaN(degatsBruts) || degatsBruts < 0) { toast("Entre un nombre de dégâts valide."); return; }
     const persos = chargerPersos();
@@ -7014,7 +7191,9 @@ const App = (() => {
     // Druide — Voie de la nature, rang 4 "Résistance naturelle" : uniquement
     // sur le type "naturel" (froid/chaleur/chute/poison/animal).
     const reductionNaturelle = typeDegats === "naturel" ? perso.reductionDegatsNaturels() : 0;
-    const reductionArmure = perso.reductionDegats(); // inclut désormais Écorce partagée (bonusTemporaire)
+    // ignoreReduction (cf. affixes de rareté "broyeuse" et co., js/raretes.js) :
+    // points de reductionDegats de la cible neutralisés par CETTE attaque.
+    const reductionArmure = Math.max(0, perso.reductionDegats() - (ignoreReduction || 0)); // inclut désormais Écorce partagée (bonusTemporaire)
     const reductionRempart = rempartActif ? 2 : 0;
     const reductionFlatTotale = reductionLourde + reductionNaturelle + reductionArmure + reductionRempart;
     let degatsNets = Math.max(0, degatsBruts - reductionFlatTotale);
@@ -8956,30 +9135,16 @@ const App = (() => {
     const duree = document.getElementById("modal-malus-duree").value.trim();
     const formuleDot = document.getElementById("modal-malus-dot").value.trim();
     if (!cibleRaw || !idEtat) return;
-    const sep = cibleRaw.indexOf(":");
-    const type = cibleRaw.slice(0, sep);
-    const id = cibleRaw.slice(sep + 1);
-    const entree = _entreeMalusMj(idEtat, duree, formuleDot);
-    // Suffixe ajouté au toast final de confirmation (branche monstre,
-    // immunité conditionnelle) — #toast est un élément unique, un second
-    // appel synchrone à toast() écraserait le premier avant qu'il soit lu.
-    let suffixeToastFinal = "";
-
-    if (type === "pj") {
+    // Barde — Voie du spectacle, rang 5 "Liberté d'action" (paralysee
+    // uniquement) : cas MJ-only à part, consomme un usage 1x/combat avant
+    // même de tenter la pose — reste ici plutôt que dans
+    // _appliquerEtatSurCibleRaw, qui ne connaît pas cette nuance de classe
+    // ni la modale à fermer sur ce chemin de sortie spécifique.
+    if (idEtat === "paralysee" && cibleRaw.startsWith("pj:") && typeof Capacites !== "undefined") {
       const persos = chargerPersos();
-      const p = persos[id];
-      if (!p) return;
-      const perso = Personnage.depuisJSON(p);
-      // Barde — Voie du spectacle, rang 5 "Liberté d'action" : même garde
-      // que la branche "etat" de Capacites.resoudreEffet, pour que
-      // l'application MANUELLE d'un état par le MJ respecte aussi
-      // l'immunité/l'ignorance automatique (sinon ce panneau la contournerait).
-      if (perso.aImmuniteEtat(idEtat)) {
-        toast(`${p.nom} est immunisé·e à l'état « ${ETATS[idEtat].nom} » (Liberté d'action) — aucun effet appliqué.`);
-        fermerModalMalus();
-        return;
-      }
-      if (idEtat === "paralysee" && perso.aLiberteAction() && typeof Capacites !== "undefined") {
+      const p = persos[cibleRaw.slice(3)];
+      const perso = p && Personnage.depuisJSON(p);
+      if (perso && perso.aLiberteAction() && !perso.aImmuniteEtat(idEtat)) {
         const usage = Capacites.verifierUsage(p, "classe:barde:5", { usage: { frequence: "1x/combat" } });
         if (usage.ok) {
           usage.appliquer();
@@ -8989,29 +9154,12 @@ const App = (() => {
           return;
         }
       }
-      p.etatsActifs = p.etatsActifs || [];
-      p.etatsActifs.push(entree);
-      sauverPersos(persos);
-      if (ficheActiveId === id) afficherFiche(id);
-      if (ficheSidebarActiveId === id) rendreFicheSidebarBattlemap(id);
-    } else if (type === "monstre" && typeof Carte !== "undefined") {
-      // Symétrique de la garde d'immunité de la branche pj ci-dessus : sans
-      // ça, rien n'empêche de poser « effrayée » sur un orc, dont tout le
-      // lore dit qu'il en est incapable (cf. schema_cible_capacites_monstres.md §5).
-      const jetonCible = Carte.listeMonstresCombat ? Carte.listeMonstresCombat().find((mm) => mm.id === id) : null;
-      const imm = typeof CapacitesMonstres !== "undefined"
-        ? CapacitesMonstres.immunite(jetonCible, idEtat) : { bloquee: false, condition: null };
-      if (imm.bloquee) {
-        toast(`${jetonCible ? jetonCible.nom : "Ce monstre"} est immunisé à « ${ETATS[idEtat].nom} » — aucun effet appliqué.`);
-        fermerModalMalus();
-        return;
-      }
-      if (imm.condition) suffixeToastFinal = ` — immunité conditionnelle : ${imm.condition} À arbitrer.`;
-      Carte.ajouterEtatCombat(id, entree);
-      rendreTableCombat();
-      rendreTableCombat("battlemap-zone-table-combat");
     }
-    toast(`${ETATS[idEtat].nom} appliqué.${suffixeToastFinal}`);
+    const entree = _entreeMalusMj(idEtat, duree, formuleDot);
+    const res = _appliquerEtatSurCibleRaw(cibleRaw, idEtat, entree);
+    // res.message porte déjà soit le refus (immunité), soit la confirmation —
+    // un seul toast() ici, jamais deux (cf. _appliquerEtatSurCibleRaw).
+    if (res.message) toast(res.message);
     fermerModalMalus();
   }
 

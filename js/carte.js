@@ -598,13 +598,16 @@ const Carte = (() => {
     return DD2VTT.jetonsEnZone(idCentre, rayonCases);
   }
 
-  function appliquerDegatsCombat(id, degatsBruts) {
+  // ignoreReduction (cf. affixes de rareté "broyeuse" et co., js/raretes.js) :
+  // points de réduction d'armure de la cible neutralisés par CETTE attaque,
+  // avant application — jamais persisté sur le jeton, recalculé à chaque appel.
+  function appliquerDegatsCombat(id, degatsBruts, ignoreReduction) {
     if (_combatEnBattlemap() && DD2VTT.tokensMonstres().some((t) => t.id === id)) {
-      return DD2VTT.appliquerDegats(id, degatsBruts);
+      return DD2VTT.appliquerDegats(id, degatsBruts, ignoreReduction);
     }
     const tok = etat.jetons.find((j) => j.id === id);
     if (!tok) return null;
-    const reduction = tok.armure || 0;
+    const reduction = Math.max(0, (tok.armure || 0) - (ignoreReduction || 0));
     const degatsNets = Math.max(0, degatsBruts - reduction);
     tok.pvActuel = Math.max(0, (tok.pvActuel ?? tok.pvMax ?? 0) - degatsNets);
     sauver(); rendreJetons();
@@ -3322,10 +3325,11 @@ const Carte = (() => {
     // Applique des dégâts bruts à un token monstre, réduits par son armure
     // (comme Personnage.reductionDegats côté fiche joueur). Renvoie le détail
     // pour le toast de l'appelant, ou null si le token n'existe pas/plus.
-    function appliquerDegatsToken(id, degatsBruts) {
+    // ignoreReduction : cf. appliquerDegatsCombat plus haut, même principe.
+    function appliquerDegatsToken(id, degatsBruts, ignoreReduction) {
       const tok = tokensDD.find(t => t.id === id);
       if (!tok) return null;
-      const reduction = tok.armure || 0;
+      const reduction = Math.max(0, (tok.armure || 0) - (ignoreReduction || 0));
       const degatsNets = Math.max(0, degatsBruts - reduction);
       tok.pvActuel = Math.max(0, (tok.pvActuel ?? tok.pvMax ?? 0) - degatsNets);
       _sauverToken(tok);

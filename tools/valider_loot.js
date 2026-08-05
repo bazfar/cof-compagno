@@ -54,6 +54,69 @@ if (!COMPETENCES_PAR_CARAC) { console.error("❌ COMPETENCES_PAR_CARAC introuvab
 if (!SAUVEGARDES) { console.error("❌ SAUVEGARDES introuvable (data/donnees.js n'a pas chargé)."); process.exit(1); }
 if (!ORDRE_CLASSES) { console.error("❌ ORDRE_CLASSES introuvable (data/donnees.js n'a pas chargé)."); process.exit(1); }
 
+const ctxEtats = chargerGlobals(["js/etats.js"], ["ETATS"]);
+const ETATS = ctxEtats.ETATS;
+if (!ETATS) { console.error("❌ ETATS introuvable (js/etats.js n'a pas chargé)."); process.exit(1); }
+function etatExiste(id) {
+  return Object.prototype.hasOwnProperty.call(ETATS, /^marquee_.+/.test(id || "") ? "marquee" : id);
+}
+
+// Grammaire de lancerFormule (js/app.js) : suite de termes ±NdM ou ±K —
+// même règle que tools/valider_bestiaire.js.
+const RE_FORMULE_TERME = /^[+-]?(\d*d\d+|\d+)$/;
+function formuleValide(f) {
+  if (typeof f !== "string" || !f) return false;
+  const termes = f.match(/[+-]?[^+-]+/g) || [];
+  return termes.length > 0 && termes.every((t) => RE_FORMULE_TERME.test(t));
+}
+
+// Valide un tableau effets[] (cf. "Mécaniser les affixes de rareté", schéma
+// étendu de declencheurs[]) — partagé entre la validation de data/loot.json
+// (declencheurs[].effets, objets forgés/catalogue) et celle de js/raretes.js
+// (mecanique.rare/legendaire.effets, affixes de rareté). `signaler` reçoit
+// déjà la clé de l'item, ce module ne fait que préfixer le message par
+// effets[i].
+const TYPES_EFFET_VALIDES = ["degats", "dot", "soin", "bonus", "etat", "ignoreReduction", "critique", "special"];
+const CIBLES_BONUS_VALIDES = ["attaque", "DEF"];
+const DUREE_MOTS_CLES_LOOT = ["prochainTour", "finCombat", "permanente"];
+function validerEffets(effets, signaler) {
+  if (!Array.isArray(effets) || !effets.length) { signaler("effets[] absent ou vide."); return; }
+  effets.forEach((e, i) => {
+    const p = `effets[${i}]`;
+    if (!e || !TYPES_EFFET_VALIDES.includes(e.type)) { signaler(`${p}.type invalide : ${JSON.stringify(e && e.type)}.`); return; }
+    if (e.probabilite !== undefined && (typeof e.probabilite !== "number" || e.probabilite < 0 || e.probabilite > 1)) {
+      signaler(`${p}.probabilite devrait être un nombre entre 0 et 1, reçu ${JSON.stringify(e.probabilite)}.`);
+    }
+    if (e.type === "degats" || e.type === "dot" || e.type === "soin") {
+      if (!formuleValide(e.formule)) signaler(`${p}.formule "${e.formule}" rejetée par la grammaire de lancerFormule.`);
+    }
+    if (e.type === "dot" || e.type === "etat") {
+      const duree = e.type === "dot" ? e.duree : e.duree;
+      if (e.type === "dot" && !(Number.isInteger(duree) && duree >= 1)) signaler(`${p}.duree devrait être un entier ≥ 1, reçu ${JSON.stringify(duree)}.`);
+      if (e.type === "etat") {
+        if (!e.id || !etatExiste(e.id)) signaler(`${p}.id inconnu de js/etats.js : ${JSON.stringify(e.id)}.`);
+        if (e.duree !== undefined && !DUREE_MOTS_CLES_LOOT.includes(e.duree) && !/^\d+$/.test(String(e.duree))) {
+          signaler(`${p}.duree "${e.duree}" non résoluble (entier en tours, ou ${DUREE_MOTS_CLES_LOOT.join("|")}).`);
+        }
+      }
+    }
+    if (e.type === "bonus") {
+      if (!CIBLES_BONUS_VALIDES.includes(e.cible)) signaler(`${p}.cible doit valoir "attaque" ou "DEF".`);
+      if (!Number.isInteger(e.valeur)) signaler(`${p}.valeur devrait être un entier.`);
+      if (e.duree !== undefined && !DUREE_MOTS_CLES_LOOT.includes(e.duree) && !/^\d+$/.test(String(e.duree))) {
+        signaler(`${p}.duree "${e.duree}" non résoluble (entier en tours, ou ${DUREE_MOTS_CLES_LOOT.join("|")}).`);
+      }
+    }
+    if (e.type === "ignoreReduction" && !(Number.isInteger(e.valeur) && e.valeur >= 1)) {
+      signaler(`${p}.valeur devrait être un entier ≥ 1, reçu ${JSON.stringify(e.valeur)}.`);
+    }
+    if (e.type === "critique" && !(Number.isInteger(e.seuil) && e.seuil >= 2 && e.seuil <= 20)) {
+      signaler(`${p}.seuil devrait être un entier entre 2 et 20, reçu ${JSON.stringify(e.seuil)}.`);
+    }
+    if (e.type === "special" && !e.note) signaler(`${p} : un effet special doit porter une note pour le MJ.`);
+  });
+}
+
 const COMPETENCES_VALIDES = new Set(Object.values(COMPETENCES_PAR_CARAC).flat());
 const CARACS_VALIDES = ["FOR", "DEX", "CON", "INT", "SAG", "CHA"];
 const SAUVEGARDES_VALIDES = Object.keys(SAUVEGARDES);
@@ -80,13 +143,21 @@ const COMMUN_MULTI_TYPE = ["horsMarche", "effet", "rarete", "rareteNom", "rarete
   // js/forge.js, prompt_declencheurs_forge.md) — génériques par nature (pas
   // liés à un type d'objet précis), utilisables aussi bien sur un objet du
   // catalogue statique (ex. epee_cupidite) que sur un objet forgé.
-  "formules", "declencheurs"];
+  "formules", "declencheurs",
+  // rariteFixe/sansModificateurRegional : lus par js/marche.js SANS jamais
+  // vérifier item.type (cf. _peutAvoirRarete/calculerPrix) — la Forge du MJ
+  // (js/forge.js:_construireItem) les pose d'ailleurs sur TOUT objet forgé,
+  // quel que soit son type. Trouvé en implémentant le bouton "Exporter pour
+  // le repo" (Étape 4, "Mécaniser les affixes de rareté") : un objet
+  // arme/armure/bouclier forgé avec ces champs (le cas courant) était rejeté
+  // par la liste blanche alors qu'il tourne très bien en jeu.
+  "rariteFixe", "sansModificateurRegional"];
 // Champs spécifiques à chaque type.
 const PAR_TYPE = {
   arme: ["degats", "portee", "typedegats", "enchantement", "deuxMains", "categorieArme", "porteeMinCases", "porteeMaxCases", "rechargement", "degatsAuMoinsRare", "bonusAttaqueMagique", "bonusDegatsMagiques"],
   armure: ["valeurCA", "malusDEX", "categorie", "reductionDegats"],
   bouclier: ["bonusDEF", "categorieBouclier"],
-  accessoire: ["slot", "bonusCarac", "bonusCompetences", "bonusInitiative", "bonusDEF", "bonusAttaqueMagique", "bonusAttaqueDistance", "bonusDegatsMagiques", "bonusDegatsMainsNues", "bonusPvMaxDe", "rariteFixe", "sansModificateurRegional", "grimoireClasses"],
+  accessoire: ["slot", "bonusCarac", "bonusCompetences", "bonusInitiative", "bonusDEF", "bonusAttaqueMagique", "bonusAttaqueDistance", "bonusDegatsMagiques", "bonusDegatsMainsNues", "bonusPvMaxDe", "grimoireClasses"],
   consommable: ["quantite", "sortAppris", "dureeEtat", "formuleDot", "jetable"],
 };
 // Champs qui, s'ils sont présents, doivent être de type number — "degats"/
@@ -193,11 +264,18 @@ items.forEach((it, index) => {
   const RESSOURCES_VALIDES = ["or", "argent", "bronze", "pv"];
   const OPERATIONS_VALIDES = ["perte", "gain"];
   (it.declencheurs || []).forEach((d, i) => {
-    if (!d || !EVENEMENTS_VALIDES.includes(d.evenement)) signaler(cle, `declencheurs[${i}].evenement invalide : "${d && d.evenement}" (attendu : ${EVENEMENTS_VALIDES.join("|")}).`);
-    if (!d || !RESSOURCES_VALIDES.includes(d.ressource)) signaler(cle, `declencheurs[${i}].ressource invalide : "${d && d.ressource}" (attendu : ${RESSOURCES_VALIDES.join("|")}).`);
-    if (!d || !OPERATIONS_VALIDES.includes(d.operation)) signaler(cle, `declencheurs[${i}].operation invalide : "${d && d.operation}" (attendu : ${OPERATIONS_VALIDES.join("|")}).`);
-    if (!d || (typeof d.valeur !== "string" && typeof d.valeur !== "number") || d.valeur === "") signaler(cle, `declencheurs[${i}].valeur manquante/invalide.`);
-    if (d && d.repli) {
+    if (!d || !EVENEMENTS_VALIDES.includes(d.evenement)) { signaler(cle, `declencheurs[${i}].evenement invalide : "${d && d.evenement}" (attendu : ${EVENEMENTS_VALIDES.join("|")}).`); return; }
+    // Deux formes acceptées (cf. "Mécaniser les affixes de rareté") :
+    // ressource/operation (Forge du MJ, existant) OU effets[] (vocabulaire
+    // mecanique.effets[] de data/donnees.js, nouveau).
+    if (Array.isArray(d.effets)) {
+      validerEffets(d.effets, (msg) => signaler(cle, `declencheurs[${i}].${msg}`));
+      return;
+    }
+    if (!RESSOURCES_VALIDES.includes(d.ressource)) signaler(cle, `declencheurs[${i}].ressource invalide : "${d.ressource}" (attendu : ${RESSOURCES_VALIDES.join("|")}).`);
+    if (!OPERATIONS_VALIDES.includes(d.operation)) signaler(cle, `declencheurs[${i}].operation invalide : "${d.operation}" (attendu : ${OPERATIONS_VALIDES.join("|")}).`);
+    if ((typeof d.valeur !== "string" && typeof d.valeur !== "number") || d.valeur === "") signaler(cle, `declencheurs[${i}].valeur manquante/invalide.`);
+    if (d.repli) {
       if (!RESSOURCES_VALIDES.includes(d.repli.ressource)) signaler(cle, `declencheurs[${i}].repli.ressource invalide : "${d.repli.ressource}".`);
       if ((typeof d.repli.valeur !== "string" && typeof d.repli.valeur !== "number") || d.repli.valeur === "") signaler(cle, `declencheurs[${i}].repli.valeur manquante/invalide.`);
     }
@@ -208,18 +286,66 @@ idsVus.forEach((n, id) => {
   if (n > 1) signaler(id, `id dupliqué (${n} occurrences dans le catalogue).`);
 });
 
+// ===========================================================================
+// js/raretes.js — mecanique{} des affixes (cf. "Mécaniser les affixes de
+// rareté"). Fichier séparé de data/loot.json, mais même vocabulaire effets[]
+// — validé ici pour rester un seul script "avant tout commit touchant le
+// loot/les raretés", comme demandé par le prompt (Étape 5).
+// ===========================================================================
+const ctxRaretes = chargerGlobals(["js/raretes.js"], ["EFFETS_PAR_ITEM", "EFFETS_RARETE"]);
+const EFFETS_PAR_ITEM = ctxRaretes.EFFETS_PAR_ITEM;
+const EFFETS_RARETE = ctxRaretes.EFFETS_RARETE;
+if (!EFFETS_PAR_ITEM || !EFFETS_RARETE) { console.error("❌ EFFETS_PAR_ITEM/EFFETS_RARETE introuvables (js/raretes.js n'a pas chargé)."); process.exit(1); }
+
+const problemesParAffixe = new Map();
+function signalerAffixe(cle, message) {
+  if (!problemesParAffixe.has(cle)) problemesParAffixe.set(cle, []);
+  problemesParAffixe.get(cle).push(message);
+}
+const EVENEMENTS_MECA_VALIDES = ["touche", "rate", "critique"];
+let nbMecaniques = 0;
+function validerMecaniqueAffixe(cle, meca) {
+  ["rare", "legendaire"].forEach((palier) => {
+    const m = meca[palier];
+    if (!m) return;
+    nbMecaniques++;
+    const p = `mecanique.${palier}`;
+    if (!EVENEMENTS_MECA_VALIDES.includes(m.evenement)) signalerAffixe(cle, `${p}.evenement invalide : "${m.evenement}" (attendu : ${EVENEMENTS_MECA_VALIDES.join("|")}).`);
+    validerEffets(m.effets, (msg) => signalerAffixe(cle, `${p}.${msg}`));
+  });
+}
+Object.keys(EFFETS_PAR_ITEM).forEach((itemId) => {
+  EFFETS_PAR_ITEM[itemId].forEach((variante) => {
+    if (variante.mecanique) validerMecaniqueAffixe(`${itemId}.${variante.id}`, variante.mecanique);
+  });
+});
+Object.keys(EFFETS_RARETE).forEach((type) => {
+  if (EFFETS_RARETE[type].mecanique) validerMecaniqueAffixe(`EFFETS_RARETE.${type}`, EFFETS_RARETE[type].mecanique);
+});
+
 const itemsEnErreur = problemesParItem.size;
 const totalErreurs = [...problemesParItem.values()].reduce((s, l) => s + l.length, 0);
+const affixesEnErreur = problemesParAffixe.size;
+const totalErreursAffixes = [...problemesParAffixe.values()].reduce((s, l) => s + l.length, 0);
 
-if (totalErreurs) {
-  console.log(`❌ ${totalErreurs} erreur(s) sur ${itemsEnErreur} item(s) :\n`);
-  problemesParItem.forEach((messages, cle) => {
-    console.log(`  [${cle}]`);
-    messages.forEach((m) => console.log(`      ${m}`));
-  });
-  console.log(`\n${items.length} item(s) analysés, ${itemsEnErreur} en erreur, ${totalErreurs} erreur(s) au total.`);
+if (totalErreurs || totalErreursAffixes) {
+  if (totalErreurs) {
+    console.log(`❌ ${totalErreurs} erreur(s) sur ${itemsEnErreur} item(s) :\n`);
+    problemesParItem.forEach((messages, cle) => {
+      console.log(`  [${cle}]`);
+      messages.forEach((m) => console.log(`      ${m}`));
+    });
+  }
+  if (totalErreursAffixes) {
+    console.log(`❌ ${totalErreursAffixes} erreur(s) sur ${affixesEnErreur} affixe(s) de rareté (js/raretes.js) :\n`);
+    problemesParAffixe.forEach((messages, cle) => {
+      console.log(`  [${cle}]`);
+      messages.forEach((m) => console.log(`      ${m}`));
+    });
+  }
+  console.log(`\n${items.length} item(s) analysés (${itemsEnErreur} en erreur), ${nbMecaniques} mecanique(s) d'affixe analysée(s) (${affixesEnErreur} en erreur).`);
   process.exit(1);
 } else {
-  console.log(`✅ ${items.length} item(s) validés, aucune erreur.`);
+  console.log(`✅ ${items.length} item(s) et ${nbMecaniques} mecanique(s) d'affixe (js/raretes.js) validés, aucune erreur.`);
   process.exit(0);
 }

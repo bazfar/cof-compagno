@@ -173,6 +173,37 @@ const Forge = (() => {
     if (typeof Marche !== "undefined") Marche.rendrePanneauMarche(); else rendre();
   }
 
+  // Ordre des clés dans data/loot.json (cf. tools/valider_loot.js pour la
+  // liste blanche complète) — reproduit ici pour que l'export colle au
+  // format du catalogue plutôt qu'à l'ordre d'insertion JS de _construireItem.
+  const ORDRE_CLES_EXPORT = [
+    "id", "nom", "type", "porte", "description",
+    "degats", "portee", "typedegats", "enchantement", "deuxMains", "categorieArme", "degatsAuMoinsRare",
+    "valeurCA", "malusDEX", "categorie", "reductionDegats",
+    "bonusDEF", "categorieBouclier",
+    "slot", "bonusCarac", "bonusCompetences", "bonusInitiative",
+    "bonusAttaqueMagique", "bonusAttaqueDistance", "bonusDegatsMagiques", "bonusDegatsMainsNues", "bonusPvMaxDe",
+    "rariteFixe", "sansModificateurRegional", "grimoireClasses",
+    "rarete", "rareteNom", "rareteCouleur", "icone", "effet", "prixPo",
+    "horsMarche", "formules", "declencheurs",
+  ];
+  // Objet -> entrée JSON prête à coller dans data/loot.json (Étape 4,
+  // "Mécaniser les affixes de rareté") : mêmes clés que le stockage
+  // loot:custom, réordonnées, MOINS `custom` (drapeau de suivi Forge, hors
+  // liste blanche de tools/valider_loot.js — jamais valide dans le catalogue).
+  // Pas de promotion automatique : le MJ copie-colle et commit à la main.
+  function _exporterPourRepo(id) {
+    const it = lire().find((x) => x.id === id);
+    if (!it) return null;
+    const propre = {};
+    ORDRE_CLES_EXPORT.forEach((cle) => { if (it[cle] !== undefined) propre[cle] = it[cle]; });
+    // Toute clé imprévue (futur champ ajouté à _construireItem sans mise à
+    // jour de ORDRE_CLES_EXPORT) atterrit quand même, en fin de liste,
+    // plutôt que d'être silencieusement perdue à l'export.
+    Object.keys(it).forEach((cle) => { if (cle !== "custom" && propre[cle] === undefined) propre[cle] = it[cle]; });
+    return JSON.stringify(propre, null, 2);
+  }
+
   /* ── Résumé lisible des effets d'un objet forgé (pour la liste) ── */
   function _resume(it) {
     const bits = [];
@@ -330,8 +361,10 @@ const Forge = (() => {
         <button class="btn petit secondaire btn-forge-editer" data-id="${it.id}">✏️ Éditer</button>
         <button class="btn petit secondaire btn-forge-vendre" data-id="${it.id}">🏪 Mettre en vente</button>
         ${nb ? `<button class="btn petit secondaire btn-forge-retirer" data-id="${it.id}">🚫 Retirer du marché</button>` : ""}
+        <button class="btn petit secondaire btn-forge-export" data-id="${it.id}">📤 Exporter pour le repo</button>
         <button class="btn petit danger btn-forge-suppr" data-id="${it.id}">🗑 Supprimer</button>
       </div>
+      <div class="forge-export-zone" id="forge-export-${it.id}" style="display:none;"></div>
     </div>`;
     }).join("");
     return `<div class="carte forge-bloc">
@@ -478,6 +511,32 @@ const Forge = (() => {
     zone.querySelectorAll(".btn-forge-vendre").forEach((b) => { b.onclick = () => { if (typeof Marche !== "undefined") Marche.mettreEnVente(b.dataset.id); }; });
     zone.querySelectorAll(".btn-forge-retirer").forEach((b) => { b.onclick = () => { if (typeof Marche !== "undefined") Marche.retirerDuMarche(b.dataset.id); }; });
     const bAnnuler = $("btn-forge-annuler"); if (bAnnuler) bAnnuler.onclick = _annulerEdition;
+    // Export (Étape 4, "Mécaniser les affixes de rareté") : bascule un
+    // <textarea readonly> sous l'objet, prêt à copier-coller dans
+    // data/loot.json — jamais écrit automatiquement (cf. piège "loot.json
+    // reste versionné, relu et commité à la main").
+    zone.querySelectorAll(".btn-forge-export").forEach((b) => {
+      b.onclick = () => {
+        const cible = $("forge-export-" + b.dataset.id);
+        if (!cible) return;
+        if (cible.style.display !== "none") { cible.style.display = "none"; cible.innerHTML = ""; return; }
+        const json = _exporterPourRepo(b.dataset.id);
+        if (!json) return;
+        cible.style.display = "";
+        cible.innerHTML = `<p class="forge-aide" style="margin:8px 0 4px;">À coller dans <code>data/loot.json</code> (champ <code>items</code>) puis reporter à la main dans <code>data/loot.js</code> — jamais promu automatiquement.</p>
+          <textarea readonly class="forge-export-textarea" rows="12" style="width:100%;font-family:monospace;font-size:0.78rem;">${echapper(json)}</textarea>
+          <div class="barre-actions" style="margin-top:6px;"><button type="button" class="btn petit secondaire btn-forge-export-copier" data-id="${b.dataset.id}">📋 Copier</button></div>`;
+        const ta = cible.querySelector("textarea");
+        if (ta) { ta.focus(); ta.select(); }
+        const bc = cible.querySelector(".btn-forge-export-copier");
+        if (bc) bc.onclick = () => {
+          navigator.clipboard.writeText(json).then(
+            () => toast("📋 JSON copié dans le presse-papiers."),
+            () => toast("Copie automatique indisponible — sélectionne le texte manuellement.")
+          );
+        };
+      };
+    });
 
     // Icône : upload + aperçu + retrait
     const _majApercuIcone = () => {
