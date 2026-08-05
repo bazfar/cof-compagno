@@ -27,7 +27,23 @@ function chargerArmesMonstres() {
   return eval(s);
 }
 
+// Catalogue des états (cf. js/etats.js) — pour vérifier que effets[].id /
+// immunites[] / immunitesConditionnelles[].etats[] pointent vers un état
+// réel, plutôt qu'un id fautif qui ne se verrait qu'en séance.
+function chargerEtats() {
+  let s = fs.readFileSync(path.join(RACINE, "js", "etats.js"), "utf8");
+  s = s.replace(/^[\s\S]*?const\s+ETATS\s*=\s*/, "").replace(/;\s*\nconst ORDRE_CATEGORIES_ETATS[\s\S]*/, "");
+  return eval("(" + s + ")");
+}
+
 const ARMES_MONSTRES = chargerArmesMonstres();
+const ETATS = chargerEtats();
+// Convention établie (cf. js/capacites.js, js/app.js _appliquerBonusMonstreDepuisMessages) :
+// un état posé "par source" porte un id suffixé (marquee_pretre...) qui
+// retombe sur l'entrée catalogue générique "marquee".
+function etatExiste(id) {
+  return Object.prototype.hasOwnProperty.call(ETATS, /^marquee_.+/.test(id) ? "marquee" : id);
+}
 const bestiaireRaw = JSON.parse(fs.readFileSync(path.join(RACINE, "data", "bestiaire.json"), "utf8"));
 const monstres = bestiaireRaw.monstres;
 if (!Array.isArray(monstres)) { console.error("❌ data/bestiaire.json : champ `monstres` absent ou n'est pas un tableau."); process.exit(1); }
@@ -135,8 +151,23 @@ ARMES_MONSTRES.forEach((a) => {
 // SECTION B — data/bestiaire.json
 // ===========================================================================
 const CHAMPS_MONSTRE_OBLIGATOIRES = ["id", "nom", "categorie", "race", "pv", "def", "init", "atk", "dangerosite", "boss", "taille", "attaques", "capacitesSpeciales", "lore", "armure", "emoji"];
-const CHAMPS_MONSTRE_OPTIONNELS = ["famille", "tier", "voies", "faction", "roleNarratif"];
+const CHAMPS_MONSTRE_OPTIONNELS = ["famille", "tier", "voies", "faction", "roleNarratif",
+  "capacitesActives", "immunites", "immunitesConditionnelles"];
 const CHAMPS_MONSTRE_AUTORISES = new Set([...CHAMPS_MONSTRE_OBLIGATOIRES, ...CHAMPS_MONSTRE_OPTIONNELS]);
+
+// Bloc mecanique de capacitesActives[] (cf. schema_cible_capacites_monstres.md
+// §3) — sous-ensemble du schéma PJ de data/donnees.js, même vocabulaire à
+// l'identique là où il existe. jetAttaque est le seul champ nouveau (un
+// monstre n'a qu'un atk plat, contrairement à jetOppose.caracAttaquant côté PJ).
+const CHAMPS_CAPACITE_AUTORISES = new Set(["nom", "description", "mecanique"]);
+const CHAMPS_MECANIQUE_AUTORISES = new Set(["type", "usage", "cible", "portee", "zone", "effets",
+  "actionBonus", "reactionCout", "jetAttaque", "jetSauvegardeFixe", "recharge"]);
+const TYPES_MECANIQUE_VALIDES = ["activable", "limitee", "passive"];
+const CIBLES_MECANIQUE_VALIDES = ["soi", "ennemi", "allie", "zone", "aucune"];
+const PORTEE_MOTS_CLES = ["adjacent", "vue", "voix"];
+const TYPES_EFFET_MONSTRE_VALIDES = ["degats", "etat", "bonus", "soin", "retraitEtat", "special"];
+const CARACS_SAUVEGARDE_VALIDES = ["FOR", "DEX", "CON", "INT", "SAG", "CHA", "Volonte", "Reflexes", "Vigueur"];
+const DUREE_MOTS_CLES = ["prochainTour", "finCombat", "permanente"];
 
 const problemesMonstres = new Map();
 function signalerMonstre(cle, msg) {
@@ -188,27 +219,123 @@ monstres.forEach((m, index) => {
     signalerMonstre(cle, `tier invalide : "${m.tier}" (attendu : ${TIERS_VALIDES.join(" | ")}).`);
   }
 
-  // 13/14. attaques[].
+  // 13/14. attaques[] — depuis la migration des capacités (cf.
+  // schema_cible_capacites_monstres.md), attaques[] ne contient plus que des
+  // armes : armeId est désormais OBLIGATOIRE. js/carte.js produit toujours le
+  // format inline hérité pour les invocations de joueur, mais celles-ci ne
+  // transitent jamais par bestiaire.json — une entrée sans armeId ICI est une
+  // capacité restée au mauvais endroit (à déplacer dans capacitesActives[]).
   (m.attaques || []).forEach((a, i) => {
-    if (a.armeId !== undefined) {
-      armesReferencees.add(a.armeId);
-      if (!idsArmesVus.has(a.armeId)) signalerMonstre(cle, `attaques[${i}].armeId introuvable dans le catalogue : "${a.armeId}".`);
-      if (typeof a.bonusAttaque !== "number" || !Number.isInteger(a.bonusAttaque)) {
-        signalerMonstre(cle, `attaques[${i}].bonusAttaque devrait être un entier, reçu ${JSON.stringify(a.bonusAttaque)}.`);
-      }
-      if (a.bonusDegats !== undefined && !Number.isInteger(a.bonusDegats)) {
-        signalerMonstre(cle, `attaques[${i}].bonusDegats devrait être un entier, reçu ${JSON.stringify(a.bonusDegats)}.`);
-      }
-      if (!a.nom) signalerMonstre(cle, `attaques[${i}].nom manquant.`);
-      if (a.effetSpecial !== null && typeof a.effetSpecial !== "string") {
-        signalerMonstre(cle, `attaques[${i}].effetSpecial devrait être string|null, reçu ${typeof a.effetSpecial}.`);
-      }
-    } else {
-      // Format inline hérité (cf. §3) : produit dynamiquement par
-      // js/carte.js pour les invocations de joueur — avertissement, pas
-      // une erreur (hors périmètre de cette migration, cf. §8).
+    if (a.armeId === undefined) {
       attaquesInlineHeritees++;
+      signalerMonstre(cle, `attaques[${i}] "${a.nom || "?"}" sans armeId — une capacité n'a plus sa place dans attaques[], à déplacer dans capacitesActives[].`);
+      return;
     }
+    armesReferencees.add(a.armeId);
+    if (!idsArmesVus.has(a.armeId)) signalerMonstre(cle, `attaques[${i}].armeId introuvable dans le catalogue : "${a.armeId}".`);
+    if (typeof a.bonusAttaque !== "number" || !Number.isInteger(a.bonusAttaque)) {
+      signalerMonstre(cle, `attaques[${i}].bonusAttaque devrait être un entier, reçu ${JSON.stringify(a.bonusAttaque)}.`);
+    }
+    if (a.bonusDegats !== undefined && !Number.isInteger(a.bonusDegats)) {
+      signalerMonstre(cle, `attaques[${i}].bonusDegats devrait être un entier, reçu ${JSON.stringify(a.bonusDegats)}.`);
+    }
+    if (!a.nom) signalerMonstre(cle, `attaques[${i}].nom manquant.`);
+    if (a.effetSpecial !== null && typeof a.effetSpecial !== "string") {
+      signalerMonstre(cle, `attaques[${i}].effetSpecial devrait être string|null, reçu ${typeof a.effetSpecial}.`);
+    }
+  });
+
+  // 15. capacitesActives[] : bloc mecanique optionnel, mais explicite (null
+  // si purement narrative — jamais absent silencieusement).
+  (m.capacitesActives || []).forEach((cap, i) => {
+    const refCap = `capacitesActives[${i}] "${cap.nom || "?"}"`;
+    Object.keys(cap).forEach((c) => {
+      if (!CHAMPS_CAPACITE_AUTORISES.has(c)) signalerMonstre(cle, `${refCap} : champ "${c}" non autorisé.`);
+    });
+    if (!cap.nom) signalerMonstre(cle, `${refCap}.nom manquant.`);
+    if (typeof cap.description !== "string") signalerMonstre(cle, `${refCap}.description devrait être une chaîne.`);
+    if (cap.mecanique === undefined) {
+      signalerMonstre(cle, `${refCap}.mecanique absente — mettre null si la capacité est purement narrative.`);
+      return;
+    }
+    const meca = cap.mecanique;
+    if (!meca) return;
+
+    Object.keys(meca).forEach((c) => {
+      if (!CHAMPS_MECANIQUE_AUTORISES.has(c)) signalerMonstre(cle, `${refCap}.mecanique : champ "${c}" non autorisé.`);
+    });
+    if (!TYPES_MECANIQUE_VALIDES.includes(meca.type)) signalerMonstre(cle, `${refCap}.mecanique.type invalide : ${JSON.stringify(meca.type)}.`);
+    if (!CIBLES_MECANIQUE_VALIDES.includes(meca.cible)) signalerMonstre(cle, `${refCap}.mecanique.cible invalide : ${JSON.stringify(meca.cible)}.`);
+
+    const freq = meca.usage && meca.usage.frequence;
+    if (!freq) signalerMonstre(cle, `${refCap}.mecanique.usage.frequence manquante.`);
+    else if (freq !== "libre" && freq !== "permanente" && !/^\d+x\/.+$/.test(freq)) {
+      signalerMonstre(cle, `${refCap}.mecanique.usage.frequence "${freq}" illisible par Capacites.parserFrequence.`);
+    }
+
+    if (meca.portee !== null && meca.portee !== undefined
+        && !Number.isInteger(meca.portee) && !PORTEE_MOTS_CLES.includes(meca.portee)) {
+      signalerMonstre(cle, `${refCap}.mecanique.portee : entier (mètres), null, ou ${PORTEE_MOTS_CLES.join(" | ")}.`);
+    }
+    if (meca.zone !== null && meca.zone !== undefined && !Number.isInteger(meca.zone)) {
+      signalerMonstre(cle, `${refCap}.mecanique.zone devrait être un rayon entier en mètres ou null.`);
+    }
+    if (meca.jetAttaque !== undefined && !Number.isInteger(meca.jetAttaque)) signalerMonstre(cle, `${refCap}.mecanique.jetAttaque devrait être un entier.`);
+    if (meca.reactionCout !== undefined && !Number.isInteger(meca.reactionCout)) signalerMonstre(cle, `${refCap}.mecanique.reactionCout devrait être un entier.`);
+    if (meca.actionBonus !== undefined && typeof meca.actionBonus !== "boolean") signalerMonstre(cle, `${refCap}.mecanique.actionBonus devrait être un booléen.`);
+
+    // recharge : purement déclaratif — aucune période nommée "recharge"
+    // n'est réinitialisée automatiquement, le MJ débloque à la main (↻).
+    if (meca.recharge !== undefined) {
+      if (!Number.isInteger(meca.recharge) || meca.recharge < 1) signalerMonstre(cle, `${refCap}.mecanique.recharge devrait être un entier ≥ 1.`);
+      if (freq !== "1x/recharge") signalerMonstre(cle, `${refCap}.mecanique.recharge présente sans usage.frequence "1x/recharge".`);
+    }
+
+    if (meca.jetSauvegardeFixe) {
+      if (!CARACS_SAUVEGARDE_VALIDES.includes(meca.jetSauvegardeFixe.carac)) {
+        signalerMonstre(cle, `${refCap}.mecanique.jetSauvegardeFixe.carac invalide : ${JSON.stringify(meca.jetSauvegardeFixe.carac)}.`);
+      }
+      if (!Number.isInteger(meca.jetSauvegardeFixe.dd)) signalerMonstre(cle, `${refCap}.mecanique.jetSauvegardeFixe.dd devrait être un entier.`);
+    }
+
+    if (!Array.isArray(meca.effets) || !meca.effets.length) {
+      signalerMonstre(cle, `${refCap}.mecanique.effets[] absent ou vide.`);
+      return;
+    }
+    meca.effets.forEach((e, k) => {
+      const refE = `${refCap}.effets[${k}]`;
+      if (!TYPES_EFFET_MONSTRE_VALIDES.includes(e.type)) { signalerMonstre(cle, `${refE}.type invalide : ${JSON.stringify(e.type)}.`); return; }
+      if (e.type === "degats" || e.type === "soin") {
+        if (!formuleValide(e.formule)) signalerMonstre(cle, `${refE}.formule "${e.formule}" rejetée par la grammaire de lancerFormule.`);
+        if (e.surReussite !== undefined && e.surReussite !== "demi") signalerMonstre(cle, `${refE}.surReussite ne vaut que "demi".`);
+        if (e.surReussite && !meca.jetSauvegardeFixe) signalerMonstre(cle, `${refE}.surReussite sans jetSauvegardeFixe — rien ne peut être réussi.`);
+      }
+      if (e.type === "etat") {
+        if (!e.id || !etatExiste(e.id)) signalerMonstre(cle, `${refE}.id inconnu de js/etats.js : ${JSON.stringify(e.id)}.`);
+        if (e.duree !== undefined && !DUREE_MOTS_CLES.includes(e.duree) && !/^\d+$/.test(String(e.duree))) {
+          signalerMonstre(cle, `${refE}.duree "${e.duree}" non résoluble (entier en tours, ou ${DUREE_MOTS_CLES.join(" | ")}).`);
+        }
+      }
+      if (e.type === "bonus") {
+        if (e.cible !== "attaque" && e.cible !== "DEF") signalerMonstre(cle, `${refE}.cible doit valoir "attaque" ou "DEF" — seules valeurs lues par _bonusEtatsMonstre.`);
+        if (!Number.isInteger(e.valeur)) signalerMonstre(cle, `${refE}.valeur devrait être un entier.`);
+      }
+      if (e.type === "special" && !e.note) signalerMonstre(cle, `${refE} : un effet special doit porter une note pour le MJ.`);
+    });
+  });
+
+  // 16. immunites[] / immunitesConditionnelles[].
+  (m.immunites || []).forEach((id) => {
+    if (!etatExiste(id)) signalerMonstre(cle, `immunites : état inconnu de js/etats.js : ${JSON.stringify(id)}.`);
+  });
+  (m.immunitesConditionnelles || []).forEach((ic, i) => {
+    const refIc = `immunitesConditionnelles[${i}]`;
+    if (!Array.isArray(ic.etats) || !ic.etats.length) signalerMonstre(cle, `${refIc}.etats[] absent ou vide.`);
+    else ic.etats.forEach((id) => {
+      if (!etatExiste(id)) signalerMonstre(cle, `${refIc} : état inconnu : ${JSON.stringify(id)}.`);
+      if ((m.immunites || []).includes(id)) signalerMonstre(cle, `${refIc} : "${id}" est déjà en immunité pleine, la condition ne sera jamais lue.`);
+    });
+    if (!ic.condition) signalerMonstre(cle, `${refIc}.condition manquante — c'est le texte affiché au MJ.`);
   });
 });
 
@@ -241,9 +368,12 @@ if (totalErreursMonstres) {
 if (armesJamaisReferencees.length) {
   console.log(`⚠️  ${armesJamaisReferencees.length} arme(s) jamais référencée(s) par aucun monstre : ${armesJamaisReferencees.join(", ")}.\n`);
 }
-if (attaquesInlineHeritees) {
-  console.log(`⚠️  ${attaquesInlineHeritees} attaque(s) au format inline hérité (jet/degats/portee/type sans armeId) — produites dynamiquement par js/carte.js (invocations), hors périmètre de cette migration.\n`);
-}
+// attaquesInlineHeritees (armeId manquant) est désormais une ERREUR (cf. §13/14
+// ci-dessus, déjà listée par monstre) — plus un simple avertissement "hors
+// périmètre" : depuis la migration des capacités, une entrée sans armeId dans
+// bestiaire.json est une capacité restée au mauvais endroit, jamais un format
+// hérité légitime (celui-ci n'est produit qu'à la volée par js/carte.js pour
+// les invocations, qui ne transitent jamais par ce fichier).
 
 if (totalErreurs) {
   console.log(`${ARMES_MONSTRES.length} arme(s) et ${monstres.length} monstre(s) analysés, ${totalErreurs} erreur(s) au total.`);
