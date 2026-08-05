@@ -847,18 +847,25 @@ const App = (() => {
   // Même distinction monstre/PJ que _resoudreAttaqueRapide (defCible) : un
   // monstre passe par Carte.appliquerDegatsCombat (armure du token), un PJ
   // par subirDegats (réduction complète du personnage, cf. Personnage).
-  function _appliquerDegatsCibleRapide(cibleId, total, ignoreReduction) {
-    if (!cibleId || typeof total !== "number" || typeof Carte === "undefined") return;
+  // silencieux (cf. _resoudreEffetsDeclencheur, branche "degats") : le
+  // résolveur de déclencheurs compose déjà son propre message dans
+  // messagesToast pour un seul toast final — sans ça, le toast interne
+  // ci-dessous ("X subit N dégâts") s'affiche puis est immédiatement
+  // écrasé, même bug déjà corrigé ailleurs (appliquerMalus, clic capacité
+  // de monstre) pour la même raison : #toast est un élément unique.
+  function _appliquerDegatsCibleRapide(cibleId, total, ignoreReduction, silencieux) {
+    if (!cibleId || typeof total !== "number" || typeof Carte === "undefined") return null;
     const monstre = (Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : []).find((t) => t.id === cibleId);
     if (monstre) {
       const info = Carte.appliquerDegatsCombat(cibleId, total, ignoreReduction);
-      if (info) toast(`${info.nom} subit ${info.degatsNets} dégâts (PV ${info.pvActuel}).`);
-      return;
+      if (info && !silencieux) toast(`${info.nom} subit ${info.degatsNets} dégâts (PV ${info.pvActuel}).`);
+      return info;
     }
     const pjTok = (Carte.listeTokensJoueursCombat ? Carte.listeTokensJoueursCombat() : []).find((t) => t.id === cibleId);
     if (pjTok && pjTok.ref && pjTok.ref.startsWith("pj-")) {
       subirDegats(pjTok.ref.slice(3), total, null, null, null, ignoreReduction);
     }
+    return null;
   }
 
   // Chasseur — Voie du chaos, rang 1 "Premier sang du prédateur" (passif) :
@@ -926,11 +933,18 @@ const App = (() => {
       // comme un jet de dé qui ne produit rien.
       if (typeof e.probabilite === "number" && Math.random() >= e.probabilite) return;
       if (e.type === "degats") {
-        if (!cibleRaw) { ctx.messagesToast.push(`${ctx.itNom} : cible inconnue — ${e.formule} dégâts à appliquer manuellement.`); return; }
+        // cible: "attaquant" (cf. Affixes phase 2 §C, épineuse/renvoyeur —
+        // "quand le porteur est touché") : redirige vers ctx.attaquantId
+        // plutôt que ctx.cibleId, seul cas où l'effet vise l'inverse du
+        // porteur qui a déclenché l'effet plutôt que sa propre cible.
+        const viseAttaquant = e.cible === "attaquant";
+        const idEffectif = viseAttaquant ? ctx.attaquantId : ctx.cibleId;
+        const rawEffectif = viseAttaquant ? (idEffectif ? _cibleRawDepuisToken(idEffectif) : null) : cibleRaw;
+        if (!rawEffectif) { ctx.messagesToast.push(`${ctx.itNom} : ${viseAttaquant ? "attaquant" : "cible"} inconnu(e) — ${e.formule} dégâts à appliquer manuellement.`); return; }
         const total = lancerFormule(e.formule, `${ctx.itNom} — Dégâts`, false);
         if (typeof total === "number") {
-          _appliquerDegatsCibleRapide(ctx.cibleId, total, ctx.ignoreReductionCourant);
-          ctx.messagesToast.push(`${ctx.itNom} : +${total} dégâts${e.elementaire ? ` (${e.elementaire})` : ""}.`);
+          _appliquerDegatsCibleRapide(idEffectif, total, viseAttaquant ? null : ctx.ignoreReductionCourant, true);
+          ctx.messagesToast.push(`${ctx.itNom} : +${total} dégâts${e.elementaire ? ` (${e.elementaire})` : ""}${viseAttaquant ? " à l'attaquant" : ""}.`);
         }
       } else if (e.type === "dot") {
         // "Saignement"/"Brûlure"/poison de prose : mécaniquement le même DOT
@@ -987,6 +1001,41 @@ const App = (() => {
     });
   }
 
+  // Condition lisible sur le jeton adverse au moment du coup (cf. Affixes
+  // phase 2 §B : sauvage/féroce, "cibleSousMoitie" ; precise, "cibleBlessee"
+  // — celle-ci lue ailleurs, avant le jet, pas ici). false si la cible est
+  // inconnue : mieux vaut ne pas déclencher qu'appliquer un bonus non mérité.
+  function _conditionRemplie(condition, cibleId) {
+    if (!condition) return true;
+    if (!cibleId || typeof Carte === "undefined") return false;
+    const monstre = Carte.listeMonstresCombat ? Carte.listeMonstresCombat().find((t) => t.id === cibleId) : null;
+    let pvActuel, pvMax;
+    if (monstre) {
+      pvActuel = monstre.pvActuel; pvMax = monstre.pvMax;
+    } else {
+      const pjTok = Carte.listeTokensJoueursCombat ? Carte.listeTokensJoueursCombat().find((t) => t.id === cibleId) : null;
+      if (!pjTok || !pjTok.ref || !pjTok.ref.startsWith("pj-")) return false;
+      const p = chargerPersos()[pjTok.ref.slice(3)];
+      if (!p) return false;
+      pvActuel = p.pvActuel; pvMax = p.pvMax;
+    }
+    if (typeof pvActuel !== "number" || typeof pvMax !== "number") return false;
+    if (condition === "cibleBlessee") return pvActuel < pvMax;
+    if (condition === "cibleSousMoitie") return pvActuel < pvMax / 2;
+    return false;
+  }
+
+  // precise (cf. Affixes phase 2 §B) : bonus au JET D'ATTAQUE conditionné à
+  // l'état de la cible, lu AVANT le jet — pas un effet de déclencheur (le
+  // texte porte sur le jet lui-même, résolu trop tard une fois "touche"
+  // connu). Même équipement contact/distance que critMinAttaque().
+  function _bonusAttaqueConditionnelEquipement(perso, type, cibleId) {
+    const arme = type === "contact" ? perso.armeContactEquipee() : type === "distance" ? perso.armeDistanceEquipee() : null;
+    const bac = arme && arme.bonusAttaqueConditionnel;
+    if (!bac) return 0;
+    return _conditionRemplie(bac.condition, cibleId) ? bac.valeur : 0;
+  }
+
   function _gererDeclencheursEquipement(persoId, type, resolution, cibleId) {
     if (type !== "contact" && type !== "distance") return;
     const persos = chargerPersos();
@@ -1006,6 +1055,7 @@ const App = (() => {
           (d.evenement === "rate" && resolution.touche === false) ||
           (d.evenement === "critique" && resolution.critique === true);
         if (!evenementOk) return;
+        if (!_conditionRemplie(d.condition, cibleId)) return;
         if (Array.isArray(d.effets)) {
           // Nouvelle branche (cf. schéma étendu) : vocabulaire effets[],
           // ctx.p/pvPorteurTouche partagés avec le reste de la fonction pour
@@ -1054,6 +1104,35 @@ const App = (() => {
     // comportement inchangé) — un seul toast final, même principe que
     // appliquerMalus/le clic des capacités de monstre.
     if (messagesToast.length) toast(messagesToast.join(" — "));
+  }
+
+  // Symétrique de _gererDeclencheursEquipement : le PORTEUR est la CIBLE
+  // (cf. Affixes phase 2 §C, "quand le porteur est touché" — épineuse/
+  // renvoyeur). Appelé quand un monstre touche un PJ au contact ; les effets
+  // visent "l'attaquant" (le monstre), jamais le porteur lui-même — aucun
+  // texte de cette phase ne cible autre chose, donc pas de branche ctx.cibleId
+  // ici (resterait undefined, jamais lue par _resoudreEffetsDeclencheur pour
+  // un effet cible:"attaquant"). Journalise dans l'historique (ajouterHisto)
+  // pour rester visible côté MJ, comme demandé par la checklist du prompt.
+  function _gererDeclencheursSubitContact(pjId, attaquantMonstreId) {
+    const persos = chargerPersos();
+    const p = persos[pjId];
+    if (!p) return;
+    const perso = Personnage.depuisJSON(p);
+    const messagesToast = [];
+    perso._itemsEquipesUniques().forEach((it) => {
+      if (!it.declencheurs || !it.declencheurs.length) return;
+      it.declencheurs.forEach((d) => {
+        if (d.evenement !== "subitContact") return;
+        if (!Array.isArray(d.effets)) return;
+        const ctx = { persoId: pjId, p, perso, persos, attaquantId: attaquantMonstreId, itNom: it.nom, type: null, messagesToast, pvPorteurTouche: false };
+        _resoudreEffetsDeclencheur(d.effets, ctx);
+      });
+    });
+    if (messagesToast.length) {
+      toast(messagesToast.join(" — "));
+      ajouterHisto(`${p.nom} — Riposte d'équipement`, 0, false, false, messagesToast.join(" — "));
+    }
   }
   const LABELS_RESSOURCE_TOAST = { or: "PO", argent: "PA", bronze: "PB", pv: "PV" };
 
@@ -1323,6 +1402,7 @@ const App = (() => {
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
     if (dmgContact && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
+    if (dmgContact && perso.bonusDegatsContactArmureEquipee()) dmgContact += "+" + perso.bonusDegatsContactArmureEquipee(); // affixe "brutale" (armure), cf. Affixes phase 2 §A
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
@@ -1558,7 +1638,10 @@ const App = (() => {
         const type = el.dataset.bmAttaque;
         const bonus = parseInt(el.dataset.bonus, 10);
         const cibleId = (_typeAttaquePortee === type) ? _cibleDistanceId : null;
-        const resolution = _resoudreAttaqueRapide(`Attaque ${type}`, bonus, perso.critMinAttaque(type), cibleId, { persoId: perso.id, caracCode: _caracPourTypeAttaque(type, perso) });
+        // bonusAttaqueConditionnel (affixe "precise", cf. Affixes phase 2 §B) :
+        // lu ici, avant le jet — un effet de déclencheur arriverait trop tard.
+        const bonusEffectif = bonus + _bonusAttaqueConditionnelEquipement(perso, type, cibleId);
+        const resolution = _resoudreAttaqueRapide(`Attaque ${type}`, bonusEffectif, perso.critMinAttaque(type), cibleId, { persoId: perso.id, caracCode: _caracPourTypeAttaque(type, perso) });
         // cibleId conservé ici (pas seulement dans la résolution du jet) :
         // sert au bouton "Dégâts" pour appliquer automatiquement le résultat
         // sur la BONNE cible au moment du clic (cf. _appliquerDegatsCibleRapide),
@@ -1787,6 +1870,7 @@ const App = (() => {
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
     if (dmgContact && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
+    if (dmgContact && perso.bonusDegatsContactArmureEquipee()) dmgContact += "+" + perso.bonusDegatsContactArmureEquipee(); // affixe "brutale" (armure), cf. Affixes phase 2 §A
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
@@ -1971,7 +2055,10 @@ const App = (() => {
         const type = el.dataset.bmAttaque;
         const bonus = parseInt(el.dataset.bonus, 10);
         const cibleId = (_typeAttaquePortee === type) ? _cibleDistanceId : null;
-        const resolution = _resoudreAttaqueRapide(`Attaque ${type}`, bonus, perso.critMinAttaque(type), cibleId, { persoId: perso.id, caracCode: _caracPourTypeAttaque(type, perso) });
+        // bonusAttaqueConditionnel (affixe "precise", cf. Affixes phase 2 §B) :
+        // lu ici, avant le jet — un effet de déclencheur arriverait trop tard.
+        const bonusEffectif = bonus + _bonusAttaqueConditionnelEquipement(perso, type, cibleId);
+        const resolution = _resoudreAttaqueRapide(`Attaque ${type}`, bonusEffectif, perso.critMinAttaque(type), cibleId, { persoId: perso.id, caracCode: _caracPourTypeAttaque(type, perso) });
         // cibleId conservé ici (pas seulement dans la résolution du jet) :
         // sert au bouton "Dégâts" pour appliquer automatiquement le résultat
         // sur la BONNE cible au moment du clic (cf. _appliquerDegatsCibleRapide),
@@ -5397,6 +5484,7 @@ const App = (() => {
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
     if (dmgContact && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
+    if (dmgContact && perso.bonusDegatsContactArmureEquipee()) dmgContact += "+" + perso.bonusDegatsContactArmureEquipee(); // affixe "brutale" (armure), cf. Affixes phase 2 §A
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
@@ -9570,6 +9658,11 @@ const App = (() => {
         if (pjId && typeof total === "number") {
           const typeDegatsNormalise = r.typedegats && r.typedegats.startsWith("physique") ? "physique" : "magique";
           subirDegats(pjId, total, typeDegatsNormalise);
+          // "quand le porteur est touché" (cf. Affixes phase 2 §C, épineuse/
+          // renvoyeur) : seulement sur une attaque de CONTACT — r.portee peut
+          // valoir "contact" ou "contact +1 case (3m)" (armes d'hast), les
+          // deux comptent comme une attaque de contact.
+          if (r.portee && r.portee.startsWith("contact")) _gererDeclencheursSubitContact(pjId, m.id);
         }
       };
     });

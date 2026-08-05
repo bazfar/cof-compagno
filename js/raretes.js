@@ -54,7 +54,11 @@ const EFFETS_RARETE = {
         rare: { evenement: "touche", effets: [{ type: "dot", formule: "1d4", duree: 2 }] },
         legendaire: { evenement: "touche", effets: [{ type: "dot", formule: "1d6", duree: 3 }] },
       } },
-  armure:   { rare: "Renvoie 1 point de dégâts à l'attaquant au contact", legendaire: "Renvoie 2 points de dégâts à l'attaquant au contact" },
+  armure:   { rare: "Renvoie 1 point de dégâts à l'attaquant au contact", legendaire: "Renvoie 2 points de dégâts à l'attaquant au contact",
+      mecanique: {
+        rare: { evenement: "subitContact", effets: [{ type: "degats", formule: "1", cible: "attaquant" }] },
+        legendaire: { evenement: "subitContact", effets: [{ type: "degats", formule: "2", cible: "attaquant" }] },
+      } },
   bouclier: { rare: "1 fois par combat : annule totalement une attaque de contact", legendaire: "2 fois par combat : annule totalement une attaque de contact" },
 };
 
@@ -77,8 +81,8 @@ const EFFETS_PAR_ITEM = {
   epee_courte: [
     { id: "precise", nom: "précise", rare: "+2 au jet d'attaque contre une cible déjà blessée", legendaire: "+4 au jet d'attaque contre une cible déjà blessée, critique sur 19-20",
       mecanique: {
-        rare: { evenement: "touche", effets: [{ type: "special", note: "+2 au jet d'attaque contre une cible déjà blessée — condition non automatisée (phase suivante), à appliquer manuellement." }] },
-        legendaire: { evenement: "touche", effets: [{ type: "special", note: "+4 au jet d'attaque contre une cible déjà blessée, critique sur 19-20 — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+        rare: { bonusAttaqueConditionnel: { condition: "cibleBlessee", valeur: 2 } },
+        legendaire: { bonusAttaqueConditionnel: { condition: "cibleBlessee", valeur: 4 }, evenement: "touche", effets: [{ type: "critique", seuil: 19 }] },
       } },
     { id: "vive", nom: "vive", rare: "Permet une attaque supplémentaire à -4 une fois par tour", legendaire: "Permet une attaque supplémentaire sans malus une fois par tour" },
   ],
@@ -97,8 +101,8 @@ const EFFETS_PAR_ITEM = {
   hache_guerre: [
     { id: "sauvage", nom: "sauvage", rare: "+1d6 dégâts contre une cible à moins de la moitié de ses PV max", legendaire: "+2d6 dégâts contre une cible à moins de la moitié de ses PV max",
       mecanique: {
-        rare: { evenement: "touche", effets: [{ type: "special", note: "+1d6 dégâts contre une cible à moins de la moitié de ses PV max — condition non automatisée (phase suivante), à appliquer manuellement." }] },
-        legendaire: { evenement: "touche", effets: [{ type: "special", note: "+2d6 dégâts contre une cible à moins de la moitié de ses PV max — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+        rare: { evenement: "touche", condition: "cibleSousMoitie", effets: [{ type: "degats", formule: "1d6" }] },
+        legendaire: { evenement: "touche", condition: "cibleSousMoitie", effets: [{ type: "degats", formule: "2d6" }] },
       } },
     { id: "broyeuse", nom: "broyeuse", rare: "Ignore 2 points de reductionDegats de la cible", legendaire: "Ignore 4 points de reductionDegats de la cible",
       mecanique: {
@@ -164,7 +168,11 @@ const EFFETS_PAR_ITEM = {
       } },
   ],
   rapiere: [
-    { id: "gracieuse", nom: "gracieuse", rare: "+1 initiative tant que l'arme est équipée", legendaire: "+2 initiative, agit en premier au premier tour de tout combat" },
+    { id: "gracieuse", nom: "gracieuse", rare: "+1 initiative tant que l'arme est équipée", legendaire: "+2 initiative, agit en premier au premier tour de tout combat",
+      mecanique: {
+        rare: { passif: { bonusInitiative: 1 } },
+        legendaire: { passif: { bonusInitiative: 2 }, note: "Agit aussi en premier au premier tour de tout combat — pas de mécanique d'ordre d'initiative forcé, à arbitrer manuellement." },
+      } },
     { id: "perfide", nom: "perfide", rare: "Critique sur 19-20", legendaire: "Critique sur 18-20",
       mecanique: {
         rare: { evenement: "touche", effets: [{ type: "critique", seuil: 19 }] },
@@ -214,8 +222,8 @@ const EFFETS_PAR_ITEM = {
     { id: "tournoyante", nom: "tournoyante", rare: "Peut être relancée pour toucher une cible à distance courte, 1 fois par combat", legendaire: "Peut être relancée sans limite, revient dans la main du porteur" },
     { id: "feroce", nom: "féroce", rare: "+1d4 dégâts contre une cible à moins de la moitié de ses PV max", legendaire: "+1d8 dégâts contre une cible à moins de la moitié de ses PV max",
       mecanique: {
-        rare: { evenement: "touche", effets: [{ type: "special", note: "+1d4 dégâts contre une cible à moins de la moitié de ses PV max — condition non automatisée (phase suivante), à appliquer manuellement." }] },
-        legendaire: { evenement: "touche", effets: [{ type: "special", note: "+1d8 dégâts contre une cible à moins de la moitié de ses PV max — condition non automatisée (phase suivante), à appliquer manuellement." }] },
+        rare: { evenement: "touche", condition: "cibleSousMoitie", effets: [{ type: "degats", formule: "1d4" }] },
+        legendaire: { evenement: "touche", condition: "cibleSousMoitie", effets: [{ type: "degats", formule: "1d8" }] },
       } },
   ],
   poignards_jumeaux: [
@@ -289,16 +297,32 @@ const EFFETS_PAR_ITEM = {
 
   // ── Armures ────────────────────────────────────────────────
   armure_cuir: [
-    { id: "souple", nom: "souple", rare: "+1 en DEX tant que l'armure est équipée", legendaire: "+2 en DEX tant que l'armure est équipée" },
-    { id: "silencieuse", nom: "silencieuse", rare: "+1 en discrétion", legendaire: "+2 en discrétion, aucun malus en terrain difficile" },
+    { id: "souple", nom: "souple", rare: "+1 en DEX tant que l'armure est équipée", legendaire: "+2 en DEX tant que l'armure est équipée",
+      mecanique: {
+        rare: { passif: { bonusCarac: { DEX: 1 } } },
+        legendaire: { passif: { bonusCarac: { DEX: 2 } } },
+      } },
+    { id: "silencieuse", nom: "silencieuse", rare: "+1 en discrétion", legendaire: "+2 en discrétion, aucun malus en terrain difficile",
+      mecanique: {
+        rare: { passif: { bonusCompetences: { Discrétion: 1 } } },
+        legendaire: { passif: { bonusCompetences: { Discrétion: 2 } }, note: "Aucun malus en terrain difficile — pas de mécanique de terrain difficile, à arbitrer manuellement." },
+      } },
   ],
   armure_cloute: [
-    { id: "epineuse", nom: "épineuse", rare: "Renvoie 1 point de dégâts à l'attaquant au contact", legendaire: "Renvoie 2 points de dégâts à l'attaquant au contact" },
+    { id: "epineuse", nom: "épineuse", rare: "Renvoie 1 point de dégâts à l'attaquant au contact", legendaire: "Renvoie 2 points de dégâts à l'attaquant au contact",
+      mecanique: {
+        rare: { evenement: "subitContact", effets: [{ type: "degats", formule: "1", cible: "attaquant" }] },
+        legendaire: { evenement: "subitContact", effets: [{ type: "degats", formule: "2", cible: "attaquant" }] },
+      } },
     { id: "robuste", nom: "robuste", rare: "Réduit de moitié les dégâts de chute", legendaire: "Annule les dégâts de chute" },
   ],
   cotte_mailles: [
     { id: "renforcee", nom: "renforcée", rare: "Réduit d'1 les dégâts physiques après application de reductionDegats", legendaire: "Réduit de 2 les dégâts physiques après application de reductionDegats" },
-    { id: "cliquetante", nom: "intimidante", rare: "+1 en intimidation", legendaire: "+2 en intimidation, effraie les créatures de faible dangerosité au 1er round" },
+    { id: "cliquetante", nom: "intimidante", rare: "+1 en intimidation", legendaire: "+2 en intimidation, effraie les créatures de faible dangerosité au 1er round",
+      mecanique: {
+        rare: { passif: { bonusCompetences: { Intimidation: 1 } } },
+        legendaire: { passif: { bonusCompetences: { Intimidation: 2 } }, note: "Effraie aussi les créatures de faible dangerosité au 1er round — à arbitrer manuellement." },
+      } },
   ],
   demi_plaques: [
     { id: "imposante", nom: "imposante", rare: "+1 DEF contre les attaques à distance", legendaire: "+2 DEF contre les attaques à distance" },
@@ -306,7 +330,11 @@ const EFFETS_PAR_ITEM = {
   ],
   plaques_comp: [
     { id: "impenetrable", nom: "impénétrable", rare: "Réduit de 1 tout dégât physique après application de reductionDegats", legendaire: "Réduit de 2 tout dégât physique après application de reductionDegats" },
-    { id: "ecrasante", nom: "écrasante", rare: "+1 en FOR tant que l'armure est équipée", legendaire: "+2 en FOR tant que l'armure est équipée" },
+    { id: "ecrasante", nom: "écrasante", rare: "+1 en FOR tant que l'armure est équipée", legendaire: "+2 en FOR tant que l'armure est équipée",
+      mecanique: {
+        rare: { passif: { bonusCarac: { FOR: 1 } } },
+        legendaire: { passif: { bonusCarac: { FOR: 2 } } },
+      } },
   ],
   armure_ombre: [
     { id: "furtive", nom: "furtive", rare: "Silhouette indétectable dans l'obscurité totale", legendaire: "Idem, et déplacement totalement silencieux" },
@@ -325,7 +353,11 @@ const EFFETS_PAR_ITEM = {
     { id: "fiable", nom: "fiable", rare: "Ignore le premier coup critique subi par combat (dégâts normaux à la place)", legendaire: "Ignore les deux premiers coups critiques subis par combat" },
   ],
   robe_mage: [
-    { id: "focalisante", nom: "focalisante", rare: "+1 en INT tant que la robe est équipée", legendaire: "+2 en INT tant que la robe est équipée" },
+    { id: "focalisante", nom: "focalisante", rare: "+1 en INT tant que la robe est équipée", legendaire: "+2 en INT tant que la robe est équipée",
+      mecanique: {
+        rare: { passif: { bonusCarac: { INT: 1 } } },
+        legendaire: { passif: { bonusCarac: { INT: 2 } } },
+      } },
     { id: "tissee_de_seve", nom: "tissée de Sève", rare: "Régénère 1 PV par tour hors combat", legendaire: "Régénère 1 PV par tour, même en combat" },
   ],
   manteau_voyageur: [
@@ -343,12 +375,20 @@ const EFFETS_PAR_ITEM = {
 
   // ── Boucliers ──────────────────────────────────────────────
   rondache: [
-    { id: "vive", nom: "vive", rare: "+1 initiative tant que le bouclier est équipé", legendaire: "+2 initiative tant que le bouclier est équipé" },
+    { id: "vive", nom: "vive", rare: "+1 initiative tant que le bouclier est équipé", legendaire: "+2 initiative tant que le bouclier est équipé",
+      mecanique: {
+        rare: { passif: { bonusInitiative: 1 } },
+        legendaire: { passif: { bonusInitiative: 2 } },
+      } },
     { id: "parade", nom: "de parade", rare: "1 fois par combat, annule totalement une attaque de contact", legendaire: "2 fois par combat, annule totalement une attaque de contact" },
   ],
   bouclier_acier: [
     { id: "standard", nom: "renforcé", rare: "+1 DEF supplémentaire contre les attaques à distance", legendaire: "+2 DEF supplémentaire contre les attaques à distance" },
-    { id: "renvoyeur", nom: "renvoyeur", rare: "Renvoie 1 point de dégâts à l'attaquant au contact", legendaire: "Renvoie 2 points de dégâts à l'attaquant au contact" },
+    { id: "renvoyeur", nom: "renvoyeur", rare: "Renvoie 1 point de dégâts à l'attaquant au contact", legendaire: "Renvoie 2 points de dégâts à l'attaquant au contact",
+      mecanique: {
+        rare: { evenement: "subitContact", effets: [{ type: "degats", formule: "1", cible: "attaquant" }] },
+        legendaire: { evenement: "subitContact", effets: [{ type: "degats", formule: "2", cible: "attaquant" }] },
+      } },
   ],
   targe_elfique: [
     { id: "protectrice", nom: "protectrice", rare: "+1 aux jets de résistance contre la magie", legendaire: "+2 aux jets de résistance contre la magie" },
@@ -458,7 +498,11 @@ const EFFETS_PAR_ITEM = {
         rare: { evenement: "touche", effets: [{ type: "special", note: "Critique sur 19-20 contre les cibles sans casque ni armure lourde — condition non automatisée (phase suivante), à appliquer manuellement." }] },
         legendaire: { evenement: "touche", effets: [{ type: "special", note: "Critique sur 18-20 dans les mêmes conditions, dégâts doublés sur critique — condition non automatisée (phase suivante), à appliquer manuellement." }] },
       } },
-    { id: "imperial", nom: "impérial", rare: "+1 en intimidation tant que l'arme est visible", legendaire: "+2 en intimidation, effraie les créatures de faible dangerosité au 1er round" },
+    { id: "imperial", nom: "impérial", rare: "+1 en intimidation tant que l'arme est visible", legendaire: "+2 en intimidation, effraie les créatures de faible dangerosité au 1er round",
+      mecanique: {
+        rare: { passif: { bonusCompetences: { Intimidation: 1 } } },
+        legendaire: { passif: { bonusCompetences: { Intimidation: 2 } }, note: "Effraie aussi les créatures de faible dangerosité au 1er round — à arbitrer manuellement." },
+      } },
   ],
 
   // ── Armures (suite) ────────────────────────────────────────
@@ -467,11 +511,19 @@ const EFFETS_PAR_ITEM = {
     { id: "protectrice_mithril", nom: "protectrice", rare: "+1 aux jets de résistance contre la magie", legendaire: "+2 aux jets de résistance, absorbe automatiquement 1 dégât magique par tour" },
   ],
   armure_ossements: [
-    { id: "macabre", nom: "macabre", rare: "+1 en intimidation, effraie les créatures vivantes de faible dangerosité", legendaire: "+2 en intimidation, immunise contre la Terreur" },
+    { id: "macabre", nom: "macabre", rare: "+1 en intimidation, effraie les créatures vivantes de faible dangerosité", legendaire: "+2 en intimidation, immunise contre la Terreur",
+      mecanique: {
+        rare: { passif: { bonusCompetences: { Intimidation: 1 } }, note: "Effraie aussi les créatures vivantes de faible dangerosité — à arbitrer manuellement." },
+        legendaire: { passif: { bonusCompetences: { Intimidation: 2 } }, note: "Immunise aussi contre la Terreur — pas d'immunité automatisée pour cet état précis, à arbitrer manuellement." },
+      } },
     { id: "drainante_os", nom: "drainante", rare: "Soigne 1 PV au porteur à chaque ennemi tué à moins de 2 cases", legendaire: "Soigne 2 PV au porteur dans les mêmes conditions, + 1d4 PV temporaires" },
   ],
   armure_guerre_orque: [
-    { id: "brutale", nom: "brutale", rare: "+1d4 dégâts avec armes de contact tant que l'armure est équipée", legendaire: "+1d6 dégâts avec armes de contact tant que l'armure est équipée" },
+    { id: "brutale", nom: "brutale", rare: "+1d4 dégâts avec armes de contact tant que l'armure est équipée", legendaire: "+1d6 dégâts avec armes de contact tant que l'armure est équipée",
+      mecanique: {
+        rare: { passif: { bonusDegatsContact: "1d4" } },
+        legendaire: { passif: { bonusDegatsContact: "1d6" } },
+      } },
     { id: "increvable", nom: "increvable", rare: "Ignore 1 point de dégâts physiques après application de reductionDegats", legendaire: "Ignore 2 points de dégâts physiques après application de reductionDegats" },
   ],
   gants_poing: [
@@ -482,7 +534,11 @@ const EFFETS_PAR_ITEM = {
   // ── Boucliers (suite) ──────────────────────────────────────
   bouclier_guet: [
     { id: "vigilant", nom: "vigilant", rare: "Ne peut jamais être surpris (garde une DEF normale même surpris)", legendaire: "Idem, + agit en premier au premier round si le groupe est surpris" },
-    { id: "imposant", nom: "imposant", rare: "+1 en intimidation", legendaire: "+2 en intimidation, +1 DEF aux alliés adjacents" },
+    { id: "imposant", nom: "imposant", rare: "+1 en intimidation", legendaire: "+2 en intimidation, +1 DEF aux alliés adjacents",
+      mecanique: {
+        rare: { passif: { bonusCompetences: { Intimidation: 1 } } },
+        legendaire: { passif: { bonusCompetences: { Intimidation: 2 } }, note: "+1 DEF aux alliés adjacents — pas de mécanique de bonus de zone automatisée, à arbitrer manuellement." },
+      } },
   ],
   bouclier_miroir: [
     { id: "reflechissant", nom: "réfléchissant", rare: "1 fois par combat, renvoie un sort ciblé à son lanceur", legendaire: "2 fois par combat, renvoie un sort ciblé à son lanceur" },
@@ -506,6 +562,58 @@ const Raretes = (() => {
   function _effetGenerique(type, rareteId) {
     const table = EFFETS_RARETE[type];
     return (table && table[rareteId]) || null;
+  }
+
+  // Fusionne mecanique[palier].passif dans le clone — MÊME chemin que les
+  // accessoires du catalogue (bonusCarac/bonusCompetences/bonusInitiative,
+  // lus génériquement par Personnage._itemsEquipesUniques()), jamais un
+  // calcul parallèle (cf. Affixes phase 2 §A, piège "ne pas dupliquer
+  // l'agrégation des bonus"). bonusDegatsContact (armure "brutale") est la
+  // seule exception : lu par Personnage.bonusDegatsContactArmureEquipee(),
+  // pas par une somme générique (formule de dé, pas un entier).
+  function _appliquerPassif(clone, item, passif) {
+    if (!passif) return;
+    if (passif.bonusCarac) {
+      clone.bonusCarac = Object.assign({}, item.bonusCarac);
+      Object.keys(passif.bonusCarac).forEach((c) => { clone.bonusCarac[c] = (clone.bonusCarac[c] || 0) + passif.bonusCarac[c]; });
+    }
+    if (passif.bonusCompetences) {
+      clone.bonusCompetences = Object.assign({}, item.bonusCompetences);
+      Object.keys(passif.bonusCompetences).forEach((c) => { clone.bonusCompetences[c] = (clone.bonusCompetences[c] || 0) + passif.bonusCompetences[c]; });
+    }
+    if (passif.bonusInitiative) clone.bonusInitiative = (item.bonusInitiative || 0) + passif.bonusInitiative;
+    if (passif.bonusDegatsContact) clone.bonusDegatsContact = passif.bonusDegatsContact;
+  }
+
+  // mecanique[palier] (rare/legendaire) -> effets sur le clone, commun aux 4
+  // types (cf. Affixes phase 2 : epineuse est une armure, renvoyeur un
+  // bouclier, tous deux avec un déclencheur "subitContact" — la mécanique
+  // n'est plus l'apanage des armes depuis cette phase). `meca` peut porter,
+  // indépendamment les uns des autres : passif, evenement+effets
+  // (déclencheur, avec condition optionnelle), bonusAttaqueConditionnel.
+  function _appliquerMecanique(clone, item, meca) {
+    if (!meca) return;
+    _appliquerPassif(clone, item, meca.passif);
+    if (meca.evenement && Array.isArray(meca.effets)) {
+      // declencheurs[] : lu par _gererDeclencheursEquipement/
+      // _gererDeclencheursSubitContact (js/app.js) sur l'item équipé — même
+      // schéma que les objets forgés (Épée de Cupidité), juste produit ici
+      // plutôt que par la Forge du MJ.
+      const d = { evenement: meca.evenement, effets: meca.effets };
+      if (meca.condition) d.condition = meca.condition;
+      clone.declencheurs = [d];
+      // critique{seuil} (cf. Rapière perfide) : résolu STATIQUEMENT ici, pas
+      // par le déclencheur (le jet est déjà fait au moment où "touche" se
+      // résout) — lu ensuite par Personnage.critMinAttaque() via arme.critMin,
+      // mécanisme déjà existant.
+      const effetCritique = meca.effets.find((e) => e.type === "critique");
+      if (effetCritique) clone.critMin = Math.min(item.critMin || 20, effetCritique.seuil);
+    }
+    // bonusAttaqueConditionnel (cf. "precise") : PAS un effet de déclencheur
+    // — son bonus se lit AVANT le jet d'attaque (cf. Affixes phase 2 §B,
+    // piège "precise n'est pas un effet de déclencheur"), par
+    // _bonusAttaqueConditionnelEquipement (js/app.js), pas par le résolveur.
+    if (meca.bonusAttaqueConditionnel) clone.bonusAttaqueConditionnel = meca.bonusAttaqueConditionnel;
   }
 
   function _renforcerEffetAccessoire(effet, bonus) {
@@ -558,29 +666,7 @@ const Raretes = (() => {
           clone.bonusAttaqueMagique = (item.bonusAttaqueMagique || 0) + bonus;
           clone.bonusDegatsMagiques = (item.bonusDegatsMagiques || 0) + bonus;
         }
-        if (auMoinsRare) {
-          if (item.degatsAuMoinsRare) clone.degats = item.degatsAuMoinsRare;
-          if (variante) { clone.effetRarete = variante[rarete.id]; clone.varianteNom = variante.nom; }
-          else clone.effetRarete = _effetGenerique("arme", rarete.id);
-          // mecanique (cf. "Mécaniser les affixes de rareté") : le texte
-          // rare/legendaire reste affiché tel quel ci-dessus, la mécanique
-          // s'ajoute. EFFETS_RARETE (repli générique) porte aussi sa propre
-          // clé mecanique, même format que les variantes.
-          const source = variante || EFFETS_RARETE.arme;
-          const meca = source && source.mecanique && source.mecanique[rarete.id];
-          if (meca) {
-            // declencheurs[] : lu par _gererDeclencheursEquipement (js/app.js)
-            // sur l'item équipé — même schéma que les objets forgés (Épée de
-            // Cupidité), juste produit ici plutôt que par la Forge du MJ.
-            clone.declencheurs = [{ evenement: meca.evenement, effets: meca.effets }];
-            // critique{seuil} (cf. Rapière perfide) : résolu STATIQUEMENT ici,
-            // pas par le déclencheur (le jet est déjà fait au moment où
-            // "touche" se résout) — lu ensuite par Personnage.critMinAttaque()
-            // via arme.critMin, mécanisme déjà existant.
-            const effetCritique = meca.effets.find((e) => e.type === "critique");
-            if (effetCritique) clone.critMin = Math.min(item.critMin || 20, effetCritique.seuil);
-          }
-        }
+        if (auMoinsRare && item.degatsAuMoinsRare) clone.degats = item.degatsAuMoinsRare;
         break;
       case "armure":
         // Le bonus de rareté se répartit sur les deux stats depuis
@@ -588,26 +674,28 @@ const Raretes = (() => {
         // CA/armures) : valeurCA ET reductionDegats gagnent chacun +bonus.
         clone.valeurCA = (item.valeurCA || 10) + bonus;
         clone.reductionDegats = (item.reductionDegats || 0) + bonus;
-        if (auMoinsRare) {
-          if (variante) { clone.effetRarete = variante[rarete.id]; clone.varianteNom = variante.nom; }
-          else clone.effetRarete = _effetGenerique("armure", rarete.id);
-        }
         break;
       case "bouclier":
         clone.bonusDEF = (item.bonusDEF || 0) + bonus;
-        if (auMoinsRare) {
-          if (variante) { clone.effetRarete = variante[rarete.id]; clone.varianteNom = variante.nom; }
-          else clone.effetRarete = _effetGenerique("bouclier", rarete.id);
-        }
         break;
       case "accessoire":
         clone.effet = _renforcerEffetAccessoire(item.effet, bonus);
-        if (auMoinsRare) {
-          if (variante) { clone.effetRarete = variante[rarete.id]; clone.varianteNom = variante.nom; }
-        }
         break;
       default:
         break; // consommable ou type inconnu
+    }
+
+    // Texte rare/legendaire + mecanique (cf. "Mécaniser les affixes de
+    // rareté") : commun aux 4 types depuis la phase 2 (armure/bouclier
+    // peuvent désormais porter un déclencheur "subitContact" ou un passif,
+    // pas seulement une arme "sur touche") — EFFETS_RARETE (repli générique)
+    // porte aussi sa propre clé mecanique, même format que les variantes.
+    if (auMoinsRare && item.type !== "consommable") {
+      if (variante) { clone.effetRarete = variante[rarete.id]; clone.varianteNom = variante.nom; }
+      else clone.effetRarete = _effetGenerique(item.type, rarete.id);
+      const source = variante || EFFETS_RARETE[item.type];
+      const meca = source && source.mecanique && source.mecanique[rarete.id];
+      if (meca) _appliquerMecanique(clone, item, meca);
     }
 
     if (clone.varianteNom) clone.nom = `${item.nom} ${clone.varianteNom}`;

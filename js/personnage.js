@@ -1310,6 +1310,19 @@ class Personnage extends Entite {
     return this._itemsEquipesUniques().reduce((t, it) => t + (it.reductionDegats || 0), 0) + this.bonusReductionCapacites()
       + this.bonusTemporaire("reduction_degats");
   }
+  // Affixe de rareté "brutale" (armure_guerre_orque, cf. "Affixes phase 2" §A) :
+  // « +1d4/1d6 dégâts avec armes de contact tant que l'armure est équipée ».
+  // Seul cas de cette phase où un passif d'UNE pièce (armure) modifie les
+  // dégâts d'une AUTRE (arme) — aucun champ bonusDegats* existant ne porte de
+  // FORMULE de dé (ils sont tous des entiers plats, cf. bonusDegatsMainsNues
+  // ci-dessus), d'où ce champ dédié (item.bonusDegatsContact, une chaîne
+  // "NdM"). Renvoie un terme de formule ("1d4") à ajouter à dmgContact côté
+  // app.js, jamais un nombre — même principe que bonusDegatsFormuleEquipement
+  // mais pour un dé littéral, pas une expression @variable évaluée.
+  bonusDegatsContactArmureEquipee() {
+    const armure = this._itemsEquipesUniques().find((it) => it.type === "armure" && it.bonusDegatsContact);
+    return (armure && armure.bonusDegatsContact) || "";
+  }
   // Druide — Voie de la nature, rang 4 "Résistance naturelle" : réduction
   // égale à 2×rangMaxVoie contre les dégâts "naturels" (froid/chaleur/chute/
   // poison/animal — nouveau 3e type de dégâts au sélecteur "Subir des

@@ -79,6 +79,17 @@ function formuleValide(f) {
 const TYPES_EFFET_VALIDES = ["degats", "dot", "soin", "bonus", "etat", "ignoreReduction", "critique", "special"];
 const CIBLES_BONUS_VALIDES = ["attaque", "DEF"];
 const DUREE_MOTS_CLES_LOOT = ["prochainTour", "finCombat", "permanente"];
+// cible: "attaquant" sur un effet degats (cf. "Affixes phase 2" §C, épineuse/
+// renvoyeur — "quand le porteur est touché") : seul cas où un effet vise
+// l'inverse du porteur qui l'a déclenché. Absent = comportement historique
+// (vise la cible du porteur).
+const CIBLES_EFFET_DEGATS_VALIDES = ["attaquant"];
+// evenement partagé entre declencheurs[] (data/loot.json) et mecanique{}
+// (js/raretes.js) — subitContact ajouté en phase 2 (cf. §C).
+const EVENEMENTS_DECLENCHEUR_VALIDES = ["touche", "rate", "critique", "subitContact"];
+// condition sur un déclencheur/mecanique (cf. "Affixes phase 2" §B :
+// sauvage/féroce = cibleSousMoitie, precise = cibleBlessee).
+const CONDITIONS_VALIDES = ["cibleBlessee", "cibleSousMoitie"];
 function validerEffets(effets, signaler) {
   if (!Array.isArray(effets) || !effets.length) { signaler("effets[] absent ou vide."); return; }
   effets.forEach((e, i) => {
@@ -89,6 +100,9 @@ function validerEffets(effets, signaler) {
     }
     if (e.type === "degats" || e.type === "dot" || e.type === "soin") {
       if (!formuleValide(e.formule)) signaler(`${p}.formule "${e.formule}" rejetée par la grammaire de lancerFormule.`);
+    }
+    if (e.type === "degats" && e.cible !== undefined && !CIBLES_EFFET_DEGATS_VALIDES.includes(e.cible)) {
+      signaler(`${p}.cible invalide : "${e.cible}" (attendu : absent ou ${CIBLES_EFFET_DEGATS_VALIDES.join("|")}).`);
     }
     if (e.type === "dot" || e.type === "etat") {
       const duree = e.type === "dot" ? e.duree : e.duree;
@@ -121,6 +135,39 @@ const COMPETENCES_VALIDES = new Set(Object.values(COMPETENCES_PAR_CARAC).flat())
 const CARACS_VALIDES = ["FOR", "DEX", "CON", "INT", "SAG", "CHA"];
 const SAUVEGARDES_VALIDES = Object.keys(SAUVEGARDES);
 const CLASSES_VALIDES = ORDRE_CLASSES;
+
+// mecanique[palier].passif (cf. "Affixes phase 2" §A) — même chemin que
+// Personnage._itemsEquipesUniques() (bonusCarac/bonusCompetences/
+// bonusInitiative), + bonusDegatsContact (exception "brutale", formule de dé
+// plutôt qu'un entier plat).
+function validerPassif(cle, prefix, passif) {
+  if (!passif || typeof passif !== "object") { signalerAffixe(cle, `${prefix} devrait être un objet, reçu ${JSON.stringify(passif)}.`); return; }
+  if (passif.bonusCarac && typeof passif.bonusCarac === "object") {
+    Object.keys(passif.bonusCarac).forEach((c) => {
+      if (!CARACS_VALIDES.includes(c)) signalerAffixe(cle, `${prefix}.bonusCarac référence une caractéristique inconnue : "${c}".`);
+    });
+  }
+  if (passif.bonusCompetences && typeof passif.bonusCompetences === "object") {
+    Object.keys(passif.bonusCompetences).forEach((c) => {
+      if (!COMPETENCES_VALIDES.has(c)) signalerAffixe(cle, `${prefix}.bonusCompetences référence une compétence inconnue : "${c}".`);
+    });
+  }
+  if (passif.bonusInitiative !== undefined && !Number.isInteger(passif.bonusInitiative)) {
+    signalerAffixe(cle, `${prefix}.bonusInitiative devrait être un entier, reçu ${JSON.stringify(passif.bonusInitiative)}.`);
+  }
+  if (passif.bonusDegatsContact !== undefined && !formuleValide(passif.bonusDegatsContact)) {
+    signalerAffixe(cle, `${prefix}.bonusDegatsContact "${passif.bonusDegatsContact}" rejeté par la grammaire de lancerFormule.`);
+  }
+}
+
+// mecanique[palier].bonusAttaqueConditionnel (cf. "Affixes phase 2" §B,
+// precise) — bonus au jet d'attaque lu avant le jet, jamais un effet de
+// déclencheur.
+function validerBonusAttaqueConditionnel(cle, prefix, bac) {
+  if (!bac || typeof bac !== "object") { signalerAffixe(cle, `${prefix} devrait être un objet, reçu ${JSON.stringify(bac)}.`); return; }
+  if (!CONDITIONS_VALIDES.includes(bac.condition)) signalerAffixe(cle, `${prefix}.condition invalide : "${bac.condition}" (attendu : ${CONDITIONS_VALIDES.join("|")}).`);
+  if (!Number.isInteger(bac.valeur)) signalerAffixe(cle, `${prefix}.valeur devrait être un entier, reçu ${JSON.stringify(bac.valeur)}.`);
+}
 
 // data/loot.json : source de vérité éditée à la main (data/loot.js en est
 // une copie générée, chargée par l'app au runtime — cf. son propre
@@ -260,11 +307,13 @@ items.forEach((it, index) => {
     if (f && f.cible === "carac" && !CARACS_VALIDES.includes(f.carac)) signaler(cle, `formules[${i}].carac invalide : "${f.carac}".`);
     if (f && f.cible === "competence" && !COMPETENCES_VALIDES.has(f.competence)) signaler(cle, `formules[${i}].competence inconnue : "${f.competence}".`);
   });
-  const EVENEMENTS_VALIDES = ["touche", "rate", "critique"];
   const RESSOURCES_VALIDES = ["or", "argent", "bronze", "pv"];
   const OPERATIONS_VALIDES = ["perte", "gain"];
   (it.declencheurs || []).forEach((d, i) => {
-    if (!d || !EVENEMENTS_VALIDES.includes(d.evenement)) { signaler(cle, `declencheurs[${i}].evenement invalide : "${d && d.evenement}" (attendu : ${EVENEMENTS_VALIDES.join("|")}).`); return; }
+    if (!d || !EVENEMENTS_DECLENCHEUR_VALIDES.includes(d.evenement)) { signaler(cle, `declencheurs[${i}].evenement invalide : "${d && d.evenement}" (attendu : ${EVENEMENTS_DECLENCHEUR_VALIDES.join("|")}).`); return; }
+    if (d.condition !== undefined && !CONDITIONS_VALIDES.includes(d.condition)) {
+      signaler(cle, `declencheurs[${i}].condition invalide : "${d.condition}" (attendu : ${CONDITIONS_VALIDES.join("|")}).`);
+    }
     // Deux formes acceptées (cf. "Mécaniser les affixes de rareté") :
     // ressource/operation (Forge du MJ, existant) OU effets[] (vocabulaire
     // mecanique.effets[] de data/donnees.js, nouveau).
@@ -302,16 +351,30 @@ function signalerAffixe(cle, message) {
   if (!problemesParAffixe.has(cle)) problemesParAffixe.set(cle, []);
   problemesParAffixe.get(cle).push(message);
 }
-const EVENEMENTS_MECA_VALIDES = ["touche", "rate", "critique"];
 let nbMecaniques = 0;
+// meca[palier] porte des champs indépendants (cf. "Affixes phase 2" :
+// passif, evenement+effets, bonusAttaqueConditionnel) — jamais mutuellement
+// exclusifs (epee_courte.precise legendaire porte à la fois evenement+effets
+// ET bonusAttaqueConditionnel). On ne valide que ce qui est effectivement
+// présent, plutôt que de supposer une forme unique.
 function validerMecaniqueAffixe(cle, meca) {
   ["rare", "legendaire"].forEach((palier) => {
     const m = meca[palier];
     if (!m) return;
     nbMecaniques++;
     const p = `mecanique.${palier}`;
-    if (!EVENEMENTS_MECA_VALIDES.includes(m.evenement)) signalerAffixe(cle, `${p}.evenement invalide : "${m.evenement}" (attendu : ${EVENEMENTS_MECA_VALIDES.join("|")}).`);
-    validerEffets(m.effets, (msg) => signalerAffixe(cle, `${p}.${msg}`));
+    if (m.evenement !== undefined || m.effets !== undefined) {
+      if (!EVENEMENTS_DECLENCHEUR_VALIDES.includes(m.evenement)) signalerAffixe(cle, `${p}.evenement invalide : "${m.evenement}" (attendu : ${EVENEMENTS_DECLENCHEUR_VALIDES.join("|")}).`);
+      validerEffets(m.effets, (msg) => signalerAffixe(cle, `${p}.${msg}`));
+    }
+    if (m.condition !== undefined && !CONDITIONS_VALIDES.includes(m.condition)) {
+      signalerAffixe(cle, `${p}.condition invalide : "${m.condition}" (attendu : ${CONDITIONS_VALIDES.join("|")}).`);
+    }
+    if (m.passif !== undefined) validerPassif(cle, `${p}.passif`, m.passif);
+    if (m.bonusAttaqueConditionnel !== undefined) validerBonusAttaqueConditionnel(cle, `${p}.bonusAttaqueConditionnel`, m.bonusAttaqueConditionnel);
+    if (m.evenement === undefined && m.effets === undefined && m.passif === undefined && m.bonusAttaqueConditionnel === undefined && m.note === undefined) {
+      signalerAffixe(cle, `${p} ne porte aucun champ reconnu (passif|evenement+effets|bonusAttaqueConditionnel).`);
+    }
   });
 }
 Object.keys(EFFETS_PAR_ITEM).forEach((itemId) => {
