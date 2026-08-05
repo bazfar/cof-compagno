@@ -1321,7 +1321,7 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
    cf. .overlay-jet), qu'il précède aussi en z-index pour rester lisible
    même si les deux se chevauchent sur un petit écran. */
 #toast {
-  position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+  position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
   background: var(--violet); color: var(--parchemin);
   padding: 12px 22px; border-radius: 30px; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
   opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; font-size: 0.9rem; z-index: 1001;

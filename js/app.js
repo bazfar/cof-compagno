@@ -203,10 +203,10 @@ const App = (() => {
     t.textContent = msg;
     t.classList.add("visible");
     if (toastTimer) clearTimeout(toastTimer);
-    // 4000ms (pas 2200) : assez long pour lire un résultat de jet
-    // ("Touché ! (DEF 14)") sans qu'il disparaisse avant l'overlay de dé
-    // associé (5000ms pour un jet simple, cf. afficherOverlayJet).
-    toastTimer = setTimeout(() => { t.classList.remove("visible"); toastTimer = null; }, 4000);
+    // 5000ms (pas 2200) : aligné sur la durée de l'overlay de dé associé
+    // (5000ms pour un jet simple, cf. afficherOverlayJet) — le résultat
+    // ("Touché ! (DEF 14)") reste lisible aussi longtemps que le jet lui-même.
+    toastTimer = setTimeout(() => { t.classList.remove("visible"); toastTimer = null; }, 5000);
   }
 
   /* ---------- Persistance ---------- */
