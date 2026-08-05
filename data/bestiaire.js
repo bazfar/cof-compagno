@@ -163,7 +163,8 @@ const BESTIAIRE = [
       "valeur": 2,
       "description": "Cottes de mailles de récupération — réduit 2 points de dégâts physiques."
     },
-    "emoji": "👺"
+    "emoji": "👺",
+    "tier": "meneur"
   },
   {
     "id": "goblin_chaman",
@@ -1222,10 +1223,6 @@ const BESTIAIRE = [
     ],
     "capacitesSpeciales": [
       {
-        "nom": "Dévastation",
-        "description": "1 fois/combat : frappe tous les ennemis adjacents."
-      },
-      {
         "nom": "Âme de la forêt",
         "description": "Immunisé aux illusions et charmes naturels. Peut communiquer avec animaux et Druides."
       },
@@ -1396,10 +1393,6 @@ const BESTIAIRE = [
         "description": "Immunisé à tous les effets de peur."
       },
       {
-        "nom": "Double frappe",
-        "description": "1 fois/round : deux attaques en une action."
-      },
-      {
         "nom": "Furie de guerre",
         "description": "Sous 50% PV : +2 ATK, +1d4 dégâts, immunité douleur, ne peut pas fuir."
       },
@@ -1509,16 +1502,8 @@ const BESTIAIRE = [
         "description": "Immunisé à tous les effets de peur."
       },
       {
-        "nom": "Frappe légendaire",
-        "description": "1 fois/combat : succès automatique, dégâts maximaux."
-      },
-      {
         "nom": "Présence martiale",
         "description": "Alliés à 9m : +1 ATK tant qu'il est debout."
-      },
-      {
-        "nom": "Cri de guerre",
-        "description": "1 fois/combat : attaque bonus immédiate pour tous les alliés à 12m."
       },
       {
         "nom": "Aura de Khoreth",
@@ -1665,7 +1650,7 @@ const BESTIAIRE = [
         "nom": "Attaque sournoise",
         "armeId": "attaque_sournoise",
         "bonusAttaque": 7,
-        "effetSpecial": "Requiert flanquement. Les 2d6 viennent du rang 1 + rang 2 de la Voie de l'Ombre."
+        "effetSpecial": "Requiert le flanquement ou l'obscurité. Les 2d6 sont déjà compris dans les dégâts de l'arme."
       }
     ],
     "capacitesSpeciales": [
@@ -1676,10 +1661,6 @@ const BESTIAIRE = [
       {
         "nom": "Attaque en puissance",
         "description": "-2 DEF pour +2 ATK et +2 dégâts ce round."
-      },
-      {
-        "nom": "Attaque sournoise",
-        "description": "+1d6 dégâts en flanquement ou obscurité."
       },
       {
         "nom": "Désengagement",
@@ -1744,16 +1725,8 @@ const BESTIAIRE = [
     ],
     "capacitesSpeciales": [
       {
-        "nom": "Double frappe",
-        "description": "1 fois/round : deux attaques en une action."
-      },
-      {
         "nom": "Défi",
         "description": "+2 ATK et +2 DEF contre une cible désignée jusqu'à fin de combat."
-      },
-      {
-        "nom": "Riposte",
-        "description": "Si une attaque le rate : attaque de contact gratuite en réaction."
       },
       {
         "nom": "Attaque sournoise",
@@ -2074,16 +2047,8 @@ const BESTIAIRE = [
     ],
     "capacitesSpeciales": [
       {
-        "nom": "Rempart vivant",
-        "description": "2 fois/round : intercepte une attaque ciblant un allié adjacent, prend les dégâts à sa place."
-      },
-      {
         "nom": "Forteresse",
         "description": "1 fois/combat, 2 rounds : DEF +4, attaques ratées de 3 ou moins contrées."
-      },
-      {
-        "nom": "Stratège de champ",
-        "description": "1 fois/combat : lui et alliés agissent en premier ce round."
       },
       {
         "nom": "Présence martiale",
@@ -2370,14 +2335,6 @@ const BESTIAIRE = [
         "description": "Alliés à 9m : +1 ATK tant qu'il est debout."
       },
       {
-        "nom": "Cri de guerre",
-        "description": "1 fois/combat : attaque bonus immédiate pour tous les alliés à 12m."
-      },
-      {
-        "nom": "Balayage de hampe",
-        "description": "1 fois/round : frappe tous les ennemis dans l'arc frontal (180°, 3m)."
-      },
-      {
         "nom": "Contre-attaque",
         "description": "Si Parade réussit : attaque gratuite."
       }
@@ -2599,16 +2556,8 @@ const BESTIAIRE = [
         "description": "Attaque jusqu'à 3m. La double frappe peut cibler deux créatures différentes dans cette portée."
       },
       {
-        "nom": "Double frappe",
-        "description": "1 fois/round : deux attaques en une action, cibles différentes possibles."
-      },
-      {
         "nom": "Défi",
         "description": "+2 ATK et +2 DEF contre une cible désignée jusqu'à fin de combat."
-      },
-      {
-        "nom": "Riposte",
-        "description": "Si une attaque rate : attaque de contact gratuite en réaction."
       },
       {
         "nom": "Zone de contrôle",
@@ -3886,7 +3835,8 @@ const BESTIAIRE = [
     "immunites": [
       "charmee",
       "hallucinee"
-    ]
+    ],
+    "tier": "elite"
   },
   {
     "id": "seigneur_gangrene",
@@ -3992,7 +3942,8 @@ const BESTIAIRE = [
     "immunites": [
       "effrayee",
       "charmee"
-    ]
+    ],
+    "tier": "grand_hote"
   },
   {
     "id": "cupide_recrue",
