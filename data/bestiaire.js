@@ -114,14 +114,37 @@ const BESTIAIRE = [
         "armeId": "filet_de_chasse",
         "bonusAttaque": 3,
         "effetSpecial": "Si touché : cible entravée (DEF -2, pas de déplacement). Test FOR diff. 12 à chaque tour pour se libérer. Recharge : 3 rounds."
-      },
+      }
+    ],
+    "capacitesActives": [
       {
         "nom": "Cri de ralliement",
-        "jet": null,
-        "degats": null,
-        "portee": "zone (9m)",
-        "type": "moral",
-        "effetSpecial": "Utilisable 1 fois par combat. Tous les gobelins dans la zone regagnent 1d4 PV et +1 en ATK jusqu'à la fin du prochain tour de Kratz."
+        "description": "Utilisable 1 fois par combat. Tous les gobelins dans la zone regagnent 1d4 PV et +1 en ATK jusqu'à la fin du prochain tour de Kratz.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "allie",
+          "portee": null,
+          "zone": 9,
+          "effets": [
+            {
+              "type": "soin",
+              "formule": "1d4"
+            },
+            {
+              "type": "bonus",
+              "cible": "attaque",
+              "valeur": 1,
+              "duree": "prochainTour"
+            },
+            {
+              "type": "special",
+              "note": "Ne concerne que les gobelins présents dans la zone."
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -369,7 +392,11 @@ const BESTIAIRE = [
       "valeur": 3,
       "description": "Écorce vivante — réduit 3 points de dégâts physiques. Pas d'effet contre le feu."
     },
-    "emoji": "🌳"
+    "emoji": "🌳",
+    "immunites": [
+      "renversee",
+      "repoussee"
+    ]
   },
   {
     "id": "orc_pillard",
@@ -414,7 +441,10 @@ const BESTIAIRE = [
     ],
     "lore": "Les orcs du monde sont les émotions de guerre que les dieux ont chassées de leur panthéon lors de la Fracture — des êtres de pure violence cristallisée en chair. Les pillards sont les individus les moins organisés, souvent mercenaires ou bandits, mais certaines tribus ont développé des codes d'honneur complexes.",
     "armure": null,
-    "emoji": "🪓"
+    "emoji": "🪓",
+    "immunites": [
+      "effrayee"
+    ]
   },
   {
     "id": "sylvath_fragment",
@@ -511,7 +541,10 @@ const BESTIAIRE = [
       "valeur": 5,
       "description": "Armure légionnaire solaire (plates + cotte) — réduit 5 points de dégâts physiques."
     },
-    "emoji": "🛡️"
+    "emoji": "🛡️",
+    "immunites": [
+      "effrayee"
+    ]
   },
   {
     "id": "golem_de_pierre_naine",
@@ -562,7 +595,18 @@ const BESTIAIRE = [
       "valeur": 10,
       "description": "Corps de granit — réduit 10 points de dégâts physiques. Vulnérable à la foudre (annule la réduction)."
     },
-    "emoji": "🗿"
+    "emoji": "🗿",
+    "immunites": [
+      "charmee",
+      "effrayee",
+      "fascinee",
+      "fascinee_illusoire",
+      "folie_illusoire",
+      "endormie",
+      "confuse",
+      "influencee",
+      "hallucinee"
+    ]
   },
   {
     "id": "elfe_du_crepuscule_renegat",
@@ -592,14 +636,28 @@ const BESTIAIRE = [
         "armeId": "fleche_de_seve_noire",
         "bonusAttaque": 5,
         "effetSpecial": "Si touché : test SAG diff. 13 ou la cible est désorientée (-2 en ATK et DEF) pendant 1 round."
-      },
+      }
+    ],
+    "capacitesActives": [
       {
         "nom": "Pas d'ombre",
-        "jet": null,
-        "degats": null,
-        "portee": "contact",
-        "type": "déplacement",
-        "effetSpecial": "Réaction, 1 fois par round. Quand ciblé par une attaque, l'elfe peut se déplacer de 3m dans une direction — si la nouvelle case est dans l'ombre, l'attaque est annulée (test DEX diff. 12)."
+        "description": "Réaction, 1 fois par round. Quand ciblé par une attaque, l'elfe peut se déplacer de 3m dans une direction — si la nouvelle case est dans l'ombre, l'attaque est annulée (test DEX diff. 12).",
+        "mecanique": {
+          "type": "activable",
+          "reactionCout": 1,
+          "usage": {
+            "frequence": "1x/tour"
+          },
+          "cible": "soi",
+          "portee": null,
+          "zone": null,
+          "effets": [
+            {
+              "type": "special",
+              "note": "Déplacement de 3 m ; si la nouvelle case est dans l'ombre, test DEX diff. 12 pour annuler l'attaque — arbitrage manuel."
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -781,7 +839,15 @@ const BESTIAIRE = [
       "valeur": 1,
       "description": "Fourrure dense — réduit 1 point de dégâts physiques."
     },
-    "emoji": "🐺"
+    "emoji": "🐺",
+    "immunitesConditionnelles": [
+      {
+        "etats": [
+          "effrayee"
+        ],
+        "condition": "Origine non magique (intimidation) uniquement."
+      }
+    ]
   },
   {
     "id": "loup_champion",
@@ -847,14 +913,38 @@ const BESTIAIRE = [
         "bonusAttaque": 6,
         "bonusDegats": 2,
         "effetSpecial": "Test FOR diff. 15 ou renversé + désarmé."
-      },
+      }
+    ],
+    "capacitesActives": [
       {
         "nom": "Hurlement de commandement",
-        "jet": null,
-        "degats": null,
-        "portee": "zone (18m)",
-        "type": "moral",
-        "effetSpecial": "Action bonus. Toutes les créatures à portée testent SAG diff. 13 ou subissent -2 ATK pendant 2 rounds (peur). Convoque 1d4 loups en 2 rounds (1 fois/combat)."
+        "description": "Action bonus. Toutes les créatures à portée testent SAG diff. 13 ou subissent -2 ATK pendant 2 rounds (peur). Convoque 1d4 loups en 2 rounds (1 fois/combat).",
+        "mecanique": {
+          "type": "limitee",
+          "actionBonus": true,
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "zone",
+          "portee": null,
+          "zone": 18,
+          "jetSauvegardeFixe": {
+            "carac": "SAG",
+            "dd": 13
+          },
+          "effets": [
+            {
+              "type": "bonus",
+              "cible": "attaque",
+              "valeur": -2,
+              "duree": "2"
+            },
+            {
+              "type": "special",
+              "note": "Convoque 1d4 loups qui rejoignent le combat en 2 rounds — à poser manuellement."
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -1134,14 +1224,36 @@ const BESTIAIRE = [
         "bonusAttaque": 8,
         "bonusDegats": 5,
         "effetSpecial": "1 fois/combat. Attaque tous les ennemis adjacents (jet d'ATK séparé pour chacun)."
-      },
+      }
+    ],
+    "capacitesActives": [
       {
         "nom": "Rugissement de la Sève",
-        "jet": null,
-        "degats": null,
-        "portee": "zone (12m)",
-        "type": "magique (peur)",
-        "effetSpecial": "Action complète, 1 fois/combat. Test SAG diff. 15 ou fuite pendant 2 rounds. Les Druides et créatures liées à la Sève sont immunisées."
+        "description": "Action complète, 1 fois/combat. Test SAG diff. 15 ou fuite pendant 2 rounds. Les Druides et créatures liées à la Sève sont immunisées.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "zone",
+          "portee": null,
+          "zone": 12,
+          "jetSauvegardeFixe": {
+            "carac": "SAG",
+            "dd": 15
+          },
+          "effets": [
+            {
+              "type": "etat",
+              "id": "effrayee",
+              "duree": "2"
+            },
+            {
+              "type": "special",
+              "note": "Les Druides et créatures liées à la Sève sont immunisés."
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -1167,7 +1279,17 @@ const BESTIAIRE = [
       "valeur": 6,
       "description": "Fourrure de Sève + peau durcie par des décennies — réduit 6 points de dégâts physiques."
     },
-    "emoji": "🐻"
+    "emoji": "🐻",
+    "immunitesConditionnelles": [
+      {
+        "etats": [
+          "charmee",
+          "fascinee_illusoire",
+          "folie_illusoire"
+        ],
+        "condition": "Origine non magique uniquement."
+      }
+    ]
   },
   {
     "id": "orc_basique",
@@ -1212,7 +1334,10 @@ const BESTIAIRE = [
       "valeur": 2,
       "description": "Armure de cuir clouté — réduit 2 points de dégâts physiques."
     },
-    "emoji": "🪓"
+    "emoji": "🪓",
+    "immunites": [
+      "effrayee"
+    ]
   },
   {
     "id": "orc_veteran",
@@ -1283,7 +1408,10 @@ const BESTIAIRE = [
       "valeur": 3,
       "description": "Cotte de mailles orque — réduit 3 points de dégâts physiques."
     },
-    "emoji": "🪓"
+    "emoji": "🪓",
+    "immunites": [
+      "effrayee"
+    ]
   },
   {
     "id": "orc_elite",
@@ -1374,7 +1502,10 @@ const BESTIAIRE = [
       "valeur": 2,
       "description": "Aucune armure lourde — peau durcie par le combat réduit 2 points. Mobilité conservée pour la furie."
     },
-    "emoji": "🪓"
+    "emoji": "🪓",
+    "immunites": [
+      "effrayee"
+    ]
   },
   {
     "id": "orc_champion",
@@ -1450,22 +1581,51 @@ const BESTIAIRE = [
         "bonusAttaque": 9,
         "bonusDegats": 5,
         "effetSpecial": "1 fois/round."
-      },
+      }
+    ],
+    "capacitesActives": [
       {
         "nom": "Frappe légendaire",
-        "jet": "Automatique (pas de jet)",
-        "degats": "16+5 (max)",
-        "portee": "contact",
-        "type": "physique",
-        "effetSpecial": "1 fois/combat. Dégâts maximaux garantis."
+        "description": "1 fois/combat. Dégâts maximaux garantis.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "ennemi",
+          "portee": "adjacent",
+          "zone": null,
+          "effets": [
+            {
+              "type": "degats",
+              "formule": "42",
+              "elementaire": null
+            },
+            {
+              "type": "special",
+              "note": "Dégâts maximaux garantis de la Double frappe, soit 2 × (2d8 max + 5). Aucun jet d'attaque."
+            }
+          ]
+        }
       },
       {
         "nom": "Cri de guerre (Commandement r.2)",
-        "jet": null,
-        "degats": null,
-        "portee": "zone (12m)",
-        "type": "moral",
-        "effetSpecial": "1 fois/combat. Tous les alliés à portée effectuent une attaque bonus immédiate (hors tour)."
+        "description": "1 fois/combat. Tous les alliés à portée effectuent une attaque bonus immédiate (hors tour).",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "allie",
+          "portee": null,
+          "zone": 12,
+          "effets": [
+            {
+              "type": "special",
+              "note": "Tous les alliés à portée effectuent une attaque bonus immédiate — résolution manuelle."
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -1495,7 +1655,10 @@ const BESTIAIRE = [
       "valeur": 5,
       "description": "Armure de plaques runiques liée à Khoreth — réduit 5 points de dégâts physiques."
     },
-    "emoji": "🪓"
+    "emoji": "🪓",
+    "immunites": [
+      "effrayee"
+    ]
   },
   {
     "id": "bandit_basique",
@@ -1937,7 +2100,15 @@ const BESTIAIRE = [
       "valeur": 4,
       "description": "Demi-armure de plates — réduit 4 points de dégâts physiques."
     },
-    "emoji": "🛡️"
+    "emoji": "🛡️",
+    "immunitesConditionnelles": [
+      {
+        "etats": [
+          "effrayee"
+        ],
+        "condition": "Seulement si 3 gardes vétérans ou plus sont adjacents."
+      }
+    ]
   },
   {
     "id": "garde_elite",
@@ -2103,22 +2274,47 @@ const BESTIAIRE = [
         "bonusAttaque": 9,
         "bonusDegats": 5,
         "effetSpecial": "+2 dégâts fixes (enchantement). Contre les créatures du Chaos : +1d6 dégâts supplémentaires."
-      },
+      }
+    ],
+    "capacitesActives": [
       {
         "nom": "Rempart vivant (Voie Défense r.4)",
-        "jet": "Automatique",
-        "degats": "— (dégâts redirigés)",
-        "portee": "contact (allié adjacent)",
-        "type": "protection",
-        "effetSpecial": "2 fois/round : intercepte une attaque ciblant un allié, prend les dégâts à sa place."
+        "description": "2 fois/round : intercepte une attaque ciblant un allié, prend les dégâts à sa place.",
+        "mecanique": {
+          "type": "activable",
+          "reactionCout": 1,
+          "usage": {
+            "frequence": "2x/tour"
+          },
+          "cible": "allie",
+          "portee": "adjacent",
+          "zone": null,
+          "effets": [
+            {
+              "type": "special",
+              "note": "Intercepte une attaque ciblant un allié adjacent et prend les dégâts à sa place — redirection manuelle."
+            }
+          ]
+        }
       },
       {
         "nom": "Stratège de champ (Voie Commandement r.3)",
-        "jet": null,
-        "degats": null,
-        "portee": "zone (combat entier)",
-        "type": "tactique",
-        "effetSpecial": "1 fois/combat : lui et tous ses alliés agissent en premier ce round, quel que soit l'ordre d'initiative."
+        "description": "1 fois/combat : lui et tous ses alliés agissent en premier ce round, quel que soit l'ordre d'initiative.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "allie",
+          "portee": "vue",
+          "zone": null,
+          "effets": [
+            {
+              "type": "special",
+              "note": "Lui et tous ses alliés agissent en premier ce round, quel que soit l'ordre d'initiative — réordonnancement manuel."
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -2436,14 +2632,27 @@ const BESTIAIRE = [
         "bonusAttaque": 8,
         "bonusDegats": 3,
         "effetSpecial": "1 fois/round. Frappe toutes les créatures dans l'arc frontal (3m, 180°). Jet d'ATK séparé pour chacune."
-      },
+      }
+    ],
+    "capacitesActives": [
       {
         "nom": "Cri de guerre (Commandement r.2)",
-        "jet": null,
-        "degats": null,
-        "portee": "zone (12m)",
-        "type": "tactique",
-        "effetSpecial": "1 fois/combat : tous les alliés à portée effectuent une attaque bonus immédiate."
+        "description": "1 fois/combat : tous les alliés à portée effectuent une attaque bonus immédiate.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "allie",
+          "portee": null,
+          "zone": 12,
+          "effets": [
+            {
+              "type": "special",
+              "note": "Tous les alliés à portée effectuent une attaque bonus immédiate — résolution manuelle."
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -2832,14 +3041,29 @@ const BESTIAIRE = [
         "bonusAttaque": 6,
         "bonusDegats": 2,
         "effetSpecial": "+1d6 dégâts contre les créatures du Chaos ou les personnages ayant atteint le palier Marque/Fracture."
-      },
+      }
+    ],
+    "capacitesActives": [
       {
         "nom": "Sceau du silence",
-        "jet": "1d20+5 vs DEF",
-        "degats": null,
-        "portee": "courte (6m)",
-        "type": "magique (sacré)",
-        "effetSpecial": "Applique l'état silencieuse (js/etats.js) pour 1 round."
+        "description": "Applique l'état silencieuse (js/etats.js) pour 1 round.",
+        "mecanique": {
+          "type": "activable",
+          "usage": {
+            "frequence": "libre"
+          },
+          "cible": "ennemi",
+          "portee": 6,
+          "zone": null,
+          "jetAttaque": 5,
+          "effets": [
+            {
+              "type": "etat",
+              "id": "silencieuse",
+              "duree": "1"
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -2857,7 +3081,15 @@ const BESTIAIRE = [
       "valeur": 5,
       "description": "Harnois bénis de l'Ordre — réduit 5 points de dégâts physiques."
     },
-    "emoji": "🔥⚔️"
+    "emoji": "🔥⚔️",
+    "immunitesConditionnelles": [
+      {
+        "etats": [
+          "effrayee"
+        ],
+        "condition": "Seulement si 3 Chevaliers-Inquisiteurs ou plus sont adjacents."
+      }
+    ]
   },
   {
     "id": "chevalier_inquisiteur_elite",
@@ -3031,14 +3263,29 @@ const BESTIAIRE = [
         "armeId": "baton_beni",
         "bonusAttaque": 3,
         "effetSpecial": null
-      },
+      }
+    ],
+    "capacitesActives": [
       {
         "nom": "Marque du jugement",
-        "jet": "1d20+3 vs DEF",
-        "degats": null,
-        "portee": "courte (6m)",
-        "type": "magique (sacré)",
-        "effetSpecial": "Applique l'état marquee (source marquee_pretre) : +1d6 dégâts sacrés pour tout allié qui frappe ensuite la cible."
+        "description": "Applique l'état marquee (source marquee_pretre) : +1d6 dégâts sacrés pour tout allié qui frappe ensuite la cible.",
+        "mecanique": {
+          "type": "activable",
+          "usage": {
+            "frequence": "libre"
+          },
+          "cible": "ennemi",
+          "portee": 6,
+          "zone": null,
+          "jetAttaque": 3,
+          "effets": [
+            {
+              "type": "etat",
+              "id": "marquee_pretre",
+              "duree": "finCombat"
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -3082,14 +3329,29 @@ const BESTIAIRE = [
         "bonusAttaque": 5,
         "bonusDegats": 1,
         "effetSpecial": null
-      },
+      }
+    ],
+    "capacitesActives": [
       {
         "nom": "Marque du jugement",
-        "jet": "1d20+5 vs DEF",
-        "degats": null,
-        "portee": "courte (6m)",
-        "type": "magique (sacré)",
-        "effetSpecial": "Applique l'état marquee (source marquee_pretre)."
+        "description": "Applique l'état marquee (source marquee_pretre).",
+        "mecanique": {
+          "type": "activable",
+          "usage": {
+            "frequence": "libre"
+          },
+          "cible": "ennemi",
+          "portee": 6,
+          "zone": null,
+          "jetAttaque": 5,
+          "effets": [
+            {
+              "type": "etat",
+              "id": "marquee_pretre",
+              "duree": "finCombat"
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -3232,14 +3494,28 @@ const BESTIAIRE = [
         "bonusAttaque": 9,
         "bonusDegats": 4,
         "effetSpecial": "+1d6 dégâts contre toute cible ayant porté un coup à un allié tombé à terre ce combat."
-      },
+      }
+    ],
+    "capacitesActives": [
       {
         "nom": "Couverture du sacrifice",
-        "jet": "Automatique",
-        "degats": "— (dégâts redirigés)",
-        "portee": "contact (allié adjacent)",
-        "type": "protection",
-        "effetSpecial": "2 fois/round : intercepte une attaque ciblant un allié adjacent, prend les dégâts à sa place."
+        "description": "2 fois/round : intercepte une attaque ciblant un allié adjacent, prend les dégâts à sa place.",
+        "mecanique": {
+          "type": "activable",
+          "reactionCout": 1,
+          "usage": {
+            "frequence": "2x/tour"
+          },
+          "cible": "allie",
+          "portee": "adjacent",
+          "zone": null,
+          "effets": [
+            {
+              "type": "special",
+              "note": "Intercepte une attaque ciblant un allié adjacent et prend les dégâts à sa place — redirection manuelle."
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -3445,7 +3721,11 @@ const BESTIAIRE = [
     ],
     "lore": "Ossements de champs de bataille oubliés, relevés lorsque la Sève corrompue par le Chaos s'infiltre dans la terre gorgée de sang. Ils frappent avec la mémoire mécanique d'un dernier combat, sans plus de volonté qu'un réflexe.",
     "armure": null,
-    "emoji": "💀"
+    "emoji": "💀",
+    "immunites": [
+      "empoisonnee",
+      "effrayee"
+    ]
   },
   {
     "id": "squelette_lame",
@@ -3486,7 +3766,11 @@ const BESTIAIRE = [
     ],
     "lore": "Une conscience martiale résiduelle habite encore ces ossements — le dernier réflexe d'un soldat qui a passé sa vie à parer et frapper. Il garde encore la posture d'une garde qu'il ne quittera jamais.",
     "armure": null,
-    "emoji": "💀"
+    "emoji": "💀",
+    "immunites": [
+      "empoisonnee",
+      "effrayee"
+    ]
   },
   {
     "id": "ossuaire_ambulant",
@@ -3536,7 +3820,12 @@ const BESTIAIRE = [
     ],
     "lore": "Ce ne sont plus des ossements isolés mais un amas grouillant de squelettes fusionnés par la corruption, une masse informe qui se déplace comme un seul organisme aux dizaines de membres.",
     "armure": null,
-    "emoji": "💀"
+    "emoji": "💀",
+    "immunites": [
+      "empoisonnee",
+      "effrayee",
+      "renversee"
+    ]
   },
   {
     "id": "connetable_cendre",
@@ -3564,14 +3853,34 @@ const BESTIAIRE = [
         "bonusAttaque": 8,
         "bonusDegats": 3,
         "effetSpecial": "Critique sur 19-20 (au lieu de 20 seul)."
-      },
+      }
+    ],
+    "capacitesActives": [
       {
         "nom": "Cri de commandement des os",
-        "jet": null,
-        "degats": null,
-        "portee": "zone (18m)",
-        "type": "moral",
-        "effetSpecial": "Action bonus, 1 fois par combat : tous les morts-vivants de La Gangrène dans la zone gagnent +2 ATK pendant 2 rounds."
+        "description": "Action bonus, 1 fois par combat : tous les morts-vivants de La Gangrène dans la zone gagnent +2 ATK pendant 2 rounds.",
+        "mecanique": {
+          "type": "limitee",
+          "actionBonus": true,
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "allie",
+          "portee": null,
+          "zone": 18,
+          "effets": [
+            {
+              "type": "bonus",
+              "cible": "attaque",
+              "valeur": 2,
+              "duree": "2"
+            },
+            {
+              "type": "special",
+              "note": "Ne concerne que les morts-vivants de La Gangrène présents dans la zone."
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -3593,7 +3902,12 @@ const BESTIAIRE = [
       "valeur": 2,
       "description": "Fragments d'armure de plaques fusionnés à l'os — réduit 2 points de dégâts physiques."
     },
-    "emoji": "💀"
+    "emoji": "💀",
+    "immunites": [
+      "empoisonnee",
+      "effrayee",
+      "charmee"
+    ]
   },
   {
     "id": "charogne_du_chaos",
@@ -3633,7 +3947,10 @@ const BESTIAIRE = [
     ],
     "lore": "Chair et Sève corrompue au même rythme : ces cadavres relevés par la Gangrène errent lentement, poussés par une faim qui ne s'éteint jamais vraiment.",
     "armure": null,
-    "emoji": "🧟"
+    "emoji": "🧟",
+    "immunites": [
+      "effrayee"
+    ]
   },
   {
     "id": "charogne_enragee",
@@ -3678,7 +3995,10 @@ const BESTIAIRE = [
     ],
     "lore": "La corruption progresse plus vite chez certaines charognes, qui se déchirent presque elles-mêmes à force de frénésie. Leur odeur seule suffit à faire fuir le gibier sur des kilomètres.",
     "armure": null,
-    "emoji": "🧟"
+    "emoji": "🧟",
+    "immunites": [
+      "effrayee"
+    ]
   },
   {
     "id": "colosse_charognard",
@@ -3727,7 +4047,10 @@ const BESTIAIRE = [
     ],
     "lore": "Plusieurs cadavres fusionnés en une seule masse difforme par la corruption la plus dense — ce que devient une charogne qui n'a jamais cessé de se nourrir.",
     "armure": null,
-    "emoji": "🧟"
+    "emoji": "🧟",
+    "immunites": [
+      "effrayee"
+    ]
   },
   {
     "id": "goule_des_cendres",
@@ -3796,14 +4119,27 @@ const BESTIAIRE = [
         "armeId": "faucheur_faux",
         "bonusAttaque": 6,
         "effetSpecial": "Si touché : test CON diff. 13 ou -2 PV maximum temporaires jusqu'à la fin du combat (vol de vitalité)."
-      },
+      }
+    ],
+    "capacitesActives": [
       {
         "nom": "Voile de brume",
-        "jet": null,
-        "degats": null,
-        "portee": "zone (9m)",
-        "type": "controle",
-        "effetSpecial": "Action, 1 fois par combat : un brouillard opaque bloque toute ligne de vue dans la zone pendant 2 rounds."
+        "description": "Action, 1 fois par combat : un brouillard opaque bloque toute ligne de vue dans la zone pendant 2 rounds.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "zone",
+          "portee": null,
+          "zone": 9,
+          "effets": [
+            {
+              "type": "special",
+              "note": "Brouillard opaque bloquant toute ligne de vue dans la zone pendant 2 rounds — à gérer manuellement sur la battlemap."
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -3875,7 +4211,11 @@ const BESTIAIRE = [
       "valeur": 3,
       "description": "Écorce et os fusionnés — réduit 3 points de dégâts physiques. Pas d'effet contre le feu."
     },
-    "emoji": "🌳"
+    "emoji": "🌳",
+    "immunites": [
+      "renversee",
+      "repoussee"
+    ]
   },
   {
     "id": "vestige_hallucine",
@@ -3900,14 +4240,39 @@ const BESTIAIRE = [
         "armeId": "vestige_toucher",
         "bonusAttaque": 6,
         "effetSpecial": "Si touché : test SAG diff. 14 ou la cible est hallucinée 1 round (attaque au hasard une créature adjacente, y compris un allié, s'il y en a une)."
-      },
+      }
+    ],
+    "capacitesActives": [
       {
         "nom": "Éclat de folie corrompue",
-        "jet": null,
-        "degats": "2d6",
-        "portee": "moyenne (18m)",
-        "type": "magique",
-        "effetSpecial": "Recharge : 2 rounds. Test SAG diff. 14 : échec = dégâts pleins et hallucination 1 round ; réussite = dégâts de moitié, pas d'hallucination."
+        "description": "Recharge : 2 rounds. Test SAG diff. 14 : échec = dégâts pleins et hallucination 1 round ; réussite = dégâts de moitié, pas d'hallucination.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/recharge"
+          },
+          "recharge": 2,
+          "cible": "ennemi",
+          "portee": 18,
+          "zone": null,
+          "jetSauvegardeFixe": {
+            "carac": "SAG",
+            "dd": 14
+          },
+          "effets": [
+            {
+              "type": "degats",
+              "formule": "2d6",
+              "elementaire": null,
+              "surReussite": "demi"
+            },
+            {
+              "type": "etat",
+              "id": "hallucinee",
+              "duree": "1"
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -3926,7 +4291,11 @@ const BESTIAIRE = [
     ],
     "lore": "Ce qui reste d'un lanceur de sorts — Druide ou Nécromancien, on ne sait plus — dont l'esprit a cédé sous la corruption sans que le corps ne meure vraiment. Il marmonne des fragments de sorts oubliés, et parfois l'un d'eux fonctionne encore.",
     "armure": null,
-    "emoji": "🔮"
+    "emoji": "🔮",
+    "immunites": [
+      "charmee",
+      "hallucinee"
+    ]
   },
   {
     "id": "seigneur_gangrene",
@@ -3952,22 +4321,57 @@ const BESTIAIRE = [
         "bonusAttaque": 10,
         "bonusDegats": 4,
         "effetSpecial": "Critique sur 19-20. Si touché : la cible est marquée par la corruption (conséquence narrative, à la discrétion du MJ)."
-      },
+      }
+    ],
+    "capacitesActives": [
       {
         "nom": "Appel de la Gangrène",
-        "jet": null,
-        "degats": null,
-        "portee": "zone (30m)",
-        "type": "invocation",
-        "effetSpecial": "Action, 1 fois par combat : invoque 1d4 Charognes du Chaos ou 1d4 Squelettes corrompus (au choix du MJ), qui rejoignent le combat en 2 rounds."
+        "description": "Action, 1 fois par combat : invoque 1d4 Charognes du Chaos ou 1d4 Squelettes corrompus (au choix du MJ), qui rejoignent le combat en 2 rounds.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "aucune",
+          "portee": null,
+          "zone": 30,
+          "effets": [
+            {
+              "type": "special",
+              "note": "Invoque 1d4 Charognes du Chaos ou 1d4 Squelettes corrompus au choix du MJ, arrivée en 2 rounds — à poser manuellement."
+            }
+          ]
+        }
       },
       {
         "nom": "Vague nécrotique",
-        "jet": null,
-        "degats": "3d6",
-        "portee": "zone (9m)",
-        "type": "magique",
-        "effetSpecial": "Recharge : 3 rounds. Test CON diff. 15 pour ne subir que la moitié des dégâts. Le Seigneur récupère la moitié des dégâts infligés en PV."
+        "description": "Recharge : 3 rounds. Test CON diff. 15 pour ne subir que la moitié des dégâts. Le Seigneur récupère la moitié des dégâts infligés en PV.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/recharge"
+          },
+          "recharge": 3,
+          "cible": "zone",
+          "portee": null,
+          "zone": 9,
+          "jetSauvegardeFixe": {
+            "carac": "CON",
+            "dd": 15
+          },
+          "effets": [
+            {
+              "type": "degats",
+              "formule": "3d6",
+              "elementaire": null,
+              "surReussite": "demi"
+            },
+            {
+              "type": "special",
+              "note": "Le Seigneur récupère la moitié des dégâts infligés en PV."
+            }
+          ]
+        }
       }
     ],
     "capacitesSpeciales": [
@@ -3993,7 +4397,11 @@ const BESTIAIRE = [
       "valeur": 3,
       "description": "Armure noircie fusionnée à la chair corrompue — réduit 3 points de dégâts physiques."
     },
-    "emoji": "☠️"
+    "emoji": "☠️",
+    "immunites": [
+      "effrayee",
+      "charmee"
+    ]
   },
   {
     "id": "cupide_recrue",
