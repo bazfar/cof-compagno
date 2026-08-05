@@ -152,7 +152,9 @@ ARMES_MONSTRES.forEach((a) => {
 // ===========================================================================
 const CHAMPS_MONSTRE_OBLIGATOIRES = ["id", "nom", "categorie", "race", "pv", "def", "init", "atk", "dangerosite", "boss", "taille", "attaques", "capacitesSpeciales", "lore", "armure", "emoji"];
 const CHAMPS_MONSTRE_OPTIONNELS = ["famille", "tier", "voies", "faction", "roleNarratif",
-  "capacitesActives", "immunites", "immunitesConditionnelles"];
+  "capacitesActives", "immunites", "immunitesConditionnelles",
+  // Échappatoire MJ lue par js/sauvegardes.js:86, sans usage à ce jour.
+  "resistanceLegendaire"];
 const CHAMPS_MONSTRE_AUTORISES = new Set([...CHAMPS_MONSTRE_OBLIGATOIRES, ...CHAMPS_MONSTRE_OPTIONNELS]);
 
 // Bloc mecanique de capacitesActives[] (cf. schema_cible_capacites_monstres.md
