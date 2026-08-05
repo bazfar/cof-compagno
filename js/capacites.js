@@ -1816,7 +1816,7 @@ const Capacites = (() => {
       // fonction (cf. mecanique.corruptionCout plus bas, jamais atteint ici).
       if (mecanique.corruptionCout) {
         p.corruptionCombat = Math.max(0, (p.corruptionCombat || 0) - mecanique.corruptionCout);
-        App.ajouterHisto(`${libelle} — Corruption`, p.corruptionCombat, false, false, `-${mecanique.corruptionCout} (jauge de combat, ${p.nom})`);
+        App.ajouterHisto(`${libelle} — Corruption`, p.corruptionCombat, false, false, `-${mecanique.corruptionCout} (jauge de combat, ${p.nom})`, { sansOverlay: true });
         messages.push(`Corruption -${mecanique.corruptionCout} (jauge de combat : ${p.corruptionCombat}).`);
       }
       const { carac, dd } = mecanique.jetSauvegardeFixe;
@@ -2434,7 +2434,7 @@ const Capacites = (() => {
         p.corruptionCombat = 0;
         p.corruptionMajeure = (p.corruptionMajeure || 0) + cfConsommees;
         App.ajouterHisto(`${libelle} — Conversion CF→CA`, p.corruptionMajeure, false, false,
-          `${cfConsommees} CF convertis en CA (${p.nom}, total CA : ${p.corruptionMajeure})`);
+          `${cfConsommees} CF convertis en CA (${p.nom}, total CA : ${p.corruptionMajeure})`, { sansOverlay: true });
         messages.push(`Déchaînement : ${cfConsommees} CF convertis en Corruption d'Âme (total CA : ${p.corruptionMajeure}).`);
       }
     }
@@ -2445,7 +2445,7 @@ const Capacites = (() => {
     if (mecanique.corruption) {
       p.corruptionCombat = (p.corruptionCombat || 0) + mecanique.corruption;
       const franchi = _verifierSeuilCorruptionMajeure(p);
-      App.ajouterHisto(`${libelle} — Corruption`, p.corruptionCombat, false, false, `+${mecanique.corruption} (jauge de combat, ${p.nom})`);
+      App.ajouterHisto(`${libelle} — Corruption`, p.corruptionCombat, false, false, `+${mecanique.corruption} (jauge de combat, ${p.nom})`, { sansOverlay: true });
       messages.push(`Corruption +${mecanique.corruption} (jauge de combat : ${p.corruptionCombat}/${SEUIL_CORRUPTION_MAJEURE}).` +
         (franchi ? ` ⚠️ Seuil dépassé — Corruption d'Âme +1 (total ${p.corruptionMajeure}), risque de mutation.` : ""));
     }
@@ -2454,7 +2454,7 @@ const Capacites = (() => {
     // jamais en cas d'échec du garde-fou (qui a déjà renvoyé plus tôt).
     if (mecanique.corruptionCout) {
       p.corruptionCombat = Math.max(0, (p.corruptionCombat || 0) - mecanique.corruptionCout);
-      App.ajouterHisto(`${libelle} — Corruption`, p.corruptionCombat, false, false, `-${mecanique.corruptionCout} (jauge de combat, ${p.nom})`);
+      App.ajouterHisto(`${libelle} — Corruption`, p.corruptionCombat, false, false, `-${mecanique.corruptionCout} (jauge de combat, ${p.nom})`, { sansOverlay: true });
       messages.push(`Corruption -${mecanique.corruptionCout} (jauge de combat : ${p.corruptionCombat}).`);
     }
     // Coût en réactions (cf. le garde-fou plus haut) : décompté une fois
@@ -2462,7 +2462,7 @@ const Capacites = (() => {
     if (mecanique.reactionCout) {
       p.reactionsUtilisees = (p.reactionsUtilisees || 0) + mecanique.reactionCout;
       const restantes = REACTIONS_MAX - p.reactionsUtilisees;
-      App.ajouterHisto(`${libelle} — Réaction`, restantes, false, false, `-${mecanique.reactionCout} réaction(s) (${p.nom}, ${restantes}/${REACTIONS_MAX} restantes)`);
+      App.ajouterHisto(`${libelle} — Réaction`, restantes, false, false, `-${mecanique.reactionCout} réaction(s) (${p.nom}, ${restantes}/${REACTIONS_MAX} restantes)`, { sansOverlay: true });
       messages.push(`Réaction(s) -${mecanique.reactionCout} (${restantes}/${REACTIONS_MAX} restantes ce combat).`);
     }
     // Coût en Points de Pouvoir (cf. le garde-fou plus haut) : décompté une
@@ -2475,7 +2475,7 @@ const Capacites = (() => {
       messages.push(`Don corrompu : ${coutCS} CS payés à la place des PP (${p.corruptionCombat} CS restants).`);
     } else if (coutPPReel) {
       p.ppActuel = (p.ppActuel || 0) - coutPPReel;
-      App.ajouterHisto(`${libelle} — PP`, p.ppActuel, false, false, `-${coutPPReel} PP (${p.nom}, ${p.ppActuel} restants)`);
+      App.ajouterHisto(`${libelle} — PP`, p.ppActuel, false, false, `-${coutPPReel} PP (${p.nom}, ${p.ppActuel} restants)`, { sansOverlay: true });
       messages.push(`PP -${coutPPReel} (${p.ppActuel} restants).`);
     }
     // Points de Cercle (cf. le garde-fou plus haut, RESSOURCES_CERCLE) :
@@ -2496,12 +2496,12 @@ const Capacites = (() => {
     // l'activation confirmée, même logique que corruptionCout/reactionCout.
     if (mecanique.ameGain) {
       p.amesStockees = Math.min(AMES_MAX, (p.amesStockees || 0) + mecanique.ameGain);
-      App.ajouterHisto(`${libelle} — Âme capturée`, p.amesStockees, false, false, `+${mecanique.ameGain} âme(s) (${p.nom}, ${p.amesStockees}/${AMES_MAX} en réserve)`);
+      App.ajouterHisto(`${libelle} — Âme capturée`, p.amesStockees, false, false, `+${mecanique.ameGain} âme(s) (${p.nom}, ${p.amesStockees}/${AMES_MAX} en réserve)`, { sansOverlay: true });
       messages.push(`Âme(s) capturée(s) +${mecanique.ameGain} (${p.amesStockees}/${AMES_MAX} en réserve).`);
     }
     if (mecanique.ameCout) {
       p.amesStockees = Math.max(0, (p.amesStockees || 0) - mecanique.ameCout);
-      App.ajouterHisto(`${libelle} — Âme libérée`, p.amesStockees, false, false, `-${mecanique.ameCout} âme(s) (${p.nom}, ${p.amesStockees}/${AMES_MAX} en réserve)`);
+      App.ajouterHisto(`${libelle} — Âme libérée`, p.amesStockees, false, false, `-${mecanique.ameCout} âme(s) (${p.nom}, ${p.amesStockees}/${AMES_MAX} en réserve)`, { sansOverlay: true });
       messages.push(`Âme(s) libérée(s) -${mecanique.ameCout} (${p.amesStockees}/${AMES_MAX} en réserve).`);
     }
 

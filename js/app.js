@@ -131,6 +131,18 @@ const App = (() => {
   // affichée — un second jet du même groupe rejoint la boîte B au lieu de
   // remplacer la boîte A (cf. afficherOverlayJet).
   let paireJetGroupeActif = null;
+  // Date.now() seul ne suffit pas : la résolution auto-chaînée d'une
+  // sauvegarde réactive fait deux ajouterHisto() synchrones à la suite
+  // (jet de sauvegarde puis jet de dégâts), qui atterrissent souvent dans
+  // la même milliseconde. _verifierNouveauJetPourOverlay ignorerait alors
+  // le second jet (horodatage <= dernierHorodatageAffiche) et la boîte B
+  // n'apparaîtrait jamais. On force donc une suite strictement croissante.
+  let _dernierHorodatageEmis = 0;
+  function _horodatageUnique() {
+    const t = Date.now();
+    _dernierHorodatageEmis = t > _dernierHorodatageEmis ? t : _dernierHorodatageEmis + 1;
+    return _dernierHorodatageEmis;
+  }
   let _sonsDe = null; // instances Audio réutilisées (une par fichier), cf. SONS_DE
   // Même principe que SONS_ECHEC_CRITIQUE, pour le bruit de dé qui roule joué
   // à chaque jet — dossier assets/sounds/de/.
@@ -7601,7 +7613,7 @@ const App = (() => {
     // presque simultanés (ex. initiative de groupe) ne peuvent plus
     // s'écraser l'un l'autre.
     SyncStore.ajouterListe(STORAGE_HISTO, {
-      label, total, crit, echec, detail: detail || "", auteur: nomLanceur(), horodatage: Date.now(),
+      label, total, crit, echec, detail: detail || "", auteur: nomLanceur(), horodatage: _horodatageUnique(),
       joueurId, cache, sonDe, sonEchec, sonSucces,
       mode: opts.mode || null, d1: typeof opts.d1 === "number" ? opts.d1 : null, d2: typeof opts.d2 === "number" ? opts.d2 : null,
       estMonstre: !!opts.estMonstre,
@@ -7611,6 +7623,13 @@ const App = (() => {
       // l'overlay les affiche côte à côte plutôt que le second n'écrase le
       // premier, cf. afficherOverlayJet.
       groupeJetId: opts.groupeJetId || null,
+      // sansOverlay : entrées de comptabilité (coût en PP/Corruption/
+      // Réaction/Âme) qui suivent immédiatement, dans le même lancer(),
+      // un vrai jet de dé (attaque, sauvegarde...) — sans ce drapeau elles
+      // écraseraient/masqueraient l'overlay du jet qui vient d'être affiché
+      // avant même que le joueur ait pu le lire (cf. _verifierNouveauJetPourOverlay).
+      // Elles restent visibles normalement dans le journal (rendreHisto).
+      sansOverlay: !!opts.sansOverlay,
     }, 40);
     rendreHisto();
   }
@@ -7922,6 +7941,7 @@ const App = (() => {
     const plusRecent = h[0]; // ajouterHisto fait unshift : h[0] = le plus récent
     if (dernierHorodatageAffiche !== null && plusRecent.horodatage <= dernierHorodatageAffiche) return;
     dernierHorodatageAffiche = plusRecent.horodatage;
+    if (plusRecent.sansOverlay) return; // entrée de comptabilité, cf. ajouterHisto
     afficherOverlayJet(plusRecent);
   }
 
@@ -9427,10 +9447,16 @@ const App = (() => {
         // (_resoudreAttaqueMonstreVsPJ). jetSauvegardeFixe reste un jet CÔTÉ
         // CIBLE, non automatisable pour un monstre (cf. §3 du schéma) :
         // affiché dans le résumé du bouton, jamais roulé ici.
+        // messagesToast accumule tous les messages du clic (jet d'attaque +
+        // effets qui suivent) pour un unique toast() final — un second appel
+        // à toast() écraserait silencieusement le premier (ex. "Touché !"
+        // perdu si la cible s'avère ensuite immunisée à l'état posé), même
+        // bug déjà corrigé côté appliquerMalus (cf. suffixeToastFinal).
+        const messagesToast = [];
         let toucheOk = true;
         if (mecanique && mecanique.jetAttaque !== undefined) {
           const resAtt = _resoudreAttaqueMonstreVsPJ(libelle, mecanique.jetAttaque + _bonusEtatsMonstre(m, "attaque"), 20, pjId);
-          toast(resAtt.echecCritique ? "1 naturel — échec critique automatique, effet non appliqué."
+          messagesToast.push(resAtt.echecCritique ? "1 naturel — échec critique automatique, effet non appliqué."
             : resAtt.critique ? `CRITIQUE !${resAtt.defCible !== null ? ` (DEF ${resAtt.defCible})` : ""}`
             : resAtt.defCible === null ? "DEF de la cible inconnue — effet appliqué, à confirmer manuellement."
             : (resAtt.touche ? `Touché ! (DEF ${resAtt.defCible})` : `Raté (DEF ${resAtt.defCible}) — effet non appliqué.`));
@@ -9446,8 +9472,8 @@ const App = (() => {
               const entree = { idEtat: action.idEtat, dureeRestante: _resoudreDureeToursMonstre(action.duree || "", null), source: cap.nom, poseLe: Date.now() };
               if (cibleSoi) {
                 const imm = CapacitesMonstres.immunite(m, action.idEtat);
-                if (imm.bloquee) { toast(`${m.nom} est immunisé à « ${ETATS[action.idEtat].nom} ».`); return; }
-                if (imm.condition) toast(`Immunité conditionnelle : ${imm.condition} — à arbitrer.`);
+                if (imm.bloquee) { messagesToast.push(`${m.nom} est immunisé à « ${ETATS[action.idEtat].nom} ».`); return; }
+                if (imm.condition) messagesToast.push(`Immunité conditionnelle : ${imm.condition} — à arbitrer.`);
                 Carte.ajouterEtatCombat(m.id, entree);
               } else if (pjId) {
                 const persos = chargerPersos();
@@ -9455,7 +9481,7 @@ const App = (() => {
                 if (p) {
                   const perso = Personnage.depuisJSON(p);
                   if (perso.aImmuniteEtat(action.idEtat)) {
-                    toast(`${p.nom} est immunisé·e à « ${ETATS[action.idEtat].nom} » (Liberté d'action).`);
+                    messagesToast.push(`${p.nom} est immunisé·e à « ${ETATS[action.idEtat].nom} » (Liberté d'action).`);
                   } else {
                     p.etatsActifs = p.etatsActifs || [];
                     p.etatsActifs.push(entree);
@@ -9463,9 +9489,14 @@ const App = (() => {
                     if (ficheActiveId === pjId) afficherFiche(pjId);
                     if (ficheSidebarActiveId === pjId) rendreFicheSidebarBattlemap(pjId);
                   }
+                } else {
+                  // Cible 🎯 choisie mais introuvable dans les persos chargés
+                  // (PJ supprimé entre-temps, id périmé...) : signaler plutôt
+                  // que d'appliquer l'état dans le vide sans un mot.
+                  messagesToast.push(`${ETATS[action.idEtat].nom} (${cap.nom}) — personnage cible introuvable : à appliquer manuellement.`);
                 }
               } else {
-                toast(`${ETATS[action.idEtat].nom} (${cap.nom}) — aucune cible 🎯 choisie ci-dessus : à appliquer manuellement.`);
+                messagesToast.push(`${ETATS[action.idEtat].nom} (${cap.nom}) — aucune cible 🎯 choisie ci-dessus : à appliquer manuellement.`);
               }
             } else if (action.action === "bonus") {
               if (cibleSoi) {
@@ -9478,17 +9509,18 @@ const App = (() => {
                 // pas de sélecteur multi-cible pour les autres monstres —
                 // laissé à la table, cf. §4 "Partiellement mécanisables" du
                 // schéma (même limite que les redirections d'attaque PJ).
-                toast(`Bonus ${action.cible} ${signe(action.valeur)} (${cap.nom}) — cible(s) alliée(s) à appliquer manuellement (pas de sélecteur multi-cible).`);
+                messagesToast.push(`Bonus ${action.cible} ${signe(action.valeur)} (${cap.nom}) — cible(s) alliée(s) à appliquer manuellement (pas de sélecteur multi-cible).`);
               }
             } else if (action.action === "retraitEtat") {
-              toast(`${cap.nom} : retrait d'état — à appliquer manuellement.`);
+              messagesToast.push(`${cap.nom} : retrait d'état — à appliquer manuellement.`);
             } else if (action.action === "note") {
-              toast(action.texte);
+              messagesToast.push(action.texte);
               ajouterHisto(libelle, 0, false, false, action.texte);
             }
           });
         }
 
+        if (messagesToast.length) toast(messagesToast.join(" — "));
         prep.appliquerUsage();
         rendreTableCombat(targetId);
       };
