@@ -504,14 +504,22 @@ const Carte = (() => {
     const couleur = monstre.boss ? "#8e44ad" : (couleurs[monstre.dangerosite] || "#7f8c8d");
     const labelBase = monstre.tier ? monstre.nom + " [" + monstre.tier + "]" : monstre.nom;
     const label = _labelMonstreDistinct(monstre.id, labelBase);
-    // Stats de combat (table de combat MJ) : PV/DEF/armure viennent du bestiaire,
-    // repris tels quels (armure.valeur -> réduction de dégâts, comme les PJ).
+    // Stats de combat (table de combat MJ) : PV/DEF viennent du bestiaire,
+    // repris tels quels. armure (réduction de dégâts, comme les PJ) est
+    // résolue depuis armureId -> data/armures_monstres.js (cf. armeId/
+    // ARMES_MONSTRES, même patron) — armureId est conservé à part sur le
+    // jeton pour l'affichage (nom/note), armure reste un NOMBRE nu, seul
+    // champ lu par le calcul de réduction (js/carte.js:appliquerDegatsCombat,
+    // js/capacites.js).
+    const modeleArmure = (monstre.armureId && typeof ARMURES_MONSTRES_INDEX !== "undefined")
+      ? ARMURES_MONSTRES_INDEX[monstre.armureId] : null;
     const donneesCombat = {
       monstreId: monstre.id,
       pvMax: (typeof monstre.pv === "number") ? monstre.pv : 1,
       pvActuel: (typeof monstre.pv === "number") ? monstre.pv : 1,
       def: (typeof monstre.def === "number") ? monstre.def : null,
-      armure: (monstre.armure && monstre.armure.valeur) || 0,
+      armure: modeleArmure ? modeleArmure.reduction : 0,
+      armureId: monstre.armureId || null,
       dangerosite: monstre.dangerosite || null,
       boss: !!monstre.boss,
       init: (typeof monstre.init === "number") ? monstre.init : 0,
@@ -3090,6 +3098,7 @@ const Carte = (() => {
         pvActuel: (d && typeof d.pvActuel === 'number') ? d.pvActuel : null,
         def: (d && typeof d.def === 'number') ? d.def : null,
         armure: (d && typeof d.armure === 'number') ? d.armure : 0,
+        armureId: (d && d.armureId) || null,
         dangerosite: (d && d.dangerosite) || null,
         boss: !!(d && d.boss),
         init: (d && typeof d.init === 'number') ? d.init : 0,

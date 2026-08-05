@@ -27,6 +27,12 @@ function chargerArmesMonstres() {
   return eval(s);
 }
 
+function chargerArmuresMonstres() {
+  let s = fs.readFileSync(path.join(RACINE, "data", "armures_monstres.js"), "utf8");
+  s = s.replace(/^\/\/[^\n]*\n/gm, "").replace(/^const\s+ARMURES_MONSTRES\s*=\s*/, "").replace(/;\s*\nconst ARMURES_MONSTRES_INDEX[\s\S]*/, "");
+  return eval(s);
+}
+
 // Catalogue des états (cf. js/etats.js) — pour vérifier que effets[].id /
 // immunites[] / immunitesConditionnelles[].etats[] pointent vers un état
 // réel, plutôt qu'un id fautif qui ne se verrait qu'en séance.
@@ -37,6 +43,7 @@ function chargerEtats() {
 }
 
 const ARMES_MONSTRES = chargerArmesMonstres();
+const ARMURES_MONSTRES = chargerArmuresMonstres();
 const ETATS = chargerEtats();
 // Convention établie (cf. js/capacites.js, js/app.js _appliquerBonusMonstreDepuisMessages) :
 // un état posé "par source" porte un id suffixé (marquee_pretre...) qui
@@ -148,14 +155,69 @@ ARMES_MONSTRES.forEach((a) => {
 });
 
 // ===========================================================================
+// SECTION A2 — data/armures_monstres.js (même patron que les armes)
+// ===========================================================================
+const CHAMPS_ARMURE = new Set(["id", "nom", "reduction", "naturelle", "note"]);
+
+const problemesArmures = new Map();
+function signalerArmure(cle, msg) {
+  if (!problemesArmures.has(cle)) problemesArmures.set(cle, []);
+  problemesArmures.get(cle).push(msg);
+}
+
+const idsArmuresVus = new Set();
+const armuresReferencees = new Set(); // rempli en section B
+const clesArmures = new Map();
+
+ARMURES_MONSTRES.forEach((a, index) => {
+  const cle = a.id || `(index ${index}, sans id)`;
+
+  Object.keys(a).forEach((champ) => {
+    if (!CHAMPS_ARMURE.has(champ)) signalerArmure(cle, `champ "${champ}" non autorisé.`);
+  });
+
+  if (!a.id || !/^[a-z0-9_]+$/.test(a.id)) {
+    signalerArmure(cle, `id invalide (attendu : ^[a-z0-9_]+$, reçu ${JSON.stringify(a.id)}).`);
+  } else {
+    if (idsArmuresVus.has(a.id)) signalerArmure(cle, "id dupliqué.");
+    idsArmuresVus.add(a.id);
+  }
+
+  if (!a.nom) signalerArmure(cle, "nom manquant.");
+  if (!(Number.isInteger(a.reduction) && a.reduction >= 1)) {
+    signalerArmure(cle, `reduction devrait être un entier ≥ 1, reçu ${JSON.stringify(a.reduction)}.`);
+  }
+  if (typeof a.naturelle !== "boolean") signalerArmure(cle, `naturelle devrait être un booléen, reçu ${typeof a.naturelle}.`);
+  if (a.note !== undefined && typeof a.note !== "string") signalerArmure(cle, `note devrait être une chaîne, reçu ${typeof a.note}.`);
+
+  // Anti-doublon : la clé (nom, reduction, naturelle) doit être unique —
+  // même principe que les armes (§1), pour empêcher la réapparition d'une
+  // armure dupliquée au lieu de réutiliser l'id existant.
+  const cleFusion = [a.nom, a.reduction, a.naturelle].join("|");
+  if (clesArmures.has(cleFusion)) {
+    signalerArmure(cle, `doublon de ${clesArmures.get(cleFusion)} — même nom, réduction et naturelle.`);
+  } else {
+    clesArmures.set(cleFusion, cle);
+  }
+});
+
+// ===========================================================================
 // SECTION B — data/bestiaire.json
 // ===========================================================================
-const CHAMPS_MONSTRE_OBLIGATOIRES = ["id", "nom", "categorie", "race", "pv", "def", "init", "atk", "dangerosite", "boss", "taille", "attaques", "capacitesSpeciales", "lore", "armure", "emoji"];
+// categorie et armure sont sortis des champs obligatoires (cf.
+// schema_cible_armures_categorie.md) : categorie mélangeait taxonomie/
+// faction/tier/chronologie de campagne sans être jamais lue par l'app (les
+// filtres du bestiaire portent sur famille et race) ; armure était un objet
+// libre {valeur, description} non typé, remplacé par armureId vers
+// data/armures_monstres.js — même patron que armeId.
+const CHAMPS_MONSTRE_OBLIGATOIRES = ["id", "nom", "race", "pv", "def", "init", "atk", "dangerosite", "boss", "taille", "attaques", "capacitesSpeciales", "lore", "emoji"];
 const CHAMPS_MONSTRE_OPTIONNELS = ["famille", "tier", "voies", "faction", "roleNarratif",
   "capacitesActives", "immunites", "immunitesConditionnelles",
   // Échappatoire MJ lue par js/sauvegardes.js:86, sans usage à ce jour.
-  "resistanceLegendaire"];
+  "resistanceLegendaire",
+  "armureId", "defMentale"];
 const CHAMPS_MONSTRE_AUTORISES = new Set([...CHAMPS_MONSTRE_OBLIGATOIRES, ...CHAMPS_MONSTRE_OPTIONNELS]);
+const TAILLES_VALIDES = ["petite", "moyenne", "grande", "très grande"];
 
 // Bloc mecanique de capacitesActives[] (cf. schema_cible_capacites_monstres.md
 // §3) — sous-ensemble du schéma PJ de data/donnees.js, même vocabulaire à
@@ -206,9 +268,21 @@ monstres.forEach((m, index) => {
     signalerMonstre(cle, `dangerosite devrait être un entier 1-5, reçu ${JSON.stringify(m.dangerosite)}.`);
   }
   if (m.boss !== undefined && typeof m.boss !== "boolean") signalerMonstre(cle, `boss devrait être un booléen, reçu ${typeof m.boss}.`);
-  ["pv", "def", "init", "atk"].forEach((champ) => {
+  ["pv", "def", "atk"].forEach((champ) => {
     if (m[champ] !== undefined && !Number.isInteger(m[champ])) signalerMonstre(cle, `${champ} devrait être un entier, reçu ${JSON.stringify(m[champ])}.`);
   });
+  // init : plage 0-10 (pas une cohérence avec la dangerosité, cf. Pièges du
+  // schéma — loup_veteran garde init 6 en dangerosité 1, plafonné en dur par
+  // js/sauvegardes.js:68 : c'est de l'équilibrage, pas du schéma).
+  if (m.init !== undefined && !(Number.isInteger(m.init) && m.init >= 0 && m.init <= 10)) {
+    signalerMonstre(cle, `init devrait être un entier entre 0 et 10, reçu ${JSON.stringify(m.init)}.`);
+  }
+  if (m.defMentale !== undefined && !Number.isInteger(m.defMentale)) {
+    signalerMonstre(cle, `defMentale devrait être un entier, reçu ${JSON.stringify(m.defMentale)}.`);
+  }
+  if (m.taille !== undefined && !TAILLES_VALIDES.includes(m.taille)) {
+    signalerMonstre(cle, `taille invalide : "${m.taille}" (attendu : ${TAILLES_VALIDES.join(" | ")}).`);
+  }
 
   // 11. race[] ⊆ enum.
   if (m.race !== undefined) {
@@ -246,6 +320,14 @@ monstres.forEach((m, index) => {
       signalerMonstre(cle, `attaques[${i}].effetSpecial devrait être string|null, reçu ${typeof a.effetSpecial}.`);
     }
   });
+
+  // armureId (cf. schema_cible_armures_categorie.md) : optionnel — 21
+  // monstres n'ont pas d'armure — mais doit exister dans le catalogue quand
+  // il est présent, même règle que armeId.
+  if (m.armureId !== undefined) {
+    armuresReferencees.add(m.armureId);
+    if (!idsArmuresVus.has(m.armureId)) signalerMonstre(cle, `armureId introuvable dans le catalogue : "${m.armureId}".`);
+  }
 
   // 15. capacitesActives[] : bloc mecanique optionnel, mais explicite (null
   // si purement narrative — jamais absent silencieusement).
@@ -343,17 +425,28 @@ monstres.forEach((m, index) => {
 
 // 7. Arme jamais référencée (avertissement).
 const armesJamaisReferencees = [...idsArmesVus].filter((id) => !armesReferencees.has(id));
+// Idem armures.
+const armuresJamaisReferencees = [...idsArmuresVus].filter((id) => !armuresReferencees.has(id));
 
 // ===========================================================================
 // RAPPORT
 // ===========================================================================
 const totalErreursArmes = [...problemesArmes.values()].reduce((s, l) => s + l.length, 0);
+const totalErreursArmures = [...problemesArmures.values()].reduce((s, l) => s + l.length, 0);
 const totalErreursMonstres = [...problemesMonstres.values()].reduce((s, l) => s + l.length, 0);
-const totalErreurs = totalErreursArmes + totalErreursMonstres;
+const totalErreurs = totalErreursArmes + totalErreursArmures + totalErreursMonstres;
 
 if (totalErreursArmes) {
   console.log(`❌ ${totalErreursArmes} erreur(s) sur ${problemesArmes.size} arme(s) (data/armes_monstres.js) :\n`);
   problemesArmes.forEach((messages, cle) => {
+    console.log(`  [${cle}]`);
+    messages.forEach((m) => console.log(`      ${m}`));
+  });
+  console.log("");
+}
+if (totalErreursArmures) {
+  console.log(`❌ ${totalErreursArmures} erreur(s) sur ${problemesArmures.size} armure(s) (data/armures_monstres.js) :\n`);
+  problemesArmures.forEach((messages, cle) => {
     console.log(`  [${cle}]`);
     messages.forEach((m) => console.log(`      ${m}`));
   });
@@ -369,6 +462,9 @@ if (totalErreursMonstres) {
 }
 if (armesJamaisReferencees.length) {
   console.log(`⚠️  ${armesJamaisReferencees.length} arme(s) jamais référencée(s) par aucun monstre : ${armesJamaisReferencees.join(", ")}.\n`);
+}
+if (armuresJamaisReferencees.length) {
+  console.log(`⚠️  ${armuresJamaisReferencees.length} armure(s) jamais référencée(s) par aucun monstre : ${armuresJamaisReferencees.join(", ")}.\n`);
 }
 // attaquesInlineHeritees (armeId manquant) est désormais une ERREUR (cf. §13/14
 // ci-dessus, déjà listée par monstre) — plus un simple avertissement "hors

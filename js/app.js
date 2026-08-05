@@ -9323,7 +9323,7 @@ const App = (() => {
           <div class="cm-stats">
             ${defHtml}
             <span title="SAG — résistance aux sorts mentaux (Domination, Sommeil, Fascination…)${m.defMentale != null ? " · fixée" : " · dérivée : 10 + dangerosité"}">SAG ${m.defMentale != null ? m.defMentale : (10 + (m.dangerosite || 0))}</span>
-            <span>Armure ${m.armure || 0}</span>
+            <span title="${echapper((typeof ARMURES_MONSTRES_INDEX !== "undefined" && m.armureId && ARMURES_MONSTRES_INDEX[m.armureId] && ARMURES_MONSTRES_INDEX[m.armureId].note) || "")}">Armure ${m.armure || 0}</span>
             ${etoiles ? `<span>${etoiles}</span>` : ""}
           </div>
           ${cibleHtml}
@@ -9692,7 +9692,14 @@ const App = (() => {
       <span title="SAG — résistance aux sorts mentaux (${m.defMentale != null ? "fixée" : "dérivée : 10 + dangerosité"})"><strong>SAG</strong> ${volonte}</span>
       <span title="Initiative"><strong>INIT</strong> ${m.init >= 0 ? "+" : ""}${m.init ?? "—"}</span>
       <span title="Attaque"><strong>ATK</strong> ${m.atk >= 0 ? "+" : ""}${m.atk ?? "—"}</span>
-      ${m.armure ? `<span title="${echapper(m.armure.description || "")}"><strong>Armure</strong> ${m.armure.valeur ?? "—"}</span>` : ""}
+      ${(() => {
+        const arm = (typeof ARMURES_MONSTRES_INDEX !== "undefined" && m.armureId) ? ARMURES_MONSTRES_INDEX[m.armureId] : null;
+        if (!arm) return "";
+        // naturelle (fourrure, écorce, corps de granit) : fait partie de la
+        // créature, ne se retire pas (contrairement à une cotte de mailles) —
+        // marqué visuellement pour que le MJ ne propose pas de la dépouiller.
+        return `<span title="${echapper(`${arm.nom}${arm.naturelle ? " (naturelle)" : ""}${arm.note ? " — " + arm.note : ""}`)}"><strong>Armure</strong> ${arm.reduction}${arm.naturelle ? " 🐾" : ""}</span>`;
+      })()}
     </div>`;
 
     const atqHtml = m.attaques && m.attaques.length
@@ -9726,7 +9733,7 @@ const App = (() => {
         <div class="monstre-nom">${emoji} ${echapper(m.nom)} ${boss}${tier}${modifie ? ' <span class="badge-modifie" title="Stats modifiées par le MJ">✎ modifié</span>' : ""}</div>
         <div class="monstre-meta">${dang} ${taille}${race}</div>
       </div>
-      ${m.categorie || m.faction ? `<div class="monstre-sous">${[m.categorie, m.faction].filter(Boolean).map(echapper).join(" · ")}</div>` : ""}
+      ${m.faction ? `<div class="monstre-sous">${echapper(m.faction)}</div>` : ""}
       ${statsHtml}
       ${atqHtml}
       ${activesHtml}
