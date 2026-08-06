@@ -1352,18 +1352,20 @@ class Personnage extends Entite {
   bonusDefContreOpportunite() {
     return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDefOpportunite || 0), 0);
   }
-  // Affixe de rareté "brutale" (armure_guerre_orque, cf. "Affixes phase 2" §A) :
-  // « +1d4/1d6 dégâts avec armes de contact tant que l'armure est équipée ».
-  // Seul cas de cette phase où un passif d'UNE pièce (armure) modifie les
-  // dégâts d'une AUTRE (arme) — aucun champ bonusDegats* existant ne porte de
-  // FORMULE de dé (ils sont tous des entiers plats, cf. bonusDegatsMainsNues
-  // ci-dessus), d'où ce champ dédié (item.bonusDegatsContact, une chaîne
-  // "NdM"). Renvoie un terme de formule ("1d4") à ajouter à dmgContact côté
-  // app.js, jamais un nombre — même principe que bonusDegatsFormuleEquipement
-  // mais pour un dé littéral, pas une expression @variable évaluée.
-  bonusDegatsContactArmureEquipee() {
-    const armure = this._itemsEquipesUniques().find((it) => it.type === "armure" && it.bonusDegatsContact);
-    return (armure && armure.bonusDegatsContact) || "";
+  // Affixe de rareté "brutale" (armure_guerre_orque, cf. "Affixes phase 2" §A)
+  // et "ecrasant" (ceinturon_colosse, cf. lot "armes A/B") : « +1d4/1d6 dégâts
+  // avec armes de contact tant que l'objet est équipé ». Aucun champ
+  // bonusDegats* existant ne porte de FORMULE de dé (ils sont tous des
+  // entiers plats, cf. bonusDegatsMainsNues ci-dessus), d'où ce champ dédié
+  // (item.bonusDegatsContact, une chaîne "NdM"). Concatène TOUS les objets
+  // équipés qui en portent un (armure ET ceinturon simultanément, ex.) en un
+  // seul terme de formule ("1d4+1d6") à ajouter à dmgContact côté app.js,
+  // jamais un nombre — même principe que bonusDegatsFormuleEquipement mais
+  // pour un dé littéral, pas une expression @variable évaluée. À l'origine
+  // restreint aux armures (find, un seul item) — généralisé pour ne pas
+  // perdre silencieusement l'une des deux sources en cas de cumul.
+  bonusDegatsContactEquipement() {
+    return this._itemsEquipesUniques().reduce((acc, it) => it.bonusDegatsContact ? (acc ? `${acc}+${it.bonusDegatsContact}` : it.bonusDegatsContact) : acc, "");
   }
   // Druide — Voie de la nature, rang 4 "Résistance naturelle" : réduction
   // égale à 2×rangMaxVoie contre les dégâts "naturels" (froid/chaleur/chute/

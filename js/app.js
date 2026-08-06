@@ -1533,7 +1533,7 @@ const App = (() => {
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
     if (dmgContact && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
-    if (dmgContact && perso.bonusDegatsContactArmureEquipee()) dmgContact += "+" + perso.bonusDegatsContactArmureEquipee(); // affixe "brutale" (armure), cf. Affixes phase 2 §A
+    if (dmgContact && perso.bonusDegatsContactEquipement()) dmgContact += "+" + perso.bonusDegatsContactEquipement(); // affixes "brutale"/"ecrasant", cf. Personnage.bonusDegatsContactEquipement
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
@@ -1869,6 +1869,8 @@ const App = (() => {
     if (btnSprint) btnSprint.onclick = () => { Combat.sprint(id); toast(`Sprint : +${Combat.SPRINT_BONUS} cases de déplacement.`); rendreFicheSidebarBattlemap(id); };
     const btnDoubleDeplacement = document.getElementById("bm-double-deplacement");
     if (btnDoubleDeplacement) btnDoubleDeplacement.onclick = () => { _declencherDoubleDeplacement(id); rendreFicheSidebarBattlemap(id); };
+    const btnAttaqueSupplementaire = document.getElementById("bm-attaque-supplementaire");
+    if (btnAttaqueSupplementaire) btnAttaqueSupplementaire.onclick = () => { _declencherAttaqueSupplementaire(id); rendreFicheSidebarBattlemap(id); };
     const btnActionSecondaire = document.getElementById("bm-action-secondaire");
     if (btnActionSecondaire) btnActionSecondaire.onclick = () => { Combat.utiliserActionSecondaire(id); rendreFicheSidebarBattlemap(id); };
     const btnReinitActions = document.getElementById("bm-reinit-actions");
@@ -2023,7 +2025,7 @@ const App = (() => {
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
     if (dmgContact && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
-    if (dmgContact && perso.bonusDegatsContactArmureEquipee()) dmgContact += "+" + perso.bonusDegatsContactArmureEquipee(); // affixe "brutale" (armure), cf. Affixes phase 2 §A
+    if (dmgContact && perso.bonusDegatsContactEquipement()) dmgContact += "+" + perso.bonusDegatsContactEquipement(); // affixes "brutale"/"ecrasant", cf. Personnage.bonusDegatsContactEquipement
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
@@ -4821,6 +4823,9 @@ const App = (() => {
     // gaté par actionPrincipaleUtilisee.
     const p = chargerPersos()[persoId];
     const doubleDeplacementDispo = p && _itemDoubleDeplacementDisponible(p);
+    // "vive"/"a_repetition"/"duelliste"/"tourbillonnante" (lot "armes A/B") :
+    // même principe SANS coût d'action que "Doubler le déplacement" ci-dessus.
+    const attaqueSupplementaireDispo = p && _itemAttaqueSupplementaireDisponible(p);
     return `<div class="carte">
       <h3 style="margin-top:0;">Actions du tour</h3>
       <div class="stats-rapides">
@@ -4846,6 +4851,7 @@ const App = (() => {
         ${!entree.actionPrincipaleUtilisee ? `<button class="btn petit secondaire" id="bm-sprint" title="Consomme l'action principale sans attaquer, contre +${Combat.SPRINT_BONUS || 2} cases">🏃 Sprint (+${Combat.SPRINT_BONUS || 2} cases)</button>` : ""}
         ${!entree.actionSecondaireUtilisee ? `<button class="btn petit secondaire" id="bm-action-secondaire" title="Boire une potion, utiliser un parchemin, relever un allié...">Action secondaire</button>` : ""}
         ${doubleDeplacementDispo ? `<button class="btn petit or" id="bm-double-deplacement" title="${echapper(doubleDeplacementDispo.it.nom)} : double le déplacement de ce tour, sans coût d'action">🥾 Doubler le déplacement</button>` : ""}
+        ${attaqueSupplementaireDispo ? `<button class="btn petit or" id="bm-attaque-supplementaire" title="${echapper(attaqueSupplementaireDispo.it.nom)} : accorde une attaque supplémentaire ce tour, sans coût d'action">⚔️ Attaque supplémentaire</button>` : ""}
         <button class="btn petit secondaire" id="bm-reinit-actions" title="Réinitialise sans attendre le prochain tour (correction de table)">↺</button>
       </div>
     </div>`;
@@ -5785,7 +5791,7 @@ const App = (() => {
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
     if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
     if (dmgContact && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
-    if (dmgContact && perso.bonusDegatsContactArmureEquipee()) dmgContact += "+" + perso.bonusDegatsContactArmureEquipee(); // affixe "brutale" (armure), cf. Affixes phase 2 §A
+    if (dmgContact && perso.bonusDegatsContactEquipement()) dmgContact += "+" + perso.bonusDegatsContactEquipement(); // affixes "brutale"/"ecrasant", cf. Personnage.bonusDegatsContactEquipement
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
@@ -10281,6 +10287,48 @@ const App = (() => {
       }
     }
     return null;
+  }
+
+  // Item équipé portant une "attaque supplémentaire" disponible (cf. "vive"/
+  // "a_repetition"/"duelliste"/"tourbillonnante", lot "armes A/B" — même
+  // mécanique que la capacité Barde "Enchaînement (L)", cf. data/donnees.js) —
+  // même patron que les autres _item*Disponible.
+  function _itemAttaqueSupplementaireDisponible(p) {
+    if (!p) return null;
+    const perso = Personnage.depuisJSON(p);
+    for (const it of perso._itemsEquipesUniques()) {
+      if (!it.declencheurs) continue;
+      for (const d of it.declencheurs) {
+        if (d.evenement !== "attaqueSupplementaire") continue;
+        const usage = _verifierUsageDeclencheur(p, it, d);
+        if (usage.ok) return { it, d, usage };
+      }
+    }
+    return null;
+  }
+
+  // Réponse au bouton "Attaque supplémentaire" (cf. htmlBlocActionsDuTour) :
+  // consomme l'usage, délègue l'octroi de l'action à
+  // Combat.accorderActionPrincipaleBonus (même fonction que "Doubler le
+  // déplacement" et qu'Enchaînement — remet actionPrincipaleUtilisee à false
+  // ce tour), puis pose l'éventuel malus ({type:"bonus", cible:"attaque"})
+  // sur le porteur lui-même via _appliquerBonusSurCibleRaw — même assomption
+  // documentée qu'Enchaînement : le malus s'applique aux DEUX attaques du
+  // tour (bonusTemporaire générique, pas de malus scopé à une seule attaque
+  // dans le vocabulaire actuel). Rien à poser au palier légendaire (aucun
+  // effet "bonus" dans son déclencheur) : _appliquerBonusSurCibleRaw n'est
+  // simplement pas appelé.
+  function _declencherAttaqueSupplementaire(persoId) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    const dispo = p && _itemAttaqueSupplementaireDisponible(p);
+    if (!dispo) { toast("Attaque supplémentaire indisponible."); return; }
+    dispo.usage.appliquer();
+    sauverPersos(persos);
+    if (typeof Combat !== "undefined" && Combat.accorderActionPrincipaleBonus) Combat.accorderActionPrincipaleBonus(persoId);
+    const effetMalus = (dispo.d.effets || []).find((e) => e.type === "bonus");
+    if (effetMalus) _appliquerBonusSurCibleRaw(`pj:${persoId}`, effetMalus.cible, effetMalus.valeur, String(effetMalus.duree || "1"), dispo.it.nom);
+    toast(`⚔️ ${dispo.it.nom} : attaque supplémentaire accordée${effetMalus ? ` (${effetMalus.valeur} ${effetMalus.cible} ce tour)` : ""}.`);
   }
 
   // Item équipé portant un doublement de déplacement "doublerDeplacement"

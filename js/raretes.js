@@ -59,7 +59,16 @@ const EFFETS_RARETE = {
         rare: { evenement: "subitContact", effets: [{ type: "degats", formule: "1", cible: "attaquant" }] },
         legendaire: { evenement: "subitContact", effets: [{ type: "degats", formule: "2", cible: "attaquant" }] },
       } },
-  bouclier: { rare: "1 fois par combat : annule totalement une attaque de contact", legendaire: "2 fois par combat : annule totalement une attaque de contact" },
+  bouclier: { rare: "1 fois par combat : annule totalement une attaque de contact", legendaire: "2 fois par combat : annule totalement une attaque de contact",
+      mecanique: {
+        // Repli générique utilisé par tout bouclier SANS variante propre dans
+        // EFFETS_PAR_ITEM (cf. Raretes.appliquer, `source = variante ||
+        // EFFETS_RARETE[item.type]`) — même mécanique que "absorbant" (lot
+        // "subitAttaque : esquive/réduction"), fraction 1.0 (annulation
+        // totale) au lieu de 0.5, lue par _reduireDegatsSubisSiDisponible.
+        rare: { evenement: "subitContact", usage: { frequence: "1x/combat" }, effets: [{ type: "reductionDegats", fraction: 1 }] },
+        legendaire: { evenement: "subitContact", usage: { frequence: "2x/combat" }, effets: [{ type: "reductionDegats", fraction: 1 }] },
+      } },
 };
 
 // Effets spéciaux propres à chaque item générique, 2 variantes chacun.
@@ -84,7 +93,16 @@ const EFFETS_PAR_ITEM = {
         rare: { bonusAttaqueConditionnel: { condition: "cibleBlessee", valeur: 2 } },
         legendaire: { bonusAttaqueConditionnel: { condition: "cibleBlessee", valeur: 4 }, evenement: "touche", effets: [{ type: "critique", seuil: 19 }] },
       } },
-    { id: "vive", nom: "vive", rare: "Permet une attaque supplémentaire à -4 une fois par tour", legendaire: "Permet une attaque supplémentaire sans malus une fois par tour" },
+    { id: "vive", nom: "vive", rare: "Permet une attaque supplémentaire à -4 une fois par tour", legendaire: "Permet une attaque supplémentaire sans malus une fois par tour",
+      mecanique: {
+        // attaqueSupplementaire (cf. lot "armes A/B") : même mécanique que
+        // Barde "Enchaînement (L)" — bouton dédié qui accorde une action via
+        // Combat.accorderActionPrincipaleBonus, malus posé comme bonusTemporaire
+        // "attaque" (s'applique aux DEUX attaques du tour, même assomption
+        // documentée que la capacité). "-4" au rare, aucun malus au légendaire.
+        rare: { evenement: "attaqueSupplementaire", usage: { frequence: "1x/tour" }, effets: [{ type: "bonus", cible: "attaque", valeur: -4, duree: "1" }] },
+        legendaire: { evenement: "attaqueSupplementaire", usage: { frequence: "1x/tour" }, effets: [{ type: "special", note: "Aucun malus à ce palier." }] },
+      } },
   ],
   epee_longue: [
     { id: "tranchante", nom: "tranchante", rare: "Saignement : +1d4 dégâts pendant 2 tours", legendaire: "Saignement aggravé : +1d6 dégâts pendant 3 tours",
@@ -185,10 +203,24 @@ const EFFETS_PAR_ITEM = {
         rare: { evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 2 }] },
         legendaire: { evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 4 }] },
       } },
-    { id: "a_repetition", nom: "à répétition", rare: "Peut tirer deux fois par tour à -4 aux deux jets", legendaire: "Peut tirer deux fois par tour sans malus" },
+    { id: "a_repetition", nom: "à répétition", rare: "Peut tirer deux fois par tour à -4 aux deux jets", legendaire: "Peut tirer deux fois par tour sans malus",
+      mecanique: {
+        // Même mécanique que "vive" (épée courte) — cf. lot "armes A/B".
+        rare: { evenement: "attaqueSupplementaire", usage: { frequence: "1x/tour" }, effets: [{ type: "bonus", cible: "attaque", valeur: -4, duree: "1" }] },
+        legendaire: { evenement: "attaqueSupplementaire", usage: { frequence: "1x/tour" }, effets: [{ type: "special", note: "Aucun malus à ce palier." }] },
+      } },
   ],
   cimeterre: [
-    { id: "tourbillonnante", nom: "tourbillonnante", rare: "Une fois par tour, touche un second adversaire adjacent à demi-dégâts", legendaire: "Touche un second adversaire adjacent à dégâts complets" },
+    { id: "tourbillonnante", nom: "tourbillonnante", rare: "Une fois par tour, touche un second adversaire adjacent à demi-dégâts", legendaire: "Touche un second adversaire adjacent à dégâts complets",
+      mecanique: {
+        // Même bouton "attaqueSupplementaire" que "vive" (aucun malus au jet
+        // d'attaque ici, contrairement à "vive"/"a_repetition"/"duelliste") :
+        // "à demi-dégâts" (rare) reste à appliquer manuellement sur le jet de
+        // dégâts de cette attaque — aucune notion de "cible secondaire" ni de
+        // dégâts fractionnés dans le vocabulaire des déclencheurs.
+        rare: { evenement: "attaqueSupplementaire", usage: { frequence: "1x/tour" }, effets: [{ type: "special", note: "Vise un second adversaire ADJACENT, à demi-dégâts (à appliquer manuellement sur le jet de dégâts)." }] },
+        legendaire: { evenement: "attaqueSupplementaire", usage: { frequence: "1x/tour" }, effets: [{ type: "special", note: "Vise un second adversaire ADJACENT, à dégâts complets." }] },
+      } },
     { id: "ensanglantee", nom: "ensanglantée", rare: "Saignement : +1d4 dégâts pendant 2 tours", legendaire: "Saignement aggravé : +1d6 dégâts pendant 3 tours",
       mecanique: {
         rare: { evenement: "touche", effets: [{ type: "dot", formule: "1d4", duree: 2 }] },
@@ -244,7 +276,12 @@ const EFFETS_PAR_ITEM = {
       } },
   ],
   poignards_jumeaux: [
-    { id: "duelliste", nom: "de duelliste", rare: "Deuxième attaque à -4 dans le même tour", legendaire: "Deuxième attaque sans malus dans le même tour" },
+    { id: "duelliste", nom: "de duelliste", rare: "Deuxième attaque à -4 dans le même tour", legendaire: "Deuxième attaque sans malus dans le même tour",
+      mecanique: {
+        // Même mécanique que "vive" (épée courte) — cf. lot "armes A/B".
+        rare: { evenement: "attaqueSupplementaire", usage: { frequence: "1x/tour" }, effets: [{ type: "bonus", cible: "attaque", valeur: -4, duree: "1" }] },
+        legendaire: { evenement: "attaqueSupplementaire", usage: { frequence: "1x/tour" }, effets: [{ type: "special", note: "Aucun malus à ce palier." }] },
+      } },
     { id: "toxique", nom: "toxique", rare: "1 chance sur 2 d'infliger 1d4 dégâts de poison pendant 2 tours", legendaire: "1 chance sur 2 d'infliger 1d6 dégâts de poison pendant 3 tours",
       mecanique: {
         rare: { evenement: "touche", effets: [{ type: "dot", formule: "1d4", duree: 2, probabilite: 0.5 }] },
@@ -495,7 +532,12 @@ const EFFETS_PAR_ITEM = {
       } },
   ],
   bouclier_acier: [
-    { id: "standard", nom: "renforcé", rare: "+1 DEF supplémentaire contre les attaques à distance", legendaire: "+2 DEF supplémentaire contre les attaques à distance" },
+    { id: "standard", nom: "renforcé", rare: "+1 DEF supplémentaire contre les attaques à distance", legendaire: "+2 DEF supplémentaire contre les attaques à distance",
+      mecanique: {
+        // Même schéma que "imposante" (demi_plaques, lot "armures B").
+        rare: { passif: { bonusDefDistance: 1 } },
+        legendaire: { passif: { bonusDefDistance: 2 } },
+      } },
     { id: "renvoyeur", nom: "renvoyeur", rare: "Renvoie 1 point de dégâts à l'attaquant au contact", legendaire: "Renvoie 2 points de dégâts à l'attaquant au contact",
       mecanique: {
         rare: { evenement: "subitContact", effets: [{ type: "degats", formule: "1", cible: "attaquant" }] },
@@ -527,10 +569,23 @@ const EFFETS_PAR_ITEM = {
         rare: { evenement: "subitContact", usage: { frequence: "1x/combat" }, effets: [{ type: "degats", formule: "1d4", cible: "attaquant" }] },
         legendaire: { evenement: "subitContact", usage: { frequence: "1x/combat" }, effets: [{ type: "degats", formule: "1d8", cible: "attaquant" }] },
       } },
-    { id: "massif", nom: "massif", rare: "Ignore 1 point de dégâts physiques après application du bonusDEF", legendaire: "Ignore 2 points de dégâts physiques après application du bonusDEF" },
+    { id: "massif", nom: "massif", rare: "Ignore 1 point de dégâts physiques après application du bonusDEF", legendaire: "Ignore 2 points de dégâts physiques après application du bonusDEF",
+      mecanique: {
+        // Même champ que "renforcee"/"impenetrable"/"increvable" (lot "armures A").
+        rare: { passif: { bonusReductionPhysique: 1 } },
+        legendaire: { passif: { bonusReductionPhysique: 2 } },
+      } },
   ],
   bouclier_seve: [
-    { id: "regenerant", nom: "régénérant", rare: "Soigne 1 PV au porteur à chaque tour où le bouclier bloque une attaque", legendaire: "Soigne 2 PV au porteur dans les mêmes conditions" },
+    { id: "regenerant", nom: "régénérant", rare: "Soigne 1 PV au porteur à chaque tour où le bouclier bloque une attaque", legendaire: "Soigne 2 PV au porteur dans les mêmes conditions",
+      mecanique: {
+        // Sibling de "drainante" (armure_ombre, lot "armures B") : même event
+        // "rateSubie" (attaque de CONTACT ratée sur le porteur — "bloque"
+        // avec un bouclier = rate le porteur), plafonné 1x/tour ("à chaque
+        // tour" du texte) au lieu d'illimité comme drainante.
+        rare: { evenement: "rateSubie", usage: { frequence: "1x/tour" }, effets: [{ type: "soin", formule: "1" }] },
+        legendaire: { evenement: "rateSubie", usage: { frequence: "1x/tour" }, effets: [{ type: "soin", formule: "2" }] },
+      } },
     { id: "vivant", nom: "vivant", rare: "Se répare de 1 point de bonusDEF perdu par jour de repos", legendaire: "Se répare intégralement après une nuit de repos" },
   ],
 
@@ -578,11 +633,21 @@ const EFFETS_PAR_ITEM = {
         rare: { passif: { bonusDeplacement: 1 }, evenement: "doublerDeplacement", usage: { frequence: "1x/combat" }, effets: [{ type: "doubleDeplacement" }] },
         legendaire: { passif: { bonusDeplacement: 2 }, evenement: "doublerDeplacement", usage: { frequence: "2x/combat" }, effets: [{ type: "doubleDeplacement" }] },
       } },
-    { id: "esquivantes", nom: "esquivantes", rare: "+1 case de déplacement ; +1 DEF contre les attaques d'opportunité", legendaire: "+2 cases de déplacement ; +2 DEF contre les attaques d'opportunité, jamais pris au dépourvu" },
+    { id: "esquivantes", nom: "esquivantes", rare: "+1 case de déplacement ; +1 DEF contre les attaques d'opportunité", legendaire: "+2 cases de déplacement ; +2 DEF contre les attaques d'opportunité, jamais pris au dépourvu",
+      mecanique: {
+        rare: { passif: { bonusDeplacement: 1, bonusDefOpportunite: 1 } },
+        legendaire: { passif: { bonusDeplacement: 2, bonusDefOpportunite: 2 },
+          note: "« Jamais pris au dépourvu » (pas de malus de surprise) — aucune mécanique de surprise automatisée dans l'app, à arbitrer manuellement (même limite que \"glissante\", armure_ecailles)." },
+      } },
   ],
   gants_voleur: [
     { id: "silencieux", nom: "silencieux", rare: "+1 Discrétion/Escamotage ; ouvre les serrures simples sans jet", legendaire: "+2 Discrétion/Escamotage ; ouvre les serrures complexes sans jet, désamorce les pièges simples automatiquement" },
-    { id: "prestes", nom: "prestes", rare: "+1 Discrétion/Escamotage ; +1 initiative", legendaire: "+2 Discrétion/Escamotage ; +2 initiative, agit en premier au premier tour" },
+    { id: "prestes", nom: "prestes", rare: "+1 Discrétion/Escamotage ; +1 initiative", legendaire: "+2 Discrétion/Escamotage ; +2 initiative, agit en premier au premier tour",
+      mecanique: {
+        rare: { passif: { bonusCompetences: { Discrétion: 1, Escamotage: 1 }, bonusInitiative: 1 } },
+        legendaire: { passif: { bonusCompetences: { Discrétion: 2, Escamotage: 2 }, bonusInitiative: 2 },
+          note: "Agit en premier au premier tour — pas de mécanique d'ordre d'initiative forcé, à arbitrer manuellement (même limite déjà notée pour d'autres bonus d'initiative de ce catalogue)." },
+      } },
   ],
   anneau_resistance: [
     { id: "renforce", nom: "renforcé", rare: "Résistance 2 au type de dégâts choisi", legendaire: "Résistance 3 au type choisi, immunité aux effets secondaires mineurs de ce type",
@@ -627,16 +692,46 @@ const EFFETS_PAR_ITEM = {
       } },
   ],
   amulette_sante: [
-    { id: "vivifiante", nom: "vivifiante", rare: "+1d6 PV max ; régénère 1 PV par tour hors combat", legendaire: "+2d6 PV max ; régénère 1 PV par tour même en combat" },
-    { id: "purifiante", nom: "purifiante", rare: "+1d4 PV max ; immunité aux maladies mineures", legendaire: "+1d6 PV max ; immunité totale aux maladies et poisons faibles" },
+    { id: "vivifiante", nom: "vivifiante", rare: "+1d6 PV max ; régénère 1 PV par tour hors combat", legendaire: "+2d6 PV max ; régénère 1 PV par tour même en combat",
+      mecanique: {
+        // Sibling exact de "tissée de sève" (robe_mage, lot "armures C") —
+        // même infra bonusPvMaxDe/regenCombat, même limite documentée là-bas
+        // pour le palier rare ("hors combat", non mécanisé).
+        rare: { passif: { bonusPvMaxDe: "1d6" } },
+        legendaire: { passif: { bonusPvMaxDe: "2d6", regenCombat: 1 } },
+      } },
+    { id: "purifiante", nom: "purifiante", rare: "+1d4 PV max ; immunité aux maladies mineures", legendaire: "+1d6 PV max ; immunité totale aux maladies et poisons faibles",
+      mecanique: {
+        // Immunité maladies/poisons reste descriptive : aucune mécanique de
+        // maladie/empoisonnement "passif" dans l'app (le poison existant est
+        // toujours un dot posé manuellement par le MJ, jamais une ressource
+        // suivie à laquelle s'immuniser).
+        rare: { passif: { bonusPvMaxDe: "1d4" }, note: "Immunité aux maladies mineures — non modélisée, à arbitrer manuellement." },
+        legendaire: { passif: { bonusPvMaxDe: "1d6" }, note: "Immunité totale aux maladies et poisons faibles — même remarque." },
+      } },
   ],
   collier_clarte: [
     { id: "impenetrable", nom: "impénétrable", rare: "Immunisé à la lecture de pensées ; +1 aux jets de résistance mentale", legendaire: "Immunisé à la lecture de pensées ; +2 aux jets de résistance mentale, immunité à la Terreur" },
     { id: "voile", nom: "voilé", rare: "Immunisé à la lecture de pensées ; invisible à la divination à courte portée", legendaire: "Immunisé à la lecture de pensées ; invisible à toute divination" },
   ],
   ceinturon_colosse: [
-    { id: "ecrasant", nom: "écrasant", rare: "+2 FOR ; +1d4 dégâts avec armes de contact", legendaire: "+3 FOR ; +1d6 dégâts avec armes de contact" },
-    { id: "inebranlable", nom: "inébranlable", rare: "+2 FOR ; ne peut être renversé ni repoussé", legendaire: "+3 FOR ; idem, + immunité à l'Étourdissement" },
+    { id: "ecrasant", nom: "écrasant", rare: "+2 FOR ; +1d4 dégâts avec armes de contact", legendaire: "+3 FOR ; +1d6 dégâts avec armes de contact",
+      mecanique: {
+        // bonusDegatsContact (cf. "brutale", armure_guerre_orque) : champ
+        // partagé, désormais généralisé à tout type d'objet équipé plutôt que
+        // restreint aux armures — cf. Personnage.bonusDegatsContactEquipement.
+        rare: { passif: { bonusCarac: { FOR: 2 }, bonusDegatsContact: "1d4" } },
+        legendaire: { passif: { bonusCarac: { FOR: 3 }, bonusDegatsContact: "1d6" } },
+      } },
+    { id: "inebranlable", nom: "inébranlable", rare: "+2 FOR ; ne peut être renversé ni repoussé", legendaire: "+3 FOR ; idem, + immunité à l'Étourdissement",
+      mecanique: {
+        // "ne peut être renversé/repoussé/étourdi" reste descriptif : aucune
+        // capacité ou piège de l'app n'inflige "renversee"/"etourdie" de
+        // façon automatisée (vérifié — infliction toujours manuelle), donc
+        // rien à immuniser concrètement pour l'instant.
+        rare: { passif: { bonusCarac: { FOR: 2 } }, note: "Immunité renversement/repoussement — non modélisée (rien ne les inflige automatiquement dans l'app), rien à arbitrer de plus." },
+        legendaire: { passif: { bonusCarac: { FOR: 3 } }, note: "Immunité renversement/repoussement/Étourdissement — même remarque." },
+      } },
   ],
   cape_brume: [
     { id: "insaisissable", nom: "insaisissable", rare: "+1 DEF contre la première attaque ; 1 fois par combat, une attaque manque automatiquement sa cible", legendaire: "+2 DEF contre la première attaque ; 2 fois par combat, une attaque manque automatiquement sa cible",
@@ -779,8 +874,25 @@ const EFFETS_PAR_ITEM = {
       } },
   ],
   gants_poing: [
-    { id: "percutants", nom: "percutants", rare: "+1 dégâts à mains nues ; ignore 1 point de reductionDegats de la cible", legendaire: "+2 dégâts à mains nues ; ignore 2 points de reductionDegats de la cible" },
-    { id: "foudroyants", nom: "foudroyants", rare: "+1 dégâts à mains nues ; 1 chance sur 2 d'étourdir la cible 1 tour sur un coup critique", legendaire: "+2 dégâts à mains nues ; étourdit systématiquement la cible 1 tour sur tout coup critique" },
+    { id: "percutants", nom: "percutants", rare: "+1 dégâts à mains nues ; ignore 1 point de reductionDegats de la cible", legendaire: "+2 dégâts à mains nues ; ignore 2 points de reductionDegats de la cible",
+      mecanique: {
+        // ignoreReduction sur "touche" (comme "perforante") : le vocabulaire
+        // des déclencheurs n'a aucune notion "mains nues vs arme en main" —
+        // s'applique sur tout coup de CONTACT réussi tant que les gants sont
+        // équipés, pas uniquement les frappes à mains nues au sens strict.
+        rare: { passif: { bonusDegatsMainsNues: 1 }, evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 1 }] },
+        legendaire: { passif: { bonusDegatsMainsNues: 2 }, evenement: "touche", effets: [{ type: "ignoreReduction", valeur: 2 }] },
+      } },
+    { id: "foudroyants", nom: "foudroyants", rare: "+1 dégâts à mains nues ; 1 chance sur 2 d'étourdir la cible 1 tour sur un coup critique", legendaire: "+2 dégâts à mains nues ; étourdit systématiquement la cible 1 tour sur tout coup critique",
+      mecanique: {
+        // evenement "critique" (jamais exercé jusqu'ici dans ce catalogue) :
+        // déjà câblé génériquement par _gererDeclencheursEquipement (proc dès
+        // que resolution.critique === true). probabilite (lu génériquement
+        // par _resoudreEffetsDeclencheur, AVANT le dispatch par type — même
+        // mécanisme que "toxique", poignards_jumeaux) porte le "1 chance sur 2".
+        rare: { passif: { bonusDegatsMainsNues: 1 }, evenement: "critique", effets: [{ type: "etat", id: "etourdie", duree: "1", probabilite: 0.5 }] },
+        legendaire: { passif: { bonusDegatsMainsNues: 2 }, evenement: "critique", effets: [{ type: "etat", id: "etourdie", duree: "1" }] },
+      } },
   ],
 
   // ── Boucliers (suite) ──────────────────────────────────────
@@ -835,7 +947,7 @@ const Raretes = (() => {
   // lus génériquement par Personnage._itemsEquipesUniques()), jamais un
   // calcul parallèle (cf. Affixes phase 2 §A, piège "ne pas dupliquer
   // l'agrégation des bonus"). bonusDegatsContact (armure "brutale") est la
-  // seule exception : lu par Personnage.bonusDegatsContactArmureEquipee(),
+  // seule exception : lu par Personnage.bonusDegatsContactEquipement(),
   // pas par une somme générique (formule de dé, pas un entier).
   function _appliquerPassif(clone, item, passif) {
     if (!passif) return;

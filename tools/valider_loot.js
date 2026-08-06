@@ -116,7 +116,13 @@ const TYPES_EFFET_CIBLE_INVERSE = ["degats", "etat"];
 // (qui vise le jet du PORTEUR lui-même, ex. malus epee_cupidite) — ici
 // l'inverse, une attaque de contact CONTRE le porteur qui échoue. Proc
 // automatique dans _resoudreAttaqueEtSuite, jamais _resoudreEffetsDeclencheur.
-const EVENEMENTS_DECLENCHEUR_VALIDES = ["touche", "rate", "critique", "subitContact", "subitAttaque", "sortLance", "relance", "critiqueSubi", "jetArme", "doublerDeplacement", "disparition", "rateSubie"];
+// attaqueSupplementaire (cf. "vive"/"a_repetition"/"duelliste"/
+// "tourbillonnante", lot "armes A/B") : même principe que doublerDeplacement/
+// disparition — bouton dédié (_declencherAttaqueSupplementaire), jamais
+// _resoudreEffetsDeclencheur. effets[] porte {type:"bonus", cible:"attaque",
+// valeur, duree} pour le malus du palier rare, ou {type:"special"} seul au
+// palier légendaire (aucun malus — mais effets[] reste requis non vide).
+const EVENEMENTS_DECLENCHEUR_VALIDES = ["touche", "rate", "critique", "subitContact", "subitAttaque", "sortLance", "relance", "critiqueSubi", "jetArme", "doublerDeplacement", "disparition", "rateSubie", "attaqueSupplementaire"];
 // typeDegats sur un déclencheur "subitContact" (cf. "réfléchissante",
 // cotte_runique — ne renvoie que les dégâts magiques subis).
 const TYPES_DEGATS_DECLENCHEUR_VALIDES = ["physique", "magique"];
