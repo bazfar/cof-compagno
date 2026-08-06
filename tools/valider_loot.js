@@ -244,6 +244,22 @@ function validerPassif(cle, prefix, passif) {
   if (passif.bonusDefOpportunite !== undefined && !Number.isInteger(passif.bonusDefOpportunite)) {
     signalerAffixe(cle, `${prefix}.bonusDefOpportunite devrait être un entier, reçu ${JSON.stringify(passif.bonusDefOpportunite)}.`);
   }
+  // fractionReductionChute (cf. "robuste", armure_cloute, lot "armures C") :
+  // seul passif fractionnaire (0-1) — pas un entier comme les autres.
+  if (passif.fractionReductionChute !== undefined && !(typeof passif.fractionReductionChute === "number" && passif.fractionReductionChute > 0 && passif.fractionReductionChute <= 1)) {
+    signalerAffixe(cle, `${prefix}.fractionReductionChute devrait être un nombre entre 0 (exclu) et 1, reçu ${JSON.stringify(passif.fractionReductionChute)}.`);
+  }
+  // regenCombat (cf. "tissée de sève", robe_mage, lot "armures C") : même
+  // convention — entier, sommé génériquement.
+  if (passif.regenCombat !== undefined && !Number.isInteger(passif.regenCombat)) {
+    signalerAffixe(cle, `${prefix}.regenCombat devrait être un entier, reçu ${JSON.stringify(passif.regenCombat)}.`);
+  }
+  // bonusPvMaxDe (cf. "tissée de sève", lot "armures C") : format dé "XdY",
+  // même grammaire que la regex de résolution (js/app.js
+  // _resoudreDePvMaxSiBesoin), pas la grammaire générale de lancerFormule.
+  if (passif.bonusPvMaxDe !== undefined && !/^\d*d\d+$/.test(passif.bonusPvMaxDe)) {
+    signalerAffixe(cle, `${prefix}.bonusPvMaxDe "${passif.bonusPvMaxDe}" ne correspond pas au format attendu (ex. "1d6").`);
+  }
 }
 
 // usage{frequence} sur un déclencheur (data/loot.json ou mecanique.rare/

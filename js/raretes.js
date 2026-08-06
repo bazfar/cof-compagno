@@ -331,7 +331,16 @@ const EFFETS_PAR_ITEM = {
         rare: { evenement: "subitContact", effets: [{ type: "degats", formule: "1", cible: "attaquant" }] },
         legendaire: { evenement: "subitContact", effets: [{ type: "degats", formule: "2", cible: "attaquant" }] },
       } },
-    { id: "robuste", nom: "robuste", rare: "Réduit de moitié les dégâts de chute", legendaire: "Annule les dégâts de chute" },
+    { id: "robuste", nom: "robuste", rare: "Réduit de moitié les dégâts de chute", legendaire: "Annule les dégâts de chute",
+      mecanique: {
+        // fractionReductionChute (cf. lot "armures C") : nécessite la
+        // nouvelle valeur "chute" du sélecteur "Subir des dégâts" (distincte
+        // de "naturel", cf. subirDegats js/app.js) — sans elle, une chute
+        // saisie comme "naturel" générique ne bénéficierait QUE du don
+        // Résistance naturelle, jamais de cet affixe.
+        rare: { passif: { fractionReductionChute: 0.5 } },
+        legendaire: { passif: { fractionReductionChute: 1 } },
+      } },
   ],
   cotte_mailles: [
     { id: "renforcee", nom: "renforcée", rare: "Réduit d'1 les dégâts physiques après application de reductionDegats", legendaire: "Réduit de 2 les dégâts physiques après application de reductionDegats",
@@ -428,7 +437,15 @@ const EFFETS_PAR_ITEM = {
         rare: { passif: { bonusCarac: { INT: 1 } } },
         legendaire: { passif: { bonusCarac: { INT: 2 } } },
       } },
-    { id: "tissee_de_seve", nom: "tissée de Sève", rare: "Régénère 1 PV par tour hors combat", legendaire: "Régénère 1 PV par tour, même en combat" },
+    { id: "tissee_de_seve", nom: "tissée de Sève", rare: "+1d6 PV max ; régénère 1 PV par tour hors combat", legendaire: "+2d6 PV max ; régénère 1 PV par tour, même en combat",
+      mecanique: {
+        // Palier rare : le "+1d6 PV max" est mécanisé (bonusPvMaxDe, infra
+        // partagée avec toute future Amulette de santé) ; le "régénère 1 PV
+        // par tour hors combat" n'a aucun crochet de tour hors combat dans
+        // l'app et reste une note manuelle non automatisée.
+        rare: { passif: { bonusPvMaxDe: "1d6" } },
+        legendaire: { passif: { bonusPvMaxDe: "2d6", regenCombat: 1 } },
+      } },
   ],
   manteau_voyageur: [
     { id: "endurant", nom: "endurant", rare: "+1 case de déplacement", legendaire: "+2 cases de déplacement",
@@ -815,6 +832,24 @@ const Raretes = (() => {
     // résoudre une attaque du type concerné, jamais dans calculerCA().
     if (passif.bonusDefDistance) clone.bonusDefDistance = (item.bonusDefDistance || 0) + passif.bonusDefDistance;
     if (passif.bonusDefOpportunite) clone.bonusDefOpportunite = (item.bonusDefOpportunite || 0) + passif.bonusDefOpportunite;
+    // fractionReductionChute (cf. "robuste", armure_cloute, lot "armures C") :
+    // seul passif FRACTIONNAIRE (0-1) de ce fichier — pas additif comme les
+    // autres (0.5 + 0.5 dépasserait le sens physique d'une "annulation"),
+    // simple écrasement par la valeur du palier. Lu par
+    // Personnage.fractionReductionChuteEquipement().
+    if (passif.fractionReductionChute !== undefined) clone.fractionReductionChute = passif.fractionReductionChute;
+    // regenCombat (cf. "tissée de sève", robe_mage, légendaire uniquement,
+    // lot "armures C") : additif — lu par Personnage.regenCombatEquipement(),
+    // consommé par Combat.tourSuivant() au début du tour du porteur. Le
+    // palier rare ("hors combat") n'a aucun crochet de tour hors combat dans
+    // l'app (js/repos.js ne gère que le repos long) et reste non mécanisé.
+    if (passif.regenCombat) clone.regenCombat = (item.regenCombat || 0) + passif.regenCombat;
+    // bonusPvMaxDe (cf. "tissée de sève", lot "armures C" — infra déjà
+    // présente côté js/app.js/_resoudreDePvMaxSiBesoin et
+    // Personnage.bonusPvEquipement, jamais encore posée par une mécanique de
+    // rareté) : dé roulé UNE SEULE FOIS à l'équipement, jamais additif —
+    // écrasement direct comme fractionReductionChute.
+    if (passif.bonusPvMaxDe) clone.bonusPvMaxDe = passif.bonusPvMaxDe;
   }
 
   // mecanique[palier] (rare/legendaire) -> effets sur le clone, commun aux 4

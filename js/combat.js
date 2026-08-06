@@ -370,8 +370,20 @@ const Combat = (() => {
       const p = persos[actif.id];
       _reinitialiserActionsEntree(actif, p);
       if (p) {
+        // "tissée de sève" (robe_mage, légendaire, cf. lot "armures C") :
+        // régénère 1 PV au début de CHAQUE tour du porteur, même en combat
+        // (contrairement au palier rare, "hors combat", non mécanisé —
+        // cf. Personnage.regenCombatEquipement). Appliqué avant
+        // decompterEtatsDebutTour pour être inclus dans la même sauvegarde.
+        const regenCombat = Personnage.depuisJSON(p).regenCombatEquipement();
+        let regenAppliquee = 0;
+        if (regenCombat > 0) regenAppliquee = Personnage.appliquerGainPv(p, regenCombat).gain;
         const { retires, degats, testsVolonte, soins } = Capacites.decompterEtatsDebutTour(p);
         App.sauverPersos(persos);
+        if (regenAppliquee > 0) App.ajouterHisto(
+          `Tissée de sève — Régénération`, regenAppliquee, false, false,
+          `${actif.nom} regagne ${regenAppliquee} PV.`
+        );
         degats.forEach((d) => App.ajouterHisto(
           `${d.libelle} — Dégâts de début de tour`, d.total, false, false,
           `${d.detail} → ${actif.nom} : ${d.pvApres} PV restants.`

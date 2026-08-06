@@ -7576,9 +7576,12 @@ const App = (() => {
     const rempartActif = !!rempartArme && perso.aRempart();
 
     const reductionLourde = typeDegats === "physique" ? perso.bonusReductionLourdeDons() : 0;
-    // Druide — Voie de la nature, rang 4 "Résistance naturelle" : uniquement
-    // sur le type "naturel" (froid/chaleur/chute/poison/animal).
-    const reductionNaturelle = typeDegats === "naturel" ? perso.reductionDegatsNaturels() : 0;
+    // Druide — Voie de la nature, rang 4 "Résistance naturelle" : sur le
+    // type "naturel" (froid/chaleur/chute/poison/animal) ET sur "chute"
+    // (cf. lot "armures C" — 4e valeur du sélecteur, distincte de "naturel"
+    // pour permettre à "robuste" de cibler UNIQUEMENT la chute, mais "chute"
+    // reste un sous-cas de "naturel" pour ce don, qui continue à s'appliquer).
+    const reductionNaturelle = (typeDegats === "naturel" || typeDegats === "chute") ? perso.reductionDegatsNaturels() : 0;
     // ignoreReduction (cf. affixes de rareté "broyeuse" et co., js/raretes.js) :
     // points de reductionDegats de la cible neutralisés par CETTE attaque.
     const reductionArmure = Math.max(0, perso.reductionDegats() - (ignoreReduction || 0)); // inclut désormais Écorce partagée (bonusTemporaire)
@@ -7595,6 +7598,13 @@ const App = (() => {
     // résultat passerait sous la moitié des PV max.
     degatsNets = Math.max(0, degatsNets - perso.reductionSeuilBasPv(degatsNets));
     if (formeChaosActive || formeOursActive) degatsNets = Math.floor(degatsNets / 2);
+    // "robuste" (armure_cloute, cf. lot "armures C") : réduction
+    // FRACTIONNAIRE (moitié/totalité) des dégâts de chute — même principe
+    // que formeChaosActive/formeOursActive ci-dessus (appliquée sur
+    // degatsNets, après la réduction plate), fraction lue dynamiquement au
+    // lieu d'un simple /2 codé en dur.
+    const fractionChute = typeDegats === "chute" ? perso.fractionReductionChuteEquipement() : 0;
+    if (fractionChute > 0) degatsNets = Math.floor(degatsNets * (1 - fractionChute));
     if (coeurMontagneActif || sanctuaireActif) degatsNets = 0;
 
     // PV temporaires (cf. Capacites.appliquerPvTemporairesSurPerso) : absorbent
@@ -7630,9 +7640,11 @@ const App = (() => {
       if (reductionEquipementPhysique > 0) sources.push("affixe");
       const suffixeReduction = sources.length ? ` après réduction (${sources.join(" + ")}, −${reductionFlatTotale})` : "";
       const suffixeChaos = formeChaosActive ? " puis divisés par 2 (Forme du chaos sauvage)"
-        : formeOursActive ? " puis divisés par 2 (Forme animale — Ours)" : "";
+        : formeOursActive ? " puis divisés par 2 (Forme animale — Ours)"
+        : fractionChute === 1 ? " puis annulés (robuste)"
+        : fractionChute > 0 ? ` puis réduits de ${Math.round(fractionChute * 100)}% (robuste)` : "";
       const suffixePvTemp = absorbeParPvTemp > 0 ? ` dont ${absorbeParPvTemp} absorbés par les PV temporaires (${p.pvTemporaires} restants)` : "";
-      message = (sources.length || formeChaosActive || formeOursActive || absorbeParPvTemp > 0)
+      message = (sources.length || formeChaosActive || formeOursActive || fractionChute > 0 || absorbeParPvTemp > 0)
         ? `🛡 ${degatsBruts} dégâts subis${suffixeReduction}${suffixeChaos} → ${degatsNets}${suffixePvTemp}, ${degatsVersPvReels} sur les PV réels.`
         : `${degatsVersPvReels} dégâts subis.`;
     }
@@ -7664,6 +7676,7 @@ const App = (() => {
           <option value="physique" selected>Physique</option>
           <option value="magique">Magique</option>
           <option value="naturel">Naturel (froid/chaleur/chute/poison/animal)</option>
+          <option value="chute">Chute (cf. "robuste", armure_cloute)</option>
         </select>
         ${coeurMontagneDispo ? `<label style="display:flex;align-items:center;gap:4px;font-size:0.78rem;"><input type="checkbox" id="${prefixe}coeur-montagne" /> 🏔 Cœur de Montagne (annule ces dégâts, 1x/jour)</label>` : ""}
         ${rempartDispo ? `<label style="display:flex;align-items:center;gap:4px;font-size:0.78rem;"><input type="checkbox" id="${prefixe}rempart" /> 🛡️ Rempart (protège activement un allié, −2)</label>` : ""}

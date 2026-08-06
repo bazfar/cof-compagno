@@ -1362,6 +1362,24 @@ class Personnage extends Entite {
     const rangMax = this.rangMaxVoie("Voie de la nature");
     return (this.classe === "druide" && rangMax >= 4) ? 2 * rangMax : 0;
   }
+  // Affixe de rareté "robuste" (armure_cloute, cf. lot "armures C") :
+  // "réduit de moitié/annule les dégâts de chute" — réduction FRACTIONNAIRE
+  // (0.5/1), pas un entier plat comme les autres passifs de ce fichier,
+  // appliquée uniquement sur typeDegats === "chute" (4e valeur du sélecteur
+  // "Subir des dégâts", distincte de "naturel" — cf. son propre commentaire
+  // ci-dessus). Un seul torse équipable à la fois : max() plutôt que somme,
+  // pour ne jamais dépasser 1 (annulation totale) même en théorie.
+  fractionReductionChuteEquipement() {
+    return this._itemsEquipesUniques().reduce((t, it) => Math.max(t, it.fractionReductionChute || 0), 0);
+  }
+  // Affixe de rareté "tissée de sève" (robe_mage, légendaire uniquement,
+  // cf. lot "armures C") : "régénère 1 PV par tour, même en combat" — le
+  // palier rare ("hors combat") n'a aucun crochet de tour hors combat
+  // nulle part dans l'app (js/repos.js ne gère que le repos long) et reste
+  // une note manuelle non automatisée. Consommé par Combat.tourSuivant().
+  regenCombatEquipement() {
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.regenCombat || 0), 0);
+  }
   // Guerrier — Voie du peuple, rang 3 "Rempart" (passive, fréquence libre) :
   // réduit de 2 les dégâts subis "lorsqu'il protège activement un allié" —
   // condition non trackable automatiquement (qui protège qui n'est pas une
