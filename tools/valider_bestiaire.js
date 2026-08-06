@@ -240,9 +240,15 @@ const CHAMPS_CAPACITE_AUTORISES = new Set(["nom", "description", "mecanique"]);
 // par Capacites.lancer pour le garde-fou de niveau min côté PJ), lu ici par
 // le calcul des répondants Contresort — rend un lanceur du bestiaire éligible
 // à Sceau du silence (état "silencieuse") en prime, effet de bord assumé.
+// intercepte (cf. extension "Rempart vivant"/"Couverture du sacrifice" du
+// moteur de réaction) : marque une capacité "cible: allie, portee: adjacent"
+// qui peut rediriger vers elle les dégâts d'une attaque visant l'allié
+// adjacent — lu par _redirectionIntercepteMonstre (js/app.js), décision
+// synchrone (confirm()) au moment d'appliquer les dégâts, MJ des deux côtés,
+// donc sans fenêtre SyncStore contrairement à Contresort/Bouclier arcanique.
 const CHAMPS_MECANIQUE_AUTORISES = new Set(["type", "usage", "cible", "portee", "zone", "effets",
   "actionBonus", "reactionCout", "jetAttaque", "jetSauvegardeFixe", "recharge",
-  "typeSort", "rang", "ecole"]);
+  "typeSort", "rang", "ecole", "intercepte"]);
 const TYPES_MECANIQUE_VALIDES = ["activable", "limitee", "passive"];
 const CIBLES_MECANIQUE_VALIDES = ["soi", "ennemi", "allie", "zone", "aucune"];
 const PORTEE_MOTS_CLES = ["adjacent", "vue", "voix"];
@@ -403,6 +409,16 @@ monstres.forEach((m, index) => {
       if (!TYPES_SORT_VALIDES.includes(meca.typeSort)) signalerMonstre(cle, `${refCap}.mecanique.typeSort invalide : ${JSON.stringify(meca.typeSort)} (attendu : ${TYPES_SORT_VALIDES.join(" | ")}).`);
       if (!(Number.isInteger(meca.rang) && meca.rang >= 1 && meca.rang <= 5)) signalerMonstre(cle, `${refCap}.mecanique.rang devrait être un entier 1-5, reçu ${JSON.stringify(meca.rang)}.`);
       if (!ECOLES_VALIDES.includes(meca.ecole)) signalerMonstre(cle, `${refCap}.mecanique.ecole invalide : ${JSON.stringify(meca.ecole)} (attendu : ${ECOLES_VALIDES.join(" | ")}).`);
+    }
+
+    // intercepte (cf. extension "Rempart vivant"/"Couverture du sacrifice") :
+    // toujours cible:"allie"/portee:"adjacent" — _redirectionIntercepteMonstre
+    // (js/app.js) ne cherche l'adjacence qu'entre les tokens de la table de
+    // combat, une capacité "intercepte" ciblant autre chose ne serait jamais
+    // proposée à la redirection.
+    if (meca.intercepte !== undefined) {
+      if (typeof meca.intercepte !== "boolean") signalerMonstre(cle, `${refCap}.mecanique.intercepte devrait être un booléen, reçu ${JSON.stringify(meca.intercepte)}.`);
+      if (meca.cible !== "allie" || meca.portee !== "adjacent") signalerMonstre(cle, `${refCap}.mecanique.intercepte attend cible:"allie" et portee:"adjacent", reçu cible:${JSON.stringify(meca.cible)}/portee:${JSON.stringify(meca.portee)}.`);
     }
 
     // recharge : purement déclaratif — aucune période nommée "recharge"

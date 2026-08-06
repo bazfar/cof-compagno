@@ -839,6 +839,38 @@ const App = (() => {
     return { touche, critique: jet.crit, echecCritique: jet.echec, totalAttaque: jet.total, defCible };
   }
 
+  // Redirection "intercepte" (Rempart vivant/Couverture du sacrifice, cf.
+  // "Prototype du moteur de réaction", extension §B) : contrairement à
+  // Contresort/Bouclier arcanique, le MJ joue les DEUX côtés (l'attaquant
+  // choisi par un PJ et le garde adjacent) — pas de fenêtre SyncStore
+  // asynchrone, un confirm() synchrone au moment d'appliquer les dégâts
+  // suffit. MJ uniquement (jamais proposé sur le clic "Dégâts" d'un joueur,
+  // qui n'a pas à arbitrer pour un monstre). Renvoie l'id du jeton qui
+  // encaisse RÉELLEMENT les dégâts (le garde si redirection acceptée, sinon
+  // cibleId inchangé).
+  function _redirectionIntercepteMonstre(cibleId) {
+    if (role !== "mj" || typeof Carte === "undefined" || !Carte.listeMonstresCombat || !Carte.distanceCasesEntre || typeof CapacitesMonstres === "undefined") return cibleId;
+    const monstres = Carte.listeMonstresCombat();
+    const cible = monstres.find((t) => t.id === cibleId);
+    if (!cible) return cibleId;
+    for (const garde of monstres) {
+      if (garde.id === cibleId) continue;
+      const dist = Carte.distanceCasesEntre(cibleId, garde.id);
+      if (dist === null || dist > 1) continue;
+      const capacites = CapacitesMonstres.capacitesDe(garde);
+      for (let i = 0; i < capacites.length; i++) {
+        const meca = capacites[i].mecanique;
+        if (!meca || !meca.intercepte) continue;
+        const usage = Capacites.verifierUsage(garde, CapacitesMonstres.cleCapacite(garde.monstreId || garde.id, i), meca);
+        if (!usage.ok) continue;
+        if (!confirm(`${garde.nom} peut intercepter (« ${capacites[i].nom} ») et prendre les dégâts à la place de ${cible.nom}. Rediriger ?`)) continue;
+        usage.appliquer();
+        return garde.id;
+      }
+    }
+    return cibleId;
+  }
+
   // Applique les dégâts d'une attaque rapide (Contact/Distance/Magique) à sa
   // cible verrouillée, une fois le jet de dégâts effectué (cf. le bouton
   // "Dégâts" sidebar/dock) — jusqu'ici ce bouton se contentait d'un jet de
@@ -857,7 +889,8 @@ const App = (() => {
     if (!cibleId || typeof total !== "number" || typeof Carte === "undefined") return null;
     const monstre = (Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : []).find((t) => t.id === cibleId);
     if (monstre) {
-      const info = Carte.appliquerDegatsCombat(cibleId, total, ignoreReduction);
+      const cibleEffective = _redirectionIntercepteMonstre(cibleId);
+      const info = Carte.appliquerDegatsCombat(cibleEffective, total, ignoreReduction);
       if (info && !silencieux) toast(`${info.nom} subit ${info.degatsNets} dégâts (PV ${info.pvActuel}).`);
       return info;
     }
@@ -1624,7 +1657,7 @@ const App = (() => {
       ${peutAgir ? htmlBlocActionsDuTour(id) : ""}
       ${peutAgir ? htmlBlocDesengagement() : ""}
       ${peutAgir ? htmlBlocAttaqueOpportunite(perso, p) : ""}
-      ${htmlBlocReactionContresort(id, p)}
+      ${htmlBlocFenetreReaction(id, p)}
       ${htmlEtatsActifs(p)}
       ${htmlBlocInitiativeJoueur(id)}
       ${htmlBlocChance(p, perso)}
@@ -4843,17 +4876,25 @@ const App = (() => {
   // AttaqueOpportunite) : une réaction se déclenche par définition hors de
   // son propre tour. Rendu dans la fiche complète ET la sidebar battlemap
   // (mêmes deux surfaces que htmlBlocChance/Corruption) — pas dans le dock,
-  // trop compact pour porter ce niveau de détail.
-  function htmlBlocReactionContresort(persoId, p) {
+  // trop compact pour porter ce niveau de détail. Deux évènements partagent
+  // ce bloc (evenement discriminant le texte/bouton) : "sortLance" (Contresort)
+  // et "subitAttaque" (Bouclier arcanique, cf. extension §A).
+  function htmlBlocFenetreReaction(persoId, p) {
     if (typeof Reactions === "undefined") return "";
     const e = Reactions.etat();
     if (!e || e.reponse || !e.repondants.includes(persoId) || Reactions.estExpiree(e)) return "";
     const secondes = Math.ceil(Reactions.msRestantes(e) / 1000);
+    const estAttaque = e.evenement === "subitAttaque";
+    const texte = estAttaque
+      ? `Tu es visé(e) par une attaque (<strong>${echapper(e.attaque.label)}</strong>) — <span id="reaction-compte-a-rebours">${secondes}</span> s pour réagir.`
+      : `${echapper(e.source.nom)} lance <strong>${echapper(e.sort.nom)}</strong> (rang ${e.sort.rang}, ${echapper(e.sort.ecole)}) — <span id="reaction-compte-a-rebours">${secondes}</span> s pour réagir.`;
     return `<div class="carte" style="border:2px solid var(--or);">
       <h3 style="margin-top:0;">⚡ Fenêtre de réaction</h3>
-      <p class="aide" style="margin:0 0 6px;">${echapper(e.source.nom)} lance <strong>${echapper(e.sort.nom)}</strong> (rang ${e.sort.rang}, ${echapper(e.sort.ecole)}) — <span id="reaction-compte-a-rebours">${secondes}</span> s pour réagir.</p>
+      <p class="aide" style="margin:0 0 6px;">${texte}</p>
       <div class="barre-actions">
-        <button class="btn petit or" data-reaction-action="contresort" data-reaction-persoid="${echapper(persoId)}">🛡️ Contresort</button>
+        ${estAttaque
+          ? `<button class="btn petit or" data-reaction-action="bouclier_arcanique" data-reaction-persoid="${echapper(persoId)}">🛡️ Bouclier arcanique</button>`
+          : `<button class="btn petit or" data-reaction-action="contresort" data-reaction-persoid="${echapper(persoId)}">🛡️ Contresort</button>`}
         <button class="btn petit secondaire" data-reaction-action="passe" data-reaction-persoid="${echapper(persoId)}">Passer</button>
       </div>
     </div>`;
@@ -5446,15 +5487,23 @@ const App = (() => {
         rafraichir();
       };
     });
-    // Fenêtre de réaction (prototype Contresort, cf. htmlBlocReactionContresort) :
-    // "passe" clôt juste la participation de CE PJ (sans coût), "contresort"
-    // dépense PP+réaction via Capacites.lancer (API publique, cf. piège "ne
-    // pas toucher js/capacites.js") PUIS résout le contest à part — un test
-    // d'attaque magique vs la difficulté du rang (10+2×rang, même échelle que
-    // l'enchantement d'armes, cf. js/enchantement.js). Le coût est dépensé
-    // que le contest réussisse ou non, comme n'importe quel sort lancé.
+    // Fenêtre de réaction (prototype Contresort + extension Bouclier
+    // arcanique, cf. htmlBlocFenetreReaction) : "passe" clôt juste la
+    // participation de CE PJ (sans coût) dans les deux cas ; la réponse
+    // active (Contresort ou Bouclier arcanique) est dispatchée sur l'évènement
+    // COURANT de la fenêtre — les deux dépensent PP+réaction via
+    // Capacites.lancer (API publique, cf. piège "ne pas toucher
+    // js/capacites.js"), mais seul Contresort tranche un contest après coup
+    // (test d'attaque magique vs difficulté du rang, cf. js/enchantement.js
+    // pour l'échelle) : Bouclier arcanique se contente d'ajuster la DEF avant
+    // le jet différé.
     racine.querySelectorAll("[data-reaction-action]").forEach((el) => {
-      el.onclick = () => { _repondreFenetreReaction(id, el.dataset.reactionAction); rafraichir(); };
+      el.onclick = () => {
+        const e = (typeof Reactions !== "undefined") ? Reactions.etat() : null;
+        if (e && e.evenement === "subitAttaque") _repondreFenetreAttaque(id, el.dataset.reactionAction);
+        else _repondreFenetreReaction(id, el.dataset.reactionAction);
+        rafraichir();
+      };
     });
     // Désengagement (homebrew, attaque d'opportunité, cf. htmlBlocDesengagement) :
     // un jet de FOR (poussée) par adversaire actuellement adjacent, opposé à
@@ -6790,7 +6839,7 @@ const App = (() => {
             <p style="font-size:0.75rem;color:#8a8296;margin-top:6px;">Bonus d'attaque (jet, pas les dégâts) = bonus de progression (${ARCHETYPE_CLASSE[p.classe] || "martial"}, ${signe(perso.bonusProgression())} au niveau ${niveau}) + modificateur. Ajuste selon tes voies (ex. +1 Tir ajusté) au moment du jet via l'onglet Dés si besoin.</p>
           </div>
 
-          ${htmlBlocReactionContresort(id, p)}
+          ${htmlBlocFenetreReaction(id, p)}
           ${htmlEtatsActifs(p)}
           ${htmlBlocInitiativeJoueur(id)}
           ${htmlBlocChance(p, perso)}
@@ -9040,7 +9089,7 @@ const App = (() => {
     }
 
     // Fenêtre de réaction (prototype Contresort, cf. js/reactions.js) :
-    // TOUS les rôles re-rendent (pour afficher/masquer htmlBlocReactionContresort
+    // TOUS les rôles re-rendent (pour afficher/masquer htmlBlocFenetreReaction
     // côté joueur, et le bandeau "Clore" de rendreOrdreInitiative côté MJ) —
     // seul le MJ, en plus, est responsable de la résolution (timer ou
     // réponse reçue), cf. _planifierResolutionReaction. onChange se déclenche
@@ -9055,7 +9104,7 @@ const App = (() => {
         if (ficheSidebarActiveId && chargerPersos()[ficheSidebarActiveId]) rendreFicheSidebarBattlemap(ficheSidebarActiveId);
         if (role === "mj") _planifierResolutionReaction(e);
       });
-      // Décompte affiché (#reaction-compte-a-rebours, cf. htmlBlocReactionContresort)
+      // Décompte affiché (#reaction-compte-a-rebours, cf. htmlBlocFenetreReaction)
       // : rafraîchi chaque seconde sans re-rendu complet — la fermeture de la
       // fenêtre (qui, elle, fait disparaître le bloc) passe par onChange
       // ci-dessus, pas par ce minuteur d'affichage.
@@ -9595,11 +9644,14 @@ const App = (() => {
     const etatCombat = Combat.etatCourant();
     // Fenêtre de réaction ouverte (prototype Contresort, cf. js/reactions.js)
     // : bandeau MJ uniquement — les joueurs répondants voient déjà
-    // htmlBlocReactionContresort sur leur propre fiche, le MJ n'a besoin que
+    // htmlBlocFenetreReaction sur leur propre fiche, le MJ n'a besoin que
     // du bouton "Clore" (résolution immédiate, sans attendre les 15 s).
     const reactionOuverte = (role === "mj" && typeof Reactions !== "undefined") ? Reactions.etat() : null;
+    const reactionLibelle = reactionOuverte && reactionOuverte.evenement === "subitAttaque"
+      ? echapper(reactionOuverte.attaque.label)
+      : reactionOuverte ? `${echapper(reactionOuverte.sort.nom)} (${echapper(reactionOuverte.source.nom)})` : "";
     const reactionHtml = reactionOuverte ? `<div class="initiative-entete" style="border-top:1px dashed var(--or);padding-top:8px;margin-top:8px;">
-      <span>⚡ Fenêtre de réaction ouverte : <strong>${echapper(reactionOuverte.sort.nom)}</strong> (${echapper(reactionOuverte.source.nom)}) — ${reactionOuverte.repondants.length} répondant(s), ${Math.ceil(Reactions.msRestantes(reactionOuverte) / 1000)} s restantes.</span>
+      <span>⚡ Fenêtre de réaction ouverte : <strong>${reactionLibelle}</strong> — ${reactionOuverte.repondants.length} répondant(s), ${Math.ceil(Reactions.msRestantes(reactionOuverte) / 1000)} s restantes.</span>
       <button class="btn petit secondaire btn-clore-reaction">⏹ Clore la fenêtre</button>
     </div>` : "";
     zone.innerHTML = `<div class="carte initiative-carte">
@@ -9652,7 +9704,7 @@ const App = (() => {
     return catalogue ? catalogue.find((s) => s.id === "contresort") : null;
   }
 
-  // Réponse d'un PJ à la fenêtre de réaction (cf. htmlBlocReactionContresort,
+  // Réponse d'un PJ à la fenêtre de réaction (cf. htmlBlocFenetreReaction,
   // boutons Contresort/Passer) — extrait du wiring pour rester testable
   // directement. "passe" clôt juste la participation de CE PJ (sans coût) ;
   // "contresort" dépense PP+réaction via Capacites.lancer (API publique, cf.
@@ -9715,6 +9767,111 @@ const App = (() => {
     });
   }
 
+  // Sort "bouclier_arcanique_mineur" (SORTS_MAGICIEN) — même patron que
+  // _sortContresort, coutPP lu dynamiquement.
+  function _sortBouclierArcanique() {
+    const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? SORTS_PAR_CLASSE.magicien : null;
+    return catalogue ? catalogue.find((s) => s.id === "bouclier_arcanique_mineur") : null;
+  }
+
+  // Répondants éligibles à Bouclier arcanique (cf. "Prototype du moteur de
+  // réaction", extension §A) : contrairement à Contresort, un seul candidat
+  // possible — la cible de l'attaque elle-même (cible: "soi" du sort). Pas de
+  // filtre de distance (c'est la cible, par définition à portée d'ELLE-même).
+  function _repondantsBouclierArcanique(pjId) {
+    if (!pjId) return [];
+    const sort = _sortBouclierArcanique();
+    if (!sort) return [];
+    const p = chargerPersos()[pjId];
+    if (!p) return [];
+    const perso = Personnage.depuisJSON(p);
+    if (!(p.grimoireSortsConnus || []).concat(perso.sortsGrimoireAccordes()).includes("bouclier_arcanique_mineur")) return [];
+    if ((p.ppActuel || 0) < (sort.mecanique.coutPP || 0)) return [];
+    if (typeof Capacites === "undefined" || Capacites.reactionsRestantes(p) < 1) return [];
+    return [pjId];
+  }
+
+  // Réponse d'un PJ à une fenêtre "subitAttaque" (cf. htmlBlocFenetreReaction,
+  // qui rend aussi ce bouton pour cet évènement) — symétrique de
+  // _repondreFenetreReaction, mais sans contest : Bouclier arcanique n'a rien
+  // à départager, il pose juste +2 DEF (déjà mécanisé comme un bonus standard,
+  // cf. mecanique.effets de bouclier_arcanique_mineur) AVANT que le jet
+  // d'attaque de _resoudreAttaqueEtSuite ne compare au total. "passe" clôt
+  // juste la participation, sans coût.
+  function _repondreFenetreAttaque(persoId, action) {
+    if (typeof Reactions === "undefined") return;
+    if (action === "passe") { Reactions.repondre(persoId, "passe"); return; }
+    const e = Reactions.etat();
+    if (!e || e.evenement !== "subitAttaque" || e.reponse || !e.repondants.includes(persoId)) return;
+    const sort = _sortBouclierArcanique();
+    if (!sort) { toast("Bouclier arcanique introuvable dans le catalogue de sorts."); return; }
+    const res = Capacites.lancer({
+      persoId,
+      source: { origine: "grimoire", cle: "bouclier_arcanique_mineur", nomCap: "Bouclier arcanique mineur", idSort: "bouclier_arcanique_mineur" },
+      mecanique: Object.assign({}, sort.mecanique, { origineGrimoire: true }),
+    });
+    if (!res.ok) { toast(res.messages.join(" · ")); return; }
+    toast("🛡️ Bouclier arcanique mineur : +2 DEF jusqu'à ton prochain tour.");
+    Reactions.repondre(persoId, "bouclier_arcanique");
+  }
+
+  // Point d'entrée AVANT tout jet d'attaque de monstre contre un PJ (arme,
+  // cf. [data-monstre-jet], ou capacité à jetAttaque, cf.
+  // _appliquerPlanCapaciteMonstre) — cf. "Prototype du moteur de réaction",
+  // extension §A. `descripteur.suite` porte tout le nécessaire pour reprendre
+  // au bon endroit après résolution (arme ou capacité) — jamais une closure,
+  // pour rester correct après un rechargement MJ. Renvoie le résultat du jet
+  // si résolu immédiatement (aucun répondant), ou null si une fenêtre s'est
+  // ouverte (l'appelant ne doit RIEN faire de plus : _resoudreAttaqueEtSuite
+  // reprendra depuis Reactions.onChange/_resoudreFenetreReaction).
+  function _declencherAttaqueMonstreVsPJ(descripteur) {
+    if (descripteur.pjId && typeof Reactions !== "undefined") {
+      const repondants = _repondantsBouclierArcanique(descripteur.pjId);
+      if (repondants.length) {
+        Reactions.ouvrir({
+          evenement: "subitAttaque",
+          source: descripteur.suite && descripteur.suite.monstreId ? { type: "monstre", id: descripteur.suite.monstreId, nom: (descripteur.label || "").split(" — ")[0] } : null,
+          cible: { persoId: descripteur.pjId },
+          attaque: { label: descripteur.label, bonus: descripteur.bonus, critMin: descripteur.critMin },
+          suite: descripteur.suite,
+          repondants,
+        });
+        toast(`⏳ Fenêtre de réaction ouverte (Bouclier arcanique) — 15 s avant le jet de « ${descripteur.label} ».`);
+        rendreTableCombat();
+        rendreTableCombat("battlemap-zone-table-combat");
+        return null;
+      }
+    }
+    return _resoudreAttaqueEtSuite(descripteur);
+  }
+
+  // Résout réellement le jet d'attaque (avec la DEF éventuellement déjà
+  // relevée par Bouclier arcanique, appliquée en amont par
+  // _repondreFenetreAttaque via Capacites.lancer) puis reprend la suite
+  // propre au point d'entrée d'origine — arme (attaquesMonstresEnAttente,
+  // même toast qu'avant ce chantier) ou capacité (_appliquerPlanCapaciteMonstreApresJet).
+  function _resoudreAttaqueEtSuite(descripteur) {
+    const resAtt = _resoudreAttaqueMonstreVsPJ(descripteur.label, descripteur.bonus, descripteur.critMin, descripteur.pjId);
+    const suite = descripteur.suite || {};
+    if (suite.type === "jetMonstreArme") {
+      attaquesMonstresEnAttente[`${suite.monstreId}:${suite.idxAttaque}`] = resAtt;
+      if (descripteur.pjId) {
+        const nomCible = (chargerPersos()[descripteur.pjId] || {}).nom || "la cible";
+        toast(resAtt.echecCritique ? "1 naturel — échec critique automatique."
+          : resAtt.critique ? `CRITIQUE sur ${nomCible} !${resAtt.defCible !== null ? ` (DEF ${resAtt.defCible})` : ""}`
+          : resAtt.defCible === null ? "DEF de la cible inconnue — à comparer manuellement."
+          : (resAtt.touche ? `Touché ${nomCible} ! (DEF ${resAtt.defCible})` : `Raté sur ${nomCible} (DEF ${resAtt.defCible}).`));
+      }
+      rendreTableCombat();
+      rendreTableCombat("battlemap-zone-table-combat");
+    } else if (suite.type === "capaciteMonstre") {
+      const m = (typeof Carte !== "undefined" && Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : []).find((mm) => mm.id === suite.monstreId);
+      if (!m) { toast("Le lanceur a quitté le combat — résolution annulée."); return; }
+      _appliquerPlanCapaciteMonstreApresJet(m, suite.indice, suite.pjId, resAtt);
+    }
+    return resAtt;
+  }
+
   // Point d'entrée du clic [data-capacite-monstre] (cf. "Prototype du moteur
   // de réaction : Contresort", Étapes 3-4) : un sort marqué typeSort ouvre
   // d'abord la fenêtre de réaction s'il existe des répondants éligibles —
@@ -9746,7 +9903,38 @@ const App = (() => {
     _appliquerPlanCapaciteMonstre(m, indice, pjId);
   }
 
+  // jetAttaque (Sceau du silence / Marque du jugement) : jet 1d20+bonus vs
+  // DEF AVANT le reste du plan — même pipeline qu'une attaque d'arme
+  // (_resoudreAttaqueMonstreVsPJ). Passe désormais par
+  // _declencherAttaqueMonstreVsPJ (cf. "Prototype du moteur de réaction",
+  // extension Bouclier arcanique §A) : si la cible peut réagir (Bouclier
+  // arcanique mineur, PP+réaction disponibles), le jet lui-même est différé
+  // derrière une fenêtre de réaction — sinon résolu immédiatement comme
+  // avant. jetSauvegardeFixe reste un jet CÔTÉ CIBLE, non automatisable pour
+  // un monstre (cf. §3 du schéma) : affiché dans le résumé du bouton, jamais
+  // roulé ici.
   function _appliquerPlanCapaciteMonstre(m, indice, pjId) {
+    const prep = CapacitesMonstres.preparer(m, indice);
+    if (!prep.ok) { toast(prep.raison); return; }
+    const mecanique = prep.mecanique;
+    if (mecanique && mecanique.jetAttaque !== undefined) {
+      const resAtt = _declencherAttaqueMonstreVsPJ({
+        label: `${m.nom} — ${prep.capacite.nom}`, bonus: mecanique.jetAttaque + _bonusEtatsMonstre(m, "attaque"), critMin: 20, pjId,
+        suite: { type: "capaciteMonstre", monstreId: m.id, indice, pjId },
+      });
+      if (resAtt === null) return; // fenêtre ouverte : _resoudreAttaqueEtSuite reprendra à la fermeture
+      _appliquerPlanCapaciteMonstreApresJet(m, indice, pjId, resAtt);
+      return;
+    }
+    _appliquerPlanCapaciteMonstreApresJet(m, indice, pjId, null);
+  }
+
+  // Suite de _appliquerPlanCapaciteMonstre une fois le jet d'attaque connu
+  // (ou d'emblée si la capacité n'en a pas) — ré-prépare le plan depuis zéro
+  // (l'usage n'a pas encore été consommé) plutôt que de le recevoir en
+  // paramètre : reste correct si le jet a été différé par une fenêtre de
+  // réaction entre-temps (cf. Étape 4 de Contresort, même principe).
+  function _appliquerPlanCapaciteMonstreApresJet(m, indice, pjId, resAtt) {
     const prep = CapacitesMonstres.preparer(m, indice);
     if (!prep.ok) { toast(prep.raison); return; }
     const cap = prep.capacite;
@@ -9754,11 +9942,6 @@ const App = (() => {
     const libelle = `${m.nom} — ${cap.nom}`;
     const cibleSoi = !!(mecanique && mecanique.cible === "soi");
 
-    // jetAttaque (Sceau du silence / Marque du jugement) : jet 1d20+bonus
-    // vs DEF avant le reste du plan — même pipeline qu'une attaque d'arme
-    // (_resoudreAttaqueMonstreVsPJ). jetSauvegardeFixe reste un jet CÔTÉ
-    // CIBLE, non automatisable pour un monstre (cf. §3 du schéma) :
-    // affiché dans le résumé du bouton, jamais roulé ici.
     // messagesToast accumule tous les messages du clic (jet d'attaque +
     // effets qui suivent) pour un unique toast() final — un second appel
     // à toast() écraserait silencieusement le premier (ex. "Touché !"
@@ -9766,8 +9949,7 @@ const App = (() => {
     // bug déjà corrigé côté appliquerMalus (cf. suffixeToastFinal).
     const messagesToast = [];
     let toucheOk = true;
-    if (mecanique && mecanique.jetAttaque !== undefined) {
-      const resAtt = _resoudreAttaqueMonstreVsPJ(libelle, mecanique.jetAttaque + _bonusEtatsMonstre(m, "attaque"), 20, pjId);
+    if (resAtt) {
       messagesToast.push(resAtt.echecCritique ? "1 naturel — échec critique automatique, effet non appliqué."
         : resAtt.critique ? `CRITIQUE !${resAtt.defCible !== null ? ` (DEF ${resAtt.defCible})` : ""}`
         : resAtt.defCible === null ? "DEF de la cible inconnue — effet appliqué, à confirmer manuellement."
@@ -9842,12 +10024,26 @@ const App = (() => {
   // UNIQUEMENT (timer expiré, réponse reçue, ou bouton "Clore" cf.
   // rendreOrdreInitiative), jamais par un joueur. Clôture D'ABORD (empêche
   // une double résolution si Reactions.onChange refire pendant le
-  // traitement — clore() déclenche lui-même onChange), puis :
-  //  - contresort réussi -> journalise l'annulation, n'applique rien ;
-  //  - contresort raté, "passe", ou personne n'a répondu (timeout) -> déroule
-  //    la résolution existante, inchangée (_appliquerPlanCapaciteMonstre).
+  // traitement — clore() déclenche lui-même onChange), puis délègue selon
+  // evenement — deux formes indépendantes partagent la même fenêtre/le même
+  // timer (cf. "une seule fenêtre à la fois"), pas le même dénouement :
+  // sortLance (Contresort) tranche un contest avant d'appliquer ou non ;
+  // subitAttaque (Bouclier arcanique) n'a rien à départager, la DEF est déjà
+  // ajustée en amont, il ne reste qu'à rouler le jet différé.
   function _resoudreFenetreReaction(e) {
     Reactions.clore();
+    if (e.evenement === "subitAttaque") {
+      _resoudreAttaqueEtSuite({ label: e.attaque.label, bonus: e.attaque.bonus, critMin: e.attaque.critMin, pjId: e.cible.persoId, suite: e.suite });
+      return;
+    }
+    _resoudreFenetreSortLance(e);
+  }
+
+  // sortLance (Contresort) : contresort réussi -> journalise l'annulation,
+  // n'applique rien ; contresort raté, "passe", ou personne n'a répondu
+  // (timeout) -> déroule la résolution existante, inchangée
+  // (_appliquerPlanCapaciteMonstre).
+  function _resoudreFenetreSortLance(e) {
     const { source, sort, reponse, indice, pjId } = e;
     if (reponse && reponse.action === "contresort" && reponse.reussite) {
       const nomRepondant = (chargerPersos()[reponse.persoId] || {}).nom || reponse.persoId;
@@ -9985,16 +10181,15 @@ const App = (() => {
         const r = _resoudreAttaqueMonstre(a);
         if (!r) return;
         const pjId = ciblesMonstres[m.id] || null;
-        const resolution = _resoudreAttaqueMonstreVsPJ(`${m.nom} — ${r.nom}`, r.bonusAttaque + _bonusEtatsMonstre(m, "attaque"), r.critMin, pjId);
-        attaquesMonstresEnAttente[`${m.id}:${idx}`] = resolution;
-        if (pjId) {
-          const nomCible = (persos[pjId] && persos[pjId].nom) || "la cible";
-          toast(resolution.echecCritique ? "1 naturel — échec critique automatique."
-            : resolution.critique ? `CRITIQUE sur ${nomCible} !${resolution.defCible !== null ? ` (DEF ${resolution.defCible})` : ""}`
-            : resolution.defCible === null ? "DEF de la cible inconnue — à comparer manuellement."
-            : (resolution.touche ? `Touché ${nomCible} ! (DEF ${resolution.defCible})` : `Raté sur ${nomCible} (DEF ${resolution.defCible}).`));
-        }
-        rendreTableCombat(targetId);
+        // _declencherAttaqueMonstreVsPJ (cf. "Prototype du moteur de
+        // réaction", extension §A) : ouvre une fenêtre Bouclier arcanique si
+        // la cible peut réagir, sinon résout immédiatement — dans les deux
+        // cas, attaquesMonstresEnAttente/toast/rendu sont posés par
+        // _resoudreAttaqueEtSuite (branche "jetMonstreArme"), jamais ici.
+        _declencherAttaqueMonstreVsPJ({
+          label: `${m.nom} — ${r.nom}`, bonus: r.bonusAttaque + _bonusEtatsMonstre(m, "attaque"), critMin: r.critMin, pjId,
+          suite: { type: "jetMonstreArme", monstreId: m.id, idxAttaque: idx },
+        });
       };
     });
     zone.querySelectorAll("[data-monstre-degats]").forEach((btn) => {

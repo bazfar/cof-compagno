@@ -1888,6 +1888,7 @@ const BESTIAIRE = [
         "nom": "Rempart vivant",
         "description": "2 fois/round : intercepte une attaque ciblant un allié, prend les dégâts à sa place.",
         "mecanique": {
+          "intercepte": true,
           "type": "activable",
           "reactionCout": 1,
           "usage": {
@@ -2952,6 +2953,7 @@ const BESTIAIRE = [
         "nom": "Couverture du sacrifice",
         "description": "2 fois/round : intercepte une attaque ciblant un allié adjacent, prend les dégâts à sa place.",
         "mecanique": {
+          "intercepte": true,
           "type": "activable",
           "reactionCout": 1,
           "usage": {
@@ -4364,6 +4366,7 @@ const BESTIAIRE = [
         "nom": "Couverture du sacrifice",
         "description": "1 fois/round : intercepte une attaque ciblant un allié adjacent, prend les dégâts à sa place.",
         "mecanique": {
+          "intercepte": true,
           "type": "activable",
           "reactionCout": 1,
           "usage": {
