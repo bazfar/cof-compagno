@@ -334,7 +334,16 @@ const EFFETS_PAR_ITEM = {
     { id: "robuste", nom: "robuste", rare: "Réduit de moitié les dégâts de chute", legendaire: "Annule les dégâts de chute" },
   ],
   cotte_mailles: [
-    { id: "renforcee", nom: "renforcée", rare: "Réduit d'1 les dégâts physiques après application de reductionDegats", legendaire: "Réduit de 2 les dégâts physiques après application de reductionDegats" },
+    { id: "renforcee", nom: "renforcée", rare: "Réduit d'1 les dégâts physiques après application de reductionDegats", legendaire: "Réduit de 2 les dégâts physiques après application de reductionDegats",
+      mecanique: {
+        // bonusReductionPhysique (cf. lot "armures A" — même texte que
+        // plaques_comp.impenetrable/armure_guerre_orque.increvable) : lu par
+        // Personnage.bonusReductionPhysiqueEquipement() (js/personnage.js),
+        // appliqué dans subirDegats (js/app.js) uniquement sur les dégâts
+        // typeDegats === "physique", en plus de reductionDegats (l'armure).
+        rare: { passif: { bonusReductionPhysique: 1 } },
+        legendaire: { passif: { bonusReductionPhysique: 2 } },
+      } },
     { id: "cliquetante", nom: "intimidante", rare: "+1 en intimidation", legendaire: "+2 en intimidation, effraie les créatures de faible dangerosité au 1er round",
       mecanique: {
         rare: { passif: { bonusCompetences: { Intimidation: 1 } } },
@@ -346,7 +355,13 @@ const EFFETS_PAR_ITEM = {
     { id: "ancree", nom: "ancrée", rare: "Résiste automatiquement à un effet de repoussement par combat", legendaire: "Résiste automatiquement à tout effet de repoussement" },
   ],
   plaques_comp: [
-    { id: "impenetrable", nom: "impénétrable", rare: "Réduit de 1 tout dégât physique après application de reductionDegats", legendaire: "Réduit de 2 tout dégât physique après application de reductionDegats" },
+    { id: "impenetrable", nom: "impénétrable", rare: "Réduit de 1 tout dégât physique après application de reductionDegats", legendaire: "Réduit de 2 tout dégât physique après application de reductionDegats",
+      mecanique: {
+        // Même mécanique que cotte_mailles.renforcee (texte identique) —
+        // cf. bonusReductionPhysique là-bas pour le détail.
+        rare: { passif: { bonusReductionPhysique: 1 } },
+        legendaire: { passif: { bonusReductionPhysique: 2 } },
+      } },
     { id: "ecrasante", nom: "écrasante", rare: "+1 en FOR tant que l'armure est équipée", legendaire: "+2 en FOR tant que l'armure est équipée",
       mecanique: {
         rare: { passif: { bonusCarac: { FOR: 1 } } },
@@ -371,7 +386,15 @@ const EFFETS_PAR_ITEM = {
   ],
   brigandine: [
     { id: "cachee", nom: "dissimulée", rare: "Peut être portée sous des vêtements civils sans être détectée", legendaire: "Idem, + 1 en discrétion" },
-    { id: "fiable", nom: "fiable", rare: "Ignore le premier coup critique subi par combat (dégâts normaux à la place)", legendaire: "Ignore les deux premiers coups critiques subis par combat" },
+    { id: "fiable", nom: "fiable", rare: "Ignore le premier coup critique subi par combat (dégâts normaux à la place)", legendaire: "Ignore les deux premiers coups critiques subis par combat",
+      mecanique: {
+        // critiqueSubi/annuleCritique (cf. "protectrice", pierre_chance, lot
+        // "jour") : même proc automatique (pas de choix du joueur), juste
+        // une fréquence différente — 1x/combat au rare, 2x/combat au
+        // légendaire (au lieu de 1x/jour puis 1x/combat pour pierre_chance).
+        rare: { evenement: "critiqueSubi", usage: { frequence: "1x/combat" }, effets: [{ type: "annuleCritique" }] },
+        legendaire: { evenement: "critiqueSubi", usage: { frequence: "2x/combat" }, effets: [{ type: "annuleCritique" }] },
+      } },
   ],
   robe_mage: [
     { id: "focalisante", nom: "focalisante", rare: "+1 en INT tant que la robe est équipée", legendaire: "+2 en INT tant que la robe est équipée",
@@ -382,7 +405,11 @@ const EFFETS_PAR_ITEM = {
     { id: "tissee_de_seve", nom: "tissée de Sève", rare: "Régénère 1 PV par tour hors combat", legendaire: "Régénère 1 PV par tour, même en combat" },
   ],
   manteau_voyageur: [
-    { id: "endurant", nom: "endurant", rare: "+1 case de déplacement", legendaire: "+2 cases de déplacement" },
+    { id: "endurant", nom: "endurant", rare: "+1 case de déplacement", legendaire: "+2 cases de déplacement",
+      mecanique: {
+        rare: { passif: { bonusDeplacement: 1 } },
+        legendaire: { passif: { bonusDeplacement: 2 } },
+      } },
     { id: "impermeable", nom: "imperméable", rare: "Immunité aux effets météorologiques mineurs (pluie, froid léger)", legendaire: "Immunité totale aux effets climatiques, y compris magiques" },
   ],
   armure_garde_solvarn: [
@@ -391,7 +418,14 @@ const EFFETS_PAR_ITEM = {
   ],
   armure_druidique: [
     { id: "vivante", nom: "vivante", rare: "Se répare de 1 point de reductionDegats perdu par jour de repos", legendaire: "Se répare intégralement après une nuit de repos" },
-    { id: "camouflee", nom: "camouflée", rare: "+1 en discrétion en milieu naturel", legendaire: "+2 en discrétion en milieu naturel, indétectable à l'arrêt" },
+    { id: "camouflee", nom: "camouflée", rare: "+1 en discrétion en milieu naturel", legendaire: "+2 en discrétion en milieu naturel, indétectable à l'arrêt",
+      mecanique: {
+        // "en milieu naturel" abandonné (comme "silencieuse" légendaire —
+        // aucun malus/bonus de terrain automatisé dans l'app) : bonus
+        // inconditionnel, condition laissée en note.
+        rare: { passif: { bonusCompetences: { Discrétion: 1 } }, note: "Bonus normalement limité au milieu naturel — pas de détection de terrain automatisée, appliqué ici sans condition (à arbitrer si hors milieu naturel)." },
+        legendaire: { passif: { bonusCompetences: { Discrétion: 2 } }, note: "Idem, + indétectable à l'arrêt — non automatisé, à arbitrer manuellement." },
+      } },
   ],
 
   // ── Boucliers ──────────────────────────────────────────────
@@ -641,7 +675,15 @@ const EFFETS_PAR_ITEM = {
         rare: { passif: { bonusDegatsContact: "1d4" } },
         legendaire: { passif: { bonusDegatsContact: "1d6" } },
       } },
-    { id: "increvable", nom: "increvable", rare: "Ignore 1 point de dégâts physiques après application de reductionDegats", legendaire: "Ignore 2 points de dégâts physiques après application de reductionDegats" },
+    { id: "increvable", nom: "increvable", rare: "Ignore 1 point de dégâts physiques après application de reductionDegats", legendaire: "Ignore 2 points de dégâts physiques après application de reductionDegats",
+      mecanique: {
+        // Même mécanique que cotte_mailles.renforcee (texte identique) —
+        // cf. bonusReductionPhysique là-bas pour le détail. Sans lien avec
+        // l'état "increvable" (js/etats.js, PV plancher à 1) — collision de
+        // nom entre un id d'affixe et un id d'état, deux catalogues distincts.
+        rare: { passif: { bonusReductionPhysique: 1 } },
+        legendaire: { passif: { bonusReductionPhysique: 2 } },
+      } },
   ],
   gants_poing: [
     { id: "percutants", nom: "percutants", rare: "+1 dégâts à mains nues ; ignore 1 point de reductionDegats de la cible", legendaire: "+2 dégâts à mains nues ; ignore 2 points de reductionDegats de la cible" },
@@ -734,6 +776,12 @@ const Raretes = (() => {
     // lu par Combat._deplacementMax() (js/combat.js), même somme générique
     // sur les items équipés que le don Mobile (+1 case).
     if (passif.bonusDeplacement) clone.bonusDeplacement = (item.bonusDeplacement || 0) + passif.bonusDeplacement;
+    // bonusReductionPhysique (cf. "renforcee"/"impenetrable"/"increvable",
+    // lot "armures A") : même convention additive — lu par
+    // Personnage.bonusReductionPhysiqueEquipement(), jamais fusionné à
+    // item.reductionDegats (qui réduit tous les types de dégâts, cf.
+    // subirDegats), puisque ce bonus-ci est physique uniquement.
+    if (passif.bonusReductionPhysique) clone.bonusReductionPhysique = (item.bonusReductionPhysique || 0) + passif.bonusReductionPhysique;
   }
 
   // mecanique[palier] (rare/legendaire) -> effets sur le clone, commun aux 4

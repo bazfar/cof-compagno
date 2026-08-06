@@ -1316,6 +1316,16 @@ class Personnage extends Entite {
     return this._itemsEquipesUniques().reduce((t, it) => t + (it.reductionDegats || 0), 0) + this.bonusReductionCapacites()
       + this.bonusTemporaire("reduction_degats");
   }
+  // Affixes de rareté "renforcee" (cotte_mailles), "impenetrable"
+  // (plaques_comp), "increvable" (armure_guerre_orque) — mêmes texte/valeurs
+  // sur 3 armures différentes (cf. lot "armures A") : "réduit/ignore N points
+  // de dégâts PHYSIQUES après application de reductionDegats" — champ dédié
+  // (pas item.reductionDegats, qui réduit TOUS les types de dégâts déjà,
+  // cf. subirDegats) puisque celui-ci ne s'applique qu'au physique, comme
+  // bonusReductionLourdeDons ci-dessous.
+  bonusReductionPhysiqueEquipement() {
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusReductionPhysique || 0), 0);
+  }
   // Affixe de rareté "brutale" (armure_guerre_orque, cf. "Affixes phase 2" §A) :
   // « +1d4/1d6 dégâts avec armes de contact tant que l'armure est équipée ».
   // Seul cas de cette phase où un passif d'UNE pièce (armure) modifie les

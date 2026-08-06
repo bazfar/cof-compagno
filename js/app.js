@@ -7569,7 +7569,13 @@ const App = (() => {
     // points de reductionDegats de la cible neutralisés par CETTE attaque.
     const reductionArmure = Math.max(0, perso.reductionDegats() - (ignoreReduction || 0)); // inclut désormais Écorce partagée (bonusTemporaire)
     const reductionRempart = rempartActif ? 2 : 0;
-    const reductionFlatTotale = reductionLourde + reductionNaturelle + reductionArmure + reductionRempart;
+    // Affixes de rareté "renforcee"/"impenetrable"/"increvable" (cf. lot
+    // "armures A") : N points de dégâts PHYSIQUES en plus de reductionArmure
+    // — champ dédié (bonusReductionPhysique), jamais fusionné à
+    // item.reductionDegats (qui réduit tous les types), même garde-fou
+    // typeDegats === "physique" que reductionLourde ci-dessus.
+    const reductionEquipementPhysique = typeDegats === "physique" ? perso.bonusReductionPhysiqueEquipement() : 0;
+    const reductionFlatTotale = reductionLourde + reductionNaturelle + reductionArmure + reductionRempart + reductionEquipementPhysique;
     let degatsNets = Math.max(0, degatsBruts - reductionFlatTotale);
     // Demi-Orc — Résistance Instinctive (rang racial 3) : -3 dégâts quand le
     // résultat passerait sous la moitié des PV max.
@@ -7607,6 +7613,7 @@ const App = (() => {
       if (reductionLourde > 0) sources.push("don");
       if (reductionNaturelle > 0) sources.push("résistance naturelle");
       if (reductionRempart > 0) sources.push("Rempart");
+      if (reductionEquipementPhysique > 0) sources.push("affixe");
       const suffixeReduction = sources.length ? ` après réduction (${sources.join(" + ")}, −${reductionFlatTotale})` : "";
       const suffixeChaos = formeChaosActive ? " puis divisés par 2 (Forme du chaos sauvage)"
         : formeOursActive ? " puis divisés par 2 (Forme animale — Ours)" : "";

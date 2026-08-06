@@ -227,6 +227,11 @@ function validerPassif(cle, prefix, passif) {
   if (passif.bonusDeplacement !== undefined && !Number.isInteger(passif.bonusDeplacement)) {
     signalerAffixe(cle, `${prefix}.bonusDeplacement devrait être un entier, reçu ${JSON.stringify(passif.bonusDeplacement)}.`);
   }
+  // bonusReductionPhysique (cf. "renforcee"/"impenetrable"/"increvable", lot
+  // "armures A") : même convention — entier, sommé génériquement.
+  if (passif.bonusReductionPhysique !== undefined && !Number.isInteger(passif.bonusReductionPhysique)) {
+    signalerAffixe(cle, `${prefix}.bonusReductionPhysique devrait être un entier, reçu ${JSON.stringify(passif.bonusReductionPhysique)}.`);
+  }
 }
 
 // usage{frequence} sur un déclencheur (data/loot.json ou mecanique.rare/
