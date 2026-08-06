@@ -2503,6 +2503,9 @@ const BESTIAIRE = [
         "nom": "Sceau du silence",
         "description": "Applique l'état silencieuse (js/etats.js) pour 1 round.",
         "mecanique": {
+          "typeSort": "majeur",
+          "rang": 2,
+          "ecole": "abjuration",
           "type": "activable",
           "usage": {
             "frequence": "libre"
@@ -2600,6 +2603,9 @@ const BESTIAIRE = [
         "nom": "Sceau du silence",
         "description": "1 fois par combat : applique l'état silencieuse à 2 cibles à 6 m.",
         "mecanique": {
+          "typeSort": "majeur",
+          "rang": 2,
+          "ecole": "abjuration",
           "type": "limitee",
           "usage": {
             "frequence": "1x/combat"
@@ -2676,6 +2682,9 @@ const BESTIAIRE = [
         "nom": "Sceau du silence",
         "description": "1 fois par combat : applique l'état silencieuse à 2 cibles à 6 m.",
         "mecanique": {
+          "typeSort": "majeur",
+          "rang": 2,
+          "ecole": "abjuration",
           "type": "limitee",
           "usage": {
             "frequence": "1x/combat"
@@ -2700,6 +2709,9 @@ const BESTIAIRE = [
         "nom": "Jugement",
         "description": "1 fois par combat : 2d8 dégâts sacrés, touche automatiquement une cible en Fracture.",
         "mecanique": {
+          "typeSort": "majeur",
+          "rang": 3,
+          "ecole": "evocation",
           "type": "limitee",
           "usage": {
             "frequence": "1x/combat"
@@ -2753,6 +2765,9 @@ const BESTIAIRE = [
         "nom": "Marque du jugement",
         "description": "Applique l'état marquee (source marquee_pretre) : +1d6 dégâts sacrés pour tout allié qui frappe ensuite la cible.",
         "mecanique": {
+          "typeSort": "majeur",
+          "rang": 1,
+          "ecole": "divination",
           "type": "activable",
           "usage": {
             "frequence": "libre"
@@ -2816,6 +2831,9 @@ const BESTIAIRE = [
         "nom": "Marque du jugement",
         "description": "Applique l'état marquee (source marquee_pretre).",
         "mecanique": {
+          "typeSort": "majeur",
+          "rang": 1,
+          "ecole": "divination",
           "type": "activable",
           "usage": {
             "frequence": "libre"
@@ -3523,6 +3541,9 @@ const BESTIAIRE = [
         "nom": "Voile de brume",
         "description": "Action, 1 fois par combat : un brouillard opaque bloque toute ligne de vue dans la zone pendant 2 rounds.",
         "mecanique": {
+          "typeSort": "majeur",
+          "rang": 2,
+          "ecole": "illusion",
           "type": "limitee",
           "usage": {
             "frequence": "1x/combat"
@@ -3640,6 +3661,9 @@ const BESTIAIRE = [
         "nom": "Éclat de folie corrompue",
         "description": "Recharge : 2 rounds. Test SAG diff. 14 : échec = dégâts pleins et hallucination 1 round ; réussite = dégâts de moitié, pas d'hallucination.",
         "mecanique": {
+          "typeSort": "majeur",
+          "rang": 3,
+          "ecole": "illusion",
           "type": "limitee",
           "usage": {
             "frequence": "1x/recharge"
@@ -3721,6 +3745,9 @@ const BESTIAIRE = [
         "nom": "Appel de la Gangrène",
         "description": "Action, 1 fois par combat : invoque 1d4 Charognes du Chaos ou 1d4 Squelettes corrompus (au choix du MJ), qui rejoignent le combat en 2 rounds.",
         "mecanique": {
+          "typeSort": "majeur",
+          "rang": 4,
+          "ecole": "invocation",
           "type": "limitee",
           "usage": {
             "frequence": "1x/combat"
@@ -3740,6 +3767,9 @@ const BESTIAIRE = [
         "nom": "Vague nécrotique",
         "description": "Recharge : 3 rounds. Test CON diff. 15 pour ne subir que la moitié des dégâts. Le Seigneur récupère la moitié des dégâts infligés en PV.",
         "mecanique": {
+          "typeSort": "majeur",
+          "rang": 4,
+          "ecole": "necromancie",
           "type": "limitee",
           "usage": {
             "frequence": "1x/recharge"

@@ -568,6 +568,13 @@ const Combat = (() => {
     // cette fonction) plutôt que dans Capacites.retirerEtatsFinCombat (qui
     // boucle par PJ) — le compteur est côté monstre, indépendant des PJ.
     if (typeof Sauvegardes !== "undefined") Sauvegardes.reinitialiser();
+    // Fenêtre de réaction (js/reactions.js, prototype Contresort) : filet de
+    // sécurité si un combat se termine avec une fenêtre restée ouverte (MJ
+    // qui clôt le combat sans attendre les 15 s) — sans ça, la fenêtre
+    // périmée resterait visible au combat SUIVANT (elle vit dans SyncStore,
+    // pas dans usagesCapacites, donc pas couverte par reinitialiserUsagesPeriode
+    // ci-dessus).
+    if (typeof Reactions !== "undefined") Reactions.clore();
     _sauver(_etatVide());
   }
 

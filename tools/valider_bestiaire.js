@@ -235,14 +235,27 @@ const TAILLES_VALIDES = ["petite", "moyenne", "grande", "très grande"];
 // l'identique là où il existe. jetAttaque est le seul champ nouveau (un
 // monstre n'a qu'un atk plat, contrairement à jetOppose.caracAttaquant côté PJ).
 const CHAMPS_CAPACITE_AUTORISES = new Set(["nom", "description", "mecanique"]);
+// typeSort/rang/ecole (cf. "Prototype du moteur de réaction : Contresort",
+// Étape 1) : même vocabulaire que data/donnees.js (typeSort:"majeur" déjà lu
+// par Capacites.lancer pour le garde-fou de niveau min côté PJ), lu ici par
+// le calcul des répondants Contresort — rend un lanceur du bestiaire éligible
+// à Sceau du silence (état "silencieuse") en prime, effet de bord assumé.
 const CHAMPS_MECANIQUE_AUTORISES = new Set(["type", "usage", "cible", "portee", "zone", "effets",
-  "actionBonus", "reactionCout", "jetAttaque", "jetSauvegardeFixe", "recharge"]);
+  "actionBonus", "reactionCout", "jetAttaque", "jetSauvegardeFixe", "recharge",
+  "typeSort", "rang", "ecole"]);
 const TYPES_MECANIQUE_VALIDES = ["activable", "limitee", "passive"];
 const CIBLES_MECANIQUE_VALIDES = ["soi", "ennemi", "allie", "zone", "aucune"];
 const PORTEE_MOTS_CLES = ["adjacent", "vue", "voix"];
 const TYPES_EFFET_MONSTRE_VALIDES = ["degats", "etat", "bonus", "soin", "retraitEtat", "special"];
 const CARACS_SAUVEGARDE_VALIDES = ["FOR", "DEX", "CON", "INT", "SAG", "CHA", "Volonte", "Reflexes", "Vigueur"];
 const DUREE_MOTS_CLES = ["prochainTour", "finCombat", "permanente"];
+const TYPES_SORT_VALIDES = ["majeur"];
+// Écoles observées dans data/donnees.js (categorie des SORTS_*) + necromancie/
+// invocation, propres aux sorts de monstres marqués ici (aucun sort PJ connu
+// à ce jour dans ces deux écoles).
+const ECOLES_VALIDES = ["abjuration", "divination", "divination_transmutation", "enchantement",
+  "evocation", "illusion", "transmutation", "necromancie", "invocation",
+  "bannissement", "foi", "guerison", "jugement"];
 
 const problemesMonstres = new Map();
 function signalerMonstre(cle, msg) {
@@ -381,6 +394,16 @@ monstres.forEach((m, index) => {
     if (meca.jetAttaque !== undefined && !Number.isInteger(meca.jetAttaque)) signalerMonstre(cle, `${refCap}.mecanique.jetAttaque devrait être un entier.`);
     if (meca.reactionCout !== undefined && !Number.isInteger(meca.reactionCout)) signalerMonstre(cle, `${refCap}.mecanique.reactionCout devrait être un entier.`);
     if (meca.actionBonus !== undefined && typeof meca.actionBonus !== "boolean") signalerMonstre(cle, `${refCap}.mecanique.actionBonus devrait être un booléen.`);
+
+    // typeSort/rang/ecole (cf. Étape 1, "Contresort") : les trois sont posés
+    // ensemble ou pas du tout — un sort sans rang n'a pas de difficulté de
+    // Contresort calculable, un rang sans typeSort ne serait jamais lu par le
+    // filtre des répondants (qui teste meca.typeSort en premier).
+    if (meca.typeSort !== undefined || meca.rang !== undefined || meca.ecole !== undefined) {
+      if (!TYPES_SORT_VALIDES.includes(meca.typeSort)) signalerMonstre(cle, `${refCap}.mecanique.typeSort invalide : ${JSON.stringify(meca.typeSort)} (attendu : ${TYPES_SORT_VALIDES.join(" | ")}).`);
+      if (!(Number.isInteger(meca.rang) && meca.rang >= 1 && meca.rang <= 5)) signalerMonstre(cle, `${refCap}.mecanique.rang devrait être un entier 1-5, reçu ${JSON.stringify(meca.rang)}.`);
+      if (!ECOLES_VALIDES.includes(meca.ecole)) signalerMonstre(cle, `${refCap}.mecanique.ecole invalide : ${JSON.stringify(meca.ecole)} (attendu : ${ECOLES_VALIDES.join(" | ")}).`);
+    }
 
     // recharge : purement déclaratif — aucune période nommée "recharge"
     // n'est réinitialisée automatiquement, le MJ débloque à la main (↻).

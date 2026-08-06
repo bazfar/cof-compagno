@@ -1915,9 +1915,18 @@ const SORTS_MAGICIEN = [
 
   { id: "contresort", nom: "Contresort", rang: 3, categorie: "abjuration",
     effet: "Réaction : annule un sort ennemi en cours de résolution",
+    // cf. "Prototype du moteur de réaction : Contresort" — le PP/la réaction
+    // sont dépensés ici, normalement, à l'activation (comme tout sort) ;
+    // l'annulation elle-même (test d'attaque magique vs difficulté du rang du
+    // sort adverse) est résolue séparément par js/app.js (_repondreFenetreReaction),
+    // pas par ce bloc effets[] — le sort n'a donc plus d'effet propre à
+    // appliquer ici, seulement le coût. Déclenchable UNIQUEMENT via la
+    // fenêtre de réaction ouverte par un sort de monstre marqué typeSort
+    // (cf. js/reactions.js) — le catalogue de sorts (Grimoire) le liste tel
+    // quel pour référence, mais il n'y a pas de bouton "Lancer" hors réaction.
     mecanique: { type: "activable", usage: { frequence: "libre" }, reactionCout: 1, coutPP: 6, typeSort: "majeur",
       cible: "ennemi", portee: 15, zone: null, jetOppose: null,
-      effets: [ { type: "special", note: "Résolution manuelle par la table — pas de moteur d'annulation de sort en cours dans l'app." } ] } },
+      effets: [ { type: "special", note: "Résolu automatiquement par la fenêtre de réaction (test d'attaque magique vs difficulté du rang du sort adverse) — voir l'entrée d'historique correspondante." } ] } },
 
   { id: "vol", nom: "Vol", rang: 3, categorie: "divination_transmutation",
     effet: "La cible gagne la capacité de voler pendant plusieurs tours",

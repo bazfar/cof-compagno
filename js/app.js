@@ -1624,6 +1624,7 @@ const App = (() => {
       ${peutAgir ? htmlBlocActionsDuTour(id) : ""}
       ${peutAgir ? htmlBlocDesengagement() : ""}
       ${peutAgir ? htmlBlocAttaqueOpportunite(perso, p) : ""}
+      ${htmlBlocReactionContresort(id, p)}
       ${htmlEtatsActifs(p)}
       ${htmlBlocInitiativeJoueur(id)}
       ${htmlBlocChance(p, perso)}
@@ -4835,6 +4836,29 @@ const App = (() => {
   // OU l'utilisateur courant est le MJ (pour pouvoir fixer la CA de
   // n'importe quel PJ), OU corruptionMajeure > 0 (le joueur voit sa jauge
   // une fois touché) — un PJ classique à CA 0 ne voit donc rien de plus.
+  // Bloc "Fenêtre de réaction" (prototype Contresort, cf. js/reactions.js) —
+  // visible pour CE PJ uniquement s'il fait partie des répondants de la
+  // fenêtre actuellement ouverte, et tant qu'elle n'a reçu aucune réponse.
+  // PAS gaté par peutAgir (contrairement à htmlBlocDesengagement/
+  // AttaqueOpportunite) : une réaction se déclenche par définition hors de
+  // son propre tour. Rendu dans la fiche complète ET la sidebar battlemap
+  // (mêmes deux surfaces que htmlBlocChance/Corruption) — pas dans le dock,
+  // trop compact pour porter ce niveau de détail.
+  function htmlBlocReactionContresort(persoId, p) {
+    if (typeof Reactions === "undefined") return "";
+    const e = Reactions.etat();
+    if (!e || e.reponse || !e.repondants.includes(persoId) || Reactions.estExpiree(e)) return "";
+    const secondes = Math.ceil(Reactions.msRestantes(e) / 1000);
+    return `<div class="carte" style="border:2px solid var(--or);">
+      <h3 style="margin-top:0;">⚡ Fenêtre de réaction</h3>
+      <p class="aide" style="margin:0 0 6px;">${echapper(e.source.nom)} lance <strong>${echapper(e.sort.nom)}</strong> (rang ${e.sort.rang}, ${echapper(e.sort.ecole)}) — <span id="reaction-compte-a-rebours">${secondes}</span> s pour réagir.</p>
+      <div class="barre-actions">
+        <button class="btn petit or" data-reaction-action="contresort" data-reaction-persoid="${echapper(persoId)}">🛡️ Contresort</button>
+        <button class="btn petit secondaire" data-reaction-action="passe" data-reaction-persoid="${echapper(persoId)}">Passer</button>
+      </div>
+    </div>`;
+  }
+
   function htmlBlocCorruption(p, perso) {
     const aChaos = perso.aVoieChaosActive();
     const majeure = p.corruptionMajeure || 0;
@@ -5421,6 +5445,16 @@ const App = (() => {
         sauverPersos(persos);
         rafraichir();
       };
+    });
+    // Fenêtre de réaction (prototype Contresort, cf. htmlBlocReactionContresort) :
+    // "passe" clôt juste la participation de CE PJ (sans coût), "contresort"
+    // dépense PP+réaction via Capacites.lancer (API publique, cf. piège "ne
+    // pas toucher js/capacites.js") PUIS résout le contest à part — un test
+    // d'attaque magique vs la difficulté du rang (10+2×rang, même échelle que
+    // l'enchantement d'armes, cf. js/enchantement.js). Le coût est dépensé
+    // que le contest réussisse ou non, comme n'importe quel sort lancé.
+    racine.querySelectorAll("[data-reaction-action]").forEach((el) => {
+      el.onclick = () => { _repondreFenetreReaction(id, el.dataset.reactionAction); rafraichir(); };
     });
     // Désengagement (homebrew, attaque d'opportunité, cf. htmlBlocDesengagement) :
     // un jet de FOR (poussée) par adversaire actuellement adjacent, opposé à
@@ -6756,6 +6790,7 @@ const App = (() => {
             <p style="font-size:0.75rem;color:#8a8296;margin-top:6px;">Bonus d'attaque (jet, pas les dégâts) = bonus de progression (${ARCHETYPE_CLASSE[p.classe] || "martial"}, ${signe(perso.bonusProgression())} au niveau ${niveau}) + modificateur. Ajuste selon tes voies (ex. +1 Tir ajusté) au moment du jet via l'onglet Dés si besoin.</p>
           </div>
 
+          ${htmlBlocReactionContresort(id, p)}
           ${htmlEtatsActifs(p)}
           ${htmlBlocInitiativeJoueur(id)}
           ${htmlBlocChance(p, perso)}
@@ -9004,6 +9039,33 @@ const App = (() => {
       });
     }
 
+    // Fenêtre de réaction (prototype Contresort, cf. js/reactions.js) :
+    // TOUS les rôles re-rendent (pour afficher/masquer htmlBlocReactionContresort
+    // côté joueur, et le bandeau "Clore" de rendreOrdreInitiative côté MJ) —
+    // seul le MJ, en plus, est responsable de la résolution (timer ou
+    // réponse reçue), cf. _planifierResolutionReaction. onChange se déclenche
+    // aussi à l'abonnement initial (valeur en cache) : un MJ qui recharge sa
+    // page pendant qu'une fenêtre est ouverte reprend donc le bon timer
+    // (cf. piège "doit survivre à un rechargement").
+    if (typeof Reactions !== "undefined") {
+      Reactions.onChange((e) => {
+        rendreOrdreInitiative();
+        rendreOrdreInitiative("battlemap-zone-ordre-initiative");
+        if (ficheActiveId && chargerPersos()[ficheActiveId]) afficherFiche(ficheActiveId);
+        if (ficheSidebarActiveId && chargerPersos()[ficheSidebarActiveId]) rendreFicheSidebarBattlemap(ficheSidebarActiveId);
+        if (role === "mj") _planifierResolutionReaction(e);
+      });
+      // Décompte affiché (#reaction-compte-a-rebours, cf. htmlBlocReactionContresort)
+      // : rafraîchi chaque seconde sans re-rendu complet — la fermeture de la
+      // fenêtre (qui, elle, fait disparaître le bloc) passe par onChange
+      // ci-dessus, pas par ce minuteur d'affichage.
+      setInterval(() => {
+        const span = document.getElementById("reaction-compte-a-rebours");
+        const e = span && Reactions.etat();
+        if (e) span.textContent = Math.ceil(Reactions.msRestantes(e) / 1000);
+      }, 1000);
+    }
+
     // Chance d'équipe (cf. htmlBlocChance) : pool partagé, re-rendu temps réel
     // dès qu'un autre client (MJ ou joueur) l'ajuste.
     SyncStore.subscribe(STORAGE_CHANCE_EQUIPE, () => {
@@ -9531,6 +9593,15 @@ const App = (() => {
     }
 
     const etatCombat = Combat.etatCourant();
+    // Fenêtre de réaction ouverte (prototype Contresort, cf. js/reactions.js)
+    // : bandeau MJ uniquement — les joueurs répondants voient déjà
+    // htmlBlocReactionContresort sur leur propre fiche, le MJ n'a besoin que
+    // du bouton "Clore" (résolution immédiate, sans attendre les 15 s).
+    const reactionOuverte = (role === "mj" && typeof Reactions !== "undefined") ? Reactions.etat() : null;
+    const reactionHtml = reactionOuverte ? `<div class="initiative-entete" style="border-top:1px dashed var(--or);padding-top:8px;margin-top:8px;">
+      <span>⚡ Fenêtre de réaction ouverte : <strong>${echapper(reactionOuverte.sort.nom)}</strong> (${echapper(reactionOuverte.source.nom)}) — ${reactionOuverte.repondants.length} répondant(s), ${Math.ceil(Reactions.msRestantes(reactionOuverte) / 1000)} s restantes.</span>
+      <button class="btn petit secondaire btn-clore-reaction">⏹ Clore la fenêtre</button>
+    </div>` : "";
     zone.innerHTML = `<div class="carte initiative-carte">
       <div class="initiative-entete">
         <h3 style="margin:0;">Ordre d'initiative — Round ${etatCombat.round}</h3>
@@ -9539,6 +9610,7 @@ const App = (() => {
           <button class="btn petit danger btn-terminer-combat">⏹ Terminer le combat</button>
         </div>
       </div>
+      ${reactionHtml}
       <div class="initiative-bandeau">
         ${etatCombat.ordre.map((e, idx) => _ligneInitiativeHtml(e, idx === etatCombat.indexActuel)).join("")}
       </div>
@@ -9553,6 +9625,264 @@ const App = (() => {
       if (!confirm("Terminer le combat ? Les états « finCombat » actifs sur les PJ seront purgés.")) return;
       Combat.terminerCombat();
     };
+    const btnClore = zone.querySelector(".btn-clore-reaction");
+    if (btnClore) {
+      btnClore.onclick = () => {
+        if (role !== "mj" || typeof Reactions === "undefined") return;
+        const e = Reactions.etat();
+        if (e) _resoudreFenetreReaction(e);
+      };
+    }
+  }
+
+  // Distance de la fenêtre de réaction (15 m, cf. "Prototype du moteur de
+  // réaction : Contresort", Étape 3) — exprimée en CASES puisque
+  // Carte.distanceCasesEntre() rend des cases (1 case = 1,5 m, cf. carte.js
+  // "Domaine de Valdecourt"). Constante dédiée, DISTINCTE de
+  // mecanique.portee (en mètres, propre à chaque sort du bestiaire) : le
+  // prompt fixe 15 m explicitement pour cette fenêtre, indépendamment de la
+  // portée du sort qui la déclenche.
+  const PORTEE_CONTRESORT_CASES = 10; // 15 m / 1,5 m par case
+
+  // Sort "contresort" (SORTS_MAGICIEN, partagé par magicien/necromancien,
+  // cf. data/donnees.js) — coutPP/reactionCout lus dynamiquement plutôt que
+  // dupliqués en dur ici : une seule source de vérité si l'équilibrage change.
+  function _sortContresort() {
+    const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? SORTS_PAR_CLASSE.magicien : null;
+    return catalogue ? catalogue.find((s) => s.id === "contresort") : null;
+  }
+
+  // Réponse d'un PJ à la fenêtre de réaction (cf. htmlBlocReactionContresort,
+  // boutons Contresort/Passer) — extrait du wiring pour rester testable
+  // directement. "passe" clôt juste la participation de CE PJ (sans coût) ;
+  // "contresort" dépense PP+réaction via Capacites.lancer (API publique, cf.
+  // piège "ne pas toucher js/capacites.js") PUIS résout le contest à part —
+  // un test d'attaque magique vs la difficulté du rang (10+2×rang, même
+  // échelle que l'enchantement d'armes, cf. js/enchantement.js). Le coût est
+  // dépensé que le contest réussisse ou non, comme n'importe quel sort lancé.
+  function _repondreFenetreReaction(persoId, action) {
+    if (typeof Reactions === "undefined") return;
+    if (action === "passe") { Reactions.repondre(persoId, "passe"); return; }
+    const e = Reactions.etat();
+    if (!e || e.reponse || !e.repondants.includes(persoId)) return;
+    const sort = _sortContresort();
+    if (!sort) { toast("Contresort introuvable dans le catalogue de sorts."); return; }
+    const res = Capacites.lancer({
+      persoId,
+      source: { origine: "grimoire", cle: "contresort", nomCap: "Contresort", idSort: "contresort" },
+      mecanique: Object.assign({}, sort.mecanique, { origineGrimoire: true }),
+    });
+    if (!res.ok) { toast(res.messages.join(" · ")); return; }
+    const perso = Personnage.depuisJSON(chargerPersos()[persoId]);
+    const difficulte = 10 + 2 * e.sort.rang;
+    const caracMagie = (typeof CARAC_MAGIE !== "undefined") ? CARAC_MAGIE[perso.classe] : null;
+    const jet = lancerTest(`Contresort vs ${e.sort.nom} (rang ${e.sort.rang})`, perso.bonusAttaque("magique") || 0, 20, null, { persoId, caracCode: caracMagie });
+    const reussite = jet.total >= difficulte;
+    toast(reussite ? `✨ Contresort réussi (${jet.total} ≥ ${difficulte}) ! ${e.sort.nom} est annulé.` : `Contresort raté (${jet.total} < ${difficulte}) — ${e.sort.nom} se résout normalement.`);
+    Reactions.repondre(persoId, "contresort", { reussite, jetTotal: jet.total, difficulte });
+  }
+
+  // Filtre des répondants éligibles à Contresort (cf. Étape 3, 4 conditions)
+  // — calculé une seule fois, à l'OUVERTURE de la fenêtre : un PJ qui
+  // s'éloigne ou dépense ses PP pendant les 15 s reste dans la liste (figée,
+  // comme une fenêtre d'opportunité réelle), _repondre() revérifiera de
+  // toute façon via Capacites.lancer au moment du clic.
+  function _repondantsContresort(monstreTokenId) {
+    if (typeof Carte === "undefined" || !Carte.distanceCasesEntre || !Carte.listeTokensJoueursCombat || !Carte.tokenIdPourPerso) return [];
+    const sort = _sortContresort();
+    if (!sort) return [];
+    const coutPP = sort.mecanique.coutPP || 0;
+    const persos = chargerPersos();
+    const persoIds = Carte.listeTokensJoueursCombat()
+      .map((tok) => (tok.ref && tok.ref.startsWith("pj-")) ? tok.ref.slice(3) : null)
+      .filter(Boolean);
+    return persoIds.filter((persoId) => {
+      const p = persos[persoId];
+      if (!p) return false;
+      const perso = Personnage.depuisJSON(p);
+      // 1. connaît Contresort (même vérification que le garde-fou
+      // origineGrimoire côté Capacites.lancer, cf. js/capacites.js).
+      if (!(p.grimoireSortsConnus || []).concat(perso.sortsGrimoireAccordes()).includes("contresort")) return false;
+      // 2. dispose du coût en PP.
+      if ((p.ppActuel || 0) < coutPP) return false;
+      // 3. au moins 1 réaction restante.
+      if (typeof Capacites === "undefined" || Capacites.reactionsRestantes(p) < 1) return false;
+      // 4. à 15 m ou moins du lanceur.
+      const tokPj = Carte.tokenIdPourPerso(persoId);
+      if (!tokPj) return false;
+      const dist = Carte.distanceCasesEntre(monstreTokenId, tokPj);
+      return dist !== null && dist <= PORTEE_CONTRESORT_CASES;
+    });
+  }
+
+  // Point d'entrée du clic [data-capacite-monstre] (cf. "Prototype du moteur
+  // de réaction : Contresort", Étapes 3-4) : un sort marqué typeSort ouvre
+  // d'abord la fenêtre de réaction s'il existe des répondants éligibles —
+  // dans ce cas, RIEN n'est résolu ici (ni jet d'attaque, ni effets, ni
+  // usage) : _resoudreFenetreReaction reprendra la résolution à la fermeture
+  // (cf. l'abonnement Reactions.onChange dans init()). Peek direct via
+  // CapacitesMonstres.capacitesDe (pas preparer()) : inutile de déclencher
+  // verifierUsage avant de savoir si la résolution est immédiate ou différée
+  // — _appliquerPlanCapaciteMonstre le refera à l'application, immédiate ou
+  // différée. Extrait du handler onclick pour rester testable directement.
+  function _declencherCapaciteMonstre(m, indice, pjId) {
+    const capPeek = (CapacitesMonstres.capacitesDe(m) || [])[indice];
+    const mecaPeek = capPeek && capPeek.mecanique;
+    if (mecaPeek && mecaPeek.typeSort && typeof Reactions !== "undefined") {
+      const repondants = _repondantsContresort(m.id);
+      if (repondants.length) {
+        Reactions.ouvrir({
+          evenement: "sortLance",
+          source: { type: "monstre", id: m.id, nom: m.nom },
+          sort: { nom: capPeek.nom, rang: mecaPeek.rang, ecole: mecaPeek.ecole },
+          indice, pjId, repondants,
+        });
+        toast(`⏳ Fenêtre de réaction ouverte (${repondants.length} répondant(s) possible(s)) — 15 s avant résolution de « ${capPeek.nom} ».`);
+        rendreTableCombat();
+        rendreTableCombat("battlemap-zone-table-combat");
+        return;
+      }
+    }
+    _appliquerPlanCapaciteMonstre(m, indice, pjId);
+  }
+
+  function _appliquerPlanCapaciteMonstre(m, indice, pjId) {
+    const prep = CapacitesMonstres.preparer(m, indice);
+    if (!prep.ok) { toast(prep.raison); return; }
+    const cap = prep.capacite;
+    const mecanique = prep.mecanique;
+    const libelle = `${m.nom} — ${cap.nom}`;
+    const cibleSoi = !!(mecanique && mecanique.cible === "soi");
+
+    // jetAttaque (Sceau du silence / Marque du jugement) : jet 1d20+bonus
+    // vs DEF avant le reste du plan — même pipeline qu'une attaque d'arme
+    // (_resoudreAttaqueMonstreVsPJ). jetSauvegardeFixe reste un jet CÔTÉ
+    // CIBLE, non automatisable pour un monstre (cf. §3 du schéma) :
+    // affiché dans le résumé du bouton, jamais roulé ici.
+    // messagesToast accumule tous les messages du clic (jet d'attaque +
+    // effets qui suivent) pour un unique toast() final — un second appel
+    // à toast() écraserait silencieusement le premier (ex. "Touché !"
+    // perdu si la cible s'avère ensuite immunisée à l'état posé), même
+    // bug déjà corrigé côté appliquerMalus (cf. suffixeToastFinal).
+    const messagesToast = [];
+    let toucheOk = true;
+    if (mecanique && mecanique.jetAttaque !== undefined) {
+      const resAtt = _resoudreAttaqueMonstreVsPJ(libelle, mecanique.jetAttaque + _bonusEtatsMonstre(m, "attaque"), 20, pjId);
+      messagesToast.push(resAtt.echecCritique ? "1 naturel — échec critique automatique, effet non appliqué."
+        : resAtt.critique ? `CRITIQUE !${resAtt.defCible !== null ? ` (DEF ${resAtt.defCible})` : ""}`
+        : resAtt.defCible === null ? "DEF de la cible inconnue — effet appliqué, à confirmer manuellement."
+        : (resAtt.touche ? `Touché ! (DEF ${resAtt.defCible})` : `Raté (DEF ${resAtt.defCible}) — effet non appliqué.`));
+      toucheOk = resAtt.touche !== false;
+    }
+
+    if (toucheOk) {
+      prep.plan.forEach((action) => {
+        if (action.action === "degats" || action.action === "soin") {
+          const suffixe = action.surReussite === "demi" ? " — moitié si sauvegarde réussie" : "";
+          lancerFormule(action.formule, `${libelle} (${action.action === "degats" ? "dégâts" : "soin"})${suffixe}`, false, { estMonstre: true });
+        } else if (action.action === "etat") {
+          const entree = { idEtat: action.idEtat, dureeRestante: _resoudreDureeToursMonstre(action.duree || "", null), source: cap.nom, poseLe: Date.now() };
+          if (cibleSoi) {
+            const imm = CapacitesMonstres.immunite(m, action.idEtat);
+            if (imm.bloquee) { messagesToast.push(`${m.nom} est immunisé à « ${ETATS[action.idEtat].nom} ».`); return; }
+            if (imm.condition) messagesToast.push(`Immunité conditionnelle : ${imm.condition} — à arbitrer.`);
+            Carte.ajouterEtatCombat(m.id, entree);
+          } else if (pjId) {
+            const persos = chargerPersos();
+            const p = persos[pjId];
+            if (p) {
+              const perso = Personnage.depuisJSON(p);
+              if (perso.aImmuniteEtat(action.idEtat)) {
+                messagesToast.push(`${p.nom} est immunisé·e à « ${ETATS[action.idEtat].nom} » (Liberté d'action).`);
+              } else {
+                p.etatsActifs = p.etatsActifs || [];
+                p.etatsActifs.push(entree);
+                sauverPersos(persos);
+                if (ficheActiveId === pjId) afficherFiche(pjId);
+                if (ficheSidebarActiveId === pjId) rendreFicheSidebarBattlemap(pjId);
+              }
+            } else {
+              // Cible 🎯 choisie mais introuvable dans les persos chargés
+              // (PJ supprimé entre-temps, id périmé...) : signaler plutôt
+              // que d'appliquer l'état dans le vide sans un mot.
+              messagesToast.push(`${ETATS[action.idEtat].nom} (${cap.nom}) — personnage cible introuvable : à appliquer manuellement.`);
+            }
+          } else {
+            messagesToast.push(`${ETATS[action.idEtat].nom} (${cap.nom}) — aucune cible 🎯 choisie ci-dessus : à appliquer manuellement.`);
+          }
+        } else if (action.action === "bonus") {
+          if (cibleSoi) {
+            Carte.ajouterEtatCombat(m.id, {
+              idEtat: null, bonus: { cible: action.cible, valeur: action.valeur },
+              dureeRestante: _resoudreDureeToursMonstre(action.duree || "", null), source: cap.nom, poseLe: Date.now(),
+            });
+          } else {
+            // "allie" (Cri de ralliement, Cri de commandement des os...) :
+            // pas de sélecteur multi-cible pour les autres monstres —
+            // laissé à la table, cf. §4 "Partiellement mécanisables" du
+            // schéma (même limite que les redirections d'attaque PJ).
+            messagesToast.push(`Bonus ${action.cible} ${signe(action.valeur)} (${cap.nom}) — cible(s) alliée(s) à appliquer manuellement (pas de sélecteur multi-cible).`);
+          }
+        } else if (action.action === "retraitEtat") {
+          messagesToast.push(`${cap.nom} : retrait d'état — à appliquer manuellement.`);
+        } else if (action.action === "note") {
+          messagesToast.push(action.texte);
+          ajouterHisto(libelle, 0, false, false, action.texte);
+        }
+      });
+    }
+
+    if (messagesToast.length) toast(messagesToast.join(" — "));
+    prep.appliquerUsage();
+    rendreTableCombat();
+    rendreTableCombat("battlemap-zone-table-combat");
+  }
+
+  // Résolution de la fenêtre de réaction (cf. Étape 4) — appelée côté MJ
+  // UNIQUEMENT (timer expiré, réponse reçue, ou bouton "Clore" cf.
+  // rendreOrdreInitiative), jamais par un joueur. Clôture D'ABORD (empêche
+  // une double résolution si Reactions.onChange refire pendant le
+  // traitement — clore() déclenche lui-même onChange), puis :
+  //  - contresort réussi -> journalise l'annulation, n'applique rien ;
+  //  - contresort raté, "passe", ou personne n'a répondu (timeout) -> déroule
+  //    la résolution existante, inchangée (_appliquerPlanCapaciteMonstre).
+  function _resoudreFenetreReaction(e) {
+    Reactions.clore();
+    const { source, sort, reponse, indice, pjId } = e;
+    if (reponse && reponse.action === "contresort" && reponse.reussite) {
+      const nomRepondant = (chargerPersos()[reponse.persoId] || {}).nom || reponse.persoId;
+      const detail = `${nomRepondant} contre le sort (jet ${reponse.jetTotal} ≥ diff. ${reponse.difficulte}) — aucun effet appliqué.`;
+      ajouterHisto(`${sort.nom} (${source.nom}) — Contresort réussi`, 0, false, false, detail);
+      toast(`✨ ${nomRepondant} a contré ${sort.nom} !`);
+      rendreTableCombat();
+      rendreTableCombat("battlemap-zone-table-combat");
+      return;
+    }
+    const m = (typeof Carte !== "undefined" && Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : []).find((mm) => mm.id === source.id);
+    if (!m) {
+      toast(`${source.nom} a quitté le combat — résolution de « ${sort.nom} » annulée.`);
+      rendreTableCombat();
+      rendreTableCombat("battlemap-zone-table-combat");
+      return;
+    }
+    _appliquerPlanCapaciteMonstre(m, indice, pjId);
+  }
+
+  // Timer de la fenêtre — recalculé depuis ouverteA/delaiMs (Reactions.
+  // msRestantes), jamais depuis une durée figée à l'ouverture : reste exact
+  // après un rechargement de page côté MJ (cf. piège "doit survivre à un
+  // rechargement"). Un seul timer actif à la fois (_timerReactionMJ) : chaque
+  // appel annule le précédent, cohérent avec "une seule fenêtre à la fois".
+  let _timerReactionMJ = null;
+  function _planifierResolutionReaction(e) {
+    if (_timerReactionMJ) { clearTimeout(_timerReactionMJ); _timerReactionMJ = null; }
+    if (!e) return;
+    if (e.reponse || Reactions.estExpiree(e)) { _resoudreFenetreReaction(e); return; }
+    _timerReactionMJ = setTimeout(() => {
+      _timerReactionMJ = null;
+      const actuel = Reactions.etat();
+      if (actuel) _resoudreFenetreReaction(actuel);
+    }, Reactions.msRestantes(e) + 50);
   }
 
   // targetId : conteneur à peupler — l'onglet dédié "Table de combat"
@@ -9702,95 +10032,7 @@ const App = (() => {
         const m = monstres.find((mm) => mm.id === btn.dataset.capaciteMonstre);
         if (!m) return;
         const indice = parseInt(btn.dataset.idxCapacite, 10);
-        const prep = CapacitesMonstres.preparer(m, indice);
-        if (!prep.ok) { toast(prep.raison); return; }
-        const cap = prep.capacite;
-        const mecanique = prep.mecanique;
-        const libelle = `${m.nom} — ${cap.nom}`;
-        const pjId = ciblesMonstres[m.id] || null;
-        const cibleSoi = !!(mecanique && mecanique.cible === "soi");
-
-        // jetAttaque (Sceau du silence / Marque du jugement) : jet 1d20+bonus
-        // vs DEF avant le reste du plan — même pipeline qu'une attaque d'arme
-        // (_resoudreAttaqueMonstreVsPJ). jetSauvegardeFixe reste un jet CÔTÉ
-        // CIBLE, non automatisable pour un monstre (cf. §3 du schéma) :
-        // affiché dans le résumé du bouton, jamais roulé ici.
-        // messagesToast accumule tous les messages du clic (jet d'attaque +
-        // effets qui suivent) pour un unique toast() final — un second appel
-        // à toast() écraserait silencieusement le premier (ex. "Touché !"
-        // perdu si la cible s'avère ensuite immunisée à l'état posé), même
-        // bug déjà corrigé côté appliquerMalus (cf. suffixeToastFinal).
-        const messagesToast = [];
-        let toucheOk = true;
-        if (mecanique && mecanique.jetAttaque !== undefined) {
-          const resAtt = _resoudreAttaqueMonstreVsPJ(libelle, mecanique.jetAttaque + _bonusEtatsMonstre(m, "attaque"), 20, pjId);
-          messagesToast.push(resAtt.echecCritique ? "1 naturel — échec critique automatique, effet non appliqué."
-            : resAtt.critique ? `CRITIQUE !${resAtt.defCible !== null ? ` (DEF ${resAtt.defCible})` : ""}`
-            : resAtt.defCible === null ? "DEF de la cible inconnue — effet appliqué, à confirmer manuellement."
-            : (resAtt.touche ? `Touché ! (DEF ${resAtt.defCible})` : `Raté (DEF ${resAtt.defCible}) — effet non appliqué.`));
-          toucheOk = resAtt.touche !== false;
-        }
-
-        if (toucheOk) {
-          prep.plan.forEach((action) => {
-            if (action.action === "degats" || action.action === "soin") {
-              const suffixe = action.surReussite === "demi" ? " — moitié si sauvegarde réussie" : "";
-              lancerFormule(action.formule, `${libelle} (${action.action === "degats" ? "dégâts" : "soin"})${suffixe}`, false, { estMonstre: true });
-            } else if (action.action === "etat") {
-              const entree = { idEtat: action.idEtat, dureeRestante: _resoudreDureeToursMonstre(action.duree || "", null), source: cap.nom, poseLe: Date.now() };
-              if (cibleSoi) {
-                const imm = CapacitesMonstres.immunite(m, action.idEtat);
-                if (imm.bloquee) { messagesToast.push(`${m.nom} est immunisé à « ${ETATS[action.idEtat].nom} ».`); return; }
-                if (imm.condition) messagesToast.push(`Immunité conditionnelle : ${imm.condition} — à arbitrer.`);
-                Carte.ajouterEtatCombat(m.id, entree);
-              } else if (pjId) {
-                const persos = chargerPersos();
-                const p = persos[pjId];
-                if (p) {
-                  const perso = Personnage.depuisJSON(p);
-                  if (perso.aImmuniteEtat(action.idEtat)) {
-                    messagesToast.push(`${p.nom} est immunisé·e à « ${ETATS[action.idEtat].nom} » (Liberté d'action).`);
-                  } else {
-                    p.etatsActifs = p.etatsActifs || [];
-                    p.etatsActifs.push(entree);
-                    sauverPersos(persos);
-                    if (ficheActiveId === pjId) afficherFiche(pjId);
-                    if (ficheSidebarActiveId === pjId) rendreFicheSidebarBattlemap(pjId);
-                  }
-                } else {
-                  // Cible 🎯 choisie mais introuvable dans les persos chargés
-                  // (PJ supprimé entre-temps, id périmé...) : signaler plutôt
-                  // que d'appliquer l'état dans le vide sans un mot.
-                  messagesToast.push(`${ETATS[action.idEtat].nom} (${cap.nom}) — personnage cible introuvable : à appliquer manuellement.`);
-                }
-              } else {
-                messagesToast.push(`${ETATS[action.idEtat].nom} (${cap.nom}) — aucune cible 🎯 choisie ci-dessus : à appliquer manuellement.`);
-              }
-            } else if (action.action === "bonus") {
-              if (cibleSoi) {
-                Carte.ajouterEtatCombat(m.id, {
-                  idEtat: null, bonus: { cible: action.cible, valeur: action.valeur },
-                  dureeRestante: _resoudreDureeToursMonstre(action.duree || "", null), source: cap.nom, poseLe: Date.now(),
-                });
-              } else {
-                // "allie" (Cri de ralliement, Cri de commandement des os...) :
-                // pas de sélecteur multi-cible pour les autres monstres —
-                // laissé à la table, cf. §4 "Partiellement mécanisables" du
-                // schéma (même limite que les redirections d'attaque PJ).
-                messagesToast.push(`Bonus ${action.cible} ${signe(action.valeur)} (${cap.nom}) — cible(s) alliée(s) à appliquer manuellement (pas de sélecteur multi-cible).`);
-              }
-            } else if (action.action === "retraitEtat") {
-              messagesToast.push(`${cap.nom} : retrait d'état — à appliquer manuellement.`);
-            } else if (action.action === "note") {
-              messagesToast.push(action.texte);
-              ajouterHisto(libelle, 0, false, false, action.texte);
-            }
-          });
-        }
-
-        if (messagesToast.length) toast(messagesToast.join(" — "));
-        prep.appliquerUsage();
-        rendreTableCombat(targetId);
+        _declencherCapaciteMonstre(m, indice, ciblesMonstres[m.id] || null);
       };
     });
     zone.querySelectorAll("[data-recharge-capacite]").forEach((btn) => {
