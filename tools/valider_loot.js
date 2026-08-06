@@ -82,7 +82,7 @@ function formuleValide(f) {
 // — reductionDegats non plus (traité en amont de subirDegats, cf.
 // _reduireDegatsSubisSiDisponible) — mais les deux passent par le même
 // vocabulaire effets[]/validerEffets pour rester validés au même endroit.
-const TYPES_EFFET_VALIDES = ["degats", "dot", "soin", "bonus", "etat", "ignoreReduction", "critique", "special", "esquive", "reductionDegats", "reflechitSort", "intercepte", "relance", "annuleCritique", "porteeCourte"];
+const TYPES_EFFET_VALIDES = ["degats", "dot", "soin", "bonus", "etat", "ignoreReduction", "critique", "special", "esquive", "reductionDegats", "reflechitSort", "intercepte", "relance", "annuleCritique", "porteeCourte", "doubleDeplacement"];
 const CIBLES_BONUS_VALIDES = ["attaque", "DEF"];
 const DUREE_MOTS_CLES_LOOT = ["prochainTour", "finCombat", "permanente"];
 // cible: "attaquant" sur un effet degats/etat (cf. "Affixes phase 2" §C,
@@ -109,7 +109,10 @@ const TYPES_EFFET_CIBLE_INVERSE = ["degats", "etat"];
 // l'usage (1x/combat au rare, illimité au légendaire, cf. absence de champ
 // usage) du bouton "Distance" pour une arme de contact aussi jetable — vérifié
 // par _itemLancerArmeDisponible (js/app.js), jamais par _resoudreEffetsDeclencheur.
-const EVENEMENTS_DECLENCHEUR_VALIDES = ["touche", "rate", "critique", "subitContact", "subitAttaque", "sortLance", "relance", "critiqueSubi", "jetArme"];
+// doublerDeplacement/disparition (cf. "fulgurantes"/"evanescente", lot
+// "malgré la limite") : déclenchés manuellement par le JOUEUR sur son propre
+// tour (boutons dédiés), jamais par _resoudreEffetsDeclencheur.
+const EVENEMENTS_DECLENCHEUR_VALIDES = ["touche", "rate", "critique", "subitContact", "subitAttaque", "sortLance", "relance", "critiqueSubi", "jetArme", "doublerDeplacement", "disparition"];
 // typeDegats sur un déclencheur "subitContact" (cf. "réfléchissante",
 // cotte_runique — ne renvoie que les dégâts magiques subis).
 const TYPES_DEGATS_DECLENCHEUR_VALIDES = ["physique", "magique"];
@@ -161,12 +164,13 @@ function validerEffets(effets, signaler) {
     if (e.type === "critique" && !(Number.isInteger(e.seuil) && e.seuil >= 2 && e.seuil <= 20)) {
       signaler(`${p}.seuil devrait être un entier entre 2 et 20, reçu ${JSON.stringify(e.seuil)}.`);
     }
-    // esquive/reflechitSort/intercepte/annuleCritique/porteeCourte : pas de
-    // paramètre, juste le type — la logique (annulation du jet, redirection
-    // du plan vers le lanceur, redirection de la cible vers un allié,
-    // downgrade du crit, disponibilité du jet à distance courte) est portée
-    // par la fenêtre de réaction ou par app.js directement (subitAttaque/
-    // sortLance/critiqueSubi/jetArme), pas par ces effets.
+    // esquive/reflechitSort/intercepte/annuleCritique/porteeCourte/
+    // doubleDeplacement : pas de paramètre, juste le type — la logique
+    // (annulation du jet, redirection du plan vers le lanceur, redirection
+    // de la cible vers un allié, downgrade du crit, disponibilité du jet à
+    // distance courte, doublement du déplacement) est portée par la fenêtre
+    // de réaction ou par app.js/combat.js directement (subitAttaque/
+    // sortLance/critiqueSubi/jetArme/doublerDeplacement), pas par ces effets.
     if (e.type === "reductionDegats" && !(typeof e.fraction === "number" && e.fraction > 0 && e.fraction <= 1)) {
       signaler(`${p}.fraction devrait être un nombre entre 0 (exclu) et 1, reçu ${JSON.stringify(e.fraction)}.`);
     }
@@ -217,6 +221,11 @@ function validerPassif(cle, prefix, passif) {
   }
   if (passif.porteeMinCases !== undefined && !(Number.isInteger(passif.porteeMinCases) && passif.porteeMinCases >= 0)) {
     signalerAffixe(cle, `${prefix}.porteeMinCases devrait être un entier ≥ 0, reçu ${JSON.stringify(passif.porteeMinCases)}.`);
+  }
+  // bonusDeplacement (cf. "fulgurantes", bottes_vitesse) : même convention
+  // que bonusDEF/bonusInitiative — entier, sommé génériquement.
+  if (passif.bonusDeplacement !== undefined && !Number.isInteger(passif.bonusDeplacement)) {
+    signalerAffixe(cle, `${prefix}.bonusDeplacement devrait être un entier, reçu ${JSON.stringify(passif.bonusDeplacement)}.`);
   }
 }
 

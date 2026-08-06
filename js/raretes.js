@@ -476,7 +476,19 @@ const EFFETS_PAR_ITEM = {
       } },
   ],
   bottes_vitesse: [
-    { id: "fulgurantes", nom: "fulgurantes", rare: "+1 case de déplacement ; 1 fois par combat, double le déplacement pour ce tour", legendaire: "+2 cases de déplacement ; 2 fois par combat, double le déplacement" },
+    { id: "fulgurantes", nom: "fulgurantes", rare: "+1 case de déplacement ; 1 fois par combat, double le déplacement pour ce tour", legendaire: "+2 cases de déplacement ; 2 fois par combat, double le déplacement",
+      mecanique: {
+        // bonusDeplacement (passif, cf. Combat._deplacementMax) + evenement
+        // "doublerDeplacement"/effet "doubleDeplacement" (cf. lot "malgré la
+        // limite") : DÉCLENCHÉ PAR LE JOUEUR sur son propre tour (bouton
+        // dédié dans "Actions du tour", pas une réaction) — usage vérifié
+        // par _itemDoubleDeplacementDisponible (js/app.js), qui délègue
+        // ensuite à Combat.doublerDeplacement (ajoute _deplacementMax(p) une
+        // seconde fois au déplacement restant, sans coût d'action —
+        // contrairement à Sprint).
+        rare: { passif: { bonusDeplacement: 1 }, evenement: "doublerDeplacement", usage: { frequence: "1x/combat" }, effets: [{ type: "doubleDeplacement" }] },
+        legendaire: { passif: { bonusDeplacement: 2 }, evenement: "doublerDeplacement", usage: { frequence: "2x/combat" }, effets: [{ type: "doubleDeplacement" }] },
+      } },
     { id: "esquivantes", nom: "esquivantes", rare: "+1 case de déplacement ; +1 DEF contre les attaques d'opportunité", legendaire: "+2 cases de déplacement ; +2 DEF contre les attaques d'opportunité, jamais pris au dépourvu" },
   ],
   gants_voleur: [
@@ -536,7 +548,22 @@ const EFFETS_PAR_ITEM = {
         legendaire: { evenement: "subitAttaque", usage: { frequence: "2x/combat" }, effets: [{ type: "esquive" }],
           note: "+2 DEF contre la première attaque du combat — même limite qu'au palier rare, à arbitrer manuellement." },
       } },
-    { id: "evanescente", nom: "évanescente", rare: "+1 DEF contre la première attaque ; 1 fois par combat, disparaît de la vue 1 tour (Discrétion totale)", legendaire: "+2 DEF contre la première attaque ; 2 fois par combat, disparaît de la vue 1 tour" },
+    { id: "evanescente", nom: "évanescente", rare: "+1 DEF contre la première attaque ; 1 fois par combat, disparaît de la vue 1 tour (Discrétion totale)", legendaire: "+2 DEF contre la première attaque ; 2 fois par combat, disparaît de la vue 1 tour",
+      mecanique: {
+        // evenement "disparition" (cf. lot "malgré la limite") : DÉCLENCHÉ
+        // PAR LE JOUEUR (bouton dédié, pas une réaction) — pose l'état
+        // "invisible" (js/etats.js, déjà défini : "non ciblable tant que le
+        // porteur n'a pas lui-même attaqué...") sur SOI-MÊME, même
+        // vocabulaire effets[] "etat" que les autres affixes (éblouissant
+        // pose "aveuglee" sur l'ATTAQUANT ; ici, pas de cible: "attaquant",
+        // l'effet vise le porteur par défaut). +1/+2 DEF contre la première
+        // attaque : même limite qu'"insaisissable" ci-dessus (aucun tracker
+        // de "première attaque" dans l'app), laissé en note.
+        rare: { evenement: "disparition", usage: { frequence: "1x/combat" }, effets: [{ type: "etat", id: "invisible", duree: "1" }],
+          note: "+1 DEF contre la première attaque du combat — aucun tracker de \"première attaque\" dans l'app, à arbitrer manuellement." },
+        legendaire: { evenement: "disparition", usage: { frequence: "2x/combat" }, effets: [{ type: "etat", id: "invisible", duree: "1" }],
+          note: "+2 DEF contre la première attaque du combat — même limite qu'au palier rare, à arbitrer manuellement." },
+      } },
   ],
 
   // ── Armes (suite) ──────────────────────────────────────────
@@ -702,6 +729,11 @@ const Raretes = (() => {
       clone.porteeMaxCases = passif.porteeMaxCases;
       clone.porteeMinCases = passif.porteeMinCases || 0;
     }
+    // bonusDeplacement (cf. "fulgurantes", bottes_vitesse, lot "malgré la
+    // limite") : même convention additive que bonusDEF/bonusInitiative —
+    // lu par Combat._deplacementMax() (js/combat.js), même somme générique
+    // sur les items équipés que le don Mobile (+1 case).
+    if (passif.bonusDeplacement) clone.bonusDeplacement = (item.bonusDeplacement || 0) + passif.bonusDeplacement;
   }
 
   // mecanique[palier] (rare/legendaire) -> effets sur le clone, commun aux 4

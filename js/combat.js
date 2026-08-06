@@ -121,6 +121,11 @@ const Combat = (() => {
     if ((p.etatsActifs || []).some((e) => e.idEtat === "forme_loup")) bonus += 2;
     // Malus de proficience d'armure (-2, cf. Personnage.estArmureNonMaitrisee).
     if (Personnage.estArmureNonMaitrisee(p)) bonus -= 2;
+    // bottes_vitesse.fulgurantes/esquivantes (cf. lot "malgré la limite") :
+    // bonus fixe d'équipement, même convention que bonusInitiative/bonusDEF
+    // (js/raretes.js) — sommé génériquement sur tous les items équipés,
+    // comme le don Mobile ci-dessus.
+    bonus += Personnage.depuisJSON(p)._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDeplacement || 0), 0);
     return DEPLACEMENT_BASE + bonus;
   }
 
@@ -487,6 +492,24 @@ const Combat = (() => {
     _sauver(etat);
   }
 
+  // bottes_vitesse.fulgurantes (cf. lot "malgré la limite") : double le
+  // déplacement du tour SANS consommer l'action principale (contrairement à
+  // Sprint) — usage (1x/2x combat) vérifié/consommé côté app.js
+  // (_itemDoubleDeplacementDisponible), cette fonction ajoute juste
+  // _deplacementMax(p) une seconde fois à ce qu'il reste ce tour (même
+  // principe additif que sprint() ci-dessus — "double" le total du tour,
+  // quel que soit ce qui a déjà été dépensé). Renvoie le montant ajouté
+  // (0 si l'entrée est introuvable), pour le message côté appelant.
+  function doublerDeplacement(persoId) {
+    const etat = _lire();
+    const entree = etat.ordre.find((e) => e.id === persoId && e.type === "pj");
+    if (!entree) return 0;
+    const montant = _deplacementMax(App.chargerPersos()[persoId]);
+    entree.deplacementRestant = (entree.deplacementRestant || 0) + montant;
+    _sauver(etat);
+    return montant;
+  }
+
   // Action secondaire (boire une potion, utiliser un parchemin, relever un
   // allié...) — un seul flag, pas de sous-catégorie automatisée.
   function utiliserActionSecondaire(persoId) {
@@ -607,6 +630,7 @@ const Combat = (() => {
     utiliserActionPrincipale,
     accorderActionPrincipaleBonus,
     sprint,
+    doublerDeplacement,
     utiliserActionSecondaire,
     reinitialiserActions,
   };

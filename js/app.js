@@ -1721,6 +1721,7 @@ const App = (() => {
       ${htmlBlocInitiativeJoueur(id)}
       ${htmlBlocChance(p, perso)}
       ${htmlBlocPierreChance(id, p)}
+      ${htmlBlocDisparition(id, p)}
       ${htmlBlocCorruption(p, perso)}
       ${htmlBlocIllusions(p, perso)}
       ${htmlBlocAmes(p, perso)}
@@ -1851,6 +1852,8 @@ const App = (() => {
     if (btnDeplacementPlus) btnDeplacementPlus.onclick = () => { Combat.ajusterDeplacement(id, 1); rendreFicheSidebarBattlemap(id); };
     const btnSprint = document.getElementById("bm-sprint");
     if (btnSprint) btnSprint.onclick = () => { Combat.sprint(id); toast(`Sprint : +${Combat.SPRINT_BONUS} cases de déplacement.`); rendreFicheSidebarBattlemap(id); };
+    const btnDoubleDeplacement = document.getElementById("bm-double-deplacement");
+    if (btnDoubleDeplacement) btnDoubleDeplacement.onclick = () => { _declencherDoubleDeplacement(id); rendreFicheSidebarBattlemap(id); };
     const btnActionSecondaire = document.getElementById("bm-action-secondaire");
     if (btnActionSecondaire) btnActionSecondaire.onclick = () => { Combat.utiliserActionSecondaire(id); rendreFicheSidebarBattlemap(id); };
     const btnReinitActions = document.getElementById("bm-reinit-actions");
@@ -4795,6 +4798,11 @@ const App = (() => {
     const entree = Combat.etatCourant().ordre.find((e) => e.type === "pj" && e.id === persoId);
     if (!entree) return "";
     const base = Combat.DEPLACEMENT_BASE || 5;
+    // "fulgurantes" (bottes_vitesse, cf. lot "malgré la limite") : bouton
+    // SANS coût d'action (contrairement à Sprint) — usage vérifié ici, pas
+    // gaté par actionPrincipaleUtilisee.
+    const p = chargerPersos()[persoId];
+    const doubleDeplacementDispo = p && _itemDoubleDeplacementDisponible(p);
     return `<div class="carte">
       <h3 style="margin-top:0;">Actions du tour</h3>
       <div class="stats-rapides">
@@ -4819,6 +4827,7 @@ const App = (() => {
       <div class="barre-actions" style="margin-top:6px;">
         ${!entree.actionPrincipaleUtilisee ? `<button class="btn petit secondaire" id="bm-sprint" title="Consomme l'action principale sans attaquer, contre +${Combat.SPRINT_BONUS || 2} cases">🏃 Sprint (+${Combat.SPRINT_BONUS || 2} cases)</button>` : ""}
         ${!entree.actionSecondaireUtilisee ? `<button class="btn petit secondaire" id="bm-action-secondaire" title="Boire une potion, utiliser un parchemin, relever un allié...">Action secondaire</button>` : ""}
+        ${doubleDeplacementDispo ? `<button class="btn petit or" id="bm-double-deplacement" title="${echapper(doubleDeplacementDispo.it.nom)} : double le déplacement de ce tour, sans coût d'action">🥾 Doubler le déplacement</button>` : ""}
         <button class="btn petit secondaire" id="bm-reinit-actions" title="Réinitialise sans attendre le prochain tour (correction de table)">↺</button>
       </div>
     </div>`;
@@ -4879,6 +4888,22 @@ const App = (() => {
       <h3 style="margin-top:0;">🍀 ${echapper(dispo.it.nom)}</h3>
       <p class="aide" style="margin:0 0 6px;">Dernier jet : <strong>${echapper(dernierJetRelancable.label)}</strong> (${dernierJetRelancable.total}). Si tu l'estimes raté, tu peux le relancer.</p>
       <button class="btn petit or" data-relancer-jet="${echapper(persoId)}">🍀 Relancer ce jet</button>
+    </div>`;
+  }
+
+  // Bloc "Disparition" (cape_brume.evanescente, cf. lot "malgré la limite") :
+  // visible pour CE PJ uniquement s'il porte l'objet ET dispose encore d'un
+  // usage — même patron que htmlBlocPierreChance (action à la demande, pas
+  // liée à une fenêtre de réaction). Pas de bouton pour le volet "+1/+2 DEF
+  // contre la première attaque" (cf. note sur la mecanique) — laissé à
+  // l'arbitrage manuel, même limite qu'"insaisissable".
+  function htmlBlocDisparition(persoId, p) {
+    const dispo = _itemDisparitionDisponible(p);
+    if (!dispo) return "";
+    return `<div class="carte">
+      <h3 style="margin-top:0;">🌫️ ${echapper(dispo.it.nom)}</h3>
+      <p class="aide" style="margin:0 0 6px;">Disparaît de la vue (Discrétion totale) pendant 1 tour.</p>
+      <button class="btn petit or" data-disparaitre="${echapper(persoId)}">🌫️ Disparaître</button>
     </div>`;
   }
 
@@ -5648,6 +5673,10 @@ const App = (() => {
     // d20 de CE PJ, jugé "raté" par le joueur lui-même.
     racine.querySelectorAll("[data-relancer-jet]").forEach((el) => {
       el.onclick = () => { _relancerDernierJet(id); rafraichir(); };
+    });
+    // Disparition (cape_brume.evanescente, cf. htmlBlocDisparition).
+    racine.querySelectorAll("[data-disparaitre]").forEach((el) => {
+      el.onclick = () => { _declencherDisparition(id); rafraichir(); };
     });
     // Désengagement (homebrew, attaque d'opportunité, cf. htmlBlocDesengagement) :
     // un jet de FOR (poussée) par adversaire actuellement adjacent, opposé à
@@ -6988,6 +7017,7 @@ const App = (() => {
           ${htmlBlocInitiativeJoueur(id)}
           ${htmlBlocChance(p, perso)}
           ${htmlBlocPierreChance(id, p)}
+          ${htmlBlocDisparition(id, p)}
           ${htmlBlocCorruption(p, perso)}
           ${htmlBlocIllusions(p, perso)}
           ${htmlBlocAmes(p, perso)}
@@ -10132,6 +10162,79 @@ const App = (() => {
       }
     }
     return null;
+  }
+
+  // Item équipé portant un doublement de déplacement "doublerDeplacement"
+  // disponible (cf. "fulgurantes", bottes_vitesse, lot "malgré la limite") —
+  // même patron que les autres _item*Disponible.
+  function _itemDoubleDeplacementDisponible(p) {
+    if (!p) return null;
+    const perso = Personnage.depuisJSON(p);
+    for (const it of perso._itemsEquipesUniques()) {
+      if (!it.declencheurs) continue;
+      for (const d of it.declencheurs) {
+        if (d.evenement !== "doublerDeplacement") continue;
+        if (!Array.isArray(d.effets) || !d.effets.some((e) => e.type === "doubleDeplacement")) continue;
+        const usage = _verifierUsageDeclencheur(p, it, d);
+        if (usage.ok) return { it, d, usage };
+      }
+    }
+    return null;
+  }
+
+  // Réponse au bouton "Doubler le déplacement" (cf. htmlBlocActionsDuTour) :
+  // consomme l'usage de l'item, délègue le calcul/l'application à
+  // Combat.doublerDeplacement (js/combat.js — ajoute _deplacementMax(p) au
+  // déplacement restant, sans coût d'action), puis toast.
+  function _declencherDoubleDeplacement(persoId) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    const dispo = p && _itemDoubleDeplacementDisponible(p);
+    if (!dispo) { toast("Doublement du déplacement indisponible."); return; }
+    dispo.usage.appliquer();
+    sauverPersos(persos);
+    const montant = (typeof Combat !== "undefined" && Combat.doublerDeplacement) ? Combat.doublerDeplacement(persoId) : 0;
+    toast(`🥾 ${dispo.it.nom} : déplacement doublé (+${montant} cases ce tour).`);
+  }
+
+  // Item équipé portant une disparition "disparition" disponible (cf.
+  // "evanescente", cape_brume, lot "malgré la limite") — même patron que les
+  // autres _item*Disponible.
+  function _itemDisparitionDisponible(p) {
+    if (!p) return null;
+    const perso = Personnage.depuisJSON(p);
+    for (const it of perso._itemsEquipesUniques()) {
+      if (!it.declencheurs) continue;
+      for (const d of it.declencheurs) {
+        if (d.evenement !== "disparition") continue;
+        if (!Array.isArray(d.effets) || !d.effets.some((e) => e.type === "etat")) continue;
+        const usage = _verifierUsageDeclencheur(p, it, d);
+        if (usage.ok) return { it, d, usage };
+      }
+    }
+    return null;
+  }
+
+  // Réponse au bouton "Disparaître" (cf. htmlBlocDisparition) : consomme
+  // l'usage puis pose l'état porté par l'effet "etat" du déclencheur (id
+  // "invisible", cf. js/etats.js) sur le porteur lui-même, via
+  // _appliquerEtatSurCibleRaw (même chemin que les autres déclencheurs
+  // d'équipement — respecte l'immunité "Liberté d'action" au passage).
+  function _declencherDisparition(persoId) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    const dispo = p && _itemDisparitionDisponible(p);
+    if (!dispo) { toast("Disparition indisponible."); return; }
+    const effetEtat = dispo.d.effets.find((e) => e.type === "etat");
+    dispo.usage.appliquer();
+    sauverPersos(persos);
+    const entree = {
+      idEtat: effetEtat.id,
+      dureeRestante: Object.assign(_resoudreDureeToursMonstre(effetEtat.duree || "", null), { dureeAffichee: effetEtat.duree || null }),
+      source: dispo.it.nom, poseLe: Date.now(),
+    };
+    const res = _appliquerEtatSurCibleRaw("pj:" + persoId, effetEtat.id, entree);
+    toast(res.applique ? `🌫️ ${dispo.it.nom} : ${res.message}` : (res.message || "Disparition indisponible."));
   }
 
   // Répondants éligibles à la fenêtre "subitAttaque" (cf. "Prototype du
