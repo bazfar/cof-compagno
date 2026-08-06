@@ -175,8 +175,14 @@ function validerEffets(effets, signaler) {
     // distance courte, doublement du déplacement) est portée par la fenêtre
     // de réaction ou par app.js/combat.js directement (subitAttaque/
     // sortLance/critiqueSubi/jetArme/doublerDeplacement), pas par ces effets.
-    if (e.type === "reductionDegats" && !(typeof e.fraction === "number" && e.fraction > 0 && e.fraction <= 1)) {
+    // fraction (défaut, cf. "absorbant") OU valeur (flat, cf. "protectrice
+    // mithril" légendaire, lot "armures C" — absorbe 1 dégât MAGIQUE fixe par
+    // tour plutôt qu'une fraction) — jamais les deux à la fois sur un même effet.
+    if (e.type === "reductionDegats" && e.valeur === undefined && !(typeof e.fraction === "number" && e.fraction > 0 && e.fraction <= 1)) {
       signaler(`${p}.fraction devrait être un nombre entre 0 (exclu) et 1, reçu ${JSON.stringify(e.fraction)}.`);
+    }
+    if (e.type === "reductionDegats" && e.valeur !== undefined && !(Number.isInteger(e.valeur) && e.valeur > 0)) {
+      signaler(`${p}.valeur devrait être un entier > 0, reçu ${JSON.stringify(e.valeur)}.`);
     }
     // relance : garderMeilleur (optionnel, cf. "insistante" légendaire) doit
     // être un booléen quand présent — absent/false = relance standard

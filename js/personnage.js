@@ -1326,6 +1326,20 @@ class Personnage extends Entite {
   bonusReductionPhysiqueEquipement() {
     return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusReductionPhysique || 0), 0);
   }
+  // Résistances élémentaires — "résistante" (armure_ecailles, type "feu" fixe)
+  // et "renforcé"/"polyvalent" (anneau_resistance, type(s) choisi(s) par le
+  // joueur à l'équipement, cf. js/app.js _resoudreChoixResistanceSiBesoin),
+  // lot "armures C" cluster résistances : item.resistanceElementaire est un
+  // tableau [{type, valeur}], sommé sur tous les objets équipés PUIS filtré
+  // sur le type demandé — deux sources différentes (torse + bague) résistant
+  // au même élément s'additionnent, contrairement à fractionReductionChute
+  // (un seul torse possible) qui écrasait au lieu de sommer.
+  reductionElementaireEquipement(typeElement) {
+    return this._itemsEquipesUniques().reduce((t, it) => {
+      const entree = (it.resistanceElementaire || []).find((r) => r.type === typeElement);
+      return t + (entree ? entree.valeur : 0);
+    }, 0);
+  }
   // Affixes "imposante" (demi_plaques) et "glissante" (armure_ecailles), cf.
   // lot "armures B" : bonus de DEF conditionnel selon le TYPE d'attaque
   // subie — jamais dans calculerCA() (qui n'a aucune notion d'attaque en

@@ -401,6 +401,9 @@ const EFFETS_PAR_ITEM = {
       } },
   ],
   cotte_runique: [
+    // "protectrice" reste TEXTE SEUL : cf. la note détaillée sur
+    // "protectrice_mithril" (cotte_mithril, lot "armures C") pour la raison —
+    // le save concerné par "contre la magie" dépend du sort, jamais fixe.
     { id: "protectrice", nom: "protectrice", rare: "+1 aux jets de résistance contre la magie", legendaire: "+2 aux jets de résistance contre la magie" },
     { id: "reflechissante", nom: "réfléchissante", rare: "1 fois par combat, renvoie 1d4 dégâts magiques subis à l'attaquant", legendaire: "1 fois par combat, renvoie 1d8 dégâts magiques subis à l'attaquant",
       mecanique: {
@@ -417,7 +420,14 @@ const EFFETS_PAR_ITEM = {
         rare: { passif: { bonusDefOpportunite: 1 } },
         legendaire: { passif: { bonusDefOpportunite: 2 }, note: "« Jamais pris au dépourvu » (pas de malus de surprise) — aucune mécanique de surprise automatisée dans l'app, à arbitrer manuellement." },
       } },
-    { id: "resistante", nom: "résistante", rare: "Résistance 1 aux dégâts de feu", legendaire: "Résistance 2 aux dégâts de feu" },
+    { id: "resistante", nom: "résistante", rare: "Résistance 1 aux dégâts de feu", legendaire: "Résistance 2 aux dégâts de feu",
+      mecanique: {
+        // Type FIXE ("feu") — cf. Personnage.reductionElementaireEquipement,
+        // lu sur le paramètre elementDegats de subirDegats (indépendant du
+        // typeDegats physique/magique/naturel/chute).
+        rare: { passif: { resistanceElementaire: [{ type: "feu", valeur: 1 }] } },
+        legendaire: { passif: { resistanceElementaire: [{ type: "feu", valeur: 2 }] } },
+      } },
   ],
   brigandine: [
     { id: "cachee", nom: "dissimulée", rare: "Peut être portée sous des vêtements civils sans être détectée", legendaire: "Idem, + 1 en discrétion" },
@@ -493,6 +503,8 @@ const EFFETS_PAR_ITEM = {
       } },
   ],
   targe_elfique: [
+    // "protectrice" reste TEXTE SEUL : même limite que cotte_runique.protectrice
+    // ci-dessus (cf. note détaillée sur cotte_mithril.protectrice_mithril).
     { id: "protectrice", nom: "protectrice", rare: "+1 aux jets de résistance contre la magie", legendaire: "+2 aux jets de résistance contre la magie" },
     { id: "legere", nom: "légère", rare: "N'inflige aucun malus DEX même combinée à une armure lourde", legendaire: "Idem, + 1 initiative" },
   ],
@@ -573,8 +585,20 @@ const EFFETS_PAR_ITEM = {
     { id: "prestes", nom: "prestes", rare: "+1 Discrétion/Escamotage ; +1 initiative", legendaire: "+2 Discrétion/Escamotage ; +2 initiative, agit en premier au premier tour" },
   ],
   anneau_resistance: [
-    { id: "renforce", nom: "renforcé", rare: "Résistance 2 au type de dégâts choisi", legendaire: "Résistance 3 au type choisi, immunité aux effets secondaires mineurs de ce type" },
-    { id: "polyvalent", nom: "polyvalent", rare: "Résistance 1 à deux types de dégâts au choix", legendaire: "Résistance 2 à deux types de dégâts au choix" },
+    { id: "renforce", nom: "renforcé", rare: "Résistance 2 au type de dégâts choisi", legendaire: "Résistance 3 au type choisi, immunité aux effets secondaires mineurs de ce type",
+      mecanique: {
+        // nbChoix:1 — le joueur choisit UN type (feu/froid/chaos/mental/
+        // sacré) à l'équipement, cf. js/app.js _resoudreChoixResistanceSiBesoin.
+        rare: { passif: { resistanceElementaireEnAttente: { nbChoix: 1, valeur: 2 } } },
+        legendaire: { passif: { resistanceElementaireEnAttente: { nbChoix: 1, valeur: 3 } },
+          note: "Immunité aux effets secondaires mineurs du type choisi — aucun effet secondaire de ce genre n'est automatisé dans l'app (poison/peur/etc. déjà purement descriptifs), rien à arbitrer de plus." },
+      } },
+    { id: "polyvalent", nom: "polyvalent", rare: "Résistance 1 à deux types de dégâts au choix", legendaire: "Résistance 2 à deux types de dégâts au choix",
+      mecanique: {
+        // nbChoix:2 — même choix, mais deux types distincts.
+        rare: { passif: { resistanceElementaireEnAttente: { nbChoix: 2, valeur: 1 } } },
+        legendaire: { passif: { resistanceElementaireEnAttente: { nbChoix: 2, valeur: 2 } } },
+      } },
   ],
   pierre_chance: [
     { id: "insistante", nom: "insistante", rare: "2 fois par jour, relance un jet raté", legendaire: "3 fois par jour, relance un jet raté (garde le meilleur résultat)",
@@ -701,8 +725,34 @@ const EFFETS_PAR_ITEM = {
 
   // ── Armures (suite) ────────────────────────────────────────
   cotte_mithril: [
-    { id: "legere_air", nom: "légère comme l'air", rare: "+1 case de déplacement", legendaire: "+2 cases de déplacement" },
-    { id: "protectrice_mithril", nom: "protectrice", rare: "+1 aux jets de résistance contre la magie", legendaire: "+2 aux jets de résistance, absorbe automatiquement 1 dégât magique par tour" },
+    { id: "legere_air", nom: "légère comme l'air", rare: "+1 case de déplacement", legendaire: "+2 cases de déplacement",
+      mecanique: {
+        // Même passif que "endurante" (manteau_voyageur) — cf. lot "armures A".
+        rare: { passif: { bonusDeplacement: 1 } },
+        legendaire: { passif: { bonusDeplacement: 2 } },
+      } },
+    { id: "protectrice_mithril", nom: "protectrice", rare: "+1 aux jets de résistance contre la magie", legendaire: "+2 aux jets de résistance, absorbe automatiquement 1 dégât magique par tour",
+      mecanique: {
+        // "+X aux jets de résistance contre la magie" (rare et le premier
+        // segment du légendaire) : reste TEXTE SEUL, cf. note générale sur le
+        // cluster "jets de résistance" plus haut dans ce fichier (§ lot
+        // "armures C") — Personnage.modSauvegarde n'a aucune notion de "cette
+        // sauvegarde est faite contre un effet magique", contrairement à
+        // Verdict/Vœu inébranlable (SAG→Volonté fixe) : ici le save concerné
+        // dépend du SORT (Reflexes pour une boule de feu, Vigueur pour un
+        // poison magique, Volonté pour une charme...), jamais fixe — même
+        // limite déjà documentée en dur dans le bloc "Jets de sauvegarde" de
+        // la fiche (cf. afficherFiche : "bonus conditionnels (vs magie...) ne
+        // sont pas encore chiffrés ici"). amulette_prot
+        // (data/loot.js, "+1 à tous les jets de résistance") porte exactement
+        // la même limite, non résolue non plus.
+        // Le second segment du légendaire (absorption automatique), lui, EST
+        // mécanisable : reductionDegats à valeur FLAT plutôt que fraction (cf.
+        // "absorbant"), 1x/tour (remis à zéro par Combat._reinitialiserActionsEntree,
+        // comme toute autre capacité "1x/tour"), restreint aux dégâts magiques
+        // via typeDegats — lu par _reduireDegatsSubisSiDisponible, AVANT subirDegats.
+        legendaire: { evenement: "subitContact", typeDegats: "magique", usage: { frequence: "1x/tour" }, effets: [{ type: "reductionDegats", valeur: 1 }] },
+      } },
   ],
   armure_ossements: [
     { id: "macabre", nom: "macabre", rare: "+1 en intimidation, effraie les créatures vivantes de faible dangerosité", legendaire: "+2 en intimidation, immunise contre la Terreur",
@@ -850,6 +900,18 @@ const Raretes = (() => {
     // rareté) : dé roulé UNE SEULE FOIS à l'équipement, jamais additif —
     // écrasement direct comme fractionReductionChute.
     if (passif.bonusPvMaxDe) clone.bonusPvMaxDe = passif.bonusPvMaxDe;
+    // resistanceElementaire (cf. "résistante", armure_ecailles, type "feu"
+    // FIXE — lot "armures C" cluster résistances) : tableau [{type,valeur}],
+    // écrasement direct comme fractionReductionChute/bonusPvMaxDe — la somme
+    // ENTRE objets équipés se fait côté Personnage.reductionElementaireEquipement,
+    // pas ici.
+    if (passif.resistanceElementaire) clone.resistanceElementaire = passif.resistanceElementaire;
+    // resistanceElementaireEnAttente (cf. "renforcé"/"polyvalent",
+    // anneau_resistance — type(s) CHOISI(S) par le joueur, pas fixe) :
+    // {nbChoix, valeur}, résolu en resistanceElementaire au premier
+    // équipement de CETTE instance (cf. js/app.js
+    // _resoudreChoixResistanceSiBesoin), même principe que bonusPvMaxDe.
+    if (passif.resistanceElementaireEnAttente) clone.resistanceElementaireEnAttente = passif.resistanceElementaireEnAttente;
   }
 
   // mecanique[palier] (rare/legendaire) -> effets sur le clone, commun aux 4

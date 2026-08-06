@@ -1200,7 +1200,11 @@ const App = (() => {
         if (!effetReduction) return;
         const usage = _verifierUsageDeclencheur(p, it, d);
         if (!usage.ok) return;
-        totalAjuste = Math.floor(total * (1 - (effetReduction.fraction || 0.5)));
+        // valeur (flat, cf. "protectrice mithril" légendaire, lot "armures C")
+        // OU fraction (défaut, cf. "absorbant") — jamais les deux sur un même effet.
+        totalAjuste = effetReduction.valeur !== undefined
+          ? Math.max(0, total - effetReduction.valeur)
+          : Math.floor(total * (1 - (effetReduction.fraction || 0.5)));
         if (usage.appliquer) usage.appliquer();
         modifie = true;
         messagesToast.push(`${it.nom} : dégâts réduits à ${totalAjuste} (au lieu de ${total}).`);
@@ -5740,7 +5744,7 @@ const App = (() => {
             const total = lancerFormule(r.degats, `${m.nom} — ${r.nom} (dégâts, attaque d'opportunité)`, resolution.critique, { estMonstre: true });
             if (typeof total === "number") {
               const typeDegatsNormalise = r.typedegats && r.typedegats.startsWith("physique") ? "physique" : "magique";
-              subirDegats(id, total, typeDegatsNormalise);
+              subirDegats(id, total, typeDegatsNormalise, undefined, undefined, undefined, r.elementaire);
               messages.push(`  → touché${resolution.critique ? " CRITIQUE" : ""} : ${total} dégâts subis.`);
             }
           }
@@ -6205,6 +6209,43 @@ const App = (() => {
     item.bonusPvMax = total;
   }
 
+  // Types de dégâts sélectionnables pour une résistance "au choix" (cf.
+  // "renforcé"/"polyvalent", anneau_resistance, lot "armures C" — cluster
+  // résistances) — même vocabulaire que le sélecteur "Élément" du formulaire
+  // "Subir des dégâts" (cf. blocDegatsSubisHtml), + "physique"/"magique" que
+  // ce sélecteur-là ne propose pas (lui gère déjà ces deux via typeDegats).
+  const CHOIX_RESISTANCE_ELEMENTAIRE = [
+    { id: "physique", label: "Physique" },
+    { id: "magique", label: "Magique" },
+    { id: "feu", label: "Feu" },
+    { id: "froid", label: "Froid" },
+    { id: "chaos", label: "Chaos" },
+    { id: "mental", label: "Mental" },
+    { id: "sacre", label: "Sacré" },
+  ];
+  // Résout le(s) type(s) de résistance élémentaire "au choix" d'un objet (cf.
+  // resistanceElementaireEnAttente, js/raretes.js) UNE SEULE FOIS, à la
+  // première mise en équipement de CETTE instance — fige le résultat dans
+  // resistanceElementaire, jamais rejoué ensuite (même principe que
+  // _resoudreDePvMaxSiBesoin ci-dessus). prompt() peut être bloqué/indisponible
+  // (même remarque qu'ailleurs dans ce fichier) : un rejet retombe sur le
+  // premier type de la liste plutôt que de laisser l'objet sans résistance.
+  function _resoudreChoixResistanceSiBesoin(item) {
+    if (!item || !item.resistanceElementaireEnAttente || item.resistanceElementaire !== undefined) return;
+    const { nbChoix, valeur } = item.resistanceElementaireEnAttente;
+    const choisis = [];
+    for (let i = 0; i < nbChoix; i++) {
+      const options = CHOIX_RESISTANCE_ELEMENTAIRE.filter((o) => !choisis.some((c) => c.type === o.id));
+      let saisie = "";
+      try {
+        saisie = prompt(`${item.nom} — choisis le type de dégâts résisté (${i + 1}/${nbChoix}) parmi : ${options.map((o) => o.label).join(", ")}`, options[0].id) || "";
+      } catch (e) { saisie = ""; }
+      const trouve = options.find((o) => o.id === saisie.trim().toLowerCase()) || options[0];
+      choisis.push({ type: trouve.id, valeur });
+    }
+    item.resistanceElementaire = choisis;
+  }
+
   // Applique un delta de PV max lié à l'équipement (accessoires à
   // bonusPvMax, ex. Amulette de santé) aux PV actuels — même principe que le
   // recalcul manuel (btn-recalculer-pv) ou le Don Robuste, mais ciblé sur ce
@@ -6234,6 +6275,7 @@ const App = (() => {
       ? slotPref
       : (slotsPossibles.find((s) => !perso.equipement[s]) || slotsPossibles[0]);
     _resoudreDePvMaxSiBesoin(item);
+    _resoudreChoixResistanceSiBesoin(item);
     const ancien = perso.equiper(slot, item);
     if (ancien === undefined) { toast("Cet objet ne peut pas être équipé dans cet emplacement."); return; }
     perso.inventaireListe.splice(idx, 1);
@@ -7529,7 +7571,7 @@ const App = (() => {
   // peuple rang 3, cf. Personnage.aRempart()) — condition "protège
   // activement un allié" non trackable automatiquement, déclarée par le
   // joueur à chaque jet, réduit de 2 les dégâts (tout type confondu).
-  function subirDegats(id, degatsBruts, typeDegats, coeurMontagneArme, rempartArme, ignoreReduction) {
+  function subirDegats(id, degatsBruts, typeDegats, coeurMontagneArme, rempartArme, ignoreReduction, elementDegats) {
     degatsBruts = parseInt(degatsBruts, 10);
     if (isNaN(degatsBruts) || degatsBruts < 0) { toast("Entre un nombre de dégâts valide."); return; }
     const persos = chargerPersos();
@@ -7592,7 +7634,16 @@ const App = (() => {
     // item.reductionDegats (qui réduit tous les types), même garde-fou
     // typeDegats === "physique" que reductionLourde ci-dessus.
     const reductionEquipementPhysique = typeDegats === "physique" ? perso.bonusReductionPhysiqueEquipement() : 0;
-    const reductionFlatTotale = reductionLourde + reductionNaturelle + reductionArmure + reductionRempart + reductionEquipementPhysique;
+    // Résistances élémentaires (cf. "résistante"/armure_ecailles,
+    // "renforcé"/"polyvalent"/anneau_resistance, lot "armures C" — cluster
+    // résistances) : dimension INDÉPENDANTE de typeDegats (physique/magique/
+    // naturel/chute) — une attaque "magique" élémentaire (ex. Toucher glacial,
+    // typedegats magique + elementaire froid) reste "magique" pour
+    // Sanctuaire/réfléchissante, ET "froid" pour cette résistance-ci, d'où le
+    // paramètre elementDegats séparé plutôt qu'une 5e valeur du sélecteur
+    // typeDegats. Cf. Personnage.reductionElementaireEquipement.
+    const reductionEquipementElementaire = elementDegats ? perso.reductionElementaireEquipement(elementDegats) : 0;
+    const reductionFlatTotale = reductionLourde + reductionNaturelle + reductionArmure + reductionRempart + reductionEquipementPhysique + reductionEquipementElementaire;
     let degatsNets = Math.max(0, degatsBruts - reductionFlatTotale);
     // Demi-Orc — Résistance Instinctive (rang racial 3) : -3 dégâts quand le
     // résultat passerait sous la moitié des PV max.
@@ -7638,6 +7689,7 @@ const App = (() => {
       if (reductionNaturelle > 0) sources.push("résistance naturelle");
       if (reductionRempart > 0) sources.push("Rempart");
       if (reductionEquipementPhysique > 0) sources.push("affixe");
+      if (reductionEquipementElementaire > 0) sources.push(`résistance ${elementDegats}`);
       const suffixeReduction = sources.length ? ` après réduction (${sources.join(" + ")}, −${reductionFlatTotale})` : "";
       const suffixeChaos = formeChaosActive ? " puis divisés par 2 (Forme du chaos sauvage)"
         : formeOursActive ? " puis divisés par 2 (Forme animale — Ours)"
@@ -7678,24 +7730,35 @@ const App = (() => {
           <option value="naturel">Naturel (froid/chaleur/chute/poison/animal)</option>
           <option value="chute">Chute (cf. "robuste", armure_cloute)</option>
         </select>
+        <select id="${prefixe}element-degats-subis" title="Élément (cumulable avec le type ci-dessus — cf. Toucher glacial : magique + froid) : lu par les résistances élémentaires (anneau_resistance, armure_ecailles)">
+          <option value="" selected>Aucun élément</option>
+          <option value="feu">Feu</option>
+          <option value="froid">Froid</option>
+          <option value="chaos">Chaos</option>
+          <option value="mental">Mental</option>
+          <option value="sacre">Sacré</option>
+        </select>
         ${coeurMontagneDispo ? `<label style="display:flex;align-items:center;gap:4px;font-size:0.78rem;"><input type="checkbox" id="${prefixe}coeur-montagne" /> 🏔 Cœur de Montagne (annule ces dégâts, 1x/jour)</label>` : ""}
         ${rempartDispo ? `<label style="display:flex;align-items:center;gap:4px;font-size:0.78rem;"><input type="checkbox" id="${prefixe}rempart" /> 🛡️ Rempart (protège activement un allié, −2)</label>` : ""}
         <button class="btn petit or" id="${prefixe}btn-appliquer-degats">Appliquer</button>
       </div>`;
   }
   function wireDegatsSubis(id, prefixe) {
-    wireDegatsSubisGenerique(prefixe, (val, typeDegats, coeurMontagneArme, rempartArme) => subirDegats(id, val, typeDegats, coeurMontagneArme, rempartArme));
+    wireDegatsSubisGenerique(prefixe, (val, typeDegats, coeurMontagneArme, rempartArme, elementDegats) =>
+      subirDegats(id, val, typeDegats, coeurMontagneArme, rempartArme, undefined, elementDegats));
   }
 
   // Câblage générique du petit formulaire "Subir des dégâts" (toggle + input +
-  // bouton + Entrée) : `appliquer(valeurBrute, typeDegats)` porte la logique
-  // propre à l'appelant (joueur via subirDegats, monstre de la table de
-  // combat, etc. — ce dernier ignore simplement les arguments en trop).
+  // bouton + Entrée) : `appliquer(valeurBrute, typeDegats, ..., elementDegats)`
+  // porte la logique propre à l'appelant (joueur via subirDegats, monstre de
+  // la table de combat, etc. — ce dernier ignore simplement les arguments en
+  // trop).
   function wireDegatsSubisGenerique(prefixe, appliquer) {
     const btnToggle = document.getElementById(`${prefixe}btn-toggle-degats`);
     const form = document.getElementById(`${prefixe}degats-subis-form`);
     const champ = document.getElementById(`${prefixe}champ-degats-bruts`);
     const selType = document.getElementById(`${prefixe}type-degats-subis`);
+    const selElement = document.getElementById(`${prefixe}element-degats-subis`);
     const caseCoeurMontagne = document.getElementById(`${prefixe}coeur-montagne`);
     const caseRempart = document.getElementById(`${prefixe}rempart`);
     if (!btnToggle || !form || !champ) return;
@@ -7704,10 +7767,11 @@ const App = (() => {
       if (form.style.display === "flex") champ.focus();
     };
     const appliquerEtVider = () => {
-      appliquer(champ.value, selType ? selType.value : "physique", !!(caseCoeurMontagne && caseCoeurMontagne.checked), !!(caseRempart && caseRempart.checked));
+      appliquer(champ.value, selType ? selType.value : "physique", !!(caseCoeurMontagne && caseCoeurMontagne.checked), !!(caseRempart && caseRempart.checked), selElement ? selElement.value || null : null);
       champ.value = "";
       if (caseCoeurMontagne) caseCoeurMontagne.checked = false;
       if (caseRempart) caseRempart.checked = false;
+      if (selElement) selElement.value = "";
     };
     document.getElementById(`${prefixe}btn-appliquer-degats`).onclick = appliquerEtVider;
     champ.addEventListener("keydown", (e) => { if (e.key === "Enter") appliquerEtVider(); });
@@ -10883,7 +10947,7 @@ const App = (() => {
           // _gererDeclencheursSubitContact (après) — une fois les PV décomptés,
           // il serait trop tard pour réduire quoi que ce soit.
           const totalAjuste = _reduireDegatsSubisSiDisponible(pjId, total, typeDegatsNormalise);
-          subirDegats(pjId, totalAjuste, typeDegatsNormalise);
+          subirDegats(pjId, totalAjuste, typeDegatsNormalise, undefined, undefined, undefined, r.elementaire);
           // "quand le porteur est touché" (cf. Affixes phase 2 §C, épineuse/
           // renvoyeur) : seulement sur une attaque de CONTACT — r.portee peut
           // valoir "contact" ou "contact +1 case (3m)" (armes d'hast), les
