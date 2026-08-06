@@ -707,8 +707,16 @@ const App = (() => {
   // dans Personnage.calculerCA() (auto-contenu à `this`) — appelée ici à
   // chaque affichage ET résolution de DEF de PJ, pour ne jamais désynchroniser
   // la valeur affichée de la valeur réellement opposée à une attaque.
-  function _defPjAvecAura(perso, persoId) {
+  // typeAttaque (optionnel, cf. lot "armures B" — "imposante"/"glissante") :
+  // "distance" ou "opportunite" ajoutent un bonus de DEF conditionnel à
+  // CETTE résolution précise, jamais à l'affichage général de la DEF (les
+  // 6 autres appels de cette fonction n'en passent pas — afficher "ta DEF"
+  // hors contexte d'attaque ne doit jamais inclure un bonus qui ne s'applique
+  // qu'à un type d'attaque particulier).
+  function _defPjAvecAura(perso, persoId, typeAttaque) {
     let def = perso.calculerCA();
+    if (typeAttaque === "distance") def += perso.bonusDefContreDistance();
+    if (typeAttaque === "opportunite") def += perso.bonusDefContreOpportunite();
     if (typeof Capacites === "undefined") return def;
     if (Capacites.bonusDefAuraPeuple) def += Capacites.bonusDefAuraPeuple(persoId);
     // Chevalier — Voie du protecteur rang 1 "Garde rapprochée" : même
@@ -1768,7 +1776,10 @@ const App = (() => {
           const persosFrais = chargerPersos();
           const pFrais = persosFrais[id];
           const dispoFrais = pFrais && _itemLancerArmeDisponible(pFrais);
-          if (dispoFrais) { dispoFrais.usage.appliquer(); sauverPersos(persosFrais); }
+          // .usage.appliquer absent sans usage.frequence sur le déclencheur
+          // (cf. "tournoyante" légendaire, illimité) — _verifierUsageDeclencheur
+          // renvoie alors {ok:true} nu, rien à consommer.
+          if (dispoFrais) { if (dispoFrais.usage.appliquer) dispoFrais.usage.appliquer(); sauverPersos(persosFrais); }
         }
         // bonusAttaqueConditionnel (affixe "precise", cf. Affixes phase 2 §B) :
         // lu ici, avant le jet — un effet de déclencheur arriverait trop tard.
@@ -2199,7 +2210,10 @@ const App = (() => {
           const persosFrais = chargerPersos();
           const pFrais = persosFrais[id];
           const dispoFrais = pFrais && _itemLancerArmeDisponible(pFrais);
-          if (dispoFrais) { dispoFrais.usage.appliquer(); sauverPersos(persosFrais); }
+          // .usage.appliquer absent sans usage.frequence sur le déclencheur
+          // (cf. "tournoyante" légendaire, illimité) — _verifierUsageDeclencheur
+          // renvoie alors {ok:true} nu, rien à consommer.
+          if (dispoFrais) { if (dispoFrais.usage.appliquer) dispoFrais.usage.appliquer(); sauverPersos(persosFrais); }
         }
         // bonusAttaqueConditionnel (affixe "precise", cf. Affixes phase 2 §B) :
         // lu ici, avant le jet — un effet de déclencheur arriverait trop tard.
@@ -5717,7 +5731,7 @@ const App = (() => {
           const a = attaques && attaques[0];
           const r = a && _resoudreAttaqueMonstre(a);
           if (!r) { messages.push(`  → attaque de ${m.nom} inconnue, à résoudre manuellement.`); return; }
-          const resolution = _resoudreAttaqueMonstreVsPJ(`${m.nom} — ${r.nom} (attaque d'opportunité)`, r.bonusAttaque + _bonusEtatsMonstre(m, "attaque"), r.critMin, id);
+          const resolution = _resoudreAttaqueMonstreVsPJ(`${m.nom} — ${r.nom} (attaque d'opportunité)`, r.bonusAttaque + _bonusEtatsMonstre(m, "attaque"), r.critMin, id, "opportunite");
           if (resolution.echecCritique) {
             messages.push(`  → échec critique automatique (1 naturel), pas de dégâts.`);
           } else if (resolution.touche === false) {
@@ -9727,12 +9741,12 @@ const App = (() => {
   // désavantage sur CE jet précis, indépendamment du sélecteur global
   // mode-d20 — ne couvre que les attaques de monstre résolues ici (pas les
   // capacités, dont le jet d'attaque ne passe pas par lancerTest).
-  function _resoudreAttaqueMonstreVsPJ(label, bonus, critMin, pjId) {
+  function _resoudreAttaqueMonstreVsPJ(label, bonus, critMin, pjId, typeAttaque) {
     const cibleP = pjId ? chargerPersos()[pjId] : null;
     const cible = cibleP ? Personnage.depuisJSON(cibleP) : null;
     const modeForce = cible && cible.aExpertBouclier() ? "desavantage" : null;
     const jet = lancerTest(label, bonus, critMin, modeForce, { estMonstre: true });
-    const defCible = cible ? _defPjAvecAura(cible, pjId) : null;
+    const defCible = cible ? _defPjAvecAura(cible, pjId, typeAttaque) : null;
     const touche = _toucheVsDef(jet, !!pjId, defCible);
     return { touche, critique: jet.crit, echecCritique: jet.echec, totalAttaque: jet.total, defCible };
   }
@@ -10171,6 +10185,27 @@ const App = (() => {
     return null;
   }
 
+  // Item équipé portant un soin "rateSubie" disponible (cf. "drainante",
+  // armure_ombre, lot "armures B") — même patron que les autres
+  // _item*Disponible ; contrairement à la plupart, aucun usage.frequence
+  // dans le texte de l'affixe (proc à chaque attaque de contact ratée, sans
+  // limite) — _verifierUsageDeclencheur renvoie {ok:true} sans effet de
+  // bord en l'absence de champ usage, donc toujours disponible ici.
+  function _itemSoinRateDisponible(p) {
+    if (!p) return null;
+    const perso = Personnage.depuisJSON(p);
+    for (const it of perso._itemsEquipesUniques()) {
+      if (!it.declencheurs) continue;
+      for (const d of it.declencheurs) {
+        if (d.evenement !== "rateSubie") continue;
+        if (!Array.isArray(d.effets) || !d.effets.some((e) => e.type === "soin")) continue;
+        const usage = _verifierUsageDeclencheur(p, it, d);
+        if (usage.ok) return { it, d, usage };
+      }
+    }
+    return null;
+  }
+
   // Item équipé portant un doublement de déplacement "doublerDeplacement"
   // disponible (cf. "fulgurantes", bottes_vitesse, lot "malgré la limite") —
   // même patron que les autres _item*Disponible.
@@ -10374,9 +10409,14 @@ const App = (() => {
   // même lancer le jet — même principe qu'annuler un jet de contresort
   // gagné, appliqué ici à l'issue de l'attaque plutôt qu'à ses effets.
   function _resoudreAttaqueEtSuite(descripteur) {
+    // typeAttaque (cf. lot "armures B" — "imposante"/"glissante") : distingue
+    // contact/distance pour le bonus de DEF conditionnel lu par
+    // _defPjAvecAura (via _resoudreAttaqueMonstreVsPJ ci-dessous) — undefined
+    // sur un forceRate (aucun jet, la DEF n'intervient jamais).
+    const typeAttaque = descripteur.forceRate ? undefined : (descripteur.contact === true ? "contact" : descripteur.contact === false ? "distance" : undefined);
     const resAtt = descripteur.forceRate
       ? { touche: false, critique: false, echecCritique: false, totalAttaque: null, defCible: null, esquiveForcee: true }
-      : _resoudreAttaqueMonstreVsPJ(descripteur.label, descripteur.bonus, descripteur.critMin, descripteur.pjId);
+      : _resoudreAttaqueMonstreVsPJ(descripteur.label, descripteur.bonus, descripteur.critMin, descripteur.pjId, typeAttaque);
     // "protectrice" (Pierre de chance, cf. lot "jour") : contrairement à
     // "insistante" (relance manuelle, cf. _relancerDernierJet), ce volet est
     // un proc AUTOMATIQUE sans choix du joueur — même principe qu'"absorbant"
@@ -10393,6 +10433,30 @@ const App = (() => {
         resAtt.critiqueAnnuleePar = dispo.it.nom;
       }
     }
+    // "drainante" (armure_ombre, cf. lot "armures B") : soigne le porteur
+    // quand une attaque de CONTACT le manque — pas de forceRate (l'attaque
+    // rate déjà pour une autre raison, esquive, rien à "manquer" au sens du
+    // texte) ni d'échec critique (déjà un raté, redondant). Portée à cette
+    // seule voie (arme + capacité à jetAttaque) — l'attaque d'opportunité de
+    // désengagement (cf. tenterDesengagement) appelle _resoudreAttaqueMonstreVsPJ
+    // directement, hors de cette fonction, non couverte ici.
+    if (resAtt.touche === false && !resAtt.esquiveForcee && !resAtt.echecCritique && descripteur.contact === true && descripteur.pjId) {
+      const persos = chargerPersos();
+      const p = persos[descripteur.pjId];
+      const dispo = p && _itemSoinRateDisponible(p);
+      if (dispo) {
+        const effetSoin = dispo.d.effets.find((e) => e.type === "soin");
+        // .usage.appliquer absent sans usage.frequence sur le déclencheur
+        // (cf. "drainante" — aucune limite par combat dans le texte).
+        if (dispo.usage.appliquer) dispo.usage.appliquer();
+        const total = lancerFormule(effetSoin.formule, `${dispo.it.nom} — Soin`, false);
+        if (typeof total === "number") {
+          Personnage.appliquerGainPv(p, total, { ignorerCorruption: true });
+          resAtt.soinDrainante = { itemNom: dispo.it.nom, total };
+        }
+        sauverPersos(persos);
+      }
+    }
     const suite = descripteur.suite || {};
     if (suite.type === "jetMonstreArme") {
       attaquesMonstresEnAttente[`${suite.monstreId}:${suite.idxAttaque}`] = resAtt;
@@ -10403,7 +10467,8 @@ const App = (() => {
           : resAtt.echecCritique ? "1 naturel — échec critique automatique."
           : resAtt.critique ? `CRITIQUE sur ${nomCible} !${resAtt.defCible !== null ? ` (DEF ${resAtt.defCible})` : ""}`
           : resAtt.defCible === null ? "DEF de la cible inconnue — à comparer manuellement."
-          : (resAtt.touche ? `Touché ${nomCible} ! (DEF ${resAtt.defCible})` : `Raté sur ${nomCible} (DEF ${resAtt.defCible}).`));
+          : (resAtt.touche ? `Touché ${nomCible} ! (DEF ${resAtt.defCible})`
+            : `Raté sur ${nomCible} (DEF ${resAtt.defCible})${resAtt.soinDrainante ? ` — 🩹 ${resAtt.soinDrainante.itemNom} : ${nomCible} regagne ${resAtt.soinDrainante.total} PV.` : "."}`));
       }
       rendreTableCombat();
       rendreTableCombat("battlemap-zone-table-combat");
@@ -10610,7 +10675,7 @@ const App = (() => {
         if (e.suite && e.suite.monstreId) ciblesMonstres[e.suite.monstreId] = pjCible;
         if (e.suite && e.suite.type === "capaciteMonstre") suiteEffective = Object.assign({}, e.suite, { pjId: pjCible });
       }
-      _resoudreAttaqueEtSuite({ label: e.attaque.label, bonus: e.attaque.bonus, critMin: e.attaque.critMin, pjId: pjCible, suite: suiteEffective, forceRate });
+      _resoudreAttaqueEtSuite({ label: e.attaque.label, bonus: e.attaque.bonus, critMin: e.attaque.critMin, pjId: pjCible, contact: e.attaque.contact, suite: suiteEffective, forceRate });
       return;
     }
     _resoudreFenetreSortLance(e);

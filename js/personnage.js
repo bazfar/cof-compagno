@@ -1326,6 +1326,18 @@ class Personnage extends Entite {
   bonusReductionPhysiqueEquipement() {
     return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusReductionPhysique || 0), 0);
   }
+  // Affixes "imposante" (demi_plaques) et "glissante" (armure_ecailles), cf.
+  // lot "armures B" : bonus de DEF conditionnel selon le TYPE d'attaque
+  // subie — jamais dans calculerCA() (qui n'a aucune notion d'attaque en
+  // cours), lus uniquement par _defPjAvecAura (js/app.js) au moment de
+  // résoudre une attaque de monstre précise, jamais à l'affichage général
+  // de la DEF.
+  bonusDefContreDistance() {
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDefDistance || 0), 0);
+  }
+  bonusDefContreOpportunite() {
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDefOpportunite || 0), 0);
+  }
   // Affixe de rareté "brutale" (armure_guerre_orque, cf. "Affixes phase 2" §A) :
   // « +1d4/1d6 dégâts avec armes de contact tant que l'armure est équipée ».
   // Seul cas de cette phase où un passif d'UNE pièce (armure) modifie les

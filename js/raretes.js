@@ -351,7 +351,15 @@ const EFFETS_PAR_ITEM = {
       } },
   ],
   demi_plaques: [
-    { id: "imposante", nom: "imposante", rare: "+1 DEF contre les attaques à distance", legendaire: "+2 DEF contre les attaques à distance" },
+    { id: "imposante", nom: "imposante", rare: "+1 DEF contre les attaques à distance", legendaire: "+2 DEF contre les attaques à distance",
+      mecanique: {
+        // bonusDefDistance (cf. lot "armures B") : lu par _defPjAvecAura
+        // uniquement lors de la résolution d'une attaque de type "distance"
+        // (arme à distance OU capacité à jetAttaque, jamais de contact),
+        // jamais dans la DEF générale affichée.
+        rare: { passif: { bonusDefDistance: 1 } },
+        legendaire: { passif: { bonusDefDistance: 2 } },
+      } },
     { id: "ancree", nom: "ancrée", rare: "Résiste automatiquement à un effet de repoussement par combat", legendaire: "Résiste automatiquement à tout effet de repoussement" },
   ],
   plaques_comp: [
@@ -370,7 +378,18 @@ const EFFETS_PAR_ITEM = {
   ],
   armure_ombre: [
     { id: "furtive", nom: "furtive", rare: "Silhouette indétectable dans l'obscurité totale", legendaire: "Idem, et déplacement totalement silencieux" },
-    { id: "drainante", nom: "drainante", rare: "Soigne 1 PV au porteur quand une attaque de contact le manque", legendaire: "Soigne 2 PV au porteur quand une attaque de contact le manque" },
+    { id: "drainante", nom: "drainante", rare: "Soigne 1 PV au porteur quand une attaque de contact le manque", legendaire: "Soigne 2 PV au porteur quand une attaque de contact le manque",
+      mecanique: {
+        // evenement "rateSubie" (cf. lot "armures B") : proc AUTOMATIQUE
+        // (pas de choix du joueur) sur une attaque de CONTACT ratée contre
+        // le porteur — pas d'usage.frequence dans le texte (aucune limite
+        // par combat), lu par _itemSoinRateDisponible/_resoudreAttaqueEtSuite
+        // (js/app.js). Portée à la voie principale (arme + capacité à
+        // jetAttaque) ; l'attaque d'opportunité de désengagement, résolue
+        // hors de cette fonction, n'est pas couverte.
+        rare: { evenement: "rateSubie", effets: [{ type: "soin", formule: "1" }] },
+        legendaire: { evenement: "rateSubie", effets: [{ type: "soin", formule: "2" }] },
+      } },
   ],
   cotte_runique: [
     { id: "protectrice", nom: "protectrice", rare: "+1 aux jets de résistance contre la magie", legendaire: "+2 aux jets de résistance contre la magie" },
@@ -381,7 +400,14 @@ const EFFETS_PAR_ITEM = {
       } },
   ],
   armure_ecailles: [
-    { id: "glissante", nom: "glissante", rare: "+1 DEF contre les attaques d'opportunité", legendaire: "+2 DEF contre les attaques d'opportunité, jamais pris au dépourvu" },
+    { id: "glissante", nom: "glissante", rare: "+1 DEF contre les attaques d'opportunité", legendaire: "+2 DEF contre les attaques d'opportunité, jamais pris au dépourvu",
+      mecanique: {
+        // bonusDefOpportunite (cf. lot "armures B") : lu par _defPjAvecAura
+        // uniquement lors de la résolution d'une AO (cf. tenterDesengagement),
+        // jamais dans la DEF générale affichée.
+        rare: { passif: { bonusDefOpportunite: 1 } },
+        legendaire: { passif: { bonusDefOpportunite: 2 }, note: "« Jamais pris au dépourvu » (pas de malus de surprise) — aucune mécanique de surprise automatisée dans l'app, à arbitrer manuellement." },
+      } },
     { id: "resistante", nom: "résistante", rare: "Résistance 1 aux dégâts de feu", legendaire: "Résistance 2 aux dégâts de feu" },
   ],
   brigandine: [
@@ -782,6 +808,13 @@ const Raretes = (() => {
     // item.reductionDegats (qui réduit tous les types de dégâts, cf.
     // subirDegats), puisque ce bonus-ci est physique uniquement.
     if (passif.bonusReductionPhysique) clone.bonusReductionPhysique = (item.bonusReductionPhysique || 0) + passif.bonusReductionPhysique;
+    // bonusDefDistance/bonusDefOpportunite (cf. "imposante"/"glissante", lot
+    // "armures B") : même convention additive — lus par
+    // Personnage.bonusDefContreDistance()/bonusDefContreOpportunite(), eux-
+    // mêmes lus uniquement par _defPjAvecAura (js/app.js) au moment de
+    // résoudre une attaque du type concerné, jamais dans calculerCA().
+    if (passif.bonusDefDistance) clone.bonusDefDistance = (item.bonusDefDistance || 0) + passif.bonusDefDistance;
+    if (passif.bonusDefOpportunite) clone.bonusDefOpportunite = (item.bonusDefOpportunite || 0) + passif.bonusDefOpportunite;
   }
 
   // mecanique[palier] (rare/legendaire) -> effets sur le clone, commun aux 4

@@ -112,7 +112,11 @@ const TYPES_EFFET_CIBLE_INVERSE = ["degats", "etat"];
 // doublerDeplacement/disparition (cf. "fulgurantes"/"evanescente", lot
 // "malgré la limite") : déclenchés manuellement par le JOUEUR sur son propre
 // tour (boutons dédiés), jamais par _resoudreEffetsDeclencheur.
-const EVENEMENTS_DECLENCHEUR_VALIDES = ["touche", "rate", "critique", "subitContact", "subitAttaque", "sortLance", "relance", "critiqueSubi", "jetArme", "doublerDeplacement", "disparition"];
+// rateSubie (cf. "drainante", armure_ombre, lot "armures B") : PAS "rate"
+// (qui vise le jet du PORTEUR lui-même, ex. malus epee_cupidite) — ici
+// l'inverse, une attaque de contact CONTRE le porteur qui échoue. Proc
+// automatique dans _resoudreAttaqueEtSuite, jamais _resoudreEffetsDeclencheur.
+const EVENEMENTS_DECLENCHEUR_VALIDES = ["touche", "rate", "critique", "subitContact", "subitAttaque", "sortLance", "relance", "critiqueSubi", "jetArme", "doublerDeplacement", "disparition", "rateSubie"];
 // typeDegats sur un déclencheur "subitContact" (cf. "réfléchissante",
 // cotte_runique — ne renvoie que les dégâts magiques subis).
 const TYPES_DEGATS_DECLENCHEUR_VALIDES = ["physique", "magique"];
@@ -231,6 +235,14 @@ function validerPassif(cle, prefix, passif) {
   // "armures A") : même convention — entier, sommé génériquement.
   if (passif.bonusReductionPhysique !== undefined && !Number.isInteger(passif.bonusReductionPhysique)) {
     signalerAffixe(cle, `${prefix}.bonusReductionPhysique devrait être un entier, reçu ${JSON.stringify(passif.bonusReductionPhysique)}.`);
+  }
+  // bonusDefDistance/bonusDefOpportunite (cf. "imposante"/"glissante", lot
+  // "armures B") : même convention — entier, sommé génériquement.
+  if (passif.bonusDefDistance !== undefined && !Number.isInteger(passif.bonusDefDistance)) {
+    signalerAffixe(cle, `${prefix}.bonusDefDistance devrait être un entier, reçu ${JSON.stringify(passif.bonusDefDistance)}.`);
+  }
+  if (passif.bonusDefOpportunite !== undefined && !Number.isInteger(passif.bonusDefOpportunite)) {
+    signalerAffixe(cle, `${prefix}.bonusDefOpportunite devrait être un entier, reçu ${JSON.stringify(passif.bonusDefOpportunite)}.`);
   }
 }
 
