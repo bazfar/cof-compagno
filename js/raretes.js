@@ -403,7 +403,16 @@ const EFFETS_PAR_ITEM = {
     { id: "legere", nom: "légère", rare: "N'inflige aucun malus DEX même combinée à une armure lourde", legendaire: "Idem, + 1 initiative" },
   ],
   bouclier_tour: [
-    { id: "muraille", nom: "muraille", rare: "1 fois par combat, protège aussi un allié adjacent d'une attaque", legendaire: "2 fois par combat, protège un allié adjacent d'une attaque" },
+    { id: "muraille", nom: "muraille", rare: "1 fois par combat, protège aussi un allié adjacent d'une attaque", legendaire: "2 fois par combat, protège un allié adjacent d'une attaque",
+      mecanique: {
+        // intercepte (cf. lot "reflechissant/muraille") : contrairement à
+        // esquive/reductionDegats (répondu par la CIBLE elle-même), ce
+        // déclencheur est offert à tout ALLIÉ adjacent à la cible — filtré
+        // par _repondantsSubitAttaque (js/app.js), pas par porteeRequise ici
+        // (aucune restriction de contact/distance dans le texte de l'affixe).
+        rare: { evenement: "subitAttaque", usage: { frequence: "1x/combat" }, effets: [{ type: "intercepte" }] },
+        legendaire: { evenement: "subitAttaque", usage: { frequence: "2x/combat" }, effets: [{ type: "intercepte" }] },
+      } },
     { id: "inebranlable", nom: "inébranlable", rare: "Résiste automatiquement à un effet de repoussement par combat", legendaire: "Résiste automatiquement à tout effet de repoussement" },
   ],
   bouclier_rond_nain: [
@@ -583,7 +592,17 @@ const EFFETS_PAR_ITEM = {
       } },
   ],
   bouclier_miroir: [
-    { id: "reflechissant", nom: "réfléchissant", rare: "1 fois par combat, renvoie un sort ciblé à son lanceur", legendaire: "2 fois par combat, renvoie un sort ciblé à son lanceur" },
+    { id: "reflechissant", nom: "réfléchissant", rare: "1 fois par combat, renvoie un sort ciblé à son lanceur", legendaire: "2 fois par combat, renvoie un sort ciblé à son lanceur",
+      mecanique: {
+        // reflechitSort (cf. lot "reflechissant/muraille") : réponse
+        // indépendante de Contresort dans la même fenêtre "sortLance",
+        // réservée à la CIBLE du sort (contrairement à Contresort, ouvert à
+        // tout PJ à portée) — cf. _repondantsSortLance/_itemReflechissantDisponible
+        // (js/app.js). Redirige le plan d'effets vers le lanceur au lieu de
+        // l'annuler (cf. redirigerVersLanceur, même chemin que cible:"soi").
+        rare: { evenement: "sortLance", usage: { frequence: "1x/combat" }, effets: [{ type: "reflechitSort" }] },
+        legendaire: { evenement: "sortLance", usage: { frequence: "2x/combat" }, effets: [{ type: "reflechitSort" }] },
+      } },
     { id: "eblouissant", nom: "éblouissant", rare: "1 fois par combat, aveugle un attaquant au contact pendant 1 tour", legendaire: "2 fois par combat, aveugle un attaquant au contact pendant 1 tour",
       mecanique: {
         rare: { evenement: "subitContact", usage: { frequence: "1x/combat" }, effets: [{ type: "etat", id: "aveuglee", duree: "1", cible: "attaquant" }] },

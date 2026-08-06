@@ -4932,26 +4932,51 @@ const App = (() => {
     if (!e || e.reponse || !e.repondants.includes(persoId) || Reactions.estExpiree(e)) return "";
     const secondes = Math.ceil(Reactions.msRestantes(e) / 1000);
     const estAttaque = e.evenement === "subitAttaque";
-    const texte = estAttaque
+    const estCible = estAttaque && persoId === e.cible.persoId;
+    const texte = !estAttaque
+      ? `${echapper(e.source.nom)} lance <strong>${echapper(e.sort.nom)}</strong> (rang ${e.sort.rang}, ${echapper(e.sort.ecole)}) — <span id="reaction-compte-a-rebours">${secondes}</span> s pour réagir.`
+      : estCible
       ? `Tu es visé(e) par une attaque (<strong>${echapper(e.attaque.label)}</strong>) — <span id="reaction-compte-a-rebours">${secondes}</span> s pour réagir.`
-      : `${echapper(e.source.nom)} lance <strong>${echapper(e.sort.nom)}</strong> (rang ${e.sort.rang}, ${echapper(e.sort.ecole)}) — <span id="reaction-compte-a-rebours">${secondes}</span> s pour réagir.`;
-    // Boutons dynamiques (cf. lot "subitAttaque : esquive/réduction") : contrairement
-    // à Contresort (un seul répondant possible), une attaque peut offrir DEUX
-    // réponses indépendantes à la même cible — Bouclier arcanique (sort) ET/OU
-    // une esquive d'équipement (parade/reactifs/insaisissable) — chacune
-    // affichée seulement si réellement disponible à cet instant.
+      // "muraille" (cf. bouclier_tour) : un allié adjacent à la cible voit ce
+      // même bloc, avec un texte et un bouton distincts (Intercepter) — il
+      // n'est jamais lui-même éligible à Bouclier arcanique/Esquive.
+      : `${echapper((chargerPersos()[e.cible.persoId] || {}).nom || "Un allié")} est visé(e) par une attaque (<strong>${echapper(e.attaque.label)}</strong>) — tu peux t'interposer, <span id="reaction-compte-a-rebours">${secondes}</span> s pour réagir.`;
+    // Boutons dynamiques (cf. lots "subitAttaque : esquive/réduction" et
+    // "reflechissant/muraille") : contrairement à l'ancien Contresort (un seul
+    // répondant possible), ces fenêtres peuvent offrir PLUSIEURS réponses
+    // indépendantes à PLUSIEURS répondants différents — chaque bouton affiché
+    // seulement s'il est réellement disponible à cet instant, pour CE PJ précis.
     let boutonsAction;
     if (estAttaque) {
       boutonsAction = "";
-      if (_peutBouclierArcanique(p)) {
-        boutonsAction += `<button class="btn petit or" data-reaction-action="bouclier_arcanique" data-reaction-persoid="${echapper(persoId)}">🛡️ Bouclier arcanique</button>`;
-      }
-      const esquive = _itemEsquiveDisponible(p, e.attaque.contact);
-      if (esquive) {
-        boutonsAction += `<button class="btn petit or" data-reaction-action="esquive" data-reaction-persoid="${echapper(persoId)}">💨 Esquive (${echapper(esquive.it.nom)})</button>`;
+      if (estCible) {
+        if (_peutBouclierArcanique(p)) {
+          boutonsAction += `<button class="btn petit or" data-reaction-action="bouclier_arcanique" data-reaction-persoid="${echapper(persoId)}">🛡️ Bouclier arcanique</button>`;
+        }
+        const esquive = _itemEsquiveDisponible(p, e.attaque.contact);
+        if (esquive) {
+          boutonsAction += `<button class="btn petit or" data-reaction-action="esquive" data-reaction-persoid="${echapper(persoId)}">💨 Esquive (${echapper(esquive.it.nom)})</button>`;
+        }
+      } else {
+        const interception = _itemInterceptionDisponible(p);
+        if (interception) {
+          boutonsAction += `<button class="btn petit or" data-reaction-action="intercepte" data-reaction-persoid="${echapper(persoId)}">🛡️ Intercepter (${echapper(interception.it.nom)})</button>`;
+        }
       }
     } else {
-      boutonsAction = `<button class="btn petit or" data-reaction-action="contresort" data-reaction-persoid="${echapper(persoId)}">🛡️ Contresort</button>`;
+      // Dynamique aussi (cf. lot "reflechissant") : Contresort n'est plus le
+      // seul répondant possible — la cible du sort peut aussi renvoyer via un
+      // objet équipé (bouclier_miroir), indépendamment de Contresort.
+      boutonsAction = "";
+      if (_peutContresort(persoId, p, e.source.id)) {
+        boutonsAction += `<button class="btn petit or" data-reaction-action="contresort" data-reaction-persoid="${echapper(persoId)}">🛡️ Contresort</button>`;
+      }
+      if (persoId === e.pjId) {
+        const reflet = _itemReflechissantDisponible(p);
+        if (reflet) {
+          boutonsAction += `<button class="btn petit or" data-reaction-action="reflechissant" data-reaction-persoid="${echapper(persoId)}">🪞 Renvoyer (${echapper(reflet.it.nom)})</button>`;
+        }
+      }
     }
     return `<div class="carte" style="border:2px solid var(--or);">
       <h3 style="margin-top:0;">⚡ Fenêtre de réaction</h3>
@@ -9780,6 +9805,21 @@ const App = (() => {
     if (action === "passe") { Reactions.repondre(persoId, "passe"); return; }
     const e = Reactions.etat();
     if (!e || e.reponse || !e.repondants.includes(persoId)) return;
+    if (action === "reflechissant") {
+      // Seul le PJ CIBLE du sort peut renvoyer (cf. _repondantsSortLance) —
+      // pas de PP/réaction (économie item, comme "esquive"), consomme
+      // seulement l'usage de l'objet.
+      if (e.pjId !== persoId) return;
+      const persos = chargerPersos();
+      const p = persos[persoId];
+      const dispo = p && _itemReflechissantDisponible(p);
+      if (!dispo) { toast("Renvoi du sort indisponible."); return; }
+      dispo.usage.appliquer();
+      sauverPersos(persos);
+      toast(`🪞 ${dispo.it.nom} : le sort est renvoyé vers son lanceur !`);
+      Reactions.repondre(persoId, "reflechissant", { itemNom: dispo.it.nom });
+      return;
+    }
     const sort = _sortContresort();
     if (!sort) { toast("Contresort introuvable dans le catalogue de sorts."); return; }
     const res = Capacites.lancer({
@@ -9797,37 +9837,77 @@ const App = (() => {
     Reactions.repondre(persoId, "contresort", { reussite, jetTotal: jet.total, difficulte });
   }
 
-  // Filtre des répondants éligibles à Contresort (cf. Étape 3, 4 conditions)
-  // — calculé une seule fois, à l'OUVERTURE de la fenêtre : un PJ qui
-  // s'éloigne ou dépense ses PP pendant les 15 s reste dans la liste (figée,
-  // comme une fenêtre d'opportunité réelle), _repondre() revérifiera de
-  // toute façon via Capacites.lancer au moment du clic.
-  function _repondantsContresort(monstreTokenId) {
-    if (typeof Carte === "undefined" || !Carte.distanceCasesEntre || !Carte.listeTokensJoueursCombat || !Carte.tokenIdPourPerso) return [];
+  // Éligibilité à Contresort pour UN PJ donné (cf. Étape 3, 4 conditions) —
+  // extrait de _repondantsContresort (même principe que _peutBouclierArcanique
+  // extrait de son ancien _repondantsBouclierArcanique) pour être réutilisable
+  // au rendu des boutons (cf. htmlBlocFenetreReaction, lot "reflechissant" :
+  // la fenêtre sortLance peut désormais avoir des répondants non-Contresort).
+  function _peutContresort(persoId, p, monstreTokenId) {
+    if (!p) return false;
+    if (typeof Carte === "undefined" || !Carte.distanceCasesEntre || !Carte.tokenIdPourPerso) return false;
     const sort = _sortContresort();
-    if (!sort) return [];
-    const coutPP = sort.mecanique.coutPP || 0;
+    if (!sort) return false;
+    const perso = Personnage.depuisJSON(p);
+    // 1. connaît Contresort (même vérification que le garde-fou
+    // origineGrimoire côté Capacites.lancer, cf. js/capacites.js).
+    if (!(p.grimoireSortsConnus || []).concat(perso.sortsGrimoireAccordes()).includes("contresort")) return false;
+    // 2. dispose du coût en PP.
+    if ((p.ppActuel || 0) < (sort.mecanique.coutPP || 0)) return false;
+    // 3. au moins 1 réaction restante.
+    if (typeof Capacites === "undefined" || Capacites.reactionsRestantes(p) < 1) return false;
+    // 4. à 15 m ou moins du lanceur.
+    const tokPj = Carte.tokenIdPourPerso(persoId);
+    if (!tokPj) return false;
+    const dist = Carte.distanceCasesEntre(monstreTokenId, tokPj);
+    return dist !== null && dist <= PORTEE_CONTRESORT_CASES;
+  }
+
+  // Filtre des répondants éligibles à Contresort — calculé une seule fois, à
+  // l'OUVERTURE de la fenêtre : un PJ qui s'éloigne ou dépense ses PP pendant
+  // les 15 s reste dans la liste (figée, comme une fenêtre d'opportunité
+  // réelle), _repondre() revérifiera de toute façon via Capacites.lancer au
+  // moment du clic.
+  function _repondantsContresort(monstreTokenId) {
+    if (typeof Carte === "undefined" || !Carte.listeTokensJoueursCombat) return [];
     const persos = chargerPersos();
     const persoIds = Carte.listeTokensJoueursCombat()
       .map((tok) => (tok.ref && tok.ref.startsWith("pj-")) ? tok.ref.slice(3) : null)
       .filter(Boolean);
-    return persoIds.filter((persoId) => {
-      const p = persos[persoId];
-      if (!p) return false;
-      const perso = Personnage.depuisJSON(p);
-      // 1. connaît Contresort (même vérification que le garde-fou
-      // origineGrimoire côté Capacites.lancer, cf. js/capacites.js).
-      if (!(p.grimoireSortsConnus || []).concat(perso.sortsGrimoireAccordes()).includes("contresort")) return false;
-      // 2. dispose du coût en PP.
-      if ((p.ppActuel || 0) < coutPP) return false;
-      // 3. au moins 1 réaction restante.
-      if (typeof Capacites === "undefined" || Capacites.reactionsRestantes(p) < 1) return false;
-      // 4. à 15 m ou moins du lanceur.
-      const tokPj = Carte.tokenIdPourPerso(persoId);
-      if (!tokPj) return false;
-      const dist = Carte.distanceCasesEntre(monstreTokenId, tokPj);
-      return dist !== null && dist <= PORTEE_CONTRESORT_CASES;
-    });
+    return persoIds.filter((persoId) => _peutContresort(persoId, persos[persoId], monstreTokenId));
+  }
+
+  // Item équipé portant un renvoi de sort "sortLance" disponible (cf.
+  // "réfléchissant", bouclier_miroir) — même patron que _itemEsquiveDisponible :
+  // renvoie { it, d, usage } (usage vérifié, pas encore consommé) ou null.
+  // Contrairement à Contresort (n'importe quel PJ à portée), seul le PJ CIBLE
+  // du sort peut renvoyer (cf. _repondantsSortLance) — pas de filtre de
+  // portée/distance ici, déjà géré à ce niveau-là.
+  function _itemReflechissantDisponible(p) {
+    if (!p) return null;
+    const perso = Personnage.depuisJSON(p);
+    for (const it of perso._itemsEquipesUniques()) {
+      if (!it.declencheurs) continue;
+      for (const d of it.declencheurs) {
+        if (d.evenement !== "sortLance") continue;
+        if (!Array.isArray(d.effets) || !d.effets.some((e) => e.type === "reflechitSort")) continue;
+        const usage = _verifierUsageDeclencheur(p, it, d);
+        if (usage.ok) return { it, d, usage };
+      }
+    }
+    return null;
+  }
+
+  // Répondants éligibles à la fenêtre "sortLance" (cf. lot "reflechissant") :
+  // les PJ éligibles à Contresort (n'importe qui à portée) UNION la cible du
+  // sort elle-même si elle porte un objet "réfléchissant" disponible — les
+  // deux réponses sont indépendantes, htmlBlocFenetreReaction affiche celles
+  // qui s'appliquent à CE PJ précis.
+  function _repondantsSortLance(monstreTokenId, pjId) {
+    const repondants = _repondantsContresort(monstreTokenId);
+    if (pjId && !repondants.includes(pjId) && _itemReflechissantDisponible(chargerPersos()[pjId])) {
+      repondants.push(pjId);
+    }
+    return repondants;
   }
 
   // Sort "bouclier_arcanique_mineur" (SORTS_MAGICIEN) — même patron que
@@ -9875,17 +9955,55 @@ const App = (() => {
     return null;
   }
 
+  // Item équipé portant une interception "subitAttaque" disponible (cf.
+  // "muraille", bouclier_tour) — même patron que _itemEsquiveDisponible, mais
+  // sans filtre de portée : c'est l'adjacence à la CIBLE (pas au porteur)
+  // qui conditionne la disponibilité, déjà vérifiée par _repondantsSubitAttaque
+  // avant d'appeler cette fonction.
+  function _itemInterceptionDisponible(p) {
+    if (!p) return null;
+    const perso = Personnage.depuisJSON(p);
+    for (const it of perso._itemsEquipesUniques()) {
+      if (!it.declencheurs) continue;
+      for (const d of it.declencheurs) {
+        if (d.evenement !== "subitAttaque") continue;
+        if (!Array.isArray(d.effets) || !d.effets.some((e) => e.type === "intercepte")) continue;
+        const usage = _verifierUsageDeclencheur(p, it, d);
+        if (usage.ok) return { it, d, usage };
+      }
+    }
+    return null;
+  }
+
   // Répondants éligibles à la fenêtre "subitAttaque" (cf. "Prototype du
-  // moteur de réaction", extension §A + lot "esquive/réduction") : un seul
-  // candidat possible — la cible de l'attaque elle-même. Pas de filtre de
-  // distance (c'est la cible, par définition à portée d'ELLE-même) ; deux
-  // réponses possibles, indépendantes (Bouclier arcanique OU une esquive
-  // d'équipement), htmlBlocFenetreReaction affiche celles qui s'appliquent.
+  // moteur de réaction", extension §A + lots "esquive/réduction" et
+  // "reflechissant/muraille") : la cible de l'attaque elle-même (Bouclier
+  // arcanique et/ou une esquive d'équipement, réponses indépendantes) UNION
+  // tout allié ADJACENT À LA CIBLE (distance <= 1 case, cf. Personnage.
+  // bonusDefDuel pour le même patron Carte.distanceCasesEntre) qui porte un
+  // objet d'interception disponible (cf. "muraille") — [] hors battlemap
+  // dd2vtt (aucune notion de case) ou si la cible n'a pas de jeton posé,
+  // comme les autres bonus d'adjacence de l'app.
   function _repondantsSubitAttaque(pjId, contact) {
     if (!pjId) return [];
     const p = chargerPersos()[pjId];
     if (!p) return [];
-    return (_peutBouclierArcanique(p) || _itemEsquiveDisponible(p, contact)) ? [pjId] : [];
+    const repondants = (_peutBouclierArcanique(p) || _itemEsquiveDisponible(p, contact)) ? [pjId] : [];
+    if (typeof Carte !== "undefined" && Carte.tokenIdPourPerso && Carte.listeTokensJoueursCombat && Carte.distanceCasesEntre) {
+      const persos = chargerPersos();
+      const tokCible = Carte.tokenIdPourPerso(pjId);
+      if (tokCible) {
+        Carte.listeTokensJoueursCombat().forEach((tok) => {
+          if (!tok.ref || !tok.ref.startsWith("pj-")) return;
+          const allieId = tok.ref.slice(3);
+          if (allieId === pjId || repondants.includes(allieId)) return;
+          const dist = Carte.distanceCasesEntre(tokCible, tok.id);
+          if (dist === null || dist > 1) return;
+          if (_itemInterceptionDisponible(persos[allieId])) repondants.push(allieId);
+        });
+      }
+    }
+    return repondants;
   }
 
   // Réponse d'un PJ à une fenêtre "subitAttaque" (cf. htmlBlocFenetreReaction,
@@ -9897,12 +10015,31 @@ const App = (() => {
   // - "esquive" : consomme l'usage de l'ITEM (pas de PP/réaction — même
   //   économie que les procs subitContact existants), force l'attaque à
   //   rater sans même la lancer (cf. _resoudreFenetreReaction/forceRate).
-  // - "passe" : clôt juste la participation, sans coût, dans les deux cas.
+  // - "intercepte" (cf. "muraille", bouclier_tour) : réponse d'un ALLIÉ
+  //   adjacent, pas de la cible — l'attaque se résout contre LUI (DEF, dégâts,
+  //   effets), cf. redirection dans _resoudreFenetreReaction.
+  // - "passe" : clôt juste la participation, sans coût, dans tous les cas.
+  // "bouclier_arcanique"/"esquive" restent réservés à la cible elle-même
+  // (e.cible.persoId), "intercepte" à tout autre répondant — un allié ne peut
+  // pas non plus agir à la place de la cible via ces deux premières réponses.
   function _repondreFenetreAttaque(persoId, action) {
     if (typeof Reactions === "undefined") return;
     if (action === "passe") { Reactions.repondre(persoId, "passe"); return; }
     const e = Reactions.etat();
     if (!e || e.evenement !== "subitAttaque" || e.reponse || !e.repondants.includes(persoId)) return;
+    if (action === "intercepte") {
+      if (persoId === e.cible.persoId) return;
+      const persos = chargerPersos();
+      const p = persos[persoId];
+      const dispo = p && _itemInterceptionDisponible(p);
+      if (!dispo) { toast("Interception indisponible."); return; }
+      dispo.usage.appliquer();
+      sauverPersos(persos);
+      toast(`🛡️ ${dispo.it.nom} : ${p.nom} s'interpose et prend l'attaque à sa place.`);
+      Reactions.repondre(persoId, "intercepte", { itemNom: dispo.it.nom, interceptantId: persoId });
+      return;
+    }
+    if (persoId !== e.cible.persoId) return;
     if (action === "esquive") {
       const persos = chargerPersos();
       const p = persos[persoId];
@@ -10006,7 +10143,7 @@ const App = (() => {
     const capPeek = (CapacitesMonstres.capacitesDe(m) || [])[indice];
     const mecaPeek = capPeek && capPeek.mecanique;
     if (mecaPeek && mecaPeek.typeSort && typeof Reactions !== "undefined") {
-      const repondants = _repondantsContresort(m.id);
+      const repondants = _repondantsSortLance(m.id, pjId);
       if (repondants.length) {
         Reactions.ouvrir({
           evenement: "sortLance",
@@ -10033,11 +10170,18 @@ const App = (() => {
   // avant. jetSauvegardeFixe reste un jet CÔTÉ CIBLE, non automatisable pour
   // un monstre (cf. §3 du schéma) : affiché dans le résumé du bouton, jamais
   // roulé ici.
-  function _appliquerPlanCapaciteMonstre(m, indice, pjId) {
+  // redirigerVersLanceur (cf. "réfléchissant", bouclier_miroir) : le sort
+  // renvoyé s'applique au MONSTRE lanceur (m) au lieu du PJ ciblé — traité
+  // exactement comme cibleSoi ci-dessous (mêmes branches etat/bonus). Saute
+  // TOUJOURS le jet d'attaque (même capacité à jetAttaque, ex. Sceau du
+  // silence) : le renvoi est automatique, pas un second jet contre la cible
+  // d'origine — comparer à sa DEF n'aurait aucun sens pour un effet qui
+  // frappe maintenant le lanceur, pas elle.
+  function _appliquerPlanCapaciteMonstre(m, indice, pjId, redirigerVersLanceur) {
     const prep = CapacitesMonstres.preparer(m, indice);
     if (!prep.ok) { toast(prep.raison); return; }
     const mecanique = prep.mecanique;
-    if (mecanique && mecanique.jetAttaque !== undefined) {
+    if (mecanique && mecanique.jetAttaque !== undefined && !redirigerVersLanceur) {
       // contact: false — les capacités à jetAttaque (Sceau du silence, Marque
       // du jugement...) sont toujours des effets à portée (mètres), jamais
       // "adjacent" : jamais des attaques de contact au sens de parade/reactifs.
@@ -10046,10 +10190,10 @@ const App = (() => {
         suite: { type: "capaciteMonstre", monstreId: m.id, indice, pjId },
       });
       if (resAtt === null) return; // fenêtre ouverte : _resoudreAttaqueEtSuite reprendra à la fermeture
-      _appliquerPlanCapaciteMonstreApresJet(m, indice, pjId, resAtt);
+      _appliquerPlanCapaciteMonstreApresJet(m, indice, pjId, resAtt, redirigerVersLanceur);
       return;
     }
-    _appliquerPlanCapaciteMonstreApresJet(m, indice, pjId, null);
+    _appliquerPlanCapaciteMonstreApresJet(m, indice, pjId, null, redirigerVersLanceur);
   }
 
   // Suite de _appliquerPlanCapaciteMonstre une fois le jet d'attaque connu
@@ -10057,13 +10201,13 @@ const App = (() => {
   // (l'usage n'a pas encore été consommé) plutôt que de le recevoir en
   // paramètre : reste correct si le jet a été différé par une fenêtre de
   // réaction entre-temps (cf. Étape 4 de Contresort, même principe).
-  function _appliquerPlanCapaciteMonstreApresJet(m, indice, pjId, resAtt) {
+  function _appliquerPlanCapaciteMonstreApresJet(m, indice, pjId, resAtt, redirigerVersLanceur) {
     const prep = CapacitesMonstres.preparer(m, indice);
     if (!prep.ok) { toast(prep.raison); return; }
     const cap = prep.capacite;
     const mecanique = prep.mecanique;
     const libelle = `${m.nom} — ${cap.nom}`;
-    const cibleSoi = !!(mecanique && mecanique.cible === "soi");
+    const cibleSoi = !!(mecanique && mecanique.cible === "soi") || !!redirigerVersLanceur;
 
     // messagesToast accumule tous les messages du clic (jet d'attaque +
     // effets qui suivent) pour un unique toast() final — un second appel
@@ -10162,16 +10306,34 @@ const App = (() => {
       // réponse laissent le jet se dérouler normalement (la DEF est déjà
       // ajustée en amont si Bouclier arcanique a été utilisé).
       const forceRate = !!(e.reponse && e.reponse.action === "esquive");
-      _resoudreAttaqueEtSuite({ label: e.attaque.label, bonus: e.attaque.bonus, critMin: e.attaque.critMin, pjId: e.cible.persoId, suite: e.suite, forceRate });
+      // "intercepte" (cf. "muraille", bouclier_tour) : l'attaque se résout
+      // contre l'ALLIÉ interposé, pas la cible d'origine — DEF, dégâts et
+      // effets suivent tous ce nouveau pjId. ciblesMonstres est aussi mis à
+      // jour : [data-monstre-degats] relit cette map au clic suivant (le jet
+      // et le clic "Dégâts" sont deux actions séparées, cf. son propre
+      // commentaire), sans ça les dégâts retomberaient sur la cible d'origine.
+      const intercepte = e.reponse && e.reponse.action === "intercepte";
+      const pjCible = intercepte ? e.reponse.interceptantId : e.cible.persoId;
+      let suiteEffective = e.suite;
+      if (intercepte) {
+        const nomCibleInit = (chargerPersos()[e.cible.persoId] || {}).nom || "la cible";
+        const nomIntercepteur = (chargerPersos()[pjCible] || {}).nom || pjCible;
+        toast(`🛡️ ${nomIntercepteur} s'interpose devant ${nomCibleInit} (${e.reponse.itemNom}) !`);
+        ajouterHisto(`${nomIntercepteur} intercepte une attaque visant ${nomCibleInit}`, 0, false, false, `${e.reponse.itemNom} — l'attaque se résout contre ${nomIntercepteur} à la place.`);
+        if (e.suite && e.suite.monstreId) ciblesMonstres[e.suite.monstreId] = pjCible;
+        if (e.suite && e.suite.type === "capaciteMonstre") suiteEffective = Object.assign({}, e.suite, { pjId: pjCible });
+      }
+      _resoudreAttaqueEtSuite({ label: e.attaque.label, bonus: e.attaque.bonus, critMin: e.attaque.critMin, pjId: pjCible, suite: suiteEffective, forceRate });
       return;
     }
     _resoudreFenetreSortLance(e);
   }
 
-  // sortLance (Contresort) : contresort réussi -> journalise l'annulation,
-  // n'applique rien ; contresort raté, "passe", ou personne n'a répondu
-  // (timeout) -> déroule la résolution existante, inchangée
-  // (_appliquerPlanCapaciteMonstre).
+  // sortLance : contresort réussi -> journalise l'annulation, n'applique rien ;
+  // "reflechissant" (cf. bouclier_miroir) -> le plan s'applique au LANCEUR
+  // (monstre) au lieu du PJ ciblé, cf. redirigerVersLanceur ;
+  // contresort raté, "passe", ou personne n'a répondu (timeout) -> déroule la
+  // résolution existante, inchangée (_appliquerPlanCapaciteMonstre).
   function _resoudreFenetreSortLance(e) {
     const { source, sort, reponse, indice, pjId } = e;
     if (reponse && reponse.action === "contresort" && reponse.reussite) {
@@ -10188,6 +10350,14 @@ const App = (() => {
       toast(`${source.nom} a quitté le combat — résolution de « ${sort.nom} » annulée.`);
       rendreTableCombat();
       rendreTableCombat("battlemap-zone-table-combat");
+      return;
+    }
+    if (reponse && reponse.action === "reflechissant") {
+      const nomRepondant = (chargerPersos()[reponse.persoId] || {}).nom || reponse.persoId;
+      const detail = `${nomRepondant} renvoie ${sort.nom} (${reponse.itemNom}) à ${source.nom} — les effets s'appliquent à ${source.nom} au lieu de ${nomRepondant}.`;
+      ajouterHisto(`${sort.nom} (${source.nom}) — Renvoyé par ${nomRepondant}`, 0, false, false, detail);
+      toast(`🪞 ${nomRepondant} renvoie ${sort.nom} à ${source.nom} !`);
+      _appliquerPlanCapaciteMonstre(m, indice, pjId, true);
       return;
     }
     _appliquerPlanCapaciteMonstre(m, indice, pjId);
