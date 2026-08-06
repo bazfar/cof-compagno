@@ -1161,6 +1161,42 @@ const App = (() => {
     if (messagesToast.length) toast(messagesToast.join(" — "));
   }
 
+  // Réduction automatique des dégâts subis (cf. "absorbant", lot "subitAttaque :
+  // esquive/réduction") — contrairement à l'esquive (fenêtre de réaction
+  // AVANT le jet), la réduction agit APRÈS un coup déjà confirmé mais AVANT
+  // que les PV ne soient décomptés : aucun choix proposé (comportement
+  // automatique, même principe que les procs subitContact existants), juste
+  // branché en AMONT de subirDegats plutôt qu'en aval. Un effet dédié
+  // "reductionDegats" (hors du vocabulaire de _resoudreEffetsDeclencheur, qui
+  // ne s'exécute qu'une fois les PV déjà décomptés — trop tard pour réduire).
+  // Renvoie le total inchangé si rien n'est disponible.
+  function _reduireDegatsSubisSiDisponible(pjId, total, typeDegatsSubis) {
+    const persos = chargerPersos();
+    const p = persos[pjId];
+    if (!p || typeof total !== "number") return total;
+    const perso = Personnage.depuisJSON(p);
+    let totalAjuste = total;
+    let modifie = false;
+    const messagesToast = [];
+    perso._itemsEquipesUniques().forEach((it) => {
+      if (!it.declencheurs || modifie) return; // un seul proc par coup, cf. "1 fois"
+      it.declencheurs.forEach((d) => {
+        if (modifie || d.evenement !== "subitContact") return;
+        if (d.typeDegats && d.typeDegats !== typeDegatsSubis) return;
+        const effetReduction = Array.isArray(d.effets) && d.effets.find((e) => e.type === "reductionDegats");
+        if (!effetReduction) return;
+        const usage = _verifierUsageDeclencheur(p, it, d);
+        if (!usage.ok) return;
+        totalAjuste = Math.floor(total * (1 - (effetReduction.fraction || 0.5)));
+        if (usage.appliquer) usage.appliquer();
+        modifie = true;
+        messagesToast.push(`${it.nom} : dégâts réduits à ${totalAjuste} (au lieu de ${total}).`);
+      });
+    });
+    if (modifie) { sauverPersos(persos); toast(messagesToast.join(" — ")); }
+    return totalAjuste;
+  }
+
   // Symétrique de _gererDeclencheursEquipement : le PORTEUR est la CIBLE
   // (cf. Affixes phase 2 §C, "quand le porteur est touché" — épineuse/
   // renvoyeur). Appelé quand un monstre touche un PJ au contact ; les effets
@@ -1186,6 +1222,11 @@ const App = (() => {
       it.declencheurs.forEach((d) => {
         if (d.evenement !== "subitContact") return;
         if (!Array.isArray(d.effets)) return;
+        // reductionDegats (cf. "absorbant" ci-dessus) : déjà traité en amont
+        // par _reduireDegatsSubisSiDisponible — un déclencheur PUREMENT
+        // reductionDegats n'a plus rien à faire ici (usage déjà consommé),
+        // le laisser passer redéclencherait/re-consommerait pour rien.
+        if (d.effets.every((e) => e.type === "reductionDegats")) return;
         if (d.typeDegats && d.typeDegats !== typeDegatsSubis) return;
         const usage = _verifierUsageDeclencheur(p, it, d);
         if (!usage.ok) return;
@@ -4894,13 +4935,29 @@ const App = (() => {
     const texte = estAttaque
       ? `Tu es visé(e) par une attaque (<strong>${echapper(e.attaque.label)}</strong>) — <span id="reaction-compte-a-rebours">${secondes}</span> s pour réagir.`
       : `${echapper(e.source.nom)} lance <strong>${echapper(e.sort.nom)}</strong> (rang ${e.sort.rang}, ${echapper(e.sort.ecole)}) — <span id="reaction-compte-a-rebours">${secondes}</span> s pour réagir.`;
+    // Boutons dynamiques (cf. lot "subitAttaque : esquive/réduction") : contrairement
+    // à Contresort (un seul répondant possible), une attaque peut offrir DEUX
+    // réponses indépendantes à la même cible — Bouclier arcanique (sort) ET/OU
+    // une esquive d'équipement (parade/reactifs/insaisissable) — chacune
+    // affichée seulement si réellement disponible à cet instant.
+    let boutonsAction;
+    if (estAttaque) {
+      boutonsAction = "";
+      if (_peutBouclierArcanique(p)) {
+        boutonsAction += `<button class="btn petit or" data-reaction-action="bouclier_arcanique" data-reaction-persoid="${echapper(persoId)}">🛡️ Bouclier arcanique</button>`;
+      }
+      const esquive = _itemEsquiveDisponible(p, e.attaque.contact);
+      if (esquive) {
+        boutonsAction += `<button class="btn petit or" data-reaction-action="esquive" data-reaction-persoid="${echapper(persoId)}">💨 Esquive (${echapper(esquive.it.nom)})</button>`;
+      }
+    } else {
+      boutonsAction = `<button class="btn petit or" data-reaction-action="contresort" data-reaction-persoid="${echapper(persoId)}">🛡️ Contresort</button>`;
+    }
     return `<div class="carte" style="border:2px solid var(--or);">
       <h3 style="margin-top:0;">⚡ Fenêtre de réaction</h3>
       <p class="aide" style="margin:0 0 6px;">${texte}</p>
       <div class="barre-actions">
-        ${estAttaque
-          ? `<button class="btn petit or" data-reaction-action="bouclier_arcanique" data-reaction-persoid="${echapper(persoId)}">🛡️ Bouclier arcanique</button>`
-          : `<button class="btn petit or" data-reaction-action="contresort" data-reaction-persoid="${echapper(persoId)}">🛡️ Contresort</button>`}
+        ${boutonsAction}
         <button class="btn petit secondaire" data-reaction-action="passe" data-reaction-persoid="${echapper(persoId)}">Passer</button>
       </div>
     </div>`;
@@ -9780,35 +9837,83 @@ const App = (() => {
     return catalogue ? catalogue.find((s) => s.id === "bouclier_arcanique_mineur") : null;
   }
 
-  // Répondants éligibles à Bouclier arcanique (cf. "Prototype du moteur de
-  // réaction", extension §A) : contrairement à Contresort, un seul candidat
-  // possible — la cible de l'attaque elle-même (cible: "soi" du sort). Pas de
-  // filtre de distance (c'est la cible, par définition à portée d'ELLE-même).
-  function _repondantsBouclierArcanique(pjId) {
-    if (!pjId) return [];
+  // Bouclier arcanique disponible pour ce perso brut ? (cf. "Prototype du
+  // moteur de réaction", extension §A) — extrait de l'ancien
+  // _repondantsBouclierArcanique pour être réutilisable à la fois par le
+  // filtre des répondants et par htmlBlocFenetreReaction (qui doit savoir
+  // QUEL bouton afficher, pas seulement SI la fenêtre doit s'ouvrir).
+  function _peutBouclierArcanique(p) {
+    if (!p) return false;
     const sort = _sortBouclierArcanique();
-    if (!sort) return [];
+    if (!sort) return false;
+    const perso = Personnage.depuisJSON(p);
+    if (!(p.grimoireSortsConnus || []).concat(perso.sortsGrimoireAccordes()).includes("bouclier_arcanique_mineur")) return false;
+    if ((p.ppActuel || 0) < (sort.mecanique.coutPP || 0)) return false;
+    if (typeof Capacites === "undefined" || Capacites.reactionsRestantes(p) < 1) return false;
+    return true;
+  }
+
+  // Item équipé portant une esquive "subitAttaque" disponible (cf. "parade"/
+  // "reactifs"/"insaisissable", lot "subitAttaque : esquive/réduction") —
+  // renvoie { it, d, usage } (usage déjà vérifié, pas encore consommé) ou
+  // null. `contact` (bool) : true pour une attaque de contact, false pour
+  // une attaque à distance/magique — porteeRequise filtre sur ce point
+  // (absent = les deux, cf. "insaisissable" qui n'a pas cette restriction).
+  function _itemEsquiveDisponible(p, contact) {
+    if (!p) return null;
+    const perso = Personnage.depuisJSON(p);
+    for (const it of perso._itemsEquipesUniques()) {
+      if (!it.declencheurs) continue;
+      for (const d of it.declencheurs) {
+        if (d.evenement !== "subitAttaque") continue;
+        if (d.porteeRequise && d.porteeRequise !== (contact ? "contact" : "distance")) continue;
+        if (!Array.isArray(d.effets) || !d.effets.some((e) => e.type === "esquive")) continue;
+        const usage = _verifierUsageDeclencheur(p, it, d);
+        if (usage.ok) return { it, d, usage };
+      }
+    }
+    return null;
+  }
+
+  // Répondants éligibles à la fenêtre "subitAttaque" (cf. "Prototype du
+  // moteur de réaction", extension §A + lot "esquive/réduction") : un seul
+  // candidat possible — la cible de l'attaque elle-même. Pas de filtre de
+  // distance (c'est la cible, par définition à portée d'ELLE-même) ; deux
+  // réponses possibles, indépendantes (Bouclier arcanique OU une esquive
+  // d'équipement), htmlBlocFenetreReaction affiche celles qui s'appliquent.
+  function _repondantsSubitAttaque(pjId, contact) {
+    if (!pjId) return [];
     const p = chargerPersos()[pjId];
     if (!p) return [];
-    const perso = Personnage.depuisJSON(p);
-    if (!(p.grimoireSortsConnus || []).concat(perso.sortsGrimoireAccordes()).includes("bouclier_arcanique_mineur")) return [];
-    if ((p.ppActuel || 0) < (sort.mecanique.coutPP || 0)) return [];
-    if (typeof Capacites === "undefined" || Capacites.reactionsRestantes(p) < 1) return [];
-    return [pjId];
+    return (_peutBouclierArcanique(p) || _itemEsquiveDisponible(p, contact)) ? [pjId] : [];
   }
 
   // Réponse d'un PJ à une fenêtre "subitAttaque" (cf. htmlBlocFenetreReaction,
-  // qui rend aussi ce bouton pour cet évènement) — symétrique de
-  // _repondreFenetreReaction, mais sans contest : Bouclier arcanique n'a rien
-  // à départager, il pose juste +2 DEF (déjà mécanisé comme un bonus standard,
-  // cf. mecanique.effets de bouclier_arcanique_mineur) AVANT que le jet
-  // d'attaque de _resoudreAttaqueEtSuite ne compare au total. "passe" clôt
-  // juste la participation, sans coût.
+  // qui rend les boutons correspondant à ce qui est réellement disponible) :
+  // - "bouclier_arcanique" : dépense PP+réaction via Capacites.lancer, pose
+  //   +2 DEF (bonus standard, cf. mecanique.effets du sort) AVANT que le jet
+  //   d'attaque de _resoudreAttaqueEtSuite ne compare au total — rien à
+  //   départager, contrairement à Contresort.
+  // - "esquive" : consomme l'usage de l'ITEM (pas de PP/réaction — même
+  //   économie que les procs subitContact existants), force l'attaque à
+  //   rater sans même la lancer (cf. _resoudreFenetreReaction/forceRate).
+  // - "passe" : clôt juste la participation, sans coût, dans les deux cas.
   function _repondreFenetreAttaque(persoId, action) {
     if (typeof Reactions === "undefined") return;
     if (action === "passe") { Reactions.repondre(persoId, "passe"); return; }
     const e = Reactions.etat();
     if (!e || e.evenement !== "subitAttaque" || e.reponse || !e.repondants.includes(persoId)) return;
+    if (action === "esquive") {
+      const persos = chargerPersos();
+      const p = persos[persoId];
+      const dispo = p && _itemEsquiveDisponible(p, e.attaque.contact);
+      if (!dispo) { toast("Esquive indisponible."); return; }
+      dispo.usage.appliquer();
+      sauverPersos(persos);
+      toast(`💨 ${dispo.it.nom} : esquive automatique — l'attaque manque sa cible.`);
+      Reactions.repondre(persoId, "esquive", { itemNom: dispo.it.nom });
+      return;
+    }
     const sort = _sortBouclierArcanique();
     if (!sort) { toast("Bouclier arcanique introuvable dans le catalogue de sorts."); return; }
     const res = Capacites.lancer({
@@ -9824,25 +9929,28 @@ const App = (() => {
   // Point d'entrée AVANT tout jet d'attaque de monstre contre un PJ (arme,
   // cf. [data-monstre-jet], ou capacité à jetAttaque, cf.
   // _appliquerPlanCapaciteMonstre) — cf. "Prototype du moteur de réaction",
-  // extension §A. `descripteur.suite` porte tout le nécessaire pour reprendre
-  // au bon endroit après résolution (arme ou capacité) — jamais une closure,
-  // pour rester correct après un rechargement MJ. Renvoie le résultat du jet
-  // si résolu immédiatement (aucun répondant), ou null si une fenêtre s'est
-  // ouverte (l'appelant ne doit RIEN faire de plus : _resoudreAttaqueEtSuite
-  // reprendra depuis Reactions.onChange/_resoudreFenetreReaction).
+  // extension §A. `descripteur.contact` (bool) distingue une attaque de
+  // contact d'une attaque à distance/magique — lu par _itemEsquiveDisponible
+  // (porteeRequise). `descripteur.suite` porte tout le nécessaire pour
+  // reprendre au bon endroit après résolution (arme ou capacité) — jamais
+  // une closure, pour rester correct après un rechargement MJ. Renvoie le
+  // résultat du jet si résolu immédiatement (aucun répondant), ou null si
+  // une fenêtre s'est ouverte (l'appelant ne doit RIEN faire de plus :
+  // _resoudreAttaqueEtSuite reprendra depuis Reactions.onChange/
+  // _resoudreFenetreReaction).
   function _declencherAttaqueMonstreVsPJ(descripteur) {
     if (descripteur.pjId && typeof Reactions !== "undefined") {
-      const repondants = _repondantsBouclierArcanique(descripteur.pjId);
+      const repondants = _repondantsSubitAttaque(descripteur.pjId, descripteur.contact);
       if (repondants.length) {
         Reactions.ouvrir({
           evenement: "subitAttaque",
           source: descripteur.suite && descripteur.suite.monstreId ? { type: "monstre", id: descripteur.suite.monstreId, nom: (descripteur.label || "").split(" — ")[0] } : null,
           cible: { persoId: descripteur.pjId },
-          attaque: { label: descripteur.label, bonus: descripteur.bonus, critMin: descripteur.critMin },
+          attaque: { label: descripteur.label, bonus: descripteur.bonus, critMin: descripteur.critMin, contact: !!descripteur.contact },
           suite: descripteur.suite,
           repondants,
         });
-        toast(`⏳ Fenêtre de réaction ouverte (Bouclier arcanique) — 15 s avant le jet de « ${descripteur.label} ».`);
+        toast(`⏳ Fenêtre de réaction ouverte — 15 s avant le jet de « ${descripteur.label} ».`);
         rendreTableCombat();
         rendreTableCombat("battlemap-zone-table-combat");
         return null;
@@ -9856,14 +9964,20 @@ const App = (() => {
   // _repondreFenetreAttaque via Capacites.lancer) puis reprend la suite
   // propre au point d'entrée d'origine — arme (attaquesMonstresEnAttente,
   // même toast qu'avant ce chantier) ou capacité (_appliquerPlanCapaciteMonstreApresJet).
+  // forceRate (cf. réponse "esquive") : l'attaque rate automatiquement, SANS
+  // même lancer le jet — même principe qu'annuler un jet de contresort
+  // gagné, appliqué ici à l'issue de l'attaque plutôt qu'à ses effets.
   function _resoudreAttaqueEtSuite(descripteur) {
-    const resAtt = _resoudreAttaqueMonstreVsPJ(descripteur.label, descripteur.bonus, descripteur.critMin, descripteur.pjId);
+    const resAtt = descripteur.forceRate
+      ? { touche: false, critique: false, echecCritique: false, totalAttaque: null, defCible: null, esquiveForcee: true }
+      : _resoudreAttaqueMonstreVsPJ(descripteur.label, descripteur.bonus, descripteur.critMin, descripteur.pjId);
     const suite = descripteur.suite || {};
     if (suite.type === "jetMonstreArme") {
       attaquesMonstresEnAttente[`${suite.monstreId}:${suite.idxAttaque}`] = resAtt;
       if (descripteur.pjId) {
         const nomCible = (chargerPersos()[descripteur.pjId] || {}).nom || "la cible";
-        toast(resAtt.echecCritique ? "1 naturel — échec critique automatique."
+        toast(resAtt.esquiveForcee ? `💨 ${nomCible} esquive totalement l'attaque !`
+          : resAtt.echecCritique ? "1 naturel — échec critique automatique."
           : resAtt.critique ? `CRITIQUE sur ${nomCible} !${resAtt.defCible !== null ? ` (DEF ${resAtt.defCible})` : ""}`
           : resAtt.defCible === null ? "DEF de la cible inconnue — à comparer manuellement."
           : (resAtt.touche ? `Touché ${nomCible} ! (DEF ${resAtt.defCible})` : `Raté sur ${nomCible} (DEF ${resAtt.defCible}).`));
@@ -9924,8 +10038,11 @@ const App = (() => {
     if (!prep.ok) { toast(prep.raison); return; }
     const mecanique = prep.mecanique;
     if (mecanique && mecanique.jetAttaque !== undefined) {
+      // contact: false — les capacités à jetAttaque (Sceau du silence, Marque
+      // du jugement...) sont toujours des effets à portée (mètres), jamais
+      // "adjacent" : jamais des attaques de contact au sens de parade/reactifs.
       const resAtt = _declencherAttaqueMonstreVsPJ({
-        label: `${m.nom} — ${prep.capacite.nom}`, bonus: mecanique.jetAttaque + _bonusEtatsMonstre(m, "attaque"), critMin: 20, pjId,
+        label: `${m.nom} — ${prep.capacite.nom}`, bonus: mecanique.jetAttaque + _bonusEtatsMonstre(m, "attaque"), critMin: 20, pjId, contact: false,
         suite: { type: "capaciteMonstre", monstreId: m.id, indice, pjId },
       });
       if (resAtt === null) return; // fenêtre ouverte : _resoudreAttaqueEtSuite reprendra à la fermeture
@@ -9956,7 +10073,8 @@ const App = (() => {
     const messagesToast = [];
     let toucheOk = true;
     if (resAtt) {
-      messagesToast.push(resAtt.echecCritique ? "1 naturel — échec critique automatique, effet non appliqué."
+      messagesToast.push(resAtt.esquiveForcee ? "Esquive totale — effet non appliqué."
+        : resAtt.echecCritique ? "1 naturel — échec critique automatique, effet non appliqué."
         : resAtt.critique ? `CRITIQUE !${resAtt.defCible !== null ? ` (DEF ${resAtt.defCible})` : ""}`
         : resAtt.defCible === null ? "DEF de la cible inconnue — effet appliqué, à confirmer manuellement."
         : (resAtt.touche ? `Touché ! (DEF ${resAtt.defCible})` : `Raté (DEF ${resAtt.defCible}) — effet non appliqué.`));
@@ -10039,7 +10157,12 @@ const App = (() => {
   function _resoudreFenetreReaction(e) {
     Reactions.clore();
     if (e.evenement === "subitAttaque") {
-      _resoudreAttaqueEtSuite({ label: e.attaque.label, bonus: e.attaque.bonus, critMin: e.attaque.critMin, pjId: e.cible.persoId, suite: e.suite });
+      // "esquive" (cf. lot subitAttaque : esquive/réduction) : l'attaque
+      // rate d'office, jamais lancée — "bouclier_arcanique"/"passe"/aucune
+      // réponse laissent le jet se dérouler normalement (la DEF est déjà
+      // ajustée en amont si Bouclier arcanique a été utilisé).
+      const forceRate = !!(e.reponse && e.reponse.action === "esquive");
+      _resoudreAttaqueEtSuite({ label: e.attaque.label, bonus: e.attaque.bonus, critMin: e.attaque.critMin, pjId: e.cible.persoId, suite: e.suite, forceRate });
       return;
     }
     _resoudreFenetreSortLance(e);
@@ -10188,12 +10311,17 @@ const App = (() => {
         if (!r) return;
         const pjId = ciblesMonstres[m.id] || null;
         // _declencherAttaqueMonstreVsPJ (cf. "Prototype du moteur de
-        // réaction", extension §A) : ouvre une fenêtre Bouclier arcanique si
-        // la cible peut réagir, sinon résout immédiatement — dans les deux
-        // cas, attaquesMonstresEnAttente/toast/rendu sont posés par
+        // réaction", extension §A + lot esquive/réduction) : ouvre une
+        // fenêtre (Bouclier arcanique et/ou esquive d'équipement) si la
+        // cible peut réagir, sinon résout immédiatement — dans les deux cas,
+        // attaquesMonstresEnAttente/toast/rendu sont posés par
         // _resoudreAttaqueEtSuite (branche "jetMonstreArme"), jamais ici.
+        // contact (cf. parade/reactifs, porteeRequise:"contact") : même
+        // logique que r.portee.startsWith("contact") déjà utilisée pour
+        // subitContact — "contact +1 case (3m)" (armes d'hast) compte aussi.
         _declencherAttaqueMonstreVsPJ({
           label: `${m.nom} — ${r.nom}`, bonus: r.bonusAttaque + _bonusEtatsMonstre(m, "attaque"), critMin: r.critMin, pjId,
+          contact: !!(r.portee && r.portee.startsWith("contact")),
           suite: { type: "jetMonstreArme", monstreId: m.id, idxAttaque: idx },
         });
       };
@@ -10215,7 +10343,12 @@ const App = (() => {
         const pjId = ciblesMonstres[m.id] || null;
         if (pjId && typeof total === "number") {
           const typeDegatsNormalise = r.typedegats && r.typedegats.startsWith("physique") ? "physique" : "magique";
-          subirDegats(pjId, total, typeDegatsNormalise);
+          // Réduction automatique (cf. "absorbant", lot subitAttaque : esquive/
+          // réduction) : AVANT subirDegats, contrairement à
+          // _gererDeclencheursSubitContact (après) — une fois les PV décomptés,
+          // il serait trop tard pour réduire quoi que ce soit.
+          const totalAjuste = _reduireDegatsSubisSiDisponible(pjId, total, typeDegatsNormalise);
+          subirDegats(pjId, totalAjuste, typeDegatsNormalise);
           // "quand le porteur est touché" (cf. Affixes phase 2 §C, épineuse/
           // renvoyeur) : seulement sur une attaque de CONTACT — r.portee peut
           // valoir "contact" ou "contact +1 case (3m)" (armes d'hast), les

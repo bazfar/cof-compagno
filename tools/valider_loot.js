@@ -76,7 +76,13 @@ function formuleValide(f) {
 // (mecanique.rare/legendaire.effets, affixes de rareté). `signaler` reçoit
 // déjà la clé de l'item, ce module ne fait que préfixer le message par
 // effets[i].
-const TYPES_EFFET_VALIDES = ["degats", "dot", "soin", "bonus", "etat", "ignoreReduction", "critique", "special"];
+// esquive/reductionDegats (cf. "parade"/"absorbant" etc., lot "subitAttaque :
+// esquive/réduction") : esquive n'est jamais résolu par
+// _resoudreEffetsDeclencheur (traité en amont du jet, cf. _resoudreAttaqueEtSuite)
+// — reductionDegats non plus (traité en amont de subirDegats, cf.
+// _reduireDegatsSubisSiDisponible) — mais les deux passent par le même
+// vocabulaire effets[]/validerEffets pour rester validés au même endroit.
+const TYPES_EFFET_VALIDES = ["degats", "dot", "soin", "bonus", "etat", "ignoreReduction", "critique", "special", "esquive", "reductionDegats"];
 const CIBLES_BONUS_VALIDES = ["attaque", "DEF"];
 const DUREE_MOTS_CLES_LOOT = ["prochainTour", "finCombat", "permanente"];
 // cible: "attaquant" sur un effet degats/etat (cf. "Affixes phase 2" §C,
@@ -87,10 +93,18 @@ const CIBLES_EFFET_INVERSE_VALIDES = ["attaquant"];
 const TYPES_EFFET_CIBLE_INVERSE = ["degats", "etat"];
 // evenement partagé entre declencheurs[] (data/loot.json) et mecanique{}
 // (js/raretes.js) — subitContact ajouté en phase 2 (cf. §C).
-const EVENEMENTS_DECLENCHEUR_VALIDES = ["touche", "rate", "critique", "subitContact"];
+// subitAttaque (cf. lot "subitAttaque : esquive/réduction") : contrairement
+// aux autres évènements, jamais résolu par _resoudreEffetsDeclencheur — géré
+// à part par _declencherAttaqueMonstreVsPJ/_repondreFenetreAttaque (avant le
+// jet d'attaque), sur le même moteur combat:reaction que Contresort.
+const EVENEMENTS_DECLENCHEUR_VALIDES = ["touche", "rate", "critique", "subitContact", "subitAttaque"];
 // typeDegats sur un déclencheur "subitContact" (cf. "réfléchissante",
 // cotte_runique — ne renvoie que les dégâts magiques subis).
 const TYPES_DEGATS_DECLENCHEUR_VALIDES = ["physique", "magique"];
+// porteeRequise sur un déclencheur "subitAttaque" (cf. "parade"/"reactifs" —
+// esquive restreinte au contact ; absent = contact ET distance, cf.
+// "insaisissable").
+const PORTEE_REQUISE_DECLENCHEUR_VALIDES = ["contact", "distance"];
 // condition sur un déclencheur/mecanique (cf. "Affixes phase 2" §B :
 // sauvage/féroce = cibleSousMoitie, precise = cibleBlessee).
 const CONDITIONS_VALIDES = ["cibleBlessee", "cibleSousMoitie"];
@@ -135,6 +149,11 @@ function validerEffets(effets, signaler) {
     if (e.type === "critique" && !(Number.isInteger(e.seuil) && e.seuil >= 2 && e.seuil <= 20)) {
       signaler(`${p}.seuil devrait être un entier entre 2 et 20, reçu ${JSON.stringify(e.seuil)}.`);
     }
+    // esquive : pas de paramètre, juste le type — l'annulation du jet est
+    // portée par la fenêtre de réaction (subitAttaque), pas par cet effet.
+    if (e.type === "reductionDegats" && !(typeof e.fraction === "number" && e.fraction > 0 && e.fraction <= 1)) {
+      signaler(`${p}.fraction devrait être un nombre entre 0 (exclu) et 1, reçu ${JSON.stringify(e.fraction)}.`);
+    }
     if (e.type === "special" && !e.note) signaler(`${p} : un effet special doit porter une note pour le MJ.`);
   });
 }
@@ -165,6 +184,9 @@ function validerPassif(cle, prefix, passif) {
   }
   if (passif.bonusDegatsContact !== undefined && !formuleValide(passif.bonusDegatsContact)) {
     signalerAffixe(cle, `${prefix}.bonusDegatsContact "${passif.bonusDegatsContact}" rejeté par la grammaire de lancerFormule.`);
+  }
+  if (passif.bonusDEF !== undefined && !Number.isInteger(passif.bonusDEF)) {
+    signalerAffixe(cle, `${prefix}.bonusDEF devrait être un entier, reçu ${JSON.stringify(passif.bonusDEF)}.`);
   }
 }
 
@@ -337,6 +359,9 @@ items.forEach((it, index) => {
     if (d.typeDegats !== undefined && !TYPES_DEGATS_DECLENCHEUR_VALIDES.includes(d.typeDegats)) {
       signaler(cle, `declencheurs[${i}].typeDegats invalide : "${d.typeDegats}" (attendu : ${TYPES_DEGATS_DECLENCHEUR_VALIDES.join("|")}).`);
     }
+    if (d.porteeRequise !== undefined && !PORTEE_REQUISE_DECLENCHEUR_VALIDES.includes(d.porteeRequise)) {
+      signaler(cle, `declencheurs[${i}].porteeRequise invalide : "${d.porteeRequise}" (attendu : ${PORTEE_REQUISE_DECLENCHEUR_VALIDES.join("|")}).`);
+    }
     // Deux formes acceptées (cf. "Mécaniser les affixes de rareté") :
     // ressource/operation (Forge du MJ, existant) OU effets[] (vocabulaire
     // mecanique.effets[] de data/donnees.js, nouveau).
@@ -396,6 +421,9 @@ function validerMecaniqueAffixe(cle, meca) {
     if (m.usage !== undefined) validerUsage(m.usage, (msg) => signalerAffixe(cle, `${p}.${msg}`));
     if (m.typeDegats !== undefined && !TYPES_DEGATS_DECLENCHEUR_VALIDES.includes(m.typeDegats)) {
       signalerAffixe(cle, `${p}.typeDegats invalide : "${m.typeDegats}" (attendu : ${TYPES_DEGATS_DECLENCHEUR_VALIDES.join("|")}).`);
+    }
+    if (m.porteeRequise !== undefined && !PORTEE_REQUISE_DECLENCHEUR_VALIDES.includes(m.porteeRequise)) {
+      signalerAffixe(cle, `${p}.porteeRequise invalide : "${m.porteeRequise}" (attendu : ${PORTEE_REQUISE_DECLENCHEUR_VALIDES.join("|")}).`);
     }
     if (m.passif !== undefined) validerPassif(cle, `${p}.passif`, m.passif);
     if (m.bonusAttaqueConditionnel !== undefined) validerBonusAttaqueConditionnel(cle, `${p}.bonusAttaqueConditionnel`, m.bonusAttaqueConditionnel);

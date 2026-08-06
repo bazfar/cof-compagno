@@ -384,7 +384,11 @@ const EFFETS_PAR_ITEM = {
         rare: { passif: { bonusInitiative: 1 } },
         legendaire: { passif: { bonusInitiative: 2 } },
       } },
-    { id: "parade", nom: "de parade", rare: "1 fois par combat, annule totalement une attaque de contact", legendaire: "2 fois par combat, annule totalement une attaque de contact" },
+    { id: "parade", nom: "de parade", rare: "1 fois par combat, annule totalement une attaque de contact", legendaire: "2 fois par combat, annule totalement une attaque de contact",
+      mecanique: {
+        rare: { evenement: "subitAttaque", porteeRequise: "contact", usage: { frequence: "1x/combat" }, effets: [{ type: "esquive" }] },
+        legendaire: { evenement: "subitAttaque", porteeRequise: "contact", usage: { frequence: "2x/combat" }, effets: [{ type: "esquive" }] },
+      } },
   ],
   bouclier_acier: [
     { id: "standard", nom: "renforcé", rare: "+1 DEF supplémentaire contre les attaques à distance", legendaire: "+2 DEF supplémentaire contre les attaques à distance" },
@@ -418,11 +422,32 @@ const EFFETS_PAR_ITEM = {
   // ── Accessoires ────────────────────────────────────────────
   anneau_protection: [
     { id: "gardien", nom: "du gardien", rare: "+1 DEF ; annule automatiquement la surprise au premier round de combat", legendaire: "+2 DEF ; annule la surprise et agit en premier au premier round" },
-    { id: "absorbant", nom: "absorbant", rare: "+1 DEF ; 1 fois par combat, réduit de moitié les dégâts d'une attaque subie", legendaire: "+2 DEF ; 2 fois par combat, réduit de moitié les dégâts d'une attaque subie" },
+    { id: "absorbant", nom: "absorbant", rare: "+1 DEF ; 1 fois par combat, réduit de moitié les dégâts d'une attaque subie", legendaire: "+2 DEF ; 2 fois par combat, réduit de moitié les dégâts d'une attaque subie",
+      mecanique: {
+        // reductionDegats (cf. lot "subitAttaque : esquive/réduction") :
+        // contrairement à esquive, PAS un choix proposé au porteur — proc
+        // automatique au moment des dégâts (comme épineuse/runique), lu par
+        // _reduireDegatsSubisSiDisponible AVANT subirDegats (jamais par
+        // _resoudreEffetsDeclencheur, qui n'intervient qu'après).
+        rare: { passif: { bonusDEF: 1 }, evenement: "subitContact", usage: { frequence: "1x/combat" }, effets: [{ type: "reductionDegats", fraction: 0.5 }] },
+        legendaire: { passif: { bonusDEF: 2 }, evenement: "subitContact", usage: { frequence: "2x/combat" }, effets: [{ type: "reductionDegats", fraction: 0.5 }] },
+      } },
   ],
   bracelets_defense: [
     { id: "impassibles", nom: "impassibles", rare: "+2 DEF (sans armure/bouclier) ; +1 aux jets de résistance", legendaire: "+3 DEF (sans armure/bouclier) ; +2 aux jets de résistance" },
-    { id: "reactifs", nom: "réactifs", rare: "+2 DEF (sans armure/bouclier) ; 1 fois par combat, esquive totalement une attaque de contact", legendaire: "+3 DEF (sans armure/bouclier) ; 2 fois par combat, esquive totalement une attaque de contact" },
+    { id: "reactifs", nom: "réactifs", rare: "+2 DEF (sans armure/bouclier) ; 1 fois par combat, esquive totalement une attaque de contact", legendaire: "+3 DEF (sans armure/bouclier) ; 2 fois par combat, esquive totalement une attaque de contact",
+      mecanique: {
+        // +2/+3 DEF conditionnel ("sans armure/bouclier") laissé en note :
+        // aucun bonusDEF de l'app n'est aujourd'hui conditionné à l'ABSENCE
+        // d'un autre équipement (bonusDEF() somme tout, sans exclusion) —
+        // même limite déjà acceptée pour "milieu naturel"/"terrain naturel"
+        // ailleurs, à arbitrer manuellement plutôt qu'inventer un garde-fou
+        // dédié pour ce seul cas. L'esquive, elle, est mécanisée normalement.
+        rare: { evenement: "subitAttaque", porteeRequise: "contact", usage: { frequence: "1x/combat" }, effets: [{ type: "esquive" }],
+          note: "+2 DEF sans armure/bouclier — condition non trackable automatiquement, à arbitrer manuellement." },
+        legendaire: { evenement: "subitAttaque", porteeRequise: "contact", usage: { frequence: "2x/combat" }, effets: [{ type: "esquive" }],
+          note: "+3 DEF sans armure/bouclier — condition non trackable automatiquement, à arbitrer manuellement." },
+      } },
   ],
   bottes_vitesse: [
     { id: "fulgurantes", nom: "fulgurantes", rare: "+1 case de déplacement ; 1 fois par combat, double le déplacement pour ce tour", legendaire: "+2 cases de déplacement ; 2 fois par combat, double le déplacement" },
@@ -453,7 +478,16 @@ const EFFETS_PAR_ITEM = {
     { id: "inebranlable", nom: "inébranlable", rare: "+2 FOR ; ne peut être renversé ni repoussé", legendaire: "+3 FOR ; idem, + immunité à l'Étourdissement" },
   ],
   cape_brume: [
-    { id: "insaisissable", nom: "insaisissable", rare: "+1 DEF contre la première attaque ; 1 fois par combat, une attaque manque automatiquement sa cible", legendaire: "+2 DEF contre la première attaque ; 2 fois par combat, une attaque manque automatiquement sa cible" },
+    { id: "insaisissable", nom: "insaisissable", rare: "+1 DEF contre la première attaque ; 1 fois par combat, une attaque manque automatiquement sa cible", legendaire: "+2 DEF contre la première attaque ; 2 fois par combat, une attaque manque automatiquement sa cible",
+      mecanique: {
+        // Pas de porteeRequise (contrairement à parade/reactifs) : le texte
+        // ne restreint pas à une attaque "de contact", donc l'esquive
+        // s'applique aussi bien à une attaque de contact qu'à distance.
+        rare: { evenement: "subitAttaque", usage: { frequence: "1x/combat" }, effets: [{ type: "esquive" }],
+          note: "+1 DEF contre la première attaque du combat — aucun tracker de \"première attaque\" dans l'app, à arbitrer manuellement." },
+        legendaire: { evenement: "subitAttaque", usage: { frequence: "2x/combat" }, effets: [{ type: "esquive" }],
+          note: "+2 DEF contre la première attaque du combat — même limite qu'au palier rare, à arbitrer manuellement." },
+      } },
     { id: "evanescente", nom: "évanescente", rare: "+1 DEF contre la première attaque ; 1 fois par combat, disparaît de la vue 1 tour (Discrétion totale)", legendaire: "+2 DEF contre la première attaque ; 2 fois par combat, disparaît de la vue 1 tour" },
   ],
 
@@ -595,6 +629,11 @@ const Raretes = (() => {
     }
     if (passif.bonusInitiative) clone.bonusInitiative = (item.bonusInitiative || 0) + passif.bonusInitiative;
     if (passif.bonusDegatsContact) clone.bonusDegatsContact = passif.bonusDegatsContact;
+    // bonusDEF (cf. "absorbant", lot subitAttaque esquive/réduction) : même
+    // champ que celui déjà sommé génériquement par Personnage.bonusDEF()
+    // (accessoires "de base" du catalogue) — aucun changement côté
+    // personnage.js, juste posé ici comme les autres passifs.
+    if (passif.bonusDEF) clone.bonusDEF = (item.bonusDEF || 0) + passif.bonusDEF;
   }
 
   // mecanique[palier] (rare/legendaire) -> effets sur le clone, commun aux 4
@@ -623,6 +662,11 @@ const Raretes = (() => {
       // type de dégâts encaissé, lu par _gererDeclencheursSubitContact
       // (js/app.js). Absent = aucun filtre (épineuse/renvoyeur/runique).
       if (meca.typeDegats) d.typeDegats = meca.typeDegats;
+      // porteeRequise (cf. "parade"/"reactifs", lot subitAttaque esquive) :
+      // filtre le déclencheur "subitAttaque" sur le type d'attaque subie
+      // ("contact" uniquement) — lu par _itemEsquiveDisponible (js/app.js).
+      // Absent = aucun filtre (contact ET distance, cf. "insaisissable").
+      if (meca.porteeRequise) d.porteeRequise = meca.porteeRequise;
       clone.declencheurs = [d];
       // critique{seuil} (cf. Rapière perfide) : résolu STATIQUEMENT ici, pas
       // par le déclencheur (le jet est déjà fait au moment où "touche" se
