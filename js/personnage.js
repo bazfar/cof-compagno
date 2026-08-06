@@ -1233,6 +1233,12 @@ class Personnage extends Entite {
   // hallebarde, pique, glaive de guerre) qui ne s'affichaient plus du tout
   // en armeContactEquipee() avec une comparaison stricte à "contact".
   static _estArmeContact(it) { return !!it && it.type === "arme" && typeof it.portee === "string" && it.portee.startsWith("contact"); }
+  // "tournoyante" (francisque, cf. lot "malgré la limite") : une arme de
+  // contact affublée de porteeMaxCases (posé par l'affixe via son passif,
+  // cf. _appliquerPassif js/raretes.js) peut AUSSI être lancée à distance
+  // courte — aucune autre arme de contact du catalogue ne porte ce champ,
+  // donc sa seule présence suffit à distinguer ce cas sans marqueur dédié.
+  static _estArmeContactJetable(it) { return Personnage._estArmeContact(it) && it.porteeMaxCases !== undefined; }
   static _estArmeContactCourte(it) { return Personnage._estArmeContact(it) && it.categorieArme === "courte"; }
   static _estArbaleteCourte(it) { return !!it && it.type === "arme" && it.portee !== "contact" && (it.id || "").startsWith("arbalete"); }
   static _estArcCourt(it) { return !!it && it.type === "arme" && it.portee !== "contact" && (it.id || "").startsWith("arc"); }
@@ -1645,6 +1651,11 @@ class Personnage extends Entite {
     for (const main of ["main_droite", "main_gauche"]) {
       const arme = this.armeEquipee(main);
       if (arme && arme.portee && !Personnage._estArmeContact(arme)) return arme;
+      // "tournoyante" (francisque, cf. lot "malgré la limite") : usage
+      // (1x/combat au rare, illimité au légendaire) vérifié séparément au
+      // rendu du bouton (cf. _itemLancerArmeDisponible, js/app.js), pas ici —
+      // cette méthode reste une lecture pure de l'équipement.
+      if (Personnage._estArmeContactJetable(arme)) return arme;
     }
     return null;
   }
@@ -1813,7 +1824,13 @@ class Personnage extends Entite {
         .reduce((t, it) => t + (it.bonusAttaqueDistance || 0), 0);
       // Malus de proficience d'armure (-2, cf. estArmureNonMaitrisee).
       const malusProficience = Personnage.estArmureNonMaitrisee(this) ? -2 : 0;
-      return b + this.mod("DEX") + bonusGantsDistance + malusProficience;
+      // "tournoyante" (francisque, cf. lot "malgré la limite") : une arme de
+      // contact lancée à distance courte reste un jet de FORCE (comme
+      // "lancer" ci-dessous), jamais de DEX — seule une vraie arme à distance
+      // (arc, arbalète...) utilise DEX.
+      const armeDist = this.armeDistanceEquipee();
+      const modCarac = Personnage._estArmeContactJetable(armeDist) ? this.mod("FOR") : this.mod("DEX");
+      return b + modCarac + bonusGantsDistance + malusProficience;
     }
     if (type === "lancer") return b + this.mod("FOR");
     if (type === "magique") {

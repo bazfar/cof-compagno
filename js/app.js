@@ -1500,7 +1500,14 @@ const App = (() => {
     // joueur au moment de résoudre l'attaque, faute de cibleId résolu ici.
     const actifArmeBenie = perso.aArmeBenie();
     const attContact = perso.bonusAttaque("contact") - (actifFrappePuissante ? 2 : 0) + (actifArmeBenie ? 1 : 0);
-    const attDistance = armeDistance ? perso.bonusAttaque("distance") - (actifTirPrecision ? 2 : 0) : null;
+    // "tournoyante" (francisque, cf. lot "malgré la limite") : une arme de
+    // contact aussi jetable à distance courte partage le même bouton
+    // "Distance" qu'une vraie arme à distance — mais son usage (1x/combat au
+    // rare, illimité au légendaire) est vérifié ICI, pas dans
+    // armeDistanceEquipee() (lecture pure de l'équipement, cf. Personnage).
+    const armeDistanceEstJetContact = !!(armeDistance && Personnage._estArmeContact(armeDistance));
+    const jetArmeDispo = armeDistanceEstJetContact ? _itemLancerArmeDisponible(p) : null;
+    const attDistance = armeDistance && (!armeDistanceEstJetContact || jetArmeDispo) ? perso.bonusAttaque("distance") - (actifTirPrecision ? 2 : 0) : null;
     const armeCourteSecondaire = perso.armeCourteSecondaire();
     let dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
     if (dmgContact && actifFrappePuissante) dmgContact += "+4";
@@ -1752,6 +1759,16 @@ const App = (() => {
         const type = el.dataset.bmAttaque;
         const bonus = parseInt(el.dataset.bonus, 10);
         const cibleId = (_typeAttaquePortee === type) ? _cibleDistanceId : null;
+        // "tournoyante" (francisque, cf. lot "malgré la limite") : consomme
+        // l'usage du jet à distance courte au clic — revérifié ici plutôt que
+        // de faire confiance à jetArmeDispo (calculé au rendu, potentiellement
+        // périmé), même principe que les fenêtres de réaction.
+        if (type === "distance" && armeDistanceEstJetContact) {
+          const persosFrais = chargerPersos();
+          const pFrais = persosFrais[id];
+          const dispoFrais = pFrais && _itemLancerArmeDisponible(pFrais);
+          if (dispoFrais) { dispoFrais.usage.appliquer(); sauverPersos(persosFrais); }
+        }
         // bonusAttaqueConditionnel (affixe "precise", cf. Affixes phase 2 §B) :
         // lu ici, avant le jet — un effet de déclencheur arriverait trop tard.
         const bonusEffectif = bonus + _bonusAttaqueConditionnelEquipement(perso, type, cibleId);
@@ -1966,7 +1983,11 @@ const App = (() => {
     const actifArmeBenie = perso.aArmeBenie();
 
     const attContact = perso.bonusAttaque("contact") - (actifFrappePuissante ? 2 : 0) + (actifArmeBenie ? 1 : 0);
-    const attDistance = armeDistance ? perso.bonusAttaque("distance") - (actifTirPrecision ? 2 : 0) : null;
+    // "tournoyante" (francisque, cf. lot "malgré la limite") : cf. même
+    // garde-fou d'usage que rendreFicheSidebarBattlemap.
+    const armeDistanceEstJetContact = !!(armeDistance && Personnage._estArmeContact(armeDistance));
+    const jetArmeDispo = armeDistanceEstJetContact ? _itemLancerArmeDisponible(p) : null;
+    const attDistance = armeDistance && (!armeDistanceEstJetContact || jetArmeDispo) ? perso.bonusAttaque("distance") - (actifTirPrecision ? 2 : 0) : null;
 
     // Repli sur les dégâts à mains nues du Moine (Voie des poings) si aucune
     // arme de contact n'est équipée ; combine avec l'arme courte en main
@@ -2169,6 +2190,14 @@ const App = (() => {
         const type = el.dataset.bmAttaque;
         const bonus = parseInt(el.dataset.bonus, 10);
         const cibleId = (_typeAttaquePortee === type) ? _cibleDistanceId : null;
+        // "tournoyante" (francisque, cf. lot "malgré la limite") : cf. même
+        // consommation d'usage que rendreFicheSidebarBattlemap.
+        if (type === "distance" && armeDistanceEstJetContact) {
+          const persosFrais = chargerPersos();
+          const pFrais = persosFrais[id];
+          const dispoFrais = pFrais && _itemLancerArmeDisponible(pFrais);
+          if (dispoFrais) { dispoFrais.usage.appliquer(); sauverPersos(persosFrais); }
+        }
         // bonusAttaqueConditionnel (affixe "precise", cf. Affixes phase 2 §B) :
         // lu ici, avant le jet — un effet de déclencheur arriverait trop tard.
         const bonusEffectif = bonus + _bonusAttaqueConditionnelEquipement(perso, type, cibleId);
@@ -10077,6 +10106,27 @@ const App = (() => {
       for (const d of it.declencheurs) {
         if (d.evenement !== "critiqueSubi") continue;
         if (!Array.isArray(d.effets) || !d.effets.some((e) => e.type === "annuleCritique")) continue;
+        const usage = _verifierUsageDeclencheur(p, it, d);
+        if (usage.ok) return { it, d, usage };
+      }
+    }
+    return null;
+  }
+
+  // Item équipé (arme de contact) portant un jet à distance courte "jetArme"
+  // disponible (cf. "tournoyante", francisque, lot "malgré la limite") —
+  // même patron que les autres _item*Disponible : renvoie { it, d, usage }
+  // (usage vérifié, pas encore consommé) ou null. Sans usage sur le
+  // déclencheur (légendaire), _verifierUsageDeclencheur renvoie {ok:true}
+  // sans effet de bord — toujours disponible.
+  function _itemLancerArmeDisponible(p) {
+    if (!p) return null;
+    const perso = Personnage.depuisJSON(p);
+    for (const it of perso._itemsEquipesUniques()) {
+      if (!it.declencheurs) continue;
+      for (const d of it.declencheurs) {
+        if (d.evenement !== "jetArme") continue;
+        if (!Array.isArray(d.effets) || !d.effets.some((e) => e.type === "porteeCourte")) continue;
         const usage = _verifierUsageDeclencheur(p, it, d);
         if (usage.ok) return { it, d, usage };
       }

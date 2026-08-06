@@ -219,7 +219,24 @@ const EFFETS_PAR_ITEM = {
       } },
   ],
   francisque: [
-    { id: "tournoyante", nom: "tournoyante", rare: "Peut être relancée pour toucher une cible à distance courte, 1 fois par combat", legendaire: "Peut être relancée sans limite, revient dans la main du porteur" },
+    { id: "tournoyante", nom: "tournoyante", rare: "Peut être relancée pour toucher une cible à distance courte, 1 fois par combat", legendaire: "Peut être relancée sans limite, revient dans la main du porteur",
+      mecanique: {
+        // porteeMaxCases (6 cases ≈ 9m, cf. la portée "jet 9m" déjà indiquée
+        // dans le texte de base de la francisque, data/loot.js) : rend l'arme
+        // reconnue par Personnage.armeDistanceEquipee()/bonusAttaque comme
+        // aussi utilisable à distance courte (jet de FORCE, pas DEX), en plus
+        // de son usage normal au contact — cf. Personnage._estArmeContactJetable.
+        // evenement "jetArme"/effet "porteeCourte" : usage vérifié par
+        // _itemLancerArmeDisponible (js/app.js) au rendu du bouton "Distance"
+        // (sidebar/dock battlemap) ET consommé à la résolution du jet — pas
+        // de usage au légendaire (illimité, cf. "revient dans la main" :
+        // rien à modéliser en plus, cette app ne fait déjà jamais "perdre"
+        // une arme équipée après une attaque, contrairement à un consommable
+        // jetable — javelot.revenant/cape_brume.evanescente restent hors
+        // scope pour cette même raison ailleurs dans le catalogue).
+        rare: { passif: { porteeMaxCases: 6 }, evenement: "jetArme", usage: { frequence: "1x/combat" }, effets: [{ type: "porteeCourte" }] },
+        legendaire: { passif: { porteeMaxCases: 6 }, evenement: "jetArme", effets: [{ type: "porteeCourte" }] },
+      } },
     { id: "feroce", nom: "féroce", rare: "+1d4 dégâts contre une cible à moins de la moitié de ses PV max", legendaire: "+1d8 dégâts contre une cible à moins de la moitié de ses PV max",
       mecanique: {
         rare: { evenement: "touche", condition: "cibleSousMoitie", effets: [{ type: "degats", formule: "1d4" }] },
@@ -675,6 +692,16 @@ const Raretes = (() => {
     // (accessoires "de base" du catalogue) — aucun changement côté
     // personnage.js, juste posé ici comme les autres passifs.
     if (passif.bonusDEF) clone.bonusDEF = (item.bonusDEF || 0) + passif.bonusDEF;
+    // porteeMaxCases/porteeMinCases (cf. "tournoyante", francisque, lot
+    // "malgré la limite") : mêmes champs que ceux DÉJÀ portés nativement par
+    // les vraies armes à distance du catalogue (arc, arbalète — cf.
+    // data/loot.js) — leur seule PRÉSENCE sur une arme de contact suffit à
+    // Personnage._estArmeContactJetable() pour la reconnaître comme jetable
+    // à distance courte, sans marqueur dédié.
+    if (passif.porteeMaxCases !== undefined) {
+      clone.porteeMaxCases = passif.porteeMaxCases;
+      clone.porteeMinCases = passif.porteeMinCases || 0;
+    }
   }
 
   // mecanique[palier] (rare/legendaire) -> effets sur le clone, commun aux 4
