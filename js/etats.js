@@ -26,6 +26,8 @@ const ETATS = {
     description: "Doit s'éloigner de la source de peur, ne peut pas l'approcher ni l'attaquer." },
   silencieuse: { nom: "Réduite au silence", categorie: "controle",
     description: "Ne peut lancer aucun sort/capacité à composante vocale." },
+  desarmee: { nom: "Désarmée", categorie: "controle", reserve: true,
+    description: "Ne peut plus utiliser son arme (attaque au contact ou à distance avec une arme équipée) tant que l'état dure ; les attaques à mains nues, sorts et capacités sans arme restent possibles. Durée en tours fixée par la capacité/le piège qui l'inflige — pas de source actuelle dans le bestiaire ou le catalogue de loot." },
   invisible: { nom: "Invisible", categorie: "controle",
     description: "Non ciblable par une attaque ou une capacité tant que le porteur n'a pas lui-même attaqué ni lancé de capacité offensive. Le déplacement reste normal. L'état est rompu immédiatement dès la première action offensive du porteur, ou à expiration de sa durée." },
   invisible_majeur: { nom: "Invisible (majeure)", categorie: "controle",
