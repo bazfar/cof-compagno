@@ -471,8 +471,30 @@ const EFFETS_PAR_ITEM = {
     { id: "polyvalent", nom: "polyvalent", rare: "Résistance 1 à deux types de dégâts au choix", legendaire: "Résistance 2 à deux types de dégâts au choix" },
   ],
   pierre_chance: [
-    { id: "insistante", nom: "insistante", rare: "2 fois par jour, relance un jet raté", legendaire: "3 fois par jour, relance un jet raté (garde le meilleur résultat)" },
-    { id: "protectrice", nom: "protectrice", rare: "1 fois par jour, relance un jet raté ; 1 fois par jour, transforme un coup critique subi en coup normal", legendaire: "2 fois par jour, relance un jet raté ; 1 fois par combat, transforme un coup critique subi en coup normal" },
+    { id: "insistante", nom: "insistante", rare: "2 fois par jour, relance un jet raté", legendaire: "3 fois par jour, relance un jet raté (garde le meilleur résultat)",
+      mecanique: {
+        // relance (cf. lot "jour" — pierre de chance) : DÉCLENCHÉ PAR LE
+        // JOUEUR sur son propre dernier test d20 (cf. dernierJetRelancable/
+        // _relancerDernierJet, js/app.js) — "raté" n'est pas toujours connu
+        // de l'app (beaucoup de jets libres n'ont pas de DC suivie), c'est
+        // au joueur de juger. garderMeilleur (légendaire uniquement, cf. son
+        // texte exact) : conserve le MEILLEUR des deux résultats.
+        rare: { evenement: "relance", usage: { frequence: "2x/jour" }, effets: [{ type: "relance" }] },
+        legendaire: { evenement: "relance", usage: { frequence: "3x/jour" }, effets: [{ type: "relance", garderMeilleur: true }] },
+      } },
+    { id: "protectrice", nom: "protectrice", rare: "1 fois par jour, relance un jet raté ; 1 fois par jour, transforme un coup critique subi en coup normal", legendaire: "2 fois par jour, relance un jet raté ; 1 fois par combat, transforme un coup critique subi en coup normal",
+      mecanique: {
+        // 2 déclencheurs indépendants sur le même item (cf. meca.aussi[],
+        // _appliquerMecanique) : "relance" (identique à "insistante", sans
+        // garderMeilleur) ET "critiqueSubi" — ce second volet est un proc
+        // AUTOMATIQUE (pas de choix du joueur, cf. "absorbant"), fréquence
+        // et période distinctes de la relance (1x/jour puis 1x/COMBAT au
+        // palier légendaire, cf. le texte exact).
+        rare: { evenement: "relance", usage: { frequence: "1x/jour" }, effets: [{ type: "relance" }],
+          aussi: [{ evenement: "critiqueSubi", usage: { frequence: "1x/jour" }, effets: [{ type: "annuleCritique" }] }] },
+        legendaire: { evenement: "relance", usage: { frequence: "2x/jour" }, effets: [{ type: "relance" }],
+          aussi: [{ evenement: "critiqueSubi", usage: { frequence: "1x/combat" }, effets: [{ type: "annuleCritique" }] }] },
+      } },
   ],
   amulette_sante: [
     { id: "vivifiante", nom: "vivifiante", rare: "+1d6 PV max ; régénère 1 PV par tour hors combat", legendaire: "+2d6 PV max ; régénère 1 PV par tour même en combat" },
@@ -661,38 +683,54 @@ const Raretes = (() => {
   // n'est plus l'apanage des armes depuis cette phase). `meca` peut porter,
   // indépendamment les uns des autres : passif, evenement+effets
   // (déclencheur, avec condition et usage optionnels), bonusAttaqueConditionnel.
+  // Un seul déclencheur (evenement+effets+usage+typeDegats+porteeRequise) —
+  // factorisé pour être appelé sur `meca` (forme courte historique) ET sur
+  // chaque entrée de `meca.aussi[]` (cf. "protectrice", Pierre de chance : un
+  // palier peut porter DEUX déclencheurs indépendants, evenements/usages
+  // distincts — ex. "relance" 1x/jour ET "critiqueSubi" 1x/combat).
+  function _construireDeclencheur(spec) {
+    // declencheurs[] : lu par _gererDeclencheursEquipement/
+    // _gererDeclencheursSubitContact (js/app.js) sur l'item équipé — même
+    // schéma que les objets forgés (Épée de Cupidité), juste produit ici
+    // plutôt que par la Forge du MJ.
+    const d = { evenement: spec.evenement, effets: spec.effets };
+    if (spec.condition) d.condition = spec.condition;
+    // usage (cf. "éblouissant", Affixes phase 4 — "1/2 fois par combat") :
+    // même vocabulaire que mecanique.usage.frequence des capacités PJ/
+    // monstres (Capacites.verifierUsage), lu par _verifierUsageDeclencheur
+    // (js/app.js) plutôt que par un compteur ad hoc.
+    if (spec.usage) d.usage = spec.usage;
+    // typeDegats (cf. "réfléchissante", cotte_runique — ne renvoie que les
+    // dégâts MAGIQUES subis) : filtre le déclencheur "subitContact" sur le
+    // type de dégâts encaissé, lu par _gererDeclencheursSubitContact
+    // (js/app.js). Absent = aucun filtre (épineuse/renvoyeur/runique).
+    if (spec.typeDegats) d.typeDegats = spec.typeDegats;
+    // porteeRequise (cf. "parade"/"reactifs", lot subitAttaque esquive) :
+    // filtre le déclencheur "subitAttaque" sur le type d'attaque subie
+    // ("contact" uniquement) — lu par _itemEsquiveDisponible (js/app.js).
+    // Absent = aucun filtre (contact ET distance, cf. "insaisissable").
+    if (spec.porteeRequise) d.porteeRequise = spec.porteeRequise;
+    return d;
+  }
   function _appliquerMecanique(clone, item, meca) {
     if (!meca) return;
     _appliquerPassif(clone, item, meca.passif);
     if (meca.evenement && Array.isArray(meca.effets)) {
-      // declencheurs[] : lu par _gererDeclencheursEquipement/
-      // _gererDeclencheursSubitContact (js/app.js) sur l'item équipé — même
-      // schéma que les objets forgés (Épée de Cupidité), juste produit ici
-      // plutôt que par la Forge du MJ.
-      const d = { evenement: meca.evenement, effets: meca.effets };
-      if (meca.condition) d.condition = meca.condition;
-      // usage (cf. "éblouissant", Affixes phase 4 — "1/2 fois par combat") :
-      // même vocabulaire que mecanique.usage.frequence des capacités PJ/
-      // monstres (Capacites.verifierUsage), lu par _verifierUsageDeclencheur
-      // (js/app.js) plutôt que par un compteur ad hoc.
-      if (meca.usage) d.usage = meca.usage;
-      // typeDegats (cf. "réfléchissante", cotte_runique — ne renvoie que les
-      // dégâts MAGIQUES subis) : filtre le déclencheur "subitContact" sur le
-      // type de dégâts encaissé, lu par _gererDeclencheursSubitContact
-      // (js/app.js). Absent = aucun filtre (épineuse/renvoyeur/runique).
-      if (meca.typeDegats) d.typeDegats = meca.typeDegats;
-      // porteeRequise (cf. "parade"/"reactifs", lot subitAttaque esquive) :
-      // filtre le déclencheur "subitAttaque" sur le type d'attaque subie
-      // ("contact" uniquement) — lu par _itemEsquiveDisponible (js/app.js).
-      // Absent = aucun filtre (contact ET distance, cf. "insaisissable").
-      if (meca.porteeRequise) d.porteeRequise = meca.porteeRequise;
-      clone.declencheurs = [d];
+      clone.declencheurs = [_construireDeclencheur(meca)];
       // critique{seuil} (cf. Rapière perfide) : résolu STATIQUEMENT ici, pas
       // par le déclencheur (le jet est déjà fait au moment où "touche" se
       // résout) — lu ensuite par Personnage.critMinAttaque() via arme.critMin,
       // mécanisme déjà existant.
       const effetCritique = meca.effets.find((e) => e.type === "critique");
       if (effetCritique) clone.critMin = Math.min(item.critMin || 20, effetCritique.seuil);
+    }
+    // aussi[] (cf. "protectrice" ci-dessus) : déclencheurs supplémentaires
+    // sur le MÊME item, jamais mutuellement exclusifs avec le premier.
+    if (Array.isArray(meca.aussi)) {
+      meca.aussi.forEach((sub) => {
+        if (!sub.evenement || !Array.isArray(sub.effets)) return;
+        clone.declencheurs = (clone.declencheurs || []).concat([_construireDeclencheur(sub)]);
+      });
     }
     // bonusAttaqueConditionnel (cf. "precise") : PAS un effet de déclencheur
     // — son bonus se lit AVANT le jet d'attaque (cf. Affixes phase 2 §B,

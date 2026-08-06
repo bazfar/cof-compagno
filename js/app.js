@@ -113,6 +113,11 @@ const App = (() => {
   // à marquer un "propriétaire" sur les persos qu'il crée, cf. estProprietaire().
   let joueurId = null;
   let joueurNom = null;
+  // Dernier test d20 rattaché à un PJ (cf. lancerTest) — permet une relance
+  // manuelle via Pierre de chance "insistante"/"protectrice" (lot "jour"),
+  // cf. _relancerDernierJet/htmlBlocPierreChance. { persoId, label, bonus,
+  // critMin, mode, total, de, crit, echec } ou null.
+  let dernierJetRelancable = null;
 
   // Overlay de jet de dé partagée (voir _verifierNouveauJetPourOverlay) :
   // horodatage du dernier jet déjà montré, pour ne jamais rejouer une
@@ -1708,6 +1713,7 @@ const App = (() => {
       ${htmlEtatsActifs(p)}
       ${htmlBlocInitiativeJoueur(id)}
       ${htmlBlocChance(p, perso)}
+      ${htmlBlocPierreChance(id, p)}
       ${htmlBlocCorruption(p, perso)}
       ${htmlBlocIllusions(p, perso)}
       ${htmlBlocAmes(p, perso)}
@@ -4831,6 +4837,22 @@ const App = (() => {
     </div>`;
   }
 
+  // Bloc "Pierre de chance" (insistante/protectrice) — visible pour CE PJ
+  // uniquement s'il porte l'objet ET qu'un jet relançable existe (cf.
+  // dernierJetRelancable, posé par lancerTest) : rien à proposer sans les
+  // deux. Le volet "transforme un critique subi en coup normal" de
+  // "protectrice" n'a pas de bouton — automatique, cf. _itemAnnuleCritiqueDisponible/
+  // _resoudreAttaqueEtSuite (comme "absorbant").
+  function htmlBlocPierreChance(persoId, p) {
+    const dispo = _itemRelanceDisponible(p);
+    if (!dispo || !dernierJetRelancable || dernierJetRelancable.persoId !== persoId) return "";
+    return `<div class="carte">
+      <h3 style="margin-top:0;">🍀 ${echapper(dispo.it.nom)}</h3>
+      <p class="aide" style="margin:0 0 6px;">Dernier jet : <strong>${echapper(dernierJetRelancable.label)}</strong> (${dernierJetRelancable.total}). Si tu l'estimes raté, tu peux le relancer.</p>
+      <button class="btn petit or" data-relancer-jet="${echapper(persoId)}">🍀 Relancer ce jet</button>
+    </div>`;
+  }
+
   // Adversaires (tokens monstres) actuellement à `rayon` cases ou moins de
   // `persoId` sur la scène dd2vtt active (défaut 1 = adjacent, cf.
   // Carte.distanceCasesEntre) — même infra que Personnage.bonusDefDuel
@@ -5592,6 +5614,11 @@ const App = (() => {
         else _repondreFenetreReaction(id, el.dataset.reactionAction);
         rafraichir();
       };
+    });
+    // Pierre de chance (cf. htmlBlocPierreChance) : relance le dernier test
+    // d20 de CE PJ, jugé "raté" par le joueur lui-même.
+    racine.querySelectorAll("[data-relancer-jet]").forEach((el) => {
+      el.onclick = () => { _relancerDernierJet(id); rafraichir(); };
     });
     // Désengagement (homebrew, attaque d'opportunité, cf. htmlBlocDesengagement) :
     // un jet de FOR (poussée) par adversaire actuellement adjacent, opposé à
@@ -6931,6 +6958,7 @@ const App = (() => {
           ${htmlEtatsActifs(p)}
           ${htmlBlocInitiativeJoueur(id)}
           ${htmlBlocChance(p, perso)}
+          ${htmlBlocPierreChance(id, p)}
           ${htmlBlocCorruption(p, perso)}
           ${htmlBlocIllusions(p, perso)}
           ${htmlBlocAmes(p, perso)}
@@ -7852,6 +7880,12 @@ const App = (() => {
     afficherResultat(label, total, detail, crit, echec);
     ajouterHisto(label + " " + signe(bonus), total, crit, echec, detail, { mode, d1, d2, estMonstre: !!opts.estMonstre });
     if (echec && opts.persoId) _apresJetAnneauChance(opts.persoId);
+    // Pierre de chance "insistante"/"protectrice" (cf. lot "jour" — relance un
+    // jet raté) : mémorise CE jet pour une relance manuelle ultérieure (cf.
+    // _relancerDernierJet/htmlBlocPierreChance) — "raté" n'est pas toujours
+    // connu de l'app (beaucoup de jets libres n'ont pas de DC suivie), c'est
+    // au joueur de juger et de cliquer le bouton, pas à lancerTest de deviner.
+    if (opts.persoId) dernierJetRelancable = { persoId: opts.persoId, label, bonus, critMin, mode, total, de, crit, echec };
     return { total, de, crit, echec };
   }
 
@@ -7944,6 +7978,59 @@ const App = (() => {
     _syncPvAffichages(persoId, p);
     if (transition) _rerendreApresTransitionMourant(persoId);
     toast(`💍 1 naturel ! L'Anneau de Chance inflige ${total} dégâts directs à ${p.nom} (${cumuls}d10, cumuls remis à 0).`);
+  }
+
+  // Item équipé portant une relance "relance" disponible (cf. "insistante"/
+  // "protectrice", Pierre de chance) — même patron que _itemEsquiveDisponible :
+  // renvoie { it, d, usage } (usage vérifié, pas encore consommé) ou null.
+  function _itemRelanceDisponible(p) {
+    if (!p) return null;
+    const perso = Personnage.depuisJSON(p);
+    for (const it of perso._itemsEquipesUniques()) {
+      if (!it.declencheurs) continue;
+      for (const d of it.declencheurs) {
+        if (d.evenement !== "relance") continue;
+        if (!Array.isArray(d.effets) || !d.effets.some((e) => e.type === "relance")) continue;
+        const usage = _verifierUsageDeclencheur(p, it, d);
+        if (usage.ok) return { it, d, usage };
+      }
+    }
+    return null;
+  }
+
+  // Relance manuelle du dernier test d20 de CE PJ (cf. dernierJetRelancable,
+  // posé par lancerTest) via Pierre de chance — c'est au joueur de juger
+  // qu'un jet est "raté" (l'app ne connaît pas toujours la DC d'un test
+  // libre) et de cliquer le bouton, pas à l'app de deviner. garderMeilleur
+  // (cf. "insistante" légendaire, effets[].garderMeilleur) : conserve le
+  // MEILLEUR des deux totaux plutôt que d'imposer le nouveau — absent/false
+  // pour tous les autres paliers (relance standard, nouveau résultat gardé).
+  // Un seul jet relançable à la fois (remis à null après usage) : on ne
+  // relance jamais une relance.
+  function _relancerDernierJet(persoId) {
+    if (!dernierJetRelancable || dernierJetRelancable.persoId !== persoId) return;
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    const dispo = p && _itemRelanceDisponible(p);
+    if (!dispo) { toast("Relance indisponible."); return; }
+    const ancien = dernierJetRelancable;
+    dispo.usage.appliquer();
+    sauverPersos(persos);
+    const effetRelance = dispo.d.effets.find((e) => e.type === "relance");
+    const { de, d1, d2, detailDes } = _lancerD20SelonMode(ancien.mode);
+    const nouveauTotal = de + ancien.bonus;
+    const garderMeilleur = !!(effetRelance && effetRelance.garderMeilleur);
+    const garderAncien = garderMeilleur && ancien.total > nouveauTotal;
+    const totalFinal = garderAncien ? ancien.total : nouveauTotal;
+    const critFinal = garderAncien ? ancien.crit : (de >= ancien.critMin);
+    const echecFinal = garderAncien ? ancien.echec : (de === 1);
+    const detail = `${detailDes} ${signe(ancien.bonus)} (ancien jet : ${ancien.total})`;
+    afficherResultat(`${ancien.label} (relance)`, totalFinal, detail, critFinal, echecFinal);
+    ajouterHisto(`${ancien.label} (relance, ${dispo.it.nom})`, totalFinal, critFinal, echecFinal, detail, { mode: ancien.mode, d1, d2 });
+    dernierJetRelancable = null;
+    toast(garderAncien
+      ? `🍀 ${dispo.it.nom} : relance à ${nouveauTotal}, meilleur résultat conservé (${totalFinal}).`
+      : `🍀 ${dispo.it.nom} : jet relancé — ${totalFinal}.`);
   }
 
   // d20 "simple" (section Dés simples) : respecte quand même le mode
@@ -9975,6 +10062,28 @@ const App = (() => {
     return null;
   }
 
+  // Item équipé portant une annulation de critique "critiqueSubi" disponible
+  // (cf. "protectrice", Pierre de chance) — même patron que
+  // _itemInterceptionDisponible, mais évènement dédié : contrairement à
+  // subitAttaque (avant le jet) et subitContact (après les dégâts, contact
+  // uniquement), ce proc se déclenche dès que le jet est connu ET critique,
+  // qu'il s'agisse d'une arme ou d'une capacité à jetAttaque à distance — lu
+  // par _resoudreAttaqueEtSuite, entièrement automatique (comme "absorbant").
+  function _itemAnnuleCritiqueDisponible(p) {
+    if (!p) return null;
+    const perso = Personnage.depuisJSON(p);
+    for (const it of perso._itemsEquipesUniques()) {
+      if (!it.declencheurs) continue;
+      for (const d of it.declencheurs) {
+        if (d.evenement !== "critiqueSubi") continue;
+        if (!Array.isArray(d.effets) || !d.effets.some((e) => e.type === "annuleCritique")) continue;
+        const usage = _verifierUsageDeclencheur(p, it, d);
+        if (usage.ok) return { it, d, usage };
+      }
+    }
+    return null;
+  }
+
   // Répondants éligibles à la fenêtre "subitAttaque" (cf. "Prototype du
   // moteur de réaction", extension §A + lots "esquive/réduction" et
   // "reflechissant/muraille") : la cible de l'attaque elle-même (Bouclier
@@ -10108,12 +10217,29 @@ const App = (() => {
     const resAtt = descripteur.forceRate
       ? { touche: false, critique: false, echecCritique: false, totalAttaque: null, defCible: null, esquiveForcee: true }
       : _resoudreAttaqueMonstreVsPJ(descripteur.label, descripteur.bonus, descripteur.critMin, descripteur.pjId);
+    // "protectrice" (Pierre de chance, cf. lot "jour") : contrairement à
+    // "insistante" (relance manuelle, cf. _relancerDernierJet), ce volet est
+    // un proc AUTOMATIQUE sans choix du joueur — même principe qu'"absorbant"
+    // (lot subitAttaque esquive/réduction). resAtt.critiqueAnnuleePar est lu
+    // par les deux chemins de message ci-dessous (arme et capacité de monstre).
+    if (resAtt.critique && descripteur.pjId) {
+      const persos = chargerPersos();
+      const p = persos[descripteur.pjId];
+      const dispo = p && _itemAnnuleCritiqueDisponible(p);
+      if (dispo) {
+        dispo.usage.appliquer();
+        sauverPersos(persos);
+        resAtt.critique = false;
+        resAtt.critiqueAnnuleePar = dispo.it.nom;
+      }
+    }
     const suite = descripteur.suite || {};
     if (suite.type === "jetMonstreArme") {
       attaquesMonstresEnAttente[`${suite.monstreId}:${suite.idxAttaque}`] = resAtt;
       if (descripteur.pjId) {
         const nomCible = (chargerPersos()[descripteur.pjId] || {}).nom || "la cible";
         toast(resAtt.esquiveForcee ? `💨 ${nomCible} esquive totalement l'attaque !`
+          : resAtt.critiqueAnnuleePar ? `🍀 ${resAtt.critiqueAnnuleePar} : critique transformé en coup normal sur ${nomCible} !${resAtt.defCible !== null ? ` (DEF ${resAtt.defCible})` : ""}`
           : resAtt.echecCritique ? "1 naturel — échec critique automatique."
           : resAtt.critique ? `CRITIQUE sur ${nomCible} !${resAtt.defCible !== null ? ` (DEF ${resAtt.defCible})` : ""}`
           : resAtt.defCible === null ? "DEF de la cible inconnue — à comparer manuellement."
@@ -10218,6 +10344,7 @@ const App = (() => {
     let toucheOk = true;
     if (resAtt) {
       messagesToast.push(resAtt.esquiveForcee ? "Esquive totale — effet non appliqué."
+        : resAtt.critiqueAnnuleePar ? `🍀 ${resAtt.critiqueAnnuleePar} : critique transformé en coup normal.${resAtt.defCible !== null ? ` (DEF ${resAtt.defCible})` : ""}`
         : resAtt.echecCritique ? "1 naturel — échec critique automatique, effet non appliqué."
         : resAtt.critique ? `CRITIQUE !${resAtt.defCible !== null ? ` (DEF ${resAtt.defCible})` : ""}`
         : resAtt.defCible === null ? "DEF de la cible inconnue — effet appliqué, à confirmer manuellement."

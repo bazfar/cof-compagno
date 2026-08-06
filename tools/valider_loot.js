@@ -82,7 +82,7 @@ function formuleValide(f) {
 // — reductionDegats non plus (traité en amont de subirDegats, cf.
 // _reduireDegatsSubisSiDisponible) — mais les deux passent par le même
 // vocabulaire effets[]/validerEffets pour rester validés au même endroit.
-const TYPES_EFFET_VALIDES = ["degats", "dot", "soin", "bonus", "etat", "ignoreReduction", "critique", "special", "esquive", "reductionDegats", "reflechitSort", "intercepte"];
+const TYPES_EFFET_VALIDES = ["degats", "dot", "soin", "bonus", "etat", "ignoreReduction", "critique", "special", "esquive", "reductionDegats", "reflechitSort", "intercepte", "relance", "annuleCritique"];
 const CIBLES_BONUS_VALIDES = ["attaque", "DEF"];
 const DUREE_MOTS_CLES_LOOT = ["prochainTour", "finCombat", "permanente"];
 // cible: "attaquant" sur un effet degats/etat (cf. "Affixes phase 2" §C,
@@ -100,7 +100,12 @@ const TYPES_EFFET_CIBLE_INVERSE = ["degats", "etat"];
 // sortLance (cf. lot "reflechissant/muraille") : même moteur combat:reaction,
 // jamais résolu par _resoudreEffetsDeclencheur non plus — géré par
 // _repondantsSortLance/_repondreFenetreReaction (js/app.js).
-const EVENEMENTS_DECLENCHEUR_VALIDES = ["touche", "rate", "critique", "subitContact", "subitAttaque", "sortLance"];
+// relance (cf. "insistante"/"protectrice", Pierre de chance, lot "jour") :
+// déclenché manuellement par le JOUEUR sur son propre dernier jet d20 (cf.
+// dernierJetRelancable/_relancerDernierJet), pas par _resoudreEffetsDeclencheur.
+// critiqueSubi (cf. "protectrice") : proc automatique dès qu'un jet
+// d'attaque de monstre contre un PJ est critique, cf. _resoudreAttaqueEtSuite.
+const EVENEMENTS_DECLENCHEUR_VALIDES = ["touche", "rate", "critique", "subitContact", "subitAttaque", "sortLance", "relance", "critiqueSubi"];
 // typeDegats sur un déclencheur "subitContact" (cf. "réfléchissante",
 // cotte_runique — ne renvoie que les dégâts magiques subis).
 const TYPES_DEGATS_DECLENCHEUR_VALIDES = ["physique", "magique"];
@@ -152,12 +157,19 @@ function validerEffets(effets, signaler) {
     if (e.type === "critique" && !(Number.isInteger(e.seuil) && e.seuil >= 2 && e.seuil <= 20)) {
       signaler(`${p}.seuil devrait être un entier entre 2 et 20, reçu ${JSON.stringify(e.seuil)}.`);
     }
-    // esquive/reflechitSort/intercepte : pas de paramètre, juste le type —
-    // la logique (annulation du jet, redirection du plan vers le lanceur,
-    // redirection de la cible vers un allié) est portée par la fenêtre de
-    // réaction (subitAttaque/sortLance), pas par ces effets.
+    // esquive/reflechitSort/intercepte/annuleCritique : pas de paramètre,
+    // juste le type — la logique (annulation du jet, redirection du plan vers
+    // le lanceur, redirection de la cible vers un allié, downgrade du crit)
+    // est portée par la fenêtre de réaction ou _resoudreAttaqueEtSuite
+    // (subitAttaque/sortLance/critiqueSubi), pas par ces effets.
     if (e.type === "reductionDegats" && !(typeof e.fraction === "number" && e.fraction > 0 && e.fraction <= 1)) {
       signaler(`${p}.fraction devrait être un nombre entre 0 (exclu) et 1, reçu ${JSON.stringify(e.fraction)}.`);
+    }
+    // relance : garderMeilleur (optionnel, cf. "insistante" légendaire) doit
+    // être un booléen quand présent — absent/false = relance standard
+    // (nouveau résultat imposé, cf. _relancerDernierJet).
+    if (e.type === "relance" && e.garderMeilleur !== undefined && typeof e.garderMeilleur !== "boolean") {
+      signaler(`${p}.garderMeilleur devrait être un booléen, reçu ${JSON.stringify(e.garderMeilleur)}.`);
     }
     if (e.type === "special" && !e.note) signaler(`${p} : un effet special doit porter une note pour le MJ.`);
   });
@@ -410,25 +422,35 @@ let nbMecaniques = 0;
 // exclusifs (epee_courte.precise legendaire porte à la fois evenement+effets
 // ET bonusAttaqueConditionnel). On ne valide que ce qui est effectivement
 // présent, plutôt que de supposer une forme unique.
+// Un seul déclencheur (evenement+effets+usage+typeDegats+porteeRequise) —
+// factorisé pour être appliqué à la fois à `m` (forme courte historique) et
+// à chaque entrée de `m.aussi[]` (cf. "protectrice", Pierre de chance : un
+// palier peut porter DEUX déclencheurs indépendants, evenements/usages
+// distincts — _appliquerMecanique, js/raretes.js).
+function validerDeclencheurMecanique(cle, p, m) {
+  if (!EVENEMENTS_DECLENCHEUR_VALIDES.includes(m.evenement)) signalerAffixe(cle, `${p}.evenement invalide : "${m.evenement}" (attendu : ${EVENEMENTS_DECLENCHEUR_VALIDES.join("|")}).`);
+  validerEffets(m.effets, (msg) => signalerAffixe(cle, `${p}.${msg}`));
+  if (m.condition !== undefined && !CONDITIONS_VALIDES.includes(m.condition)) {
+    signalerAffixe(cle, `${p}.condition invalide : "${m.condition}" (attendu : ${CONDITIONS_VALIDES.join("|")}).`);
+  }
+  if (m.usage !== undefined) validerUsage(m.usage, (msg) => signalerAffixe(cle, `${p}.${msg}`));
+  if (m.typeDegats !== undefined && !TYPES_DEGATS_DECLENCHEUR_VALIDES.includes(m.typeDegats)) {
+    signalerAffixe(cle, `${p}.typeDegats invalide : "${m.typeDegats}" (attendu : ${TYPES_DEGATS_DECLENCHEUR_VALIDES.join("|")}).`);
+  }
+  if (m.porteeRequise !== undefined && !PORTEE_REQUISE_DECLENCHEUR_VALIDES.includes(m.porteeRequise)) {
+    signalerAffixe(cle, `${p}.porteeRequise invalide : "${m.porteeRequise}" (attendu : ${PORTEE_REQUISE_DECLENCHEUR_VALIDES.join("|")}).`);
+  }
+}
 function validerMecaniqueAffixe(cle, meca) {
   ["rare", "legendaire"].forEach((palier) => {
     const m = meca[palier];
     if (!m) return;
     nbMecaniques++;
     const p = `mecanique.${palier}`;
-    if (m.evenement !== undefined || m.effets !== undefined) {
-      if (!EVENEMENTS_DECLENCHEUR_VALIDES.includes(m.evenement)) signalerAffixe(cle, `${p}.evenement invalide : "${m.evenement}" (attendu : ${EVENEMENTS_DECLENCHEUR_VALIDES.join("|")}).`);
-      validerEffets(m.effets, (msg) => signalerAffixe(cle, `${p}.${msg}`));
-    }
-    if (m.condition !== undefined && !CONDITIONS_VALIDES.includes(m.condition)) {
-      signalerAffixe(cle, `${p}.condition invalide : "${m.condition}" (attendu : ${CONDITIONS_VALIDES.join("|")}).`);
-    }
-    if (m.usage !== undefined) validerUsage(m.usage, (msg) => signalerAffixe(cle, `${p}.${msg}`));
-    if (m.typeDegats !== undefined && !TYPES_DEGATS_DECLENCHEUR_VALIDES.includes(m.typeDegats)) {
-      signalerAffixe(cle, `${p}.typeDegats invalide : "${m.typeDegats}" (attendu : ${TYPES_DEGATS_DECLENCHEUR_VALIDES.join("|")}).`);
-    }
-    if (m.porteeRequise !== undefined && !PORTEE_REQUISE_DECLENCHEUR_VALIDES.includes(m.porteeRequise)) {
-      signalerAffixe(cle, `${p}.porteeRequise invalide : "${m.porteeRequise}" (attendu : ${PORTEE_REQUISE_DECLENCHEUR_VALIDES.join("|")}).`);
+    if (m.evenement !== undefined || m.effets !== undefined) validerDeclencheurMecanique(cle, p, m);
+    if (m.aussi !== undefined) {
+      if (!Array.isArray(m.aussi)) signalerAffixe(cle, `${p}.aussi devrait être un tableau, reçu ${JSON.stringify(m.aussi)}.`);
+      else m.aussi.forEach((sub, i) => validerDeclencheurMecanique(cle, `${p}.aussi[${i}]`, sub || {}));
     }
     if (m.passif !== undefined) validerPassif(cle, `${p}.passif`, m.passif);
     if (m.bonusAttaqueConditionnel !== undefined) validerBonusAttaqueConditionnel(cle, `${p}.bonusAttaqueConditionnel`, m.bonusAttaqueConditionnel);
