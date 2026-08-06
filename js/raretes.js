@@ -342,7 +342,11 @@ const EFFETS_PAR_ITEM = {
   ],
   cotte_runique: [
     { id: "protectrice", nom: "protectrice", rare: "+1 aux jets de résistance contre la magie", legendaire: "+2 aux jets de résistance contre la magie" },
-    { id: "reflechissante", nom: "réfléchissante", rare: "1 fois par combat, renvoie 1d4 dégâts magiques subis à l'attaquant", legendaire: "1 fois par combat, renvoie 1d8 dégâts magiques subis à l'attaquant" },
+    { id: "reflechissante", nom: "réfléchissante", rare: "1 fois par combat, renvoie 1d4 dégâts magiques subis à l'attaquant", legendaire: "1 fois par combat, renvoie 1d8 dégâts magiques subis à l'attaquant",
+      mecanique: {
+        rare: { evenement: "subitContact", typeDegats: "magique", usage: { frequence: "1x/combat" }, effets: [{ type: "degats", formule: "1d4", cible: "attaquant" }] },
+        legendaire: { evenement: "subitContact", typeDegats: "magique", usage: { frequence: "1x/combat" }, effets: [{ type: "degats", formule: "1d8", cible: "attaquant" }] },
+      } },
   ],
   armure_ecailles: [
     { id: "glissante", nom: "glissante", rare: "+1 DEF contre les attaques d'opportunité", legendaire: "+2 DEF contre les attaques d'opportunité, jamais pris au dépourvu" },
@@ -399,7 +403,11 @@ const EFFETS_PAR_ITEM = {
     { id: "inebranlable", nom: "inébranlable", rare: "Résiste automatiquement à un effet de repoussement par combat", legendaire: "Résiste automatiquement à tout effet de repoussement" },
   ],
   bouclier_rond_nain: [
-    { id: "runique", nom: "runique", rare: "1 fois par combat, renvoie 1d4 dégâts subis à l'attaquant", legendaire: "1 fois par combat, renvoie 1d8 dégâts subis à l'attaquant" },
+    { id: "runique", nom: "runique", rare: "1 fois par combat, renvoie 1d4 dégâts subis à l'attaquant", legendaire: "1 fois par combat, renvoie 1d8 dégâts subis à l'attaquant",
+      mecanique: {
+        rare: { evenement: "subitContact", usage: { frequence: "1x/combat" }, effets: [{ type: "degats", formule: "1d4", cible: "attaquant" }] },
+        legendaire: { evenement: "subitContact", usage: { frequence: "1x/combat" }, effets: [{ type: "degats", formule: "1d8", cible: "attaquant" }] },
+      } },
     { id: "massif", nom: "massif", rare: "Ignore 1 point de dégâts physiques après application du bonusDEF", legendaire: "Ignore 2 points de dégâts physiques après application du bonusDEF" },
   ],
   bouclier_seve: [
@@ -610,6 +618,11 @@ const Raretes = (() => {
       // monstres (Capacites.verifierUsage), lu par _verifierUsageDeclencheur
       // (js/app.js) plutôt que par un compteur ad hoc.
       if (meca.usage) d.usage = meca.usage;
+      // typeDegats (cf. "réfléchissante", cotte_runique — ne renvoie que les
+      // dégâts MAGIQUES subis) : filtre le déclencheur "subitContact" sur le
+      // type de dégâts encaissé, lu par _gererDeclencheursSubitContact
+      // (js/app.js). Absent = aucun filtre (épineuse/renvoyeur/runique).
+      if (meca.typeDegats) d.typeDegats = meca.typeDegats;
       clone.declencheurs = [d];
       // critique{seuil} (cf. Rapière perfide) : résolu STATIQUEMENT ici, pas
       // par le déclencheur (le jet est déjà fait au moment où "touche" se

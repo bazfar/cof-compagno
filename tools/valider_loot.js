@@ -88,6 +88,9 @@ const TYPES_EFFET_CIBLE_INVERSE = ["degats", "etat"];
 // evenement partagé entre declencheurs[] (data/loot.json) et mecanique{}
 // (js/raretes.js) — subitContact ajouté en phase 2 (cf. §C).
 const EVENEMENTS_DECLENCHEUR_VALIDES = ["touche", "rate", "critique", "subitContact"];
+// typeDegats sur un déclencheur "subitContact" (cf. "réfléchissante",
+// cotte_runique — ne renvoie que les dégâts magiques subis).
+const TYPES_DEGATS_DECLENCHEUR_VALIDES = ["physique", "magique"];
 // condition sur un déclencheur/mecanique (cf. "Affixes phase 2" §B :
 // sauvage/féroce = cibleSousMoitie, precise = cibleBlessee).
 const CONDITIONS_VALIDES = ["cibleBlessee", "cibleSousMoitie"];
@@ -331,6 +334,9 @@ items.forEach((it, index) => {
       signaler(cle, `declencheurs[${i}].condition invalide : "${d.condition}" (attendu : ${CONDITIONS_VALIDES.join("|")}).`);
     }
     if (d.usage !== undefined) validerUsage(d.usage, (msg) => signaler(cle, `declencheurs[${i}].${msg}`));
+    if (d.typeDegats !== undefined && !TYPES_DEGATS_DECLENCHEUR_VALIDES.includes(d.typeDegats)) {
+      signaler(cle, `declencheurs[${i}].typeDegats invalide : "${d.typeDegats}" (attendu : ${TYPES_DEGATS_DECLENCHEUR_VALIDES.join("|")}).`);
+    }
     // Deux formes acceptées (cf. "Mécaniser les affixes de rareté") :
     // ressource/operation (Forge du MJ, existant) OU effets[] (vocabulaire
     // mecanique.effets[] de data/donnees.js, nouveau).
@@ -388,6 +394,9 @@ function validerMecaniqueAffixe(cle, meca) {
       signalerAffixe(cle, `${p}.condition invalide : "${m.condition}" (attendu : ${CONDITIONS_VALIDES.join("|")}).`);
     }
     if (m.usage !== undefined) validerUsage(m.usage, (msg) => signalerAffixe(cle, `${p}.${msg}`));
+    if (m.typeDegats !== undefined && !TYPES_DEGATS_DECLENCHEUR_VALIDES.includes(m.typeDegats)) {
+      signalerAffixe(cle, `${p}.typeDegats invalide : "${m.typeDegats}" (attendu : ${TYPES_DEGATS_DECLENCHEUR_VALIDES.join("|")}).`);
+    }
     if (m.passif !== undefined) validerPassif(cle, `${p}.passif`, m.passif);
     if (m.bonusAttaqueConditionnel !== undefined) validerBonusAttaqueConditionnel(cle, `${p}.bonusAttaqueConditionnel`, m.bonusAttaqueConditionnel);
     if (m.evenement === undefined && m.effets === undefined && m.passif === undefined && m.bonusAttaqueConditionnel === undefined && m.note === undefined) {

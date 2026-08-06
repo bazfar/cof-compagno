@@ -1169,7 +1169,12 @@ const App = (() => {
   // ici (resterait undefined, jamais lue par _resoudreEffetsDeclencheur pour
   // un effet cible:"attaquant"). Journalise dans l'historique (ajouterHisto)
   // pour rester visible côté MJ, comme demandé par la checklist du prompt.
-  function _gererDeclencheursSubitContact(pjId, attaquantMonstreId) {
+  // typeDegatsSubis ("physique"|"magique", cf. affixes "réfléchissante" —
+  // ne renvoie que les dégâts MAGIQUES subis, contrairement à épineuse/
+  // renvoyeur/runique qui ne distinguent pas) : optionnel, absent = aucun
+  // filtre côté déclencheur (comportement historique, épineuse/renvoyeur
+  // n'ont jamais porté ce champ).
+  function _gererDeclencheursSubitContact(pjId, attaquantMonstreId, typeDegatsSubis) {
     const persos = chargerPersos();
     const p = persos[pjId];
     if (!p) return;
@@ -1181,6 +1186,7 @@ const App = (() => {
       it.declencheurs.forEach((d) => {
         if (d.evenement !== "subitContact") return;
         if (!Array.isArray(d.effets)) return;
+        if (d.typeDegats && d.typeDegats !== typeDegatsSubis) return;
         const usage = _verifierUsageDeclencheur(p, it, d);
         if (!usage.ok) return;
         const ctx = { persoId: pjId, p, perso, persos, attaquantId: attaquantMonstreId, itNom: it.nom, type: null, messagesToast, pvPorteurTouche: false };
@@ -10214,7 +10220,7 @@ const App = (() => {
           // renvoyeur) : seulement sur une attaque de CONTACT — r.portee peut
           // valoir "contact" ou "contact +1 case (3m)" (armes d'hast), les
           // deux comptent comme une attaque de contact.
-          if (r.portee && r.portee.startsWith("contact")) _gererDeclencheursSubitContact(pjId, m.id);
+          if (r.portee && r.portee.startsWith("contact")) _gererDeclencheursSubitContact(pjId, m.id, typeDegatsNormalise);
         }
       };
     });
