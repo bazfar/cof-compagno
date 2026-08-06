@@ -79,17 +79,22 @@ function formuleValide(f) {
 const TYPES_EFFET_VALIDES = ["degats", "dot", "soin", "bonus", "etat", "ignoreReduction", "critique", "special"];
 const CIBLES_BONUS_VALIDES = ["attaque", "DEF"];
 const DUREE_MOTS_CLES_LOOT = ["prochainTour", "finCombat", "permanente"];
-// cible: "attaquant" sur un effet degats (cf. "Affixes phase 2" §C, épineuse/
-// renvoyeur — "quand le porteur est touché") : seul cas où un effet vise
-// l'inverse du porteur qui l'a déclenché. Absent = comportement historique
-// (vise la cible du porteur).
-const CIBLES_EFFET_DEGATS_VALIDES = ["attaquant"];
+// cible: "attaquant" sur un effet degats/etat (cf. "Affixes phase 2" §C,
+// épineuse/renvoyeur, et "Affixes phase 4", éblouissant) : seul cas où un
+// effet vise l'inverse du porteur qui l'a déclenché. Absent = comportement
+// historique (vise la cible du porteur).
+const CIBLES_EFFET_INVERSE_VALIDES = ["attaquant"];
+const TYPES_EFFET_CIBLE_INVERSE = ["degats", "etat"];
 // evenement partagé entre declencheurs[] (data/loot.json) et mecanique{}
 // (js/raretes.js) — subitContact ajouté en phase 2 (cf. §C).
 const EVENEMENTS_DECLENCHEUR_VALIDES = ["touche", "rate", "critique", "subitContact"];
 // condition sur un déclencheur/mecanique (cf. "Affixes phase 2" §B :
 // sauvage/féroce = cibleSousMoitie, precise = cibleBlessee).
 const CONDITIONS_VALIDES = ["cibleBlessee", "cibleSousMoitie"];
+// usage.frequence sur un déclencheur/mecanique (cf. "éblouissant", Affixes
+// phase 4 — "1/2 fois par combat") : même grammaire que
+// Capacites.parserFrequence (js/capacites.js), ex. "1x/combat", "2x/jour".
+const RE_USAGE_FREQUENCE = /^\d+x\/.+$/i;
 function validerEffets(effets, signaler) {
   if (!Array.isArray(effets) || !effets.length) { signaler("effets[] absent ou vide."); return; }
   effets.forEach((e, i) => {
@@ -101,8 +106,8 @@ function validerEffets(effets, signaler) {
     if (e.type === "degats" || e.type === "dot" || e.type === "soin") {
       if (!formuleValide(e.formule)) signaler(`${p}.formule "${e.formule}" rejetée par la grammaire de lancerFormule.`);
     }
-    if (e.type === "degats" && e.cible !== undefined && !CIBLES_EFFET_DEGATS_VALIDES.includes(e.cible)) {
-      signaler(`${p}.cible invalide : "${e.cible}" (attendu : absent ou ${CIBLES_EFFET_DEGATS_VALIDES.join("|")}).`);
+    if (TYPES_EFFET_CIBLE_INVERSE.includes(e.type) && e.cible !== undefined && !CIBLES_EFFET_INVERSE_VALIDES.includes(e.cible)) {
+      signaler(`${p}.cible invalide : "${e.cible}" (attendu : absent ou ${CIBLES_EFFET_INVERSE_VALIDES.join("|")}).`);
     }
     if (e.type === "dot" || e.type === "etat") {
       const duree = e.type === "dot" ? e.duree : e.duree;
@@ -157,6 +162,17 @@ function validerPassif(cle, prefix, passif) {
   }
   if (passif.bonusDegatsContact !== undefined && !formuleValide(passif.bonusDegatsContact)) {
     signalerAffixe(cle, `${prefix}.bonusDegatsContact "${passif.bonusDegatsContact}" rejeté par la grammaire de lancerFormule.`);
+  }
+}
+
+// usage{frequence} sur un déclencheur (data/loot.json ou mecanique.rare/
+// legendaire) — cf. "éblouissant", Affixes phase 4. Signaler générique (pas
+// signalerAffixe en dur) : partagé entre les items du catalogue et les
+// affixes de rareté, comme validerEffets ci-dessus.
+function validerUsage(usage, signaler) {
+  if (!usage || typeof usage !== "object") { signaler(`usage devrait être un objet, reçu ${JSON.stringify(usage)}.`); return; }
+  if (typeof usage.frequence !== "string" || !RE_USAGE_FREQUENCE.test(usage.frequence)) {
+    signaler(`usage.frequence "${usage.frequence}" ne correspond pas au format attendu (ex. "1x/combat").`);
   }
 }
 
@@ -314,6 +330,7 @@ items.forEach((it, index) => {
     if (d.condition !== undefined && !CONDITIONS_VALIDES.includes(d.condition)) {
       signaler(cle, `declencheurs[${i}].condition invalide : "${d.condition}" (attendu : ${CONDITIONS_VALIDES.join("|")}).`);
     }
+    if (d.usage !== undefined) validerUsage(d.usage, (msg) => signaler(cle, `declencheurs[${i}].${msg}`));
     // Deux formes acceptées (cf. "Mécaniser les affixes de rareté") :
     // ressource/operation (Forge du MJ, existant) OU effets[] (vocabulaire
     // mecanique.effets[] de data/donnees.js, nouveau).
@@ -370,6 +387,7 @@ function validerMecaniqueAffixe(cle, meca) {
     if (m.condition !== undefined && !CONDITIONS_VALIDES.includes(m.condition)) {
       signalerAffixe(cle, `${p}.condition invalide : "${m.condition}" (attendu : ${CONDITIONS_VALIDES.join("|")}).`);
     }
+    if (m.usage !== undefined) validerUsage(m.usage, (msg) => signalerAffixe(cle, `${p}.${msg}`));
     if (m.passif !== undefined) validerPassif(cle, `${p}.passif`, m.passif);
     if (m.bonusAttaqueConditionnel !== undefined) validerBonusAttaqueConditionnel(cle, `${p}.bonusAttaqueConditionnel`, m.bonusAttaqueConditionnel);
     if (m.evenement === undefined && m.effets === undefined && m.passif === undefined && m.bonusAttaqueConditionnel === undefined && m.note === undefined) {

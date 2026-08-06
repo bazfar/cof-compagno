@@ -971,13 +971,19 @@ const App = (() => {
         _appliquerBonusSurCibleRaw(cibleRaw, e.cible, e.valeur, String(e.duree), ctx.itNom);
         ctx.messagesToast.push(`${ctx.itNom} : ${e.cible} ${e.valeur >= 0 ? "+" : ""}${e.valeur} sur la cible.`);
       } else if (e.type === "etat") {
-        if (!cibleRaw) { ctx.messagesToast.push(`${ctx.itNom} : cible inconnue — état « ${ETATS[e.id] ? ETATS[e.id].nom : e.id} » à appliquer manuellement.`); return; }
+        // cible: "attaquant" (cf. éblouissant, Affixes phase 4 — même
+        // redirection que "degats" en phase 2 §C) : le porteur touché pose
+        // l'état sur l'attaquant, pas sur lui-même.
+        const viseAttaquant = e.cible === "attaquant";
+        const idEffectif = viseAttaquant ? ctx.attaquantId : ctx.cibleId;
+        const rawEffectif = viseAttaquant ? (idEffectif ? _cibleRawDepuisToken(idEffectif) : null) : cibleRaw;
+        if (!rawEffectif) { ctx.messagesToast.push(`${ctx.itNom} : ${viseAttaquant ? "attaquant" : "cible"} inconnu(e) — état « ${ETATS[e.id] ? ETATS[e.id].nom : e.id} » à appliquer manuellement.`); return; }
         const entree = {
           idEtat: e.id,
           dureeRestante: Object.assign(_resoudreDureeToursMonstre(e.duree || "", null), { dureeAffichee: e.duree || null }),
           source: ctx.itNom, poseLe: Date.now(),
         };
-        const res = _appliquerEtatSurCibleRaw(cibleRaw, e.id, entree);
+        const res = _appliquerEtatSurCibleRaw(rawEffectif, e.id, entree);
         if (res.message) ctx.messagesToast.push(`${ctx.itNom} : ${res.message}`);
       } else if (e.type === "ignoreReduction") {
         // Touche le calcul de dégâts, pas un mouvement de ressource : stocké
@@ -1036,6 +1042,19 @@ const App = (() => {
     return _conditionRemplie(bac.condition, cibleId) ? bac.valeur : 0;
   }
 
+  // Limite d'usage d'un déclencheur d'équipement (cf. "éblouissant", Affixes
+  // phase 4 — "1/2 fois par combat") : réutilise Capacites.verifierUsage tel
+  // quel (clé arbitraire, mecanique.usage.frequence générique), au lieu d'un
+  // compteur ad hoc — la remise à zéro "combat" est donc déjà couverte
+  // gratuitement par Combat.terminerCombat() -> Capacites.
+  // reinitialiserUsagesPeriode(p, "combat"), qui ne fait aucune distinction
+  // entre une clé de capacité et une clé d'équipement. Pas de limite = { ok:
+  // true } sans effet de bord, comme avant l'introduction de ce champ.
+  function _verifierUsageDeclencheur(p, it, d) {
+    if (!d.usage || typeof Capacites === "undefined") return { ok: true };
+    return Capacites.verifierUsage(p, `equipement:${it.id}:${d.evenement}`, { usage: d.usage });
+  }
+
   function _gererDeclencheursEquipement(persoId, type, resolution, cibleId) {
     if (type !== "contact" && type !== "distance") return;
     const persos = chargerPersos();
@@ -1056,12 +1075,15 @@ const App = (() => {
           (d.evenement === "critique" && resolution.critique === true);
         if (!evenementOk) return;
         if (!_conditionRemplie(d.condition, cibleId)) return;
+        const usage = _verifierUsageDeclencheur(p, it, d);
+        if (!usage.ok) return;
         if (Array.isArray(d.effets)) {
           // Nouvelle branche (cf. schéma étendu) : vocabulaire effets[],
           // ctx.p/pvPorteurTouche partagés avec le reste de la fonction pour
           // qu'un seul sauverPersos() ferme le passage, comme l'ancien chemin.
           const ctx = { persoId, p, perso, persos, cibleId, itNom: it.nom, type, messagesToast, pvPorteurTouche: false };
           _resoudreEffetsDeclencheur(d.effets, ctx);
+          if (usage.appliquer) usage.appliquer();
           if (ctx.pvPorteurTouche) pvTouche = true;
           modifie = true;
           return;
@@ -1120,15 +1142,20 @@ const App = (() => {
     if (!p) return;
     const perso = Personnage.depuisJSON(p);
     const messagesToast = [];
+    let usageConsomme = false;
     perso._itemsEquipesUniques().forEach((it) => {
       if (!it.declencheurs || !it.declencheurs.length) return;
       it.declencheurs.forEach((d) => {
         if (d.evenement !== "subitContact") return;
         if (!Array.isArray(d.effets)) return;
+        const usage = _verifierUsageDeclencheur(p, it, d);
+        if (!usage.ok) return;
         const ctx = { persoId: pjId, p, perso, persos, attaquantId: attaquantMonstreId, itNom: it.nom, type: null, messagesToast, pvPorteurTouche: false };
         _resoudreEffetsDeclencheur(d.effets, ctx);
+        if (usage.appliquer) { usage.appliquer(); usageConsomme = true; }
       });
     });
+    if (usageConsomme) sauverPersos(persos);
     if (messagesToast.length) {
       toast(messagesToast.join(" — "));
       ajouterHisto(`${p.nom} — Riposte d'équipement`, 0, false, false, messagesToast.join(" — "));

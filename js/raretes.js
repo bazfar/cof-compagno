@@ -542,7 +542,11 @@ const EFFETS_PAR_ITEM = {
   ],
   bouclier_miroir: [
     { id: "reflechissant", nom: "réfléchissant", rare: "1 fois par combat, renvoie un sort ciblé à son lanceur", legendaire: "2 fois par combat, renvoie un sort ciblé à son lanceur" },
-    { id: "eblouissant", nom: "éblouissant", rare: "1 fois par combat, aveugle un attaquant au contact pendant 1 tour", legendaire: "2 fois par combat, aveugle un attaquant au contact pendant 1 tour" },
+    { id: "eblouissant", nom: "éblouissant", rare: "1 fois par combat, aveugle un attaquant au contact pendant 1 tour", legendaire: "2 fois par combat, aveugle un attaquant au contact pendant 1 tour",
+      mecanique: {
+        rare: { evenement: "subitContact", usage: { frequence: "1x/combat" }, effets: [{ type: "etat", id: "aveuglee", duree: "1", cible: "attaquant" }] },
+        legendaire: { evenement: "subitContact", usage: { frequence: "2x/combat" }, effets: [{ type: "etat", id: "aveuglee", duree: "1", cible: "attaquant" }] },
+      } },
   ],
 };
 
@@ -590,7 +594,7 @@ const Raretes = (() => {
   // bouclier, tous deux avec un déclencheur "subitContact" — la mécanique
   // n'est plus l'apanage des armes depuis cette phase). `meca` peut porter,
   // indépendamment les uns des autres : passif, evenement+effets
-  // (déclencheur, avec condition optionnelle), bonusAttaqueConditionnel.
+  // (déclencheur, avec condition et usage optionnels), bonusAttaqueConditionnel.
   function _appliquerMecanique(clone, item, meca) {
     if (!meca) return;
     _appliquerPassif(clone, item, meca.passif);
@@ -601,6 +605,11 @@ const Raretes = (() => {
       // plutôt que par la Forge du MJ.
       const d = { evenement: meca.evenement, effets: meca.effets };
       if (meca.condition) d.condition = meca.condition;
+      // usage (cf. "éblouissant", Affixes phase 4 — "1/2 fois par combat") :
+      // même vocabulaire que mecanique.usage.frequence des capacités PJ/
+      // monstres (Capacites.verifierUsage), lu par _verifierUsageDeclencheur
+      // (js/app.js) plutôt que par un compteur ad hoc.
+      if (meca.usage) d.usage = meca.usage;
       clone.declencheurs = [d];
       // critique{seuil} (cf. Rapière perfide) : résolu STATIQUEMENT ici, pas
       // par le déclencheur (le jet est déjà fait au moment où "touche" se
