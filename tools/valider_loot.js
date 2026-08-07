@@ -280,6 +280,27 @@ function validerPassif(cle, prefix, passif) {
   if (passif.bonusPvMaxDe !== undefined && !/^\d*d\d+$/.test(passif.bonusPvMaxDe)) {
     signalerAffixe(cle, `${prefix}.bonusPvMaxDe "${passif.bonusPvMaxDe}" ne correspond pas au format attendu (ex. "1d6").`);
   }
+  // bonusResistanceMentale/bonusDefSansArmure (cf. "impenetrable"/collier_clarte
+  // et "impassibles"/"reactifs" bracelets_defense, lot "armes/accessoires D") :
+  // même convention — entier, sommé génériquement.
+  if (passif.bonusResistanceMentale !== undefined && !Number.isInteger(passif.bonusResistanceMentale)) {
+    signalerAffixe(cle, `${prefix}.bonusResistanceMentale devrait être un entier, reçu ${JSON.stringify(passif.bonusResistanceMentale)}.`);
+  }
+  if (passif.bonusDefSansArmure !== undefined && !Number.isInteger(passif.bonusDefSansArmure)) {
+    signalerAffixe(cle, `${prefix}.bonusDefSansArmure devrait être un entier, reçu ${JSON.stringify(passif.bonusDefSansArmure)}.`);
+  }
+  // bonusDefArmureGroupe (cf. "standard"/armure_garde_solvarn, lot
+  // "précédent armure_garde_solvarn") : même convention — entier.
+  if (passif.bonusDefArmureGroupe !== undefined && !Number.isInteger(passif.bonusDefArmureGroupe)) {
+    signalerAffixe(cle, `${prefix}.bonusDefArmureGroupe devrait être un entier, reçu ${JSON.stringify(passif.bonusDefArmureGroupe)}.`);
+  }
+  // immuniteEtats (cf. "ancree"/"inebranlable", lot "repoussement") :
+  // tableau d'ids d'état existants dans js/etats.js — lu par
+  // Personnage.aImmuniteEtat().
+  if (passif.immuniteEtats !== undefined) {
+    if (!Array.isArray(passif.immuniteEtats)) signalerAffixe(cle, `${prefix}.immuniteEtats devrait être un tableau, reçu ${JSON.stringify(passif.immuniteEtats)}.`);
+    else passif.immuniteEtats.forEach((id) => { if (!etatExiste(id)) signalerAffixe(cle, `${prefix}.immuniteEtats référence un état inconnu de js/etats.js : ${JSON.stringify(id)}.`); });
+  }
 }
 
 // usage{frequence} sur un déclencheur (data/loot.json ou mecanique.rare/

@@ -771,7 +771,7 @@ class Personnage extends Entite {
     const dex = this.dexEffectifCA();
     const armure = this._itemsEquipesUniques().find((it) => it.type === "armure");
     const valeurCA = armure ? (armure.valeurCA || 10) : 10; // 10 = "Vêtements" par défaut
-    return valeurCA + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusDefMutations() + this.bonusTemporaire("DEF") + this.bonusDefImmobile() + this.bonusDefDuel() + this.bonusDefBouclierExpert() + this.bonusDefPhalange() + this.bonusDefSansArmureEquipement();
+    return valeurCA + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusDefMutations() + this.bonusTemporaire("DEF") + this.bonusDefImmobile() + this.bonusDefDuel() + this.bonusDefBouclierExpert() + this.bonusDefPhalange() + this.bonusDefSansArmureEquipement() + this.bonusDefArmureGroupeEquipement();
   }
 
   // Chasseur — Voie de la traque, rang 2 "Camouflage naturel" (passive) :
@@ -1109,6 +1109,13 @@ class Personnage extends Entite {
     // temporaire à la Peur tant que l'état 'avatar_du_pacte' reste actif
     // (indépendante du choix de la Voie du commandant ci-dessus).
     if (idEtat === "effrayee" && this.classe === "chevalier" && (this.etatsActifs || []).some((e) => e.idEtat === "avatar_du_pacte")) return true;
+    // "ancree" (demi_plaques)/"inebranlable" (bouclier_tour), palier
+    // légendaire uniquement (cf. lot "repoussement") : immunité PERMANENTE
+    // à "repoussee" — le palier rare ("1 fois par combat") aurait demandé de
+    // dupliquer le double-contrôle (gate + usage 1x/combat) déjà écrit à
+    // chaque site d'application d'état pour "Liberté d'action" ci-dessus,
+    // disproportionné pour ce seul affixe : laissé en note/texte seul.
+    if (this._itemsEquipesUniques().some((it) => (it.immuniteEtats || []).includes(idEtat))) return true;
     return false;
   }
   // A-t-il "Liberté d'action" (gate seule, sans le contrôle d'usage 1x/combat
@@ -1390,6 +1397,36 @@ class Personnage extends Entite {
     const aArmureOuBouclier = this._itemsEquipesUniques().some((it) => it.type === "armure" || it.type === "bouclier");
     if (aArmureOuBouclier) return 0;
     return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDefSansArmure || 0), 0);
+  }
+  // "standard"/"d'unité" (armure_garde_solvarn, lot "précédent armure_garde
+  // _solvarn") : "+X DEF quand porté aux côtés d'un autre porteur de la MÊME
+  // armure" — PREMIER cas où Personnage lit l'équipement d'un AUTRE
+  // personnage (jusqu'ici toujours self-contained, cf. bonusDefDuel/
+  // bonusDefPhalange qui ne lisent que des positions de jetons Carte, jamais
+  // le contenu d'un autre perso) : Carte ne donne que la position/le ref du
+  // jeton adjacent, pas son équipement — il faut App.chargerPersos() pour
+  // résoudre la fiche brute de CET allié (même pattern déjà utilisé par
+  // Combat/Capacites pour accéder à App, jamais par Personnage jusqu'ici).
+  // Générique sur l'id de l'item porteur du champ (pas juste
+  // "armure_garde_solvarn" en dur), pour rester réutilisable si un futur
+  // objet porte la même mécanique.
+  bonusDefArmureGroupeEquipement() {
+    const monItem = this._itemsEquipesUniques().find((it) => it.bonusDefArmureGroupe);
+    if (!monItem) return 0;
+    if (typeof Carte === "undefined" || !Carte.tokenIdPourPerso || !Carte.listeTokensJoueursCombat || !Carte.distanceCasesEntre) return 0;
+    if (typeof App === "undefined" || !App.chargerPersos) return 0;
+    const monToken = Carte.tokenIdPourPerso(this.id);
+    if (!monToken) return 0;
+    const persos = App.chargerPersos();
+    const aUnAllieEquipe = (Carte.listeTokensJoueursCombat() || []).some((t) => {
+      if (t.id === monToken || !t.ref || !t.ref.startsWith("pj-")) return false;
+      const d = Carte.distanceCasesEntre(monToken, t.id);
+      if (d === null || d > 1) return false;
+      const autreP = persos[t.ref.slice(3)];
+      if (!autreP || !autreP.equipement) return false;
+      return Object.values(autreP.equipement).some((it) => it && it.id === monItem.id);
+    });
+    return aUnAllieEquipe ? monItem.bonusDefArmureGroupe : 0;
   }
   // Druide — Voie de la nature, rang 4 "Résistance naturelle" : réduction
   // égale à 2×rangMaxVoie contre les dégâts "naturels" (froid/chaleur/chute/

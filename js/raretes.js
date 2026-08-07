@@ -406,7 +406,16 @@ const EFFETS_PAR_ITEM = {
         rare: { passif: { bonusDefDistance: 1 } },
         legendaire: { passif: { bonusDefDistance: 2 } },
       } },
-    { id: "ancree", nom: "ancrée", rare: "Résiste automatiquement à un effet de repoussement par combat", legendaire: "Résiste automatiquement à tout effet de repoussement" },
+    { id: "ancree", nom: "ancrée", rare: "Résiste automatiquement à un effet de repoussement par combat", legendaire: "Résiste automatiquement à tout effet de repoussement",
+      mecanique: {
+        // immuniteEtats (lot "repoussement") : palier légendaire SEUL —
+        // immunité permanente, lue par Personnage.aImmuniteEtat("repoussee").
+        // Le palier rare ("1 fois par combat") aurait demandé de dupliquer
+        // le double-contrôle gate+usage déjà écrit pour "Liberté d'action" à
+        // chaque site d'application d'état — laissé en note.
+        legendaire: { passif: { immuniteEtats: ["repoussee"] } },
+        rare: { note: "1 fois par combat — pas de notion d'usage limité dans aImmuniteEtat (contrairement à Liberté d'action, gérée séparément à chaque site d'application d'état) ; à arbitrer manuellement." },
+      } },
   ],
   plaques_comp: [
     { id: "impenetrable", nom: "impénétrable", rare: "Réduit de 1 tout dégât physique après application de reductionDegats", legendaire: "Réduit de 2 tout dégât physique après application de reductionDegats",
@@ -504,7 +513,16 @@ const EFFETS_PAR_ITEM = {
   ],
   armure_garde_solvarn: [
     { id: "disciplinee", nom: "disciplinée", rare: "+1 aux jets de moral en groupe", legendaire: "+2 aux jets de moral, immunise contre la Terreur en groupe" },
-    { id: "standard", nom: "d'unité", rare: "+1 DEF quand porté aux côtés d'un autre porteur de la même armure", legendaire: "+2 DEF dans les mêmes conditions" },
+    { id: "standard", nom: "d'unité", rare: "+1 DEF quand porté aux côtés d'un autre porteur de la même armure", legendaire: "+2 DEF dans les mêmes conditions",
+      mecanique: {
+        // bonusDefArmureGroupe (lot "précédent armure_garde_solvarn") : lu
+        // par Personnage.bonusDefArmureGroupeEquipement() — PREMIER cas où
+        // Personnage lit l'équipement d'un AUTRE personnage (via
+        // App.chargerPersos(), même pattern déjà utilisé par Combat/
+        // Capacites, jamais par Personnage lui-même jusqu'ici).
+        rare: { passif: { bonusDefArmureGroupe: 1 } },
+        legendaire: { passif: { bonusDefArmureGroupe: 2 } },
+      } },
   ],
   armure_druidique: [
     { id: "vivante", nom: "vivante", rare: "Se répare de 1 point de reductionDegats perdu par jour de repos", legendaire: "Se répare intégralement après une nuit de repos" },
@@ -561,7 +579,12 @@ const EFFETS_PAR_ITEM = {
         rare: { evenement: "subitAttaque", usage: { frequence: "1x/combat" }, effets: [{ type: "intercepte" }] },
         legendaire: { evenement: "subitAttaque", usage: { frequence: "2x/combat" }, effets: [{ type: "intercepte" }] },
       } },
-    { id: "inebranlable", nom: "inébranlable", rare: "Résiste automatiquement à un effet de repoussement par combat", legendaire: "Résiste automatiquement à tout effet de repoussement" },
+    { id: "inebranlable", nom: "inébranlable", rare: "Résiste automatiquement à un effet de repoussement par combat", legendaire: "Résiste automatiquement à tout effet de repoussement",
+      mecanique: {
+        // Même mécanique que "ancree" (demi_plaques) — cf. lot "repoussement".
+        legendaire: { passif: { immuniteEtats: ["repoussee"] } },
+        rare: { note: "1 fois par combat — pas de notion d'usage limité dans aImmuniteEtat ; à arbitrer manuellement." },
+      } },
   ],
   bouclier_rond_nain: [
     { id: "runique", nom: "runique", rare: "1 fois par combat, renvoie 1d4 dégâts subis à l'attaquant", legendaire: "1 fois par combat, renvoie 1d8 dégâts subis à l'attaquant",
@@ -1063,6 +1086,15 @@ const Raretes = (() => {
     // bonusDefSansArmureEquipement().
     if (passif.bonusResistanceMentale) clone.bonusResistanceMentale = (item.bonusResistanceMentale || 0) + passif.bonusResistanceMentale;
     if (passif.bonusDefSansArmure) clone.bonusDefSansArmure = (item.bonusDefSansArmure || 0) + passif.bonusDefSansArmure;
+    // immuniteEtats (cf. "ancree"/"inebranlable", légendaire uniquement, lot
+    // "repoussement") : tableau d'ids d'état — lu par Personnage.aImmuniteEtat,
+    // union (pas de doublon) plutôt qu'écrasement, au cas où deux objets
+    // équipés en porteraient chacun un différent.
+    if (passif.immuniteEtats) clone.immuniteEtats = Array.from(new Set([...(item.immuniteEtats || []), ...passif.immuniteEtats]));
+    // bonusDefArmureGroupe (cf. "standard"/"d'unité", armure_garde_solvarn,
+    // lot "précédent armure_garde_solvarn") : même convention additive —
+    // entier, lu par Personnage.bonusDefArmureGroupeEquipement().
+    if (passif.bonusDefArmureGroupe) clone.bonusDefArmureGroupe = (item.bonusDefArmureGroupe || 0) + passif.bonusDefArmureGroupe;
   }
 
   // mecanique[palier] (rare/legendaire) -> effets sur le clone, commun aux 4
