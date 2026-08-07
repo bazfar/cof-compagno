@@ -9100,6 +9100,13 @@ const App = (() => {
               : `<span class="badge-chaos" title="Visible MJ uniquement">🔒 Secret</span>`)
           : "";
 
+        // Tag "rencontré" (cf. p.rencontre dans PNJ_CLES, data/donnees.js) :
+        // marque les PNJ que le groupe a déjà croisés en jeu. Purement
+        // informatif, visible des deux rôles, aucun effet de règle.
+        const badgeRencontre = p.rencontre
+          ? `<span class="badge-rencontre" title="Déjà rencontré par le groupe">✓ Rencontré</span>`
+          : "";
+
         const boutonReveler = estSecret && !revele && role === "mj"
           ? `<button type="button" class="btn petit secondaire" data-act="reveler-pnj" data-id="${p.id}">🔓 Révéler aux joueurs</button>`
           : "";
@@ -9118,6 +9125,7 @@ const App = (() => {
               <div class="pnj-nom">${echapper(p.nom)}</div>
               <div class="pnj-titre">${echapper(p.titre)}</div>
             </div>
+            ${badgeRencontre}
             ${badgeSecretMj}
             <span class="badge-faction" style="background:${_couleurFaction(p.faction)};">${echapper(p.faction)}</span>
           </div>

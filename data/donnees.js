@@ -2796,7 +2796,20 @@ const LORE = {
       titre: "Les Lieux de Libris",
       categorie: "Approfondissements par faction & peuple",
       contenu:
-        "Sept lieux structurent la vie politique et sociale de Libris — territoires informels des cinq blocs de l'Assemblée, ou terrains neutres où tout le monde se croise.\n\nLe Grand Marché (Quartier des Marchés)\nCœur commercial de la ville, sur la Lisdane. Entrepôts, comptoirs de change, guildes en tout genre — territoire naturel du Comptoir. C'est ici, dans l'arrière-boutique d'un entrepôt discret appartenant à un intermédiaire de confiance, que Maître Aurèle Ferrand traite ses affaires les moins avouables.\n\nLe Palais du Serment\nSiège officiel de l'Assemblée, bâtiment le plus ancien de Libris — la charte fondatrice y est conservée sous verre, dans la salle où Vasnal préside encore les débats. Terrain neutre en théorie ; en pratique, les cinq blocs s'y affrontent à coups de procédure.\n\nLa Citadelle des Ponts\nCaserne principale de la Garde Citoyenne, sur un éperon rocheux dominant un des ponts de la Lisdane. Accès restreint, patrouilles visibles — un lieu qui rassure certains habitants et en inquiète d'autres.\n\nLe Quartier du Tissage\nTerritoire du Cercle des Peuples. Quartier mixte où se concentrent Aelindra, Mordanel exilés et autres non-humains de la ville. Ateliers, maisons communes, un petit temple dédié à Aelindros.\n\nLa Racine Noire\nTaverne discrète en périphérie, loin des quartiers marchands — repaire informel des Fils de Libris. Pas de siège officiel : leur pouvoir se construit ici, autour de bière bon marché et de discours populistes adressés à ceux que le Comptoir a ruinés.\n\nLa Table Commune\nAuberge-carrefour près des quais, fréquentée par tout le monde — marchands, miliciens en repos, idéalistes désabusés, parfois même un Fils de Libris qui ne veut pas se faire remarquer. Le lieu neutre par excellence pour une rencontre discrète.\n\nLes Docks de Port-Libris\nPort principal, où arrivent les nouvelles de la guerre navale contre Aetharion et les cargaisons du Comptoir. Lieu de passage pour toute intrigue impliquant contrebande, espionnage étranger, ou rumeurs fraîchement débarquées d'un autre continent.",
+        "Sept lieux structurent la vie politique et sociale de Libris — plus deux adresses d'une échelle inférieure, dans le Grand Marché — territoires informels des cinq blocs de l'Assemblée, ou terrains neutres où tout le monde se croise.\n\nLe Grand Marché (Quartier des Marchés)\nCœur commercial de la ville, sur la Lisdane. Entrepôts, comptoirs de change, guildes en tout genre — territoire naturel du Comptoir. C'est ici, dans l'arrière-boutique d'un entrepôt discret appartenant à un intermédiaire de confiance, que Maître Aurèle Ferrand traite ses affaires les moins avouables.\n\nLe Palais du Serment\nSiège officiel de l'Assemblée, bâtiment le plus ancien de Libris — la charte fondatrice y est conservée sous verre, dans la salle où Vasnal préside encore les débats. Terrain neutre en théorie ; en pratique, les cinq blocs s'y affrontent à coups de procédure.\n\nLa Citadelle des Ponts\nCaserne principale de la Garde Citoyenne, sur un éperon rocheux dominant un des ponts de la Lisdane. Accès restreint, patrouilles visibles — un lieu qui rassure certains habitants et en inquiète d'autres.\n\nLe Quartier du Tissage\nTerritoire du Cercle des Peuples. Quartier mixte où se concentrent Aelindra, Mordanel exilés et autres non-humains de la ville. Ateliers, maisons communes, un petit temple dédié à Aelindros.\n\nLa Racine Noire\nTaverne discrète en périphérie, loin des quartiers marchands — repaire informel des Fils de Libris. Pas de siège officiel : leur pouvoir se construit ici, autour de bière bon marché et de discours populistes adressés à ceux que le Comptoir a ruinés.\n\nLa Table Commune\nAuberge-carrefour près des quais, fréquentée par tout le monde — marchands, miliciens en repos, idéalistes désabusés, parfois même un Fils de Libris qui ne veut pas se faire remarquer. Le lieu neutre par excellence pour une rencontre discrète.\n\nLes Docks de Port-Libris\nPort principal, où arrivent les nouvelles de la guerre navale contre Aetharion et les cargaisons du Comptoir. Lieu de passage pour toute intrigue impliquant contrebande, espionnage étranger, ou rumeurs fraîchement débarquées d'un autre continent.\n\nLa Rangée B (Grand Marché)\nLe Comptoir numérote ses parcelles d'entrepôt par rangées. Quand la Lisdane s'est envasée sur sa rive nord, la Rangée B s'est retrouvée à cent pas d'un quai devenu inutilisable : le Comptoir a déclassé la rangée entière et revendu les parcelles à bas prix, plaques de laiton comprises. C'est aujourd'hui une rue de logements bon marché, d'ateliers et de tavernes installés dans des coques d'entrepôt trop grandes pour eux. Personne n'a rebaptisé les parcelles — on dit « je loge au B211 » comme ailleurs on dirait un nom de rue.\n\nLe B148\nAncien entrepôt à grain de la Rangée B, reconverti en taverne il y a douze ans par Bob, un porteur au dos cassé. La plaque de laiton du Comptoir est toujours boulonnée au-dessus de la porte, et le nom est resté : personne à Libris n'appelle l'endroit autrement. Salle unique trop haute sous plafond, charpente apparente, mezzanine louée à la nuit, étable aménagée dans une ancienne aire de chargement. Un incendie criminel jamais élucidé y a pris il y a deux ans, éteint de justesse par Henry, un gamin des rues que Bob a embauché le lendemain.",
+    },
+    {
+      titre: "La Fièvre du Grenier",
+      categorie: "Approfondissements par faction & peuple",
+      contenu:
+        "Depuis que les attaques de caravanes sont devenues publiques, Libris ne manque de rien : elle a peur de manquer, et c'est pire. On achète double, on stocke, on cache. Les prix montent parce que le stock disparaît des étals, et le stock disparaît parce que les prix montent. Il y a encore assez de grain dans la ville pour trois mois — personne n'y croit.\n\nLes conséquences se lisent partout. Des voisins se surveillent mutuellement les réserves. Des altercations éclatent pour une file d'attente. La Garde Citoyenne, dont les effectifs étaient déjà restreints, court d'un quartier à l'autre sans jamais arriver à temps nulle part.\n\nLes Fils de Libris n'ont pas inventé ce ressentiment, ils l'ont organisé. Leur discours tient en une phrase — « ils gardent pour les leurs » — et il fonctionne précisément parce que dans une ville qui thésaurise, tout le monde garde pour les siens et qu'il faut bien que ce soit la faute de quelqu'un. Les non-humains du Quartier du Tissage en font les frais les premiers, et le Cercle des Peuples, qui n'a ni troupes ni trésor, peine à protéger ceux qu'il représente.\n\nÀ l'Assemblée, Corwan Dessalles a saisi l'occasion pour plaider une refonte des sièges : le poids des blocs devrait suivre, selon lui, « qui nourrit la ville ». La formulation est habile — elle vise le Cercle des Peuples sans jamais le nommer. Le Consul Vasnal préside des débats devenus hostiles, Liora Sennett compte les voix, et Aldous Kenrick sort la charte fondatrice de sa vitrine plus souvent qu'en dix ans.",
+    },
+    {
+      titre: "Notes MJ — la Cour et les Fondations",
+      categorie: "Notes MJ",
+      mjSeulement: true,
+      contenu:
+        "Avant l'envasement de la Lisdane, le Comptoir stockait son grain sous terre : des celliers voûtés courant sous toute la Rangée B, frais et secs, reliés entre eux pour qu'on puisse déplacer les sacs sans remonter. Au déclassement de la rangée, les accès ont été murés parcelle par parcelle, aux frais des nouveaux propriétaires. Le réseau, lui, est intact — et il n'a jamais été vraiment vide.\n\nC'est là que siège le Roi des Mendiants, grand hôte de la Cupidité, dans les celliers d'un quartier construit pour garder ce qu'on a peur de manquer. Khoreth étant le miroir de Valdaan — la pierre qui écrase, les profondeurs — le grand hôte loge sous la richesse, jamais dedans.\n\nSon économie : il ne touche jamais l'or. Il prend des promesses, des services, des noms. Un porteur qui a reçu un repas un mauvais hiver ne rend jamais ce repas : il rend, une fois, un renseignement, et il ne se considère toujours pas quitte. Une dette qu'on ne solde pas vaut mieux qu'une dette qu'on rembourse. Conséquence de table : le levier qui fonctionne sur un cupide ordinaire — lui jeter de l'or pour le détourner — le nourrit.\n\nSon réseau, ce sont des enfants. Les bandes d'orphelins de Libris, les Doigts, collectent ce qu'elles entendent et sont payées en repas, en couvertures, en petites faveurs, jamais en pièces. Un enfant est invisible dans un marché : il traîne, il écoute, personne ne baisse la voix devant lui. Les Doigts ignorent pour qui ils travaillent — ils connaissent un intermédiaire, jamais deux.\n\nSes rapports avec les cinq blocs. Comptoir : il connaît les vrais livres mieux que Selyne Orwick, parce que les porteurs lui doivent quelque chose. Garde Citoyenne : elle utilise les positions de mendiants comme informateurs, et le Lieutenant Osgoode n'a jamais demandé qui les attribue. Fils de Libris : il possède les pauvres dont Dessalles prétend parler, Dessalles l'ignore, aucun contact, rivalité purement structurelle. Serment de Libris : sans intérêt pour lui, il ne veut pas le pouvoir, il veut le manque. Cercle des Peuples : son seul angle mort — le Tissage s'occupe de ses propres pauvres, personne là-bas ne lui doit rien.\n\nCe dernier point compte : le Quartier du Tissage est la seule communauté de Libris qui n'a pas besoin de lui, et une émeute qui la briserait lui rendrait service. Il n'organise pas le pogrom. Il ne fera simplement rien pour l'empêcher, alors qu'il est de tous les habitants de cette ville celui qui saurait le plus tôt qu'il se prépare. Sa participation est un silence — et c'est exactement ce qu'on pourra lui reprocher plus tard.\n\nRègle de mise en scène : il n'apparaît jamais avant le dernier acte. On ne le voit pas, on voit ses positions. Un mendiant toujours au même coin. Un gamin qui sait trop. Une porte murée. Un porteur qui refuse un pourboire.",
     },
     {
       titre: "Les Marches Orientales — le second front",
@@ -3192,19 +3205,6 @@ const PNJ_CLES = [
     ],
   },
   {
-    id: "grizzard-ancre",
-    nom: "Grizzard « l'Ancre »",
-    titre: "Vigie des Docks de Port-Libris",
-    faction: "Comptoir",
-    resume: "Vieux docker balafré qui voit tout ce qui entre et sort du port, et vend ses informations pas cher.",
-    description:
-      "Plus à sa place sur les quais que n'importe où ailleurs, Grizzard observe le trafic portuaire depuis des décennies. Pas malveillant, juste pragmatique : il vend ses informations contre à boire à la Table Commune.",
-    accroches: [
-      "Premier à savoir quand une cargaison ou un passager « ne colle pas ».",
-      "Source naturelle pour tout hook lié à la contrebande ou à l'espionnage étranger.",
-    ],
-  },
-  {
     id: "aldous-kenrick",
     nom: "Aldous Kenrick",
     titre: "Archiviste du Palais du Serment",
@@ -3306,6 +3306,96 @@ const PNJ_CLES = [
     accroches: [
       "Peut donner aux PJ une vision nuancée du ressentiment des Fils de Libris — utile pour éviter le manichéisme.",
       "Quête possible : lui offrir une vraie alternative économique, pour tester si le mouvement perd du terrain autrement que par la force.",
+    ],
+  },
+  {
+    id: "bastien-orfeuil",
+    nom: "Maître Bastien Orfeuil",
+    titre: "Négociant du Grand Marché",
+    faction: "Comptoir",
+    rencontre: true,
+    resume: "Héritier d'une famille terrienne ruinée par les raids impériaux, refondée en maison de négoce à Libris.",
+    description:
+      "Les Orfeuil tenaient un domaine agricole avant que les raids impériaux ne balaient la campagne. La famille a tout perdu, s'est repliée sur Libris et s'est reconstruite dans le négoce sous la bannière du Comptoir. Bastien en dirige la troisième génération : correct, prudent, obsédé par la solidité — un homme qui a grandi avec le récit d'une ruine et qui organise sa vie pour qu'elle ne se répète pas.\n\nIl soutient que le domaine n'a pas été perdu, mais livré : selon lui, les Vaudrel ont ouvert les portes aux impériaux afin de spolier sa famille. Il n'a jamais pu le prouver et n'a jamais cessé de le dire.",
+    accroches: [
+      "Ses convois font partie de ceux qui sont attaqués sur les routes. Il perd de l'argent chaque semaine et commence à parler de convois armés à ses frais — ce qui ne plaît ni à la Garde Citoyenne ni au Comptoir.",
+      "Levier d'accès au Comptoir sans passer par Draeven : il connaît les intermédiaires, il n'est pas assez haut placé pour être prudent.",
+      "MJ — l'accusation contre les Vaudrel est invérifiable dans les deux sens. Ne jamais trancher : le litige n'est pas un mystère à résoudre, c'est une plaie qui ne se referme pas. C'est exactement le terrain sur lequel Khoreth pousse.",
+    ],
+  },
+  {
+    id: "anselme-vaudrel",
+    nom: "Anselme Vaudrel",
+    titre: "Ancien jardinier du domaine Orfeuil",
+    faction: "Comptoir",
+    rencontre: true,
+    resume: "Vieil homme rongé par une rancune vieille de trente ans contre les Orfeuil, et par autre chose depuis peu.",
+    description:
+      "Les Vaudrel étaient une petite famille attachée au domaine des Orfeuil. Après l'accusation de collaboration, ils ont été ruinés sans jamais être jugés — et Anselme a fini par entretenir, comme jardinier, les jardins d'une maison où les siens avaient eu un nom.\n\nSa version est simple : quand les raids impériaux sont arrivés, les Orfeuil ont chargé leurs charrettes et sont partis en laissant le personnel sur place. Il n'a jamais rien ouvert à personne. On l'a abandonné, puis on l'a accusé pour justifier le départ.\n\nLes deux récits sont invérifiables, et les deux hommes y croient.",
+    accroches: [
+      "MJ — hôte précoce et involontaire de la corruption de Cupidité (aspect cristallisé de Khoreth). Bloc de statistiques : anselme_vaudrel dans data/bestiaire.json, famille cupide, tier meneur, dangerosité 3.",
+      "MJ — le Signe : un regard qui s'attarde une fraction de seconde de trop sur l'or, un tic de la main qui compte ou soupèse sans objet réel. Ne pas surligner, juste décrire.",
+      "MJ — sa rancune est le point d'accroche. Khoreth ne pousse pas sur l'avidité, il pousse sur ce qu'on estime nous être dû et qu'on n'a jamais reçu. Anselme est la première démonstration de ce principe dans la campagne ; le Roi des Mendiants en est l'aboutissement.",
+    ],
+  },
+  {
+    id: "grizzard-ancre",
+    nom: "Grizzard « l'Ancre »",
+    titre: "Vigie des Docks de Port-Libris",
+    faction: "Citoyens de Libris",
+    resume: "Vieux docker balafré qui voit tout ce qui entre et sort du port, et vend ses informations pas cher.",
+    description:
+      "Plus à sa place sur les quais que n'importe où ailleurs, Grizzard observe le trafic portuaire depuis des décennies. Pas malveillant, juste pragmatique : il vend ses informations contre à boire à la Table Commune.",
+    accroches: [
+      "Premier à savoir quand une cargaison ou un passager « ne colle pas ».",
+      "Source naturelle pour tout hook lié à la contrebande ou à l'espionnage étranger.",
+    ],
+  },
+  {
+    id: "ewen-castellan",
+    nom: "Ewen Castellan",
+    titre: "Changeur du Grand Marché, témoin de l'Assemblée",
+    faction: "Citoyens de Libris",
+    rencontre: true,
+    resume: "Changeur ordinaire qui a vu passer trop de monnaie solvarienne, et qui n'est jamais arrivé jusqu'au banc des témoins.",
+    description:
+      "Ewen tenait un comptoir de change sans histoire au Grand Marché. Son travail consistait à convertir des monnaies étrangères pour des marchands de passage — un métier où l'on ne regarde pas les visages, seulement les pièces.\n\nIl a fini par regarder les deux. Des sommes en monnaie solvarienne, converties en monnaie liberrane, ressortaient entre les mains d'hommes qu'il reconnaissait pour les avoir vus entrer à la Racine Noire. Il était le seul à pouvoir relier la pièce au visage : Selyne Orwick peut confirmer des mouvements d'argent, elle ne peut pas dire qui est venu les chercher.\n\nIl a accepté de témoigner devant l'Assemblée. Il est mort pendant son escorte.",
+    accroches: [
+      "Sa mort a fermé la piste du témoignage. Elle n'a pas fermé le dossier : le Lieutenant Bram Osgoode a vu la pièce que le Général-Consul Kessing garde confidentielle, et l'ordre de se taire le ronge.",
+      "MJ — aucune preuve ne relie sa mort à quiconque. C'est un secret de table, pas une énigme : ne pas fabriquer d'indice a posteriori.",
+      "MJ — le PJ concerné a tout intérêt à ce que le dossier de Kessing reste dans son tiroir. Si le groupe pousse pour l'obtenir, il joue contre son propre camp devant témoins.",
+    ],
+  },
+  {
+    id: "bob-b148",
+    nom: "Bob",
+    titre: "Tenancier du B148",
+    faction: "Citoyens de Libris",
+    rencontre: true,
+    resume: "Ancien porteur du Grand Marché reconverti en tavernier, sans faction et bien décidé à le rester.",
+    description:
+      "Dos cassé à quarante ans sur les quais, Bob a racheté une parcelle déclassée de la Rangée B avec ses indemnités et l'a transformée en taverne. Massif, lent, économe de ses mots comme de tout le reste. Il a des clients dans les cinq blocs et tient à ce que ça dure : la règle du B148 n'est affichée nulle part et tout le monde la connaît — pas de politique au comptoir.\n\nIl n'a pas recueilli Henry par bonté. Un gamin qui dort dans l'étable coûte moins cher qu'un employé et lui évite de payer une veille de nuit. Il le sait, il n'en est pas fier, et il tiendra sa promesse de la chambre — tard, et à contrecœur, parce que cette chambre il la loue.",
+    accroches: [
+      "Depuis la Fièvre du Grenier : son fournisseur ne vient plus, il monte ses prix et il en a honte. Il a commencé à stocker en cave.",
+      "MJ — il a muré la porte du fond de sa cave en emménageant, il y a douze ans. Si on lui demande pourquoi, il change de sujet, par gêne et non par ruse : il ne le sait pas lui-même. Quelqu'un le lui a demandé poliment, et lui a donné en échange quelque chose dont il avait besoin cette année-là.",
+      "MJ — comme tout le monde dans ce quartier, Bob doit quelque chose au Roi des Mendiants et ne le formulerait jamais ainsi.",
+    ],
+  },
+  {
+    id: "henry-b148",
+    nom: "Henry",
+    titre: "Serveur au B148",
+    faction: "Citoyens de Libris",
+    rencontre: true,
+    resume: "Orphelin de quinze ans, joyeux et serviable, qui sait beaucoup trop de choses sur ce qui circule dans le Grand Marché.",
+    description:
+      "Pas de nom de famille : il n'a jamais su celui de son père et personne ne le lui a demandé depuis assez longtemps pour que ça manque. Son père a disparu quand il avait six ans, sa mère est morte de maladie deux ans plus tard. Il a fait la rue, puis rejoint une bande de gamins qui échangeait des renseignements contre des repas — il en parle sans drame, comme d'un ancien travail.\n\nIl y a deux ans, le B148 a brûlé. Henry était là et a coupé le feu avant qu'il prenne la charpente. Bob l'a embauché le lendemain. C'est l'histoire dont il est le plus fier, et il la raconte bien.\n\nIl dort dans l'étable et vise la chambre au-dessus : Bob la lui a promise « s'il prouve qu'il la mérite », sans jamais préciser ce que ça voudrait dire. Il donnerait n'importe quoi pour cette porte à lui.",
+    accroches: [
+      "Il sait ce qu'il ne devrait pas savoir : quelle ruelle a vu passer quelle charrette, quel porteur doit quoi à qui, quelles positions de mendiants ont changé cette semaine. Il le lâche en servant, comme des potins.",
+      "Il ne ment jamais. Si on lui demande d'où il tient ça, il ne fabrique pas : il rit et change de sujet. Il a fait ça toute sa vie et croit sincèrement que ce n'est pas mentir.",
+      "MJ — l'incendie n'était pas inélucidé : il a été allumé sur commande, et Henry avait reçu la consigne d'être là cette nuit-là « pour regarder ». Il ignorait tout du feu et s'est jeté dessus de lui-même. Son héroïsme est authentique et il était prévu — le but étant de le placer à l'intérieur de la taverne où logent les gens qu'il faudra un jour surveiller, et de l'y placer d'une façon dont il serait fier.",
+      "MJ — quatre ans d'informations payés par un toit, et une chambre un jour s'il continue. Un désir unique, précis et hors de portée : exactement ce sur quoi le Roi des Mendiants travaille.",
+      "MJ — le jour où il comprend, ce n'est pas d'avoir été utilisé qui le brise (ça, il l'accepte) : c'est que la seule chose dont il soit fier lui ait été donnée. Jouer le moment sans explication — il se tait, et c'est la première fois.",
     ],
   },
   {
