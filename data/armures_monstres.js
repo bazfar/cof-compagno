@@ -270,6 +270,30 @@ const ARMURES_MONSTRES = [
     "reduction": 2,
     "naturelle": false,
     "note": "Des dizaines de vêtements donnés au fil des ans, portés les uns sur les autres — le Roi ne jette jamais ce qu'on lui donne."
+  },
+  {
+    "id": "cuir_epais_et_soies_durcies",
+    "nom": "Cuir épais et soies durcies",
+    "reduction": 2,
+    "naturelle": true
+  },
+  {
+    "id": "peau_visqueuse_et_muscle",
+    "nom": "Peau visqueuse et muscle",
+    "reduction": 2,
+    "naturelle": true
+  },
+  {
+    "id": "anneaux_chitineux",
+    "nom": "Anneaux chitineux",
+    "reduction": 2,
+    "naturelle": true
+  },
+  {
+    "id": "carapace_de_faille",
+    "nom": "Carapace de Faille",
+    "reduction": 3,
+    "naturelle": true
   }
 ];
 

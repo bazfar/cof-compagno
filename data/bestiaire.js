@@ -5108,6 +5108,405 @@ const BESTIAIRE = [
     ],
     "lore": "Statistiques volontairement identiques au socle dangerosité 1 / rôle soldat — ce n'est pas un garde du corps, c'est un pauvre. Toute la différence tient dans 'Ce que je te dois' : les PJ doivent tailler dans des gens qui doivent une pièce au Roi pour l'atteindre. Fragile exprès : s'il encaisse, il tombe.",
     "emoji": "🤲"
+  },
+  {
+    "id": "rodeur_de_brume",
+    "nom": "Rôdeur de brume",
+    "race": [
+      "monstres"
+    ],
+    "pv": 22,
+    "def": 13,
+    "init": 4,
+    "atk": 5,
+    "dangerosite": 2,
+    "boss": false,
+    "role": "escarmoucheur",
+    "taille": "moyenne",
+    "tier": "basique",
+    "famille": "rodeur",
+    "armureId": "fourrure_dense",
+    "attaques": [
+      {
+        "nom": "Morsure silencieuse",
+        "armeId": "morsure_silencieuse",
+        "bonusAttaque": 5,
+        "bonusDegats": 0,
+        "effetSpecial": "Si le rôdeur attaque depuis la dissimulation, la cible ne peut pas réagir ce round (pas d'attaque d'opportunité, pas de capacité déclenchée)."
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Embuscade des fonds",
+        "description": "En terrain de brume, hautes herbes ou sous-bois humide, le rôdeur est considéré comme dissimulé tant qu'il n'a pas attaqué. Test SAG diff. 14 pour le repérer avant qu'il ne bondisse."
+      },
+      {
+        "nom": "Repli",
+        "description": "Si le rôdeur tombe sous la moitié de ses PV, il rompt le combat au round suivant et disparaît dans la brume. Il revient la nuit suivante si le groupe campe sur son territoire."
+      }
+    ],
+    "lore": "Prédateur du cerf-des-brumes, dont il partage les fonds humides de Valdorne et de Mornac. Long, bas sur pattes, robe grise qui se confond avec la vapeur du matin. Les paysans ne le voient jamais : ils trouvent des carcasses de cerf ouvertes proprement, et concluent au braconnage — plusieurs pendaisons injustes ont eu lieu pour cette raison. Sa chair est immangeable, amère et musquée ; on ne le chasse que pour la peau.",
+    "emoji": "🐆"
+  },
+  {
+    "id": "loup_de_la_sombre",
+    "nom": "Loup de la Sombre",
+    "race": [
+      "monstres"
+    ],
+    "pv": 26,
+    "def": 15,
+    "init": 3,
+    "atk": 5,
+    "dangerosite": 2,
+    "boss": false,
+    "role": "soldat",
+    "taille": "moyenne",
+    "tier": "basique",
+    "famille": "loup",
+    "armureId": "fourrure_dense",
+    "attaques": [
+      {
+        "nom": "Morsure de charogne",
+        "armeId": "morsure_de_charogne",
+        "bonusAttaque": 5,
+        "bonusDegats": 2,
+        "effetSpecial": "Si la cible est déjà blessée (sous la moitié de ses PV), la morsure ignore 1 point de réduction de dégâts."
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Meute de charnier",
+        "description": "+1 aux jets d'attaque par autre Loup de la Sombre adjacent à la même cible, maximum +3."
+      },
+      {
+        "nom": "Suit les colonnes",
+        "description": "Ne fuit pas devant le feu ni devant le nombre : ces loups ont appris que les hommes en armes finissent par laisser des corps. Immunisé aux tests de moral tant qu'un cadavre est visible sur le champ de bataille."
+      }
+    ],
+    "lore": "Les loups qui suivent les armées depuis le gué de Fossessainte, génération après génération. Plus lourds et moins farouches que les loups des bois : ils ont perdu la peur de l'homme parce que l'homme, pour eux, est une source de nourriture qui se déplace. Les vétérans solvariens les appellent « les intendants » et refusent d'en parler devant les recrues.",
+    "emoji": "🐺"
+  },
+  {
+    "id": "verrat_roi_futaies",
+    "nom": "Verrat-roi des futaies",
+    "race": [
+      "monstres"
+    ],
+    "pv": 60,
+    "def": 13,
+    "init": 3,
+    "atk": 7,
+    "dangerosite": 3,
+    "boss": false,
+    "role": "brute",
+    "taille": "grande",
+    "tier": "veteran",
+    "famille": "sanglier",
+    "armureId": "cuir_epais_et_soies_durcies",
+    "attaques": [
+      {
+        "nom": "Boutoir",
+        "armeId": "boutoir_du_verrat",
+        "bonusAttaque": 7,
+        "bonusDegats": 3,
+        "effetSpecial": "Si le verrat a parcouru au moins 6 m en ligne droite avant de frapper : test FOR diff. 15 ou la cible est renversée."
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Charge irrésistible",
+        "description": "Recharge : 3 rounds. Le verrat traverse en ligne droite jusqu'à 12 m et frappe toute créature sur son passage (une attaque par créature, dégâts normaux)."
+      },
+      {
+        "nom": "Ne recule jamais",
+        "description": "Immunisé aux tests de moral et aux effets de peur. Un verrat-roi ne comprend pas la retraite."
+      }
+    ],
+    "lore": "Un sanglier des futaies de Valdorne qui a survécu à dix saisons de chasse seigneuriale — chaque échec l'a rendu plus lourd, plus balafré et plus rancunier. Les veneurs le reconnaissent aux fers de lance encore fichés dans son garrot. Sa viande est immense et excellente : abattre un verrat-roi nourrit un village pendant une semaine, et le droit de le faire appartient légalement au seigneur, ce qui a déjà causé plus d'une émeute.",
+    "emoji": "🐗"
+  },
+  {
+    "id": "silure_de_la_lisdane",
+    "nom": "Silure de la Lisdane",
+    "race": [
+      "monstres"
+    ],
+    "pv": 93,
+    "def": 15,
+    "init": 4,
+    "atk": 10,
+    "dangerosite": 4,
+    "boss": false,
+    "role": "brute",
+    "taille": "très grande",
+    "tier": "veteran",
+    "famille": "silure",
+    "armureId": "peau_visqueuse_et_muscle",
+    "attaques": [
+      {
+        "nom": "Gueule aspirante",
+        "armeId": "gueule_aspirante",
+        "bonusAttaque": 10,
+        "bonusDegats": 8,
+        "effetSpecial": "Si le jet d'attaque dépasse la DEF de la cible de 5 ou plus et que la cible est de taille moyenne ou inférieure, elle est engloutie (cf. Engloutissement)."
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Engloutissement",
+        "description": "Une créature engloutie subit 1d6 dégâts par round et ne peut plus agir que pour se dégager : test FOR ou DEX diff. 15. Le silure ne peut engloutir qu'une créature à la fois. S'il tombe à 0 PV, il régurgite."
+      },
+      {
+        "nom": "Maître de l'eau trouble",
+        "description": "Sous l'eau, le silure a +2 en DEF et repère toute créature à 18 m par ses barbillons, même invisible. Hors de l'eau, il perd toute vitesse de déplacement au-delà de 3 m par tour."
+      }
+    ],
+    "lore": "Il vit dans les fonds de la Lisdane à l'embouchure, là où le fleuve devient port. Il mange les anguilles, les carpes tombées des viviers, les chiens, et de temps en temps un docker ivre — les autorités de Libris parlent officiellement de noyades. Deux corporations du Grand Marché se disputent depuis quinze ans le droit de le pêcher : la chair d'un silure de cette taille vaut une année de salaire, et son bouillon est un plat de banquet libérien.",
+    "emoji": "🐟"
+  },
+  {
+    "id": "tisserand_des_cimes",
+    "nom": "Tisserand des cimes",
+    "race": [
+      "monstres"
+    ],
+    "pv": 17,
+    "def": 13,
+    "init": 4,
+    "atk": 4,
+    "dangerosite": 2,
+    "boss": false,
+    "role": "controleur",
+    "taille": "moyenne",
+    "tier": "basique",
+    "famille": "tisserand",
+    "attaques": [
+      {
+        "nom": "Fil tranchant",
+        "armeId": "fil_tranchant",
+        "bonusAttaque": 4,
+        "bonusDegats": 0,
+        "effetSpecial": "Test DEX diff. 13 ou la cible est entravée (déplacement nul, -2 aux attaques) jusqu'à ce qu'elle se libère : action complète, test FOR diff. 13."
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Toile de canopée",
+        "description": "Un tisserand établi a tissé 3 à 6 cases de toile autour de lui : terrain difficile pour tous sauf lui, et toute créature qui y termine son tour teste DEX diff. 12 ou est entravée."
+      },
+      {
+        "nom": "Descente en fil",
+        "description": "Se laisse tomber ou remonte de 9 m verticalement sans provoquer d'attaque d'opportunité. Attaque de préférence depuis le haut, hors de portée du corps à corps."
+      }
+    ],
+    "lore": "Larve du papillon-tisserand, dont les elfes récoltent la soie. Elle passe deux ans en canopée avant sa métamorphose et défend son fil avec une hargne sans rapport avec sa taille. Les récoltants d'Aetharion travaillent en binôme : un qui coupe, un qui surveille. La soie prélevée sur une toile de tisserand vivant vaut trois fois celle d'un cocon abandonné — ce que personne ne dit à l'acheteur solvarien.",
+    "emoji": "🕸️"
+  },
+  {
+    "id": "chasseur_de_verre",
+    "nom": "Chasseur de verre",
+    "race": [
+      "monstres"
+    ],
+    "pv": 34,
+    "def": 15,
+    "init": 5,
+    "atk": 7,
+    "dangerosite": 3,
+    "boss": false,
+    "role": "escarmoucheur",
+    "taille": "grande",
+    "tier": "basique",
+    "famille": "chasseur_verre",
+    "attaques": [
+      {
+        "nom": "Morsure de verre",
+        "armeId": "morsure_de_verre",
+        "bonusAttaque": 7,
+        "bonusDegats": 2,
+        "effetSpecial": "Après avoir mordu, le chasseur peut se déplacer de 3 m sans provoquer d'attaque d'opportunité."
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Transparence",
+        "description": "Tant que le chasseur n'a pas bougé depuis son dernier tour, il est effectivement invisible : les attaques contre lui subissent -4 et il ne peut pas être ciblé au-delà de 6 m. La transparence tombe pour un round complet dès qu'il se déplace."
+      },
+      {
+        "nom": "Chasse à l'affût",
+        "description": "Reste immobile dans le courant jusqu'à ce qu'une proie passe à portée. Au premier round de combat, il agit toujours en premier quelle que soit l'initiative des autres."
+      }
+    ],
+    "lore": "Prédateur du poisson-verre, dont il a poussé la transparence à l'échelle d'un grand félin aquatique. On ne le voit pas : on voit le courant se déformer autour de quelque chose. Les Hauts Elfes le chassent rarement et jamais seuls ; les rares dépouilles ramenées à Elyndoril deviennent des ornements de cour, car le corps garde sa transparence après la mort et ne se corrompt qu'au bout de plusieurs semaines.",
+    "emoji": "💧"
+  },
+  {
+    "id": "cerf_blanc",
+    "nom": "Cerf blanc",
+    "race": [
+      "monstres"
+    ],
+    "pv": 26,
+    "def": 15,
+    "init": 5,
+    "atk": 6,
+    "dangerosite": 3,
+    "boss": false,
+    "role": "controleur",
+    "taille": "grande",
+    "tier": "elite",
+    "famille": "cerf",
+    "roleNarratif": "Rencontre morale, pas rencontre de combat. Le cerf ne frappe jamais le premier ; toute la scène consiste à voir ce que le groupe décide de faire d'une proie qui vaut une fortune et dont la mort coûte cher.",
+    "attaques": [
+      {
+        "nom": "Ramure",
+        "armeId": "ramure_blanche",
+        "bonusAttaque": 6,
+        "bonusDegats": 1,
+        "effetSpecial": "Uniquement en riposte ou si le cerf est acculé. Test FOR diff. 14 ou la cible est repoussée de 3 m."
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Ne frappe jamais le premier",
+        "description": "Le cerf blanc n'attaque pas tant qu'il n'a pas été attaqué ou encerclé. Laissé libre, il observe le groupe pendant 1d4 rounds puis s'en va."
+      },
+      {
+        "nom": "Fuite impossible à suivre",
+        "description": "S'il choisit de partir, aucun test de pistage ne fonctionne : les traces s'arrêtent net à quelques pas. Seule une capacité surnaturelle permet de le retrouver."
+      },
+      {
+        "nom": "Le prix du braconnier",
+        "description": "La créature qui porte le coup fatal gagne immédiatement 1 point de Corruption d'Âme. Chez les elfes, tuer un cerf blanc est un crime jugé, pas une infraction de chasse."
+      }
+    ],
+    "lore": "Chasse rituelle des Aelindra et des Aetharion, jamais commerciale : la bête est traquée, approchée, et laissée partir. Le rite compte, pas la prise. Une venaison de cerf blanc n'existe sur aucun marché — ce qui, à Libris, se traduit par un prix théorique que trois maisons du Comptoir seraient prêtes à payer, et par au moins une expédition qui n'est jamais revenue.",
+    "emoji": "🦌"
+  },
+  {
+    "id": "nuee_scarabees_forge",
+    "nom": "Nuée de scarabées-de-forge",
+    "race": [
+      "monstres"
+    ],
+    "pv": 22,
+    "def": 13,
+    "init": 4,
+    "atk": 5,
+    "dangerosite": 2,
+    "boss": false,
+    "role": "escarmoucheur",
+    "taille": "moyenne",
+    "tier": "basique",
+    "famille": "nuee",
+    "attaques": [
+      {
+        "nom": "Grouillement",
+        "armeId": "grouillement_de_scarabees",
+        "bonusAttaque": 5,
+        "bonusDegats": 0,
+        "effetSpecial": "Touche automatiquement toute créature qui termine son tour dans la case de la nuée, sans jet d'attaque."
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Corps de nuée",
+        "description": "Les dégâts d'armes tranchantes et perforantes sont réduits de moitié (arrondi inférieur). Les dégâts de zone et de feu sont doublés."
+      },
+      {
+        "nom": "Attirée par la chaleur",
+        "description": "La nuée se dirige toujours vers la source de chaleur la plus proche : forge allumée, torche, sort de feu. Un personnage qui jette sa torche à 9 m détourne la nuée pendant 1 round."
+      }
+    ],
+    "lore": "Le grignotage de taverne à l'échelle d'une salle. Les scarabées-de-forge vivent normalement dans les parois chaudes autour des fonderies de Forge-Runez, où on les ramasse à la pelle pour les griller. Une veine de chaleur qui se déplace, une cheminée mal entretenue, et c'est la colonie entière qui migre à travers les galeries d'habitation. Les nains les combattent au feu, ce qui est absurde et fonctionne quand même : la nuée s'agglutine sur les flammes et brûle en masse.",
+    "emoji": "🪲"
+  },
+  {
+    "id": "ver_de_roche_adulte",
+    "nom": "Ver-de-roche adulte",
+    "race": [
+      "monstres"
+    ],
+    "pv": 60,
+    "def": 13,
+    "init": 3,
+    "atk": 7,
+    "dangerosite": 3,
+    "boss": false,
+    "role": "brute",
+    "taille": "très grande",
+    "tier": "veteran",
+    "famille": "ver_de_roche",
+    "armureId": "anneaux_chitineux",
+    "attaques": [
+      {
+        "nom": "Morsure annelée",
+        "armeId": "morsure_annelee",
+        "bonusAttaque": 7,
+        "bonusDegats": 5,
+        "effetSpecial": "Si le ver surgit du sol le round où il attaque, la cible ne bénéficie pas de sa réduction de dégâts pour cette attaque."
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Surgissement",
+        "description": "Recharge : 4 rounds. Le ver se déplace sous la roche jusqu'à 12 m et resurgit : toutes les créatures adjacentes au point d'émergence testent DEX diff. 14 ou tombent à terre."
+      },
+      {
+        "nom": "Aveugle, sensible aux vibrations",
+        "description": "Ne peut pas cibler une créature qui n'a pas bougé ni attaqué depuis son dernier tour. La discrétion visuelle ne sert à rien contre lui ; l'immobilité, si."
+      }
+    ],
+    "lore": "Le ver-de-roche des Failles Rouges à taille adulte — celui qu'on mange à Karag Dûm n'est qu'un juvénile de deux mètres. Sa graisse est le meilleur combustible à lampe du monde souterrain et un ingrédient de cuisine recherché : une seule bête approvisionne un quartier pendant un mois. Les équipes de chasse évolutionnistes partent à douze et reviennent rarement au complet, ce qui fait partie du prestige.",
+    "emoji": "🪱"
+  },
+  {
+    "id": "mere_de_roche",
+    "nom": "Mère-de-roche",
+    "race": [
+      "monstres"
+    ],
+    "pv": 135,
+    "def": 17,
+    "init": 5,
+    "atk": 13,
+    "dangerosite": 5,
+    "boss": true,
+    "role": "brute",
+    "taille": "très grande",
+    "tier": "champion",
+    "famille": "ver_de_roche",
+    "armureId": "carapace_de_faille",
+    "attaques": [
+      {
+        "nom": "Broiement",
+        "armeId": "broiement_de_la_mere",
+        "bonusAttaque": 13,
+        "bonusDegats": 9,
+        "effetSpecial": "Une cible de taille grande ou inférieure touchée est agrippée : elle subit automatiquement les dégâts du Broiement au début du tour suivant de la Mère, sauf si elle se libère (test FOR diff. 17)."
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Résistance légendaire (3/combat)",
+        "description": "La Mère-de-roche peut choisir de réussir automatiquement un jet de sauvegarde raté. Trois fois par combat."
+      },
+      {
+        "nom": "Effondrement",
+        "description": "Recharge : 4 rounds. La Mère frappe la voûte : la salle s'effondre partiellement. Toutes les créatures au sol testent DEX diff. 16 ou subissent 3d6 dégâts et sont ensevelies (entravées jusqu'à libération, test FOR diff. 15)."
+      },
+      {
+        "nom": "Chaleur de la Faille",
+        "description": "Toute créature qui commence son tour à 3 m ou moins subit 1d6 dégâts de chaleur, sans jet."
+      },
+      {
+        "nom": "Elle ne chasse pas, elle creuse",
+        "description": "La Mère ne poursuit jamais hors de son réseau. Fuir fonctionne — et laisse la galerie condamnée pour une génération."
+      }
+    ],
+    "lore": "Les Évolutionnistes de Khazrak Dûm savent qu'il existe, dans les Failles, des vers qui ne cessent jamais de grandir. Une Mère-de-roche a percé les galeries basses de Grimgal il y a quarante ans ; on a muré le quartier plutôt que de la combattre, et les plus vieux disent qu'on l'entend encore. Ce que personne ne dit à voix haute : la graisse d'une Mère nourrirait la cité entière pendant un hiver, et c'est exactement l'argument que ressort chaque génération une faction qui veut rouvrir le mur.",
+    "emoji": "🐛"
   }
 ];
 const BESTIAIRE_INDEX = Object.fromEntries(BESTIAIRE.map(function(m){ return [m.id, m]; }));

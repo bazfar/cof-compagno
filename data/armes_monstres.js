@@ -921,6 +921,86 @@ const ARMES_MONSTRES = [
     "portee": "courte (6m)",
     "typedegats": "magique",
     "elementaire": "chaos"
+  },
+  {
+    "id": "morsure_silencieuse",
+    "nom": "Morsure silencieuse",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "morsure_de_charogne",
+    "nom": "Morsure de charogne",
+    "type": "arme",
+    "degats": "2d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "boutoir_du_verrat",
+    "nom": "Boutoir",
+    "type": "arme",
+    "degats": "2d10",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "gueule_aspirante",
+    "nom": "Gueule aspirante",
+    "type": "arme",
+    "degats": "2d12",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "fil_tranchant",
+    "nom": "Fil tranchant",
+    "type": "arme",
+    "degats": "2d4",
+    "portee": "courte (6m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "morsure_de_verre",
+    "nom": "Morsure de verre",
+    "type": "arme",
+    "degats": "2d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "ramure_blanche",
+    "nom": "Ramure",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "grouillement_de_scarabees",
+    "nom": "Grouillement",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "morsure_annelee",
+    "nom": "Morsure annelée",
+    "type": "arme",
+    "degats": "2d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "broiement_de_la_mere",
+    "nom": "Broiement",
+    "type": "arme",
+    "degats": "4d10",
+    "portee": "contact",
+    "typedegats": "physique"
   }
 ];
 
