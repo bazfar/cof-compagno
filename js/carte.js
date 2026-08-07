@@ -610,6 +610,13 @@ const Carte = (() => {
     const reduction = Math.max(0, (tok.armure || 0) - (ignoreReduction || 0));
     const degatsNets = Math.max(0, degatsBruts - reduction);
     tok.pvActuel = Math.max(0, (tok.pvActuel ?? tok.pvMax ?? 0) - degatsNets);
+    // "sursaut" (cf. "tombeA0", capacitesSpeciales) : tout nouveau dégât
+    // pendant le sursaut y met fin IMMÉDIATEMENT — retiré ici, pas via le
+    // décompte générique de durée (qui n'agirait qu'au début du PROCHAIN
+    // tour du porteur, trop tard pour "immédiatement").
+    if (degatsNets > 0 && tok.etatsActifs && tok.etatsActifs.some((e) => e.idEtat === "sursaut")) {
+      tok.etatsActifs = tok.etatsActifs.filter((e) => e.idEtat !== "sursaut");
+    }
     sauver(); rendreJetons();
     _notifierChangementMonstres();
     return { nom: tok.nom, reduction, degatsNets, pvActuel: tok.pvActuel };

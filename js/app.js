@@ -918,6 +918,7 @@ const App = (() => {
         // porté le coup — diffusé dès que CE jeton précis passe à 0,
         // contrairement à "ennemi tué" qui a besoin d'un PJ identifié.
         _declencherAllieTombe(cibleEffective);
+        _declencherTombeA0(cibleEffective);
         if (persoId) _declencherEnnemiTue(persoId, cibleEffective);
       }
       return info;
@@ -975,6 +976,31 @@ const App = (() => {
       });
     });
     if (messagesToast.length) toast(messagesToast.join(" — "));
+  }
+
+  // "tombeA0" (cf. "sursaut", capacitesSpeciales, 14e évènement, réutilisable
+  // sur n'importe quel monstre — pas un trait cupide en dur) : pose l'état
+  // "sursaut" sur LUI-MÊME (contrairement à allieTombe, jamais diffusé) dès
+  // que ce jeton passe à 0 PV, s'il porte la capacité correspondante.
+  // Combat._estKO respecte ensuite l'état pour ne pas sauter son tour ;
+  // Carte.appliquerDegatsCombat y met fin immédiatement sur tout nouveau
+  // dégât ; decompterEtatsMonstre le retire au début de son propre tour
+  // suivant (même sémantique "prochainTour" que partout ailleurs).
+  function _declencherTombeA0(monstreTombeId) {
+    if (typeof Carte === "undefined" || !Carte.listeMonstresCombat || !Carte.ajouterEtatCombat || typeof BESTIAIRE_INDEX === "undefined") return;
+    const jeton = Carte.listeMonstresCombat().find((t) => t.id === monstreTombeId);
+    if (!jeton || !jeton.monstreId) return;
+    if ((jeton.etatsActifs || []).some((e) => e.idEtat === "sursaut")) return;
+    const def = BESTIAIRE_INDEX[jeton.monstreId];
+    if (!def || !Array.isArray(def.capacitesSpeciales)) return;
+    const capa = def.capacitesSpeciales.find((c) => c.mecanique && c.mecanique.declencheur && c.mecanique.declencheur.evenement === "tombeA0");
+    if (!capa) return;
+    Carte.ajouterEtatCombat(monstreTombeId, {
+      idEtat: "sursaut",
+      dureeRestante: { tours: 1, motCle: null, dureeAffichee: "prochainTour" },
+      source: capa.nom, poseLe: Date.now(),
+    });
+    toast(`⚡ ${jeton.nom} : ${capa.nom} — reste debout à 0 PV, agira une dernière fois.`);
   }
 
   // Réponse à un "ennemi tué à moins de 2 cases" (cf. "drainante_os",

@@ -335,6 +335,15 @@ const Combat = (() => {
       const p = App.chargerPersos()[entree.id];
       return !p || !!p.etatMort;
     }
+    // "sursaut" (cf. "tombeA0", capacitesSpeciales) : un monstre à 0 PV mais
+    // encore en sursaut garde son tour — jamais KO tant que l'état reste
+    // actif, retiré au début de son PROCHAIN tour (decompterEtatsMonstre,
+    // même sémantique "prochainTour" que partout ailleurs dans l'app) ou
+    // immédiatement s'il subit un nouveau dégât (cf. Carte.appliquerDegatsCombat).
+    if (entree.type === "monstre") {
+      const m = (Carte.listeMonstresCombat() || []).find((t) => t.id === entree.id);
+      if (m && (m.etatsActifs || []).some((e) => e.idEtat === "sursaut")) return false;
+    }
     const pv = _pvActuel(entree);
     return typeof pv === "number" && pv <= 0;
   }

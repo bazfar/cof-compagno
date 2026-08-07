@@ -258,7 +258,7 @@ const DUREE_MOTS_CLES = ["prochainTour", "finCombat", "permanente"];
 // capacitesSpeciales[].mecanique.declencheur (cf. "Curée" des cupides,
 // "allieTombe" — premier évènement de portée COLLECTIVE, diffusé aux autres
 // jetons plutôt qu'au porteur, cf. _declencherAllieTombe).
-const EVENEMENTS_CAPACITE_SPECIALE_VALIDES = ["allieTombe"];
+const EVENEMENTS_CAPACITE_SPECIALE_VALIDES = ["allieTombe", "tombeA0"];
 const PORTEE_ALLIE_TOMBE_VALIDES = ["famille", "faction", "zone"];
 const TYPES_SORT_VALIDES = ["majeur"];
 // Écoles observées dans data/donnees.js (categorie des SORTS_*) + necromancie/
@@ -498,6 +498,13 @@ monstres.forEach((m, index) => {
       if (decl.portee === "zone" && !(Number.isInteger(decl.rayon) && decl.rayon > 0)) {
         signalerMonstre(cle, `${refCap}.mecanique.declencheur.rayon devrait être un entier > 0 (mètres) quand portee vaut "zone".`);
       }
+    }
+    // "tombeA0" (cf. "sursaut") : aucun effets[] — la seule présence de la
+    // capacité suffit à _declencherTombeA0 (pose "sursaut" sur le porteur
+    // lui-même), rien de plus à valider ici.
+    if (decl.evenement === "tombeA0") {
+      if (meca.effets !== undefined) signalerMonstre(cle, `${refCap}.mecanique.effets ne devrait pas être posé pour "tombeA0" (aucun effet résolu par _declencherTombeA0).`);
+      return;
     }
     if (!Array.isArray(meca.effets) || !meca.effets.length) {
       signalerMonstre(cle, `${refCap}.mecanique.effets[] absent ou vide.`);
