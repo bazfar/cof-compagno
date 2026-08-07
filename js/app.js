@@ -9241,7 +9241,10 @@ const App = (() => {
           .filter((s) => s.deplaceVersFaction === g.groupe)
           .map((s) => {
             const attrRole = s.mjSeulement ? ` data-role="mj"` : "";
-            return `<div class="lore-section"${attrRole}><h3>${echapper(s.titre)}</h3><div class="contenu">${echapper(s.contenu)}</div></div>`;
+            // Carte claire (.carte pnj-carte), comme le bloc synthèse — sinon
+            // le texte sombre de .contenu s'affiche sur le fond sombre du
+            // panneau Factions et devient illisible.
+            return `<div class="carte pnj-carte" style="margin-top:10px;"${attrRole}><h3>${echapper(s.titre)}</h3><div class="contenu">${echapper(s.contenu)}</div></div>`;
           }).join("");
         return `<div class="lore-section"><h3>${echapper(g.groupe)}</h3>` +
           blasonHtml +
