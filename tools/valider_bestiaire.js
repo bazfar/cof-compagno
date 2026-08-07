@@ -255,6 +255,11 @@ const PORTEE_MOTS_CLES = ["adjacent", "vue", "voix"];
 const TYPES_EFFET_MONSTRE_VALIDES = ["degats", "etat", "bonus", "soin", "retraitEtat", "special"];
 const CARACS_SAUVEGARDE_VALIDES = ["FOR", "DEX", "CON", "INT", "SAG", "CHA", "Volonte", "Reflexes", "Vigueur"];
 const DUREE_MOTS_CLES = ["prochainTour", "finCombat", "permanente"];
+// capacitesSpeciales[].mecanique.declencheur (cf. "Curée" des cupides,
+// "allieTombe" — premier évènement de portée COLLECTIVE, diffusé aux autres
+// jetons plutôt qu'au porteur, cf. _declencherAllieTombe).
+const EVENEMENTS_CAPACITE_SPECIALE_VALIDES = ["allieTombe"];
+const PORTEE_ALLIE_TOMBE_VALIDES = ["famille", "faction", "zone"];
 const TYPES_SORT_VALIDES = ["majeur"];
 // Écoles observées dans data/donnees.js (categorie des SORTS_*) + necromancie/
 // invocation, propres aux sorts de monstres marqués ici (aucun sort PJ connu
@@ -454,10 +459,60 @@ monstres.forEach((m, index) => {
         }
       }
       if (e.type === "bonus") {
-        if (e.cible !== "attaque" && e.cible !== "DEF") signalerMonstre(cle, `${refE}.cible doit valoir "attaque" ou "DEF" — seules valeurs lues par _bonusEtatsMonstre.`);
+        // "degats" (cf. "Curée" des cupides, allieTombe) : ajouté à
+        // _resoudreAttaqueMonstre, au même endroit que bonusDegats de
+        // l'attaque — plus seulement "attaque"/"DEF".
+        if (!["attaque", "DEF", "degats"].includes(e.cible)) signalerMonstre(cle, `${refE}.cible doit valoir "attaque", "DEF" ou "degats" — seules valeurs lues par _bonusEtatsMonstre.`);
         if (!Number.isInteger(e.valeur)) signalerMonstre(cle, `${refE}.valeur devrait être un entier.`);
       }
       if (e.type === "special" && !e.note) signalerMonstre(cle, `${refE} : un effet special doit porter une note pour le MJ.`);
+    });
+  });
+
+  // 15ter. capacitesSpeciales[] : nom/description obligatoires ; mecanique
+  // optionnelle (cf. "Curée" des cupides — PREMIER cas où ce champ devient
+  // mécanique, jusqu'ici purement narratif). Shape différente de
+  // capacitesActives[].mecanique : pas de type/cible/usage, ces capacités ne
+  // sont jamais déclenchées par le MJ, seulement par un évènement de combat
+  // (declencheur.evenement), diffusé aux AUTRES jetons (cf.
+  // _declencherAllieTombe, js/app.js), jamais au porteur lui-même.
+  (m.capacitesSpeciales || []).forEach((cap, i) => {
+    const refCap = `capacitesSpeciales[${i}] "${cap.nom || "?"}"`;
+    if (!cap.nom) signalerMonstre(cle, `${refCap}.nom manquant.`);
+    if (typeof cap.description !== "string") signalerMonstre(cle, `${refCap}.description devrait être une chaîne.`);
+    if (cap.mecanique === undefined) return; // purement narrative, rien à valider de plus
+    const meca = cap.mecanique;
+    if (!meca || typeof meca !== "object") { signalerMonstre(cle, `${refCap}.mecanique devrait être un objet.`); return; }
+    const decl = meca.declencheur;
+    if (!decl || typeof decl !== "object") { signalerMonstre(cle, `${refCap}.mecanique.declencheur manquant.`); return; }
+    if (!EVENEMENTS_CAPACITE_SPECIALE_VALIDES.includes(decl.evenement)) {
+      signalerMonstre(cle, `${refCap}.mecanique.declencheur.evenement invalide : ${JSON.stringify(decl.evenement)} (attendu : ${EVENEMENTS_CAPACITE_SPECIALE_VALIDES.join(" | ")}).`);
+    }
+    // portee (cf. "allieTombe") : obligatoire — sans elle, l'évènement n'a
+    // pas de sens (qui réagit ?). zone exige rayon (mètres, converti en
+    // cases par _declencherAllieTombe, 1 case = 1,5 m).
+    if (decl.evenement === "allieTombe") {
+      if (!PORTEE_ALLIE_TOMBE_VALIDES.includes(decl.portee)) {
+        signalerMonstre(cle, `${refCap}.mecanique.declencheur.portee invalide : ${JSON.stringify(decl.portee)} (attendu : ${PORTEE_ALLIE_TOMBE_VALIDES.join(" | ")}).`);
+      }
+      if (decl.portee === "zone" && !(Number.isInteger(decl.rayon) && decl.rayon > 0)) {
+        signalerMonstre(cle, `${refCap}.mecanique.declencheur.rayon devrait être un entier > 0 (mètres) quand portee vaut "zone".`);
+      }
+    }
+    if (!Array.isArray(meca.effets) || !meca.effets.length) {
+      signalerMonstre(cle, `${refCap}.mecanique.effets[] absent ou vide.`);
+      return;
+    }
+    meca.effets.forEach((e, k) => {
+      const refE = `${refCap}.effets[${k}]`;
+      // Seul "bonus" est résolu par _declencherAllieTombe aujourd'hui — pas
+      // de "degats"/"etat"/"soin" (aucun besoin identifié, cf. le prompt).
+      if (e.type !== "bonus") { signalerMonstre(cle, `${refE}.type invalide : ${JSON.stringify(e.type)} (seul "bonus" est supporté ici).`); return; }
+      if (!["attaque", "DEF", "degats"].includes(e.cible)) signalerMonstre(cle, `${refE}.cible doit valoir "attaque", "DEF" ou "degats".`);
+      if (!Number.isInteger(e.valeur)) signalerMonstre(cle, `${refE}.valeur devrait être un entier.`);
+      if (e.duree !== undefined && !DUREE_MOTS_CLES.includes(e.duree) && !/^\d+$/.test(String(e.duree))) {
+        signalerMonstre(cle, `${refE}.duree "${e.duree}" non résoluble (entier en tours, ou ${DUREE_MOTS_CLES.join(" | ")}).`);
+      }
     });
   });
 

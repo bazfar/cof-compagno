@@ -3867,6 +3867,17 @@
         {
           "nom": "Reddition",
           "description": "Si le groupe est réduit à moins de 50%, ces hors-la-loi testent le moral (SAG diff. 8) ou se rendent / fuient."
+        },
+        {
+          "nom": "Curée",
+          "description": "À la mort d'un des leurs, les cupides se ruent pour le dépouiller : +1 ATK et +1 aux dégâts au tour suivant.",
+          "mecanique": {
+            "declencheur": { "evenement": "allieTombe", "portee": "famille" },
+            "effets": [
+              { "type": "bonus", "cible": "attaque", "valeur": 1, "duree": "prochainTour" },
+              { "type": "bonus", "cible": "degats", "valeur": 1, "duree": "prochainTour" }
+            ]
+          }
         }
       ],
       "lore": "Recrue récente, appâtée par la promesse d'un gain facile. Rien ne la distingue encore d'un bandit ou d'un pirate ordinaire — la corruption qui l'anime n'est pas encore assez ancrée pour se manifester. Selon le contexte, rebaptiser 'Bandit' (route) ou 'Pirate' (mer), sans changer les statistiques.",
@@ -3915,6 +3926,17 @@
         {
           "nom": "Signe (note MJ)",
           "description": "Regard qui s'attarde une fraction de seconde de trop sur l'or, un sceau ou un chiffre ; tic de la main qui compte ou soupèse sans objet réel. Premier indice tangible pour des PJ attentifs — ne pas surligner, juste décrire."
+        },
+        {
+          "nom": "Curée",
+          "description": "À la mort d'un des leurs, les cupides se ruent pour le dépouiller : +1 ATK et +1 aux dégâts au tour suivant.",
+          "mecanique": {
+            "declencheur": { "evenement": "allieTombe", "portee": "famille" },
+            "effets": [
+              { "type": "bonus", "cible": "attaque", "valeur": 1, "duree": "prochainTour" },
+              { "type": "bonus", "cible": "degats", "valeur": 1, "duree": "prochainTour" }
+            ]
+          }
         }
       ],
       "lore": "Corrompu depuis plus longtemps que ses hommes, il dirige sa bande avec un mélange de charisme et d'appétit insatiable. Selon le contexte, rebaptiser 'Chef de bande' (route) ou 'Capitaine corsaire' (mer), sans changer les statistiques.",
@@ -3958,6 +3980,17 @@
         {
           "nom": "Révélation (note MJ — jamais lue aux joueurs)",
           "description": "À sa mort, une phrase suggère que la soif ne meurt pas avec l'hôte : elle cherche déjà un nouveau visage. Sert d'accroche pour la suite de l'arc de la Cupidité. Ne pas expliciter la nature métaphysique — laisser planer le doute."
+        },
+        {
+          "nom": "Curée",
+          "description": "À la mort d'un des leurs, les cupides se ruent pour le dépouiller : +1 ATK et +1 aux dégâts au tour suivant.",
+          "mecanique": {
+            "declencheur": { "evenement": "allieTombe", "portee": "famille" },
+            "effets": [
+              { "type": "bonus", "cible": "attaque", "valeur": 1, "duree": "prochainTour" },
+              { "type": "bonus", "cible": "degats", "valeur": 1, "duree": "prochainTour" }
+            ]
+          }
         }
       ],
       "lore": "Ici, la corruption ne se cache plus. Un hôte de longue date, dévoré par ce qu'il croyait maîtriser — richesse, pouvoir, ou toute autre obsession qui l'a consumé. Boss de campagne, révélation tardive : c'est la première fois que les PJ voient la vraie nature de la menace qu'ils traquaient depuis le début. Selon le contexte, rebaptiser 'Seigneur hors-la-loi' (route) ou 'Amiral corsaire' (mer), sans changer les statistiques.",
@@ -4001,6 +4034,17 @@
         {
           "nom": "Signe (note MJ)",
           "description": "Regard qui s'attarde une fraction de seconde de trop sur l'or, tic de la main qui compte ou soupèse sans objet réel. Premier indice tangible pour des PJ attentifs — ne pas surligner, juste décrire."
+        },
+        {
+          "nom": "Curée",
+          "description": "À la mort d'un des leurs, les cupides se ruent pour le dépouiller : +1 ATK et +1 aux dégâts au tour suivant.",
+          "mecanique": {
+            "declencheur": { "evenement": "allieTombe", "portee": "famille" },
+            "effets": [
+              { "type": "bonus", "cible": "attaque", "valeur": 1, "duree": "prochainTour" },
+              { "type": "bonus", "cible": "degats", "valeur": 1, "duree": "prochainTour" }
+            ]
+          }
         }
       ],
       "lore": "Ancien serviteur/jardinier du domaine familial des Orfeuil, abandonné sur place quand la famille a quitté les lieux. Sa rancune contre les Orfeuil ne l'a jamais quitté — et depuis peu, sans qu'il comprenne pourquoi, elle s'accompagne de tics étranges annonçant une corruption naissante (aspect cristallisé de Khoreth, cf. chambre cultiste Mission 1). Boss unique de la Mission 2 « Le Poids de l'Or » — statistiques identiques au Meneur avide standard, ne pas réutiliser ce PNJ nommé ailleurs (contrairement aux tiers génériques recrue/meneur/grand_hote de la famille cupide, prévus pour être rebaptisés librement).",
@@ -4121,6 +4165,17 @@
         {
           "nom": "Marque dissimulée (note MJ)",
           "description": "Porte un sceau de Khoreth tatoué sous les vêtements — invisible sauf fouille ou détection explicite. Premier indice tangible que la Cupidité a une organisation derrière elle, pas seulement des opportunistes isolés."
+        },
+        {
+          "nom": "Curée",
+          "description": "À la mort d'un des leurs, les cupides se ruent pour le dépouiller : +1 ATK et +1 aux dégâts au tour suivant.",
+          "mecanique": {
+            "declencheur": { "evenement": "allieTombe", "portee": "famille" },
+            "effets": [
+              { "type": "bonus", "cible": "attaque", "valeur": 1, "duree": "prochainTour" },
+              { "type": "bonus", "cible": "degats", "valeur": 1, "duree": "prochainTour" }
+            ]
+          }
         }
       ],
       "lore": "Contrairement au hors-la-loi ordinaire, il ne se bat pas pour l'or qu'il pourrait voler — il sert déjà quelque chose de plus grand, et n'en a pas encore pleinement conscience. Khoreth cultive la cupidité comme d'autres cultivent la peur : discrètement, un cœur à la fois.",
@@ -4160,6 +4215,17 @@
         {
           "nom": "Rite mineur (note MJ)",
           "description": "1 fois par combat, murmure un mot en langue morte avant de frapper : aucun effet mécanique, mais un PJ qui comprend le Bas-Chaotique (rare) saisit qu'il s'agit d'une offrande à Khoreth, pas d'une simple insulte."
+        },
+        {
+          "nom": "Curée",
+          "description": "À la mort d'un des leurs, les cupides se ruent pour le dépouiller : +1 ATK et +1 aux dégâts au tour suivant.",
+          "mecanique": {
+            "declencheur": { "evenement": "allieTombe", "portee": "famille" },
+            "effets": [
+              { "type": "bonus", "cible": "attaque", "valeur": 1, "duree": "prochainTour" },
+              { "type": "bonus", "cible": "degats", "valeur": 1, "duree": "prochainTour" }
+            ]
+          }
         }
       ],
       "lore": "A gravi les échelons du culte assez pour qu'on lui confie une lame et une mission. Contrairement au Fidèle, il sait précisément ce qu'il sert — et pourquoi la cupidité des autres est la porte d'entrée la plus fiable de Khoreth.",

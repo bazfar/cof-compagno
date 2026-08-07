@@ -913,8 +913,12 @@ const App = (() => {
       const pvAvant = monstreEffectif ? (monstreEffectif.pvActuel ?? monstreEffectif.pvMax ?? 0) : null;
       const info = Carte.appliquerDegatsCombat(cibleEffective, total, ignoreReduction);
       if (info && !silencieux) toast(`${info.nom} subit ${info.degatsNets} dégâts (PV ${info.pvActuel}).`);
-      if (info && persoId && pvAvant !== null && pvAvant > 0 && info.pvActuel === 0) {
-        _declencherEnnemiTue(persoId, cibleEffective);
+      if (info && pvAvant !== null && pvAvant > 0 && info.pvActuel === 0) {
+        // "allieTombe" (cf. "Curée des cupides") ne dépend pas de qui a
+        // porté le coup — diffusé dès que CE jeton précis passe à 0,
+        // contrairement à "ennemi tué" qui a besoin d'un PJ identifié.
+        _declencherAllieTombe(cibleEffective);
+        if (persoId) _declencherEnnemiTue(persoId, cibleEffective);
       }
       return info;
     }
@@ -923,6 +927,54 @@ const App = (() => {
       subirDegats(pjTok.ref.slice(3), total, null, null, null, ignoreReduction);
     }
     return null;
+  }
+
+  // "allieTombe" (cf. "Curée des cupides", capacitesSpeciales) : PREMIER
+  // déclencheur de portée COLLECTIVE — les 13 précédents (touche/rate/
+  // critique/critiqueSubi/rateSubie/subitContact/subitAttaque/sortLance/
+  // jetArme/relance/attaqueSupplementaire/doublerDeplacement/disparition)
+  // sont tous centrés sur le PORTEUR ; celui-ci est diffusé aux AUTRES
+  // jetons vivants dès que CE jeton précis passe à 0 PV (cf. l'appelant,
+  // _appliquerDegatsCibleRapide). famille/faction comparent le champ du
+  // jeton tombé à celui du receveur (résolus via BESTIAIRE_INDEX) ; zone
+  // compare Carte.distanceCasesEntre à rayon converti en cases (1 case =
+  // 1,5 m, même conversion que PORTEE_CONTRESORT_CASES).
+  function _declencherAllieTombe(monstreTombeId) {
+    if (typeof Carte === "undefined" || !Carte.listeMonstresCombat || typeof BESTIAIRE_INDEX === "undefined") return;
+    const tokens = Carte.listeMonstresCombat();
+    const jetonTombe = tokens.find((t) => t.id === monstreTombeId);
+    if (!jetonTombe || !jetonTombe.monstreId) return;
+    const defTombe = BESTIAIRE_INDEX[jetonTombe.monstreId];
+    if (!defTombe) return;
+    const messagesToast = [];
+    tokens.forEach((t) => {
+      if (t.id === monstreTombeId || !t.monstreId) return;
+      if ((t.pvActuel ?? t.pvMax ?? 0) <= 0) return; // déjà hors combat, ne réagit pas
+      const defT = BESTIAIRE_INDEX[t.monstreId];
+      if (!defT || !Array.isArray(defT.capacitesSpeciales)) return;
+      defT.capacitesSpeciales.forEach((cap) => {
+        const decl = cap.mecanique && cap.mecanique.declencheur;
+        if (!decl || decl.evenement !== "allieTombe" || !Array.isArray(cap.mecanique.effets)) return;
+        let concerne = false;
+        if (decl.portee === "famille") concerne = !!defTombe.famille && defTombe.famille === defT.famille;
+        else if (decl.portee === "faction") concerne = !!defTombe.faction && defTombe.faction === defT.faction;
+        else if (decl.portee === "zone" && Carte.distanceCasesEntre) {
+          const d = Carte.distanceCasesEntre(monstreTombeId, t.id);
+          concerne = d !== null && d <= Math.round((decl.rayon || 0) / 1.5);
+        }
+        if (!concerne) return;
+        // Anti-cascade (cf. Pièges) : un seul bonus de CETTE capacité actif
+        // par receveur à la fois — si deux alliés tombent avant l'expiration
+        // du précédent, pas de second empilement, dédoublonné par source
+        // (nom de la capacité), pas par occurrence.
+        if ((t.etatsActifs || []).some((e) => e.source === cap.nom)) return;
+        cap.mecanique.effets.forEach((e) => {
+          if (e.type === "bonus") _appliquerBonusSurCibleRaw(`monstre:${t.id}`, e.cible, e.valeur, e.duree, cap.nom);
+        });
+        messagesToast.push(`${t.nom} : ${cap.nom} (${jetonTombe.nom} tombé).`);
+      });
+    });
+    if (messagesToast.length) toast(messagesToast.join(" — "));
   }
 
   // Réponse à un "ennemi tué à moins de 2 cases" (cf. "drainante_os",
@@ -5798,7 +5850,7 @@ const App = (() => {
           const def = typeof BESTIAIRE_INDEX !== "undefined" && m.monstreId ? BESTIAIRE_INDEX[m.monstreId] : null;
           const attaques = m.attaques || (def && def.attaques);
           const a = attaques && attaques[0];
-          const r = a && _resoudreAttaqueMonstre(a);
+          const r = a && _resoudreAttaqueMonstre(a, m);
           if (!r) { messages.push(`  → attaque de ${m.nom} inconnue, à résoudre manuellement.`); return; }
           const resolution = _resoudreAttaqueMonstreVsPJ(`${m.nom} — ${r.nom} (attaque d'opportunité)`, r.bonusAttaque + _bonusEtatsMonstre(m, "attaque"), r.critMin, id, "opportunite");
           if (resolution.echecCritique) {
@@ -9818,7 +9870,7 @@ const App = (() => {
   // inline jet/degats/portee/type — pas de migration prévue pour ces jetons
   // dynamiques). Renvoie null si l'armeId référencé est introuvable dans le
   // catalogue (ne devrait pas arriver, cf. tools/valider_mecaniques.js).
-  function _resoudreAttaqueMonstre(a) {
+  function _resoudreAttaqueMonstre(a, m) {
     if (!a) return null;
     if (a.armeId !== undefined) {
       const arme = typeof ArmesMonstres !== "undefined" ? ArmesMonstres.trouver(a.armeId) : null;
@@ -9829,7 +9881,10 @@ const App = (() => {
       // (bonusDegats), jamais de l'arme elle-même : un futur monstre qui veut
       // la même arme à un tarif différent réutilise l'armeId avec son propre
       // bonusDegats, au lieu de créer un doublon "_2"/"_3" dans le catalogue.
-      const bonusDegats = a.bonusDegats || 0;
+      // "Curée" (cf. allieTombe) : bonus TEMPORAIRE (etatsActifs, cible
+      // "degats") concaténé au MÊME endroit — m optionnel (absent au
+      // catalogue statique, cf. l'appel bestiaire hors combat), 0 sans jeton.
+      const bonusDegats = (a.bonusDegats || 0) + _bonusEtatsMonstre(m, "degats");
       const expr = bonusDegats ? `${arme.degats}${signe(bonusDegats)}` : arme.degats;
       // touches (§5.2) : une arme qui frappe N fois (ex. Double frappe) répète
       // le même terme N fois plutôt que d'écrire un multiplicateur littéral
@@ -9917,7 +9972,7 @@ const App = (() => {
     // repris tel quel au clic (data-monstre-jet ci-dessous), pour que le
     // nombre affiché soit toujours celui réellement lancé.
     return `<div class="cm-attaques">${attaques.map((a, i) => {
-      const r = _resoudreAttaqueMonstre(a);
+      const r = _resoudreAttaqueMonstre(a, m);
       if (!r) return "";
       const etatDeg = _etatDegatsMonstre(m.id, i);
       const bonusAttaqueEffectif = r.bonusAttaque + _bonusEtatsMonstre(m, "attaque");
@@ -11013,7 +11068,7 @@ const App = (() => {
         const attaques = m && (m.attaques || (def && def.attaques));
         const idx = parseInt(btn.dataset.idxAttaque, 10);
         const a = attaques && attaques[idx];
-        const r = _resoudreAttaqueMonstre(a);
+        const r = _resoudreAttaqueMonstre(a, m);
         if (!r) return;
         const pjId = ciblesMonstres[m.id] || null;
         // _declencherAttaqueMonstreVsPJ (cf. "Prototype du moteur de
@@ -11038,7 +11093,7 @@ const App = (() => {
         const def = m && typeof BESTIAIRE_INDEX !== "undefined" ? BESTIAIRE_INDEX[m.monstreId] : null;
         const attaques = m && (m.attaques || (def && def.attaques));
         const a = attaques && attaques[parseInt(btn.dataset.idxAttaque, 10)];
-        const r = _resoudreAttaqueMonstre(a);
+        const r = _resoudreAttaqueMonstre(a, m);
         if (!r) return;
         const critique = btn.dataset.monstreCritique === "1";
         const total = lancerFormule(r.degats, `${m.nom} — ${r.nom} (dégâts)`, critique, { estMonstre: true });
