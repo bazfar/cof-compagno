@@ -903,6 +903,24 @@ const ARMES_MONSTRES = [
     "portee": "courte (6m)",
     "typedegats": "magique",
     "elementaire": "feu"
+  },
+  {
+    "id": "poigne_du_besoin",
+    "nom": "Poigne du besoin",
+    "type": "arme",
+    "degats": "3d6",
+    "portee": "courte (6m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "main_de_khoreth",
+    "nom": "Main de Khoreth",
+    "type": "arme",
+    "degats": "4d6",
+    "portee": "courte (6m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
   }
 ];
 

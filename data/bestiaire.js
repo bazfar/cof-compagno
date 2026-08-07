@@ -4826,6 +4826,288 @@ const BESTIAIRE = [
     "lore": "Un rang que peu atteignent — la plupart des prêtres du feu meurent en soignant avant d'y parvenir. L'Évêque a survécu à ses propres cautérisations les plus risquées, et cette réputation seule suffit à raffermir le moral des troupes du Sacerdoce autour de lui.",
     "emoji": "🩹🔥",
     "armureId": "robe_renforcee_de_plaques_legeres"
+  },
+  {
+    "id": "cupide_roi_mendiants",
+    "nom": "Roi des mendiants",
+    "famille": "cupide",
+    "tier": "grand_hote",
+    "race": [
+      "humanoïdes"
+    ],
+    "pv": 40,
+    "def": 17,
+    "init": 6,
+    "atk": 9,
+    "dangerosite": 4,
+    "boss": true,
+    "role": "controleur",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Poigne du besoin",
+        "armeId": "poigne_du_besoin",
+        "bonusAttaque": 9,
+        "bonusDegats": 1,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesActives": [
+      {
+        "nom": "La main tendue",
+        "description": "1 fois par combat, une cible à 9 m : jet de Volonté diff. 14 ou elle lui donne son arme (Désarmée, 2 tours).",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "ennemi",
+          "portee": 9,
+          "zone": null,
+          "jetSauvegardeFixe": {
+            "carac": "Volonte",
+            "dd": 14
+          },
+          "effets": [
+            {
+              "type": "etat",
+              "id": "desarmee",
+              "duree": "2"
+            },
+            {
+              "type": "special",
+              "note": "Sur échec, la cible ne lâche pas son arme : elle la lui donne. La récupérer coûte une action et un test de FOR opposé — ou une négociation."
+            }
+          ]
+        }
+      },
+      {
+        "nom": "La Cour",
+        "description": "1 fois par combat : 1d4+1 Gueux de la Cour se détachent de la foule et rejoignent le combat au round suivant.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "aucune",
+          "portee": null,
+          "zone": 18,
+          "effets": [
+            {
+              "type": "special",
+              "note": "1d4+1 Gueux de la Cour (cupide_gueux_cour) se détachent de la foule et rejoignent le combat au round suivant — à poser manuellement."
+            }
+          ]
+        }
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Il ne touche jamais l'or",
+        "description": "Chaque fois qu'un personnage à 9 m dépense, donne, jette ou perd un objet de valeur — y compris pour tenter de le détourner — le Roi regagne 1d6 PV. Le levier qui fonctionne sur le Meneur avide le nourrit."
+      },
+      {
+        "nom": "Nul ne frappe un mendiant",
+        "description": "La première fois qu'un personnage l'attaque dans un combat, il doit réussir un jet de Volonté diff. 12 ou perdre son action (hésitation devant la misère). Un seul jet par personnage et par combat."
+      },
+      {
+        "nom": "Le nom mangé (note MJ)",
+        "description": "Personne ne connaît son nom, et lui non plus : c'est la première chose que Khoreth prend à un grand hôte. Un PJ qui le lui demande obtient un silence sincère — ne pas jouer ça comme un refus."
+      }
+    ],
+    "lore": "Grand hôte de la Cupidité qui n'a jamais possédé une pièce. Khoreth n'est pas l'or : c'est le manque. Le marchand qui thésaurise est un petit hôte ; l'homme qui veut tout et ne tient rien en est un grand. Il ne prend pas d'argent, il prend des promesses — sa cour, ce sont tous ceux qui ont un jour laissé tomber quelque chose dans son écuelle. Contrepoint contrôleur du Grand hôte de la Cupidité (rôle soldat) : celui-ci ne se bat pas, il fait donner. Tier générique, à rebaptiser librement selon la ville — 'Roi des gueux', 'Doyen des Quais', 'Prince des Bas-Fonds' — sans changer les statistiques.",
+    "emoji": "🥣",
+    "armureId": "armure_de_cuir_rapiecee"
+  },
+  {
+    "id": "roi_des_mendiants",
+    "nom": "Le Roi des Mendiants",
+    "famille": "cupide",
+    "tier": "grand_hote",
+    "faction": "La Cour du Roi des Mendiants",
+    "race": [
+      "humanoïdes",
+      "corrompu"
+    ],
+    "pv": 59,
+    "def": 19,
+    "init": 7,
+    "atk": 12,
+    "dangerosite": 5,
+    "boss": true,
+    "role": "controleur",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Main de Khoreth",
+        "armeId": "main_de_khoreth",
+        "bonusAttaque": 12,
+        "bonusDegats": 4,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesActives": [
+      {
+        "nom": "La main tendue",
+        "description": "1 fois par combat, une cible à 9 m : jet de Volonté diff. 16 ou elle lui donne son arme (Désarmée, 2 tours).",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "ennemi",
+          "portee": 9,
+          "zone": null,
+          "jetSauvegardeFixe": {
+            "carac": "Volonte",
+            "dd": 16
+          },
+          "effets": [
+            {
+              "type": "etat",
+              "id": "desarmee",
+              "duree": "2"
+            },
+            {
+              "type": "special",
+              "note": "Sur échec, la cible ne lâche pas son arme : elle la lui donne. La récupérer coûte une action et un test de FOR opposé — ou une négociation."
+            }
+          ]
+        }
+      },
+      {
+        "nom": "La Cour",
+        "description": "1 fois par combat : 1d4+2 Gueux de la Cour se détachent de la foule et rejoignent le combat au round suivant.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "aucune",
+          "portee": null,
+          "zone": 18,
+          "effets": [
+            {
+              "type": "special",
+              "note": "1d4+2 Gueux de la Cour (cupide_gueux_cour) se détachent de la foule et rejoignent le combat au round suivant — à poser manuellement."
+            }
+          ]
+        }
+      },
+      {
+        "nom": "La Dîme",
+        "description": "Recharge 3 rounds, zone de 9 m : jet de Volonté diff. 16, 3d6 dégâts de chaos (moitié si réussi).",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/recharge"
+          },
+          "recharge": 3,
+          "cible": "zone",
+          "portee": null,
+          "zone": 9,
+          "jetSauvegardeFixe": {
+            "carac": "Volonte",
+            "dd": 16
+          },
+          "effets": [
+            {
+              "type": "degats",
+              "formule": "3d6",
+              "elementaire": "chaos",
+              "surReussite": "demi"
+            },
+            {
+              "type": "special",
+              "note": "Le Roi récupère la moitié des dégâts infligés en PV. Chaque cible qui échoue perd en plus un objet de valeur au hasard de son inventaire : il n'est pas volé, il est simplement parti."
+            }
+          ]
+        }
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Il ne touche jamais l'or",
+        "description": "Chaque fois qu'un personnage à 9 m dépense, donne, jette ou perd un objet de valeur — y compris pour tenter de le détourner — le Roi regagne 1d6 PV. Le levier qui fonctionne sur le Meneur avide le nourrit."
+      },
+      {
+        "nom": "Nul ne frappe un mendiant",
+        "description": "La première fois qu'un personnage l'attaque dans un combat, il doit réussir un jet de Volonté diff. 14 ou perdre son action (hésitation devant la misère). Un seul jet par personnage et par combat."
+      },
+      {
+        "nom": "Le nom mangé (note MJ)",
+        "description": "Personne ne connaît son nom, et lui non plus : c'est la première chose que Khoreth prend à un grand hôte. Un PJ qui le lui demande obtient un silence sincère — ne pas jouer ça comme un refus."
+      },
+      {
+        "nom": "Le manteau change, pas le roi (note MJ — jamais lue aux joueurs)",
+        "description": "À 0 PV, le corps qui tombe est celui d'un vieillard maigre que personne ne reconnaît. Dans la foule, quelqu'un se redresse. Ne rien expliciter — même usage que la 'Révélation' du Grand hôte de la Cupidité, un cran plus loin dans l'arc."
+      }
+    ],
+    "lore": "Il tient sa cour dans les fondations sous le Grand Marché de Libris — l'endroit le plus riche de la République — et ne possède rien. Khoreth étant le miroir de Valdaan (la pierre qui écrase, les profondeurs), le grand hôte de la Cupidité siège sous la richesse plutôt que dedans. Il parasite les Fils de Libris sans les avoir jamais approchés : Dessalles prétend parler pour les pauvres de Libris, le Roi les possède. PNJ unique — ne pas réutiliser ailleurs, contrairement à l'archétype générique 'Roi des mendiants'.",
+    "emoji": "👑🥣",
+    "armureId": "haillons_offerts_superposes",
+    "immunites": [
+      "charmee",
+      "effrayee"
+    ]
+  },
+  {
+    "id": "cupide_gueux_cour",
+    "nom": "Gueux de la Cour",
+    "famille": "cupide",
+    "tier": "basique",
+    "faction": "La Cour du Roi des Mendiants",
+    "race": [
+      "humanoïdes"
+    ],
+    "pv": 15,
+    "def": 13,
+    "init": 2,
+    "atk": 3,
+    "dangerosite": 1,
+    "boss": false,
+    "role": "soldat",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Bâton noueux",
+        "armeId": "baton_noueux",
+        "bonusAttaque": 3,
+        "bonusDegats": 1,
+        "effetSpecial": null
+      }
+    ],
+    "capacitesActives": [
+      {
+        "nom": "Ce que je te dois",
+        "description": "1 fois par combat, réaction : intercepte une attaque visant un allié adjacent et prend les dégâts à sa place.",
+        "mecanique": {
+          "intercepte": true,
+          "type": "activable",
+          "reactionCout": 1,
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "allie",
+          "portee": "adjacent",
+          "zone": null,
+          "effets": [
+            {
+              "type": "special",
+              "note": "Intercepte une attaque ciblant un allié adjacent — en pratique le Roi — et prend les dégâts à sa place. Redirection manuelle."
+            }
+          ]
+        }
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Une pièce, un jour",
+        "description": "Insensible aux tests de moral tant que le Roi est visible sur le champ de bataille. Il ne se bat pas pour Khoreth et ne connaît pas ce mot : il a reçu quelque chose du Roi, une fois, et il n'a jamais fini de le rendre."
+      }
+    ],
+    "lore": "Statistiques volontairement identiques au socle dangerosité 1 / rôle soldat — ce n'est pas un garde du corps, c'est un pauvre. Toute la différence tient dans 'Ce que je te dois' : les PJ doivent tailler dans des gens qui doivent une pièce au Roi pour l'atteindre. Fragile exprès : s'il encaisse, il tombe.",
+    "emoji": "🤲"
   }
 ];
 const BESTIAIRE_INDEX = Object.fromEntries(BESTIAIRE.map(function(m){ return [m.id, m]; }));

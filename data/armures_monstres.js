@@ -263,6 +263,13 @@ const ARMURES_MONSTRES = [
     "nom": "Cuirasse sertie d'or et de gemmes volées",
     "reduction": 3,
     "naturelle": false
+  },
+  {
+    "id": "haillons_offerts_superposes",
+    "nom": "Haillons offerts, superposés",
+    "reduction": 2,
+    "naturelle": false,
+    "note": "Des dizaines de vêtements donnés au fil des ans, portés les uns sur les autres — le Roi ne jette jamais ce qu'on lui donne."
   }
 ];
 
