@@ -9018,7 +9018,9 @@ const App = (() => {
     html += `<img id="lore-carte-img" src="assets/maps/Carte monde.png" alt="Carte du monde" class="lore-carte" />`;
     if (LORE.intro) html += `<p style="font-style:italic;color:#6a6278;">${LORE.intro}</p>`;
     let categoriePrecedente = null;
-    LORE.sections.forEach((s) => {
+    // Les sections taguées deplaceVersFaction sont rendues dans l'onglet
+    // Factions (rendreFactions), pas ici dans les Chroniques.
+    LORE.sections.filter((s) => !s.deplaceVersFaction).forEach((s) => {
       if (s.categorie && s.categorie !== categoriePrecedente) {
         html += `<h2 class="lore-categorie">${echapper(s.categorie)}</h2>`;
         categoriePrecedente = s.categorie;
@@ -9227,12 +9229,28 @@ const App = (() => {
         const histoireHtml = g.histoire
           ? `<h4 style="color:var(--or);margin:10px 0 4px;font-size:0.95rem;">Histoire</h4><div class="contenu" style="color:#fff;">${echapper(g.histoire)}</div>`
           : "";
+        // Carte de la faction (ex. carte de ville pour la capitale) — repli
+        // silencieux si le fichier manque, pas d'icône cassée.
+        const carteHtml = g.carte
+          ? `<img class="faction-carte" src="${echapper(g.carte)}" alt="Carte — ${echapper(g.groupe)}" onerror="this.style.display='none';" />`
+          : "";
+        // Sections de lore rattachées à cette faction (deplaceVersFaction),
+        // rendues ici plutôt que dans les Chroniques. mjSeulement masqué au
+        // joueur via data-role, comme dans rendreLore().
+        const sectionsLoreHtml = (typeof LORE !== "undefined" ? LORE.sections : [])
+          .filter((s) => s.deplaceVersFaction === g.groupe)
+          .map((s) => {
+            const attrRole = s.mjSeulement ? ` data-role="mj"` : "";
+            return `<div class="lore-section"${attrRole}><h3>${echapper(s.titre)}</h3><div class="contenu">${echapper(s.contenu)}</div></div>`;
+          }).join("");
         return `<div class="lore-section"><h3>${echapper(g.groupe)}</h3>` +
           blasonHtml +
           histoireHtml +
           `<p style="font-style:italic;color:#6a6278;white-space:pre-wrap;">${echapper(g.intro)}</p>` +
+          carteHtml +
           entitesHtml +
           `<div class="carte pnj-carte" style="margin-top:10px;"><div class="contenu">${echapper(g.synthese)}</div></div>` +
+          sectionsLoreHtml +
           `</div>`;
       }).join("");
     zone.innerHTML = filtreHtml + groupesHtml;

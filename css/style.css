@@ -1136,6 +1136,7 @@ main:has(#panneau-lore.actif) { max-width: 1400px; }
 .lore-categorie:first-of-type { margin-top: 0; }
 .lore-section h3 { color: var(--or); border-bottom: 2px solid var(--or); padding-bottom: 4px; }
 .faction-blason { display: block; width: 100%; max-width: 220px; height: auto; margin: 12px auto; }
+.faction-carte { display: block; width: 100%; max-width: 860px; height: auto; margin: 14px auto; border-radius: 8px; border: 1px solid var(--parchemin-fonce); box-shadow: 0 3px 10px var(--ombre); }
 .lore-section .contenu { white-space: pre-wrap; font-size: 0.9rem; color: #3a3348; }
 
 .frise-chronologique {
