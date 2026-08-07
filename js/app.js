@@ -9352,9 +9352,12 @@ const App = (() => {
 
     // Cartes "Principe" + amorces gastronomiques par bloc — contexte narratif,
     // non filtrable par type/peuple (juste masqué si le filtre peuple exclut ce bloc).
+    // Carte claire (.carte pnj-carte), comme dans rendreFactions : sinon le
+    // texte sombre de .contenu s'affiche sur le fond sombre de ce panneau et
+    // devient illisible (zone-lore-faune-flore n'a pas de wrapper .carte).
     const blocsHtml = (FAUNE_FLORE.blocs || [])
       .filter((b) => !_fauneFlorePeupleFiltre || _fauneFlorePeupleFiltre === b.peuple)
-      .map((b) => `<div class="lore-section"><h3>${echapper(b.titre)}</h3>` +
+      .map((b) => `<div class="carte pnj-carte lore-section"><h3>${echapper(b.titre)}</h3>` +
         `<div class="contenu">${echapper(b.principe)}</div>` +
         (b.amorces && b.amorces.length
           ? `<h4 style="color:var(--or);margin:10px 0 4px;font-size:0.95rem;">Amorces gastronomiques</h4><ul class="pnj-accroches" style="margin:0;">${
