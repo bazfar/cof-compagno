@@ -2575,6 +2575,11 @@ const Capacites = (() => {
     cibleCreaturePlusProche,
     lancer,
     resoudreDegatsEnAttente,
+    // Exposée pour _declencherEnnemiTue (js/app.js, cf. "drainante_os",
+    // armure_ossements, lot "armes/accessoires D") : PV temporaires du
+    // légendaire, hors du chemin normal resoudreEffet — n'était jusqu'ici
+    // qu'une fonction interne, jamais appelée depuis l'extérieur du module.
+    appliquerPvTemporairesSurPerso,
   };
 })();
 

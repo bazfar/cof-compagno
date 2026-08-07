@@ -898,13 +898,24 @@ const App = (() => {
   // ci-dessous ("X subit N dégâts") s'affiche puis est immédiatement
   // écrasé, même bug déjà corrigé ailleurs (appliquerMalus, clic capacité
   // de monstre) pour la même raison : #toast est un élément unique.
-  function _appliquerDegatsCibleRapide(cibleId, total, ignoreReduction, silencieux) {
+  function _appliquerDegatsCibleRapide(cibleId, total, ignoreReduction, silencieux, persoId) {
     if (!cibleId || typeof total !== "number" || typeof Carte === "undefined") return null;
     const monstre = (Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : []).find((t) => t.id === cibleId);
     if (monstre) {
       const cibleEffective = _redirectionIntercepteMonstre(cibleId);
+      // "ennemi tué" (cf. "drainante_os", armure_ossements, lot "armes/
+      // accessoires D") : PV AVANT capturés sur la cible EFFECTIVE (après
+      // redirection d'interception éventuelle), pour détecter un passage
+      // >0 -> 0 causé par CETTE action précise — pas de proc sur un
+      // sur-kill (déjà à 0 avant) ni sans PJ identifié (persoId absent des
+      // call sites qui ne le connaissent pas encore).
+      const monstreEffectif = Carte.listeMonstresCombat().find((t) => t.id === cibleEffective);
+      const pvAvant = monstreEffectif ? (monstreEffectif.pvActuel ?? monstreEffectif.pvMax ?? 0) : null;
       const info = Carte.appliquerDegatsCombat(cibleEffective, total, ignoreReduction);
       if (info && !silencieux) toast(`${info.nom} subit ${info.degatsNets} dégâts (PV ${info.pvActuel}).`);
+      if (info && persoId && pvAvant !== null && pvAvant > 0 && info.pvActuel === 0) {
+        _declencherEnnemiTue(persoId, cibleEffective);
+      }
       return info;
     }
     const pjTok = (Carte.listeTokensJoueursCombat ? Carte.listeTokensJoueursCombat() : []).find((t) => t.id === cibleId);
@@ -912,6 +923,54 @@ const App = (() => {
       subirDegats(pjTok.ref.slice(3), total, null, null, null, ignoreReduction);
     }
     return null;
+  }
+
+  // Réponse à un "ennemi tué à moins de 2 cases" (cf. "drainante_os",
+  // armure_ossements, lot "armes/accessoires D") — jamais de choix du
+  // joueur (comme "absorbant"/"drainante"), proc automatique dès qu'un des
+  // deux appelants de _appliquerDegatsCibleRapide détecte le passage >0->0.
+  // Distance vérifiée ICI (pas dans l'appelant) : nécessite le jeton du PJ
+  // (_monTokenId), absent hors battlemap dd2vtt — pas de proc dans ce cas
+  // plutôt qu'une fausse supposition de portée.
+  function _declencherEnnemiTue(persoId, monstreTokenId) {
+    if (typeof Carte === "undefined" || !Carte.distanceCasesEntre) return;
+    const monTokenId = _monTokenId(persoId);
+    if (!monTokenId) return;
+    const dist = Carte.distanceCasesEntre(monTokenId, monstreTokenId);
+    if (typeof dist !== "number" || dist > 2) return;
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const perso = Personnage.depuisJSON(p);
+    const messages = [];
+    let modifie = false;
+    perso._itemsEquipesUniques().forEach((it) => {
+      if (!it.declencheurs) return;
+      it.declencheurs.forEach((d) => {
+        if (d.evenement !== "ennemiTue") return;
+        const usage = _verifierUsageDeclencheur(p, it, d);
+        if (!usage.ok) return;
+        if (usage.appliquer) usage.appliquer();
+        modifie = true;
+        const effetSoin = (d.effets || []).find((e) => e.type === "soin");
+        const effetPvTemp = (d.effets || []).find((e) => e.type === "pvTemp");
+        if (effetSoin) {
+          const total = lancerFormule(effetSoin.formule, `${it.nom} — Soin`, false);
+          if (typeof total === "number") {
+            Personnage.appliquerGainPv(p, total, { ignorerCorruption: true });
+            messages.push(`${it.nom} : ${p.nom} regagne ${total} PV.`);
+          }
+        }
+        if (effetPvTemp && typeof Capacites !== "undefined" && Capacites.appliquerPvTemporairesSurPerso) {
+          const totalTemp = lancerFormule(effetPvTemp.formule, `${it.nom} — PV temporaires`, false);
+          if (typeof totalTemp === "number") {
+            const res = Capacites.appliquerPvTemporairesSurPerso(p, totalTemp, effetPvTemp.duree || "finCombat", {});
+            messages.push(`${it.nom} : ${res.montant} PV temporaires.`);
+          }
+        }
+      });
+    });
+    if (modifie) { sauverPersos(persos); if (messages.length) toast(messages.join(" — ")); }
   }
 
   // Chasseur — Voie du chaos, rang 1 "Premier sang du prédateur" (passif) :
@@ -989,7 +1048,7 @@ const App = (() => {
         if (!rawEffectif) { ctx.messagesToast.push(`${ctx.itNom} : ${viseAttaquant ? "attaquant" : "cible"} inconnu(e) — ${e.formule} dégâts à appliquer manuellement.`); return; }
         const total = lancerFormule(e.formule, `${ctx.itNom} — Dégâts`, false);
         if (typeof total === "number") {
-          _appliquerDegatsCibleRapide(idEffectif, total, viseAttaquant ? null : ctx.ignoreReductionCourant, true);
+          _appliquerDegatsCibleRapide(idEffectif, total, viseAttaquant ? null : ctx.ignoreReductionCourant, true, ctx.persoId);
           ctx.messagesToast.push(`${ctx.itNom} : +${total} dégâts${e.elementaire ? ` (${e.elementaire})` : ""}${viseAttaquant ? " à l'attaquant" : ""}.`);
         }
       } else if (e.type === "dot") {
@@ -1831,7 +1890,7 @@ const App = (() => {
         const type = el.dataset.bmDegatsType;
         const attente = type && attaquesRapidesEnAttente[type];
         if (attente && attente.persoId === id && attente.touche === true && attente.cibleId) {
-          _appliquerDegatsCibleRapide(attente.cibleId, total, attente.ignoreReduction);
+          _appliquerDegatsCibleRapide(attente.cibleId, total, attente.ignoreReduction, false, id);
         }
       };
     });
@@ -2257,7 +2316,7 @@ const App = (() => {
         const type = el.dataset.bmDegatsType;
         const attente = type && attaquesRapidesEnAttente[type];
         if (attente && attente.persoId === id && attente.touche === true && attente.cibleId) {
-          _appliquerDegatsCibleRapide(attente.cibleId, total, attente.ignoreReduction);
+          _appliquerDegatsCibleRapide(attente.cibleId, total, attente.ignoreReduction, false, id);
         }
       };
     });

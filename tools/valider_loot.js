@@ -82,7 +82,10 @@ function formuleValide(f) {
 // — reductionDegats non plus (traité en amont de subirDegats, cf.
 // _reduireDegatsSubisSiDisponible) — mais les deux passent par le même
 // vocabulaire effets[]/validerEffets pour rester validés au même endroit.
-const TYPES_EFFET_VALIDES = ["degats", "dot", "soin", "bonus", "etat", "ignoreReduction", "critique", "special", "esquive", "reductionDegats", "reflechitSort", "intercepte", "relance", "annuleCritique", "porteeCourte", "doubleDeplacement"];
+// pvTemp (cf. "drainante_os", armure_ossements, lot "armes/accessoires D") :
+// PV temporaires (formule de dé), lu par _declencherEnnemiTue (js/app.js) via
+// Capacites.appliquerPvTemporairesSurPerso — jamais par _resoudreEffetsDeclencheur.
+const TYPES_EFFET_VALIDES = ["degats", "dot", "soin", "bonus", "etat", "ignoreReduction", "critique", "special", "esquive", "reductionDegats", "reflechitSort", "intercepte", "relance", "annuleCritique", "porteeCourte", "doubleDeplacement", "pvTemp"];
 const CIBLES_BONUS_VALIDES = ["attaque", "DEF"];
 const DUREE_MOTS_CLES_LOOT = ["prochainTour", "finCombat", "permanente"];
 // cible: "attaquant" sur un effet degats/etat (cf. "Affixes phase 2" §C,
@@ -122,7 +125,12 @@ const TYPES_EFFET_CIBLE_INVERSE = ["degats", "etat"];
 // _resoudreEffetsDeclencheur. effets[] porte {type:"bonus", cible:"attaque",
 // valeur, duree} pour le malus du palier rare, ou {type:"special"} seul au
 // palier légendaire (aucun malus — mais effets[] reste requis non vide).
-const EVENEMENTS_DECLENCHEUR_VALIDES = ["touche", "rate", "critique", "subitContact", "subitAttaque", "sortLance", "relance", "critiqueSubi", "jetArme", "doublerDeplacement", "disparition", "rateSubie", "attaqueSupplementaire"];
+// ennemiTue (cf. "drainante_os", armure_ossements, lot "armes/accessoires D") :
+// proc automatique dès qu'une action du PJ fait passer les PV d'un monstre
+// de >0 à 0, à ≤2 cases — détecté dans _appliquerDegatsCibleRapide (js/app.js),
+// résolu par _declencherEnnemiTue, jamais _resoudreEffetsDeclencheur (a besoin
+// d'un avant/après PV et d'une distance, hors de sa portée).
+const EVENEMENTS_DECLENCHEUR_VALIDES = ["touche", "rate", "critique", "subitContact", "subitAttaque", "sortLance", "relance", "critiqueSubi", "jetArme", "doublerDeplacement", "disparition", "rateSubie", "attaqueSupplementaire", "ennemiTue"];
 // typeDegats sur un déclencheur "subitContact" (cf. "réfléchissante",
 // cotte_runique — ne renvoie que les dégâts magiques subis).
 const TYPES_DEGATS_DECLENCHEUR_VALIDES = ["physique", "magique"];
@@ -145,7 +153,7 @@ function validerEffets(effets, signaler) {
     if (e.probabilite !== undefined && (typeof e.probabilite !== "number" || e.probabilite < 0 || e.probabilite > 1)) {
       signaler(`${p}.probabilite devrait être un nombre entre 0 et 1, reçu ${JSON.stringify(e.probabilite)}.`);
     }
-    if (e.type === "degats" || e.type === "dot" || e.type === "soin") {
+    if (e.type === "degats" || e.type === "dot" || e.type === "soin" || e.type === "pvTemp") {
       if (!formuleValide(e.formule)) signaler(`${p}.formule "${e.formule}" rejetée par la grammaire de lancerFormule.`);
     }
     if (TYPES_EFFET_CIBLE_INVERSE.includes(e.type) && e.cible !== undefined && !CIBLES_EFFET_INVERSE_VALIDES.includes(e.cible)) {

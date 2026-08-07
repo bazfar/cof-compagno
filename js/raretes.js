@@ -604,19 +604,26 @@ const EFFETS_PAR_ITEM = {
       } },
   ],
   bracelets_defense: [
-    { id: "impassibles", nom: "impassibles", rare: "+2 DEF (sans armure/bouclier) ; +1 aux jets de résistance", legendaire: "+3 DEF (sans armure/bouclier) ; +2 aux jets de résistance" },
+    { id: "impassibles", nom: "impassibles", rare: "+2 DEF (sans armure/bouclier) ; +1 aux jets de résistance", legendaire: "+3 DEF (sans armure/bouclier) ; +2 aux jets de résistance",
+      mecanique: {
+        // bonusDefSansArmure (lot "armes/accessoires D") : conditionnel à
+        // l'ABSENCE d'armure ET de bouclier, lu directement dans
+        // calculerCA() (cf. Personnage.bonusDefSansArmureEquipement) —
+        // "+X aux jets de résistance" générique (sans type précisé) reste
+        // TEXTE SEUL, même limite que le reste du cluster "jets de résistance"
+        // (cf. cotte_runique/targe_elfique.protectrice).
+        rare: { passif: { bonusDefSansArmure: 2 } },
+        legendaire: { passif: { bonusDefSansArmure: 3 } },
+      } },
     { id: "reactifs", nom: "réactifs", rare: "+2 DEF (sans armure/bouclier) ; 1 fois par combat, esquive totalement une attaque de contact", legendaire: "+3 DEF (sans armure/bouclier) ; 2 fois par combat, esquive totalement une attaque de contact",
       mecanique: {
-        // +2/+3 DEF conditionnel ("sans armure/bouclier") laissé en note :
-        // aucun bonusDEF de l'app n'est aujourd'hui conditionné à l'ABSENCE
-        // d'un autre équipement (bonusDEF() somme tout, sans exclusion) —
-        // même limite déjà acceptée pour "milieu naturel"/"terrain naturel"
-        // ailleurs, à arbitrer manuellement plutôt qu'inventer un garde-fou
-        // dédié pour ce seul cas. L'esquive, elle, est mécanisée normalement.
-        rare: { evenement: "subitAttaque", porteeRequise: "contact", usage: { frequence: "1x/combat" }, effets: [{ type: "esquive" }],
-          note: "+2 DEF sans armure/bouclier — condition non trackable automatiquement, à arbitrer manuellement." },
-        legendaire: { evenement: "subitAttaque", porteeRequise: "contact", usage: { frequence: "2x/combat" }, effets: [{ type: "esquive" }],
-          note: "+3 DEF sans armure/bouclier — condition non trackable automatiquement, à arbitrer manuellement." },
+        // bonusDefSansArmure (lot "armes/accessoires D") : même champ
+        // qu'"impassibles" ci-dessus — n'était laissé en note QUE parce que
+        // ce champ n'existait pas encore au moment d'écrire ce commentaire
+        // (cf. le "à arbitrer manuellement" ci-dessous, aujourd'hui caduc).
+        // L'esquive reste mécanisée comme avant.
+        rare: { passif: { bonusDefSansArmure: 2 }, evenement: "subitAttaque", porteeRequise: "contact", usage: { frequence: "1x/combat" }, effets: [{ type: "esquive" }] },
+        legendaire: { passif: { bonusDefSansArmure: 3 }, evenement: "subitAttaque", porteeRequise: "contact", usage: { frequence: "2x/combat" }, effets: [{ type: "esquive" }] },
       } },
   ],
   bottes_vitesse: [
@@ -641,7 +648,14 @@ const EFFETS_PAR_ITEM = {
       } },
   ],
   gants_voleur: [
-    { id: "silencieux", nom: "silencieux", rare: "+1 Discrétion/Escamotage ; ouvre les serrures simples sans jet", legendaire: "+2 Discrétion/Escamotage ; ouvre les serrures complexes sans jet, désamorce les pièges simples automatiquement" },
+    { id: "silencieux", nom: "silencieux", rare: "+1 Discrétion/Escamotage ; ouvre les serrures simples sans jet", legendaire: "+2 Discrétion/Escamotage ; ouvre les serrures complexes sans jet, désamorce les pièges simples automatiquement",
+      mecanique: {
+        // Même schéma que "prestes" (ci-dessous) — "ouvre les serrures/
+        // désamorce les pièges sans jet" reste descriptif : aucune mécanique
+        // de serrure/piège dans l'app (toujours un jet de compétence libre).
+        rare: { passif: { bonusCompetences: { Discrétion: 1, Escamotage: 1 } }, note: "Ouvre les serrures simples sans jet — non modélisé, à arbitrer manuellement." },
+        legendaire: { passif: { bonusCompetences: { Discrétion: 2, Escamotage: 2 } }, note: "Ouvre les serrures complexes sans jet et désamorce les pièges simples automatiquement — même remarque." },
+      } },
     { id: "prestes", nom: "prestes", rare: "+1 Discrétion/Escamotage ; +1 initiative", legendaire: "+2 Discrétion/Escamotage ; +2 initiative, agit en premier au premier tour",
       mecanique: {
         rare: { passif: { bonusCompetences: { Discrétion: 1, Escamotage: 1 }, bonusInitiative: 1 } },
@@ -711,7 +725,16 @@ const EFFETS_PAR_ITEM = {
       } },
   ],
   collier_clarte: [
-    { id: "impenetrable", nom: "impénétrable", rare: "Immunisé à la lecture de pensées ; +1 aux jets de résistance mentale", legendaire: "Immunisé à la lecture de pensées ; +2 aux jets de résistance mentale, immunité à la Terreur" },
+    { id: "impenetrable", nom: "impénétrable", rare: "Immunisé à la lecture de pensées ; +1 aux jets de résistance mentale", legendaire: "Immunisé à la lecture de pensées ; +2 aux jets de résistance mentale, immunité à la Terreur",
+      mecanique: {
+        // bonusResistanceMentale (lot "armes/accessoires D") : "mentale" est
+        // assez spécifique pour être fixé sur Volonté (cf. Personnage.
+        // modSauvegarde), contrairement à "contre la magie" (jamais mécanisé).
+        // Immunité lecture de pensées/Terreur reste descriptive : pas de
+        // mécanique de télépathie/lecture de pensées dans l'app.
+        rare: { passif: { bonusResistanceMentale: 1 }, note: "Immunité à la lecture de pensées — non modélisée, à arbitrer manuellement." },
+        legendaire: { passif: { bonusResistanceMentale: 2 }, note: "Immunité à la lecture de pensées et à la Terreur — même remarque." },
+      } },
     { id: "voile", nom: "voilé", rare: "Immunisé à la lecture de pensées ; invisible à la divination à courte portée", legendaire: "Immunisé à la lecture de pensées ; invisible à toute divination" },
   ],
   ceinturon_colosse: [
@@ -855,7 +878,16 @@ const EFFETS_PAR_ITEM = {
         rare: { passif: { bonusCompetences: { Intimidation: 1 } }, note: "Effraie aussi les créatures vivantes de faible dangerosité — à arbitrer manuellement." },
         legendaire: { passif: { bonusCompetences: { Intimidation: 2 } }, note: "Immunise aussi contre la Terreur — pas d'immunité automatisée pour cet état précis, à arbitrer manuellement." },
       } },
-    { id: "drainante_os", nom: "drainante", rare: "Soigne 1 PV au porteur à chaque ennemi tué à moins de 2 cases", legendaire: "Soigne 2 PV au porteur dans les mêmes conditions, + 1d4 PV temporaires" },
+    { id: "drainante_os", nom: "drainante", rare: "Soigne 1 PV au porteur à chaque ennemi tué à moins de 2 cases", legendaire: "Soigne 2 PV au porteur dans les mêmes conditions, + 1d4 PV temporaires",
+      mecanique: {
+        // ennemiTue (lot "armes/accessoires D") : détecté dans
+        // _appliquerDegatsCibleRapide (js/app.js) — passage des PV du
+        // monstre de >0 à 0 sur CETTE action, PJ à ≤2 cases (Carte.
+        // distanceCasesEntre) — résolu par _declencherEnnemiTue, jamais par
+        // _resoudreEffetsDeclencheur.
+        rare: { evenement: "ennemiTue", effets: [{ type: "soin", formule: "1" }] },
+        legendaire: { evenement: "ennemiTue", effets: [{ type: "soin", formule: "2" }, { type: "pvTemp", formule: "1d4", duree: "finCombat" }] },
+      } },
   ],
   armure_guerre_orque: [
     { id: "brutale", nom: "brutale", rare: "+1d4 dégâts avec armes de contact tant que l'armure est équipée", legendaire: "+1d6 dégâts avec armes de contact tant que l'armure est équipée",
@@ -1024,6 +1056,13 @@ const Raretes = (() => {
     // équipement de CETTE instance (cf. js/app.js
     // _resoudreChoixResistanceSiBesoin), même principe que bonusPvMaxDe.
     if (passif.resistanceElementaireEnAttente) clone.resistanceElementaireEnAttente = passif.resistanceElementaireEnAttente;
+    // bonusResistanceMentale/bonusDefSansArmure (cf. "impenetrable"/collier_clarte
+    // et "impassibles"/bracelets_defense, lot "armes/accessoires D") : même
+    // convention additive que bonusReductionPhysique/bonusDefDistance —
+    // entiers, sommés génériquement par Personnage.bonusResistanceMentaleEquipement()/
+    // bonusDefSansArmureEquipement().
+    if (passif.bonusResistanceMentale) clone.bonusResistanceMentale = (item.bonusResistanceMentale || 0) + passif.bonusResistanceMentale;
+    if (passif.bonusDefSansArmure) clone.bonusDefSansArmure = (item.bonusDefSansArmure || 0) + passif.bonusDefSansArmure;
   }
 
   // mecanique[palier] (rare/legendaire) -> effets sur le clone, commun aux 4

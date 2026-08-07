@@ -447,7 +447,14 @@ class Personnage extends Entite {
     const code = (typeof SAUVEGARDES !== "undefined" && SAUVEGARDES[nom]) || null;
     if (!code) return 0;
     const malusProficience = (nom === "Reflexes" && Personnage.estArmureNonMaitrisee(this)) ? -2 : 0;
-    return this.mod(code) + this.bonusTestCaracCapacites(code) + malusProficience;
+    // "impenetrable" (collier_clarte, lot "armes/accessoires D") : "+X aux
+    // jets de résistance MENTALE" est assez spécifique pour être fixé sur
+    // Volonté, contrairement à "contre la magie" (cotte_runique/targe_elfique,
+    // jamais mécanisé — le save concerné y dépend du sort). Même principe que
+    // Verdict/Vœu inébranlable (aAvantageResistanceMentale), qui forcent déjà
+    // l'avantage sur ce même jet SAG — ici un bonus fixe, pas un avantage.
+    const bonusResistanceMentale = (nom === "Volonte") ? this.bonusResistanceMentaleEquipement() : 0;
+    return this.mod(code) + this.bonusTestCaracCapacites(code) + malusProficience + bonusResistanceMentale;
   }
 
   get classeDef() {
@@ -764,7 +771,7 @@ class Personnage extends Entite {
     const dex = this.dexEffectifCA();
     const armure = this._itemsEquipesUniques().find((it) => it.type === "armure");
     const valeurCA = armure ? (armure.valeurCA || 10) : 10; // 10 = "Vêtements" par défaut
-    return valeurCA + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusDefMutations() + this.bonusTemporaire("DEF") + this.bonusDefImmobile() + this.bonusDefDuel() + this.bonusDefBouclierExpert() + this.bonusDefPhalange();
+    return valeurCA + dex + this.bonusDefEquipement() + this.bonusDefCapacites() + this.bonusDefMutations() + this.bonusTemporaire("DEF") + this.bonusDefImmobile() + this.bonusDefDuel() + this.bonusDefBouclierExpert() + this.bonusDefPhalange() + this.bonusDefSansArmureEquipement();
   }
 
   // Chasseur — Voie de la traque, rang 2 "Camouflage naturel" (passive) :
@@ -1366,6 +1373,23 @@ class Personnage extends Entite {
   // perdre silencieusement l'une des deux sources en cas de cumul.
   bonusDegatsContactEquipement() {
     return this._itemsEquipesUniques().reduce((acc, it) => it.bonusDegatsContact ? (acc ? `${acc}+${it.bonusDegatsContact}` : it.bonusDegatsContact) : acc, "");
+  }
+  // "impenetrable" (collier_clarte, lot "armes/accessoires D") : lu par
+  // modSauvegarde uniquement sur le jet de Volonté (SAG) — jamais dans un
+  // calcul générique, même principe que bonusDegatsContactEquipement ci-dessus.
+  bonusResistanceMentaleEquipement() {
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusResistanceMentale || 0), 0);
+  }
+  // "impassibles" (bracelets_defense, lot "armes/accessoires D") : "+X DEF
+  // (sans armure/bouclier)" — conditionnel à l'ABSENCE d'armure ET de
+  // bouclier équipés (contrairement à bonusDefDistance/bonusDefOpportunite,
+  // conditionnels au TYPE d'attaque subie) : la condition est toujours vraie
+  // ou fausse, jamais contextuelle à une attaque précise, donc lue
+  // directement dans calculerCA() plutôt que via _defPjAvecAura.
+  bonusDefSansArmureEquipement() {
+    const aArmureOuBouclier = this._itemsEquipesUniques().some((it) => it.type === "armure" || it.type === "bouclier");
+    if (aArmureOuBouclier) return 0;
+    return this._itemsEquipesUniques().reduce((t, it) => t + (it.bonusDefSansArmure || 0), 0);
   }
   // Druide — Voie de la nature, rang 4 "Résistance naturelle" : réduction
   // égale à 2×rangMaxVoie contre les dégâts "naturels" (froid/chaleur/chute/
