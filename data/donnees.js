@@ -4103,6 +4103,180 @@ const FACTIONS = [
 ];
 
 /* ============================================================
+   FAUNE & FLORE (page "Lore" > onglet "Faune & Flore")
+   Socle de gastronomie/prix/ingrédients d'alchimie, pas de règle. Chaque
+   entrée porte deux tags de tri, même logique que `peuples` sur
+   CHRONOLOGIE : `type` ("flore" | "faune") et `peuple` ("commun" — espèce
+   transversale, dans toutes les cultures — | "humain" | "elfe" | "nain").
+   `rarete` reprend les paliers de data/marche.js (commun, peu_commun, rare,
+   legendaire) pour brancher des prix plus tard sans retravailler la liste.
+   Les espèces marquées par la magie sont volontairement dispersées entre
+   les blocs, sans logique géographique : ne pas en faire un indice de lieu.
+   Rendu par js/app.js (rendreFauneFlore), rien à dupliquer ailleurs.
+   ============================================================ */
+const FAUNE_FLORE = {
+  intro:
+    "Registre réaliste, avec des espèces marquées par la magie dispersées sans logique géographique — le monde est magique partout, pas seulement près de l'Arbre ou des Failles. Une espèce étrange n'est donc pas un indice de lieu : elle fait simplement partie du décor, et les peuples la traitent comme telle (on la cuisine, on la taxe, on la revend). Ambition mécanique actuelle : aucune — pur roleplay, saveur, prix.",
+  blocs: [
+    {
+      peuple: "humain",
+      titre: "Bloc humain",
+      principe:
+        "Toutes les nations humaines descendent du Premier Empire solvarien : le socle alimentaire est partout le même — céréale, porc, chou, vin. Les différences sont des variations de terroir et de classe, jamais de nature. Un Valdornien et un Arvethien mangent le même pain ; ils s'insultent sur la façon de le cuire. Ligne de fracture réelle, transversale à toutes les nations : le pain blanc contre le pain gris — la couleur de la miche dit la classe sociale plus sûrement que le vêtement.",
+      amorces: [
+        "Solvarn (Zénith) : pain blanc au safran d'Autel, volaille dorée, vin de Kor Valdan. Le repas comme démonstration liturgique.",
+        "Solvarn (Marche) : pain de seigle, hareng salé, chou fermenté. Monotone par doctrine autant que par pauvreté.",
+        "Valdorne : porc au cidre de Gardesèle, gibier, pommes partout.",
+        "Arveth : galettes de sarrasin, bœuf des landes fumé, eau-de-vie de prune — cuisine de rite guerrier, portions démesurées.",
+        "Mornac : jambon sec, vin noir, anguille — cuisine de fleuve et de commerce.",
+        "Serval : fromage de col, agneau, tout ce qui passe au fumoir.",
+        "Liberra : le seul endroit où les six cuisines se croisent dans la même rue, plus les épices d'import. Il n'existe pas de cuisine libérienne propre — et c'est exactement l'argument qu'en tirent ses habitants.",
+      ],
+    },
+    {
+      peuple: "elfe",
+      titre: "Bloc elfique",
+      principe:
+        "Un seul socle sylvestre partagé par les trois nations : on ne défriche pas, on prélève. Pas de grande céréale, pas d'élevage de masse — farines d'arbre (gland, châtaigne), sèves, champignons, cueillette, gibier rare. La cuisine elfique est saisonnière au jour près et se conserve mal : elle ne voyage pratiquement pas, ce qui explique qu'aucun humain n'y comprenne rien. Les variantes nationales sont des accents, pas des cuisines séparées : Aetharion formalise et protocolise, Aelindra fermente et partage, Mordanel travaille le nocturne et l'amer.",
+      amorces: [
+        "Aetharion : repas en service ordonné, sève claire en ouverture, poisson cru, infusion de feuille d'argent en clôture. Chaque étape a un mot dit à voix haute.",
+        "Aelindra : plat unique partagé, pain de gland, fromage de feuille, tout le monde mange dans le même plat — l'inverse exact du protocole aetharien.",
+        "Mordanel : repas de nuit, amertume assumée, soupe-lanterne, vin de baie-de-crépuscule. Ce que les autres prennent pour de la morbidité est de la précision.",
+      ],
+    },
+    {
+      peuple: "nain",
+      titre: "Bloc nain",
+      principe:
+        "Deux mondes, une même contrainte : pas de soleil. Tout repose sur la champignonnière, les cultures sous lampes runiques, les rivières souterraines et le troc de surface avec Serval. La cuisine naine est dense, salée, calorique, et tourne autour de deux obsessions : la levure et le sel gemme. La ligne de fracture est politique. À Kaldrun (Nains de l'Ordre), manger de la surface est un signe de réussite et manger du rat est une honte. Dans les Failles Rouges (Khazrak Dûm), les Évolutionnistes revendiquent l'inverse : manger ce que la Faille donne est une preuve de sang. La même assiette n'a pas le même sens à deux jours de marche.",
+      amorces: [
+        "Kaldrun : bouillie de cave-mousse au fromage bleu, champignon-barrique grillé, bière de levure de clan, sel gemme sur la table en bloc entier — on gratte soi-même.",
+        "Table de prestige (Kaldrun) : bœuf de surface, houblon importé, sombre-truffe. La démonstration de richesse naine est une démonstration de commerce.",
+        "Karag Dûm / Failles : chapeau-rouge trois fois bouilli, ver-de-roche grillé, poivre-de-cendre. Cuisine agressive, revendiquée comme telle.",
+        "Rite : le champignon-écho avant les serments, le poisson-cloche aux mariages, le pain de la souche familiale aux funérailles.",
+      ],
+    },
+  ],
+  entrees: [
+    // -- Espèce transversale --
+    { nom: "Barbade", type: "flore", peuple: "commun", ou: "Partout — bords de route, jachères, pieds de mur, éboulis. Ne pousse pas sous terre", rarete: "commun",
+      description: "Touffe basse à feuilles dentelées vert-de-gris, doublées sur le dessous d'un duvet fibreux blanchâtre qui lui donne son nom. Increvable : elle repousse sur les terres brûlées, les champs de bataille et les gravats. Les Solvariens y voient la preuve d'une providence solaire, les Aelindra une mauvaise herbe utile, les nains une importation coûteuse.",
+      usage: "Base de toutes les potions de soin (feuille écrasée en urgence sur le terrain, infusion séchée réduite pour les décoctions plus élaborées) — vendue en bottes séchées sous le nom commercial d'« herbes médicinales » (cf. loot.json, herbes_medicinales : le nom du marchand, la Barbade étant le nom de la plante). Franchement amère en cuisine : jeunes pousses de printemps blanchies deux fois, base de plusieurs toniques et bières régionales.",
+      note: "Déclinaisons culturelles — Humains : séchée en bottes suspendues, monopole de culture propre des monastères solvariens (la Barbade sauvage marche aussi mais jugée moins efficace, ce qui arrange tout le monde sauf l'acheteur). Elfes : employée fraîche, en cataplasme lié à la sève ambrée — la sécher passe pour une mutilation d'apothicaire. Nains : ne pousse pas sous la roche, achetée à Serval en bottes à un prix que Kaldrun trouve humiliant ; les Failles cultivent une barbade pâle sous lampes runiques, plus faible mais souveraine — argument évolutionniste récurrent." },
+
+    // -- Bloc humain : flore cultivée --
+    { nom: "Froment du Zénith", type: "flore", peuple: "humain", ou: "Solvarn central, plaines de Solmaris", description: "Blé à épi dense, barbes dorées, sacralisé par le culte solaire", usage: "Pain blanc, hosties, pâtisserie de cour", rarete: "commun (Solvarn) / peu commun ailleurs" },
+    { nom: "Orge grise", type: "flore", peuple: "humain", ou: "Partout", description: "Orge rustique, tolère les mauvais sols", usage: "Bouillie, bière de caserne, fourrage", rarete: "commun" },
+    { nom: "Seigle de Naros", type: "flore", peuple: "humain", ou: "Marches, forts-frontières", description: "Grain noir, sols pauvres", usage: "Pain dense qui tient trois semaines — ration militaire standard", rarete: "commun" },
+    { nom: "Sarrasin d'Arveth", type: "flore", peuple: "humain", ou: "Arveth, hautes terres", description: "Grain sombre à goût de noisette", usage: "Galettes, bouillie du matin", rarete: "commun" },
+    { nom: "Chou serré de Durnholk", type: "flore", peuple: "humain", ou: "Nord solvarien", description: "Pomme très compacte, résiste au gel", usage: "Fermenté en saumure (« le gris »), base de l'hiver nordique", rarete: "commun" },
+    { nom: "Navet-de-cendre", type: "flore", peuple: "humain", ou: "Valdorne, brûlis", description: "Tubercule violacé, pousse sur terre brûlée", usage: "Nourriture de disette, purée, fourrage", rarete: "commun" },
+    { nom: "Fève de Verselande", type: "flore", peuple: "humain", ou: "Terres coalisées", description: "Grosse fève plate séchée", usage: "Potages, ragoûts longs", rarete: "commun" },
+    { nom: "Poirée des levées", type: "flore", peuple: "humain", ou: "Berges de la Lisdane", description: "Bette à côtes larges", usage: "Braisée, farce, feuilles en papillote", rarete: "commun" },
+    { nom: "Pomme de Gardesèle", type: "flore", peuple: "humain", ou: "Côte de Valdorne", description: "Petite pomme acide, garde tout l'hiver", usage: "Cidre, vinaigre, compote au porc", rarete: "commun" },
+    { nom: "Vigne de Kor Valdan", type: "flore", peuple: "humain", ou: "Golfe d'Acier", description: "Blanc minéral, salin", usage: "Vin d'autel du culte solaire — usage liturgique protégé", rarete: "peu_commun" },
+    { nom: "Vigne noire de Mornac", type: "flore", peuple: "humain", ou: "Vallée de la Lisdane", description: "Rouge épais, tannique", usage: "Vin d'export, écoulé par Port-Saphir et Libris", rarete: "peu_commun" },
+    { nom: "Prune de Boigris", type: "flore", peuple: "humain", ou: "Arveth, Marches Orientales", description: "Petite prune bleue très sucrée", usage: "Séchée pour l'hiver ; eau-de-vie qui brûle la gorge", rarete: "commun" },
+    { nom: "Herbe-à-fumée", type: "flore", peuple: "humain", ou: "Contreforts de Serval", description: "Arbrisseau aromatique résineux", usage: "Brûlée sous les viandes suspendues — signature du fumage servalien", rarete: "commun" },
+    { nom: "Ail des levées", type: "flore", peuple: "humain", ou: "Mornac, Liberra", description: "Gousses violettes", usage: "Base de toute cuisine du sud", rarete: "commun" },
+    { nom: "Safran d'Autel", type: "flore", peuple: "humain", ou: "Jardins de temple, Solvarn", description: "Crocus cultivé en enceinte cléricale", usage: "Colore en or le pain des fêtes solaires ; sortie du temple interdite", rarete: "rare" },
+    { nom: "Poivre des quais", type: "flore", peuple: "humain", ou: "Importé, redistribué par Libris", description: "Baie séchée d'outre-mer", usage: "Épice de statut : sa présence sur une table dit un revenu", rarete: "rare" },
+    { nom: "Champignon des chaumes", type: "flore", peuple: "humain", ou: "Partout, prairies", description: "Rosé des prés banal", usage: "Poêlé, séché en cordons", rarete: "commun" },
+    { nom: "Racine-de-lune", type: "flore", peuple: "humain", ou: "Sporadique, partout", description: "Tubercule blanc qui ne se laisse déterrer que de nuit ; mis au soleil, il noircit en une heure", usage: "Croqué cru, il coupe la faim un jour plein. Ration de contrebandiers et de déserteurs", rarete: "peu_commun" },
+
+    // -- Bloc humain : faune élevée et chassée --
+    { nom: "Bœuf des landes", type: "faune", peuple: "humain", ou: "Arveth", description: "Grand bovin à poil long, corne large", usage: "Viande de fête, cuir, lait tardif", rarete: "peu_commun" },
+    { nom: "Mouton des Contreforts", type: "faune", peuple: "humain", ou: "Serval", description: "Petit, gras, laine épaisse", usage: "Agneau rôti, lait → fromage de col affiné en grotte", rarete: "commun" },
+    { nom: "Chèvre-des-cols", type: "faune", peuple: "humain", ou: "Serval, Valdorne", description: "Agile, mauvais caractère", usage: "Lait, chevreau, peau à outres", rarete: "commun" },
+    { nom: "Porc noir de Mornac", type: "faune", peuple: "humain", ou: "Mornac, sous les chênaies", description: "Nourri de glands", usage: "Jambon sec de Mornhaven — le produit de luxe humain le plus exporté", rarete: "peu_commun" },
+    { nom: "Porc de basse-cour", type: "faune", peuple: "humain", ou: "Partout", description: "Rose, engraissé aux restes", usage: "Salaisons, saindoux, boudin", rarete: "commun" },
+    { nom: "Poule dorée de Solmaris", type: "faune", peuple: "humain", ou: "Solvarn", description: "Plumage cuivre, couve mal", usage: "Œufs, volaille de temple ; le coq figure sur les enseignes de boulangers", rarete: "commun" },
+    { nom: "Oie de la Sombre", type: "faune", peuple: "humain", ou: "Gué de Fossessainte, migration", description: "Grande oie grise", usage: "Chassée au filet ; graisse de conservation, foie engraissé chez les nobles", rarete: "peu_commun" },
+    { nom: "Sanglier des futaies", type: "faune", peuple: "humain", ou: "Valdorne", description: "Massif, agressif", usage: "Chasse seigneuriale, viande boucanée", rarete: "peu_commun" },
+    { nom: "Cerf-des-brumes", type: "faune", peuple: "humain", ou: "Valdorne, Mornac", description: "Robe grise, se tient dans les fonds humides", usage: "Gibier noble — braconné, il vaut une main coupée", rarete: "peu_commun" },
+    { nom: "Lièvre de Fossessainte", type: "faune", peuple: "humain", ou: "Frontière Sombre", description: "Roux, très maigre", usage: "Civet ; plat de paysan devenu plat de guerre", rarete: "commun" },
+    { nom: "Carpe de levée", type: "faune", peuple: "humain", ou: "La Lisdane, la Verselande", description: "Élevée en étangs de monastère", usage: "Poisson des jours de jeûne clérical", rarete: "commun" },
+    { nom: "Brochet de la Lisdane", type: "faune", peuple: "humain", ou: "Fleuve", description: "Prédateur long, chair ferme", usage: "Quenelles, grillé entier", rarete: "commun" },
+    { nom: "Anguille du Grand Port", type: "faune", peuple: "humain", ou: "Libris, embouchure", description: "Grasse, remonte au printemps", usage: "Fumée sur bois de pomme — plat populaire de Libris", rarete: "commun" },
+    { nom: "Hareng de Cendre-Claire", type: "faune", peuple: "humain", ou: "Côtes, Kor Valdan", description: "Banc dense, pêche de masse", usage: "Salé en barrique : nourrit les armées et les flottes", rarete: "commun" },
+    { nom: "Abeille de bruyère", type: "faune", peuple: "humain", ou: "Valdorne, Arveth", description: "Ruches de paille", usage: "Miel sombre, hydromel, cire d'église", rarete: "commun" },
+    { nom: "Truite-miroir", type: "faune", peuple: "humain", ou: "La Verselande", description: "Écailles très réfléchissantes ; sa chair reste froide au toucher même sortie du feu", usage: "Servie tiède exprès : curiosité de table riche, et vraie ration de voyage", rarete: "rare" },
+    { nom: "Coq de veille", type: "faune", peuple: "humain", ou: "Solvarn, élevages de temple", description: "Chante à l'heure exacte quel que soit le ciel ; personne ne sait pourquoi", usage: "Rarement mangé — vendu comme horloge vivante aux caravanes", rarete: "peu_commun" },
+
+    // -- Bloc elfique : flore --
+    { nom: "Sève claire (seliath)", type: "flore", peuple: "elfe", ou: "Aetharion, printemps", description: "Sève montante des grands arbres, récoltée sur trois semaines par an", usage: "Bue pure et fraîche. Boisson de rang : la première coupe revient au plus âgé", rarete: "rare hors Aetharion" },
+    { nom: "Sève ambrée", type: "flore", peuple: "elfe", ou: "Partout en terres elfiques", description: "Sève d'automne réduite au feu doux", usage: "Sirop de conservation, base sucrante universelle", rarete: "peu_commun" },
+    { nom: "Gland doux d'Aelindra", type: "flore", peuple: "elfe", ou: "Aelindra, enclave occidentale", description: "Gland sélectionné sur des siècles, sans amertume", usage: "Farine, pain plat, galettes de voyage", rarete: "commun (elfes)" },
+    { nom: "Châtaigne de Cœuvre", type: "flore", peuple: "elfe", ou: "Aelindra", description: "Grosse, farineuse", usage: "Purée, farine, rôtie aux fêtes d'automne", rarete: "commun (elfes)" },
+    { nom: "Noisette des halliers", type: "flore", peuple: "elfe", ou: "Partout", description: "Petite, huileuse", usage: "Huile de table, pâte sucrée", rarete: "commun" },
+    { nom: "Pomme-de-brume", type: "flore", peuple: "elfe", ou: "Vergers d'Elyndoril", description: "Peau grise duveteuse, chair très pâle", usage: "Cidre clair, presque incolore", rarete: "peu_commun" },
+    { nom: "Baie-de-crépuscule (morlaen)", type: "flore", peuple: "elfe", ou: "Mordanel", description: "Bleu-noir, ne mûrit qu'après le coucher du soleil", usage: "Vin sombre, très amer — signature mordanelle", rarete: "peu_commun" },
+    { nom: "Prune pâle", type: "flore", peuple: "elfe", ou: "Mordanel", description: "Presque blanche, acide", usage: "Séchée, macérée dans la sève ambrée", rarete: "commun" },
+    { nom: "Fougère-crosse", type: "flore", peuple: "elfe", ou: "Partout, printemps", description: "Jeunes pousses enroulées", usage: "Blanchies, servies à l'huile de noisette", rarete: "commun" },
+    { nom: "Ail-des-ombres", type: "flore", peuple: "elfe", ou: "Mordanel, sous-bois", description: "Feuille large, odeur puissante", usage: "Condiment de base des cuisines nocturnes", rarete: "commun" },
+    { nom: "Cresson d'eau vive", type: "flore", peuple: "elfe", ou: "Sources, Aelindra", description: "Croquant, poivré", usage: "Cru, en fin de plat", rarete: "commun" },
+    { nom: "Riz sauvage de Valmeryl", type: "flore", peuple: "elfe", ou: "Marais d'Aelindra", description: "Grain long noir, récolté en barque", usage: "Le plus proche équivalent elfique d'une céréale", rarete: "peu_commun" },
+    { nom: "Trompette-de-sève", type: "flore", peuple: "elfe", ou: "Sur écorce vivante", description: "Champignon en cornet, ne pousse que sur arbre sain", usage: "Séché, réduit en poudre : l'umami elfique", rarete: "peu_commun" },
+    { nom: "Champignon-lanterne", type: "flore", peuple: "elfe", ou: "Mordanel, galeries de racines", description: "Luit faiblement dans le noir ; le bouillon garde la lueur une heure", usage: "Soupe des veillées longues — on cuisine pour la lumière autant que pour manger", rarete: "peu_commun" },
+    { nom: "Mousse-poivre", type: "flore", peuple: "elfe", ou: "Rochers humides", description: "Lichen piquant", usage: "Râpé en fin de cuisson", rarete: "commun" },
+    { nom: "Feuille d'argent", type: "flore", peuple: "elfe", ou: "Aetharion", description: "Feuillage vert-gris", usage: "Infusion de protocole : le refus d'une tasse est une insulte codifiée", rarete: "peu_commun" },
+    { nom: "Miel de bosquet", type: "flore", peuple: "elfe", ou: "Ruches sauvages, terres elfiques", description: "Ambre presque translucide, très fluide", usage: "Sommeil profond et rêves d'une netteté anormale. Jamais vendu sciemment à un Solvarien", rarete: "rare" },
+    { nom: "Fleur-de-veille (ilweth)", type: "flore", peuple: "elfe", ou: "Sporadique", description: "Corolle blanche qui se ferme au bruit", usage: "En infusion, on ne dort pas mais on rêve éveillé une nuit entière. Outil d'érudits, vice discret de cour", rarete: "rare" },
+
+    // -- Bloc elfique : faune --
+    { nom: "Cerf blanc", type: "faune", peuple: "elfe", ou: "Aetharion, Aelindra", description: "Robe crème, très rare", usage: "Chasse rituelle, jamais commercialisée. Le tuer sans droit est un crime", rarete: "légendaire (au marché)" },
+    { nom: "Chevreuil des halliers", type: "faune", peuple: "elfe", ou: "Partout", description: "Petit, nerveux", usage: "Gibier ordinaire, mariné à la baie", rarete: "commun" },
+    { nom: "Perdrix-des-mousses", type: "faune", peuple: "elfe", ou: "Sous-bois", description: "Plumage moucheté", usage: "Rôtie entière, farcie de trompette-de-sève", rarete: "commun" },
+    { nom: "Chèvre naine des clairières", type: "faune", peuple: "elfe", ou: "Aelindra", description: "Haute comme un chien", usage: "Lait → fromage frais serré dans des feuilles, mangé en trois jours", rarete: "commun" },
+    { nom: "Truite de source", type: "faune", peuple: "elfe", ou: "Ruisseaux d'Aetharion", description: "Chair rose pâle", usage: "Crue, tranchée fine, sève ambrée et mousse-poivre", rarete: "commun" },
+    { nom: "Écrevisse de racine", type: "faune", peuple: "elfe", ou: "Berges, Aelindra", description: "Vit dans les racines immergées", usage: "Bouillie, en entrée de fête", rarete: "peu_commun" },
+    { nom: "Escargot de canopée", type: "faune", peuple: "elfe", ou: "Mordanel", description: "Grimpe haut, coquille sombre", usage: "Délicatesse mordanelle ; les autres nations feignent d'être choquées", rarete: "peu_commun" },
+    { nom: "Abeille sylvestre", type: "faune", peuple: "elfe", ou: "Partout", description: "Ruches naturelles, jamais domestiquées", usage: "Miel courant (distinct du miel de bosquet)", rarete: "commun" },
+    { nom: "Sanglier gris d'Aranil", type: "faune", peuple: "elfe", ou: "Aelindra", description: "Plus petit et plus maigre que le sanglier humain", usage: "Boucané, viande de réserve", rarete: "peu_commun" },
+    { nom: "Caille de brume", type: "faune", peuple: "elfe", ou: "Marais de Valmeryl", description: "Migratrice, arrive une semaine par an", usage: "Toute la communauté cuisine en même temps : c'est un événement, pas un repas", rarete: "peu_commun" },
+    { nom: "Poisson-verre", type: "faune", peuple: "elfe", ou: "Rivières d'Aetharion", description: "Transparent, visible seulement quand il bouge", usage: "Pêché à vue, presque impossible à attraper ; servi entier pour prouver qu'on l'a eu", rarete: "rare" },
+    { nom: "Papillon-tisserand", type: "faune", peuple: "elfe", ou: "Aetharion", description: "Cocon à fil très résistant", usage: "Non alimentaire — textile de haut rang, à noter pour l'artisanat", rarete: "rare" },
+
+    // -- Bloc nain : flore --
+    { nom: "Cave-mousse", type: "flore", peuple: "nain", ou: "Toutes galeries", description: "Champignon-tapis qui couvre des salles entières", usage: "Base absolue : pain, bouillie, bière. Dans les Failles, prend un goût métallique que les Évolutionnistes disent supérieur", rarete: "commun" },
+    { nom: "Champignon-barrique", type: "flore", peuple: "nain", ou: "Kaldrun, salles chaudes", description: "Pied charnu large comme un tonneau", usage: "Tranché et grillé en substitut de viande — plat quotidien", rarete: "commun" },
+    { nom: "Barbe-de-forge", type: "flore", peuple: "nain", ou: "Près des cheminées de Forge-Runez", description: "Lichen filamenteux, naturellement salé", usage: "Condiment, et sel du pauvre", rarete: "commun" },
+    { nom: "Sombre-truffe", type: "flore", peuple: "nain", ou: "Veines profondes", description: "Noire, odeur violente", usage: "Râpée sur la bouillie des jours de fête. Prix absurde en surface", rarete: "rare" },
+    { nom: "Orge-de-galerie", type: "flore", peuple: "nain", ou: "Kaldrun, champs sous lampes runiques", description: "Orge pâle poussée sans soleil, épi court", usage: "Pain de garnison, malt de brasserie", rarete: "commun" },
+    { nom: "Chou-de-galerie", type: "flore", peuple: "nain", ou: "Sous lampes", description: "Feuilles blanches, presque translucides", usage: "Fermenté en jarre, seul légume vert du régime", rarete: "commun" },
+    { nom: "Racine-de-pierre", type: "flore", peuple: "nain", ou: "Fissures profondes", description: "Tubercule dur comme du bois", usage: "Six heures de bouillon minimum. Plat de siège, plat de mémoire", rarete: "commun" },
+    { nom: "Mousse-sucre", type: "flore", peuple: "nain", ou: "Parois suintantes", description: "Fine pellicule douce", usage: "Seul sucrant natif : desserts rares et très convoités", rarete: "peu_commun" },
+    { nom: "Chapeau-rouge des Failles", type: "flore", peuple: "nain", ou: "Khazrak Dûm", description: "Vermillon, légèrement toxique cru", usage: "Bouilli trois fois. Le manger est une déclaration d'appartenance évolutionniste", rarete: "peu_commun" },
+    { nom: "Sel gemme de Kaldrun", type: "flore", peuple: "nain", ou: "Veines de sel", description: "Blocs translucides taillés à la pioche", usage: "Conservation, commerce, monnaie d'appoint — un des grands exports nains", rarete: "commun (nains) / peu commun (surface)" },
+    { nom: "Poivre-de-cendre", type: "flore", peuple: "nain", ou: "Failles Rouges", description: "Grain minéral piquant, pas végétal", usage: "Assaisonnement de la cuisine renégate", rarete: "peu_commun" },
+    { nom: "Levure noire de clan", type: "flore", peuple: "nain", ou: "Kaldrun, chaque clan la sienne", description: "Souche entretenue sans interruption depuis des générations", usage: "Bière et pain. Perdre sa souche est un deuil réel, la voler est un casus belli", rarete: "commun (mais non vendable)" },
+    { nom: "Houblon de Serval", type: "flore", peuple: "nain", ou: "Importé de la surface", description: "Cône vert amer", usage: "Achat régulier aux humains — le seul ingrédient dont Kaldrun dépend", rarete: "peu_commun" },
+    { nom: "Champignon-écho", type: "flore", peuple: "nain", ou: "Salles profondes", description: "Sa consommation grave la voix pendant une heure", usage: "Mangé avant les chants de forge et les serments de clan", rarete: "peu_commun" },
+    { nom: "Truffe-braise", type: "flore", peuple: "nain", ou: "Sporadique, Failles", description: "Reste tiède des heures après la récolte", usage: "Glissée dans les rations des mineurs longue-distance", rarete: "rare" },
+
+    // -- Bloc nain : faune --
+    { nom: "Chèvre de galerie", type: "faune", peuple: "nain", ou: "Kaldrun", description: "Poil ras, quasi aveugle, nourrie de cave-mousse", usage: "Lait → fromage bleu de cave, affiné en niche murée", rarete: "commun" },
+    { nom: "Porc de fosse", type: "faune", peuple: "nain", ou: "Toutes cités", description: "Élevé sur les déchets de champignonnière", usage: "Lard, saindoux, salaison — la graisse nourrit aussi les lampes", rarete: "commun" },
+    { nom: "Poisson-blanc aveugle", type: "faune", peuple: "nain", ou: "Rivières souterraines", description: "Sans yeux, chair douce", usage: "Bouilli, en soupe de sel gemme", rarete: "commun" },
+    { nom: "Écrevisse noire", type: "faune", peuple: "nain", ou: "Sources chaudes", description: "Carapace épaisse", usage: "Ébouillantée, décortiquée à la pointe du couteau", rarete: "peu_commun" },
+    { nom: "Scarabée-de-forge", type: "faune", peuple: "nain", ou: "Près des fonderies", description: "Carapace bronzée", usage: "Grillé sur plaque : croquant salé, grignotage de taverne", rarete: "commun" },
+    { nom: "Chauve-souris de plafond", type: "faune", peuple: "nain", ou: "Grandes cavernes", description: "Chassée au filet en vol", usage: "Viande séchée + graisse à lampe : rien ne se perd", rarete: "commun" },
+    { nom: "Escargot de suintement", type: "faune", peuple: "nain", ou: "Parois humides", description: "Lent, gros", usage: "Nourriture d'enfance, méprisée par les adultes qui en mangent quand même", rarete: "commun" },
+    { nom: "Rat des veines", type: "faune", peuple: "nain", ou: "Partout", description: "Omniprésent", usage: "À Karag Dûm, viande ordinaire. À Kaldrun, l'accusation d'en manger est une insulte grave", rarete: "commun" },
+    { nom: "Ver-de-roche", type: "faune", peuple: "nain", ou: "Failles Rouges", description: "Long, très gras", usage: "Tronçonné et grillé. Délicatesse renégate, répulsif absolu pour l'Ordre", rarete: "peu_commun" },
+    { nom: "Corbeau des cheminées", type: "faune", peuple: "nain", ou: "Bouches de surface", description: "Niche dans les évents de forge", usage: "Braconné par les gamins, rôti en cachette", rarete: "commun" },
+    { nom: "Bœuf de surface", type: "faune", peuple: "nain", ou: "Importé de Serval", description: "Acheté vivant, descendu par les rampes", usage: "Viande de fête et de statut : servir du bœuf, c'est afficher son commerce", rarete: "rare (sous terre)" },
+    { nom: "Poisson-cloche", type: "faune", peuple: "nain", ou: "Lacs profonds de Kaldrun", description: "Émet un son bas et régulier quand il est vivant hors de l'eau", usage: "Traditionnellement servi encore chantant aux mariages ; certains clans trouvent ça barbare", rarete: "rare" },
+  ],
+  notes: [
+    "Référence de cohérence, pas source de vérité narrative : le lore canonique reste dans les autres onglets de ce panneau.",
+    "Les paliers de rareté sont alignés sur data/marche.js (commun, peu_commun, rare, legendaire) et se combinent avec les multiplicateurs d'origine (local ×0,8, importé allié ×1, importé rival ×1,5) : un jambon de Mornac à Solmaris n'est pas au même prix qu'à Mornhaven.",
+    "Les espèces marquées par la magie (racine-de-lune, truite-miroir, coq de veille, miel de bosquet, fleur-de-veille, poisson-verre, champignon-lanterne, champignon-écho, truffe-braise, poisson-cloche) sont volontairement dispersées sans logique géographique. Ne pas en faire un indice de lieu a posteriori.",
+    "Aucun effet mécanique n'est chiffré à ce stade : c'est un choix, pas un oubli. Si la gastronomie passe un jour en système, les candidats naturels sont le miel de bosquet, la fleur-de-veille, la racine-de-lune et le champignon-écho.",
+  ],
+};
+
+/* ============================================================
    RÈGLES GÉNÉRALES (page "Règles" > onglet "Général")
    Même format que LORE.sections ({ titre, contenu }) — rendu par
    js/app.js (rendreReglesGeneral), rien à dupliquer ailleurs.

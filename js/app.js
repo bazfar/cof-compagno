@@ -9320,6 +9320,96 @@ const App = (() => {
   }
 
   /* ============================================================
+     FAUNE & FLORE (page "Lore" > onglet "Faune & Flore")
+     Filtre à deux axes indépendants — type (flore/faune) et peuple
+     (commun/humain/elfe/nain) — mêmes boutons or/secondaire que les
+     filtres PNJ/Factions/Chronologie ci-dessus, combinés par ET logique.
+     ============================================================ */
+  let _fauneFloreTypeFiltre = "";
+  let _fauneFlorePeupleFiltre = "";
+  const _FAUNE_FLORE_COULEURS_PEUPLE = { commun: "#6a6278", humain: "#b8924a", elfe: "#3a7d44", nain: "#8a2f3b" };
+  const _FAUNE_FLORE_COULEURS_TYPE = { flore: "#3a7d44", faune: "#8a2f3b" };
+  const _FAUNE_FLORE_LIBELLES_PEUPLE = { commun: "Commun", humain: "Humain", elfe: "Elfe", nain: "Nain" };
+
+  function rendreFauneFlore() {
+    const zone = document.getElementById("zone-lore-faune-flore");
+    if (!zone || typeof FAUNE_FLORE === "undefined") return;
+
+    const introHtml = `<p style="font-style:italic;color:#6a6278;">${echapper(FAUNE_FLORE.intro)}</p>`;
+
+    const filtreHtml =
+      `<div class="barre-actions" style="margin-bottom:6px;">` +
+      `<button type="button" class="btn petit ${_fauneFloreTypeFiltre === "" ? "or" : "secondaire"}" data-ff-type="">Tous types</button>` +
+      `<button type="button" class="btn petit ${_fauneFloreTypeFiltre === "flore" ? "or" : "secondaire"}" data-ff-type="flore">🌿 Flore</button>` +
+      `<button type="button" class="btn petit ${_fauneFloreTypeFiltre === "faune" ? "or" : "secondaire"}" data-ff-type="faune">🐾 Faune</button>` +
+      `</div>` +
+      `<div class="barre-actions" style="margin-bottom:14px;">` +
+      `<button type="button" class="btn petit ${_fauneFlorePeupleFiltre === "" ? "or" : "secondaire"}" data-ff-peuple="">Tous peuples</button>` +
+      Object.keys(_FAUNE_FLORE_LIBELLES_PEUPLE).map((p) =>
+        `<button type="button" class="btn petit ${_fauneFlorePeupleFiltre === p ? "or" : "secondaire"}" data-ff-peuple="${p}">${_FAUNE_FLORE_LIBELLES_PEUPLE[p]}</button>`
+      ).join("") +
+      `</div>`;
+
+    // Cartes "Principe" + amorces gastronomiques par bloc — contexte narratif,
+    // non filtrable par type/peuple (juste masqué si le filtre peuple exclut ce bloc).
+    const blocsHtml = (FAUNE_FLORE.blocs || [])
+      .filter((b) => !_fauneFlorePeupleFiltre || _fauneFlorePeupleFiltre === b.peuple)
+      .map((b) => `<div class="lore-section"><h3>${echapper(b.titre)}</h3>` +
+        `<div class="contenu">${echapper(b.principe)}</div>` +
+        (b.amorces && b.amorces.length
+          ? `<h4 style="color:var(--or);margin:10px 0 4px;font-size:0.95rem;">Amorces gastronomiques</h4><ul class="pnj-accroches" style="margin:0;">${
+              b.amorces.map((a) => `<li>${echapper(a)}</li>`).join("")
+            }</ul>`
+          : "") +
+        `</div>`
+      ).join("");
+
+    const entreesFiltrees = FAUNE_FLORE.entrees.filter((e) =>
+      (!_fauneFloreTypeFiltre || e.type === _fauneFloreTypeFiltre) &&
+      (!_fauneFlorePeupleFiltre || e.peuple === _fauneFlorePeupleFiltre)
+    );
+
+    let peupleAffiche = null;
+    const entreesHtml = entreesFiltrees.map((e) => {
+      let enteteGroupe = "";
+      if (e.peuple !== peupleAffiche) {
+        enteteGroupe = `<h2 class="lore-categorie">${_FAUNE_FLORE_LIBELLES_PEUPLE[e.peuple] || e.peuple}</h2>`;
+        peupleAffiche = e.peuple;
+      }
+      const badgeType = `<span class="badge-faction" style="background:${_FAUNE_FLORE_COULEURS_TYPE[e.type]};">${e.type === "flore" ? "🌿 Flore" : "🐾 Faune"}</span>`;
+      const badgePeuple = `<span class="badge-faction" style="background:${_FAUNE_FLORE_COULEURS_PEUPLE[e.peuple]};">${_FAUNE_FLORE_LIBELLES_PEUPLE[e.peuple] || e.peuple}</span>`;
+      return enteteGroupe + `<div class="carte pnj-carte">
+        <div class="pnj-entete">
+          <div style="flex:1;">
+            <div class="pnj-nom">${echapper(e.nom)}</div>
+            <div class="pnj-titre">${echapper(e.ou)} · rareté : ${echapper(e.rarete)}</div>
+          </div>
+          ${badgeType}
+          ${badgePeuple}
+        </div>
+        <div class="contenu">${echapper(e.description)}</div>
+        <p class="pnj-resume" style="margin-top:6px;"><em>${echapper(e.usage)}</em></p>
+        ${e.note ? `<div class="contenu" style="margin-top:6px;">${echapper(e.note)}</div>` : ""}
+      </div>`;
+    }).join("");
+
+    const notesHtml = (FAUNE_FLORE.notes || []).length
+      ? `<div class="carte pnj-carte" style="margin-top:14px;"><h4 style="margin-top:0;">Notes d'usage</h4><ul class="pnj-accroches" style="margin:0;">${
+          FAUNE_FLORE.notes.map((n) => `<li>${echapper(n)}</li>`).join("")
+        }</ul></div>`
+      : "";
+
+    zone.innerHTML = introHtml + filtreHtml + blocsHtml + entreesHtml + notesHtml;
+
+    zone.querySelectorAll("[data-ff-type]").forEach((btn) => {
+      btn.onclick = () => { _fauneFloreTypeFiltre = btn.dataset.ffType; rendreFauneFlore(); };
+    });
+    zone.querySelectorAll("[data-ff-peuple]").forEach((btn) => {
+      btn.onclick = () => { _fauneFlorePeupleFiltre = btn.dataset.ffPeuple; rendreFauneFlore(); };
+    });
+  }
+
+  /* ============================================================
      INITIALISATION
      ============================================================ */
 
@@ -9336,10 +9426,12 @@ const App = (() => {
       pnj: "sous-panneau-lore-pnj",
       factions: "sous-panneau-lore-factions",
       chronologie: "sous-panneau-lore-chronologie",
+      "faune-flore": "sous-panneau-lore-faune-flore",
     });
     rendrePnjCles();
     rendreFactions();
     rendreChronologie();
+    rendreFauneFlore();
 
     document.querySelectorAll("#choix-genre .btn-genre").forEach((b) => {
       b.onclick = () => choisirGenre(b.dataset.genre);
