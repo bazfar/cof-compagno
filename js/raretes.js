@@ -1212,11 +1212,16 @@ const Raretes = (() => {
         if (auMoinsRare && item.degatsAuMoinsRare) clone.degats = item.degatsAuMoinsRare;
         break;
       case "armure":
-        // Le bonus de rareté se répartit sur les deux stats depuis
-        // l'éclatement de l'ancien valeurArmure (cf. §7 de la référence
-        // CA/armures) : valeurCA ET reductionDegats gagnent chacun +bonus.
+        // Recalibrage équilibrage (cf. equilibrage_bestiaire.pdf) : le bonus
+        // de rareté ne touche plus QUE la CA, jamais reductionDegats. La CA
+        // est un seuil — elle retire une proportion constante de touches,
+        // quel que soit l'attaquant. La réduction est SOUSTRACTIVE : son
+        // effet dépend de la taille du coup, et à réduction élevée elle peut
+        // ramener à zéro les dégâts d'un monstre de faible dangerosité —
+        // elle n'atténue pas la menace, elle efface des paliers entiers du
+        // bestiaire. reductionDegats reste donc figée à sa valeur de
+        // catalogue, jamais scalée par la rareté de l'exemplaire.
         clone.valeurCA = (item.valeurCA || 10) + bonus;
-        clone.reductionDegats = (item.reductionDegats || 0) + bonus;
         break;
       case "bouclier":
         clone.bonusDEF = (item.bonusDEF || 0) + bonus;
