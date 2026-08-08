@@ -6190,6 +6190,7 @@ const App = (() => {
           const soin = formuleSoinItem(it);
           const resurrection = estParcheminResurrection(it);
           const parcheminSort = estParcheminSort(it);
+          const toileSeve = estRetireCorruptionCombat(it);
           return `<div class="inv-item">
             <div class="inv-item-header">
               <span class="inv-item-nom" style="color:${it.rareteCouleur || ""}">${echapper(it.nom)}</span>${badgeRareteHtml(it)}
@@ -6209,6 +6210,7 @@ const App = (() => {
               ${resurrection && persoId ? `<button class="btn petit or btn-reanimer-allie" data-idx="${idx}">📜 Réanimer un allié</button>` : ""}
               ${parcheminSort && persoId ? `<button class="btn petit or btn-apprendre-sort" data-idx="${idx}">📖 Apprendre</button>` : ""}
               ${parcheminSort && persoId ? `<button class="btn petit or btn-lancer-parchemin" data-idx="${idx}">✨ Lancer</button>` : ""}
+              ${toileSeve && persoId ? `<button class="btn petit or btn-appliquer-toile" data-idx="${idx}">🧵 Appliquer</button>` : ""}
               ${persoId ? `<button class="btn petit secondaire btn-donner-item" data-idx="${idx}">🎁 Donner</button>` : ""}
               <button class="btn petit danger btn-jeter-item" data-idx="${idx}">Jeter</button>
             </div>
@@ -6705,6 +6707,15 @@ const App = (() => {
     return !!it && it.type === "consommable" && it.id === "parchemin_resurrection";
   }
 
+  // Toile de sève (cf. data/loot.json: toile_de_seve) : consommable qui retire
+  // des points à la JAUGE DE COMBAT (corruptionCombat), jamais à la Corruption
+  // d'Âme, qui reste irréversible. Identifié par le champ corruptionCombatRetiree
+  // plutôt que par id, pour que d'autres étoffes/onguents fonctionnent sans
+  // toucher au code.
+  function estRetireCorruptionCombat(it) {
+    return !!it && it.type === "consommable" && Number(it.corruptionCombatRetiree) > 0;
+  }
+
   // Parchemin d'apprentissage (cf. reference_sorts_connus.md) : consommable
   // référençant un id de SORTS_PAR_CLASSE[classe] via sortAppris — identifié
   // par champ plutôt que par id explicite (contrairement à
@@ -6805,6 +6816,32 @@ const App = (() => {
     afficherFiche(persoId);
     soigner(persoId, total, item.nom);
     if (typeof Combat !== "undefined" && Combat.utiliserActionSecondaire) Combat.utiliserActionSecondaire(persoId);
+  }
+
+  // Applique une toile de sève sur soi : retire des points de jauge de Chaos du
+  // combat en cours. Contrairement à utiliserConsommable (potion = action
+  // secondaire), c'est une ACTION COMPLÈTE — se bander la main pendant qu'on se
+  // bat est un vrai renoncement, pas un geste gratuit. La Corruption d'Âme
+  // (corruptionMajeure) n'est jamais touchée : rien ne l'efface.
+  function appliquerToileSeve(persoId, idx) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const item = p.inventaireListe[idx];
+    if (!estRetireCorruptionCombat(item)) return;
+    const avant = p.corruptionCombat || 0;
+    if (avant <= 0) { toast("Aucune corruption de combat à retirer."); return; }
+    const retire = Math.min(avant, Number(item.corruptionCombatRetiree) || 1);
+    if (typeof Capacites !== "undefined" && Capacites.ajusterCorruptionCombat) {
+      Capacites.ajusterCorruptionCombat(p, -retire);
+    } else {
+      p.corruptionCombat = Math.max(0, avant - retire);
+    }
+    _consommerUnite(p, idx);
+    sauverPersos(persos);
+    afficherFiche(persoId);
+    toast(`${p.nom} applique ${item.nom} — jauge de Chaos ${avant} → ${p.corruptionCombat}.`);
+    if (typeof Combat !== "undefined" && Combat.utiliserActionPrincipale) Combat.utiliserActionPrincipale(persoId);
   }
 
   // Ouvre le sélecteur d'allié à qui administrer le consommable — même modèle
@@ -7895,6 +7932,10 @@ const App = (() => {
     // au Grimoire (cf. lancerSortDepuisParchemin).
     zone.querySelectorAll(".btn-lancer-parchemin").forEach((el) => {
       el.onclick = () => lancerSortDepuisParchemin(id, parseInt(el.dataset.idx, 10));
+    });
+    // Inventaire — appliquer une toile de sève (jauge de Chaos du combat)
+    zone.querySelectorAll(".btn-appliquer-toile").forEach((el) => {
+      el.onclick = () => appliquerToileSeve(id, parseInt(el.dataset.idx, 10));
     });
     // Carte Grimoire — bouton "Apprentissage" : replie/déplie la liste
     // complète du catalogue de classe (cf. rendu ci-dessus).

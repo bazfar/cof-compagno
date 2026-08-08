@@ -366,12 +366,13 @@ const PAR_TYPE = {
   armure: ["valeurCA", "malusDEX", "categorie", "reductionDegats"],
   bouclier: ["bonusDEF", "categorieBouclier"],
   accessoire: ["slot", "bonusCarac", "bonusCompetences", "bonusInitiative", "bonusDEF", "bonusAttaqueMagique", "bonusAttaqueDistance", "bonusDegatsMagiques", "bonusDegatsMainsNues", "bonusPvMaxDe", "grimoireClasses"],
-  consommable: ["quantite", "sortAppris", "dureeEtat", "formuleDot", "jetable"],
+  consommable: ["quantite", "sortAppris", "dureeEtat", "formuleDot", "jetable", "corruptionCombatRetiree"],
 };
 // Champs qui, s'ils sont présents, doivent être de type number — "degats"/
 // "degatsAuMoinsRare"/"bonusPvMaxDe" en sont volontairement exclus (formule
 // de dé du type "1d6"/"1d4", pas un nombre, malgré le nom).
 const CHAMPS_NOMBRE_STRICT = [
+  "corruptionCombatRetiree",
   "prixPo", "enchantement", "porteeMinCases", "porteeMaxCases", "rechargement",
   "valeurCA", "malusDEX", "reductionDegats", "bonusDEF", "quantite",
   "bonusInitiative", "bonusAttaqueMagique", "bonusAttaqueDistance", "bonusDegatsMagiques", "bonusDegatsMainsNues",
