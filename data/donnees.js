@@ -67,6 +67,19 @@ const PROFICIENCE_ARMURE = {
 };
 const RANG_CATEGORIE = { legere: 0, moyenne: 1, lourde: 2 };
 
+/* Catégorie d'armes maîtrisée sans malus par chaque classe — calqué sur
+   PROFICIENCE_ARMURE ci-dessus. Une classe "martiale" maîtrise aussi les
+   armes simples (hiérarchie via RANG_MAITRISE_ARME). Sert à
+   Personnage.estArmeNonMaitrisee().
+   Barde en martiale : son kit de départ est la rapière (cf.
+   data/equipement_depart.js) — tous les kits passent sans conflit. */
+const PROFICIENCE_ARME = {
+  guerrier: "martiale", chevalier: "martiale", chasseur: "martiale", barde: "martiale",
+  pretre: "simple", druide: "simple", moine: "simple",
+  magicien: "simple", necromancien: "simple", enchanteur: "simple",
+};
+const RANG_MAITRISE_ARME = { simple: 0, martiale: 1 };
+
 /* Classes éligibles à l'Attaque d'Opportunité générique (cf. §3 de
    reference_sauvegardes_reactions.md) — les 3 Lanceurs purs (magicien,
    necromancien, enchanteur) en sont exclus. Déclaré ici (global, chargé

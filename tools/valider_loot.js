@@ -334,6 +334,7 @@ if (!Array.isArray(items)) { console.error("❌ data/loot.json : champ `items` a
 
 const TYPES_VALIDES = ["arme", "armure", "bouclier", "accessoire", "consommable"];
 const CATEGORIES_ARMURE_VALIDES = ["legere", "moyenne", "lourde"];
+const MAITRISE_ARME_VALIDES = ["simple", "martiale"];
 
 // Champs autorisés sur TOUT item, quel que soit le type.
 const COMMUN = ["id", "nom", "type", "porte", "description", "prixPo"];
@@ -355,7 +356,7 @@ const COMMUN_MULTI_TYPE = ["horsMarche", "effet", "rarete", "rareteNom", "rarete
   "rariteFixe", "sansModificateurRegional"];
 // Champs spécifiques à chaque type.
 const PAR_TYPE = {
-  arme: ["degats", "portee", "typedegats", "enchantement", "deuxMains", "categorieArme", "porteeMinCases", "porteeMaxCases", "rechargement", "degatsAuMoinsRare", "bonusAttaqueMagique", "bonusDegatsMagiques"],
+  arme: ["degats", "portee", "typedegats", "enchantement", "deuxMains", "categorieArme", "maitrise", "porteeMinCases", "porteeMaxCases", "rechargement", "degatsAuMoinsRare", "bonusAttaqueMagique", "bonusDegatsMagiques"],
   armure: ["valeurCA", "malusDEX", "categorie", "reductionDegats"],
   bouclier: ["bonusDEF", "categorieBouclier"],
   accessoire: ["slot", "bonusCarac", "bonusCompetences", "bonusInitiative", "bonusDEF", "bonusAttaqueMagique", "bonusAttaqueDistance", "bonusDegatsMagiques", "bonusDegatsMainsNues", "bonusPvMaxDe", "grimoireClasses"],
@@ -439,6 +440,13 @@ items.forEach((it, index) => {
     if (typeof it.valeurCA !== "number") signaler(cle, `armure sans valeurCA numérique (reçu : ${JSON.stringify(it.valeurCA)}).`);
     if (typeof it.malusDEX !== "number") signaler(cle, `armure sans malusDEX numérique (reçu : ${JSON.stringify(it.malusDEX)}).`);
     if (!CATEGORIES_ARMURE_VALIDES.includes(it.categorie)) signaler(cle, `armure avec categorie invalide : "${it.categorie}" (attendu : ${CATEGORIES_ARMURE_VALIDES.join("|")}).`);
+  }
+
+  // 6bis. arme : maitrise (cf. PROFICIENCE_ARME, data/donnees.js) — requise
+  // sur toute arme du catalogue statique (contrairement aux objets de la
+  // Forge du MJ, jamais écrits ici : cf. js/forge.js, SyncStore["loot:custom"]).
+  if (it.type === "arme") {
+    if (!MAITRISE_ARME_VALIDES.includes(it.maitrise)) signaler(cle, `arme avec maitrise invalide ou absente : "${it.maitrise}" (attendu : ${MAITRISE_ARME_VALIDES.join("|")}).`);
   }
 
   // 7. champs numériques attendus bien de type number

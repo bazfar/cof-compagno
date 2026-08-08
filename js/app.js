@@ -679,15 +679,6 @@ const App = (() => {
     }, rayonZoneCases, estLigne ? { longueur: longueurLigne, idLanceur: monTokenId } : null);
   }
 
-  // Combine deux formules de dégâts (bi-arme : mêlée + arme courte en main
-  // secondaire, cf. Personnage.armeCourteSecondaire) en une seule formule
-  // lançable via lancerFormule (qui gère désormais plusieurs termes de dés).
-  function _combinerFormules(a, b) {
-    if (!a) return b || null;
-    if (!b) return a;
-    return a + (b.startsWith("-") ? "" : "+") + b;
-  }
-
   // État "dégâts en attente" des attaques rapides à l'arme (Contact/Distance/
   // Magique, boutons data-bm-attaque/data-bm-degats, sidebar ET dock — cf.
   // _resoudreAttaqueRapide/_etatDegatsRapide) — état de MODULE par type
@@ -1657,8 +1648,14 @@ const App = (() => {
     const armeDistanceEstJetContact = !!(armeDistance && Personnage._estArmeContact(armeDistance));
     const jetArmeDispo = armeDistanceEstJetContact ? _itemLancerArmeDisponible(p) : null;
     const attDistance = armeDistance && (!armeDistanceEstJetContact || jetArmeDispo) ? perso.bonusAttaque("distance") - (actifTirPrecision ? 2 : 0) : null;
-    const armeCourteSecondaire = perso.armeCourteSecondaire();
-    let dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
+    // Bi-arme : l'arme secondaire n'est plus fusionnée dans la formule
+    // principale — elle est lancée séparément puis réduite au pourcentage du
+    // palier de dons (cf. Personnage.pourcentageDegatsSecondaire), arrondi à
+    // l'inférieur avec un plancher de 1.
+    const armeSecondaire = perso.armeSecondaire();
+    const formuleSecondaire = armeSecondaire ? formuleDegats(armeSecondaire) : null;
+    const pctSecondaire = armeSecondaire ? perso.pourcentageDegatsSecondaire() : 0;
+    let dmgContact = formuleDegats(armeContact) || perso.degatsPoings();
     if (dmgContact && actifFrappePuissante) dmgContact += "+4";
     if (dmgContact && actifArmeBenie) dmgContact += "+2";
     // Don Expert en hast : +1 dégâts au contact avec une arme d'allonge
@@ -1856,7 +1853,7 @@ const App = (() => {
         ${attDistance === null ? `<p class="aide" style="font-size:0.72rem;margin:6px 0 0;">Équipe un arc ou une arbalète pour débloquer l'attaque à distance.</p>` : ""}
         ${(dmgContact && etatDegC.visible) || (dmgDistance && etatDegD.visible) || (dmgMagique && etatDegM.visible) ? `
         <div class="barre-actions" style="margin-top:6px;">
-          ${dmgContact && etatDegC.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}" data-bm-degats-type="contact" data-bm-critique="${etatDegC.critique ? "1" : "0"}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}">🎲 Dégâts Contact (${dmgContact})${etatDegC.critique ? " CRIT" : ""}</button>` : ""}
+          ${dmgContact && etatDegC.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}" data-bm-degats-type="contact" data-bm-critique="${etatDegC.critique ? "1" : "0"}"${formuleSecondaire ? ` data-bm-degats-sec="${formuleSecondaire}" data-bm-degats-pct="${pctSecondaire}"` : ""} title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeSecondaire ? " + " + armeSecondaire.nom : ""))}">🎲 Dégâts Contact (${dmgContact})${formuleSecondaire ? ` (+ ${formuleSecondaire} à ${pctSecondaire}%)` : ""}${etatDegC.critique ? " CRIT" : ""}</button>` : ""}
           ${dmgDistance && etatDegD.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}" data-bm-degats-type="distance" data-bm-critique="${etatDegD.critique ? "1" : "0"}" data-bm-mult="${perso.aTirFatal() ? "3" : "2"}" title="${echapper(armeDistance ? armeDistance.nom : "")}">🎲 Dégâts Distance (${dmgDistance})${etatDegD.critique ? " CRIT" : ""}</button>` : ""}
           ${dmgMagique && etatDegM.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgMagique}" data-bm-degats-type="magique" data-bm-critique="${etatDegM.critique ? "1" : "0"}">🎲 Dégâts Magique (${dmgMagique})${etatDegM.critique ? " CRIT" : ""}</button>` : ""}
         </div>` : ""}
@@ -1964,7 +1961,15 @@ const App = (() => {
       el.onclick = () => {
         const formule = el.dataset.bmDegats;
         const estCrit = el.dataset.bmCritique === "1";
-        const total = lancerFormule(formule, `${p.nom} — Dégâts (${formule})`, estCrit ? parseInt(el.dataset.bmMult || "2", 10) : false);
+        let total = lancerFormule(formule, `${p.nom} — Dégâts (${formule})`, estCrit ? parseInt(el.dataset.bmMult || "2", 10) : false);
+        // Bi-arme : second jet séparé, réduit au pourcentage du palier de
+        // dons (arrondi inférieur, minimum 1 — cf. §5.1).
+        const formuleSec = el.dataset.bmDegatsSec;
+        if (formuleSec && typeof total === "number") {
+          const pct = parseInt(el.dataset.bmDegatsPct || "100", 10);
+          const brut = lancerFormule(formuleSec, `${p.nom} — Arme secondaire (${formuleSec}, ${pct}%)`, estCrit ? parseInt(el.dataset.bmMult || "2", 10) : false);
+          if (typeof brut === "number") total += Math.max(1, Math.floor((brut * pct) / 100));
+        }
         const type = el.dataset.bmDegatsType;
         const attente = type && attaquesRapidesEnAttente[type];
         if (attente && attente.persoId === id && attente.touche === true && attente.cibleId) {
@@ -2149,8 +2154,14 @@ const App = (() => {
     // Repli sur les dégâts à mains nues du Moine (Voie des poings) si aucune
     // arme de contact n'est équipée ; combine avec l'arme courte en main
     // secondaire (bi-arme) le cas échéant — cf. rendreFicheSidebarBattlemap.
-    const armeCourteSecondaire = perso.armeCourteSecondaire();
-    let dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
+    // Bi-arme : l'arme secondaire n'est plus fusionnée dans la formule
+    // principale — elle est lancée séparément puis réduite au pourcentage du
+    // palier de dons (cf. Personnage.pourcentageDegatsSecondaire), arrondi à
+    // l'inférieur avec un plancher de 1.
+    const armeSecondaire = perso.armeSecondaire();
+    const formuleSecondaire = armeSecondaire ? formuleDegats(armeSecondaire) : null;
+    const pctSecondaire = armeSecondaire ? perso.pourcentageDegatsSecondaire() : 0;
+    let dmgContact = formuleDegats(armeContact) || perso.degatsPoings();
     if (dmgContact && actifFrappePuissante) dmgContact += "+4";
     if (dmgContact && actifArmeBenie) dmgContact += "+2";
     // Don Expert en hast : +1 dégâts au contact avec une arme d'allonge
@@ -2223,7 +2234,7 @@ const App = (() => {
     if (attDistance !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="distance" data-bonus="${attDistance}"><span class="dock-ic">🏹</span><span class="dock-lbl">Distance ${signe(attDistance)}</span></button>`);
     if (attMagique !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="magique" data-bonus="${attMagique}"><span class="dock-ic">✨</span><span class="dock-lbl">Magique ${signe(attMagique)}</span></button>`);
     if (attLancer !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="lancer" data-bonus="${attLancer}"><span class="dock-ic">🎯</span><span class="dock-lbl">Lancer ${signe(attLancer)}</span></button>`);
-    if (dmgContact && etatDegC.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}" data-bm-degats-type="contact" data-bm-critique="${etatDegC.critique ? "1" : "0"}" title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeCourteSecondaire ? " + " + armeCourteSecondaire.nom : ""))}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}${etatDegC.critique ? " CRIT" : ""}</span></button>`);
+    if (dmgContact && etatDegC.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}" data-bm-degats-type="contact" data-bm-critique="${etatDegC.critique ? "1" : "0"}"${formuleSecondaire ? ` data-bm-degats-sec="${formuleSecondaire}" data-bm-degats-pct="${pctSecondaire}"` : ""} title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeSecondaire ? " + " + armeSecondaire.nom : ""))}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}${formuleSecondaire ? ` (+ ${formuleSecondaire} à ${pctSecondaire}%)` : ""}${etatDegC.critique ? " CRIT" : ""}</span></button>`);
     if (dmgDistance && etatDegD.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgDistance}" data-bm-degats-type="distance" data-bm-critique="${etatDegD.critique ? "1" : "0"}" data-bm-mult="${perso.aTirFatal() ? "3" : "2"}" title="${echapper(armeDistance.nom)}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgDistance}${etatDegD.critique ? " CRIT" : ""}</span></button>`);
     if (dmgMagique && etatDegM.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgMagique}" data-bm-degats-type="magique" data-bm-critique="${etatDegM.critique ? "1" : "0"}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgMagique}${etatDegM.critique ? " CRIT" : ""}</span></button>`);
     // Bascules Frappe puissante / Tir de précision : -2 attaque / +4 dégâts
@@ -2390,7 +2401,15 @@ const App = (() => {
     dock.querySelectorAll("[data-bm-degats]").forEach((el) => {
       el.onclick = () => {
         const estCrit = el.dataset.bmCritique === "1";
-        const total = lancerFormule(el.dataset.bmDegats, `${p.nom} — Dégâts (${el.dataset.bmDegats})`, estCrit ? parseInt(el.dataset.bmMult || "2", 10) : false);
+        let total = lancerFormule(el.dataset.bmDegats, `${p.nom} — Dégâts (${el.dataset.bmDegats})`, estCrit ? parseInt(el.dataset.bmMult || "2", 10) : false);
+        // Bi-arme : second jet séparé, réduit au pourcentage du palier de
+        // dons (arrondi inférieur, minimum 1 — cf. §5.1).
+        const formuleSec = el.dataset.bmDegatsSec;
+        if (formuleSec && typeof total === "number") {
+          const pct = parseInt(el.dataset.bmDegatsPct || "100", 10);
+          const brut = lancerFormule(formuleSec, `${p.nom} — Arme secondaire (${formuleSec}, ${pct}%)`, estCrit ? parseInt(el.dataset.bmMult || "2", 10) : false);
+          if (typeof brut === "number") total += Math.max(1, Math.floor((brut * pct) / 100));
+        }
         const type = el.dataset.bmDegatsType;
         const attente = type && attaquesRapidesEnAttente[type];
         if (attente && attente.persoId === id && attente.touche === true && attente.cibleId) {
@@ -5913,14 +5932,19 @@ const App = (() => {
         const adjacents = _ennemisAdjacents(id, pp.bastionActifFinCombat ? 3 : 1);
         if (!adjacents.length) { toast(pp.bastionActifFinCombat ? "Aucun monstre à portée du Bastion." : "Aucun adversaire adjacent."); return; }
         const armeContact = perso.armeContactEquipee();
-        const armeCourteSecondaire = perso.armeCourteSecondaire();
         const formuleDegats = (arme) => {
           if (!arme) return null;
           const bonus = arme.bonusDegatsTotal !== undefined ? arme.bonusDegatsTotal : (arme.enchantement || 0);
           const base = arme.degats + (bonus ? (bonus > 0 ? "+" + bonus : String(bonus)) : "");
           return arme.bonusDegatsAffixe ? base + "+" + arme.bonusDegatsAffixe : base;
         };
-        let dmgContact = _combinerFormules(formuleDegats(armeContact) || perso.degatsPoings(), formuleDegats(armeCourteSecondaire));
+        // Bi-arme : même traitement que les boutons de dégâts manuels (cf.
+        // sidebar/dock plus haut) — l'arme secondaire est lancée séparément
+        // et réduite au pourcentage du palier de dons.
+        const armeSecondaire = perso.armeSecondaire();
+        const formuleSecondaire = armeSecondaire ? formuleDegats(armeSecondaire) : null;
+        const pctSecondaire = armeSecondaire ? perso.pourcentageDegatsSecondaire() : 0;
+        let dmgContact = formuleDegats(armeContact) || perso.degatsPoings();
         if (dmgContact && perso.aExpertHastQualifie()) dmgContact += "+1";
     // Chevalier — Voie du chaos rang 4 "Marque du serment brisé", choix
     // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
@@ -5956,7 +5980,12 @@ const App = (() => {
           } else if (!dmgContact) {
             messages.push(`✅ Touché ${m.nom}, mais aucune arme/formule de dégâts au contact.`);
           } else {
-            const total = lancerFormule(dmgContact, `${perso.nom || "Perso"} — Dégâts (attaque d'opportunité vs ${m.nom})`, resolution.critique);
+            let total = lancerFormule(dmgContact, `${perso.nom || "Perso"} — Dégâts (attaque d'opportunité vs ${m.nom})`, resolution.critique);
+            // Bi-arme : même traitement que les boutons de dégâts manuels.
+            if (formuleSecondaire && typeof total === "number") {
+              const brut = lancerFormule(formuleSecondaire, `${perso.nom || "Perso"} — Arme secondaire (${formuleSecondaire}, ${pctSecondaire}%, attaque d'opportunité vs ${m.nom})`, resolution.critique);
+              if (typeof brut === "number") total += Math.max(1, Math.floor((brut * pctSecondaire) / 100));
+            }
             if (typeof total === "number") {
               const res = Carte.appliquerDegatsCombat(m.id, total);
               messages.push(`✅ Touché${resolution.critique ? " CRITIQUE" : ""} ${m.nom} : ${total} dégâts${res ? ` → ${res.pvActuel} PV restants` : ""}.`);
@@ -6016,13 +6045,30 @@ const App = (() => {
     </div>`;
   }
 
+  // Libellés lisibles des paliers PROFICIENCE_ARMURE/PROFICIENCE_ARME
+  // (data/donnees.js) — sert au bloc "⚔️ Maîtrises" de rendreBlocEquipement.
+  const LIBELLES_CATEGORIE_ARMURE = { legere: "légères", moyenne: "moyennes", lourde: "lourdes" };
+  const LIBELLES_MAITRISE_ARME = { simple: "simples", martiale: "simples et martiales" };
+  function _nomDon(id) {
+    const d = (typeof DONS !== "undefined") && DONS.find((x) => x.id === id);
+    return d ? d.nom : id;
+  }
+
   function rendreBlocEquipement(perso) {
+    const armureNonMaitrisee = Personnage.estArmureNonMaitrisee(perso);
     const casesHtml = SLOTS_EQUIPEMENT.map((slot) => {
       const it = perso.equipement[slot];
       if (it) {
         const badge = badgeEffetItem(it);
+        // Badge ⚠ (cf. §6.2) : armure non maîtrisée sur le torse, arme non
+        // maîtrisée (cf. Personnage.estArmeNonMaitrisee) sur les mains.
+        const nonMaitrise = (slot === "torse" && armureNonMaitrisee) ||
+          ((slot === "main_droite" || slot === "main_gauche") && it.type === "arme" && Personnage.estArmeNonMaitrisee(perso, it));
+        const badgeAlerte = nonMaitrise
+          ? ` <span style="color:var(--chaos);font-weight:700;" title="${slot === "torse" ? "Armure non maîtrisée — malus complet, cf. bloc Maîtrises ci-dessous" : "Arme non maîtrisée — -3 au jet d'attaque"}">⚠</span>`
+          : "";
         return `<div class="slot-case occupe" data-slot="${slot}">
-          <div class="slot-label">${LABELS_SLOT[slot]}</div>
+          <div class="slot-label">${LABELS_SLOT[slot]}${badgeAlerte}</div>
           <div class="slot-item-nom" style="color:${it.rareteCouleur || ""}">${echapper(it.nom)}</div>
           ${badgeRareteHtml(it)}
           <div class="slot-item-effet">${echapper(badge)}</div>
@@ -6035,6 +6081,36 @@ const App = (() => {
         <button class="btn petit secondaire btn-ouvrir-equiper" data-slot="${slot}">+ Équiper</button>
       </div>`;
     }).join("");
+
+    // Bloc "⚔️ Maîtrises" (cf. §6.1) — rend visible le système de proficience
+    // d'armure existant (jusqu'ici jamais signalé sur la fiche) et son
+    // pendant pour les armes (cf. PROFICIENCE_ARMURE/PROFICIENCE_ARME,
+    // data/donnees.js).
+    const donsArmure = ["maitre_armures_moyennes", "maitre_armures_lourdes"].filter((id) => (perso.dons || []).includes(id));
+    const libelleArmureBase = LIBELLES_CATEGORIE_ARMURE[PROFICIENCE_ARMURE[perso.classe]] || "légères";
+    const libelleArmeBase = LIBELLES_MAITRISE_ARME[PROFICIENCE_ARME[perso.classe]] || "simples";
+    const maitriseArmesMartiales = (perso.dons || []).includes("maitre_armes_martiales");
+    const dons = perso.dons || [];
+    let libellePalierBiArme;
+    if (dons.includes("maitre_armes_doubles")) libellePalierBiArme = "0 malus d'attaque (toutes combinaisons) · 100% dégâts arme secondaire";
+    else if (dons.includes("ambidextre")) libellePalierBiArme = "−2 attaque (armes non courtes) · 75% dégâts arme secondaire";
+    else libellePalierBiArme = "−4 attaque (armes non courtes) · 50% dégâts arme secondaire";
+
+    const alerteArmureHtml = armureNonMaitrisee
+      ? `<div class="alerte-maitrise">⚠ Armure non maîtrisée : DEX ignoré en CA, −3 attaque contact/magique, −2 attaque à distance, −2 tests DEX, −2 Réflexes, −2 déplacement.</div>`
+      : "";
+    // dédoublonne une arme deuxMains (occupe main_droite ET main_gauche à la fois).
+    const armesEquipeesUniques = [...new Set([perso.equipement.main_droite, perso.equipement.main_gauche].filter((it) => it && it.type === "arme"))];
+    const alertesArmesHtml = armesEquipeesUniques
+      .filter((it) => Personnage.estArmeNonMaitrisee(perso, it))
+      .map((it) => `<div class="alerte-maitrise">⚠ ${echapper(it.nom)} : arme ${echapper(it.maitrise)} non maîtrisée, −3 au jet d'attaque.</div>`)
+      .join("");
+
+    const blocMaitrisesHtml = `<div class="recap-equipement" style="margin-top:6px;">
+      <div>⚔️ Armures maîtrisées : <strong>${libelleArmureBase}</strong>${donsArmure.length ? ` (+ ${donsArmure.map(_nomDon).join(", ")})` : ""}</div>
+      <div>⚔️ Armes maîtrisées : <strong>${libelleArmeBase}</strong>${maitriseArmesMartiales ? ` (+ ${_nomDon("maitre_armes_martiales")})` : ""}</div>
+      <div>⚔️ Combat à deux armes : <strong>${libellePalierBiArme}</strong></div>
+    </div>${alerteArmureHtml}${alertesArmesHtml}`;
 
     // Contrat Démoniaque (data/loot.json: contrat_demoniaque) : pas de notion
     // de repos long dans l'app — réinitialisation manuelle par le joueur,
@@ -6056,6 +6132,7 @@ const App = (() => {
           <div>DEF totale : <strong>${_defPjAvecAura(perso, perso.id)}</strong> (dont +${perso.bonusDefEquipement()} équipement)</div>
           <div>Réduction de dégâts : <strong>${perso.reductionDegats()}</strong></div>
         </div>
+        ${blocMaitrisesHtml}
         ${contratHtml}
         <div class="selecteur-slot" id="selecteur-slot-equip" style="display:none;"></div>
       </div>`;
@@ -6278,6 +6355,57 @@ const App = (() => {
 
   // Ouvre, dans le bloc Équipement de la création, un sélecteur des items de
   // l'inventaire compatibles avec `slot` (déclenché par "+ Équiper" sur un slot vide).
+  // Est-ce qu'équiper `it` dans `slot` déclencherait un malus de maîtrise
+  // (armure ou arme, cf. Personnage.estArmureNonMaitrisee/estArmeNonMaitrisee) ?
+  // Réutilise ces méthodes en substituant temporairement l'armure du `perso`
+  // passé — instance jetable ici (reconstruite à chaque ouverture du
+  // sélecteur), la mutation est restaurée aussitôt, pas de duplication de
+  // règle. Renvoie le texte du malus, ou null si aucun.
+  function _malusMaitriseSiEquipe(perso, it, slot) {
+    if (slot === "torse" && it.type === "armure") {
+      const avant = perso.equipement.torse;
+      perso.equipement.torse = it;
+      const nonMaitrisee = Personnage.estArmureNonMaitrisee(perso);
+      perso.equipement.torse = avant;
+      return nonMaitrisee
+        ? "Armure non maîtrisée : DEX ignoré en CA, −3 attaque contact/magique, −2 attaque à distance, −2 tests DEX, −2 Réflexes, −2 déplacement."
+        : null;
+    }
+    if ((slot === "main_droite" || slot === "main_gauche") && it.type === "arme") {
+      return Personnage.estArmeNonMaitrisee(perso, it) ? `Arme ${it.maitrise} non maîtrisée : −3 au jet d'attaque.` : null;
+    }
+    return null;
+  }
+
+  // Construit le HTML du <select> + aide de maîtrise, commun aux deux
+  // sélecteurs (création et fiche) — `onConfirmer(idx)` reçoit l'index
+  // choisi dans l'inventaire au clic sur "Équiper".
+  function _rendreSelecteurEquip(zone, perso, slot, compatibles, onConfirmer) {
+    zone.innerHTML =
+      `<select id="select-item-a-equiper">` +
+      compatibles.map(({ it, idx }) => {
+        const badge = badgeEffetItem(it);
+        const malus = _malusMaitriseSiEquipe(perso, it, slot);
+        return `<option value="${idx}">${echapper(it.nom)}${badge ? " — " + echapper(badge) : ""}${malus ? " ⚠ non maîtrisée" : ""}</option>`;
+      }).join("") +
+      `</select>` +
+      `<div class="alerte-maitrise" id="aide-maitrise-equip" style="display:none;"></div>` +
+      `<button class="btn petit or" id="btn-confirmer-equip">Équiper dans « ${LABELS_SLOT[slot]} »</button>`;
+    zone.style.display = "block";
+    const selectEl = document.getElementById("select-item-a-equiper");
+    const aideEl = document.getElementById("aide-maitrise-equip");
+    const majAide = () => {
+      const idx = parseInt(selectEl.value, 10);
+      const it = compatibles.find((c) => c.idx === idx).it;
+      const malus = _malusMaitriseSiEquipe(perso, it, slot);
+      aideEl.textContent = malus ? `⚠ ${malus}` : "";
+      aideEl.style.display = malus ? "block" : "none";
+    };
+    selectEl.onchange = majAide;
+    majAide();
+    document.getElementById("btn-confirmer-equip").onclick = () => onConfirmer(parseInt(selectEl.value, 10));
+  }
+
   function ouvrirSelecteurEquipCreation(slot) {
     const perso = new Personnage(creation);
     const zone = document.getElementById("selecteur-slot-equip");
@@ -6290,19 +6418,7 @@ const App = (() => {
       zone.style.display = "block";
       return;
     }
-    zone.innerHTML =
-      `<select id="select-item-a-equiper">` +
-      compatibles.map(({ it, idx }) => {
-        const badge = badgeEffetItem(it);
-        return `<option value="${idx}">${echapper(it.nom)}${badge ? " — " + echapper(badge) : ""}</option>`;
-      }).join("") +
-      `</select>` +
-      `<button class="btn petit or" id="btn-confirmer-equip">Équiper dans « ${LABELS_SLOT[slot]} »</button>`;
-    zone.style.display = "block";
-    document.getElementById("btn-confirmer-equip").onclick = () => {
-      const idx = parseInt(document.getElementById("select-item-a-equiper").value, 10);
-      equiperItemCreation(idx, slot);
-    };
+    _rendreSelecteurEquip(zone, perso, slot, compatibles, (idx) => equiperItemCreation(idx, slot));
   }
 
   // Ouvre, dans le bloc Équipement, un sélecteur des items de l'inventaire
@@ -6322,19 +6438,7 @@ const App = (() => {
       zone.style.display = "block";
       return;
     }
-    zone.innerHTML =
-      `<select id="select-item-a-equiper">` +
-      compatibles.map(({ it, idx }) => {
-        const badge = badgeEffetItem(it);
-        return `<option value="${idx}">${echapper(it.nom)}${badge ? " — " + echapper(badge) : ""}</option>`;
-      }).join("") +
-      `</select>` +
-      `<button class="btn petit or" id="btn-confirmer-equip">Équiper dans « ${LABELS_SLOT[slot]} »</button>`;
-    zone.style.display = "block";
-    document.getElementById("btn-confirmer-equip").onclick = () => {
-      const idx = parseInt(document.getElementById("select-item-a-equiper").value, 10);
-      equiperItem(persoId, idx, slot);
-    };
+    _rendreSelecteurEquip(zone, perso, slot, compatibles, (idx) => equiperItem(persoId, idx, slot));
   }
 
   // Roule le dé de bonus PV max d'un objet (ex. Amulette de santé,

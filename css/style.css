@@ -1328,6 +1328,7 @@ main:has(#panneau-lore.actif) { max-width: 1400px; }
 }
 
 .aide { background: var(--chaos-bg); border-left: 4px solid var(--chaos); padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin: 12px 0; }
+.alerte-maitrise { background: var(--chaos-bg); border-left: 4px solid var(--chaos); color: var(--chaos); font-weight: 600; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; margin: 6px 0; }
 .info-box { background: #eef3ec; border-left: 4px solid var(--succes); padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin: 12px 0; }
 .vide { text-align: center; color: #8a8296; padding: 30px; font-style: italic; }
 

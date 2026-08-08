@@ -18,10 +18,13 @@ const DONS = [
     effet: "Tant que vous ne maniez qu'une seule arme (une main libre, ni bouclier ni seconde arme) et qu'un seul adversaire vous est adjacent : +2 DEF." },
 
   { id: "ambidextre", nom: "Ambidextre", categorie: "combat",
-    effet: "Permet d'équiper une arme à une main dans chaque main (sans bouclier). Réduit de -4 à -2 le malus au jet d'attaque de la règle de combat à deux armes." },
+    effet: "Combat à deux armes : réduit de -4 à -2 le malus au jet d'attaque quand l'une des deux armes n'est pas courte, et porte les dégâts de l'arme secondaire de 50% à 75%." },
 
   { id: "maitre_armes_doubles", nom: "Maître d'armes doubles", categorie: "combat",
-    effet: "Retire le malus restant de la règle de combat à deux armes (attaques à jet normal). Permet en plus d'équiper une arme longue en main secondaire (au lieu de courte uniquement)." },
+    effet: "Combat à deux armes : supprime totalement le malus au jet d'attaque (jet normal en toutes combinaisons) et porte les dégâts de l'arme secondaire à 100%." },
+
+  { id: "maitre_armes_martiales", nom: "Maître des armes martiales", categorie: "combat",
+    effet: "Manier une arme martiale ne provoque plus le malus de -3 au jet d'attaque, même sans la maîtriser nativement (cf. PROFICIENCE_ARME, data/donnees.js)." },
 
   { id: "expert_hast", nom: "Expert en hast", categorie: "combat",
     effet: "Avec une arme deux_mains à allonge (lance, hallebarde, pique, glaive de guerre) : +1 dégâts, et attaque d'opportunité bonus quand un ennemi entre à contact avec vous." },
@@ -33,10 +36,10 @@ const DONS = [
     effet: "+2 PV par niveau, rétroactif sur tous les niveaux déjà acquis." },
 
   { id: "maitre_armures_moyennes", nom: "Maître des armures moyennes", categorie: "defense",
-    effet: "Porter une armure moyenne ne provoque plus aucun malus de proficience (DEX forcé à 0 en CA, -2 aux tests DEX, -2 déplacement), même sans la maîtriser nativement." },
+    effet: "Porter une armure moyenne ne provoque plus aucun malus de proficience (DEX forcé à 0 en CA, -3 attaque contact/magique, -2 attaque à distance, -2 tests DEX, -2 Réflexes, -2 déplacement), même sans la maîtriser nativement." },
 
   { id: "maitre_armures_lourdes", nom: "Maître des armures lourdes", categorie: "defense",
-    effet: "Porter une armure lourde ne provoque plus aucun malus de proficience, même sans la maîtriser nativement. Avec une armure lourde équipée : réduit aussi de 3 les dégâts physiques subis, avant application de reductionDegats." },
+    effet: "Porter une armure lourde ne provoque plus aucun malus de proficience (DEX forcé à 0 en CA, -3 attaque contact/magique, -2 attaque à distance, -2 tests DEX, -2 Réflexes, -2 déplacement), même sans la maîtriser nativement. Avec une armure lourde équipée : réduit aussi de 3 les dégâts physiques subis, avant application de reductionDegats." },
 
   { id: "expert_bouclier", nom: "Expert du bouclier", categorie: "defense",
     effet: "Bouclier équipé : +1 DEF supplémentaire. Les adversaires qui vous attaquent au contact ou à distance sont désavantagés (2d20, gardent le plus bas)." },

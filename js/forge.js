@@ -136,6 +136,7 @@ const Forge = (() => {
       item.typedegats = "physique";
       item.deuxMains = chk("forge-deuxmains");
       item.enchantement = 0;
+      item.maitrise = v("forge-maitrise") || "simple";
     }
     return item;
   }
@@ -178,7 +179,7 @@ const Forge = (() => {
   // format du catalogue plutôt qu'à l'ordre d'insertion JS de _construireItem.
   const ORDRE_CLES_EXPORT = [
     "id", "nom", "type", "porte", "description",
-    "degats", "portee", "typedegats", "enchantement", "deuxMains", "categorieArme", "degatsAuMoinsRare",
+    "degats", "portee", "typedegats", "enchantement", "deuxMains", "categorieArme", "maitrise", "degatsAuMoinsRare",
     "valeurCA", "malusDEX", "categorie", "reductionDegats",
     "bonusDEF", "categorieBouclier",
     "slot", "bonusCarac", "bonusCompetences", "bonusInitiative",
@@ -256,6 +257,7 @@ const Forge = (() => {
         <label class="f-arme">Dégâts<input type="text" id="forge-degats" placeholder="1d8" /></label>
         <label class="f-arme">Portée<input type="text" id="forge-portee" placeholder="contact" /></label>
         <label class="f-arme forge-check"><input type="checkbox" id="forge-deuxmains" /> Arme à 2 mains</label>
+        <label class="f-arme">Maîtrise<select id="forge-maitrise"><option value="simple">Simple</option><option value="martiale">Martiale</option></select></label>
       </div>
       <div class="forge-caracs-bloc">
         <span class="forge-sous-titre">Bonus de caractéristiques (± , 0 = aucun)</span>
@@ -481,7 +483,7 @@ const Forge = (() => {
     S("forge-valeurca", it.valeurCA || 10);
     S("forge-reduction", it.reductionDegats || 0);
     S("forge-malusdex", it.malusDEX || 0);
-    if (it.type === "arme") { S("forge-degats", it.degats || ""); S("forge-portee", it.portee || ""); const dm = $("forge-deuxmains"); if (dm) dm.checked = !!it.deuxMains; }
+    if (it.type === "arme") { S("forge-degats", it.degats || ""); S("forge-portee", it.portee || ""); const dm = $("forge-deuxmains"); if (dm) dm.checked = !!it.deuxMains; S("forge-maitrise", it.maitrise || "simple"); }
     S("forge-desc", it.description || "");
     S("forge-effet", it.effet || "");
     S("forge-init", it.bonusInitiative || 0);

@@ -757,6 +757,21 @@ class Personnage extends Entite {
     return !(p.dons || []).includes(donRequis);
   }
 
+  // Une arme donnée est-elle d'une catégorie de maîtrise au-dessus de celle
+  // de la classe (cf. PROFICIENCE_ARME/RANG_MAITRISE_ARME, data/donnees.js),
+  // sans le don qui lève le malus ? Utilisable aussi bien sur une instance
+  // Personnage que sur un objet perso brut `p` (même patron que
+  // estArmureNonMaitrisee ci-dessus).
+  // Une arme sans champ `maitrise` est traitée comme simple, donc jamais
+  // non-maîtrisée : décision assumée pour ne pas pénaliser rétroactivement
+  // les objets créés dans la Forge du MJ avant ce système.
+  static estArmeNonMaitrisee(p, arme) {
+    if (!p || !arme || arme.type !== "arme" || !arme.maitrise) return false;
+    const requise = PROFICIENCE_ARME[p.classe] || "simple";
+    if (RANG_MAITRISE_ARME[arme.maitrise] <= RANG_MAITRISE_ARME[requise]) return false;
+    return !(p.dons || []).includes("maitre_armes_martiales");
+  }
+
   // Mod. DEX effectif pour la CA : ignoré entièrement si l'armure équipée
   // n'est pas maîtrisée (cf. estArmureNonMaitrisee), sinon réduit du malusDEX
   // de l'armure (data/loot.json).
@@ -1233,14 +1248,6 @@ class Personnage extends Entite {
     }
   }
 
-  // Combinaisons main_droite/main_gauche acceptées quand aucun des deux
-  // objets n'est à deux mains (déjà géré séparément) : mêlée (courte ou
-  // longue) + bouclier (historique) ; mêlée + arbalète courte ; mêlée +
-  // arme courte (bi-arme) ; arc court + arme courte. Tout le reste (deux
-  // armes à distance ensemble, arc court + bouclier ou + mêlée longue...)
-  // reste hors du périmètre décrit par la table, donc refusé. Repose sur la
-  // convention d'id du catalogue ("arc_*"/"arbalete_*") pour distinguer arc
-  // court et arbalète courte, qui n'ont pas de champ dédié.
   // "contact" couvre aussi les armes d'allonge dont la portée précise une
   // extension ("contact +1 case", "contact étendu", "contact/lancer") —
   // toujours des armes de mêlée avant tout, cf. Expert en hast (lance,
@@ -1256,17 +1263,24 @@ class Personnage extends Entite {
   static _estArmeContactCourte(it) { return Personnage._estArmeContact(it) && it.categorieArme === "courte"; }
   static _estArbaleteCourte(it) { return !!it && it.type === "arme" && it.portee !== "contact" && (it.id || "").startsWith("arbalete"); }
   static _estArcCourt(it) { return !!it && it.type === "arme" && it.portee !== "contact" && (it.id || "").startsWith("arc"); }
-  // `armeLongueAutorisee` (don Maître d'armes doubles) élargit la main
-  // secondaire aux armes de contact "longue", en plus de "courte".
-  static _armesCompatiblesMainsCroisees(a, b, armeLongueAutorisee) {
+  // Combinaisons main_droite/main_gauche acceptées quand aucun des deux
+  // objets n'est à deux mains (déjà géré séparément). Refonte du bi-arme
+  // (décision de Thomas) : toute paire d'objets à une main est désormais
+  // permise — y compris arme longue + arme longue, auparavant réservée au
+  // don Maître d'armes doubles — la contrepartie n'étant plus une
+  // interdiction mais un malus d'attaque (cf. malusCombatDeuxArmes) et un
+  // pourcentage de dégâts réduit sur l'arme secondaire (cf.
+  // pourcentageDegatsSecondaire).
+  // Deux seules exclusions subsistent, faute d'une main libre pour
+  // manœuvrer : deux armes à distance ensemble, et arme à distance +
+  // bouclier.
+  static _armesCompatiblesMainsCroisees(a, b) {
     if (!a || !b) return true; // main libre : toujours compatible
     if (a.deuxMains || b.deuxMains) return false;
-    const estCourteOuAutorisee = (it) =>
-      Personnage._estArmeContactCourte(it) || (armeLongueAutorisee && Personnage._estArmeContact(it) && it.categorieArme === "longue");
-    const paire = (x, y) =>
-      (Personnage._estArmeContact(x) && (y.type === "bouclier" || Personnage._estArbaleteCourte(y) || estCourteOuAutorisee(y))) ||
-      (Personnage._estArcCourt(x) && estCourteOuAutorisee(y));
-    return paire(a, b) || paire(b, a);
+    const estDistance = (it) => it.type === "arme" && !Personnage._estArmeContact(it);
+    if (estDistance(a) && estDistance(b)) return false;
+    if ((estDistance(a) && b.type === "bouclier") || (estDistance(b) && a.type === "bouclier")) return false;
+    return true;
   }
 
   // Équipe item dans slot. Renvoie l'ancien occupant du slot (item ou null
@@ -1291,8 +1305,7 @@ class Personnage extends Entite {
     if (slot === "main_droite" || slot === "main_gauche") {
       const autreSlot = slot === "main_droite" ? "main_gauche" : "main_droite";
       const autre = this.equipement[autreSlot];
-      const armeLongueAutorisee = (this.dons || []).includes("maitre_armes_doubles");
-      if (autre && autre !== item && !Personnage._armesCompatiblesMainsCroisees(item, autre, armeLongueAutorisee)) return undefined;
+      if (autre && autre !== item && !Personnage._armesCompatiblesMainsCroisees(item, autre)) return undefined;
     }
 
     const ancien = this.equipement[slot];
@@ -1790,23 +1803,25 @@ class Personnage extends Entite {
     return contacts.find((a) => a.categorieArme !== "courte") || contacts[0];
   }
 
-  // Arme en main secondaire (bi-arme), si l'AUTRE main que celle de
-  // armeContactEquipee() porte une arme de contact courte distincte — null
-  // sinon (pas de bi-arme ; l'autre main porte un bouclier, une arbalète
-  // courte, ou rien). Avec le don Maître d'armes doubles, une arme "longue"
-  // en main secondaire compte aussi (cf. equiper/_armesCompatiblesMainsCroisees).
-  // Sert à combiner les dégâts de contact (cf. app.js).
-  armeCourteSecondaire() {
+  // Arme de contact tenue dans la main qui ne porte pas l'arme principale,
+  // ou null (l'autre main porte un bouclier, une arme à distance, ou rien).
+  // Depuis la refonte du bi-arme : n'importe quelle arme de contact à une
+  // main convient (courte OU longue), le don Maître d'armes doubles n'est
+  // plus une condition d'accès mais un multiplicateur de dégâts (cf.
+  // pourcentageDegatsSecondaire). Sert à combiner les dégâts de contact
+  // (cf. js/app.js).
+  armeSecondaire() {
     const droite = this.armeEquipee("main_droite");
     const gauche = this.armeEquipee("main_gauche");
     const principale = this.armeContactEquipee();
     if (!principale) return null;
     const autre = principale === droite ? gauche : droite;
     if (!autre || autre === principale) return null;
-    if (Personnage._estArmeContactCourte(autre)) return autre;
-    if ((this.dons || []).includes("maitre_armes_doubles") && Personnage._estArmeContact(autre) && autre.categorieArme === "longue") return autre;
-    return null;
+    return Personnage._estArmeContact(autre) ? autre : null;
   }
+
+  // Alias historique conservé le temps que tous les appelants migrent.
+  armeCourteSecondaire() { return this.armeSecondaire(); }
 
   // Arme à deux mains actuellement équipée (contact OU distance), ou null —
   // sert de base au don Frappe puissante (contact) et Tir de précision
@@ -1845,15 +1860,36 @@ class Personnage extends Entite {
     return (armeD && !g) || (armeG && !d);
   }
 
-  // Malus/bonus d'attaque du combat à deux armes, uniquement au contact (la
-  // règle de base est FOR-based, cf. REGLES_GENERALES) : -4 par défaut, -2
-  // avec le don Ambidextre, 0 avec Maître d'armes doubles (qui inclut Ambidextre).
+  // Malus d'attaque du combat à deux armes, uniquement au contact.
+  // Refonte (décision de Thomas) : deux armes COURTES ne subissent aucun
+  // malus, quel que soit le don — c'est ce qui ouvre les builds bi-arme
+  // légers (poignard/poignard, rapière + arme courte...) aux classes qui
+  // n'ont pas de don à dépenser. Dès qu'une des deux armes n'est pas courte,
+  // l'échelle historique s'applique : -4 par défaut, -2 avec Ambidextre,
+  // 0 avec Maître d'armes doubles.
   malusCombatDeuxArmes(type) {
     if (type !== "contact" || !this.enCombatDeuxArmes()) return 0;
+    const d = this.equipement && this.equipement.main_droite;
+    const g = this.equipement && this.equipement.main_gauche;
+    if (d && g && d.categorieArme === "courte" && g.categorieArme === "courte") return 0;
     const dons = this.dons || [];
     if (dons.includes("maitre_armes_doubles")) return 0;
     if (dons.includes("ambidextre")) return -2;
     return -4;
+  }
+
+  // Part des dégâts de l'arme secondaire réellement infligée en combat à
+  // deux armes (décision de Thomas). S'applique à TOUT bi-arme, court comme
+  // long : sans cela les deux dons n'auraient plus aucun effet sur les
+  // combos courts, désormais exemptés de malus d'attaque.
+  // L'assiette est celle de formuleDegats() côté js/app.js — dé de l'arme +
+  // enchantement/rareté + affixe — le Mod.FOR n'y entre pas (il n'est compté
+  // qu'une fois dans l'attaque).
+  pourcentageDegatsSecondaire() {
+    const dons = this.dons || [];
+    if (dons.includes("maitre_armes_doubles")) return 100;
+    if (dons.includes("ambidextre")) return 75;
+    return 50;
   }
 
   // Dégâts à mains nues du Moine (Voie des poings), résolus en formule
@@ -1931,7 +1967,14 @@ class Personnage extends Entite {
     // et magique uniquement — l'attaque à distance garde son propre -2 (déjà
     // dans le malus DEX ci-dessous), pas de cumul entre les deux.
     const malusProficienceAttaque = (type === "contact" || type === "magique") && Personnage.estArmureNonMaitrisee(this) ? -3 : 0;
-    if (type === "contact") return b + this.mod("FOR") + malusProficienceAttaque;
+    // Malus d'arme non maîtrisée (-3, cf. estArmeNonMaitrisee) : porte sur
+    // l'arme réellement en main, indépendant du malus d'armure ci-dessus —
+    // les deux se cumulent volontairement (un magicien en armure lourde avec
+    // une hallebarde est à -6).
+    if (type === "contact") {
+      const malusArme = Personnage.estArmeNonMaitrisee(this, this.armeContactEquipee()) ? -3 : 0;
+      return b + this.mod("FOR") + malusProficienceAttaque + malusArme;
+    }
     if (type === "distance") {
       // Bonus simple et mécanique d'un item équipé (ex. Gants du
       // Franc-Tireur : { bonusAttaqueDistance: 1 }, cf. data/loot.js/json)
@@ -1947,7 +1990,9 @@ class Personnage extends Entite {
       // (arc, arbalète...) utilise DEX.
       const armeDist = this.armeDistanceEquipee();
       const modCarac = Personnage._estArmeContactJetable(armeDist) ? this.mod("FOR") : this.mod("DEX");
-      return b + modCarac + bonusGantsDistance + malusProficience;
+      // Malus d'arme non maîtrisée (-3, cf. estArmeNonMaitrisee).
+      const malusArme = Personnage.estArmeNonMaitrisee(this, armeDist) ? -3 : 0;
+      return b + modCarac + bonusGantsDistance + malusProficience + malusArme;
     }
     if (type === "lancer") return b + this.mod("FOR");
     if (type === "magique") {
