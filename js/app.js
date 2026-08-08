@@ -232,8 +232,40 @@ const App = (() => {
   // temps réel). Instance partagée avec carte.js et loot.js (window.DepotPersos,
   // défini dans depot.js) : un seul abonnement Firestore pour toute l'app.
   const depotPersos = window.DepotPersos;
+
+  // Fusion rétroactive des consommables dupliqués (cf. ajouterAInventaire) :
+  // les inventaires existants contiennent déjà des doublons empilés en
+  // plusieurs lignes séparées (créés avant l'introduction de la fusion à
+  // l'ajout). Idempotente et silencieuse — mute persos[*].inventaireListe en
+  // place, renvoie true si quoi que ce soit a été fusionné (pour ne
+  // déclencher une sauvegarde que la première fois, jamais rejouée ensuite
+  // une fois les doublons résorbés).
+  function _fusionnerConsommablesDupliquesAuChargement(persos) {
+    let modifie = false;
+    Object.keys(persos).forEach((id) => {
+      const p = persos[id];
+      if (!Array.isArray(p.inventaireListe) || p.inventaireListe.length < 2) return;
+      const fusionne = [];
+      p.inventaireListe.forEach((it) => {
+        if (it && it.type === "consommable") {
+          const existant = fusionne.find((f) => f.type === "consommable" && f.id === it.id);
+          if (existant) {
+            existant.quantite = (existant.quantite || 1) + (it.quantite || 1);
+            modifie = true;
+            return;
+          }
+        }
+        fusionne.push(it);
+      });
+      p.inventaireListe = fusionne;
+    });
+    return modifie;
+  }
+
   function chargerPersos() {
-    return depotPersos.charger(); // map { id: perso }
+    const persos = depotPersos.charger(); // map { id: perso }
+    if (_fusionnerConsommablesDupliquesAuChargement(persos)) sauverPersos(persos);
+    return persos;
   }
   function sauverPersos(obj) {
     depotPersos.remplacerTout(obj);
@@ -6174,6 +6206,7 @@ const App = (() => {
               ${soin && persoId ? `<button class="btn petit secondaire btn-soigner-allie" data-idx="${idx}">❤ Soigner un allié</button>` : ""}
               ${resurrection && persoId ? `<button class="btn petit or btn-reanimer-allie" data-idx="${idx}">📜 Réanimer un allié</button>` : ""}
               ${parcheminSort && persoId ? `<button class="btn petit or btn-apprendre-sort" data-idx="${idx}">📖 Apprendre</button>` : ""}
+              ${parcheminSort && persoId ? `<button class="btn petit or btn-lancer-parchemin" data-idx="${idx}">✨ Lancer</button>` : ""}
               ${persoId ? `<button class="btn petit secondaire btn-donner-item" data-idx="${idx}">🎁 Donner</button>` : ""}
               <button class="btn petit danger btn-jeter-item" data-idx="${idx}">Jeter</button>
             </div>
@@ -6200,6 +6233,7 @@ const App = (() => {
         </div>
         ${persoId ? `<div class="selecteur-slot" id="selecteur-don-item" style="display:none;"></div>` : ""}
         ${persoId ? `<div class="selecteur-slot" id="selecteur-soin-item" style="display:none;"></div>` : ""}
+        ${persoId ? `<div class="selecteur-slot" id="selecteur-lancer-parchemin" style="display:none;"></div>` : ""}
       </div>`;
   }
 
@@ -6249,11 +6283,11 @@ const App = (() => {
     // à faire pour un Manuel/une Amulette de base.
     if (kit.accessoire) {
       const accessoire = depuisCatalogue(kit.accessoire);
-      if (accessoire) creation.inventaireListe.push(Object.assign({}, accessoire, { _kitDepart: true }));
+      if (accessoire) ajouterAInventaire(creation, Object.assign({}, accessoire, { _kitDepart: true }));
     }
     (kit.consommables || []).forEach((id) => {
       const item = depuisCatalogue(id);
-      if (item) creation.inventaireListe.push(Object.assign({}, item, { _kitDepart: true }));
+      if (item) ajouterAInventaire(creation, Object.assign({}, item, { _kitDepart: true }));
     });
   }
 
@@ -6329,7 +6363,7 @@ const App = (() => {
     const ancien = perso.equiper(slot, item);
     if (ancien === undefined) { toast("Cet objet ne peut pas être équipé dans cet emplacement."); return; }
     perso.inventaireListe.splice(idx, 1);
-    if (ancien) perso.inventaireListe.push(ancien);
+    if (ancien) ajouterAInventaire(perso, ancien);
     rendreEquipInventaireCreation();
     recalculerDerives();
     toast(`« ${item.nom} » équipé (${LABELS_SLOT[slot]}).`);
@@ -6339,14 +6373,14 @@ const App = (() => {
     const perso = new Personnage(creation);
     const item = perso.deséquiper(slot);
     if (!item) return;
-    perso.inventaireListe.push(item);
+    ajouterAInventaire(perso, item);
     rendreEquipInventaireCreation();
     recalculerDerives();
     toast(`« ${item.nom} » retiré, renvoyé dans l'inventaire.`);
   }
 
   function ajouterItemInventaireCreation(item) {
-    creation.inventaireListe.push(item);
+    ajouterAInventaire(creation, item);
     rendreEquipInventaireCreation();
     toast(`« ${item.nom} » ajouté à l'inventaire.`);
   }
@@ -6532,7 +6566,7 @@ const App = (() => {
     const ancien = perso.equiper(slot, item);
     if (ancien === undefined) { toast("Cet objet ne peut pas être équipé dans cet emplacement."); return; }
     perso.inventaireListe.splice(idx, 1);
-    if (ancien) perso.inventaireListe.push(ancien);
+    if (ancien) ajouterAInventaire(perso, ancien);
     _ajusterPvMaxEquipement(perso, (item.bonusPvMax || 0) - ((ancien && ancien.bonusPvMax) || 0));
     persos[persoId] = perso.versJSON();
     sauverPersos(persos);
@@ -6554,7 +6588,7 @@ const App = (() => {
     const perso = Personnage.depuisJSON(p);
     const item = perso.deséquiper(slot);
     if (!item) return;
-    perso.inventaireListe.push(item);
+    ajouterAInventaire(perso, item);
     _ajusterPvMaxEquipement(perso, -((item.bonusPvMax) || 0));
     persos[persoId] = perso.versJSON();
     sauverPersos(persos);
@@ -6567,7 +6601,7 @@ const App = (() => {
     const p = persos[persoId];
     if (!p) return;
     const perso = Personnage.depuisJSON(p);
-    perso.inventaireListe.push(item);
+    ajouterAInventaire(perso, item);
     persos[persoId] = perso.versJSON();
     sauverPersos(persos);
     afficherFiche(persoId);
@@ -6641,8 +6675,7 @@ const App = (() => {
     const item = p.inventaireListe[idx];
     if (!item) return;
     p.inventaireListe.splice(idx, 1);
-    if (!Array.isArray(dest.inventaireListe)) dest.inventaireListe = [];
-    dest.inventaireListe.push(item);
+    ajouterAInventaire(dest, item);
     sauverPersos(persos);
     afficherFiche(persoId);
     toast(`« ${item.nom} » donné à ${dest.nom}.`);
@@ -6680,6 +6713,28 @@ const App = (() => {
     const q = (it.quantite || 1) - 1;
     if (q > 0) it.quantite = q;
     else perso.inventaireListe.splice(idx, 1);
+  }
+
+  // Ajoute un objet à l'inventaire en FUSIONNANT les consommables de même id
+  // (décision de Thomas) : deux Parchemins — Boule de feu deviennent une seule
+  // entrée quantite:2 au lieu de deux lignes successives.
+  // Restreint au type "consommable" à dessein : Raretes.appliquer exclut ce
+  // type (cf. js/raretes.js, garde `item.type !== "consommable"`), donc deux
+  // consommables de même id sont forcément identiques. Ce n'est PAS vrai des
+  // armes/armures/accessoires, dont deux instances du même id peuvent porter
+  // une rareté, un affixe ou un matériau différents — ne jamais étendre cette
+  // fusion à ces types, on écraserait des objets réellement distincts.
+  function ajouterAInventaire(perso, item) {
+    if (!perso || !item) return;
+    if (!perso.inventaireListe) perso.inventaireListe = [];
+    if (item.type === "consommable") {
+      const existant = perso.inventaireListe.find((it) => it.type === "consommable" && it.id === item.id);
+      if (existant) {
+        existant.quantite = (existant.quantite || 1) + (item.quantite || 1);
+        return;
+      }
+    }
+    perso.inventaireListe.push(item);
   }
 
   // Tire une formule "XdY(+Z)" et l'annonce dans l'historique partagé (donc
@@ -6962,6 +7017,138 @@ const App = (() => {
     _consommerUnite(p, idx);
     sauverPersos(persos);
     afficherFiche(persoId);
+  }
+
+  // Retrouve un sort par id dans N'IMPORTE QUELLE liste de SORTS_PAR_CLASSE —
+  // contrairement à _apprendreSortGrimoireLocal (restreint à SORTS_PAR_CLASSE
+  // [p.classe]), utilisé par « Lancer depuis le parchemin » : n'importe qui
+  // peut LIRE un parchemin, seul un lanceur de la bonne classe peut le
+  // COPIER dans son Grimoire (cf. apprendreSortDepuisParchemin ci-dessus).
+  function _sortDepuisNimporteQuelleClasse(sortId) {
+    if (typeof SORTS_PAR_CLASSE === "undefined") return null;
+    for (const cls of Object.keys(SORTS_PAR_CLASSE)) {
+      const sort = (SORTS_PAR_CLASSE[cls] || []).find((s) => s.id === sortId);
+      if (sort) return sort;
+    }
+    return null;
+  }
+
+  // Résout l'effet d'un sort lancé depuis un parchemin, via Capacites.lancer
+  // — le même moteur que le lancement normal depuis le Grimoire — mais avec
+  // une mecanique délestée de coutPP/typeSort/origineGrimoire : aucun coût en
+  // PP (le parchemin EST le coût, décision de Thomas) et aucun contrôle de
+  // rang minimum/emplacement/apprentissage (un parchemin de rang 5 doit être
+  // lançable par un niveau 1). Ces trois contrôles sont TOUS conditionnés
+  // dans Capacites.lancer par la présence de ces champs précis sur l'objet
+  // mecanique reçu (cf. js/capacites.js lancer()) — les omettre suffit à les
+  // désactiver sans toucher à ce fichier.
+  // Cible "soi"/"aucune"/"groupe" : aucun choix de cible à faire, résolution
+  // immédiate. "allie"/"ennemi" : petit sélecteur dédié (cf.
+  // _ouvrirSelecteurCibleParchemin), donc ASYNCHRONE — d'où le callback
+  // onResolu(consomme), appelé une fois l'issue connue (consomme=false si
+  // l'utilisateur n'a jamais pu choisir de cible, ex. aucune disponible :
+  // le parchemin n'est alors pas gaspillé, même logique que
+  // ouvrirSelecteurDon/ouvrirSelecteurSoin sans destinataire). "zone" (AOE/
+  // battlemap) : repli explicite du chantier — la mécanique de ciblage
+  // automatisé de zone est bâtie dans wireCapacitesEtEtats/
+  // _armerCiblageCarteZoneAuto, hors de portée d'une action d'inventaire
+  // isolée sans dupliquer cette machinerie ; le descriptif complet est
+  // annoncé dans l'historique partagé pour un arbitrage manuel du MJ.
+  function _resoudreEffetParchemin(persoId, p, sort, onResolu) {
+    const mecanique = sort.mecanique || {};
+    const source = { origine: "parchemin", cle: sort.id, nomCap: sort.nom, idSort: sort.id };
+    const mecaniqueParchemin = Object.assign({}, mecanique, { typeSort: undefined, coutPP: 0, origineGrimoire: false });
+    if (mecanique.cible === "soi" || mecanique.cible === "aucune" || mecanique.cible === "groupe") {
+      const res = Capacites.lancer({ persoId, source, mecanique: mecaniqueParchemin });
+      toast(res.messages.join(" · "));
+      onResolu(true);
+      return;
+    }
+    if (mecanique.cible === "allie" || mecanique.cible === "ennemi") {
+      _ouvrirSelecteurCibleParchemin(persoId, source, mecaniqueParchemin, sort, onResolu);
+      return;
+    }
+    ajouterHisto(`📜 ${p.nom} lance « ${sort.nom} » depuis un parchemin`, "", false, false,
+      sort.effet || "Effet à arbitrer manuellement par le MJ.", {});
+    toast(`« ${sort.nom} » (effet de zone) lancé — à arbitrer manuellement par le MJ, annoncé dans l'historique.`);
+    onResolu(true);
+  }
+
+  // Sélecteur d'allié/ennemi pour un sort "allie"/"ennemi" lancé depuis un
+  // parchemin — même modèle que ouvrirSelecteurSoin, conteneur dédié pour ne
+  // pas entrer en collision avec les sélecteurs don/soin déjà existants.
+  function _ouvrirSelecteurCibleParchemin(persoId, source, mecaniqueParchemin, sort, onResolu) {
+    const zone = document.getElementById("selecteur-lancer-parchemin");
+    if (!zone) { onResolu(false); return; }
+    const cibles = (typeof Capacites !== "undefined" ? Capacites.listeCibles(persoId) : [])
+      .filter((c) => (mecaniqueParchemin.cible === "allie" ? c.genre === "perso" : c.genre === "monstre"));
+    if (!cibles.length) {
+      zone.innerHTML = `<div class="aide">Aucune cible disponible pour « ${echapper(sort.nom)} » — parchemin conservé.</div>`;
+      zone.style.display = "block";
+      onResolu(false);
+      return;
+    }
+    zone.innerHTML =
+      `<select id="select-cible-lancer-parchemin">` +
+      cibles.map((c) => `<option value="${c.id}">${echapper(c.nom)}${c.soi ? " (soi-même)" : ""}</option>`).join("") +
+      `</select>` +
+      `<button class="btn petit or" id="btn-confirmer-lancer-parchemin">Lancer « ${echapper(sort.nom)} »</button>`;
+    zone.style.display = "block";
+    document.getElementById("btn-confirmer-lancer-parchemin").onclick = () => {
+      const cibleId = document.getElementById("select-cible-lancer-parchemin").value;
+      const res = Capacites.lancer({ persoId, source, mecanique: mecaniqueParchemin, cibleId });
+      zone.style.display = "none";
+      toast(res.messages.join(" · "));
+      onResolu(true);
+    };
+  }
+
+  // Lance le sort d'un parchemin sans l'inscrire au grimoire : aucun coût en
+  // PP (décision de Thomas — le parchemin EST le coût), parchemin consommé
+  // dans tous les cas. Un personnage sans classe magique doit réussir un test
+  // d'INT difficulté 14 ; en cas d'échec le parchemin est perdu quand même.
+  function lancerSortDepuisParchemin(persoId, idx) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const item = p.inventaireListe[idx];
+    if (!item || !estParcheminSort(item)) return;
+    // Contrairement à apprendreSortDepuisParchemin, le sort est recherché
+    // dans TOUTES les classes : lire un parchemin ne requiert pas d'être de
+    // la bonne classe, seul l'apprendre (le copier au Grimoire) le requiert.
+    const sort = _sortDepuisNimporteQuelleClasse(item.sortAppris);
+    if (!sort) { toast("Sort introuvable dans le catalogue de Grimoire."); return; }
+
+    const estCasteur = typeof CARAC_MAGIE !== "undefined" && !!CARAC_MAGIE[p.classe];
+    if (!estCasteur) {
+      const perso = Personnage.depuisJSON(p);
+      const modInt = perso.mod("INT");
+      const jet = lancerTest(`${p.nom} lit « ${item.nom} » — Test d'INT (diff. 14)`, modInt, 20, null, { persoId, caracCode: "INT" });
+      if (jet.total < 14) {
+        toast(`Échec (${jet.total} < 14) : « ${sort.nom} » échoue — le parchemin est consumé.`);
+        _consommerUnite(p, idx);
+        sauverPersos(persos);
+        afficherFiche(persoId);
+        return;
+      }
+    }
+    // _resoudreEffetParchemin est ASYNCHRONE pour "allie"/"ennemi" (attend le
+    // choix de cible dans le sélecteur dédié) — la consommation du parchemin
+    // et le rafraîchissement de la fiche n'interviennent donc que dans ce
+    // callback, jamais juste après l'appel ci-dessous (qui aurait sinon
+    // consommé le parchemin — et surtout détruit/recréé le sélecteur en plein
+    // choix de cible via afficherFiche — avant même que la cible soit choisie).
+    _resoudreEffetParchemin(persoId, p, sort, (consomme) => {
+      if (!consomme) return;
+      const persosApres = chargerPersos();
+      const pApres = persosApres[persoId];
+      if (!pApres) return;
+      // idx réutilisé tel quel : rien entre-temps (test d'INT, Capacites.lancer,
+      // ajouterHisto, sélecteur de cible) ne touche inventaireListe.
+      _consommerUnite(pApres, idx);
+      sauverPersos(persosApres);
+      afficherFiche(persoId);
+    });
   }
   // Bouton "📖 Apprentissage" de la carte Grimoire (liste complète du
   // catalogue de classe, cf. bloc HTML dans afficherFiche ci-dessous) :
@@ -7695,6 +7882,11 @@ const App = (() => {
     // Inventaire — apprendre un sort depuis un parchemin (Grimoire)
     zone.querySelectorAll(".btn-apprendre-sort").forEach((el) => {
       el.onclick = () => apprendreSortDepuisParchemin(id, parseInt(el.dataset.idx, 10));
+    });
+    // Inventaire — lancer directement le sort d'un parchemin, sans l'inscrire
+    // au Grimoire (cf. lancerSortDepuisParchemin).
+    zone.querySelectorAll(".btn-lancer-parchemin").forEach((el) => {
+      el.onclick = () => lancerSortDepuisParchemin(id, parseInt(el.dataset.idx, 10));
     });
     // Carte Grimoire — bouton "Apprentissage" : replie/déplie la liste
     // complète du catalogue de classe (cf. rendu ci-dessus).
@@ -11803,5 +11995,5 @@ const App = (() => {
   // Dette du Soigneur que le reste de l'app — cf. Personnage.appliquerGainPv).
   // — proposerAttaqueOpportunite est en plus exposé pour js/carte.js
   // (déclenchement géométrique semi-auto depuis demarrerDragDD/finDragDD).
-  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire, ajusterPv, proposerAttaqueOpportunite, autoriserPreparationGrimoire };
+  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire, ajusterPv, proposerAttaqueOpportunite, autoriserPreparationGrimoire, ajouterAInventaire };
 })();

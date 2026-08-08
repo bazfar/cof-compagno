@@ -46,13 +46,19 @@ function chargerGlobals(fichiers, noms) {
   return ctx;
 }
 
-const ctx = chargerGlobals(["data/donnees.js"], ["COMPETENCES_PAR_CARAC", "SAUVEGARDES", "ORDRE_CLASSES"]);
+const ctx = chargerGlobals(["data/donnees.js"], ["COMPETENCES_PAR_CARAC", "SAUVEGARDES", "ORDRE_CLASSES", "SORTS_PAR_CLASSE"]);
 const COMPETENCES_PAR_CARAC = ctx.COMPETENCES_PAR_CARAC;
 const SAUVEGARDES = ctx.SAUVEGARDES;
 const ORDRE_CLASSES = ctx.ORDRE_CLASSES;
+const SORTS_PAR_CLASSE = ctx.SORTS_PAR_CLASSE;
 if (!COMPETENCES_PAR_CARAC) { console.error("❌ COMPETENCES_PAR_CARAC introuvable (data/donnees.js n'a pas chargé)."); process.exit(1); }
 if (!SAUVEGARDES) { console.error("❌ SAUVEGARDES introuvable (data/donnees.js n'a pas chargé)."); process.exit(1); }
 if (!ORDRE_CLASSES) { console.error("❌ ORDRE_CLASSES introuvable (data/donnees.js n'a pas chargé)."); process.exit(1); }
+if (!SORTS_PAR_CLASSE) { console.error("❌ SORTS_PAR_CLASSE introuvable (data/donnees.js n'a pas chargé)."); process.exit(1); }
+// Ensemble de tous les ids de sorts, toutes classes confondues (cf. "Parchemins
+// de sorts complets" : un parchemin peut être lu/lancé par n'importe qui,
+// sortAppris n'est donc pas restreint à une classe précise ici).
+const SORT_IDS_VALIDES = new Set(Object.values(SORTS_PAR_CLASSE).flat().map((s) => s.id));
 
 const ctxEtats = chargerGlobals(["js/etats.js"], ["ETATS"]);
 const ETATS = ctxEtats.ETATS;
@@ -447,6 +453,14 @@ items.forEach((it, index) => {
   // Forge du MJ, jamais écrits ici : cf. js/forge.js, SyncStore["loot:custom"]).
   if (it.type === "arme") {
     if (!MAITRISE_ARME_VALIDES.includes(it.maitrise)) signaler(cle, `arme avec maitrise invalide ou absente : "${it.maitrise}" (attendu : ${MAITRISE_ARME_VALIDES.join("|")}).`);
+  }
+
+  // 6ter. consommable : sortAppris (cf. "Parchemins de sorts complets") doit
+  // référencer un sort réellement présent dans au moins une liste de
+  // SORTS_PAR_CLASSE — sinon apprendreSortDepuisParchemin/lancerSortDepuisParchemin
+  // (js/app.js) ne trouveraient jamais le sort au moment de l'utiliser.
+  if (it.type === "consommable" && it.sortAppris !== undefined && !SORT_IDS_VALIDES.has(it.sortAppris)) {
+    signaler(cle, `sortAppris "${it.sortAppris}" ne correspond à aucun sort de SORTS_PAR_CLASSE.`);
   }
 
   // 7. champs numériques attendus bien de type number

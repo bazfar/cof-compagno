@@ -243,7 +243,7 @@ const Loot = (() => {
         if (!dest) return;
         const itemFinal = _itemFinal();
         if (!Array.isArray(dest.inventaireListe)) dest.inventaireListe = [];
-        dest.inventaireListe.push(Object.assign({}, itemFinal, { itemRef: itemFinal.id }));
+        App.ajouterAInventaire(dest, Object.assign({}, itemFinal, { itemRef: itemFinal.id }));
         sauverPersos(persosActuels);
         modal.style.display = "none";
         rendreCatalogue();
@@ -473,7 +473,7 @@ const Loot = (() => {
     if (persos[gagnantId]) {
       if (!Array.isArray(persos[gagnantId].inventaireListe)) persos[gagnantId].inventaireListe = [];
       const item = Object.assign({}, vote.item, { itemRef: vote.item.id });
-      persos[gagnantId].inventaireListe.push(item);
+      App.ajouterAInventaire(persos[gagnantId], item);
       sauverPersos(persos);
     }
 
