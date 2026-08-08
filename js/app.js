@@ -2529,6 +2529,7 @@ const App = (() => {
     if (panneau === "loot" && typeof Loot !== "undefined") Loot.rendreCatalogue();
     if (panneau === "marche" && typeof Marche !== "undefined") Marche.rendrePanneauMarche();
     if (panneau === "reputation" && typeof Reputation !== "undefined") Reputation.rendrePanneauReputation();
+    if (panneau === "meteo" && typeof Meteo !== "undefined") Meteo.rendrePanneauMeteo();
     if (panneau === "atelier") rendrePanneauAtelier();
     if (panneau === "regles") rendreRegles();
     if (panneau === "bestiaire") rendreBestiaire();
@@ -10225,6 +10226,16 @@ const App = (() => {
         });
       });
     }
+
+    // Météo : deux clés d'état + le journal. Le panneau ne se redessine que
+    // s'il est ouvert (même schéma que marche:stock / reputation ci-dessus).
+    const _rafraichirMeteo = () => {
+      const p = document.getElementById("panneau-meteo");
+      if (p && p.classList.contains("actif") && typeof Meteo !== "undefined") Meteo.rendrePanneauMeteo();
+    };
+    SyncStore.subscribe("meteo:courante", _rafraichirMeteo);
+    SyncStore.subscribe("meteo:porteciel", _rafraichirMeteo);
+    SyncStore.subscribeListe("meteo:journal", _rafraichirMeteo, 20);
   }
 
   /* ============================================================
@@ -12008,5 +12019,10 @@ const App = (() => {
   // Dette du Soigneur que le reste de l'app — cf. Personnage.appliquerGainPv).
   // — proposerAttaqueOpportunite est en plus exposé pour js/carte.js
   // (déclenchement géométrique semi-auto depuis demarrerDragDD/finDragDD).
-  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire, ajusterPv, proposerAttaqueOpportunite, autoriserPreparationGrimoire, ajouterAInventaire };
+  // — obtenirJoueurId/obtenirJoueurNom sont en plus exposés pour js/meteo.js :
+  // le Porte-Ciel est désigné par joueurId, et seul ce client doit voir les
+  // boutons de jet. Getters en LECTURE SEULE — joueurId reste privé et ne
+  // doit être réécrit que par enregistrerJoueurCourant (fusion d'identité
+  // par prénom).
+  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire, ajusterPv, proposerAttaqueOpportunite, autoriserPreparationGrimoire, ajouterAInventaire, obtenirJoueurId: () => joueurId, obtenirJoueurNom: () => joueurNom };
 })();
