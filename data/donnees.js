@@ -3289,12 +3289,13 @@ const PNJ_CLES = [
     nom: "Lieutenant Bram Osgoode",
     titre: "Officier de la Citadelle des Ponts",
     faction: "Garde Citoyenne",
-    resume: "Discipliné en apparence, rongé par le doute depuis qu'il a vu le dossier sur le financement solvarien des Fils de Libris.",
+    resume: "Discipliné en apparence, rongé par le doute depuis qu'il a vu un document que ses supérieurs gardent secret.",
     description:
-      "Bram a vu le document que Kessing garde confidentiel, et l'ordre de le taire le ronge depuis. Officier loyal jusqu'ici, il commence à se demander si l'obéissance vaut encore quelque chose face à ce qu'il sait.",
+      "Bram a vu un document que le Général-Consul Kessing garde confidentiel, et l'ordre de se taire le ronge depuis. Officier loyal jusqu'ici, il commence à se demander si l'obéissance vaut encore quelque chose face à ce qu'il sait.",
     accroches: [
       "Pourrait être la fuite qui rend le document public, si les PJ gagnent sa confiance.",
       "Hook moral : obéir à Kessing ou trahir sa hiérarchie pour ce qu'il croit juste.",
+      "MJ — le document concerne le financement solvarien des Fils de Libris (cf. PNJ Ewen Castellan et Factions > République de Liberra > Garde Citoyenne).",
     ],
   },
   {
@@ -4063,7 +4064,7 @@ const FACTIONS = [
         nom: "La Garde Citoyenne — bloc militaire",
         devise: "La liberté se défend, elle ne se proclame pas.",
         update:
-          "Sur le terrain, le serment tient : les officiers protègent le Tissage parce que c'est leur travail, pas parce qu'ils aiment le Tissage. Mais les effectifs sont à flux tendu et le Sergent Yannick Doria sait qui, dans la Garde, a des sympathies inquiétantes pour les Fils de Libris.\n\nCe ne sont pas des traîtres : ce sont des gardes épuisés, en sous-nombre, qui courent d'un quartier à l'autre sans jamais arriver à temps, et à qui on explique patiemment que le désordre a un visage. C'est comme ça qu'une ronde devient mince — personne n'a désobéi, on a simplement redéployé.\n\nLe vrai nœud est plus haut. Le Général-Consul Kessing garde confidentiel le dossier sur le financement solvarien des Fils de Libris, et le Lieutenant Bram Osgoode, qui l'a vu, se tait sur ordre.",
+          "Sur le terrain, le serment tient : les officiers protègent le Tissage parce que c'est leur travail, pas parce qu'ils aiment le Tissage. Mais les effectifs sont à flux tendu et le Sergent Yannick Doria sait qui, dans la Garde, a des sympathies inquiétantes pour les Fils de Libris.\n\nCe ne sont pas des traîtres : ce sont des gardes épuisés, en sous-nombre, qui courent d'un quartier à l'autre sans jamais arriver à temps, et à qui on explique patiemment que le désordre a un visage. C'est comme ça qu'une ronde devient mince — personne n'a désobéi, on a simplement redéployé.\n\nLe vrai nœud est plus haut, au niveau du commandement — mais ça, la rue ne le voit pas.",
         description:
           "Figure de proue : Général-Consul Rohar Kessing, ancien officier de terrain, discipline avant tout.\nInsigne : écharpe grise, sceau d'un bouclier croisé de deux lances. Contrôle la milice et la défense des frontières orientales — poids grandissant à mesure que la pression de Solvarn et les raids venus des Failles Rouges s'intensifient.\nFracture/hook : certains officiers murmurent qu'une République sans hiérarchie forte ne survivra pas à une vraie guerre — tentation autoritaire qui inquiète le Serment de Libris.",
       },
