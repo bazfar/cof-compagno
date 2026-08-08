@@ -6321,28 +6321,34 @@ const App = (() => {
       el.onclick = () => jeterItemCreation(parseInt(el.dataset.idx, 10));
     });
 
-    const btnAjouterItem = document.getElementById("btn-ajouter-item");
-    const formAjouterItem = document.getElementById("form-ajout-item");
+    // Recherches scopées à `zone` (jamais document.getElementById) : ce même
+    // bloc HTML (mêmes ids) est aussi rendu dans la fiche (cf. plus bas,
+    // afficherFiche) — un getElementById global renverrait toujours le
+    // PREMIER des deux éléments du DOM (celui-ci, la création), y compris
+    // quand c'est l'autre wiring (fiche) qui l'appelle, laissant le bouton
+    // réellement visible de la fiche sans aucun gestionnaire de clic.
+    const btnAjouterItem = zone.querySelector("#btn-ajouter-item");
+    const formAjouterItem = zone.querySelector("#form-ajout-item");
     if (!btnAjouterItem || !formAjouterItem) return;
     btnAjouterItem.onclick = () => {
       formAjouterItem.style.display = formAjouterItem.style.display === "none" ? "flex" : "none";
     };
-    const selectCatalogue = document.getElementById("nouvel-item-catalogue");
-    const diversChamps = document.getElementById("nouvel-item-divers-champs");
+    const selectCatalogue = zone.querySelector("#nouvel-item-catalogue");
+    const diversChamps = zone.querySelector("#nouvel-item-divers-champs");
     selectCatalogue.onchange = () => {
       diversChamps.style.display = selectCatalogue.value === "__divers__" ? "flex" : "none";
     };
-    document.getElementById("btn-confirmer-ajout-item").onclick = () => {
+    zone.querySelector("#btn-confirmer-ajout-item").onclick = () => {
       const choix = selectCatalogue.value;
       if (!choix) { toast("Choisis un objet dans la liste."); return; }
       if (choix === "__divers__") {
-        const nom = document.getElementById("nouvel-item-nom").value.trim();
+        const nom = zone.querySelector("#nouvel-item-nom").value.trim();
         if (!nom) { toast("Donne un nom à l'objet."); return; }
         ajouterItemInventaireCreation({
           id: "manuel-" + Date.now(),
           nom,
           type: "divers",
-          description: document.getElementById("nouvel-item-desc").value.trim(),
+          description: zone.querySelector("#nouvel-item-desc").value.trim(),
         });
       } else {
         const catalogueItem = (typeof LOOT_CATALOGUE !== "undefined") ? LOOT_CATALOGUE.find((it) => it.id === choix) : null;
@@ -7944,28 +7950,34 @@ const App = (() => {
       el.onclick = () => apprendreSortDirectementDuGrimoire(el.dataset.perso, el.dataset.sort);
     });
     // Inventaire — formulaire d'ajout, lié au catalogue loot (+ option "divers")
-    const btnAjouterItem = document.getElementById("btn-ajouter-item");
-    const formAjouterItem = document.getElementById("form-ajout-item");
+    // Recherches scopées à `zone` (jamais document.getElementById) : ce même
+    // bloc HTML (mêmes ids) est aussi rendu dans le panneau de création (cf.
+    // wireEquipInventaireCreation) — un getElementById global renverrait
+    // toujours le premier des deux éléments du DOM (celui de la création,
+    // rendu en premier dans index.html), laissant CE bouton (celui réellement
+    // visible sur la fiche) sans aucun gestionnaire de clic.
+    const btnAjouterItem = zone.querySelector("#btn-ajouter-item");
+    const formAjouterItem = zone.querySelector("#form-ajout-item");
     if (btnAjouterItem && formAjouterItem) {
       btnAjouterItem.onclick = () => {
         formAjouterItem.style.display = formAjouterItem.style.display === "none" ? "flex" : "none";
       };
-      const selectCatalogue = document.getElementById("nouvel-item-catalogue");
-      const diversChamps = document.getElementById("nouvel-item-divers-champs");
+      const selectCatalogue = zone.querySelector("#nouvel-item-catalogue");
+      const diversChamps = zone.querySelector("#nouvel-item-divers-champs");
       selectCatalogue.onchange = () => {
         diversChamps.style.display = selectCatalogue.value === "__divers__" ? "flex" : "none";
       };
-      document.getElementById("btn-confirmer-ajout-item").onclick = () => {
+      zone.querySelector("#btn-confirmer-ajout-item").onclick = () => {
         const choix = selectCatalogue.value;
         if (!choix) { toast("Choisis un objet dans la liste."); return; }
         if (choix === "__divers__") {
-          const nom = document.getElementById("nouvel-item-nom").value.trim();
+          const nom = zone.querySelector("#nouvel-item-nom").value.trim();
           if (!nom) { toast("Donne un nom à l'objet."); return; }
           ajouterItemInventaire(id, {
             id: "manuel-" + Date.now(),
             nom,
             type: "divers",
-            description: document.getElementById("nouvel-item-desc").value.trim(),
+            description: zone.querySelector("#nouvel-item-desc").value.trim(),
           });
         } else {
           const catalogueItem = (typeof LOOT_CATALOGUE !== "undefined") ? LOOT_CATALOGUE.find((it) => it.id === choix) : null;
