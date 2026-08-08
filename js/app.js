@@ -6192,6 +6192,7 @@ const App = (() => {
           return `<div class="inv-item">
             <div class="inv-item-header">
               <span class="inv-item-nom" style="color:${it.rareteCouleur || ""}">${echapper(it.nom)}</span>${badgeRareteHtml(it)}
+              ${(it.quantite || 1) > 1 ? `<span class="loot-badge">×${it.quantite}</span>` : ""}
               ${it.type ? `<span class="loot-badge loot-badge-${it.type}">${echapper(it.type)}</span>` : ""}
             </div>
             ${badge ? `<div class="inv-item-stats">${echapper(badge)}</div>` : ""}
