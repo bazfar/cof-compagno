@@ -218,6 +218,19 @@ class Personnage extends Entite {
     // de SORTS_MAGICIEN (ou liste équivalente future Nécro/Enchanteur),
     // distinct de capacites[] (réservé aux rangs de Voie classiques).
     this.grimoireSortsConnus = d.grimoireSortsConnus || [];
+    // Grimoire v3 — sélection MANUELLE des sorts préparés (= réellement
+    // lançables) parmi les sorts inscrits. Tableau vide/absent = repli sur
+    // le remplissage glouton historique (cf. grimoireOccupationParTier), ce
+    // qui laisse intactes toutes les fiches créées avant ce système.
+    this.grimoireSortsPrepares = d.grimoireSortsPrepares || [];
+    // Drapeau de rattrapage : tant qu'il est faux, le joueur peut inscrire
+    // librement dans la limite du plafond (les sorts ont été distribués
+    // hors mécanique au niveau 3). Une fois figé à true, seuls les
+    // parchemins permettent d'inscrire un nouveau sort.
+    this.grimoireRattrapageFait = d.grimoireRattrapageFait === true;
+    // Fenêtre de préparation ouverte par un repos long (cf. js/repos.js,
+    // lancerJetRepos) et consommée à la validation de la sélection.
+    this.grimoirePreparationDisponible = d.grimoirePreparationDisponible === true;
     // Prêtre — Cercle de spécialisation (cf. prompt_pretre_cercle_vie.md
     // Partie 1) : "vie"/"foi"/"bannissement"/"jugement"/null, fixé à la
     // création — donne 1 sort de la famille correspondante, occupant un
@@ -585,6 +598,39 @@ class Personnage extends Entite {
     const t = this.slotsGrimoireParTier();
     return t["12"] + t["13"] + t["14"] + t["15"];
   }
+  // Grimoire v3 — plafond de sorts INSCRITS (cf. GRIMOIRE_INSCRITS_BASE /
+  // GRIMOIRE_NIVEAU_PIVOT, data/donnees.js) : 4 + 1 par niveau au-delà du 3.
+  // Indépendant des emplacements PRÉPARÉS (slotsGrimoireParTier), qui
+  // dépendent eux de la rareté de l'objet porté.
+  plafondInscriptionGrimoire() {
+    const base = (typeof GRIMOIRE_INSCRITS_BASE !== "undefined") ? GRIMOIRE_INSCRITS_BASE : 4;
+    const pivot = (typeof GRIMOIRE_NIVEAU_PIVOT !== "undefined") ? GRIMOIRE_NIVEAU_PIVOT : 3;
+    return base + Math.max(0, (this.niveau || 1) - pivot);
+  }
+  // Ids réellement inscrits, accordés d'abord (garantis par les règles,
+  // jamais bloqués), puis les sorts appris — dédoublonnés. Au-delà du
+  // plafond, les sorts APPRIS en excédent sont exclus : ils restent dans
+  // grimoireSortsConnus (rien n'est effacé) mais ne sont ni préparables ni
+  // lançables tant que le plafond n'a pas remonté d'un niveau.
+  idsGrimoireInscrits() {
+    const accordes = this.sortsGrimoireAccordes();
+    const appris = (this.grimoireSortsConnus || []).filter((id) => !accordes.includes(id));
+    return accordes.concat(appris).slice(0, this.plafondInscriptionGrimoire());
+  }
+  // Sorts appris qui débordent du plafond d'inscription — sert à l'affichage
+  // d'avertissement sur la fiche, jamais à filtrer/effacer des données.
+  idsGrimoireHorsPlafond() {
+    const accordes = this.sortsGrimoireAccordes();
+    const appris = (this.grimoireSortsConnus || []).filter((id) => !accordes.includes(id));
+    return accordes.concat(appris).slice(this.plafondInscriptionGrimoire());
+  }
+  // Reste-t-il une place inscriptible ? Utilisé aussi bien par
+  // l'apprentissage libre (rattrapage) que par les parchemins.
+  placeInscriptionLibre() {
+    const accordes = this.sortsGrimoireAccordes();
+    const total = accordes.length + (this.grimoireSortsConnus || []).filter((id) => !accordes.includes(id)).length;
+    return total < this.plafondInscriptionGrimoire();
+  }
   // Liste ordonnée des ids de sorts en compétition pour un emplacement :
   // les sorts ACCORDÉS (cf. sortsGrimoireAccordes, garantis par la Voie/le
   // Cercle) passent en premier, avant les sorts appris manuellement — pour
@@ -592,9 +638,16 @@ class Personnage extends Entite {
   // reste sans emplacement plutôt qu'un octroi garanti par les règles.
   // Dédoublonné (un id ne compte qu'une fois, même appris ET accordé).
   _idsGrimoirePourOccupation() {
-    const accordes = this.sortsGrimoireAccordes();
-    const appris = (this.grimoireSortsConnus || []).filter((id) => !accordes.includes(id));
-    return accordes.concat(appris);
+    const inscrits = this.idsGrimoireInscrits();
+    // Grimoire v3 — sélection manuelle des préparés : on ne garde que les
+    // ids explicitement choisis par le joueur, dans SON ordre, filtrés sur
+    // ceux qui sont réellement inscrits (une sélection peut devenir
+    // obsolète après une baisse de niveau ou un sort retiré). Sélection
+    // vide ou entièrement obsolète = repli sur le remplissage glouton
+    // historique (accordés d'abord, puis appris), pour ne rien casser sur
+    // les fiches antérieures à ce système.
+    const choisis = (this.grimoireSortsPrepares || []).filter((id) => inscrits.includes(id));
+    return choisis.length ? choisis : inscrits;
   }
   // Recalcule l'occupation par palier À LA VOLÉE depuis grimoireSortsConnus
   // + sortsGrimoireAccordes (cf. _idsGrimoirePourOccupation ci-dessus) —
@@ -633,6 +686,25 @@ class Personnage extends Entite {
   // grimoireSortsConnus.
   emplacementLibrePourRang(rang) {
     return Personnage._tierLibrePourRang(this.slotsGrimoireParTier(), this.grimoireOccupationParTier(), rang);
+  }
+  // Une sélection de préparés est-elle logeable telle quelle dans les
+  // emplacements typés disponibles ? Rejoue le remplissage glouton sur la
+  // liste proposée : renvoie { ok, refuses[] } — refuses = ids qui ne
+  // trouvent aucun palier compatible libre (rang trop élevé pour la rareté
+  // de l'objet, ou capacité saturée).
+  validerPreparationGrimoire(ids) {
+    const capacites = this.slotsGrimoireParTier();
+    const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[this.classe] || []) : [];
+    const occ = { "12": 0, "13": 0, "14": 0, "15": 0 };
+    const refuses = [];
+    (ids || []).forEach((id) => {
+      const sort = catalogue.find((s) => s.id === id);
+      if (!sort) { refuses.push(id); return; }
+      const tier = Personnage._tierLibrePourRang(capacites, occ, sort.rang);
+      if (tier) occ[tier]++;
+      else refuses.push(id);
+    });
+    return { ok: refuses.length === 0, refuses };
   }
   // Nombre total de sorts (appris + accordés) qui obtiennent effectivement
   // un emplacement — numérateur de l'affichage "X/Y sorts connus" (cf.
@@ -2173,6 +2245,9 @@ class Personnage extends Entite {
       // Cercle de spécialisation et les 4 pools de Points de Cercle du
       // Prêtre au prochain aller-retour.
       grimoireSortsConnus: this.grimoireSortsConnus,
+      grimoireSortsPrepares: this.grimoireSortsPrepares,
+      grimoireRattrapageFait: this.grimoireRattrapageFait,
+      grimoirePreparationDisponible: this.grimoirePreparationDisponible,
       cercleSpecialisation: this.cercleSpecialisation,
       pointsBenediction: this.pointsBenediction,
       pointsConviction: this.pointsConviction,

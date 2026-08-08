@@ -98,6 +98,9 @@ const Repos = (() => {
     let total = entree.flat || 0;
     entree.des.forEach((d) => { total += App.lancerDe(d); });
     App.ajusterPv(persoId, total);
+    // Grimoire v3 : un repos long rouvre la fenêtre de re-préparation des
+    // sorts (cf. Personnage.grimoirePreparationDisponible).
+    if (App.autoriserPreparationGrimoire) App.autoriserPreparationGrimoire(persoId);
     const formule = entree.des.map((d) => `1d${d}`).join("+") + (entree.flat ? `+${entree.flat}` : "");
     App.ajouterHisto(entree.label, total, false, false, formule);
     toast(`🛌 ${p.nom} récupère ${total} PV.`);

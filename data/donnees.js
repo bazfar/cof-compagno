@@ -2470,6 +2470,16 @@ const SORTS_PAR_CLASSE = {
 const COUT_PP_PAR_RANG = { 1: 2, 2: 4, 3: 6, 4: 16, 5: 25 };
 const NIVEAU_MIN_PAR_RANG = { 1: 1, 2: 1, 3: 4, 4: 6, 5: 8 };
 
+/* Grimoire v3 — plafond de sorts INSCRITS dans le grimoire, indexé sur le
+   niveau (décision de Thomas) : 4 de base, +1 par niveau au-delà du 3.
+   À ne pas confondre avec les emplacements PRÉPARÉS (sorts réellement
+   lançables), qui restent indexés sur la rareté de l'objet porté (cf.
+   GRIMOIRE_TIERS_PAR_RARETE, js/personnage.js). Les sorts accordés par une
+   voie ou un cercle consomment une place inscrite au même titre que les
+   sorts appris. */
+const GRIMOIRE_INSCRITS_BASE = 4;
+const GRIMOIRE_NIVEAU_PIVOT = 3;
+
 /* Déblocage d'école (cf. discussion du 04/08/2026) : chaque école (champ
    `categorie` des sorts) est débloquée par un rang de Voie "Initiation X"
    déjà existant dans les données — natif à la classe du personnage OU
@@ -4475,6 +4485,11 @@ const REGLES_GENERALES = [
           <tr><td>Arme longue ou à deux mains</td><td>Aucune autre arme de corps à corps</td><td>Seule une arme courte peut compléter une arme courte ou longue</td></tr>
         </tbody>
       </table></div>`,
+  },
+  {
+    titre: "Grimoire v3 — plafond d'inscription, sorts préparés au choix",
+    contenu:
+      "Deux plafonds désormais distincts. Inscrits : combien de sorts le Grimoire CONTIENT — 4 + 1 par niveau au-delà du 3 (niveau 3 ou moins : 4 ; niveau 5 : 6 ; niveau 10 : 11), sorts accordés par une voie ou un cercle compris dans le décompte. Préparés : combien sont réellement UTILISABLES — emplacements typés par rareté de l'objet de Grimoire porté (Manuel/Amulette), inchangé depuis le Grimoire v2.\n\nUn sort inscrit sans emplacement préparé compatible reste inscrit (rien n'est perdu) mais n'est pas lançable — son bouton Lancer est désactivé jusqu'à ce que le joueur le prépare (au prochain repos long) ou obtienne un objet de meilleure rareté.\n\nLe joueur choisit lesquels de ses sorts inscrits occupent les emplacements préparés, plutôt qu'un remplissage automatique. Ce choix n'est modifiable qu'au repos long (bloc « Préparation » de la carte Grimoire).\n\nFin de l'apprentissage libre : les personnages ayant reçu leurs sorts hors mécanique au niveau 3 gardent l'apprentissage libre (bouton « 📖 Apprentissage », sans consommer de parchemin) jusqu'à ce qu'ils cliquent eux-mêmes sur « Terminer le rattrapage » (action explicite et irréversible). Une fois terminé, seuls les parchemins permettent d'inscrire un nouveau sort — le plafond d'inscription continue de croître avec le niveau, mais seul un parchemin peut désormais le remplir.",
   },
 ];
 

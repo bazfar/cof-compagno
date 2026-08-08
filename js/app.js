@@ -1533,7 +1533,11 @@ const App = (() => {
     const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
     const appris = p.grimoireSortsConnus || [];
     const accordes = perso.sortsGrimoireAccordes();
-    const idsAffiches = appris.concat(accordes.filter((sid) => !appris.includes(sid)));
+    // Grimoire v3 : liste limitée aux sorts INSCRITS (plafond par niveau) —
+    // un sort appris hors plafond n'apparaît plus ici du tout, cohérent avec
+    // sortGrimoireADesEmplacements ci-dessous qui, lui, respecte déjà la
+    // sélection manuelle des préparés (cf. Personnage._idsGrimoirePourOccupation).
+    const idsAffiches = perso.idsGrimoireInscrits();
     const resume = `<div class="aide" style="margin-bottom:8px;">${perso.grimoireSlotsOccupes()}/${perso.slotsGrimoire()} sorts connus${perso.slotsGrimoire() === 0 ? ` — ajoute ${NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire"} à ton inventaire pour en apprendre.` : ""}</div>`;
     if (!idsAffiches.length) return resume + `<div class="vide">Aucun sort appris.</div>`;
     const listeHtml = idsAffiches.map((sortId) => {
@@ -2058,9 +2062,11 @@ const App = (() => {
     const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
     if (catalogue.length) {
       const perso = Personnage.depuisJSON(p);
-      const appris = p.grimoireSortsConnus || [];
-      const accordes = perso.sortsGrimoireAccordes();
-      const idsAffiches = appris.concat(accordes.filter((sid) => !appris.includes(sid)));
+      // Grimoire v3 : limité aux sorts INSCRITS (plafond par niveau) ET
+      // réellement PRÉPARÉS (sélection manuelle ou repli glouton, cf.
+      // sortGrimoireADesEmplacements) — sans ce filtre, un sort non préparé
+      // resterait lançable depuis le dock de combat.
+      const idsAffiches = perso.idsGrimoireInscrits().filter((sid) => perso.sortGrimoireADesEmplacements(sid));
       idsAffiches.forEach((sortId) => {
         const sort = catalogue.find((s) => s.id === sortId);
         if (!sort) return;
@@ -6916,15 +6922,35 @@ const App = (() => {
       toast(`Ce sort (rang ${sort.rang}) nécessite le niveau ${niveauMin} (actuellement niveau ${p.niveau || 1}).`);
       return null;
     }
-    const tierLibre = perso.emplacementLibrePourRang(sort.rang);
-    if (!tierLibre) {
-      toast(`Plus d'emplacement compatible avec un sort de rang ${sort.rang} — équipe un objet de meilleure rareté, ou n'apprends pas de nouveau sort pour l'instant.`);
+    // Grimoire v3 — plafond d'inscription par niveau (cf.
+    // Personnage.plafondInscriptionGrimoire). Distinct du contrôle
+    // d'emplacement ci-dessous, qui ne concerne que les sorts PRÉPARÉS.
+    if (!perso.placeInscriptionLibre()) {
+      toast(`Grimoire plein : ${perso.plafondInscriptionGrimoire()} sorts inscriptibles au niveau ${p.niveau || 1} (sorts accordés compris). Prends un niveau pour gagner une place.`);
       return null;
     }
+    // Grimoire v3 : l'absence d'emplacement PRÉPARÉ compatible n'empêche
+    // plus l'inscription — le sort entre au grimoire, simplement non
+    // préparé pour l'instant. Le joueur arbitrera au prochain repos long.
+    const tierLibre = perso.emplacementLibrePourRang(sort.rang);
     p.grimoireSortsConnus = connus.concat([sortId]);
     const slots = perso.slotsGrimoire();
-    toast(`📖 « ${sort.nom} » ajouté au Grimoire, emplacement 1-${GRIMOIRE_PLAFOND_TIER[tierLibre]} (${p.grimoireSortsConnus.length}/${slots} au total).`);
+    if (tierLibre) {
+      toast(`📖 « ${sort.nom} » ajouté au Grimoire, emplacement 1-${GRIMOIRE_PLAFOND_TIER[tierLibre]} (${p.grimoireSortsConnus.length}/${slots} au total).`);
+    } else {
+      toast(`📖 « ${sort.nom} » inscrit au Grimoire, mais aucun emplacement compatible pour l'instant (rang ${sort.rang}) — à préparer au prochain repos long.`);
+    }
     return sort;
+  }
+  // Ouvre la fenêtre de re-préparation du Grimoire (cf. Grimoire v3) —
+  // appelée par js/repos.js quand un personnage résout son jet de repos.
+  // No-op silencieux pour les classes sans Grimoire.
+  function autoriserPreparationGrimoire(persoId) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p || typeof CARAC_MAGIE === "undefined" || !CARAC_MAGIE[p.classe]) return;
+    p.grimoirePreparationDisponible = true;
+    sauverPersos(persos);
   }
   function apprendreSortDepuisParchemin(persoId, idx) {
     const persos = chargerPersos();
@@ -6946,6 +6972,7 @@ const App = (() => {
     const persos = chargerPersos();
     const p = persos[persoId];
     if (!p) return;
+    if (p.grimoireRattrapageFait) { toast("Rattrapage terminé : les nouveaux sorts s'apprennent désormais par parchemin."); return; }
     if (!_apprendreSortGrimoireLocal(p, sortId)) return;
     sauverPersos(persos);
     afficherFiche(persoId);
@@ -7185,10 +7212,52 @@ const App = (() => {
                 const occ = perso.grimoireOccupationParTier();
                 return `<div class="aide" style="margin-bottom:8px;font-size:0.78rem;">Par rang max. logeable — 1-2 : ${occ["12"]}/${cap["12"]} · 1-3 : ${occ["13"]}/${cap["13"]} · 1-4 : ${occ["14"]}/${cap["14"]} · 1-5 : ${occ["15"]}/${cap["15"]}</div>`;
               })() : ""}
+              ${(function () {
+                // Grimoire v3 — bloc "Préparation" : plafond d'INSCRIPTION
+                // (par niveau) distinct des emplacements PRÉPARÉS (par
+                // rareté). Le joueur choisit lesquels de ses sorts inscrits
+                // occupent les emplacements préparés ; ce choix n'est
+                // modifiable qu'au repos long (cf. grimoirePreparationDisponible,
+                // ouvert par js/repos.js).
+                const plafond = perso.plafondInscriptionGrimoire();
+                const inscrits = perso.idsGrimoireInscrits();
+                const horsPlafond = perso.idsGrimoireHorsPlafond();
+                const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
+                const nomSort = (sid) => { const s = catalogue.find((x) => x.id === sid); return s ? s.nom : sid; };
+                const rangSort = (sid) => { const s = catalogue.find((x) => x.id === sid); return s ? s.rang : "?"; };
+                const prepDisponible = p.grimoirePreparationDisponible === true;
+                // Sélection actuelle : le choix persisté du joueur si présent,
+                // sinon repli sur le glouton réellement actif (même patron que
+                // _idsGrimoirePourOccupation côté personnage.js).
+                const selectionActuelle = (perso.grimoireSortsPrepares && perso.grimoireSortsPrepares.length)
+                  ? perso.grimoireSortsPrepares
+                  : inscrits.filter((sid) => perso.sortGrimoireADesEmplacements(sid));
+                const casesHtml = inscrits.length
+                  ? inscrits.map((sid) => `<label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;margin:3px 0;">
+                      <input type="checkbox" class="chk-prepare-grimoire" data-perso="${id}" data-sort="${sid}" ${selectionActuelle.includes(sid) ? "checked" : ""} ${prepDisponible ? "" : "disabled"} />
+                      ${echapper(nomSort(sid))} <span class="voie-source">(rang ${rangSort(sid)})</span>
+                    </label>`).join("")
+                  : `<div class="vide">Aucun sort inscrit.</div>`;
+                const avertissementHorsPlafond = horsPlafond.length
+                  ? `<div class="aide" style="margin-top:6px;">⚠ ${horsPlafond.length} sort(s) au-delà du plafond d'inscription — conservés mais non préparables jusqu'au prochain niveau : ${horsPlafond.map((sid) => echapper(nomSort(sid))).join(", ")}</div>`
+                  : "";
+                return `<div class="carte" style="margin:8px 0;padding:10px;">
+                  <h4 style="margin:0 0 6px;font-size:0.9rem;">Préparation</h4>
+                  <div class="aide" style="margin-bottom:6px;">Inscrits : ${inscrits.length}/${plafond} · Préparés : ${perso.grimoireSlotsOccupes()}/${perso.slotsGrimoire()}</div>
+                  ${casesHtml}
+                  ${prepDisponible
+                    ? `<button type="button" class="btn petit or btn-valider-preparation-grimoire" data-perso="${id}" style="margin-top:8px;">Valider la préparation</button>`
+                    : `<div class="aide" style="margin-top:6px;">Préparation modifiable au prochain repos long.</div>`}
+                  ${avertissementHorsPlafond}
+                </div>`;
+              })()}
               ${perso.slotsGrimoire() > 0 ? `
-              <div class="barre-actions" style="margin-bottom:8px;">
+              ${p.grimoireRattrapageFait
+                ? `<div class="aide" style="margin-bottom:8px;">Rattrapage terminé — nouveaux sorts par parchemin uniquement.</div>`
+                : `<div class="barre-actions" style="margin-bottom:8px;">
                 <button type="button" class="btn petit secondaire btn-toggle-apprentissage-grimoire" data-perso="${id}">📖 Apprentissage</button>
-              </div>
+                <button type="button" class="btn petit danger btn-figer-rattrapage-grimoire" data-perso="${id}">Terminer le rattrapage</button>
+              </div>`}
               <div class="grimoire-apprentissage" id="grimoire-apprentissage-${id}" style="display:none;margin-bottom:8px;">
                 ${(function () {
                   const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
@@ -7206,13 +7275,19 @@ const App = (() => {
                     const niveauMin = (typeof NIVEAU_MIN_PAR_RANG !== "undefined" && NIVEAU_MIN_PAR_RANG[sort.rang]) || 1;
                     const niveauInsuffisant = !dejaConnu && (p.niveau || 1) < niveauMin;
                     const tierLibre = dejaConnu || niveauInsuffisant ? null : perso.emplacementLibrePourRang(sort.rang);
+                    // Grimoire v3 : le plafond d'INSCRIPTION (perso.placeInscriptionLibre)
+                    // gate désormais l'apprentissage, pas l'absence d'emplacement PRÉPARÉ —
+                    // un sort peut s'inscrire sans tierLibre, juste non lançable pour l'instant.
+                    const placeInscriptible = !dejaConnu && !niveauInsuffisant && perso.placeInscriptionLibre();
                     const action = dejaConnu
                       ? `<span class="loot-badge">Connu</span>`
                       : niveauInsuffisant
                         ? `<span class="loot-badge" style="opacity:.6;" title="Nécessite le niveau ${niveauMin}">Trop haut niveau</span>`
-                        : tierLibre
-                          ? `<button type="button" class="btn petit or btn-apprendre-sort-direct" data-perso="${id}" data-sort="${sort.id}">Apprendre (1-${GRIMOIRE_PLAFOND_TIER[tierLibre]})</button>`
-                          : `<span class="loot-badge" style="opacity:.6;">Aucun emplacement</span>`;
+                        : !placeInscriptible
+                          ? `<span class="loot-badge" style="opacity:.6;" title="Plafond d'inscription atteint (${perso.plafondInscriptionGrimoire()} au niveau ${p.niveau || 1})">Grimoire plein</span>`
+                          : tierLibre
+                            ? `<button type="button" class="btn petit or btn-apprendre-sort-direct" data-perso="${id}" data-sort="${sort.id}">Apprendre (1-${GRIMOIRE_PLAFOND_TIER[tierLibre]})</button>`
+                            : `<button type="button" class="btn petit secondaire btn-apprendre-sort-direct" data-perso="${id}" data-sort="${sort.id}" title="Aucun emplacement préparé compatible — inscrit mais non lançable jusqu'au prochain repos long">Apprendre (non préparé)</button>`;
                     // École débloquée (cf. ECOLE_VERS_VOIE_DEBLOCAGE, data/donnees.js
                     // et Capacites.lancer, coutPPReel) : mise en avant + tag, pour
                     // repérer avant d'apprendre les sorts au tarif PP normal de ceux
@@ -7627,6 +7702,47 @@ const App = (() => {
       el.onclick = () => {
         const liste = document.getElementById(`grimoire-apprentissage-${el.dataset.perso}`);
         if (liste) liste.style.display = liste.style.display === "none" ? "block" : "none";
+      };
+    });
+    // Grimoire v3 — fige définitivement la fin du rattrapage : ferme le
+    // canal d'apprentissage libre, seuls les parchemins restent (cf.
+    // apprendreSortDirectementDuGrimoire). Action explicite du joueur,
+    // jamais automatique (le plafond remonte à chaque niveau, ce serait
+    // ambigu de figer tout seul).
+    zone.querySelectorAll(".btn-figer-rattrapage-grimoire").forEach((el) => {
+      el.onclick = () => {
+        if (!confirm("Action irréversible : après validation, seuls les parchemins permettront d'apprendre de nouveaux sorts. Continuer ?")) return;
+        const persos = chargerPersos();
+        const p = persos[el.dataset.perso];
+        if (!p) return;
+        p.grimoireRattrapageFait = true;
+        sauverPersos(persos);
+        afficherFiche(el.dataset.perso);
+      };
+    });
+    // Grimoire v3 — valide la sélection de sorts préparés cochée par le
+    // joueur (cf. Personnage.validerPreparationGrimoire) : n'écrit rien si
+    // la sélection dépasse la capacité typée par rareté (rang trop élevé
+    // pour l'objet porté, ou palier saturé).
+    zone.querySelectorAll(".btn-valider-preparation-grimoire").forEach((el) => {
+      el.onclick = () => {
+        const persoId = el.dataset.perso;
+        const persos = chargerPersos();
+        const p = persos[persoId];
+        if (!p) return;
+        const perso = Personnage.depuisJSON(p);
+        const ids = Array.from(zone.querySelectorAll(`.chk-prepare-grimoire[data-perso="${persoId}"]:checked`)).map((c) => c.dataset.sort);
+        const { ok, refuses } = perso.validerPreparationGrimoire(ids);
+        if (!ok) {
+          const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
+          const noms = refuses.map((sid) => { const s = catalogue.find((x) => x.id === sid); return s ? s.nom : sid; });
+          toast(`Préparation refusée — rang trop élevé pour l'objet porté ou palier saturé : ${noms.join(", ")}.`);
+          return;
+        }
+        p.grimoireSortsPrepares = ids;
+        p.grimoirePreparationDisponible = false;
+        sauverPersos(persos);
+        afficherFiche(persoId);
       };
     });
     // Carte Grimoire — apprendre directement un sort choisi dans la liste
@@ -8145,9 +8261,10 @@ const App = (() => {
     // d'apprentissage forcé (fermer le modal sans choisir ne fait rien, cf.
     // ouvrirModalChoixCapacite/btn-fermer-modal-choix-capacite). Recherche
     // via parchemin (Partie 2 point 1) reste le seul autre canal.
-    if (typeof CARAC_MAGIE !== "undefined" && CARAC_MAGIE[creation.classe] && typeof SORTS_PAR_CLASSE !== "undefined" && SORTS_PAR_CLASSE[creation.classe]) {
+    if (!creation.grimoireRattrapageFait && typeof CARAC_MAGIE !== "undefined" && CARAC_MAGIE[creation.classe] && typeof SORTS_PAR_CLASSE !== "undefined" && SORTS_PAR_CLASSE[creation.classe]) {
       const catalogue = SORTS_PAR_CLASSE[creation.classe];
-      const slots = new Personnage(creation).slotsGrimoire();
+      const persoCreation = new Personnage(creation);
+      const slots = persoCreation.slotsGrimoire();
       const connus = creation.grimoireSortsConnus || [];
       // Exclut les sorts accordés directement par un rang de voie (cf.
       // SORTS_ACCORDES_PAR_VOIE, data/donnees.js) — pas d'intérêt à proposer
@@ -8155,7 +8272,10 @@ const App = (() => {
       const accordes = (typeof SORTS_ACCORDES_PAR_VOIE !== "undefined" ? SORTS_ACCORDES_PAR_VOIE : [])
         .filter((e) => e.classe === creation.classe).map((e) => e.idSort);
       const disponibles = catalogue.filter((s) => !connus.includes(s.id) && !accordes.includes(s.id));
-      if (slots > connus.length && disponibles.length) {
+      // Grimoire v3 : le plafond d'INSCRIPTION par niveau remplace le vieux
+      // test sur les emplacements préparés — c'est désormais le bon critère
+      // pour savoir s'il reste de la place pour un nouveau sort.
+      if (persoCreation.placeInscriptionLibre() && disponibles.length) {
         ouvrirModalChoixCapacite({
           titre: "Nouveau sort disponible",
           consigne: `Slot de Grimoire libre (${connus.length}/${slots}) — apprends un nouveau sort, ou ferme cette fenêtre pour l'apprendre plus tard (parchemin) :`,
@@ -11683,5 +11803,5 @@ const App = (() => {
   // Dette du Soigneur que le reste de l'app — cf. Personnage.appliquerGainPv).
   // — proposerAttaqueOpportunite est en plus exposé pour js/carte.js
   // (déclenchement géométrique semi-auto depuis demarrerDragDD/finDragDD).
-  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire, ajusterPv, proposerAttaqueOpportunite };
+  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire, ajusterPv, proposerAttaqueOpportunite, autoriserPreparationGrimoire };
 })();
