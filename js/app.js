@@ -9204,6 +9204,14 @@ const App = (() => {
             ? `<button type="button" class="btn petit secondaire" data-act="reveler-faction-entite" data-id="${echapper(e.id)}">🔓 Révéler aux joueurs</button>`
             : "";
 
+          // Champ `update` (cf. FACTIONS[].entites[].update, data/donnees.js) :
+          // état courant du bloc, distinct de sa description structurelle. Se
+          // met à jour au fil de la campagne sans réécrire l'identité de la
+          // faction. Facultatif — les entités sans `update` rendent comme avant.
+          const updateEntiteHtml = e.update
+            ? `<div class="faction-update"><h5>Situation actuelle</h5><div class="contenu">${echapper(e.update)}</div></div>`
+            : "";
+
           const partieSecreteHtml = estSecretEntite && e.descriptionSecrete && (releveeEntite || role === "mj")
             ? `<div class="contenu" style="margin-top:8px;">${echapper(e.descriptionSecrete)}</div>`
             : "";
@@ -9220,6 +9228,7 @@ const App = (() => {
           </div>
           <div class="contenu">${echapper(e.description)}</div>
           ${partieSecreteHtml}
+          ${updateEntiteHtml}
           ${boutonRevelerEntite}
         </div>`;
         }).join("");
@@ -9246,9 +9255,13 @@ const App = (() => {
             // panneau Factions et devient illisible.
             return `<div class="carte pnj-carte" style="margin-top:10px;"${attrRole}><h3>${echapper(s.titre)}</h3><div class="contenu">${echapper(s.contenu)}</div></div>`;
           }).join("");
+        const updateGroupeHtml = g.update
+          ? `<h4 style="color:var(--or);margin:10px 0 4px;font-size:0.95rem;">Situation actuelle</h4><div class="contenu" style="color:#fff;">${echapper(g.update)}</div>`
+          : "";
         return `<div class="lore-section"><h3>${echapper(g.groupe)}</h3>` +
           blasonHtml +
           histoireHtml +
+          updateGroupeHtml +
           `<p style="font-style:italic;color:#6a6278;white-space:pre-wrap;">${echapper(g.intro)}</p>` +
           carteHtml +
           entitesHtml +

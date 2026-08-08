@@ -4025,36 +4025,48 @@ const FACTIONS = [
     // silencieux côté rendreFactions(), pas d'icône cassée). D'autres
     // factions pourront porter leur propre blason de la même façon.
     blason: "assets/blasons/blason_liberra.png",
+    update:
+      "LA FIÈVRE DU GRENIER — niveau 1 sur 5\n\nDepuis que les attaques de caravanes sont devenues publiques, Libris ne manque de rien : elle a peur de manquer, et c'est pire. On achète double, on stocke, on cache. Les prix montent parce que le stock disparaît des étals, et le stock disparaît parce que les prix montent. Il y a encore assez de grain dans la ville pour trois mois — personne n'y croit.\n\nDes voisins se surveillent mutuellement les réserves. Des altercations éclatent pour une place dans une file. La Garde Citoyenne, déjà en sous-effectif, court d'un quartier à l'autre sans arriver à temps nulle part.\n\nÉchelle : 0 rien d'anormal · 1 la ville stocke (actuel) · 2 un commerçant refuse ouvertement de servir un non-humain · 3 une rixe fait un blessé grave · 4 le Tissage se barricade et le Comptoir suspend ses livraisons au quartier · 5 l'émeute part seule, il n'y a plus personne à convaincre.\n\nLe compteur monte d'un cran à chaque incident public non résolu, et descend d'un cran quand les personnages règlent visiblement quelque chose.",
     intro:
       "Contrairement à l'Empire, la République ne repose pas sur une noblesse mais sur une Assemblée de citoyens divisée en cinq blocs politiques, reflétant fidèlement ses fractures internes déjà connues : marchands, idéalistes, militaires, communautés non-humaines — auxquelles s'ajoute un cinquième bloc né du ressentiment, les Fils de Libris.\n\nDevise inscrite au fronton de l'Assemblée fondatrice : « La liberté ne s'hérite pas, elle se gagne. » Rarement brandi avec fierté unanime — chaque bloc préfère son propre insigne — le sceau d'État n'apparaît que sur les actes officiels, les frontières et la monnaie.",
     entites: [
       {
         nom: "Le Comptoir — bloc marchand",
         devise: "Le fleuve ne choisit pas ses passagers.",
+        update:
+          "Draeven négocie en secret avec les Fils de Libris. Ce que Dessalles lui offre est concret : un Cercle des Peuples affaibli, c'est moins de contraintes réglementaires sur les guildes, et le Tribun promet de lâcher sur la fiscalité portuaire en échange de voix.\n\nCe qui la retient l'est tout autant. Le Quartier du Tissage travaille pour le Comptoir — artisans, tisserands, fournisseurs. Se mettre à dos le Cercle, c'est perdre de l'argent tout de suite pour en gagner peut-être plus tard. Draeven ne craint pas d'être immorale ; elle craint que ça se sache.\n\nSur les routes, les convois du bloc sont attaqués chaque semaine. Maître Bastien Orfeuil commence à parler de convois armés à ses frais, ce qui ne plaît ni à la Garde Citoyenne ni au Comptoir lui-même.",
         description:
           "Figure de proue : Consule Ilsabet Draeven, ancienne capitaine de commerce fluvial, pragmatique jusqu'à l'os.\nInsigne : écharpe bleu-marine, sceau d'une balance posée sur une vague. Contrôle les routes commerciales de la Lisdane et les ports, finance une bonne partie du budget de l'Assemblée par les taxes portuaires.\nFracture/hook : des guildes affiliées au Comptoir opèrent en sous-main jusque dans les provinces frontalières — le complot de guilde du Scénario 0 (Maître Aurèle Ferrand, le médaillon) est une ramification directe de ce bloc. Draeven ignore-t-elle vraiment ce que font ses guildes les plus zélées, ou ferme-t-elle les yeux tant que l'or rentre ?",
       },
       {
         nom: "Le Serment de Libris — bloc idéaliste",
         devise: "Ce que nous avons juré, nous le tiendrons.",
+        update:
+          "Vasnal ne pouvait pas bloquer la refonte des sièges. Il pouvait la faire reporter, et c'est ce qu'il a obtenu : le vote a échoué de peu. Report, pas rejet — la motion reviendra, et tout le monde le sait, ce qui rend les mois suivants plus tendus et non moins.\n\nLiora Sennett compte les voix et découvre que l'idéalisme ne s'additionne pas. Aldous Kenrick sort la charte fondatrice de sa vitrine plus souvent qu'en dix ans ; il a aussi remarqué que d'anciens dossiers ont été consultés récemment, sans savoir par qui.",
         description:
           "Figure de proue : Consul Emeric Vasnal, vieillissant, l'un des derniers signataires encore vivants de la charte fondatrice.\nInsigne : écharpe blanche, sceau d'une plume sur un livre ouvert. Faible en moyens concrets, fort en légitimité morale.\nFracture/hook : en perte de vitesse face aux blocs pragmatiques ; Vasnal cherche un successeur charismatique avant que le Serment ne devienne une relique symbolique sans pouvoir réel.",
       },
       {
         nom: "La Garde Citoyenne — bloc militaire",
         devise: "La liberté se défend, elle ne se proclame pas.",
+        update:
+          "Sur le terrain, le serment tient : les officiers protègent le Tissage parce que c'est leur travail, pas parce qu'ils aiment le Tissage. Mais les effectifs sont à flux tendu et le Sergent Yannick Doria sait qui, dans la Garde, a des sympathies inquiétantes pour les Fils de Libris.\n\nCe ne sont pas des traîtres : ce sont des gardes épuisés, en sous-nombre, qui courent d'un quartier à l'autre sans jamais arriver à temps, et à qui on explique patiemment que le désordre a un visage. C'est comme ça qu'une ronde devient mince — personne n'a désobéi, on a simplement redéployé.\n\nLe vrai nœud est plus haut. Le Général-Consul Kessing garde confidentiel le dossier sur le financement solvarien des Fils de Libris, et le Lieutenant Bram Osgoode, qui l'a vu, se tait sur ordre.",
         description:
           "Figure de proue : Général-Consul Rohar Kessing, ancien officier de terrain, discipline avant tout.\nInsigne : écharpe grise, sceau d'un bouclier croisé de deux lances. Contrôle la milice et la défense des frontières orientales — poids grandissant à mesure que la pression de Solvarn et les raids venus des Failles Rouges s'intensifient.\nFracture/hook : certains officiers murmurent qu'une République sans hiérarchie forte ne survivra pas à une vraie guerre — tentation autoritaire qui inquiète le Serment de Libris.",
       },
       {
         nom: "Le Cercle des Peuples — bloc communautés non-humaines",
         devise: "Admis n'est pas égal.",
+        update:
+          "Isolé comme jamais. Sa réforme de représentation proportionnelle lui a été retournée : Dessalles a repris le principe de repondération des sièges pour en faire une motion qui découperait le Cercle lui-même. Le Serment est un allié idéologique sans moyens, le Comptoir négocie derrière son dos, la Garde a juré de protéger et n'y arrive pas. « Admis n'est pas égal » n'a jamais aussi bien porté.\n\nMira Sylvenne, qui voit venir l'escalade avant l'Assemblée comme toujours, tient désormais une liste de familles à évacuer en priorité. Le Quartier du Tissage est une île, et un seul pont la relie au reste de la ville.",
         description:
           "Figure de proue : Conseillère Ythel Aelindra (majorité sylvaine), épaulée par une minorité mordanel en exil.\nInsigne : écharpe verte, sceau d'une feuille entrelacée à une main. Représentation officielle garantie par la charte, mais poids réel disproportionnellement faible face aux sièges humains.\nFracture/hook : pousse pour une réforme de représentation proportionnelle, combattue frontalement par les Fils de Libris — point de friction central de l'Assemblée.",
       },
       {
         nom: "Les Fils de Libris — bloc suprémaciste",
         devise: "Libris pour ceux qui l'ont bâtie.",
+        update:
+          "Dessalles plaide que le poids des blocs doit suivre « qui nourrit la ville ». La formulation est habile — elle vise le Cercle des Peuples sans jamais le nommer, et dans une ville qui thésaurise, « qui nourrit la ville » est la seule question que tout le monde se pose. Le vote a échoué de peu ; le bloc reviendra dès qu'un incident lui en donnera l'occasion, et il n'a pas besoin de le provoquer, seulement de ne pas l'empêcher.\n\nLe mouvement a racheté sa taverne du Banc et l'a rebaptisée : La Racine Noire est devenue La Racine Dorée, enseigne redorée à l'occasion. Personne n'a relevé que l'or est la couleur de l'Empire dont les Fils reprennent la rhétorique de pureté — ni qu'une enseigne, ça se date.",
         description:
           "Figure de proue : Tribun Corwan Dessalles, orateur populiste, ancien petit commerçant ruiné par la concurrence des guildes du Comptoir.\nInsigne : écharpe rouge sombre, sceau d'un poing fermé sur une racine. Né du ressentiment économique et de la peur post-Silence de Valmoire — recrute chez les laissés-pour-compte du miracle marchand de la République.\nFracture/hook : ironie centrale, ce bloc reproduit, sans se l'avouer, la rhétorique de pureté de Solvarn — l'ennemi même que la Sécession voulait fuir. Certains soupçonnent, sans preuve, des financements discrets venus de l'Empire pour déstabiliser la République de l'intérieur. Un attentat ou une manifestation des Fils de Libris pourrait forcer les quatre autres blocs à une alliance de circonstance qu'ils détestent tous.",
       },
