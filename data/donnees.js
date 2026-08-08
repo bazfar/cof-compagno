@@ -2975,6 +2975,60 @@ const CHRONOLOGIE = [
     description:
       "Quatre des huit maisons font sécession et fondent les Royaumes Coalisés ; naissance de la République de Liberra. Cf. section \"La Rupture — chronique de la Grande Sécession\" pour le détail des batailles.",
   },
+  {
+    id: "raids-imperiaux-liberra",
+    periode: "Raids impériaux sur les campagnes liberranes",
+    quand: "il y a ~55 ans",
+    duree: null,
+    peuples: ["humains"],
+    description:
+      "La pression de Solvarn au nord se traduit par des incursions répétées dans l'arrière-pays de la République. Des domaines agricoles sont brûlés ou évacués ; plusieurs familles terriennes se replient sur Libris et se refondent dans le négoce sous la bannière du Comptoir — dont les Orfeuil, dont Bastien dirige aujourd'hui la troisième génération.\n\nC'est de ces jours que date le différend Orfeuil / Vaudrel : les uns soutiennent que les Vaudrel ont ouvert les portes aux impériaux pour les spolier, les autres que les Orfeuil ont chargé leurs charrettes et laissé le personnel sur place. Aucune des deux versions n'a jamais été prouvée, et les deux familles y croient.",
+  },
+  {
+    id: "essor-toile-seve",
+    periode: "L'essor de la toile de sève",
+    quand: "il y a ~45 ans",
+    duree: null,
+    peuples: ["humains", "elfes", "chaos"],
+    description:
+      "La montée de la pression du Chaos transforme une étoffe aelindra en consommable de première nécessité : la toile de sève absorbe une part de ce que le Chaos dépose, et tout ce qui le combat en réclame. L'Empire de Solvarn, qui ne peut pas être vu achetant à un elfe, achète à Libris — la toile ressort des Docks sous la marque « toile de Libris ».\n\nLe trafic explose. Les coques venues de Mornac grossissent, et les quais du bras est deviennent trop courts et trop peu profonds à marée basse.",
+  },
+  {
+    id: "digue-neuve",
+    periode: "Le vote de la Digue Neuve",
+    quand: "il y a ~42 ans",
+    duree: null,
+    peuples: ["humains"],
+    description:
+      "L'Assemblée de Libris vote une estacade de pierre qui resserre le courant dans le bras est de la Lisdane, pour l'approfondir par chasse naturelle plutôt que par dragage.\n\nUne hydrographe du Comptoir, Ysoline Marnet, dépose avant le vote un mémoire expliquant que l'ouvrage déplacera le dépôt de limon sans le supprimer. Son raisonnement demandait d'admettre que la prospérité des chantiers de Mornac coûterait quelque chose à Libris. On l'écoute poliment, et on vote.",
+  },
+  {
+    id: "envasement-bras-ouest",
+    periode: "L'Envasement du bras ouest",
+    quand: "il y a ~32 à ~42 ans",
+    duree: "une décennie",
+    peuples: ["humains"],
+    description:
+      "En amont, les chantiers navals de Mornac s'agrandissent et la vallée de la Lisdane se déboise pour leur fournir du bois : des versants nus saignent du limon à chaque crue. En aval, le seul bras privé de courant pour l'évacuer est celui que la Digue Neuve vient d'assécher.\n\nDeux décisions raisonnables, prises à deux cents lieues l'une de l'autre par des gens qui ne se sont jamais parlé. En dix ans, les quais de la Rangée B deviennent inaccessibles à marée basse, puis tout court.",
+  },
+  {
+    id: "reclassement-rangee-b",
+    periode: "Le Reclassement de la Rangée B",
+    quand: "il y a ~30 ans",
+    duree: null,
+    peuples: ["humains"],
+    description:
+      "Le Comptoir déclasse la rangée entière et rachète les parcelles au prix déclassé — techniquement une indemnisation : assez pour qu'on ne puisse pas attaquer, pas assez pour survivre. Les familles ruinées se replient sur Le Banc, la seule terre encore abordable, et qui donne sur le bras mort.\n\nLa rue dit l'Envasement, le registre dit le Reclassement. Qui emploie le second n'a jamais mis les pieds sur l'île.",
+  },
+  {
+    id: "fievre-du-grenier",
+    periode: "La Fièvre du Grenier",
+    quand: "aujourd'hui",
+    duree: null,
+    peuples: ["humains", "elfes", "chaos"],
+    description:
+      "Les attaques de caravanes deviennent publiques. Libris ne manque de rien mais a peur de manquer, et c'est pire : on achète double, on stocke, on cache. La Garde Citoyenne, déjà en sous-effectif, court d'un quartier à l'autre sans arriver à temps nulle part, et les Fils de Libris plaident une refonte des sièges fondée sur « qui nourrit la ville ».\n\nCe que la ville ignore : les convois ne sont pas pillés mais éventrés. Ceux qui les attaquent ne cherchent pas le butin, ils fabriquent la rareté.",
+  },
 ];
 
 /* ============================================================
