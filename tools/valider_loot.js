@@ -374,7 +374,17 @@ const PAR_TYPE = {
   armure: ["valeurCA", "malusDEX", "categorie", "reductionDegats", "reductionDegatsCreature"],
   bouclier: ["bonusDEF", "categorieBouclier"],
   accessoire: ["slot", "bonusCarac", "bonusCompetences", "bonusInitiative", "bonusDEF", "bonusAttaqueMagique", "bonusAttaqueDistance", "bonusDegatsMagiques", "bonusDegatsMainsNues", "bonusPvMaxDe", "grimoireClasses"],
-  consommable: ["quantite", "sortAppris", "dureeEtat", "formuleDot", "jetable", "corruptionCombatRetiree"],
+  // vivre (Cuisine, prompt_cuisine_recalage_gastronomie.md) : champ neutre
+  // aujourd'hui, marque les ingrédients/rations de bouche pour un futur
+  // regroupement UI au marché/inventaire — jamais lu par le moteur.
+  // effetRepos (Cuisine + Repos, mêmes prompts) : contrat unique entre le
+  // module Cuisine et le module Repos — { des:["XdY",...], maximise?,
+  // intoxication? } — cf. js/cuisine.js/js/repos.js en tête de fichier.
+  // effetDeclaratif (Cuisine) : texte libre affiché sur la carte de recette
+  // et recopié sur le plat produit, jamais interprété par le moteur — MJ
+  // arbitre à la table (cf. data/cuisine.js, les 3 plats désignés par le
+  // document de référence gastronomique).
+  consommable: ["quantite", "sortAppris", "dureeEtat", "formuleDot", "jetable", "corruptionCombatRetiree", "vivre", "effetRepos", "effetDeclaratif"],
 };
 // Champs qui, s'ils sont présents, doivent être de type number — "degats"/
 // "degatsAuMoinsRare"/"bonusPvMaxDe"/"bonusDegatsCreature" en sont

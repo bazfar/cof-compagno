@@ -47,6 +47,8 @@ const ETATS = {
     description: "-2 DEF uniquement (ne touche pas le déplacement — voir Ralentie)." },
   fatiguee: { nom: "Fatiguée", categorie: "malus",
     description: "-2 à tous les tests, jusqu'au prochain repos long." },
+  intoxication: { nom: "Intoxication", categorie: "malus",
+    description: "-2 à tous les tests, jusqu'au prochain repos long (plat de désastre au dernier repos long, cf. Atelier > Cuisine)." },
   hallucinee: { nom: "Halluciné", categorie: "malus",
     description: "-2 Perception et -2 Volonté tant que l'effet dure." },
   maudite: { nom: "Maudite", categorie: "dot",

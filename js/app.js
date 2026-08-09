@@ -92,11 +92,19 @@ const App = (() => {
   let alchimieType = null;      // "soin" | "utilitaires" | "poisons"
   let alchimieFiliereId = null; // "seve" | "flambeau" (si alchimieType === "soin")
   let alchimieFamilleId = null; // "enduit" | "dard" | "piege" (si alchimieType === "poisons")
-  // Compteur de tentatives/jour partagé enchantement + alchimie (clé composite
-  // "categorie:sousId:palierOuRecetteId", ex. "enchantement:generique:3",
-  // "alchimie:soin_seve:2", "alchimie:util:antidote") — un seul bouton MJ
-  // "Nouveau jour" réinitialise les deux systèmes d'un coup.
+  // Compteur de tentatives/jour partagé enchantement + alchimie + cuisine (clé
+  // composite "categorie:sousId:palierOuRecetteId", ex.
+  // "enchantement:generique:3", "alchimie:soin_seve:2", "alchimie:util:antidote",
+  // "cuisine:<recetteId>" cf. js/cuisine.js) — un seul bouton MJ "Nouveau
+  // jour" réinitialise les trois systèmes d'un coup.
   const STORAGE_ATELIER_TENTATIVES = "atelier:tentatives";
+  // Extrait de l'ancien handler inline du bouton "Nouveau jour" (cf. plus
+  // bas) pour que Repos.reposLong (js/repos.js) puisse appeler EXACTEMENT
+  // la même remise à zéro — "le repos long est le nouveau jour" (cf.
+  // prompt_repos_cuisine_metiers.md) sans dupliquer la logique.
+  function reinitialiserTentativesAtelier() {
+    SyncStore.set(STORAGE_ATELIER_TENTATIVES, {});
+  }
   // Chance d'équipe (don Chanceux, cf. data/dons.js) : pool PARTAGÉ, visible et
   // modifiable par tout le monde (contrairement à la Chance personnelle, propre
   // à chaque perso ayant le don, cf. p.chancePersonnelle dans htmlBlocChance) —
@@ -4349,6 +4357,7 @@ const App = (() => {
     initSousOnglets("sous-onglets-atelier", {
       enchantement: "sous-panneau-atelier-enchantement",
       alchimie: "sous-panneau-atelier-alchimie",
+      cuisine: "sous-panneau-atelier-cuisine",
     });
     const sel = document.getElementById("select-atelier-perso");
     if (!sel) return;
@@ -4359,6 +4368,7 @@ const App = (() => {
       const vide = `<div class="carte"><p class="vide">Aucun personnage. Crée-en un dans l'onglet « Création ».</p></div>`;
       document.getElementById("zone-atelier").innerHTML = vide;
       document.getElementById("zone-atelier-alchimie").innerHTML = "";
+      document.getElementById("zone-atelier-cuisine").innerHTML = "";
       return;
     }
     sel.innerHTML = ids.map((id) => `<option value="${id}">${echapper(persos[id].nom)}</option>`).join("");
@@ -4370,9 +4380,11 @@ const App = (() => {
       alchimieType = null; alchimieFiliereId = null; alchimieFamilleId = null;
       _rendreAtelierItems();
       _rendreAlchimieType();
+      if (typeof Cuisine !== "undefined") Cuisine.rendreZoneCuisine(atelierPersoId);
     };
     _rendreAtelierItems();
     _rendreAlchimieType();
+    if (typeof Cuisine !== "undefined") Cuisine.rendreZoneCuisine(atelierPersoId);
   }
 
   /* ---------- Sous-onglet Enchantement ---------- */
@@ -10003,30 +10015,32 @@ const App = (() => {
     });
 
     // Atelier — bouton MJ "Nouveau jour" : remet à zéro les tentatives
-    // d'enchantement ET d'alchimie de tout le monde d'un seul coup (clé
-    // SyncStore partagée, cf. STORAGE_ATELIER_TENTATIVES) — data-role="mj"
-    // masque déjà le bouton côté joueur, garde de rôle ici en défense
-    // supplémentaire.
+    // d'enchantement, d'alchimie ET de cuisine de tout le monde d'un seul
+    // coup (clé SyncStore partagée, cf. STORAGE_ATELIER_TENTATIVES) —
+    // data-role="mj" masque déjà le bouton côté joueur, garde de rôle ici
+    // en défense supplémentaire. Même fonction que Repos.reposLong appelle
+    // ("le repos long est le nouveau jour") — cf. reinitialiserTentativesAtelier.
     const btnNouveauJourAtelier = document.getElementById("btn-atelier-nouveau-jour");
     if (btnNouveauJourAtelier) {
       btnNouveauJourAtelier.onclick = () => {
         if (role !== "mj") return;
-        if (!confirm("Réinitialiser les tentatives d'enchantement et d'alchimie de tous les joueurs pour aujourd'hui ?")) return;
-        SyncStore.set(STORAGE_ATELIER_TENTATIVES, {});
+        if (!confirm("Réinitialiser les tentatives d'enchantement, d'alchimie et de cuisine de tous les joueurs pour aujourd'hui ?")) return;
+        reinitialiserTentativesAtelier();
         toast("Nouveau jour : tentatives d'atelier réinitialisées.");
         rendrePanneauAtelier();
       };
     }
     // Rafraîchit les tentatives/paliers affichés dès qu'un autre client (MJ
-    // "Nouveau jour", ou un autre joueur qui tente un enchantement/brassage)
-    // modifie le compteur partagé — les deux sous-onglets sont maintenus à
-    // jour en continu (cf. rendrePanneauAtelier), seule la visibilité CSS
-    // distingue lequel est affiché.
+    // "Nouveau jour", Repos.reposLong, ou un autre joueur qui tente un
+    // enchantement/brassage/plat) modifie le compteur partagé — les trois
+    // sous-onglets sont maintenus à jour en continu (cf. rendrePanneauAtelier),
+    // seule la visibilité CSS distingue lequel est affiché.
     SyncStore.subscribe(STORAGE_ATELIER_TENTATIVES, () => {
       const panneauAtelier = document.getElementById("panneau-atelier");
       if (panneauAtelier && panneauAtelier.classList.contains("actif")) {
         _rendreAtelierPaliers();
         _rendreAlchimieDetail();
+        if (typeof Cuisine !== "undefined" && atelierPersoId) Cuisine.rendreZoneCuisine(atelierPersoId);
       }
     });
 
@@ -12097,5 +12111,9 @@ const App = (() => {
   // boutons de jet. Getters en LECTURE SEULE — joueurId reste privé et ne
   // doit être réécrit que par enregistrerJoueurCourant (fusion d'identité
   // par prénom).
-  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire, ajusterPv, proposerAttaqueOpportunite, autoriserPreparationGrimoire, ajouterAInventaire, obtenirJoueurId: () => joueurId, obtenirJoueurNom: () => joueurNom };
+  // — reinitialiserTentativesAtelier est en plus exposée pour js/repos.js
+  // (Repos.reposLong appelle EXACTEMENT la même remise à zéro que le bouton
+  // MJ "🌅 Nouveau jour" — "le repos long est le nouveau jour", cf. son
+  // commentaire en tête de fichier).
+  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire, ajusterPv, proposerAttaqueOpportunite, autoriserPreparationGrimoire, ajouterAInventaire, obtenirJoueurId: () => joueurId, obtenirJoueurNom: () => joueurNom, reinitialiserTentativesAtelier };
 })();
