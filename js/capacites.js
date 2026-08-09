@@ -1714,6 +1714,10 @@ const Capacites = (() => {
       usage.appliquer && usage.appliquer();
       if (coutPPReel) {
         p.ppActuel = Math.max(0, (p.ppActuel || 0) - coutPPReel);
+        // Remous (accord explicite de Thomas, 09/08/2026, cf.
+        // prompt_remous_ui.md §3) : alimente la jauge de Remous du lieu
+        // avec le coût PP réellement décompté.
+        if (typeof Remous !== "undefined") Remous.ajouter(p, coutPPReel);
         messages.push(`PP -${coutPPReel} (${p.ppActuel} restants).`);
       }
       App.sauverPersos(persos);
@@ -2475,6 +2479,10 @@ const Capacites = (() => {
       messages.push(`Don corrompu : ${coutCS} CS payés à la place des PP (${p.corruptionCombat} CS restants).`);
     } else if (coutPPReel) {
       p.ppActuel = (p.ppActuel || 0) - coutPPReel;
+      // Remous (accord explicite de Thomas, 09/08/2026, cf.
+      // prompt_remous_ui.md §3) : alimente la jauge de Remous du lieu
+      // avec le coût PP réellement décompté.
+      if (typeof Remous !== "undefined") Remous.ajouter(p, coutPPReel);
       App.ajouterHisto(`${libelle} — PP`, p.ppActuel, false, false, `-${coutPPReel} PP (${p.nom}, ${p.ppActuel} restants)`, { sansOverlay: true });
       messages.push(`PP -${coutPPReel} (${p.ppActuel} restants).`);
     }

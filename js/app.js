@@ -1612,7 +1612,15 @@ const App = (() => {
     // re-rendu en temps réel car cette fonction est rappelée à chaque
     // Combat.onChange (cf. init()).
     const zoneOrdreJoueur = document.getElementById("battlemap-zone-ordre-initiative-joueur");
-    if (zoneOrdreJoueur) zoneOrdreJoueur.innerHTML = _htmlOrdreInitiativeLecture(id);
+    if (zoneOrdreJoueur) {
+      zoneOrdreJoueur.innerHTML = _htmlOrdreInitiativeLecture(id);
+      // Jauge de Remous (lecture, sans contrôles MJ) sous l'ordre
+      // d'initiative joueur — cf. Remous.rendreJauge, js/remous.js. No-op
+      // si le combat n'est pas actif (le conteneur n'existe alors pas
+      // dans le HTML rendu ci-dessus) : la jauge continue de compter en
+      // arrière-plan dans SyncStore, elle n'a juste rien à afficher ici.
+      if (typeof Remous !== "undefined") Remous.rendreJauge("remous-jauge-joueur");
+    }
     const persos = chargerPersos();
     const p = id && persos[id];
     if (!p) {
@@ -10277,6 +10285,20 @@ const App = (() => {
     SyncStore.subscribe("meteo:courante", _rafraichirMeteo);
     SyncStore.subscribe("meteo:porteciel", _rafraichirMeteo);
     SyncStore.subscribeListe("meteo:journal", _rafraichirMeteo, 20);
+
+    // Remous : contrairement à la météo, pas de panneau dédié — la jauge
+    // vit sous l'ordre d'initiative, dans jusqu'à trois conteneurs
+    // possibles selon l'onglet ouvert (Table de combat, colonne MJ de la
+    // battlemap, colonne joueur). Remous.rendreJauge no-op silencieusement
+    // si le conteneur visé n'existe pas dans le DOM courant, donc appeler
+    // les trois sans condition est sûr et évite de dupliquer la logique de
+    // rendreOrdreInitiative/_htmlOrdreInitiativeLecture ici.
+    SyncStore.subscribe("remous:etat", () => {
+      if (typeof Remous === "undefined") return;
+      Remous.rendreJauge("zone-ordre-initiative-remous");
+      Remous.rendreJauge("battlemap-zone-ordre-initiative-remous");
+      Remous.rendreJauge("remous-jauge-joueur");
+    });
   }
 
   /* ============================================================
@@ -10712,7 +10734,8 @@ const App = (() => {
       <div class="initiative-bandeau">
         ${etat.ordre.map((e, idx) => _ligneInitiativeHtml(e, idx === etat.indexActuel)).join("")}
       </div>
-    </div>`;
+    </div>
+    <div id="remous-jauge-joueur"></div>`;
   }
 
   // targetId : conteneur à peupler — l'onglet dédié "Table de combat"
@@ -10762,7 +10785,16 @@ const App = (() => {
       <div class="initiative-bandeau">
         ${etatCombat.ordre.map((e, idx) => _ligneInitiativeHtml(e, idx === etatCombat.indexActuel)).join("")}
       </div>
-    </div>`;
+    </div>
+    <div id="${targetId}-remous"></div>`;
+
+    // Jauge de Remous sous l'ordre d'initiative (cf. Remous.rendreJauge,
+    // js/remous.js) — id dérivé de targetId : plusieurs instances de
+    // rendreOrdreInitiative peuvent coexister dans le DOM (onglet Table de
+    // combat masqué en CSS + colonne MJ de la battlemap), même raison que
+    // les boutons ci-dessous ciblés via zone.querySelector plutôt qu'un id
+    // global.
+    if (typeof Remous !== "undefined") Remous.rendreJauge(`${targetId}-remous`);
 
     zone.querySelector(".btn-tour-suivant").onclick = () => {
       if (role !== "mj") return;
