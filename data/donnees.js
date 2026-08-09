@@ -3440,6 +3440,83 @@ const PNJ_CLES = [
     ],
   },
   {
+    id: "ilsabet-draeven",
+    nom: "Consule Ilsabet Draeven",
+    titre: "Figure de proue du Comptoir",
+    faction: "Comptoir",
+    resume: "Ancienne capitaine de commerce fluvial, sans famille derrière elle, montée par pure fiabilité.",
+    description:
+      "Aucune grande maison ne l'a portée : une capitaine ne vient pas d'une grande maison. Elle est montée parce qu'elle était celle sur qui on pouvait compter pour livrer une cargaison dans une mauvaise saison, et son autorité au Comptoir tient encore entièrement là-dessus. Elle n'est pas aimée — elle est fiable, ce qui est un pouvoir bien plus fragile qu'il n'y paraît.\n\nElle a une soixantaine d'années. Elle avait vingt ans au vote de la Digue Neuve, et elle a navigué sur ce fleuve pendant qu'il mourait : elle a vu le bras ouest se refermer sous sa propre quille, année après année. Sa première commande a été rendue possible par le bras est approfondi.\n\nElle ne parle jamais en principes. Quand on l'attaque sur la morale, elle demande combien ça coûte — et si on lui répond par un montant sérieux, elle écoute vraiment.",
+    accroches: [
+      "Ce qu'elle veut n'est pas l'or, c'est la continuité : que le Comptoir existe encore dans trente ans. Toute trahison se mesure à cette aune, et rien d'autre.",
+      "MJ — son pragmatisme est une blessure, pas un tempérament. Jeune, elle a vu une hydrographe avoir raison et être écartée poliment ; elle en a conclu qu'avoir raison ne vaut rien sans levier, et elle a passé quarante ans à acquérir des leviers.",
+      "MJ — elle ne craint pas d'être immorale, elle craint d'être vue. Toute sa trajectoire dépend d'une seule variable : ce que les personnages rendent public.",
+      "MJ — le mémoire d'Ysoline Marnet est son point de bascule. Elle est la seule dirigeante de Libris capable de lire un mémoire hydrographique et de comprendre en trois minutes ce que la Digue a fait. Ce n'est pas une accusation, c'est une démonstration — et sa carrière est née de cette décision-là.",
+    ],
+  },
+  {
+    id: "emeric-vasnal",
+    nom: "Consul Emeric Vasnal",
+    titre: "Figure de proue du Serment de Libris",
+    faction: "Serment de Libris",
+    resume: "Près de quatre-vingt-dix ans, signataire de l'Acte de Représentation — celui-là même qu'on démantèle devant lui.",
+    description:
+      "Il n'a pas signé la charte fondatrice : elle a cent soixante-dix ans et il n'en a pas quatre-vingt-dix. Il a signé sa dernière grande révision, l'Acte de Représentation, il y a une soixantaine d'années — le texte qui a garanti au Cercle des Peuples ses sièges à l'Assemblée.\n\nIl n'était pas idéaliste à l'époque. Il était greffier, procédurier, et il a rédigé cette garantie parce qu'elle était juridiquement nécessaire pour que le reste tienne. Il n'a compris que bien plus tard ce qu'il avait fabriqué, et il a passé le reste de sa vie à s'en montrer digne rétrospectivement.\n\nAujourd'hui il préside des débats devenus hostiles, il n'a pas pu bloquer la refonte des sièges, il l'a fait reporter — et c'est la dernière chose qu'il savait encore faire.",
+    accroches: [
+      "Ce que Dessalles veut démanteler, c'est son œuvre de jeunesse. Personne à l'Assemblée ne le formule à voix haute, et tout le monde le sait.",
+      "Il cherche un successeur charismatique avant que le Serment ne devienne une relique. Liora Sennett compte les voix et découvre que l'idéalisme ne s'additionne pas.",
+      "MJ — ce qu'il veut n'est pas d'être retenu : c'est que ça lui survive. Il est passé de la première envie.",
+      "MJ — il ignore encore que d'anciens dossiers ont été consultés aux archives dont Aldous Kenrick a la garde. Le lui apprendre lui donne exactement ce qui lui manque : un motif de brûler en une fois sa dernière réserve de légitimité, sur un seul vote, en sachant que ça le finira.",
+      "MJ — sa peur intime est de n'avoir jamais été qu'un homme chanceux qui a signé au bon moment.",
+    ],
+  },
+  {
+    id: "rohar-kessing",
+    nom: "Général-Consul Rohar Kessing",
+    titre: "Figure de proue de la Garde Citoyenne",
+    faction: "Garde Citoyenne",
+    resume: "Ancien officier de terrain pour qui la discipline n'est pas une valeur mais une structure de survie.",
+    description:
+      "Il parle en effectifs et en délais, jamais en principes. Quand on l'attaque sur la morale, il répond par un nombre de patrouilles — et ce n'est pas une esquive : c'est sincèrement sa façon de penser le problème.\n\nCe qu'il demande est littéral et ne lui est jamais accordé : des hommes. La Garde monte en puissance à mesure que la pression de Solvarn et les raids des Failles Rouges s'intensifient, et elle est en sous-effectif permanent dans la ville qu'elle est censée tenir. Certains de ses officiers murmurent qu'une République sans hiérarchie forte ne survivra pas à une vraie guerre.",
+    accroches: [
+      "MJ — d'où vient la discipline : il a obéi une fois à un ordre parfaitement correct et tenu sa position pendant que le hameau de Vaugrin brûlait derrière lui. Il pense encore avoir eu raison, parce que l'alternative est d'avoir choisi la mauvaise chose, et il ne peut pas porter ça.",
+      "MJ — c'est exactement pourquoi le dossier sur le financement solvarien des Fils de Libris reste dans son tiroir. Se taire sur ordre est la dernière structure qui lui reste.",
+      "MJ — il sait qu'une preuve unirait instantanément les quatre autres blocs contre les Fils. Il sait aussi que ça mettrait vingt mille personnes dans la rue d'une ville où il aligne six hommes par distribution. Il attend d'avoir les effectifs ; il ne les aura jamais, et une part de lui l'a déjà compris.",
+      "MJ — sa bascule autoritaire, si elle vient, sera tragique et non sinistre : il y viendrait pour que plus personne n'ait à choisir entre un ordre et un village.",
+    ],
+  },
+  {
+    id: "ythel-aelindra",
+    nom: "Conseillère Ythel Aelindra",
+    titre: "Figure de proue du Cercle des Peuples",
+    faction: "Cercle des Peuples",
+    resume: "Elfe sylvaine envoyée en délégation à Libris, restée, devenue citoyenne — et observée depuis chez elle.",
+    description:
+      "Elle n'est pas de Libris. Les Aelindra l'ont envoyée porter leur doctrine — réparer l'Arbre en tissant des liens avec toutes les races — et elle est restée. Sa carrière entière est un pari public sur la promesse liberrane, fait devant ceux qui l'ont envoyée et qui n'ont jamais cessé de regarder.\n\nSi la République lui donne tort, elle ne perd pas un siège : elle démontre qu'une doctrine était fausse, et donne raison à Aetharion qui prêche l'isolement depuis toujours.\n\nElle porte l'écharpe verte et la feuille entrelacée à une main, et elle répète que « admis n'est pas égal » depuis assez longtemps pour que la formule ait cessé de faire effet.",
+    accroches: [
+      "Sa réforme de représentation proportionnelle était son grand œuvre. Dessalles vient de la retourner contre elle : puisqu'on repondère les sièges, dit-il, repondérons selon qui nourrit la ville.",
+      "MJ — elle a déjà perdu l'argument une fois, en privé. Elle a élevé un demi-elfe, Naeren, qui a quitté Libris à cause des Fils de Libris. Elle n'en parle à personne.",
+      "MJ — elle ne prendra jamais la branche de la milice de quartier : ce serait concéder que la coexistence a besoin de murs, c'est-à-dire donner raison à Aetharion et à Dessalles dans la même phrase.",
+      "MJ — son angle mort : elle ignore que le Quartier du Tissage est la seule communauté de Libris sur laquelle le Roi des Mendiants n'a aucune prise, donc la seule qu'il ait intérêt à voir brisée. Un quartier assiégé finit toujours par avoir besoin de quelqu'un qui sait faire entrer des choses.",
+    ],
+  },
+  {
+    id: "corwan-dessalles",
+    nom: "Tribun Corwan Dessalles",
+    titre: "Figure de proue des Fils de Libris",
+    faction: "Fils de Libris",
+    resume: "Orateur populiste, et avant cela facteur en grains de la Rangée B ruiné par le Reclassement.",
+    description:
+      "Il avait vingt-cinq ans quand le Comptoir a déclassé la Rangée B et racheté les parcelles au prix déclassé. Il a passé les dix années suivantes à essayer la voie légale — pétitions, avocats, audiences — et il a perdu parce que les papiers étaient en règle. On l'avait indemnisé. Techniquement.\n\nIl n'est pas un cynique venu de l'extérieur exploiter une misère : il est né dedans, et il est aujourd'hui exactement ce que Denner Ashcombe sera dans vingt ans si personne n'intervient.\n\nÉcharpe rouge sombre, poing fermé sur une racine. Il recrute chez les laissés-pour-compte du miracle marchand, et il tient ses réunions à la Racine Dorée, sur Le Banc.",
+    accroches: [
+      "MJ — le moment exact où il a choisi sa cible : en sortant de sa dernière audience perdue, quelqu'un dans le couloir a dit quelque chose sur le Tissage, et il a découvert que ça faisait taire une pièce. Il n'a pas choisi par haine — il a choisi la première phrase qu'il ait prononcée qui ait été écoutée.",
+      "MJ — ce qu'il veut, vingt-cinq ans plus tard, n'est plus l'argent : c'est qu'on l'entende. Sa peur est d'avoir toujours été destiné à être ignoré, et que la foule soit la seule chose qui ait jamais changé ça.",
+      "MJ — il sait parfaitement qui l'a ruiné. Il désigne le Tissage parce que le Comptoir peut riposter et que le Tissage ne peut pas.",
+      "MJ — l'argent solvarien : il soupçonne, et il ne demande pas. C'est un homme qui a appris à ne pas poser les questions dont la réponse coûterait cher.",
+      "MJ — deux choses qu'il ignore : que le Roi des Mendiants possède déjà les pauvres dont il prétend parler, et que sa taverne s'appelait La Racine Noire avant d'être rachetée et redorée. L'or est la couleur de l'Empire dont il reprend la rhétorique de pureté. C'est écrit sur sa porte.",
+    ],
+  },
+  {
     id: "bastien-orfeuil",
     nom: "Maître Bastien Orfeuil",
     titre: "Négociant du Grand Marché",
