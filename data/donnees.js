@@ -95,6 +95,11 @@ const ARCHETYPE_CLASSE = {
 };
 /* Niveaux requis pour gagner +1 au bonus d'attaque selon l'archétype. */
 const DIVISEUR_ATTAQUE = { martial: 2, hybride: 2, lanceur: 3 };
+/* Poids du modificateur de caractéristique magique dans calculerPPMax()
+   (js/personnage.js) — changement d'équilibrage : les hybrides ne
+   comptaient jusqu'ici que le mod une seule fois. Les martiaux n'ont pas
+   d'entrée CARAC_MAGIE et ne consultent jamais cette table. */
+const MULTIPLICATEUR_MOD_PP = { hybride: 1, lanceur: 2 };
 
 /* Famille de caractéristique associée à chaque classe, utilisée pour le coût
    d'ouverture des voies hors profil lors d'une montée de niveau. */

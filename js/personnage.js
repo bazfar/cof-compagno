@@ -214,6 +214,14 @@ class Personnage extends Entite {
     // de constructeur plutôt qu'à côté de pvActuel (posé par super() tout en
     // haut, avant que ces champs n'existent encore sur `this`).
     this.ppActuel = d.ppActuel !== undefined ? d.ppActuel : this.calculerPPMax();
+    // Écrêtage au chargement (cf. "Réserve de PP réduite pour les
+    // hybrides") : une fiche existante peut avoir ppActuel au-dessus du
+    // nouveau maximum d'un hybride (mod ×1 au lieu de ×2). On écrête
+    // seulement — jamais de repos forcé ni de remise à plein, un
+    // personnage en cours de journée ne doit pas être soigné par cette
+    // passe.
+    const _ppMaxApresEcretage = this.calculerPPMax();
+    if (_ppMaxApresEcretage !== null && this.ppActuel > _ppMaxApresEcretage) this.ppActuel = _ppMaxApresEcretage;
     // Sorts appris hors Voies (cf. reference_sorts_connus.md) : tableau d'id
     // de SORTS_MAGICIEN (ou liste équivalente future Nécro/Enchanteur),
     // distinct de capacites[] (réservé aux rangs de Voie classiques).
@@ -542,10 +550,27 @@ class Personnage extends Entite {
   /* ----- Points de Pouvoir (PP, cf. reference_systeme_magie_pp.md) ----- */
   // PP max : null si la classe n'a pas de CARAC_MAGIE (même garde-fou que
   // bonusAttaque("magique")) — un Guerrier n'a pas de pool de PP.
+  // Réserve de PP réduite pour les hybrides (changement d'équilibrage) :
+  // un lanceur pur compte le mod ×2, un hybride (prêtre/druide/barde/
+  // moine) ne le compte qu'une fois — cf. MULTIPLICATEUR_MOD_PP
+  // (data/donnees.js, à côté de DIVISEUR_ATTAQUE, même patron). Repli
+  // "lanceur" (×2, comportement historique) si ARCHETYPE_CLASSE ou
+  // MULTIPLICATEUR_MOD_PP est indisponible — même principe que
+  // bonusProgression() ci-dessous (l. ~1998).
+  //
+  // Interaction avec 'ascension_chaotique' (cf. _multiplicateurAscension
+  // ci-dessus, l. ~266-275) : ce multiplicateur passe par mod(), qu'on
+  // pondère maintenant ×1 au lieu de ×2 pour les hybrides. Conséquence
+  // mécanique non neutre, à ne pas découvrir en jeu : le gain de PP que
+  // procure Ascension chaotique est donc, lui aussi, divisé par deux pour
+  // un hybride par rapport à un lanceur pur — cohérent avec la règle
+  // ci-dessus, mais distinct d'elle.
   calculerPPMax() {
     const carac = CARAC_MAGIE[this.classe];
     if (!carac) return null;
-    return 4 + (this.niveau || 1) * 2 + this.mod(carac) * 2 + this.bonusPPCapacites();
+    const arch = (typeof ARCHETYPE_CLASSE !== "undefined" && ARCHETYPE_CLASSE[this.classe]) || "lanceur";
+    const multMod = (typeof MULTIPLICATEUR_MOD_PP !== "undefined" && MULTIPLICATEUR_MOD_PP[arch]) || 2;
+    return 4 + (this.niveau || 1) * 2 + this.mod(carac) * multMod + this.bonusPPCapacites();
   }
   // Magicien — Voie de la magie universitaire, rangs 1/2 "Réserve étendue
   // I/II" (passives) : +4 PP max par rang acquis (cumulables, +8 max aux
