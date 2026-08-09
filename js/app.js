@@ -362,8 +362,23 @@ const App = (() => {
     // session (nouveaux persos créés, etc.), pas seulement cet appel.
     const canonique = window.DepotJoueurs.liste().find((j) => memeNom(j.nom, joueurNom));
     if (canonique && canonique.id !== joueurId) {
+      const ancienId = joueurId;
+      const ancienDoc = window.DepotJoueurs.charger(ancienId);
       joueurId = canonique.id;
       localStorage.setItem(STORAGE_JOUEUR_ID, joueurId);
+      // Supprime l'ancien document devenu orphelin — jusqu'ici la fusion ne
+      // faisait que rediriger l'id courant, sans jamais nettoyer l'ancien,
+      // ce qui accumulait des doublons permanents dans le sélecteur
+      // Porte-Ciel (cf. js/meteo.js) à chaque changement d'appareil ("il
+      // faut harmoniser cela", retour de Thomas). Récupère la couleur de
+      // l'ancien document avant suppression si le canonique n'en a pas
+      // encore, pour ne rien perdre au passage.
+      if (ancienDoc) {
+        if (ancienDoc.couleur && !canonique.couleur) {
+          window.DepotJoueurs.sauver({ id: canonique.id, nom: joueurNom, couleur: ancienDoc.couleur }, canonique.id);
+        }
+        window.DepotJoueurs.supprimer(ancienId);
+      }
     }
     const existant = window.DepotJoueurs.charger(joueurId);
     window.DepotJoueurs.sauver({ id: joueurId, nom: joueurNom, couleur: (existant && existant.couleur) || null }, joueurId);
