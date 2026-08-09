@@ -5626,7 +5626,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Chair d'ailleurs",
-        "description": "Résistance (moitié dégâts) aux dégâts non magiques : ce démon n'est encore fait qu'en partie de la chair d'ailleurs qui compose les siens."
+        "description": "Résistance (moitié dégâts) aux dégâts non magiques : ce démon n'est encore fait qu'en partie de la chair d'ailleurs qui compose les siens. Une arme de Grisfer compte comme magique face à cette résistance."
       },
       {
         "nom": "Retour à la Mer",
@@ -5688,7 +5688,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Chair d'ailleurs",
-        "description": "Résistance (moitié dégâts) aux dégâts non magiques : ce démon n'est encore fait qu'en partie de la chair d'ailleurs qui compose les siens."
+        "description": "Résistance (moitié dégâts) aux dégâts non magiques : ce démon n'est encore fait qu'en partie de la chair d'ailleurs qui compose les siens. Une arme de Grisfer compte comme magique face à cette résistance."
       },
       {
         "nom": "Retour à la Mer",
@@ -5750,7 +5750,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Chair d'ailleurs",
-        "description": "Résistance (moitié dégâts) aux dégâts non magiques : ce démon n'est encore fait qu'en partie de la chair d'ailleurs qui compose les siens."
+        "description": "Résistance (moitié dégâts) aux dégâts non magiques : ce démon n'est encore fait qu'en partie de la chair d'ailleurs qui compose les siens. Une arme de Grisfer compte comme magique face à cette résistance."
       },
       {
         "nom": "Retour à la Mer",
@@ -5812,7 +5812,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Chair d'ailleurs",
-        "description": "Immunité aux dégâts non magiques : seule une arme ou un sort magique peut le blesser."
+        "description": "Immunité aux dégâts non magiques : seule une arme ou un sort magique peut le blesser. Une arme de Grisfer compte comme magique face à cette immunité."
       },
       {
         "nom": "Retour à la Mer",
@@ -5901,7 +5901,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Chair d'ailleurs",
-        "description": "Immunité aux dégâts non magiques : seule une arme ou un sort magique peut le blesser."
+        "description": "Immunité aux dégâts non magiques : seule une arme ou un sort magique peut le blesser. Une arme de Grisfer compte comme magique face à cette immunité."
       },
       {
         "nom": "Retour à la Mer",

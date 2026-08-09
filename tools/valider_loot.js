@@ -359,23 +359,33 @@ const COMMUN_MULTI_TYPE = ["horsMarche", "effet", "rarete", "rareteNom", "rarete
   // le repo" (Étape 4, "Mécaniser les affixes de rareté") : un objet
   // arme/armure/bouclier forgé avec ces champs (le cas courant) était rejeté
   // par la liste blanche alors qu'il tourne très bien en jeu.
-  "rariteFixe", "sansModificateurRegional"];
+  "rariteFixe", "sansModificateurRegional",
+  // materiau/materiauNom/effetMateriau (cf. js/materiaux.js, MateriauxRarete
+  // — axe Grisfer, prompt_grisfer_seve.md) : posés sur arme ET armure,
+  // même patron multi-type que rarete/rareteNom/rareteCouleur ci-dessus.
+  "materiau", "materiauNom", "effetMateriau"];
 // Champs spécifiques à chaque type.
 const PAR_TYPE = {
-  arme: ["degats", "portee", "typedegats", "enchantement", "deuxMains", "categorieArme", "maitrise", "porteeMinCases", "porteeMaxCases", "rechargement", "degatsAuMoinsRare", "bonusAttaqueMagique", "bonusDegatsMagiques"],
-  armure: ["valeurCA", "malusDEX", "categorie", "reductionDegats"],
+  // bonusDegatsCreature (Grisfer) : dé (ex. "1d6"), pas un nombre — même
+  // exception que "degats"/"degatsAuMoinsRare", cf. CHAMPS_NOMBRE_STRICT.
+  arme: ["degats", "portee", "typedegats", "enchantement", "deuxMains", "categorieArme", "maitrise", "porteeMinCases", "porteeMaxCases", "rechargement", "degatsAuMoinsRare", "bonusAttaqueMagique", "bonusDegatsMagiques", "bonusDegatsCreature"],
+  // reductionDegatsCreature (Grisfer) : bonus fixe, même patron que
+  // reductionDegats — dans CHAMPS_NOMBRE_STRICT ci-dessous.
+  armure: ["valeurCA", "malusDEX", "categorie", "reductionDegats", "reductionDegatsCreature"],
   bouclier: ["bonusDEF", "categorieBouclier"],
   accessoire: ["slot", "bonusCarac", "bonusCompetences", "bonusInitiative", "bonusDEF", "bonusAttaqueMagique", "bonusAttaqueDistance", "bonusDegatsMagiques", "bonusDegatsMainsNues", "bonusPvMaxDe", "grimoireClasses"],
   consommable: ["quantite", "sortAppris", "dureeEtat", "formuleDot", "jetable", "corruptionCombatRetiree"],
 };
 // Champs qui, s'ils sont présents, doivent être de type number — "degats"/
-// "degatsAuMoinsRare"/"bonusPvMaxDe" en sont volontairement exclus (formule
-// de dé du type "1d6"/"1d4", pas un nombre, malgré le nom).
+// "degatsAuMoinsRare"/"bonusPvMaxDe"/"bonusDegatsCreature" en sont
+// volontairement exclus (formule de dé du type "1d6"/"1d4", pas un nombre,
+// malgré le nom).
 const CHAMPS_NOMBRE_STRICT = [
   "corruptionCombatRetiree",
   "prixPo", "enchantement", "porteeMinCases", "porteeMaxCases", "rechargement",
   "valeurCA", "malusDEX", "reductionDegats", "bonusDEF", "quantite",
   "bonusInitiative", "bonusAttaqueMagique", "bonusAttaqueDistance", "bonusDegatsMagiques", "bonusDegatsMainsNues",
+  "reductionDegatsCreature",
 ];
 
 const problemesParItem = new Map(); // id (ou index si id manquant) -> [messages]
