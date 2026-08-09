@@ -87,8 +87,13 @@ function estDeNu(f) {
   return /^\d*d\d+$/.test(f);
 }
 
-const RACES_VALIDES = ["humanoïdes", "monstres", "mort-vivant", "corrompu"];
-const TIERS_VALIDES = ["basique", "veteran", "elite", "champion", "recrue", "meneur", "grand_hote"];
+const RACES_VALIDES = ["humanoïdes", "monstres", "mort-vivant", "corrompu", "demon"];
+const TIERS_VALIDES = ["basique", "veteran", "elite", "champion", "recrue", "meneur", "grand_hote",
+  // Famille demon (cf. prompt_famille_demons.md) : paliers D1-D5, pas la
+  // ladder générique basique/veteran/elite/champion — les 5 paliers montent
+  // en jeu par Escalade (drain de PP), pas par choix de fiche au moment de
+  // la rencontre.
+  "reliquat", "affame", "insatiable", "gouffre", "convive"];
 
 // ===========================================================================
 // SECTION A — data/armes_monstres.js

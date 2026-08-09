@@ -3869,10 +3869,23 @@ const BESTIAIRE = [
         "nom": "Curée",
         "description": "À la mort d'un des leurs, les cupides se ruent pour le dépouiller : +1 ATK et +1 aux dégâts au tour suivant.",
         "mecanique": {
-          "declencheur": { "evenement": "allieTombe", "portee": "famille" },
+          "declencheur": {
+            "evenement": "allieTombe",
+            "portee": "famille"
+          },
           "effets": [
-            { "type": "bonus", "cible": "attaque", "valeur": 1, "duree": "prochainTour" },
-            { "type": "bonus", "cible": "degats", "valeur": 1, "duree": "prochainTour" }
+            {
+              "type": "bonus",
+              "cible": "attaque",
+              "valeur": 1,
+              "duree": "prochainTour"
+            },
+            {
+              "type": "bonus",
+              "cible": "degats",
+              "valeur": 1,
+              "duree": "prochainTour"
+            }
           ]
         }
       }
@@ -3928,10 +3941,23 @@ const BESTIAIRE = [
         "nom": "Curée",
         "description": "À la mort d'un des leurs, les cupides se ruent pour le dépouiller : +1 ATK et +1 aux dégâts au tour suivant.",
         "mecanique": {
-          "declencheur": { "evenement": "allieTombe", "portee": "famille" },
+          "declencheur": {
+            "evenement": "allieTombe",
+            "portee": "famille"
+          },
           "effets": [
-            { "type": "bonus", "cible": "attaque", "valeur": 1, "duree": "prochainTour" },
-            { "type": "bonus", "cible": "degats", "valeur": 1, "duree": "prochainTour" }
+            {
+              "type": "bonus",
+              "cible": "attaque",
+              "valeur": 1,
+              "duree": "prochainTour"
+            },
+            {
+              "type": "bonus",
+              "cible": "degats",
+              "valeur": 1,
+              "duree": "prochainTour"
+            }
           ]
         }
       }
@@ -3982,10 +4008,23 @@ const BESTIAIRE = [
         "nom": "Curée",
         "description": "À la mort d'un des leurs, les cupides se ruent pour le dépouiller : +1 ATK et +1 aux dégâts au tour suivant.",
         "mecanique": {
-          "declencheur": { "evenement": "allieTombe", "portee": "famille" },
+          "declencheur": {
+            "evenement": "allieTombe",
+            "portee": "famille"
+          },
           "effets": [
-            { "type": "bonus", "cible": "attaque", "valeur": 1, "duree": "prochainTour" },
-            { "type": "bonus", "cible": "degats", "valeur": 1, "duree": "prochainTour" }
+            {
+              "type": "bonus",
+              "cible": "attaque",
+              "valeur": 1,
+              "duree": "prochainTour"
+            },
+            {
+              "type": "bonus",
+              "cible": "degats",
+              "valeur": 1,
+              "duree": "prochainTour"
+            }
           ]
         }
       }
@@ -4036,10 +4075,23 @@ const BESTIAIRE = [
         "nom": "Curée",
         "description": "À la mort d'un des leurs, les cupides se ruent pour le dépouiller : +1 ATK et +1 aux dégâts au tour suivant.",
         "mecanique": {
-          "declencheur": { "evenement": "allieTombe", "portee": "famille" },
+          "declencheur": {
+            "evenement": "allieTombe",
+            "portee": "famille"
+          },
           "effets": [
-            { "type": "bonus", "cible": "attaque", "valeur": 1, "duree": "prochainTour" },
-            { "type": "bonus", "cible": "degats", "valeur": 1, "duree": "prochainTour" }
+            {
+              "type": "bonus",
+              "cible": "attaque",
+              "valeur": 1,
+              "duree": "prochainTour"
+            },
+            {
+              "type": "bonus",
+              "cible": "degats",
+              "valeur": 1,
+              "duree": "prochainTour"
+            }
           ]
         }
       }
@@ -4167,10 +4219,23 @@ const BESTIAIRE = [
         "nom": "Curée",
         "description": "À la mort d'un des leurs, les cupides se ruent pour le dépouiller : +1 ATK et +1 aux dégâts au tour suivant.",
         "mecanique": {
-          "declencheur": { "evenement": "allieTombe", "portee": "famille" },
+          "declencheur": {
+            "evenement": "allieTombe",
+            "portee": "famille"
+          },
           "effets": [
-            { "type": "bonus", "cible": "attaque", "valeur": 1, "duree": "prochainTour" },
-            { "type": "bonus", "cible": "degats", "valeur": 1, "duree": "prochainTour" }
+            {
+              "type": "bonus",
+              "cible": "attaque",
+              "valeur": 1,
+              "duree": "prochainTour"
+            },
+            {
+              "type": "bonus",
+              "cible": "degats",
+              "valeur": 1,
+              "duree": "prochainTour"
+            }
           ]
         }
       }
@@ -4217,10 +4282,23 @@ const BESTIAIRE = [
         "nom": "Curée",
         "description": "À la mort d'un des leurs, les cupides se ruent pour le dépouiller : +1 ATK et +1 aux dégâts au tour suivant.",
         "mecanique": {
-          "declencheur": { "evenement": "allieTombe", "portee": "famille" },
+          "declencheur": {
+            "evenement": "allieTombe",
+            "portee": "famille"
+          },
           "effets": [
-            { "type": "bonus", "cible": "attaque", "valeur": 1, "duree": "prochainTour" },
-            { "type": "bonus", "cible": "degats", "valeur": 1, "duree": "prochainTour" }
+            {
+              "type": "bonus",
+              "cible": "attaque",
+              "valeur": 1,
+              "duree": "prochainTour"
+            },
+            {
+              "type": "bonus",
+              "cible": "degats",
+              "valeur": 1,
+              "duree": "prochainTour"
+            }
           ]
         }
       }
@@ -5507,6 +5585,343 @@ const BESTIAIRE = [
     ],
     "lore": "Les Évolutionnistes de Khazrak Dûm savent qu'il existe, dans les Failles, des vers qui ne cessent jamais de grandir. Une Mère-de-roche a percé les galeries basses de Grimgal il y a quarante ans ; on a muré le quartier plutôt que de la combattre, et les plus vieux disent qu'on l'entend encore. Ce que personne ne dit à voix haute : la graisse d'une Mère nourrirait la cité entière pendant un hiver, et c'est exactement l'argument que ressort chaque génération une faction qui veut rouvrir le mur.",
     "emoji": "🐛"
+  },
+  {
+    "id": "demon_reliquat",
+    "nom": "Reliquat",
+    "famille": "demon",
+    "tier": "reliquat",
+    "race": [
+      "demon",
+      "corrompu"
+    ],
+    "pv": 16,
+    "def": 13,
+    "init": 3,
+    "atk": 4,
+    "dangerosite": 1,
+    "boss": false,
+    "role": "escarmoucheur",
+    "taille": "petite",
+    "attaques": [
+      {
+        "nom": "Étreinte",
+        "armeId": "etreinte",
+        "bonusAttaque": 4,
+        "effetSpecial": "Morsure d'ancrage : draine aussi 2 PP à la cible touchée (2 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Traque du remueur",
+        "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+      },
+      {
+        "nom": "Morsure d'ancrage",
+        "description": "Chaque attaque réussie inflige ses dégâts et draine en plus 2 PP à la cible touchée. Contre une cible sans PP, le drain se convertit en 2 dégâts de PV supplémentaires — non-casters et casters encaissent ainsi la même charge."
+      },
+      {
+        "nom": "Escalade",
+        "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Affamé, D2 au rythme de drain actuel, soit 3 touche(s) sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
+      },
+      {
+        "nom": "Chair d'ailleurs",
+        "description": "Résistance (moitié dégâts) aux dégâts non magiques : ce démon n'est encore fait qu'en partie de la chair d'ailleurs qui compose les siens."
+      },
+      {
+        "nom": "Retour à la Mer",
+        "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé. Déjà au plancher : un Reliquat banni revient en Reliquat."
+      },
+      {
+        "nom": "Immunité à la Déchirure",
+        "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+      },
+      {
+        "nom": "Destruction définitive",
+        "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+      },
+      {
+        "nom": "À peine formé",
+        "description": "Une bavure qui tient à peine debout : +1 à ses tests d'esquive et de déplacement (bonus déjà inclus dans les statistiques ci-dessus, à moduler par le MJ en poursuite ou fuite)."
+      }
+    ],
+    "lore": "Un démon n'est pas une créature : c'est une âme figée en forme, un reste de repas laissé par l'un des trois dieux bannis qui se nourrissent dans la Mer, faute d'ancrage mortel. Le Reliquat est le tout premier stade — à peine sorti de l'eau, encore incertain de sa propre silhouette, il tient debout par réflexe plus que par volonté. Pas de biologie, pas de sang, pas de peur de la mort : juste une faim qui cherche d'où elle vient.",
+    "emoji": "🫧"
+  },
+  {
+    "id": "demon_affame",
+    "nom": "Affamé",
+    "famille": "demon",
+    "tier": "affame",
+    "race": [
+      "demon",
+      "corrompu"
+    ],
+    "pv": 28,
+    "def": 15,
+    "init": 4,
+    "atk": 6,
+    "dangerosite": 2,
+    "boss": false,
+    "role": "controleur",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Étreinte écrasante",
+        "armeId": "etreinte_ecrasante",
+        "bonusAttaque": 6,
+        "effetSpecial": "Morsure d'ancrage : draine aussi 3 PP à la cible touchée (3 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Traque du remueur",
+        "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+      },
+      {
+        "nom": "Morsure d'ancrage",
+        "description": "Chaque attaque réussie inflige ses dégâts et draine en plus 3 PP à la cible touchée. Contre une cible sans PP, le drain se convertit en 3 dégâts de PV supplémentaires — non-casters et casters encaissent ainsi la même charge."
+      },
+      {
+        "nom": "Escalade",
+        "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Insatiable, D3 au rythme de drain actuel, soit 2 touche(s) sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
+      },
+      {
+        "nom": "Chair d'ailleurs",
+        "description": "Résistance (moitié dégâts) aux dégâts non magiques : ce démon n'est encore fait qu'en partie de la chair d'ailleurs qui compose les siens."
+      },
+      {
+        "nom": "Retour à la Mer",
+        "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé."
+      },
+      {
+        "nom": "Immunité à la Déchirure",
+        "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+      },
+      {
+        "nom": "Destruction définitive",
+        "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+      },
+      {
+        "nom": "Agrippement",
+        "description": "Une cible touchée est agrippée (DEF -2, ne peut s'éloigner sans test FOR ou DEX diff. 12) : l'Affamé reste au contact de ce qu'il draine plutôt que de le laisser filer."
+      }
+    ],
+    "lore": "Un démon est un reste de repas — ce que laissent les trois dieux bannis quand ils se nourrissent d'âmes dans la Mer. L'Affamé a déjà appris à retenir ce qu'il attrape : il ne relâche jamais une prise tant qu'il y a encore quelque chose à en tirer. Ce n'est pas de la cruauté, c'est de la faim organisée.",
+    "emoji": "🌀"
+  },
+  {
+    "id": "demon_insatiable",
+    "nom": "Insatiable",
+    "famille": "demon",
+    "tier": "insatiable",
+    "race": [
+      "demon",
+      "corrompu"
+    ],
+    "pv": 45,
+    "def": 16,
+    "init": 5,
+    "atk": 8,
+    "dangerosite": 3,
+    "boss": false,
+    "role": "controleur",
+    "taille": "moyenne",
+    "attaques": [
+      {
+        "nom": "Griffes dévastatrices",
+        "armeId": "griffes_devastatrices",
+        "bonusAttaque": 8,
+        "effetSpecial": "Morsure d'ancrage : draine aussi 4 PP à la cible touchée (4 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Traque du remueur",
+        "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+      },
+      {
+        "nom": "Morsure d'ancrage",
+        "description": "Chaque attaque réussie inflige ses dégâts et draine en plus 4 PP à la cible touchée. Contre une cible sans PP, le drain se convertit en 4 dégâts de PV supplémentaires — non-casters et casters encaissent ainsi la même charge."
+      },
+      {
+        "nom": "Escalade",
+        "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Gouffre, D4 au rythme de drain actuel, soit 2 touche(s) sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
+      },
+      {
+        "nom": "Chair d'ailleurs",
+        "description": "Résistance (moitié dégâts) aux dégâts non magiques : ce démon n'est encore fait qu'en partie de la chair d'ailleurs qui compose les siens."
+      },
+      {
+        "nom": "Retour à la Mer",
+        "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé."
+      },
+      {
+        "nom": "Immunité à la Déchirure",
+        "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+      },
+      {
+        "nom": "Destruction définitive",
+        "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+      },
+      {
+        "nom": "Membrane amincie",
+        "description": "Sa seule présence amincit la membrane du lieu (effet de zone, 9 m) : à la discrétion du MJ, la jauge de Remous locale progresse plus vite tant qu'il reste sur place, ou la membrane du lieu descend d'un rang tant qu'il y demeure."
+      }
+    ],
+    "lore": "Un démon est un reste de repas — ce que laissent les trois dieux bannis quand ils se nourrissent d'âmes dans la Mer. L'Insatiable n'a plus besoin d'attendre qu'on remue l'eau : il en apporte assez avec lui pour amincir la paroi autour de lui. Là où il s'arrête, la Mer se rapproche.",
+    "emoji": "🕳️"
+  },
+  {
+    "id": "demon_gouffre",
+    "nom": "Gouffre",
+    "famille": "demon",
+    "tier": "gouffre",
+    "race": [
+      "demon",
+      "corrompu"
+    ],
+    "pv": 72,
+    "def": 18,
+    "init": 5,
+    "atk": 10,
+    "dangerosite": 4,
+    "boss": false,
+    "role": "brute",
+    "taille": "grande",
+    "attaques": [
+      {
+        "nom": "Étreinte du charnier",
+        "armeId": "etreinte_du_charnier",
+        "bonusAttaque": 10,
+        "effetSpecial": "Deux touches (cf. arme) : chacune draine en plus 6 PP à la cible touchée (6 dégâts de PV supplémentaires par touche si elle n'a pas de PP). Une seule touche suffit déjà à faire escalader le démon d'un palier. Cf. capacitesSpeciales."
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Traque du remueur",
+        "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+      },
+      {
+        "nom": "Morsure d'ancrage",
+        "description": "Chaque attaque réussie inflige ses dégâts et draine en plus 6 PP à la cible touchée. Contre une cible sans PP, le drain se convertit en 6 dégâts de PV supplémentaires — non-casters et casters encaissent ainsi la même charge."
+      },
+      {
+        "nom": "Escalade",
+        "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Convive, D5 au rythme de drain actuel, soit 1 touche(s) sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
+      },
+      {
+        "nom": "Chair d'ailleurs",
+        "description": "Immunité aux dégâts non magiques : seule une arme ou un sort magique peut le blesser."
+      },
+      {
+        "nom": "Retour à la Mer",
+        "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé."
+      },
+      {
+        "nom": "Immunité à la Déchirure",
+        "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+      },
+      {
+        "nom": "Destruction définitive",
+        "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+      },
+      {
+        "nom": "Inarrêtable",
+        "description": "Ne peut être ralenti, entravé ni repoussé par aucun effet non magique. Encaisse et avance : un Gouffre qui a choisi sa cible ne dévie pas de sa trajectoire."
+      }
+    ],
+    "lore": "Un démon est un reste de repas — ce que laissent les trois dieux bannis quand ils se nourrissent d'âmes dans la Mer. Le Gouffre a cessé de chasser comme une bête : il avance comme une marée, sans détour ni hésitation, et rien de ce qu'un mortel sait faire ne le fait dévier. Ce qu'il touche une fois, il ne le lâche plus vraiment.",
+    "emoji": "🌑"
+  },
+  {
+    "id": "demon_convive",
+    "nom": "Convive",
+    "famille": "demon",
+    "tier": "convive",
+    "race": [
+      "demon",
+      "corrompu"
+    ],
+    "pv": 110,
+    "def": 20,
+    "init": 7,
+    "atk": 14,
+    "dangerosite": 5,
+    "boss": true,
+    "role": "soldat",
+    "taille": "grande",
+    "attaques": [
+      {
+        "nom": "Poigne du besoin",
+        "armeId": "poigne_du_besoin",
+        "bonusAttaque": 14,
+        "effetSpecial": "Morsure d'ancrage : draine aussi 8 PP à la cible touchée (8 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
+      }
+    ],
+    "capacitesActives": [
+      {
+        "nom": "Rassasiement",
+        "description": "Utilisable 1 fois par combat. Le Convive se repaît d'un instant de terreur pure : il regagne 2d8 PV et gagne +2 aux dégâts jusqu'à la fin de son prochain tour.",
+        "mecanique": {
+          "type": "limitee",
+          "usage": {
+            "frequence": "1x/combat"
+          },
+          "cible": "soi",
+          "portee": null,
+          "zone": null,
+          "effets": [
+            {
+              "type": "soin",
+              "formule": "2d8"
+            },
+            {
+              "type": "bonus",
+              "cible": "degats",
+              "valeur": 2,
+              "duree": "prochainTour"
+            }
+          ]
+        }
+      }
+    ],
+    "capacitesSpeciales": [
+      {
+        "nom": "Traque du remueur",
+        "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+      },
+      {
+        "nom": "Morsure d'ancrage",
+        "description": "Chaque attaque réussie inflige ses dégâts et draine en plus 8 PP à la cible touchée. Contre une cible sans PP, le drain se convertit en 8 dégâts de PV supplémentaires — non-casters et casters encaissent ainsi la même charge."
+      },
+      {
+        "nom": "Escalade",
+        "description": "Déjà au palier maximal : la Morsure d'ancrage continue de drainer des PP, mais le démon ne peut plus escalader plus haut."
+      },
+      {
+        "nom": "Chair d'ailleurs",
+        "description": "Immunité aux dégâts non magiques : seule une arme ou un sort magique peut le blesser."
+      },
+      {
+        "nom": "Retour à la Mer",
+        "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé."
+      },
+      {
+        "nom": "Immunité à la Déchirure",
+        "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+      },
+      {
+        "nom": "Destruction définitive",
+        "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit. Un Convive a mangé à la table d'un dieu : le filtrer pour de bon coûte nettement plus cher au dieu qui s'y risque qu'une bannissement de palier inférieur."
+      },
+      {
+        "nom": "A mangé à la table d'un dieu",
+        "description": "Le Convive n'est plus un reste de repas ordinaire : il a survécu assez longtemps, gorgé de PP volés, pour approcher ce que goûte un dieu banni. Sa seule présence impose un test de moral (SAG diff. 10) aux créatures de dangerosité 2 ou moins qui l'affrontent pour la première fois."
+      }
+    ],
+    "lore": "Un démon est un reste de repas — ce que laissent les trois dieux bannis quand ils se nourrissent d'âmes dans la Mer. Le Convive a mangé à leur table : plusieurs casters vidés d'un coup, ou une lente accumulation qu'aucune table n'a su interrompre à temps. Le filtrer pour de bon coûte au dieu qui s'y risque bien plus qu'un bannissement ordinaire — un coût que la prêtresse naine du groupe connaît mieux que quiconque, elle qui canalise déjà Valdaan pour bien moins que ça.",
+    "emoji": "🩸"
   }
 ];
 const BESTIAIRE_INDEX = Object.fromEntries(BESTIAIRE.map(function(m){ return [m.id, m]; }));
