@@ -5595,7 +5595,7 @@
       "famille": "demon",
       "tier": "reliquat",
       "race": [
-        "demon",
+        "démon",
         "corrompu"
       ],
       "pv": 16,
@@ -5657,7 +5657,7 @@
       "famille": "demon",
       "tier": "affame",
       "race": [
-        "demon",
+        "démon",
         "corrompu"
       ],
       "pv": 28,
@@ -5719,7 +5719,7 @@
       "famille": "demon",
       "tier": "insatiable",
       "race": [
-        "demon",
+        "démon",
         "corrompu"
       ],
       "pv": 45,
@@ -5781,7 +5781,7 @@
       "famille": "demon",
       "tier": "gouffre",
       "race": [
-        "demon",
+        "démon",
         "corrompu"
       ],
       "pv": 72,
@@ -5843,7 +5843,7 @@
       "famille": "demon",
       "tier": "convive",
       "race": [
-        "demon",
+        "démon",
         "corrompu"
       ],
       "pv": 110,
@@ -5928,5 +5928,5 @@
     }
   ],
   "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide.",
-  "note_race": "race (tableau) : tags de catégorie de créature, indépendants de famille/categorie/faction. Valeurs possibles : humanoïdes, monstres, mort-vivant, corrompu, demon. Un monstre peut cumuler plusieurs tags (ex: une créature autrefois humaine et relevée par la corruption est à la fois humanoïdes, mort-vivant et corrompu ; un démon est toujours demon + corrompu, jamais humanoïdes — ce n'est pas une créature vivante détournée mais une âme figée en forme, cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous »). Distinct du concept Race des Personnages joueurs (elfe, nain, humain...)."
+  "note_race": "race (tableau) : tags de catégorie de créature, indépendants de famille/categorie/faction. Valeurs possibles : humanoïdes, monstres, mort-vivant, corrompu, démon. Un monstre peut cumuler plusieurs tags (ex: une créature autrefois humaine et relevée par la corruption est à la fois humanoïdes, mort-vivant et corrompu ; un démon est toujours démon + corrompu, jamais humanoïdes — ce n'est pas une créature vivante détournée mais une âme figée en forme, cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous »). ATTENTION : la valeur exacte est \"démon\" (avec accent) — js/capacites.js teste race.includes(\"démon\") en dur (_cibleEstMortVivantDemonCorrompu, _cibleEstDemonOuMortVivant) ; un id sans accent ferait échouer silencieusement toutes les capacités anti-démons du Prêtre, du Moine et du Chevalier. Distinct du concept Race des Personnages joueurs (elfe, nain, humain...)."
 }

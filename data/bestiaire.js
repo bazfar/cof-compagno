@@ -5592,7 +5592,7 @@ const BESTIAIRE = [
     "famille": "demon",
     "tier": "reliquat",
     "race": [
-      "demon",
+      "démon",
       "corrompu"
     ],
     "pv": 16,
@@ -5654,7 +5654,7 @@ const BESTIAIRE = [
     "famille": "demon",
     "tier": "affame",
     "race": [
-      "demon",
+      "démon",
       "corrompu"
     ],
     "pv": 28,
@@ -5716,7 +5716,7 @@ const BESTIAIRE = [
     "famille": "demon",
     "tier": "insatiable",
     "race": [
-      "demon",
+      "démon",
       "corrompu"
     ],
     "pv": 45,
@@ -5778,7 +5778,7 @@ const BESTIAIRE = [
     "famille": "demon",
     "tier": "gouffre",
     "race": [
-      "demon",
+      "démon",
       "corrompu"
     ],
     "pv": 72,
@@ -5840,7 +5840,7 @@ const BESTIAIRE = [
     "famille": "demon",
     "tier": "convive",
     "race": [
-      "demon",
+      "démon",
       "corrompu"
     ],
     "pv": 110,

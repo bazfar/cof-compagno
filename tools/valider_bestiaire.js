@@ -87,7 +87,12 @@ function estDeNu(f) {
   return /^\d*d\d+$/.test(f);
 }
 
-const RACES_VALIDES = ["humanoïdes", "monstres", "mort-vivant", "corrompu", "demon"];
+// "démon" (avec accent, cf. correctif prompt_famille_demons.md) : valeur
+// exacte testée en dur par js/capacites.js (race.includes("démon"),
+// _cibleEstMortVivantDemonCorrompu / _cibleEstDemonOuMortVivant) — un id
+// sans accent ferait échouer silencieusement toutes les capacités
+// anti-démons du Prêtre, du Moine et du Chevalier.
+const RACES_VALIDES = ["humanoïdes", "monstres", "mort-vivant", "corrompu", "démon"];
 const TIERS_VALIDES = ["basique", "veteran", "elite", "champion", "recrue", "meneur", "grand_hote",
   // Famille demon (cf. prompt_famille_demons.md) : paliers D1-D5, pas la
   // ladder générique basique/veteran/elite/champion — les 5 paliers montent
