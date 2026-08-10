@@ -38,6 +38,13 @@ const Repos = (() => {
   const STORAGE_REPOS_ATTENTE = "repos:enAttente"; // { [persoId]: { label, desPositifs:[..], flatPositif, desNegatifs:[..], horodatage } }
   const KEY_VOTE = "repos:vote";       // null hors scrutin
   const KEY_ENCOURS = "repos:encours"; // null hors overlay
+  // Requête de récolte (prompt_recolte_4_repos.md §2.2) — même patron exact
+  // que Meteo (CLE_DEMANDE/demanderLectureCiel/_cloreDemandeEnCours,
+  // js/meteo.js) : document unique, statut "en_attente" pendant la fenêtre
+  // de réponse. Échéance 60s (le double de la météo — choisir un milieu ET
+  // une espèce prend plus de temps que lire le ciel).
+  const KEY_DEMANDE_RECOLTE = "recolte:demande"; // null hors requête
+  const ECHEANCE_DEMANDE_RECOLTE_MS = 60000;
 
   function lireAttente() { return SyncStore.get(STORAGE_REPOS_ATTENTE) || {}; }
   function sauverAttente(a) { SyncStore.set(STORAGE_REPOS_ATTENTE, a); }
@@ -45,6 +52,8 @@ const Repos = (() => {
   function sauverVote(v) { SyncStore.set(KEY_VOTE, v); }
   function lireEncours() { return SyncStore.get(KEY_ENCOURS) || null; }
   function sauverEncours(e) { SyncStore.set(KEY_ENCOURS, e); }
+  function lireDemandeRecolte() { return SyncStore.get(KEY_DEMANDE_RECOLTE) || null; }
+  function sauverDemandeRecolte(d) { SyncStore.set(KEY_DEMANDE_RECOLTE, d); }
 
   /* ── Utilitaires (copie locale, même convention que js/marche.js) ── */
   function echapper(s) {
@@ -301,6 +310,13 @@ const Repos = (() => {
       plats: [],
       attributions: {},
       statut: "cuisine",
+      // recoltes (prompt_recolte_4_repos.md §2.1) : { [persoId]: { metierId,
+      // milieuId, itemId, qualiteId, unites, aleaD } }. Sa présence vaut
+      // compteur — un convive qui y figure a déjà récolté ce repos-ci.
+      // Toujours initialisé (même en dortoir/chambre/luxe, où le bloc
+      // Récolte ne s'affiche juste jamais) pour que Recolte.tenter()
+      // (js/recolte.js) trouve toujours la forme attendue.
+      recoltes: {},
     });
   }
 
@@ -324,6 +340,301 @@ const Repos = (() => {
   function _recalculerStatut(encours) {
     const portionsPool = encours.plats.reduce((t, pl) => t + pl.portionsRestantes, 0);
     encours.statut = portionsPool >= encours.convives.length ? "pret" : "cuisine";
+  }
+
+  /* ================================================================
+     RÉCOLTE DANS L'OVERLAY (prompt_recolte_4_repos.md) — un bloc
+     SUPPLÉMENTAIRE, jamais une phase : elle ne touche JAMAIS
+     encours.statut/_recalculerStatut, ne peut donc jamais empêcher un
+     groupe de valider son repos. Uniquement au couchage "camp" — en
+     dortoir/chambre/luxe on est en ville, on achète (cf. §1 du prompt).
+     ================================================================ */
+
+  // joueurId d'un convive : un personnage n'a pas de joueurId propre, seul
+  // son propriétaire en a un via sa présence déclarée (cf. Presence,
+  // js/seance.js) — même résolution par nom que _creerOverlay ci-dessus.
+  function _joueurIdDuConvive(p) {
+    const presents = (typeof Presence !== "undefined") ? Presence.presents() : [];
+    const trouve = presents.find((j) => _memeNom(p.proprietaireNom, j.nom));
+    return trouve ? trouve.joueurId : null;
+  }
+
+  // Convives éligibles à une requête de récolte : ont déclaré traque OU
+  // alchimie sur leur fiche (p.metiersPratiques, cf. js/app.js — Recolte.
+  // metiersDe le lit) ET n'ont pas déjà récolté ce repos-ci (présence dans
+  // encours.recoltes, cf. Recolte.tenter).
+  function _convivesEligiblesRecolte(encours, persos) {
+    if (typeof Recolte === "undefined") return [];
+    return encours.convives.filter((persoId) => {
+      const p = persos[persoId];
+      if (!p) return false;
+      if (encours.recoltes && encours.recoltes[persoId]) return false;
+      return Recolte.metiersDe(p).some((m) => m === "traque" || m === "alchimie");
+    });
+  }
+
+  // MJ uniquement — construit `cibles` et ouvre la requête. Pas
+  // d'automatisme à l'ouverture de l'overlay (cf. §1.3) : c'est un clic
+  // délibéré du MJ, qui décide si le groupe a le temps de battre les bois.
+  function lancerRecoltes() {
+    const role = (typeof App !== "undefined" && App.obtenirRole) ? App.obtenirRole() : "joueur";
+    if (role !== "mj") return;
+    const encours = lireEncours();
+    if (!encours || encours.couchage !== "camp") return;
+    if (lireDemandeRecolte()) return; // une requête à la fois
+    const persos = App.chargerPersos();
+    const eligibles = _convivesEligiblesRecolte(encours, persos);
+    if (!eligibles.length) { toast("Aucun convive éligible à la récolte."); return; }
+    const cibles = eligibles.map((persoId) => {
+      const p = persos[persoId];
+      return { persoId, joueurId: _joueurIdDuConvive(p), nom: p.nom, metiers: Recolte.metiersDe(p).filter((m) => m === "traque" || m === "alchimie") };
+    });
+    const ouvertTs = Date.now();
+    sauverDemandeRecolte({ ouvertTs, echeanceTs: ouvertTs + ECHEANCE_DEMANDE_RECOLTE_MS, cibles, repondus: [], statut: "en_attente" });
+    toast(`🌿 Requête de récolte envoyée à ${cibles.length} convive${cibles.length > 1 ? "s" : ""}.`);
+    _demarrerMinuteurRecolte();
+    _rendreOverlayRepos();
+  }
+
+  // Relais MJ ("⏩ Clore les récoltes") — clôt sans attendre le décompte.
+  // Les joueurs qui n'ont pas répondu n'ont simplement pas récolté : aucun
+  // jet n'est lancé à leur place (cf. §2.2).
+  function clorerRecoltes() {
+    const role = (typeof App !== "undefined" && App.obtenirRole) ? App.obtenirRole() : "joueur";
+    if (role !== "mj") return;
+    if (!lireDemandeRecolte()) return;
+    sauverDemandeRecolte(null);
+    _arreterMinuteurRecolte();
+    toast("Récoltes closes.");
+    _rendreOverlayRepos();
+  }
+
+  // Minuteur local sans serveur, même patron que _demarrerMinuteur/
+  // _arreterMinuteur (scrutin) — mais ICI la requête se CLÔT elle-même à
+  // l'échéance (cf. §2.2 : "la requête se clôt d'elle-même"), contrairement
+  // à la demande météo qui attend un relais manuel. Plusieurs clients
+  // peuvent écrire ce null en même temps sans risque (même raisonnement que
+  // _resoudreScrutin : calcul déterministe, dernier-écrivain-gagne anodin).
+  let _minuteurRecolteId = null;
+  function _demarrerMinuteurRecolte() {
+    if (_minuteurRecolteId) return;
+    _minuteurRecolteId = setInterval(() => {
+      const d = lireDemandeRecolte();
+      if (!d || d.statut !== "en_attente") { _arreterMinuteurRecolte(); return; }
+      if (Date.now() >= d.echeanceTs) { sauverDemandeRecolte(null); _arreterMinuteurRecolte(); _rendreOverlayRepos(); return; }
+      _rendreOverlayRepos();
+      _rendreModalRecolte();
+    }, 1000);
+  }
+  function _arreterMinuteurRecolte() {
+    if (_minuteurRecolteId) { clearInterval(_minuteurRecolteId); _minuteurRecolteId = null; }
+  }
+
+  /* ── Modale de récolte (#modal-recolte), chez le joueur sollicité —
+     même patron que #modal-porte-ciel (js/meteo.js) : ouverte UNIQUEMENT
+     chez le(s) client(s) dont joueurId figure dans `cibles` et pas encore
+     dans `repondus`, fermée chez tous à la résolution/clôture. Vérifié
+     avant d'écrire ce bloc : aucune infrastructure de modale générique
+     n'existe dans js/app.js (chaque modal-X a son propre <div>/logique) —
+     overlay local ici, sur le modèle demandé par le prompt à défaut. ── */
+
+  // État local des sélecteurs de la modale (par navigateur, pas synchronisé
+  // — ne concerne que l'affichage avant le jet, jamais son résultat).
+  let _recolteChoix = { metierId: null, milieuId: null, itemId: null };
+
+  function _maCibleRecolte(demande) {
+    if (!demande || demande.statut !== "en_attente") return null;
+    const moi = (typeof App !== "undefined" && App.obtenirJoueurId) ? App.obtenirJoueurId() : null;
+    return demande.cibles.find((c) => c.joueurId === moi && !demande.repondus.includes(c.persoId)) || null;
+  }
+
+  function _rendreModalRecolte() {
+    const modal = document.getElementById("modal-recolte");
+    if (!modal) return;
+    const demande = lireDemandeRecolte();
+    const cible = _maCibleRecolte(demande);
+    if (!cible) { modal.style.display = "none"; _recolteChoix = { metierId: null, milieuId: null, itemId: null }; return; }
+    const corps = document.getElementById("modal-recolte-corps");
+    if (!corps) return;
+    const persos = App.chargerPersos();
+    const p = persos[cible.persoId];
+    if (!p) { modal.style.display = "none"; return; }
+    modal.style.display = "flex";
+
+    // 1. Métier — sélecteur seulement si les deux sont déclarés.
+    if (!_recolteChoix.metierId || !cible.metiers.includes(_recolteChoix.metierId)) _recolteChoix.metierId = cible.metiers[0];
+    const blocMetier = cible.metiers.length > 1
+      ? `<label>Métier
+          <select id="recolte-select-metier">${cible.metiers.map((m) => `<option value="${m}"${m === _recolteChoix.metierId ? " selected" : ""}>${echapper(METIERS[m].icone + " " + METIERS[m].nom)}</option>`).join("")}</select>
+        </label>`
+      : `<div>${echapper(METIERS[_recolteChoix.metierId].icone + " " + METIERS[_recolteChoix.metierId].nom)}</div>`;
+
+    // 2. Milieu — limité à ceux de la région météo courante (cf. §4.2).
+    const regionId = (typeof Meteo !== "undefined" && Meteo.obtenirEtat) ? Meteo.obtenirEtat().regionId : null;
+    const milieuxDispo = (regionId && typeof MILIEUX_PAR_REGION !== "undefined") ? (MILIEUX_PAR_REGION[regionId] || []) : [];
+    if (!milieuxDispo.length) {
+      corps.innerHTML = `<p><strong>${echapper(p.nom)}</strong></p>${blocMetier}
+        <p class="vide">Aucun milieu accessible dans cette région — pas de récolte possible ce soir.</p>
+        <div class="barre-actions"><button class="btn secondaire" id="recolte-btn-fermer-vide">Fermer</button></div>`;
+      document.getElementById("recolte-btn-fermer-vide").onclick = () => _repondreRecolte(cible.persoId);
+      return;
+    }
+    if (!_recolteChoix.milieuId || !milieuxDispo.includes(_recolteChoix.milieuId)) _recolteChoix.milieuId = milieuxDispo[0];
+    const blocMilieu = `<label>Milieu
+      <select id="recolte-select-milieu">${milieuxDispo.map((mid) => {
+        const m = (typeof MILIEUX_RECOLTE !== "undefined") ? MILIEUX_RECOLTE.find((x) => x.id === mid) : null;
+        return `<option value="${mid}"${mid === _recolteChoix.milieuId ? " selected" : ""}>${m ? echapper(m.icone + " " + m.nom) : echapper(mid)}</option>`;
+      }).join("")}</select>
+    </label>`;
+
+    // 3. Espèce visée, groupée par rareté, seuil affiché à côté de chacune —
+    // les espèces hors de portée du rang NE SONT PAS listées (cf. §4.3 :
+    // "pas grisées : listées, elles inviteraient à demander une dérogation").
+    const rangMetier = Metiers.rang(p, _recolteChoix.metierId);
+    const especes = Recolte.especesDisponibles(regionId, _recolteChoix.milieuId, _recolteChoix.metierId, rangMetier);
+    if (!_recolteChoix.itemId || !especes.some((e) => e.item.id === _recolteChoix.itemId)) {
+      _recolteChoix.itemId = especes.length ? especes[0].item.id : null;
+    }
+    const parRarete = {};
+    especes.forEach((e) => { (parRarete[e.rarete] = parRarete[e.rarete] || []).push(e); });
+    const optionsEspeces = Object.keys(RARETES_RECOLTE).filter((r) => parRarete[r] && parRarete[r].length).map((r) => {
+      const opts = parRarete[r].map((e) => {
+        const S = Recolte.seuilEffectif(e.rangCible, rangMetier);
+        return `<option value="${e.item.id}"${e.item.id === _recolteChoix.itemId ? " selected" : ""}>${echapper(e.item.nom)} — seuil ${S}</option>`;
+      }).join("");
+      return `<optgroup label="${echapper(RARETES_RECOLTE[r].nom)}">${opts}</optgroup>`;
+    }).join("");
+
+    // 4. Détail du modificateur — chaque composante sur sa ligne, aucun
+    // modificateur silencieux (cf. §4.4).
+    const mods = Recolte.modificateurs(p, _recolteChoix.metierId);
+    const signe = (n) => (n >= 0 ? "+" : "") + n;
+    const detailMods = mods.detail.map((d) => `<div>${echapper(d.libelle)} ${signe(d.valeur)}</div>`).join("");
+
+    corps.innerHTML = `
+      <p><strong>${echapper(p.nom)}</strong></p>
+      ${blocMetier}
+      ${blocMilieu}
+      <label>Espèce visée
+        <select id="recolte-select-espece">${optionsEspeces || `<option value="">— Aucune espèce accessible à ce rang —</option>`}</select>
+      </label>
+      <div class="carte" style="margin-top:8px;">
+        ${detailMods}
+        <div style="margin-top:4px;"><strong>Total : ${signe(mods.total)}</strong></div>
+      </div>
+      <div class="barre-actions" style="margin-top:10px;">
+        <button class="btn or" id="recolte-btn-lancer"${especes.length ? "" : " disabled"}>🎲 Récolter</button>
+      </div>
+      <div id="recolte-resultat" style="margin-top:10px;"></div>
+    `;
+    const selMetier = document.getElementById("recolte-select-metier");
+    if (selMetier) selMetier.onchange = (e) => { _recolteChoix.metierId = e.target.value; _recolteChoix.itemId = null; _rendreModalRecolte(); };
+    document.getElementById("recolte-select-milieu").onchange = (e) => { _recolteChoix.milieuId = e.target.value; _recolteChoix.itemId = null; _rendreModalRecolte(); };
+    const selEspece = document.getElementById("recolte-select-espece");
+    if (selEspece) selEspece.onchange = (e) => { _recolteChoix.itemId = e.target.value; };
+    document.getElementById("recolte-btn-lancer").onclick = () => _lancerJetRecolte(cible.persoId);
+  }
+
+  function _lancerJetRecolte(persoId) {
+    const res = Recolte.tenter(persoId, _recolteChoix.metierId, _recolteChoix.milieuId, _recolteChoix.itemId);
+    const zone = document.getElementById("recolte-resultat");
+    if (!res.ok) { if (zone) zone.innerHTML = `<p class="vide">${echapper(res.raison)}</p>`; return; }
+    if (zone) {
+      zone.innerHTML = `<p><strong>${echapper(Recolte.libelleQualite(res.resultat.qualiteId))}</strong> — ${res.unitesFinal > 0 ? `${res.unitesFinal}× ${echapper(res.itemProduit.nom)}` : "rien récolté"}${res.alea ? `<br><span style="color:var(--chaos);">⚠ ${echapper(res.alea.message)}</span>` : ""}</p>
+        <button class="btn or" id="recolte-btn-fermer-resultat">Fermer</button>`;
+      document.getElementById("recolte-btn-fermer-resultat").onclick = () => _repondreRecolte(persoId);
+    }
+    // La carte MJ/récap de l'overlay doit refléter le résultat tout de
+    // suite chez les autres — Recolte.tenter() a déjà écrit encours.recoltes,
+    // un simple re-rendu local suffit (SyncStore notifiera les autres clients).
+    _rendreOverlayRepos();
+  }
+
+  // Marque le convive comme "répondu" (jet fait, ou milieu vide constaté) —
+  // ferme la modale chez lui ; les autres clients se mettent à jour via le
+  // SyncStore.subscribe(KEY_DEMANDE_RECOLTE) plus bas.
+  function _repondreRecolte(persoId) {
+    const demande = lireDemandeRecolte();
+    if (demande && demande.statut === "en_attente" && !demande.repondus.includes(persoId)) {
+      demande.repondus = demande.repondus.concat([persoId]);
+      sauverDemandeRecolte(demande);
+    }
+    _recolteChoix = { metierId: null, milieuId: null, itemId: null };
+    _rendreModalRecolte();
+  }
+
+  /* ── Bloc "🌿 Récolte" de l'overlay (vue MJ complète, vue joueur =
+     récapitulatif seul) ── */
+  function _htmlBlocRecolte(encours, persos, role) {
+    if (encours.couchage !== "camp") return "";
+    const recoltesFaites = encours.recoltes || {};
+    const recap = Object.keys(recoltesFaites).map((persoId) => {
+      const p = persos[persoId];
+      const r = recoltesFaites[persoId];
+      if (!p) return "";
+      const item = (typeof LOOT_CATALOGUE !== "undefined") ? LOOT_CATALOGUE.find((it) => it.id === r.itemId) : null;
+      const milieu = (typeof MILIEUX_RECOLTE !== "undefined") ? MILIEUX_RECOLTE.find((m) => m.id === r.milieuId) : null;
+      const icone = r.metierId === "traque" ? "🏹" : "⚗️";
+      const nomMetier = (typeof METIERS !== "undefined" && METIERS[r.metierId]) ? METIERS[r.metierId].nom : r.metierId;
+      let ligne = `<div>${icone} ${echapper(p.nom)} — ${echapper(nomMetier)} · ${milieu ? echapper(milieu.nom) : echapper(r.milieuId)} · ${item ? echapper(item.nom) : echapper(r.itemId)} — ${echapper((typeof Recolte !== "undefined") ? Recolte.libelleQualite(r.qualiteId) : r.qualiteId)}${r.unites ? `, ${r.unites} unité${r.unites > 1 ? "s" : ""}` : ""}</div>`;
+      if (r.aleaD != null && typeof ALEAS_RECOLTE !== "undefined") {
+        const alea = ALEAS_RECOLTE.find((a) => a.d === r.aleaD);
+        if (alea) ligne += `<div style="font-size:0.82rem;color:var(--chaos);margin-left:22px;">${echapper(alea.nom)} — ${echapper(alea[r.metierId] || "")}</div>`;
+      }
+      return ligne;
+    }).join("");
+
+    let corpsMJ = "";
+    if (role === "mj") {
+      const demande = lireDemandeRecolte();
+      if (demande && demande.statut === "en_attente") {
+        const secondes = Math.max(0, Math.ceil((demande.echeanceTs - Date.now()) / 1000));
+        const statuts = demande.cibles.map((c) => `<div>${demande.repondus.includes(c.persoId) ? "✅" : "⏳"} ${echapper(c.nom)}</div>`).join("");
+        corpsMJ = `<div style="margin-top:6px;">⏳ ${secondes}s restantes — ${demande.repondus.length}/${demande.cibles.length} ont répondu.</div>
+          ${statuts}
+          <button class="btn petit secondaire" id="btn-clore-recoltes" style="margin-top:6px;">⏩ Clore les récoltes</button>`;
+      } else {
+        const eligibles = _convivesEligiblesRecolte(encours, persos);
+        const desactive = !eligibles.length;
+        let explication = "";
+        if (desactive) {
+          explication = Object.keys(recoltesFaites).length
+            ? "Tous les convives éligibles ont déjà récolté ce repos."
+            : "Aucun convive n'a déclaré la Traque ou l'Alchimie sur sa fiche.";
+        }
+        corpsMJ = `<button class="btn or" id="btn-lancer-recoltes"${desactive ? " disabled" : ""}>🌿 Lancer les récoltes</button>
+          ${explication ? `<div style="font-size:0.82rem;color:#6a6278;margin-top:4px;">${echapper(explication)}</div>` : ""}`;
+      }
+    }
+
+    return `<div class="carte" style="margin-top:10px;">
+      <h4 style="margin-top:0;">🌿 Récolte</h4>
+      ${corpsMJ}
+      ${recap ? `<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;">${recap}</div>` : ""}
+    </div>`;
+  }
+
+  // Bannière "Rencontre à tirer" — MJ uniquement. Alimentée par
+  // SyncStore["recolte:rencontres"] (cf. js/recolte.js, _appliquerAlea cas
+  // "rencontre"). Volontairement PASSIVE : elle ne fait qu'informer le MJ,
+  // jamais n'interrompt le repos long ni ne force un jet — c'est au MJ
+  // d'arbitrer (au dé, en RP, etc.) puis de cocher "Traité" une fois fait.
+  function _htmlBanniereRencontres(role) {
+    if (role !== "mj") return "";
+    const rencontres = SyncStore.get("recolte:rencontres") || [];
+    if (!rencontres.length) return "";
+    const lignes = rencontres.map((r, idx) => `<div class="carte" style="margin-top:6px;border-color:var(--chaos);">
+      🐺 Rencontre à tirer — la récolte de ${echapper(r.nom || "?")} a mal tourné${r.majeure ? " (majeure)" : ""}.
+      <button class="btn petit secondaire" data-traiter-rencontre="${idx}" style="margin-left:8px;">✔️ Traité</button>
+    </div>`).join("");
+    return lignes;
+  }
+
+  function _traiterRencontre(idx) {
+    const rencontres = SyncStore.get("recolte:rencontres") || [];
+    rencontres.splice(idx, 1);
+    SyncStore.set("recolte:rencontres", rencontres);
+    _rendreOverlayRepos();
   }
 
   // N'importe quel convive peut se déclarer cuisinier. Le jet/qualité/XP/
@@ -527,6 +838,21 @@ const Repos = (() => {
         p.pvTemporaires = 0;
         p.pvTemporairesExpiration = null;
       }
+      // Même sweep, même endroit, pour le malus social temporaire posé par
+      // un aléa de récolte "requalifié malgré tout"/rencontre (cf.
+      // js/recolte.js) : il expire "jusqu'au prochain repos long", donc au
+      // même instant que le bonus PV ci-dessus, pas avant.
+      if (p.malusSocialTemporaire && p.malusSocialTemporaire.motCle === "reposLong") {
+        p.malusSocialTemporaire = null;
+      }
+      // Récolte "bloquée au prochain repos" (aléa de récolte) : un blocage
+      // qui ne concerne QUE ce repos-ci, purgé pour tout le monde qu'on ait
+      // ou non tenté de récolter cette fois. p.recolteBonus, lui, N'EST PAS
+      // touché ici : c'est un bonus DURABLE affecté à un milieu précis (cf.
+      // js/recolte.js, cas "bonusMilieu"), qui ne s'épuise qu'en étant
+      // consommé par une future récolte, jamais par le simple passage d'un
+      // repos long.
+      p.recolteBloqueeProchainRepos = false;
       if (recetteCuisinee && recetteCuisinee.bonusTemporaire && recetteCuisinee.rang !== 5) {
         // Exclusif au rang 5 (cf. prompt_cuisine_bonus_rang5.md §2) : le
         // moteur IGNORE le champ s'il apparaît sur une autre recette plutôt
@@ -620,7 +946,10 @@ const Repos = (() => {
   // Abandon — réservé à l'initiateur et au MJ. Les ingrédients déjà
   // consommés pendant la phase cuisine NE SONT PAS rendus : on a cuisiné,
   // ce n'est pas un bug si un repos abandonné a coûté des vivres pour
-  // rien — ne pas "corriger" ça en remboursant plus tard.
+  // rien — ne pas "corriger" ça en remboursant plus tard. Même logique pour
+  // les récoltes déjà faites (encours.recoltes) : le gibier/les ingrédients
+  // récoltés et l'XP de métier déjà accordée ne sont PAS repris non plus —
+  // Recolte.tenter() s'arrête dès que le produit entre en inventaire.
   function annulerRepos() {
     const role = (typeof App !== "undefined" && App.obtenirRole) ? App.obtenirRole() : "joueur";
     const vote = lireVote();
@@ -797,9 +1126,11 @@ const Repos = (() => {
     }).join("");
 
     return `
+      ${_htmlBanniereRencontres(role)}
       <div class="carte">
         <strong>🍽 Portions couvertes : ${couverts}/${encours.convives.length}</strong>
       </div>
+      ${_htmlBlocRecolte(encours, persos, role)}
       <div class="carte" style="margin-top:10px;">
         <h4 style="margin-top:0;">Cuisiner</h4>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -856,6 +1187,13 @@ const Repos = (() => {
     if (btnValider) btnValider.onclick = () => { if (confirm("Valider le repos long pour tout le groupe ?")) validerRepos(); };
     const btnAnnuler = document.getElementById("btn-overlay-annuler");
     if (btnAnnuler) btnAnnuler.onclick = () => { if (confirm("Annuler ce repos long ? Les ingrédients déjà consommés ne seront pas rendus.")) annulerRepos(); };
+    const btnLancerRecoltes = document.getElementById("btn-lancer-recoltes");
+    if (btnLancerRecoltes) btnLancerRecoltes.onclick = () => lancerRecoltes();
+    const btnClorerRecoltes = document.getElementById("btn-clore-recoltes");
+    if (btnClorerRecoltes) btnClorerRecoltes.onclick = () => clorerRecoltes();
+    document.querySelectorAll("[data-traiter-rencontre]").forEach((btn) => {
+      btn.onclick = () => _traiterRencontre(parseInt(btn.dataset.traiterRencontre, 10));
+    });
   }
 
   function _rendreOverlayRepos() {
@@ -883,11 +1221,18 @@ const Repos = (() => {
     if (p && p.classList.contains("actif")) rendreZoneRepos();
     if (typeof App !== "undefined" && App.rafraichirFicheActive) App.rafraichirFicheActive();
   });
-  SyncStore.subscribe(KEY_ENCOURS, () => { _rendreOverlayRepos(); });
+  SyncStore.subscribe(KEY_ENCOURS, () => { _rendreOverlayRepos(); _rendreModalRecolte(); });
+  SyncStore.subscribe(KEY_DEMANDE_RECOLTE, (val) => {
+    if (val && val.statut === "en_attente") _demarrerMinuteurRecolte(); else _arreterMinuteurRecolte();
+    _rendreOverlayRepos();
+    _rendreModalRecolte();
+  });
+  SyncStore.subscribe("recolte:rencontres", () => { _rendreOverlayRepos(); });
 
   return {
     rendreZoneRepos, reposCourt, lancerJetRepos, purgerAttente,
     estScrutinEnCours, ouvrirScrutin, voter, resoudreScrutinMaintenant: _resoudreScrutin,
     changerConvive, cuisinerDansOverlay, jeterPlat, attribuer, validerRepos, annulerRepos,
+    lancerRecoltes, clorerRecoltes,
   };
 })();

@@ -7,25 +7,24 @@
    RARETES_RECOLTE, RENDEMENT_RECOLTE, ALEAS_RECOLTE) et data/loot.json
    (champs recolte/rarete/milieux, cf. prompt_recolte_1_donnees.md).
 
-   Contrat avec js/repos.js (prompt 4, pas encore écrit) : la cadence "une
-   récolte par personnage et par repos long" vit sur SyncStore["recolte:
-   cadence"] (liste de persoId), PAS sur "atelier:tentatives" (qui ne doit
-   pas être remis à zéro par le bouton "Nouveau jour" — la récolte suit le
-   rythme du repos long, pas de la journée).
+   Contrat avec js/repos.js (prompt 4) : la cadence "une récolte par
+   personnage et par repos long" vit sur SyncStore["repos:encours"].recoltes
+   ({ [persoId]: {metierId,milieuId,itemId,qualiteId,unites,aleaD} }), PAS
+   sur "atelier:tentatives" (qui ne doit pas être remis à zéro par le bouton
+   "Nouveau jour" — la récolte suit le rythme du repos long, pas de la
+   journée). tenter() exige donc un `repos:encours` actif — la récolte ne se
+   déclenche que depuis la modale sollicitée par le MJ dans l'overlay de
+   repos long, jamais en dehors (cf. js/repos.js, lancerRecoltes/modale).
 
-   ÉCART DÉLIBÉRÉ par rapport à la lettre du prompt 2 (qui dit "le compteur
-   vit dans encours.recoltes", cf. SyncStore["repos:encours"]) : vérifié en
-   pratique, écrire un encours partiel ({recoltes:[...]} sans convives/plats/
-   attributions) fait planter _htmlOverlay (js/repos.js:770,
-   encours.convives.filter(...)) dès que quelqu'un d'autre a cet overlay de
-   repos long ouvert — repos:encours est un objet à forme fixe, géré par le
-   cycle de vie de js/repos.js (créé/vidé à l'ouverture/validation du repos
-   long), pas un sac fourre-tout. Clé dédiée ici pour ne RIEN casser ; le
-   prompt 4, qui écrit l'intégration réelle au repos long, pourra migrer ce
-   compteur dans encours.recoltes EN TOUTE CONNAISSANCE de son cycle de vie
-   (au moment où il gère déjà la création/le vidage de l'objet), ou garder
-   cette clé séparée — les deux options restent ouvertes, aucune n'est
-   fermée ici.
+   Historique (pour mémoire) : le prompt 2 demandait déjà "encours.recoltes",
+   mais _creerOverlay (js/repos.js) n'existait pas encore à ce moment pour
+   l'initialiser en forme complète — écrire un encours PARTIEL depuis ce
+   fichier aurait fait planter l'overlay de repos long existant
+   (_htmlOverlay suppose encours.convives/plats/attributions toujours
+   présents). Le prompt 2 utilisait donc une clé séparée ("recolte:cadence")
+   en attendant ce prompt 4, qui initialise enfin encours.recoltes:{} dès la
+   création de l'overlay — la migration vers encours.recoltes se fait ici,
+   sans risque, précisément parce que la forme est maintenant garantie.
    ============================================================ */
 
 const Recolte = (() => {
@@ -300,8 +299,16 @@ const Recolte = (() => {
       return { ok: false, raison: `${(METIERS[metierId] || {}).nom || metierId} n'est pas déclaré comme métier pratiqué sur cette fiche.` };
     }
 
-    const cadence = SyncStore.get("recolte:cadence") || [];
-    if (cadence.includes(persoId)) {
+    // Cadence "une récolte par personnage et par repos long" (prompt_recolte_
+    // 4_repos.md §2.1, qui migre enfin ce compteur sur encours.recoltes
+    // maintenant que js/repos.js l'initialise TOUJOURS en forme complète dès
+    // _creerOverlay — la clé "recolte:cadence" du prompt 2 n'existe plus).
+    // La récolte ne peut se tenter QUE depuis l'overlay de repos long
+    // (cf. la modale sollicitée, js/repos.js) : sans encours actif, il n'y a
+    // simplement rien à faire ici.
+    const encours = SyncStore.get("repos:encours") || null;
+    if (!encours) return { ok: false, raison: "Aucun repos long en cours." };
+    if (encours.recoltes && encours.recoltes[persoId]) {
       return { ok: false, raison: "Une seule récolte par repos long — déjà faite." };
     }
 
@@ -351,7 +358,12 @@ const Recolte = (() => {
     }
 
     const gainXp = Metiers.gagnerXp(p, metierId, resultat.xpGagne);
-    SyncStore.set("recolte:cadence", cadence.concat([persoId]));
+    encours.recoltes = encours.recoltes || {};
+    encours.recoltes[persoId] = {
+      metierId, milieuId, itemId: itemProduit.id, qualiteId: resultat.qualiteId,
+      unites: unitesFinal, aleaD: aleaResultat ? aleaResultat.alea.d : null,
+    };
+    SyncStore.set("repos:encours", encours);
     App.sauverPersos(persos);
 
     // Dégâts d'aléa appliqués APRÈS la sauvegarde ci-dessus : App.ajusterPv

@@ -858,6 +858,21 @@
     </div>
   </div>
 
+  <!-- Modale de récolte (cf. js/repos.js, recolte:demande) — même patron que
+       #modal-porte-ciel : ouverte UNIQUEMENT chez le(s) convive(s) sollicité(s)
+       et pas encore répondu(s), fermée dès la réponse (jet fait ou milieu
+       vide) ou la clôture/expiration de la requête. Aucun bouton de
+       fermeture manuelle dans l'en-tête : on répond (ou le milieu est vide),
+       on ne "ferme" pas une sollicitation sans y répondre. -->
+  <div id="modal-recolte" class="modal-overlay" style="display:none;">
+    <div class="modal-boite">
+      <div class="modal-entete">
+        <h3>🌿 Récolte</h3>
+      </div>
+      <div id="modal-recolte-corps" style="padding:0 18px 18px;"></div>
+    </div>
+  </div>
+
   <!-- Modal choix permanent d'une capacité (ex. +2 DEF OU +1d8 DM) -->
   <div id="modal-choix-capacite" class="modal-overlay" style="display:none;">
     <div class="modal-boite">
@@ -927,8 +942,8 @@
   <script src="js/metiers.js?v=1"></script>
   <script src="js/cuisine.js?v=3"></script>
   <script src="js/cuisine_reference.js?v=2"></script>
-  <script src="js/recolte.js?v=1"></script>
-  <script src="js/repos.js?v=6"></script>
+  <script src="js/recolte.js?v=2"></script>
+  <script src="js/repos.js?v=7"></script>
   <script src="js/reputation.js?v=1"></script>
   <script src="js/meteo.js?v=2"></script>
   <script src="js/remous.js?v=1"></script>
