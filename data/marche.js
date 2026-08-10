@@ -20,17 +20,30 @@
    provenance régionale.
    ============================================================ */
 
+// nation/regionMeteo (prompt_marche_ingredients.md, étape 3) : `nation`
+// pilote le calcul local/allié/import (cf. BLOCS + calculerModificateurOrigine
+// plus bas), `regionMeteo` synchronise la ville avec la région météo choisie
+// par le MJ (cf. js/marche.js, présélection — un CONFORT, jamais un verrou :
+// un joueur reste libre de consulter n'importe quel autre marché).
 const LOCALITES_MARCHE = [
   {
     id: "haldren",
     nom: "Haldren (Valdorne)",
     palier: "bourg",
     plafondValeurCA: 12,
+    nation: "valdorne",
+    regionMeteo: "valdorne",
     marchands: [
       {
         id: "generaliste_haldren",
         nom: "Marchand généraliste",
-        typesAutorises: ["arme", "armure", "bouclier", "consommable"],
+        // "ingredient" ajouté ici (prompt_marche_ingredients.md étape 4) :
+        // Haldren garde son seul généraliste (pas de boucherie/épicerie
+        // dédiée), donc c'est LUI qui doit pouvoir vendre des vivres —
+        // quotas.ingredient les plafonne à 20 pour ne pas noyer armes et
+        // potions sous le grain (cf. tirerStockMarchand, data/marche.js).
+        typesAutorises: ["arme", "armure", "bouclier", "consommable", "ingredient"],
+        quotas: { ingredient: 20 },
         modificateurParDefaut: 1,
         estMarcheNoir: false,
       },
@@ -41,6 +54,8 @@ const LOCALITES_MARCHE = [
     nom: "Grand Marché (Libris)",
     palier: "capitale",
     plafondValeurCA: 16,
+    nation: "liberra",
+    regionMeteo: "liberra_nord",
     marchands: [
       {
         id: "factrice_comptoir",
@@ -50,6 +65,23 @@ const LOCALITES_MARCHE = [
         estMarcheNoir: false,
         faction: "comptoir", // lie ce marchand à la réputation du bloc Comptoir (Liberra)
       },
+      {
+        id: "boucherie_libris",
+        nom: "Boucherie",
+        typesAutorises: ["ingredient"],
+        famillesAutorisees: ["viande"],
+        modificateurParDefaut: 1,
+        estMarcheNoir: false,
+      },
+      {
+        id: "epicerie_libris",
+        nom: "Épicerie",
+        typesAutorises: ["ingredient", "consommable"],
+        famillesAutorisees: ["cereale", "legume", "champignon", "sel_epice", "gras_sucre", "seve", "laitier", "boisson", "divers"],
+        quotas: { consommable: 6 }, // quelques potions, pas un apothicaire
+        modificateurParDefaut: 1,
+        estMarcheNoir: false,
+      },
     ],
   },
   {
@@ -57,6 +89,13 @@ const LOCALITES_MARCHE = [
     nom: "Karag Dûm — marché noir",
     palier: "capitale",
     plafondValeurCA: 16,
+    // "khazrak" (nation, cf. origine des vivres) ≠ "karag_dum" (regionMeteo,
+    // id de REGIONS_METEO) : Karag Dûm est la CAPITALE de la nation Khazrak
+    // Dûm (Nains Renégats, cf. data/donnees.js) — même écart de vocabulaire
+    // que Solvarn/Solmaris ou Valdorne/Valdecourt, juste jamais nommé "nation
+    // Karag Dûm" nulle part dans le canon.
+    nation: "khazrak",
+    regionMeteo: "karag_dum",
     marchands: [
       {
         id: "skarn_ombrefaille",
@@ -64,6 +103,65 @@ const LOCALITES_MARCHE = [
         typesAutorises: ["arme", "armure", "bouclier", "accessoire", "consommable"],
         modificateurParDefaut: 2.5,
         estMarcheNoir: true,
+      },
+      // Délibérément AUCUNE boucherie ni épicerie ici (cf. prompt_marche_
+      // ingredients.md étape 4, "Karag Dûm son marché noir [seulement]") —
+      // et son unique marchand ne vend pas non plus de vivres : le marché
+      // noir des Failles Rouges fait dans l'arme et la contrebande, pas le
+      // grain. Contrôle jetable #6 de la validation.
+    ],
+  },
+  {
+    id: "valdecourt",
+    nom: "Valdecourt (Valdorne)",
+    palier: "capitale",
+    plafondValeurCA: 16,
+    nation: "valdorne",
+    regionMeteo: "valdorne",
+    marchands: [
+      {
+        id: "boucherie_valdecourt",
+        nom: "Boucherie",
+        typesAutorises: ["ingredient"],
+        famillesAutorisees: ["viande"],
+        modificateurParDefaut: 1,
+        estMarcheNoir: false,
+      },
+      {
+        id: "epicerie_valdecourt",
+        nom: "Épicerie",
+        typesAutorises: ["ingredient", "consommable"],
+        famillesAutorisees: ["cereale", "legume", "champignon", "sel_epice", "gras_sucre", "seve", "laitier", "boisson", "divers"],
+        quotas: { consommable: 6 },
+        modificateurParDefaut: 1,
+        estMarcheNoir: false,
+      },
+    ],
+  },
+  {
+    id: "mornhaven",
+    nom: "Mornhaven (Mornac)",
+    palier: "capitale",
+    plafondValeurCA: 16,
+    nation: "mornac",
+    regionMeteo: "mornac",
+    marchands: [
+      {
+        id: "boucherie_mornhaven",
+        nom: "Boucherie",
+        typesAutorises: ["ingredient"],
+        famillesAutorisees: ["viande"],
+        modificateurParDefaut: 1,
+        estMarcheNoir: false,
+      },
+      {
+        id: "epicerie_mornhaven",
+        nom: "Épicerie",
+        typesAutorises: ["ingredient", "consommable"],
+        famillesAutorisees: ["cereale", "legume", "champignon", "sel_epice", "gras_sucre", "seve", "laitier", "boisson", "divers"],
+        quotas: { consommable: 6 },
+        modificateurParDefaut: 1,
+        estMarcheNoir: false,
       },
     ],
   },
@@ -76,6 +174,47 @@ const MODIFICATEURS_REGIONAUX = [
   { id: "marche_noir_2", label: "Marché noir (×2)", valeur: 2 },
   { id: "marche_noir_3", label: "Marché noir (×3)", valeur: 3 },
 ];
+
+// Blocs culturels (prompt_marche_ingredients.md étape 5) — sert UNIQUEMENT
+// au calcul local/allié/import ci-dessous, jamais lu ailleurs (pas une
+// donnée géopolitique générale : Serval y est "humain" par convention de
+// commerce/langue, ce qui ne dit rien de son statut politique réel).
+const BLOCS = {
+  humain: ["solvarn", "valdorne", "arveth", "mornac", "liberra", "serval"],
+  elfique: ["aetharion", "aelindra", "mordanel"],
+  nain: ["kaldrun", "khazrak"],
+};
+function _blocDe(nationOuBloc) {
+  if (Object.keys(BLOCS).includes(nationOuBloc)) return nationOuBloc;
+  return Object.keys(BLOCS).find((b) => BLOCS[b].includes(nationOuBloc)) || null;
+}
+
+// Modificateur régional AUTOMATIQUE d'un vivre pour une localité donnée,
+// déduit de son origine et de la nation de la localité (cf. LOCALITES_MARCHE
+// ci-dessus) — remplace la sélection manuelle du MJ comme valeur par
+// défaut, jamais comme contrainte (le menu déroulant reste disponible et
+// écrase ce calcul, cf. js/marche.js). Une origine valant directement un nom
+// de bloc ("elfique"/"nain"/"humain", cf. miel_bosquet et consorts, qui
+// n'appartiennent à aucune nation précise) se compare au bloc de la
+// localité, jamais à sa nation — d'où le test _blocDe(origine) en premier.
+// Répli neutre (×1) si l'une des deux données manque (localité sans nation,
+// vivre sans origine) plutôt que de deviner.
+//
+// Cas particulier vérifié sur l'exemple du prompt (sombre-truffe, origine
+// "nain", ×0,8 à Karag Dûm et ×1,5 à Libris) : quand l'origine EST déjà un
+// bloc entier, la retrouver dans n'importe quelle localité de ce bloc n'est
+// pas un "import allié" entre deux nations distinctes, c'est déjà "de la
+// région" au sens large — donc local (×0,8), pas ×1. Le palier "importé
+// allié" (×1) ne s'applique qu'à une origine de nation précise (ex.
+// "solvarn") retrouvée dans une AUTRE nation du même bloc (ex. valdorne).
+function modificateurOrigineAutomatique(origine, nationLocalite) {
+  if (!origine || !nationLocalite) return 1;
+  if (origine === "partout" || origine === nationLocalite) return 0.8;
+  const blocOrigine = _blocDe(origine);
+  const blocLocalite = _blocDe(nationLocalite);
+  if (!blocOrigine || blocOrigine !== blocLocalite) return 1.5;
+  return Object.keys(BLOCS).includes(origine) ? 0.8 : 1;
+}
 
 const RARETES_MARCHE = [
   { id: "commun", label: "Commun (×1)", valeur: 1 },
@@ -117,9 +256,15 @@ function tirerRareteStock() {
 // générique ne doit jamais avoir en stock au hasard — reste obtenable
 // uniquement via le MJ (Loot/+Ajouter un objet), jamais tiré ici.
 function tirerStockMarchand(marchand, localite, catalogueLoot) {
-  const pool = catalogueLoot.filter((item) => {
+  let pool = catalogueLoot.filter((item) => {
     if (item.horsMarche) return false;
     if (!marchand.typesAutorises.includes(item.type)) return false;
+    // famillesAutorisees (prompt_marche_ingredients.md étape 4) : NOUVEAU
+    // filtre, ignoré quand absent — les marchands existants ne changent pas
+    // de comportement. Ne gate QUE les ingredients (les potions d'une
+    // épicerie, type "consommable" sans familleVivre, ne sont jamais
+    // concernées) : une boucherie ne vend ni poisson ni laitier.
+    if (marchand.famillesAutorisees && item.type === "ingredient" && !marchand.famillesAutorisees.includes(item.familleVivre)) return false;
     if (item.type === "armure" && (item.valeurCA || 10) > localite.plafondValeurCA) return false;
     if (item.type === "bouclier") {
       // Seuil/plafond décalés de -10 par rapport à plafondValeurCA (échelle
@@ -131,6 +276,22 @@ function tirerStockMarchand(marchand, localite, catalogueLoot) {
     }
     return true;
   });
+  // quotas (prompt_marche_ingredients.md étape 4) : plafond PAR TYPE,
+  // appliqué avant la coupe globale à 40 — sans ça, 81 vivres noieraient les
+  // potions/armes d'un généraliste. Mélangé d'abord pour que les n gardés
+  // soient un sous-ensemble aléatoire, pas toujours les mêmes premiers de
+  // catalogueLoot. Type absent de `quotas` = non plafonné ici (seule la
+  // coupe globale s'applique) ; `quotas` absent du marchand = comportement
+  // actuel inchangé.
+  if (marchand.quotas) {
+    const compteurs = {};
+    pool = pool.slice().sort(() => Math.random() - 0.5).filter((item) => {
+      const max = marchand.quotas[item.type];
+      if (max == null) return true;
+      compteurs[item.type] = (compteurs[item.type] || 0) + 1;
+      return compteurs[item.type] <= max;
+    });
+  }
   const melange = pool.slice().sort(() => Math.random() - 0.5);
   return melange.slice(0, 40).map((item, idx) => ({
     slotId: item.id + "_" + Date.now() + "_" + idx + "_" + Math.random().toString(36).slice(2, 8),

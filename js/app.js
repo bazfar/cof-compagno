@@ -276,8 +276,8 @@ const App = (() => {
       if (!Array.isArray(p.inventaireListe) || p.inventaireListe.length < 2) return;
       const fusionne = [];
       p.inventaireListe.forEach((it) => {
-        if (it && it.type === "consommable") {
-          const existant = fusionne.find((f) => f.type === "consommable" && f.id === it.id);
+        if (it && TYPES_EMPILABLES.includes(it.type)) {
+          const existant = fusionne.find((f) => f.type === it.type && f.id === it.id);
           if (existant) {
             existant.quantite = (existant.quantite || 1) + (it.quantite || 1);
             modifie = true;
@@ -6815,20 +6815,22 @@ const App = (() => {
     else perso.inventaireListe.splice(idx, 1);
   }
 
-  // Ajoute un objet à l'inventaire en FUSIONNANT les consommables de même id
-  // (décision de Thomas) : deux Parchemins — Boule de feu deviennent une seule
-  // entrée quantite:2 au lieu de deux lignes successives.
-  // Restreint au type "consommable" à dessein : Raretes.appliquer exclut ce
-  // type (cf. js/raretes.js, garde `item.type !== "consommable"`), donc deux
-  // consommables de même id sont forcément identiques. Ce n'est PAS vrai des
+  // Ajoute un objet à l'inventaire en FUSIONNANT les objets empilables de même
+  // id (décision de Thomas) : deux Parchemins — Boule de feu deviennent une
+  // seule entrée quantite:2 au lieu de deux lignes successives.
+  // Restreint à TYPES_EMPILABLES à dessein : Raretes.appliquer exclut déjà
+  // "consommable" (cf. js/raretes.js, garde `item.type !== "consommable"`) et
+  // ignore silencieusement tout type inconnu — dont "ingredient" — via son
+  // switch/default (cf. prompt_marche_ingredients.md), donc deux objets de
+  // même id parmi ces types sont forcément identiques. Ce n'est PAS vrai des
   // armes/armures/accessoires, dont deux instances du même id peuvent porter
   // une rareté, un affixe ou un matériau différents — ne jamais étendre cette
   // fusion à ces types, on écraserait des objets réellement distincts.
   function ajouterAInventaire(perso, item) {
     if (!perso || !item) return;
     if (!perso.inventaireListe) perso.inventaireListe = [];
-    if (item.type === "consommable") {
-      const existant = perso.inventaireListe.find((it) => it.type === "consommable" && it.id === item.id);
+    if (TYPES_EMPILABLES.includes(item.type)) {
+      const existant = perso.inventaireListe.find((it) => it.type === item.type && it.id === item.id);
       if (existant) {
         existant.quantite = (existant.quantite || 1) + (item.quantite || 1);
         return;

@@ -148,7 +148,7 @@ const Loot = (() => {
     if (it.type === "armure")     return `CA ${it.valeurCA ?? 10} · Réduction ${it.reductionDegats || 0}${it.malusDEX ? ` · Malus DEX -${it.malusDEX}` : ""}`;
     if (it.type === "bouclier")   return `+${it.bonusDEF} DEF`;
     if (it.type === "accessoire") return it.effet;
-    if (it.type === "consommable")return `Quantité : ${it.quantite}`;
+    if (TYPES_EMPILABLES.includes(it.type)) return `Quantité : ${it.quantite}`;
     return "";
   }
 

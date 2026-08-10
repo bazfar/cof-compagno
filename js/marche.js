@@ -58,6 +58,23 @@ const Marche = (() => {
     return { localite: null, marchand: null };
   }
 
+  // Modificateur "par défaut" effectif pour CET item chez CE marchand dans
+  // CETTE localité (prompt_marche_ingredients.md étape 5) : le marché noir
+  // garde toujours la priorité (son modificateurParDefaut l'emporte, cf.
+  // "Le marché noir garde la priorité" du prompt) ; sinon, pour un vivre
+  // (type "ingredient") avec une localité qui porte une `nation`, le calcul
+  // automatique origine/nation remplace modificateurParDefaut ; pour tout
+  // le reste (armes, potions, vivre sans origine résoluble...), comportement
+  // inchangé. Reste une VALEUR PAR DÉFAUT seulement : le menu déroulant MJ
+  // (marche-select-mod) l'écrase toujours au moment du clic.
+  function _modificateurEffectif(item, marchand, localite) {
+    if (marchand.estMarcheNoir) return marchand.modificateurParDefaut;
+    if (item.type === "ingredient" && localite && localite.nation) {
+      return modificateurOrigineAutomatique(item.origine, localite.nation);
+    }
+    return marchand.modificateurParDefaut;
+  }
+
   function _idModificateurLePlusProche(valeur) {
     let meilleur = MODIFICATEURS_REGIONAUX[0];
     let ecart = Math.abs(meilleur.valeur - valeur);
@@ -112,6 +129,32 @@ const Marche = (() => {
   const _LABELS_RARETE_COURT = { commun: "Commun", peu_commun: "Peu commun", rare: "Rare", legendaire: "Légendaire" };
   function _labelCourtRarete(id) { return _LABELS_RARETE_COURT[id] || id; }
 
+  // Noms d'affichage des origines de vivre (prompt_marche_ingredients.md) —
+  // table locale plutôt que REGIONS_METEO (data/meteo.js) : les ids n'y
+  // coïncident que partiellement ("khazrak" y est nommé "karag_dum",
+  // "liberra" y est scindé nord/sud, "elfique"/"nain"/"partout" n'y existent
+  // pas du tout) — cf. LOCALITES_MARCHE ci-dessus pour l'explication complète
+  // Khazrak Dûm / Karag Dûm.
+  const _NOMS_ORIGINE = {
+    partout: "Partout", solvarn: "Solvarn", valdorne: "Valdorne", arveth: "Arveth",
+    mornac: "Mornac", liberra: "Liberra", serval: "Serval", aetharion: "Aetharion",
+    aelindra: "Aelindra", mordanel: "Mordanel", kaldrun: "Kaldrun", khazrak: "Khazrak Dûm",
+    elfique: "pan-elfique", nain: "pan-nain",
+  };
+  function _nomOrigine(id) { return _NOMS_ORIGINE[id] || id || "?"; }
+
+  // Libellé court du modificateur EFFECTIF (pas forcément un des 5 choix du
+  // menu déroulant MJ, ex. ×0,8 automatique local) — affiché sur chaque
+  // vivre en vitrine (prompt_marche_ingredients.md étape 6 : « Kaldrun ·
+  // importé rival ×1,5 »), pour qu'un joueur comprenne pourquoi ce prix-là.
+  const _LIBELLES_MOD_COURT = { local: "local", importe_allie: "importé allié", importe_rival: "importé rival", marche_noir_2: "marché noir", marche_noir_3: "marché noir" };
+  function _infoOrigineVivre(item, modValeur) {
+    if (item.type !== "ingredient") return "";
+    const idProche = _idModificateurLePlusProche(modValeur);
+    const libelleMod = _LIBELLES_MOD_COURT[idProche] || idProche;
+    return `${echapper(_nomOrigine(item.origine))} · ${echapper(libelleMod)} ×${modValeur}`;
+  }
+
   function _statsItem(it) {
     if (it.type === "arme") {
       const degats = it.enchantement > 0 ? `${it.enchantement}+${it.degats}` : it.degats;
@@ -120,7 +163,7 @@ const Marche = (() => {
     if (it.type === "armure") return `CA ${it.valeurCA ?? 10} · Réduction ${it.reductionDegats || 0}${it.malusDEX ? ` · Malus DEX -${it.malusDEX}` : ""}`;
     if (it.type === "bouclier") return `+${it.bonusDEF} DEF`;
     if (it.type === "accessoire") return it.effet;
-    if (it.type === "consommable") return `Quantité : ${it.quantite || 1}`;
+    if (TYPES_EMPILABLES.includes(it.type)) return `Quantité : ${it.quantite || 1}`;
     return "";
   }
 
@@ -128,13 +171,18 @@ const Marche = (() => {
   let _persoId = null;
   let _localiteId = null;
   let _marchandId = null;
-  let _filtreType = "tous"; // "tous" | "equip" | "conso" — filtre d'affichage du stock
+  let _filtreType = "tous"; // "tous" | "equip" | "conso" | "vivres" — filtre d'affichage du stock
 
-  // Un objet est un consommable ou un "équipement" (tout le reste : arme,
-  // armure, bouclier, accessoire, charme…). Sert au filtre du marché.
+  // Un objet est un consommable, un vivre ("ingredient", cf.
+  // prompt_marche_ingredients.md) ou un "équipement" (tout le reste : arme,
+  // armure, bouclier, accessoire, charme…). "equip" exclut désormais les
+  // DEUX types empilables (TYPES_EMPILABLES), pas seulement "consommable" —
+  // sinon les 81 vivres réapparaîtraient tous sous "Équipements" depuis leur
+  // passage à "ingredient". Sert au filtre du marché.
   function _correspondFiltre(item) {
     if (_filtreType === "conso") return item.type === "consommable";
-    if (_filtreType === "equip") return item.type !== "consommable";
+    if (_filtreType === "vivres") return item.type === "ingredient";
+    if (_filtreType === "equip") return !TYPES_EMPILABLES.includes(item.type);
     return true;
   }
 
@@ -255,7 +303,8 @@ const Marche = (() => {
     const { localite, marchand } = _trouverMarchandEtLocalite(marchandId);
     if (!perso || !item || !localite || !marchand) return;
     const rareteEffective = _peutAvoirRarete(item) ? (rareteId || "commun") : "commun";
-    const prixFinalPo = calculerPrix(item, marchand.modificateurParDefaut, _valeurRarete(rareteEffective), 0, marchand.faction);
+    const modEffectif = _modificateurEffectif(item, marchand, localite);
+    const prixFinalPo = calculerPrix(item, modEffectif, _valeurRarete(rareteEffective), 0, marchand.faction);
     if (prixFinalPo == null) { toast("Ce marchand refuse de vous vendre quoi que ce soit."); return; }
     const demandes = lireDemandes();
     demandes.push({
@@ -265,7 +314,7 @@ const Marche = (() => {
       marchandId,
       localiteId: localite.id,
       itemId,
-      modRegionalId: _idModificateurLePlusProche(marchand.modificateurParDefaut),
+      modRegionalId: _idModificateurLePlusProche(modEffectif),
       rariteId: rareteEffective,
       remisePct: 0,
       prixFinalPo,
@@ -333,11 +382,17 @@ const Marche = (() => {
     return `<span class="loot-badge loot-badge-rarete-${rareteId}">${echapper(_labelCourtRarete(rareteId))}</span>`;
   }
 
-  function _carteStockJoueur(slot, marchand) {
+  function _carteStockJoueur(slot, marchand, localite) {
     const item = slot.item;
-    const prix = calculerPrix(item, marchand.modificateurParDefaut, _valeurRarete(slot.rareteId), 0, marchand.faction);
+    const modEffectif = _modificateurEffectif(item, marchand, localite);
+    const prix = calculerPrix(item, modEffectif, _valeurRarete(slot.rareteId), 0, marchand.faction);
     const refuse = prix == null;
     const stats = _statsItem(item);
+    // Étape 6 : un vivre affiche son origine et le modificateur appliqué
+    // ("Kaldrun · importé rival ×1,5") pour que le prix ne soit jamais une
+    // boîte noire, et son effetDeclaratif (les 6 vivres hors système) sur
+    // sa fiche, jamais comme une règle chiffrée.
+    const infoOrigine = _infoOrigineVivre(item, modEffectif);
     return `<div class="loot-item">
       <div class="loot-item-header">
         <span class="loot-item-nom">${item.icone ? `<img class="loot-item-icone" src="${item.icone}" alt="" />` : ""}${echapper(item.nom)}</span>
@@ -346,7 +401,9 @@ const Marche = (() => {
         ${_badgeRarete(item, slot.rareteId)}
       </div>
       ${stats ? `<div class="loot-item-stats">${echapper(stats)}</div>` : ""}
+      ${infoOrigine ? `<div class="loot-item-stats">🌍 ${infoOrigine}</div>` : ""}
       <div class="loot-item-desc">${echapper(item.description)}</div>
+      ${item.effetDeclaratif ? `<div class="aide" style="margin-top:4px;">✦ ${echapper(item.effetDeclaratif)}</div>` : ""}
       <div class="marche-prix">${refuse ? "Commerce refusé" : prix + " po"}</div>
       <div class="barre-actions" style="margin-top:8px;">
         <button class="btn petit or btn-marche-demander" data-item-id="${item.id}" data-rarete-id="${slot.rareteId}" ${refuse ? "disabled" : ""}>🛒 Demander l'achat</button>
@@ -354,12 +411,14 @@ const Marche = (() => {
     </div>`;
   }
 
-  function _carteStockMj(slot, marchand) {
+  function _carteStockMj(slot, marchand, localite) {
     const item = slot.item;
     const stats = _statsItem(item);
-    const modDefautId = _idModificateurLePlusProche(marchand.modificateurParDefaut);
-    const prixInitial = calculerPrix(item, marchand.modificateurParDefaut, _valeurRarete(slot.rareteId), 0, marchand.faction);
+    const modEffectif = _modificateurEffectif(item, marchand, localite);
+    const modDefautId = _idModificateurLePlusProche(modEffectif);
+    const prixInitial = calculerPrix(item, modEffectif, _valeurRarete(slot.rareteId), 0, marchand.faction);
     const afficheRarete = _peutAvoirRarete(item);
+    const infoOrigine = _infoOrigineVivre(item, modEffectif);
     return `<div class="loot-item">
       <div class="loot-item-header">
         <span class="loot-item-nom">${item.icone ? `<img class="loot-item-icone" src="${item.icone}" alt="" />` : ""}${echapper(item.nom)}</span>
@@ -368,7 +427,9 @@ const Marche = (() => {
         ${_badgeRarete(item, slot.rareteId)}
       </div>
       ${stats ? `<div class="loot-item-stats">${echapper(stats)}</div>` : ""}
+      ${infoOrigine ? `<div class="loot-item-stats">🌍 ${infoOrigine}</div>` : ""}
       <div class="loot-item-desc">${echapper(item.description)}</div>
+      ${item.effetDeclaratif ? `<div class="aide" style="margin-top:4px;">✦ ${echapper(item.effetDeclaratif)}</div>` : ""}
       <div class="marche-controles" data-slot-id="${slot.slotId}" data-item-id="${item.id}">
         ${!item.sansModificateurRegional ? `<select class="marche-select-mod">${_optionsModificateur(item, modDefautId)}</select>` : ""}
         ${afficheRarete ? `<select class="marche-select-rarete">${_optionsRarete(slot.rareteId)}</select>` : ""}
@@ -393,10 +454,11 @@ const Marche = (() => {
     if (!slots.length) { zone.innerHTML = '<p class="vide">Ce marchand n\'a rien en stock pour l\'instant.</p>'; return; }
     const slotsFiltres = slots.filter((s) => _correspondFiltre(s.item));
     if (!slotsFiltres.length) {
-      zone.innerHTML = `<p class="vide">Aucun ${_filtreType === "conso" ? "consommable" : "équipement"} en stock chez ce marchand.</p>`;
+      const libelleFiltreVide = _filtreType === "conso" ? "consommable" : _filtreType === "vivres" ? "vivre" : "équipement";
+      zone.innerHTML = `<p class="vide">Aucun ${libelleFiltreVide} en stock chez ce marchand.</p>`;
       return;
     }
-    zone.innerHTML = slotsFiltres.map((s) => role === "mj" ? _carteStockMj(s, marchand) : _carteStockJoueur(s, marchand)).join("");
+    zone.innerHTML = slotsFiltres.map((s) => role === "mj" ? _carteStockMj(s, marchand, localite) : _carteStockJoueur(s, marchand, localite)).join("");
 
     if (role === "mj") {
       zone.querySelectorAll(".marche-controles select").forEach((sel) => {
@@ -635,6 +697,29 @@ const Marche = (() => {
     let n = 0;
     Object.keys(stock).forEach((mid) => (stock[mid] || []).map(_normStockEntry).forEach((e) => { if (e.itemId === itemId) n++; }));
     return n;
+  }
+
+  // ── Étape 3 (prompt_marche_ingredients.md) : synchro météo → localité ──
+  // Quand le MJ change la région météo (SyncStore "meteo:courante"), on
+  // présélectionne la localité du marché dont regionMeteo correspond. C'est
+  // un confort de mise en scène, jamais une contrainte : on ne fait que
+  // changer la VALEUR PAR DÉFAUT du sélecteur (_localiteId) avant le
+  // prochain rendu — le sélecteur reste un <select> normal, non désactivé,
+  // et un joueur peut toujours choisir une autre ville juste après.
+  let _dernierRegionMeteoId = null;
+  function _presrelectionnerLocalitePourRegion(etat) {
+    if (typeof LOCALITES_MARCHE === "undefined") return;
+    const regionId = etat && etat.regionId;
+    if (!regionId || regionId === _dernierRegionMeteoId) return;
+    _dernierRegionMeteoId = regionId;
+    const localite = LOCALITES_MARCHE.find((l) => l.regionMeteo === regionId);
+    if (!localite || localite.id === _localiteId) return;
+    _localiteId = localite.id;
+    _marchandId = null;
+    rendrePanneauMarche();
+  }
+  if (typeof SyncStore !== "undefined" && SyncStore.subscribe) {
+    SyncStore.subscribe("meteo:courante", _presrelectionnerLocalitePourRegion);
   }
 
   return { rendrePanneauMarche, acheterObjetMarche, demanderAchatMarche, calculerPrix, mettreEnVente, retirerDuMarche, estEnVente };

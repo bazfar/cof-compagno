@@ -338,10 +338,15 @@ const lootRaw = JSON.parse(fs.readFileSync(LOOT_PATH, "utf8"));
 const items = lootRaw.items;
 if (!Array.isArray(items)) { console.error("❌ data/loot.json : champ `items` absent ou n'est pas un tableau."); process.exit(1); }
 
-const TYPES_VALIDES = ["arme", "armure", "bouclier", "accessoire", "consommable"];
+// ingredient (prompt_marche_ingredients.md) : les vivres bruts quittent
+// "consommable" pour ce type dédié — ration_voyage reste "consommable"
+// (produit fini, pas un vivre brut), tout comme les réactifs d'alchimie
+// (herbes_medicinales et consorts), jamais tagués vivre:true.
+const TYPES_VALIDES = ["arme", "armure", "bouclier", "accessoire", "consommable", "ingredient"];
 const CATEGORIES_ARMURE_VALIDES = ["legere", "moyenne", "lourde"];
 const MAITRISE_ARME_VALIDES = ["simple", "martiale"];
 const CATEGORIES_PORTEE_VALIDES = ["contact", "allonge", "jet", "distance"];
+const FAMILLES_VIVRE_VALIDES = ["viande", "poisson", "cereale", "legume", "champignon", "sel_epice", "gras_sucre", "seve", "laitier", "boisson", "divers"];
 
 // Champs autorisés sur TOUT item, quel que soit le type.
 const COMMUN = ["id", "nom", "type", "porte", "description", "prixPo"];
@@ -391,6 +396,14 @@ const PAR_TYPE = {
   // arbitre à la table (cf. data/cuisine.js, les 3 plats désignés par le
   // document de référence gastronomique).
   consommable: ["quantite", "sortAppris", "dureeEtat", "formuleDot", "jetable", "corruptionCombatRetiree", "vivre", "effetRepos", "effetDeclaratif"],
+  // ingredient (prompt_marche_ingredients.md) : vivres bruts — 81 au total,
+  // pas 60 comme l'annonce le prompt en prose (cf. data/loot.js, commentaire
+  // au-dessus de TYPES_EMPILABLES, pour le décompte détaillé). familleVivre
+  // pilote quel marchand spécialisé peut le vendre, origine pilote le prix
+  // à l'import (cf. data/marche.js, BLOCS). Sous-ensemble du whitelist "consommable"
+  // (quantite/vivre/effetRepos/effetDeclaratif) : aucun vivre n'utilise
+  // sortAppris/dureeEtat/formuleDot/jetable/corruptionCombatRetiree.
+  ingredient: ["quantite", "vivre", "effetRepos", "effetDeclaratif", "familleVivre", "origine"],
 };
 // Champs qui, s'ils sont présents, doivent être de type number — "degats"/
 // "degatsAuMoinsRare"/"bonusPvMaxDe"/"bonusDegatsCreature" en sont
@@ -473,6 +486,14 @@ items.forEach((it, index) => {
     if (typeof it.valeurCA !== "number") signaler(cle, `armure sans valeurCA numérique (reçu : ${JSON.stringify(it.valeurCA)}).`);
     if (typeof it.malusDEX !== "number") signaler(cle, `armure sans malusDEX numérique (reçu : ${JSON.stringify(it.malusDEX)}).`);
     if (!CATEGORIES_ARMURE_VALIDES.includes(it.categorie)) signaler(cle, `armure avec categorie invalide : "${it.categorie}" (attendu : ${CATEGORIES_ARMURE_VALIDES.join("|")}).`);
+  }
+
+  // 6ter0. ingredient (prompt_marche_ingredients.md) : familleVivre/origine
+  // requis sur tout vivre — pilotent respectivement quel marchand spécialisé
+  // peut le vendre et le prix à l'import (cf. data/marche.js).
+  if (it.type === "ingredient") {
+    if (!FAMILLES_VIVRE_VALIDES.includes(it.familleVivre)) signaler(cle, `ingredient avec familleVivre invalide ou absente : "${it.familleVivre}" (attendu : ${FAMILLES_VIVRE_VALIDES.join("|")}).`);
+    if (!it.origine) signaler(cle, `ingredient sans origine renseignée.`);
   }
 
   // 6bis. arme : maitrise (cf. PROFICIENCE_ARME, data/donnees.js) — requise
