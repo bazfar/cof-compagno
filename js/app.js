@@ -109,10 +109,6 @@ const App = (() => {
   let atelierPersoId = null;
   let atelierItemIdx = null;
   let atelierSystemeId = null;
-  // Sélection courante du sous-onglet Alchimie (cf. _rendreAlchimieType et suite).
-  let alchimieType = null;      // "soin" | "utilitaires" | "poisons"
-  let alchimieFiliereId = null; // "seve" | "flambeau" (si alchimieType === "soin")
-  let alchimieFamilleId = null; // "enduit" | "dard" | "piege" (si alchimieType === "poisons")
   // Compteur de tentatives/jour partagé enchantement + alchimie + cuisine (clé
   // composite "categorie:sousId:palierOuRecetteId", ex.
   // "enchantement:generique:3", "alchimie:soin_seve:2", "alchimie:util:antidote",
@@ -4423,13 +4419,12 @@ const App = (() => {
     sel.onchange = () => {
       atelierPersoId = sel.value;
       atelierItemIdx = null; atelierSystemeId = null;
-      alchimieType = null; alchimieFiliereId = null; alchimieFamilleId = null;
       _rendreAtelierItems();
-      _rendreAlchimieType();
+      if (typeof Alchimie !== "undefined" && Alchimie.rendreZoneAlchimie) Alchimie.rendreZoneAlchimie(atelierPersoId);
       if (typeof Cuisine !== "undefined") Cuisine.rendreZoneCuisine(atelierPersoId);
     };
     _rendreAtelierItems();
-    _rendreAlchimieType();
+    if (typeof Alchimie !== "undefined" && Alchimie.rendreZoneAlchimie) Alchimie.rendreZoneAlchimie(atelierPersoId);
     if (typeof Cuisine !== "undefined") Cuisine.rendreZoneCuisine(atelierPersoId);
   }
 
@@ -4588,187 +4583,6 @@ const App = (() => {
     rendrePanneauAtelier();
   }
 
-  /* ---------- Sous-onglet Alchimie ---------- */
-
-  // Reconstruit la recette/palier à partir d'une clé composite (cf.
-  // _tentativesJour) plutôt que de fermer sur une référence — les boutons
-  // sont re-générés à chaque rendu, autant relire depuis ALCHIMIE à chaque
-  // clic pour ne jamais dépendre d'un état capturé périmé.
-  function _recetteDepuisCle(cle) {
-    const parts = cle.split(":"); // ["alchimie", "soin_<filiere>" | "util" | "poison_<famille>", <palierId> | <recetteId>]
-    if (parts[1] === "util") return Alchimie.trouverRecetteUtilitaire(parts[2]);
-    if (parts[1].startsWith("poison_")) return Alchimie.trouverRecettePoison(parts[1].replace(/^poison_/, ""), parseInt(parts[2], 10));
-    const filiereId = parts[1].replace(/^soin_/, "");
-    return Alchimie.trouverRecetteSoin(filiereId, parseInt(parts[2], 10));
-  }
-
-  function _rendreAlchimieType() {
-    const zone = document.getElementById("zone-atelier-alchimie");
-    if (!zone || typeof Alchimie === "undefined") return;
-    const p = chargerPersos()[atelierPersoId];
-    if (!p) { zone.innerHTML = ""; return; }
-    zone.innerHTML = `<div class="carte">
-      <label>Type de potion
-        <select id="select-alchimie-type">
-          <option value="soin">${echapper(ALCHIMIE.soin.label)}</option>
-          <option value="utilitaires">${echapper(ALCHIMIE.utilitaires.label)}</option>
-          <option value="poisons">${echapper(ALCHIMIE.poisons.label)}</option>
-        </select>
-      </label>
-      <label style="margin-left:12px;">Bonus au jet
-        <input type="number" id="alchimie-bonus" value="0" style="width:70px;" />
-      </label>
-      <div id="zone-alchimie-detail" style="margin-top:10px;"></div>
-    </div>`;
-    const sel = document.getElementById("select-alchimie-type");
-    alchimieType = alchimieType || "soin";
-    sel.value = alchimieType;
-    sel.onchange = () => { alchimieType = sel.value; alchimieFiliereId = null; alchimieFamilleId = null; _rendreAlchimieDetail(); };
-    _rendreAlchimieDetail();
-  }
-
-  function _rendreAlchimieDetail() {
-    if (alchimieType === "utilitaires") _rendreAlchimieUtilitaires();
-    else if (alchimieType === "poisons") _rendreAlchimiePoisons();
-    else _rendreAlchimieSoin();
-  }
-
-  function _rendreAlchimieSoin() {
-    const zone = document.getElementById("zone-alchimie-detail");
-    if (!zone) return;
-    const filieres = Object.keys(ALCHIMIE.soin.filieres);
-    alchimieFiliereId = filieres.includes(alchimieFiliereId) ? alchimieFiliereId : filieres[0];
-    zone.innerHTML = `
-      <label>Filière
-        <select id="select-alchimie-filiere">
-          ${filieres.map((fid) => `<option value="${fid}">${echapper(ALCHIMIE.soin.filieres[fid].label)}</option>`).join("")}
-        </select>
-      </label>
-      <div id="zone-alchimie-paliers" style="margin-top:10px;"></div>
-    `;
-    const sel = document.getElementById("select-alchimie-filiere");
-    sel.value = alchimieFiliereId;
-    sel.onchange = () => { alchimieFiliereId = sel.value; _rendreAlchimiePaliersSoin(); };
-    _rendreAlchimiePaliersSoin();
-  }
-
-  function _rendreAlchimiePaliersSoin() {
-    const zone = document.getElementById("zone-alchimie-paliers");
-    if (!zone) return;
-    const filiere = ALCHIMIE.soin.filieres[alchimieFiliereId];
-    if (!filiere) { zone.innerHTML = ""; return; }
-    _rendreCartesRecettes(zone, filiere.paliers.map((palier) => ({ recette: palier, cle: `alchimie:soin_${alchimieFiliereId}:${palier.id}` })));
-  }
-
-  // Copie quasi conforme de _rendreAlchimieSoin/_rendreAlchimiePaliersSoin,
-  // mais sur ALCHIMIE.poisons.familles — variable de module dédiée
-  // (alchimieFamilleId) pour ne pas mélanger les deux systèmes si jamais
-  // leurs clés se recoupent.
-  function _rendreAlchimiePoisons() {
-    const zone = document.getElementById("zone-alchimie-detail");
-    if (!zone) return;
-    const familles = Object.keys(ALCHIMIE.poisons.familles);
-    alchimieFamilleId = familles.includes(alchimieFamilleId) ? alchimieFamilleId : familles[0];
-    zone.innerHTML = `
-      <label>Famille
-        <select id="select-alchimie-famille">
-          ${familles.map((fid) => `<option value="${fid}">${echapper(ALCHIMIE.poisons.familles[fid].label)}</option>`).join("")}
-        </select>
-      </label>
-      <div id="zone-alchimie-paliers" style="margin-top:10px;"></div>
-    `;
-    const sel = document.getElementById("select-alchimie-famille");
-    sel.value = alchimieFamilleId;
-    sel.onchange = () => { alchimieFamilleId = sel.value; _rendreAlchimiePaliersPoisons(); };
-    _rendreAlchimiePaliersPoisons();
-  }
-
-  function _rendreAlchimiePaliersPoisons() {
-    const zone = document.getElementById("zone-alchimie-paliers");
-    if (!zone) return;
-    const famille = ALCHIMIE.poisons.familles[alchimieFamilleId];
-    if (!famille) { zone.innerHTML = ""; return; }
-    _rendreCartesRecettes(zone, famille.paliers.map((palier) => ({ recette: palier, cle: `alchimie:poison_${alchimieFamilleId}:${palier.id}` })));
-  }
-
-  function _rendreAlchimieUtilitaires() {
-    const zone = document.getElementById("zone-alchimie-detail");
-    if (!zone) return;
-    zone.innerHTML = `<div id="zone-alchimie-paliers"></div>`;
-    _rendreCartesRecettes(document.getElementById("zone-alchimie-paliers"),
-      ALCHIMIE.utilitaires.recettes.map((r) => ({ recette: r, cle: `alchimie:util:${r.id}` })));
-  }
-
-  // Rendu partagé filière-soin/utilitaires : une carte par recette, même
-  // gabarit que _rendreAtelierPaliers côté enchantement (diff/tentatives/
-  // coût/bouton), adapté au vocabulaire alchimie (rate au lieu de détruit).
-  function _rendreCartesRecettes(zone, entrees) {
-    if (!zone || typeof Alchimie === "undefined") return;
-    const p = chargerPersos()[atelierPersoId];
-    if (!p) { zone.innerHTML = ""; return; }
-    zone.innerHTML = entrees.map(({ recette, cle }) => {
-      const nomPotion = _nomCatalogueLoot(recette.potionId);
-      const tentatives = _tentativesJour(atelierPersoId, cle);
-      const restantes = recette.tentativesJour - tentatives;
-      const materiauxOk = materiauxDisponibles(atelierPersoId, recette.cout);
-      const coutTxt = recette.cout.map((c) => {
-        const dispo = _quantiteDisponible(p.inventaireListe, c.id);
-        const manque = dispo < c.qte;
-        return `<span${manque ? ' style="color:var(--chaos);font-weight:700;"' : ""}>${c.qte}× ${echapper(_nomCatalogueLoot(c.id))} (${dispo} en stock)</span>`;
-      }).join(", ");
-      const desactive = restantes <= 0 || !materiauxOk;
-      const nomItemRate = _nomCatalogueLoot(recette.itemRateId || "potion_ratee");
-      return `<div class="carte" style="margin-top:10px;">
-        <div><strong>${echapper(nomPotion)}</strong> — diff. ${recette.diff}${recette.rateCritiqueSi > 0 ? ` · <span style="color:var(--chaos);">rate si jet brut ≤ ${recette.rateCritiqueSi} (${echapper(nomItemRate)})</span>` : ""}</div>
-        ${recette.formuleDot ? `<div>Dégâts par tour : ${echapper(recette.formuleDot)}${recette.dureeEtat ? ` pendant ${recette.dureeEtat} tours` : ""}</div>` : ""}
-        <div>Coût : ${coutTxt}</div>
-        <div>Tentatives aujourd'hui : ${tentatives}/${recette.tentativesJour}${restantes <= 0 ? " — épuisées" : ""}</div>
-        <button class="btn or" data-cle-recette="${echapper(cle)}" ${desactive ? "disabled" : ""} style="margin-top:6px;">Brasser</button>
-      </div>`;
-    }).join("");
-
-    zone.querySelectorAll("[data-cle-recette]").forEach((btn) => {
-      btn.onclick = () => _brasserPotion(btn.dataset.cleRecette);
-    });
-  }
-
-  function _brasserPotion(cle) {
-    const recette = _recetteDepuisCle(cle);
-    const p = chargerPersos()[atelierPersoId];
-    if (!recette || !p) return;
-
-    if (_tentativesJour(atelierPersoId, cle) >= recette.tentativesJour) {
-      toast("Plus de tentatives pour cette recette aujourd'hui.");
-      return;
-    }
-    if (!materiauxDisponibles(atelierPersoId, recette.cout)) {
-      toast("Matériaux insuffisants.");
-      return;
-    }
-
-    const bonus = parseInt(document.getElementById("alchimie-bonus").value, 10) || 0;
-    const jetBrut = lancerDe(20);
-    const resultat = Alchimie.resoudre(recette, jetBrut, bonus);
-
-    // Ingrédients consommés dans tous les cas (succès, échec, ratée).
-    consommerMateriaux(atelierPersoId, recette.cout);
-
-    if (resultat.resultat !== "echec") {
-      const itemCatalogue = (typeof LOOT_CATALOGUE !== "undefined") ? LOOT_CATALOGUE.find((it) => it.id === resultat.itemProduitId) : null;
-      if (itemCatalogue) ajouterItemInventaire(atelierPersoId, Object.assign({}, itemCatalogue));
-    }
-    _incrementerTentative(atelierPersoId, cle);
-
-    const total = jetBrut + bonus;
-    const crit = jetBrut === 20, echec = jetBrut === 1;
-    const detailJet = `d20[${jetBrut}]${bonus >= 0 ? "+" : ""}${bonus} — ${resultat.message}`;
-    const label = `${p.nom} — Alchimie (${_nomCatalogueLoot(recette.potionId)})`;
-    afficherResultat(label, total, detailJet, crit, echec);
-    ajouterHisto(label, total, crit, echec, detailJet);
-    toast(resultat.message);
-
-    rendrePanneauAtelier();
-  }
 
   // Bloc de contrôle du partage (propriétaire uniquement) : Privé / Certains
   // joueurs (cases à cocher des autres prénoms) / Toute la table.
@@ -10257,7 +10071,7 @@ const App = (() => {
       const panneauAtelier = document.getElementById("panneau-atelier");
       if (panneauAtelier && panneauAtelier.classList.contains("actif")) {
         _rendreAtelierPaliers();
-        _rendreAlchimieDetail();
+        if (typeof Alchimie !== "undefined" && Alchimie.rendreZoneAlchimie && atelierPersoId) Alchimie.rendreZoneAlchimie(atelierPersoId);
         if (typeof Cuisine !== "undefined" && atelierPersoId) Cuisine.rendreZoneCuisine(atelierPersoId);
       }
     });

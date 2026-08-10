@@ -1,123 +1,99 @@
 /* ============================================================
-   COF-COMPAGNO — Alchimie à risque (onglet Atelier, sous-onglet Alchimie).
+   Alchimie à risque — sous-onglet Atelier (rang Métier + recettes),
+   cf. data/alchimie.js pour la table ALCHIMIE (recettes/paliers).
 
    Second volet du système de craft à risque, à côté de l'enchantement
-   (js/enchantement.js) : au lieu de faire progresser un objet déjà en
-   inventaire, l'alchimie PRODUIT une potion du catalogue loot à partir
-   d'ingrédients (fleurs, herbes...). Rien n'est jamais détruit ici (pas
-   d'objet à perdre) — un jet catastrophique produit une "Potion ratée"
-   à la place de la potion visée, plutôt qu'un échec sec.
+   (js/enchantement.js, resté sur les fonctions privées de js/app.js —
+   volontaire, cf. prompt_recolte_3_alchimie.md) : au lieu de faire
+   progresser un objet déjà en inventaire, l'alchimie PRODUIT une potion du
+   catalogue loot à partir d'ingrédients (fleurs, herbes...). Rien n'est
+   jamais détruit ici (pas d'objet à perdre) — un jet catastrophique produit
+   une "Potion ratée" à la place de la potion visée, plutôt qu'un échec sec.
 
-   3 familles de recettes (cf. ALCHIMIE) :
-   - soin.filieres.seve/flambeau : 3 paliers chacune, potions de soin de
-     difficulté croissante (Druide/Prêtre thématiquement, mais l'app ne
-     restreint pas par classe — cf. bonus au jet, laissé libre côté UI).
-   - utilitaires.recettes : 6 recettes indépendantes (une seule "palier"
-     chacune), potions utilitaires diverses.
-   - poisons.familles.enduit/dard/piege : 5 paliers chacune (même table de
-     potence à chaque palier) ; seuls le potionId produit et le réactif de
-     famille changent — cf. js/etats.js (empoisonnee) pour l'état appliqué.
+   Module self-contained, même convention que js/cuisine.js/js/repos.js/
+   js/marche.js/js/recolte.js : ses propres echapper()/toast(), accès à
+   App/SyncStore/Metiers/Personnage uniquement via leurs API publiques —
+   toute l'UI qui vivait dans js/app.js (Sous-onglet Alchimie) est reprise
+   ici À L'IDENTIQUE dans son arborescence (type → filière/famille →
+   cartes de palier), seul le bonus au jet change de source (rang de métier
+   + INT au lieu d'un champ numérique libre, cf. §4).
 
-   Chaque palier/recette référence `potionId`, l'id catalogue (data/loot.js)
-   de la potion produite en cas de succès — jamais recréé ici, juste
-   pointé (cf. js/app.js, ajouterItemInventaire).
+   Jet : 1d20 + 2×rang(alchimie) + mod.INT — PAS les bandes de qualité de la
+   Cuisine (QUALITES) : l'alchimie n'a que succès/échec/raté critique,
+   jamais réutilisé/dupliqué ici à dessein.
+
+   Tentatives/jour : réutilise la clé SyncStore "atelier:tentatives" (même
+   table que Cuisine/Enchantement, cf. js/app.js), avec les MÊMES préfixes
+   de clé qu'avant ce déplacement (alchimie:soin_<filiere>:<palier>,
+   alchimie:util:<recette>, alchimie:poison_<famille>:<palier>) — le bouton
+   MJ "🌅 Nouveau jour" (qui vide toute la table) continue donc de
+   réinitialiser l'alchimie sans code supplémentaire.
    ============================================================ */
-
-const ALCHIMIE = {
-  soin: {
-    label: "Potions de soin",
-    filieres: {
-      seve: {
-        label: "Sève (Druide)",
-        paliers: [
-          { id: 1, potionId: "potion_soin_petite", diff: 10, tentativesJour: 5, cout: [{ id: "fleur_seve_naissante", qte: 1 }], rateCritiqueSi: 0 },
-          { id: 2, potionId: "potion_soin", diff: 12, tentativesJour: 4, cout: [{ id: "fleur_seve_eclose", qte: 1 }], rateCritiqueSi: 0 },
-          { id: 3, potionId: "potion_soin_sup", diff: 14, tentativesJour: 3, cout: [{ id: "fleur_seve_ancienne", qte: 2 }], rateCritiqueSi: 2 },
-        ],
-      },
-      flambeau: {
-        label: "Flambeau (Prêtre)",
-        paliers: [
-          { id: 4, potionId: "potion_soin_benie", diff: 16, tentativesJour: 2, cout: [{ id: "fleur_flambeau", qte: 1 }], rateCritiqueSi: 3 },
-          { id: 5, potionId: "potion_soin_grande", diff: 18, tentativesJour: 1, cout: [{ id: "fleur_flambeau_embrasee", qte: 2 }], rateCritiqueSi: 5 },
-          { id: 6, potionId: "potion_soin_grande_benie", diff: 20, tentativesJour: 1, cout: [{ id: "fleur_aurore_eternelle", qte: 1 }, { id: "diamant", qte: 1 }], rateCritiqueSi: 8 },
-        ],
-      },
-    },
-  },
-  utilitaires: {
-    label: "Potions utilitaires",
-    recettes: [
-      { id: "antidote", potionId: "antidote", diff: 10, tentativesJour: 5, cout: [{ id: "herbes_medicinales", qte: 2 }], rateCritiqueSi: 0 },
-      { id: "huile_sainte", potionId: "huile_sainte", diff: 12, tentativesJour: 3, cout: [{ id: "fleur_flambeau", qte: 1 }], rateCritiqueSi: 0 },
-      { id: "elixir_vision_nocturne", potionId: "elixir_vision_nocturne", diff: 12, tentativesJour: 3, cout: [{ id: "fleur_lune", qte: 1 }], rateCritiqueSi: 0 },
-      { id: "fumigene", potionId: "fumigene", diff: 10, tentativesJour: 4, cout: [{ id: "poussiere_fer", qte: 1 }, { id: "herbes_medicinales", qte: 1 }], rateCritiqueSi: 0 },
-      { id: "elixir_force", potionId: "elixir_force", diff: 14, tentativesJour: 2, cout: [{ id: "fleur_rugissante", qte: 2 }], rateCritiqueSi: 0 },
-      { id: "bombe_alchimique", potionId: "bombe_alchimique", diff: 14, tentativesJour: 2, cout: [{ id: "herbe_feu", qte: 2 }], rateCritiqueSi: 0 },
-    ],
-  },
-  // Table de potence commune aux 3 familles (enduit/dard/piege) : mêmes
-  // diff/tentativesJour/rateCritiqueSi à chaque palier, seuls potionId et le
-  // réactif de famille changent. formuleDot/dureeEtat ne sont PAS lus par
-  // Alchimie.resoudre (qui ignore tout ce qui n'est pas diff/cout/
-  // tentativesJour/rateCritiqueSi/itemRateId) : ils servent uniquement à
-  // l'affichage de la carte recette et au pré-remplissage de la modale Malus
-  // au moment de l'usage (cf. js/app.js, ouvrirModalMalus).
-  poisons: {
-    label: "Poisons",
-    familles: {
-      enduit: {
-        label: "Enduit d'arme",
-        paliers: [
-          { id: 1, potionId: "poison_enduit_1", diff: 12, tentativesJour: 3, formuleDot: "1d4", dureeEtat: 2,
-            cout: [{ id: "venin_brut", qte: 1 }, { id: "huile_alchimique", qte: 1 }], rateCritiqueSi: 0, itemRateId: "poison_rate" },
-          { id: 2, potionId: "poison_enduit_2", diff: 14, tentativesJour: 3, formuleDot: "1d6", dureeEtat: 3,
-            cout: [{ id: "venin_brut", qte: 2 }, { id: "huile_alchimique", qte: 1 }], rateCritiqueSi: 0, itemRateId: "poison_rate" },
-          { id: 3, potionId: "poison_enduit_3", diff: 16, tentativesJour: 2, formuleDot: "1d8", dureeEtat: 3,
-            cout: [{ id: "glande_venimeuse", qte: 1 }, { id: "huile_alchimique", qte: 1 }], rateCritiqueSi: 2, itemRateId: "poison_rate" },
-          { id: 4, potionId: "poison_enduit_4", diff: 18, tentativesJour: 1, formuleDot: "1d10", dureeEtat: 4,
-            cout: [{ id: "glande_venimeuse", qte: 2 }, { id: "huile_alchimique", qte: 1 }], rateCritiqueSi: 5, itemRateId: "poison_rate" },
-          { id: 5, potionId: "poison_enduit_5", diff: 20, tentativesJour: 1, formuleDot: "2d6", dureeEtat: 4,
-            cout: [{ id: "fiel_noir", qte: 1 }, { id: "diamant", qte: 1 }, { id: "huile_alchimique", qte: 1 }], rateCritiqueSi: 10, itemRateId: "poison_rate" },
-        ],
-      },
-      dard: {
-        label: "Dard / fiole lancée",
-        paliers: [
-          { id: 1, potionId: "poison_dard_1", diff: 12, tentativesJour: 3, formuleDot: "1d4", dureeEtat: 2,
-            cout: [{ id: "venin_brut", qte: 1 }, { id: "fiole_vide", qte: 1 }], rateCritiqueSi: 0, itemRateId: "poison_rate" },
-          { id: 2, potionId: "poison_dard_2", diff: 14, tentativesJour: 3, formuleDot: "1d6", dureeEtat: 3,
-            cout: [{ id: "venin_brut", qte: 2 }, { id: "fiole_vide", qte: 1 }], rateCritiqueSi: 0, itemRateId: "poison_rate" },
-          { id: 3, potionId: "poison_dard_3", diff: 16, tentativesJour: 2, formuleDot: "1d8", dureeEtat: 3,
-            cout: [{ id: "glande_venimeuse", qte: 1 }, { id: "fiole_vide", qte: 1 }], rateCritiqueSi: 2, itemRateId: "poison_rate" },
-          { id: 4, potionId: "poison_dard_4", diff: 18, tentativesJour: 1, formuleDot: "1d10", dureeEtat: 4,
-            cout: [{ id: "glande_venimeuse", qte: 2 }, { id: "fiole_vide", qte: 1 }], rateCritiqueSi: 5, itemRateId: "poison_rate" },
-          { id: 5, potionId: "poison_dard_5", diff: 20, tentativesJour: 1, formuleDot: "2d6", dureeEtat: 4,
-            cout: [{ id: "fiel_noir", qte: 1 }, { id: "diamant", qte: 1 }, { id: "fiole_vide", qte: 1 }], rateCritiqueSi: 10, itemRateId: "poison_rate" },
-        ],
-      },
-      piege: {
-        label: "Ingéré / piège",
-        paliers: [
-          { id: 1, potionId: "poison_piege_1", diff: 12, tentativesJour: 3, formuleDot: "1d4", dureeEtat: 2,
-            cout: [{ id: "venin_brut", qte: 1 }, { id: "poudre_camouflage", qte: 1 }], rateCritiqueSi: 0, itemRateId: "poison_rate" },
-          { id: 2, potionId: "poison_piege_2", diff: 14, tentativesJour: 3, formuleDot: "1d6", dureeEtat: 3,
-            cout: [{ id: "venin_brut", qte: 2 }, { id: "poudre_camouflage", qte: 1 }], rateCritiqueSi: 0, itemRateId: "poison_rate" },
-          { id: 3, potionId: "poison_piege_3", diff: 16, tentativesJour: 2, formuleDot: "1d8", dureeEtat: 3,
-            cout: [{ id: "glande_venimeuse", qte: 1 }, { id: "poudre_camouflage", qte: 1 }], rateCritiqueSi: 2, itemRateId: "poison_rate" },
-          { id: 4, potionId: "poison_piege_4", diff: 18, tentativesJour: 1, formuleDot: "1d10", dureeEtat: 4,
-            cout: [{ id: "glande_venimeuse", qte: 2 }, { id: "poudre_camouflage", qte: 1 }], rateCritiqueSi: 5, itemRateId: "poison_rate" },
-          { id: 5, potionId: "poison_piege_5", diff: 20, tentativesJour: 1, formuleDot: "2d6", dureeEtat: 4,
-            cout: [{ id: "fiel_noir", qte: 1 }, { id: "diamant", qte: 1 }, { id: "poudre_camouflage", qte: 1 }], rateCritiqueSi: 10, itemRateId: "poison_rate" },
-        ],
-      },
-    },
-  },
-};
 
 const Alchimie = (() => {
   "use strict";
 
+  const METIER_ID = "alchimie";
+  const STORAGE_ATELIER_TENTATIVES = "atelier:tentatives"; // même clé que js/app.js/js/cuisine.js
+
+  /* ── Utilitaires (copie locale, même convention que js/cuisine.js) ── */
+  function echapper(s) {
+    const d = document.createElement("div"); d.textContent = s == null ? "" : String(s); return d.innerHTML;
+  }
+  function toast(msg) {
+    const t = document.getElementById("toast");
+    if (!t) return;
+    t.textContent = msg; t.classList.add("visible");
+    setTimeout(() => t.classList.remove("visible"), 2800);
+  }
+
+  function _nomCatalogueLoot(id) {
+    if (typeof LOOT_CATALOGUE === "undefined") return id;
+    const it = LOOT_CATALOGUE.find((l) => l.id === id);
+    return it ? it.nom : id;
+  }
+
+  // Quantité/consommation de matériaux — copie locale de la paire
+  // _quantiteDisponible/_consommerQuantite partagée enchantement+alchimie
+  // dans js/app.js (jamais exposée publiquement, donc pas réutilisable
+  // depuis ici sans la dupliquer — cf. prompt, §4.4 "sinon en faire une
+  // copie locale").
+  function _quantiteDisponible(inventaireListe, itemId) {
+    return (inventaireListe || []).filter((it) => it.id === itemId).reduce((total, it) => total + (it.quantite || 1), 0);
+  }
+  function _consommerQuantite(inventaireListe, itemId, qte) {
+    let restant = qte;
+    for (let i = inventaireListe.length - 1; i >= 0 && restant > 0; i--) {
+      const it = inventaireListe[i];
+      if (it.id !== itemId) continue;
+      const dispo = it.quantite || 1;
+      if (dispo <= restant) { restant -= dispo; inventaireListe.splice(i, 1); }
+      else { it.quantite = dispo - restant; restant = 0; }
+    }
+  }
+  function _materiauxDisponibles(inventaireListe, cout) {
+    return cout.every((c) => _quantiteDisponible(inventaireListe, c.id) >= c.qte);
+  }
+  function _consommerMateriaux(inventaireListe, cout) {
+    cout.forEach((c) => _consommerQuantite(inventaireListe, c.id, c.qte));
+  }
+
+  function _tentativesAtelier() { return SyncStore.get(STORAGE_ATELIER_TENTATIVES) || {}; }
+  // cle : identifiant composite COMPLET, déjà préfixé par l'appelant (ex.
+  // "alchimie:soin_seve:2", "alchimie:util:antidote") — inchangé depuis
+  // js/app.js, pour que "🌅 Nouveau jour" continue de tout réinitialiser.
+  function _tentativesJour(persoId, cle) {
+    const table = _tentativesAtelier();
+    return (table[persoId] && table[persoId][cle]) || 0;
+  }
+  function _incrementerTentative(persoId, cle) {
+    const table = _tentativesAtelier();
+    table[persoId] = table[persoId] || {};
+    table[persoId][cle] = (table[persoId][cle] || 0) + 1;
+    SyncStore.set(STORAGE_ATELIER_TENTATIVES, table);
+  }
+
+  /* ── Trouveurs (inchangés) ──────────────────────────────────── */
   function trouverRecetteSoin(filiereId, palierId) {
     const f = ALCHIMIE.soin.filieres[filiereId];
     return f ? f.paliers.find((p) => p.id === palierId) : null;
@@ -130,11 +106,25 @@ const Alchimie = (() => {
     return f ? f.paliers.find((p) => p.id === palierId) : null;
   }
 
+  // Reconstruit la recette/palier à partir d'une clé composite (cf.
+  // _tentativesJour) plutôt que de fermer sur une référence — les boutons
+  // sont re-générés à chaque rendu, autant relire depuis ALCHIMIE à chaque
+  // clic pour ne jamais dépendre d'un état capturé périmé.
+  function _recetteDepuisCle(cle) {
+    const parts = cle.split(":"); // ["alchimie", "soin_<filiere>" | "util" | "poison_<famille>", <palierId> | <recetteId>]
+    if (parts[1] === "util") return trouverRecetteUtilitaire(parts[2]);
+    if (parts[1].startsWith("poison_")) return trouverRecettePoison(parts[1].replace(/^poison_/, ""), parseInt(parts[2], 10));
+    const filiereId = parts[1].replace(/^soin_/, "");
+    return trouverRecetteSoin(filiereId, parseInt(parts[2], 10));
+  }
+
   // jetBrut : d20 seul (avant bonus) — juge à lui seul le brassage raté.
-  // bonus : modificateur d'artisan (Druide/Prêtre/artisan PNJ incarné par le
-  // MJ) ajouté au jet pour juger la réussite face à recette.diff.
-  // Contrairement à Enchantements.resoudre, il n'y a rien à muter/détruire
-  // ici : le résultat pointe seulement l'id catalogue à produire (ou null).
+  // bonus : 2×rang + mod.INT (cf. _bonusJet ci-dessous), ajouté au jet pour
+  // juger la réussite face à recette.diff. Contrairement à
+  // Enchantements.resoudre, il n'y a rien à muter/détruire ici : le résultat
+  // pointe seulement l'id catalogue à produire (ou null). INCHANGÉ par
+  // rapport à l'ancien js/alchimie.js — seule la provenance de `bonus`
+  // change (cf. prompt_recolte_3_alchimie.md, interdit de rééquilibrage).
   function resoudre(recette, jetBrut, bonus) {
     if (!recette) return { resultat: "erreur", message: "Recette introuvable." };
 
@@ -155,10 +145,236 @@ const Alchimie = (() => {
     return { resultat: "echec", itemProduitId: null, message: `Échec (${total} < ${recette.diff}) — ingrédients perdus, rien produit.` };
   }
 
-  return { LISTE: ALCHIMIE, trouverRecetteSoin, trouverRecetteUtilitaire, trouverRecettePoison, resoudre };
+  // Rang de recette DÉRIVÉ de diff plutôt qu'un champ ajouté à la table (qui
+  // obligerait à toucher les 21 recettes, interdit par le prompt) : diff
+  // 10→1, 12→2, 14→3, 16→4, 18→5, 20→5 (plafonné, cf. prompt §4.2).
+  function _rangRecette(recette) {
+    return Math.max(1, Math.min(5, Math.round((recette.diff - 8) / 2)));
+  }
+
+  // xpMult : succès 1, échec simple 0.5 (on apprend en ratant une mixture),
+  // raté critique 0. Ne réutilise PAS QUALITES.xpMult de la Cuisine :
+  // l'alchimie n'a pas de bandes de qualité (cf. en-tête de ce fichier).
+  function _xpMultPour(resultatId) {
+    if (resultatId === "succes") return 1;
+    if (resultatId === "echec") return 0.5;
+    return 0; // "ratee" (critique) ou "erreur"
+  }
+
+  /* ── Bonus au jet (rang + INT) — remplace l'ancien champ numérique libre ─ */
+  // { rang, modINT, bonus, texte } — `texte` est la ligne lecture-seule
+  // affichée à la place de l'ancien champ de saisie manuelle (cf. prompt
+  // §4.3) : le joueur doit voir d'où vient son bonus, il ne le saisit plus.
+  function _bonusJet(p) {
+    const rang = Metiers.rang(p, METIER_ID);
+    const perso = Personnage.depuisJSON(p);
+    const modINT = perso.mod("INT");
+    const bonus = 2 * rang + modINT;
+    const signe = (n) => (n >= 0 ? "+" : "") + n;
+    return { rang, modINT, bonus, texte: `2 × rang (${rang}) + INT (${signe(modINT)}) = ${signe(bonus)}` };
+  }
+
+  /* ── État local du sous-onglet (par navigateur, pas synchronisé) ──
+     Patron _persoIdCourant de js/cuisine.js — alchimieType/FiliereId/
+     FamilleId étaient des variables de module d'app.js (cf. prompt §3),
+     désormais privées ici. */
+  let _persoIdCourant = null;
+  let _type = null;      // "soin" | "utilitaires" | "poisons"
+  let _filiereId = null; // "seve" | "flambeau" (si _type === "soin")
+  let _familleId = null; // "enduit" | "dard" | "piege" (si _type === "poisons")
+
+  function _htmlRang(p) {
+    const rang = Metiers.rang(p, METIER_ID);
+    const titre = Metiers.titre(p, METIER_ID);
+    const xp = Metiers.xp(p, METIER_ID);
+    const prog = Metiers.progressionVersRangSuivant(p, METIER_ID);
+    return `<div class="carte">
+      <h3 style="margin-top:0;">${METIERS.alchimie.icone} Alchimie — ${echapper(titre)} (rang ${rang})</h3>
+      <div style="font-size:0.85rem;">${xp} XP${prog ? ` — ${prog.actuel}/${prog.requis} vers le rang ${rang + 1}` : " — rang maximum"}</div>
+      ${prog ? `<div class="barre-pv" style="margin-top:4px;"><div class="rempli" style="width:${prog.pct}%;"></div></div>` : ""}
+    </div>`;
+  }
+
+  function rendreZoneAlchimie(persoId) {
+    _persoIdCourant = persoId;
+    const zone = document.getElementById("zone-atelier-alchimie");
+    if (!zone) return;
+    const p = App.chargerPersos()[persoId];
+    if (!p) { zone.innerHTML = ""; return; }
+    const mod = _bonusJet(p);
+    zone.innerHTML = _htmlRang(p) + `<div class="carte">
+      <label>Type de potion
+        <select id="select-alchimie-type">
+          <option value="soin">${echapper(ALCHIMIE.soin.label)}</option>
+          <option value="utilitaires">${echapper(ALCHIMIE.utilitaires.label)}</option>
+          <option value="poisons">${echapper(ALCHIMIE.poisons.label)}</option>
+        </select>
+      </label>
+      <div style="margin-top:6px;font-size:0.85rem;">Bonus au jet : ${echapper(mod.texte)}</div>
+      <div id="zone-alchimie-detail" style="margin-top:10px;"></div>
+    </div>`;
+    const sel = document.getElementById("select-alchimie-type");
+    _type = _type || "soin";
+    sel.value = _type;
+    sel.onchange = () => { _type = sel.value; _filiereId = null; _familleId = null; _rendreAlchimieDetail(); };
+    _rendreAlchimieDetail();
+  }
+
+  function _rendreAlchimieDetail() {
+    if (_type === "utilitaires") _rendreAlchimieUtilitaires();
+    else if (_type === "poisons") _rendreAlchimiePoisons();
+    else _rendreAlchimieSoin();
+  }
+
+  function _rendreAlchimieSoin() {
+    const zone = document.getElementById("zone-alchimie-detail");
+    if (!zone) return;
+    const filieres = Object.keys(ALCHIMIE.soin.filieres);
+    _filiereId = filieres.includes(_filiereId) ? _filiereId : filieres[0];
+    zone.innerHTML = `
+      <label>Filière
+        <select id="select-alchimie-filiere">
+          ${filieres.map((fid) => `<option value="${fid}">${echapper(ALCHIMIE.soin.filieres[fid].label)}</option>`).join("")}
+        </select>
+      </label>
+      <div id="zone-alchimie-paliers" style="margin-top:10px;"></div>
+    `;
+    const sel = document.getElementById("select-alchimie-filiere");
+    sel.value = _filiereId;
+    sel.onchange = () => { _filiereId = sel.value; _rendreAlchimiePaliersSoin(); };
+    _rendreAlchimiePaliersSoin();
+  }
+
+  function _rendreAlchimiePaliersSoin() {
+    const zone = document.getElementById("zone-alchimie-paliers");
+    if (!zone) return;
+    const filiere = ALCHIMIE.soin.filieres[_filiereId];
+    if (!filiere) { zone.innerHTML = ""; return; }
+    _rendreCartesRecettes(zone, filiere.paliers.map((palier) => ({ recette: palier, cle: `alchimie:soin_${_filiereId}:${palier.id}` })));
+  }
+
+  // Copie quasi conforme de _rendreAlchimieSoin/_rendreAlchimiePaliersSoin,
+  // mais sur ALCHIMIE.poisons.familles — variable dédiée (_familleId) pour
+  // ne pas mélanger les deux systèmes si jamais leurs clés se recoupent.
+  function _rendreAlchimiePoisons() {
+    const zone = document.getElementById("zone-alchimie-detail");
+    if (!zone) return;
+    const familles = Object.keys(ALCHIMIE.poisons.familles);
+    _familleId = familles.includes(_familleId) ? _familleId : familles[0];
+    zone.innerHTML = `
+      <label>Famille
+        <select id="select-alchimie-famille">
+          ${familles.map((fid) => `<option value="${fid}">${echapper(ALCHIMIE.poisons.familles[fid].label)}</option>`).join("")}
+        </select>
+      </label>
+      <div id="zone-alchimie-paliers" style="margin-top:10px;"></div>
+    `;
+    const sel = document.getElementById("select-alchimie-famille");
+    sel.value = _familleId;
+    sel.onchange = () => { _familleId = sel.value; _rendreAlchimiePaliersPoisons(); };
+    _rendreAlchimiePaliersPoisons();
+  }
+
+  function _rendreAlchimiePaliersPoisons() {
+    const zone = document.getElementById("zone-alchimie-paliers");
+    if (!zone) return;
+    const famille = ALCHIMIE.poisons.familles[_familleId];
+    if (!famille) { zone.innerHTML = ""; return; }
+    _rendreCartesRecettes(zone, famille.paliers.map((palier) => ({ recette: palier, cle: `alchimie:poison_${_familleId}:${palier.id}` })));
+  }
+
+  function _rendreAlchimieUtilitaires() {
+    const zone = document.getElementById("zone-alchimie-detail");
+    if (!zone) return;
+    zone.innerHTML = `<div id="zone-alchimie-paliers"></div>`;
+    _rendreCartesRecettes(document.getElementById("zone-alchimie-paliers"),
+      ALCHIMIE.utilitaires.recettes.map((r) => ({ recette: r, cle: `alchimie:util:${r.id}` })));
+  }
+
+  // Rendu partagé filière-soin/poisons/utilitaires : une carte par recette,
+  // même gabarit qu'avant ce déplacement (diff/tentatives/coût/bouton).
+  function _rendreCartesRecettes(zone, entrees) {
+    if (!zone) return;
+    const p = App.chargerPersos()[_persoIdCourant];
+    if (!p) { zone.innerHTML = ""; return; }
+    zone.innerHTML = entrees.map(({ recette, cle }) => {
+      const nomPotion = _nomCatalogueLoot(recette.potionId);
+      const tentatives = _tentativesJour(_persoIdCourant, cle);
+      const restantes = recette.tentativesJour - tentatives;
+      const materiauxOk = _materiauxDisponibles(p.inventaireListe, recette.cout);
+      const coutTxt = recette.cout.map((c) => {
+        const dispo = _quantiteDisponible(p.inventaireListe, c.id);
+        const manque = dispo < c.qte;
+        return `<span${manque ? ' style="color:var(--chaos);font-weight:700;"' : ""}>${c.qte}× ${echapper(_nomCatalogueLoot(c.id))} (${dispo} en stock)</span>`;
+      }).join(", ");
+      const desactive = restantes <= 0 || !materiauxOk;
+      const nomItemRate = _nomCatalogueLoot(recette.itemRateId || "potion_ratee");
+      return `<div class="carte" style="margin-top:10px;">
+        <div><strong>${echapper(nomPotion)}</strong> — diff. ${recette.diff}${recette.rateCritiqueSi > 0 ? ` · <span style="color:var(--chaos);">rate si jet brut ≤ ${recette.rateCritiqueSi} (${echapper(nomItemRate)})</span>` : ""}</div>
+        ${recette.formuleDot ? `<div>Dégâts par tour : ${echapper(recette.formuleDot)}${recette.dureeEtat ? ` pendant ${recette.dureeEtat} tours` : ""}</div>` : ""}
+        <div>Coût : ${coutTxt}</div>
+        <div>Tentatives aujourd'hui : ${tentatives}/${recette.tentativesJour}${restantes <= 0 ? " — épuisées" : ""}</div>
+        <button class="btn or" data-cle-recette="${echapper(cle)}" ${desactive ? "disabled" : ""} style="margin-top:6px;">Brasser</button>
+      </div>`;
+    }).join("");
+
+    zone.querySelectorAll("[data-cle-recette]").forEach((btn) => {
+      btn.onclick = () => _brasserPotion(btn.dataset.cleRecette);
+    });
+  }
+
+  function _brasserPotion(cle) {
+    const recette = _recetteDepuisCle(cle);
+    const persos = App.chargerPersos();
+    const p = persos[_persoIdCourant];
+    if (!recette || !p) return;
+
+    if (_tentativesJour(_persoIdCourant, cle) >= recette.tentativesJour) {
+      toast("Plus de tentatives pour cette recette aujourd'hui.");
+      return;
+    }
+    if (!_materiauxDisponibles(p.inventaireListe, recette.cout)) {
+      toast("Matériaux insuffisants.");
+      return;
+    }
+
+    const rangAlchimie = Metiers.rang(p, METIER_ID);
+    const mod = _bonusJet(p);
+    const jetBrut = App.lancerDe(20);
+    const resultat = resoudre(recette, jetBrut, mod.bonus);
+
+    // Ingrédients consommés dans tous les cas (succès, échec, ratée).
+    _consommerMateriaux(p.inventaireListe, recette.cout);
+
+    if (resultat.resultat !== "echec") {
+      const itemCatalogue = (typeof LOOT_CATALOGUE !== "undefined") ? LOOT_CATALOGUE.find((it) => it.id === resultat.itemProduitId) : null;
+      if (itemCatalogue) App.ajouterAInventaire(p, Object.assign({}, itemCatalogue));
+    }
+    _incrementerTentative(_persoIdCourant, cle);
+
+    const rangRecette = _rangRecette(recette);
+    const xpGagne = Math.ceil((2 * rangRecette + 3 * Math.max(0, rangRecette - rangAlchimie)) * _xpMultPour(resultat.resultat));
+    const gainXp = Metiers.gagnerXp(p, METIER_ID, xpGagne);
+    App.sauverPersos(persos);
+
+    const total = jetBrut + mod.bonus;
+    const crit = jetBrut === 20, echec = jetBrut === 1;
+    const detailJet = `d20[${jetBrut}]${mod.bonus >= 0 ? "+" : ""}${mod.bonus} — ${resultat.message}`;
+    const label = `${p.nom} — Alchimie (${_nomCatalogueLoot(recette.potionId)})`;
+    App.ajouterHisto(label, total, crit, echec, detailJet);
+
+    let msg = resultat.message;
+    if (xpGagne) msg += ` +${xpGagne} XP Alchimie.`;
+    if (gainXp.montee) msg += ` ⚗️ Nouveau rang : ${Metiers.titre(App.chargerPersos()[_persoIdCourant], METIER_ID)} !`;
+    toast(msg);
+
+    rendreZoneAlchimie(_persoIdCourant);
+  }
+
+  return {
+    LISTE: ALCHIMIE, trouverRecetteSoin, trouverRecetteUtilitaire, trouverRecettePoison, resoudre,
+    rendreZoneAlchimie,
+  };
 })();
 
-if (typeof window !== "undefined") {
-  window.ALCHIMIE = ALCHIMIE;
-  window.Alchimie = Alchimie;
-}
+if (typeof window !== "undefined") window.Alchimie = Alchimie;
