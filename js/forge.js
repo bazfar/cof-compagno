@@ -132,6 +132,7 @@ const Forge = (() => {
     if (type === "accessoire") item.slot = v("forge-slot");
     const def = n("forge-def"); if (def) item.bonusDEF = def;
     if (type === "armure") {
+      item.categorie = v("forge-categorie") || "legere";                 // proficience (cf. Personnage.estArmureNonMaitrisee)
       item.valeurCA = n("forge-valeurca") || 10;                       // classe d'armure (plus dur à toucher)
       const rd = n("forge-reduction"); if (rd) item.reductionDegats = rd; // réduction de dégâts (absorbe)
       const md = n("forge-malusdex"); if (md) item.malusDEX = md;
@@ -228,6 +229,7 @@ const Forge = (() => {
     if (it.bonusAttaqueMagique) bits.push(`${it.bonusAttaqueMagique > 0 ? "+" : ""}${it.bonusAttaqueMagique} atk mag.`);
     if (it.bonusAttaqueDistance) bits.push(`${it.bonusAttaqueDistance > 0 ? "+" : ""}${it.bonusAttaqueDistance} atk dist.`);
     if (it.bonusDegatsMagiques) bits.push(`${it.bonusDegatsMagiques > 0 ? "+" : ""}${it.bonusDegatsMagiques} dég. mag.`);
+    if (it.type === "armure") bits.push(`catégorie ${LABELS_CATEGORIE_ARMURE[it.categorie] || it.categorie || "légère"}`);
     if (it.valeurCA) bits.push(`CA ${it.valeurCA}`);
     if (it.reductionDegats) bits.push(`réduction ${it.reductionDegats}`);
     if (it.malusDEX) bits.push(`malus DEX -${it.malusDEX}`);
@@ -263,6 +265,11 @@ const Forge = (() => {
         <label>Prix (po)<input type="number" id="forge-prix" value="50" step="1" min="0" /></label>
         <label>Rareté (affichage)<select id="forge-rarete">${_optionRaretes()}</select></label>
         <label>Bonus CA<input type="number" id="forge-def" value="0" step="1" /></label>
+        <label class="f-armure" title="Détermine le malus de proficience (cf. Personnage.estArmureNonMaitrisee) : une classe qui ne maîtrise pas cette catégorie subit un malus DEX/attaque, sauf don Maître d'armures. Sans ce champ, l'armure est traitée comme toujours maîtrisée.">Catégorie<select id="forge-categorie">
+          <option value="legere">Légère</option>
+          <option value="moyenne">Moyenne</option>
+          <option value="lourde">Lourde</option>
+        </select></label>
         <label class="f-armure">Classe d'armure (CA)<input type="number" id="forge-valeurca" value="10" step="1" min="0" /></label>
         <label class="f-armure">Réduction de dégâts<input type="number" id="forge-reduction" value="0" step="1" min="0" /></label>
         <label class="f-armure">Malus DEX<input type="number" id="forge-malusdex" value="0" step="1" min="0" /></label>
@@ -440,6 +447,7 @@ const Forge = (() => {
     const ap = $("forge-f-apercu"); if (ap) ap.textContent = "Aperçu : —";
     _rendreFormulesListe();
   }
+  const LABELS_CATEGORIE_ARMURE = { legere: "légère", moyenne: "moyenne", lourde: "lourde" };
   const LABELS_RESSOURCE = { or: "or", argent: "argent", bronze: "bronze", pv: "PV" };
   const LABELS_EVENEMENT = { touche: "Touche", rate: "Rate", critique: "Critique" };
   function _labelDeclencheur(d) {
@@ -500,6 +508,7 @@ const Forge = (() => {
     S("forge-rarete", it.rarete || "commun");
     if (it.bonusCarac) CARACS.forEach((c) => S("forge-carac-" + c, it.bonusCarac[c] || 0));
     S("forge-def", it.bonusDEF || 0);
+    S("forge-categorie", it.categorie || "legere");
     S("forge-valeurca", it.valeurCA || 10);
     S("forge-reduction", it.reductionDegats || 0);
     S("forge-malusdex", it.malusDEX || 0);
