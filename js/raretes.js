@@ -253,11 +253,12 @@ const EFFETS_PAR_ITEM = {
   francisque: [
     { id: "tournoyante", nom: "tournoyante", rare: "Peut être relancée pour toucher une cible à distance courte, 1 fois par combat", legendaire: "Peut être relancée sans limite, revient dans la main du porteur",
       mecanique: {
-        // porteeMaxCases (6 cases ≈ 9m, cf. la portée "jet 9m" déjà indiquée
-        // dans le texte de base de la francisque, data/loot.js) : rend l'arme
-        // reconnue par Personnage.armeDistanceEquipee()/bonusAttaque comme
-        // aussi utilisable à distance courte (jet de FORCE, pas DEX), en plus
-        // de son usage normal au contact — cf. Personnage._estArmeContactJetable.
+        // porteeMaxCases (6 cases ≈ 9m) : ÉTEND la portée de base de la
+        // francisque (categoriePortee "jet", 1-5 cases déjà de base depuis
+        // prompt_portees_armes.md — reconnue par Personnage.armeDistanceEquipee()
+        // sans l'aide de cet affixe) à 6 cases. L'affixe n'accorde donc plus la
+        // capacité à distance elle-même (déjà acquise), seulement sa relance
+        // (cf. evenement "jetArme" ci-dessous) et cette portée étendue.
         // evenement "jetArme"/effet "porteeCourte" : usage vérifié par
         // _itemLancerArmeDisponible (js/app.js) au rendu du bouton "Distance"
         // (sidebar/dock battlemap) ET consommé à la résolution du jet — pas
@@ -1022,11 +1023,12 @@ const Raretes = (() => {
     // personnage.js, juste posé ici comme les autres passifs.
     if (passif.bonusDEF) clone.bonusDEF = (item.bonusDEF || 0) + passif.bonusDEF;
     // porteeMaxCases/porteeMinCases (cf. "tournoyante", francisque, lot
-    // "malgré la limite") : mêmes champs que ceux DÉJÀ portés nativement par
-    // les vraies armes à distance du catalogue (arc, arbalète — cf.
-    // data/loot.js) — leur seule PRÉSENCE sur une arme de contact suffit à
-    // Personnage._estArmeContactJetable() pour la reconnaître comme jetable
-    // à distance courte, sans marqueur dédié.
+    // "malgré la limite") : ÉCRASE la portée de base de l'arme affixée — pour
+    // la francisque (categoriePortee "jet", 1-5 cases de base depuis
+    // prompt_portees_armes.md), l'affixe l'étend à 6 cases. N'affecte plus la
+    // RECONNAISSANCE comme arme à distance (Personnage.armeDistanceEquipee()
+    // s'appuie sur categoriePortee, pas sur la présence de ce champ — toute
+    // arme en porte un désormais, cf. normalisation des portées).
     if (passif.porteeMaxCases !== undefined) {
       clone.porteeMaxCases = passif.porteeMaxCases;
       clone.porteeMinCases = passif.porteeMinCases || 0;

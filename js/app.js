@@ -23,6 +23,18 @@ const App = (() => {
   };
   const SKIN_DE_DEFAUT = "solvarn";
 
+  // Demi-Elfe Double Héritage (avantage journalier) : Perception + les 4
+  // compétences "Social" (cf. wiring plus bas, ~7788). Hissée au niveau du
+  // module (au lieu d'être redéclarée à chaque rendu de fiche) et exposée via
+  // App.obtenirCompetencesDoubleHeritage() pour js/meteo.js
+  // (modificateurPourJet, cf. prompt_meteo_porte_ciel.md §4.1) : le prompt
+  // demande de réutiliser CETTE liste pour le malus météo "social" plutôt que
+  // d'en écrire une seconde, mais js/meteo.js est une IIFE séparée qui ne
+  // peut pas lire une const privée de celle-ci — il faut donc la faire
+  // remonter via l'API publique d'App, comme obtenirJoueurId/obtenirJoueurNom
+  // le font déjà pour ce même module.
+  const COMPETENCES_DOUBLE_HERITAGE = ["Perception", "Bluff", "Intimidation", "Représentation", "Persuasion"];
+
   function _skinDeActuel() {
     return localStorage.getItem(STORAGE_SKIN_DE) || SKIN_DE_DEFAUT;
   }
@@ -1674,7 +1686,7 @@ const App = (() => {
     // 4e type d'attaque rapide : lance n'importe quel objet d'inventaire
     // marqué jetable: true (dard empoisonné en premier lieu, mais générique —
     // cf. bombe_alchimique). Portée calculée dynamiquement (2m + Mod.FOR),
-    // pas une constante comme PORTEE_CONTACT/PORTEE_MAGIQUE_BASE plus bas.
+    // pas une constante comme PORTEE_CONTACT_DEFAUT/PORTEE_MAGIQUE_BASE plus bas.
     const objetsJetables = (p.inventaireListe || []).filter((it) => it.jetable && (it.quantite || 1) > 0);
     const attLancer = objetsJetables.length ? perso.bonusAttaque("lancer") : null;
     // Dégâts = formule de l'arme réellement équipée (même bonus que
@@ -1707,12 +1719,12 @@ const App = (() => {
     // joueur au moment de résoudre l'attaque, faute de cibleId résolu ici.
     const actifArmeBenie = perso.aArmeBenie();
     const attContact = perso.bonusAttaque("contact") - (actifFrappePuissante ? 2 : 0) + (actifArmeBenie ? 1 : 0);
-    // "tournoyante" (francisque, cf. lot "malgré la limite") : une arme de
-    // contact aussi jetable à distance courte partage le même bouton
-    // "Distance" qu'une vraie arme à distance — mais son usage (1x/combat au
-    // rare, illimité au légendaire) est vérifié ICI, pas dans
-    // armeDistanceEquipee() (lecture pure de l'équipement, cf. Personnage).
-    const armeDistanceEstJetContact = !!(armeDistance && Personnage._estArmeContact(armeDistance));
+    // "tournoyante" (francisque, cf. lot "malgré la limite") : arme classée
+    // en categoriePortee "jet" (comme fronde/javelot) mais dont l'usage à
+    // distance reste limité (1x/combat au rare, illimité au légendaire) —
+    // ce garde-fou est vérifié ICI, pas dans armeDistanceEquipee() (lecture
+    // pure de l'équipement, cf. Personnage).
+    const armeDistanceEstJetContact = !!(armeDistance && armeDistance.categoriePortee === "jet");
     const jetArmeDispo = armeDistanceEstJetContact ? _itemLancerArmeDisponible(p) : null;
     const attDistance = armeDistance && (!armeDistanceEstJetContact || jetArmeDispo) ? perso.bonusAttaque("distance") - (actifTirPrecision ? 2 : 0) : null;
     // Bi-arme : l'arme secondaire n'est plus fusionnée dans la formule
@@ -1778,12 +1790,20 @@ const App = (() => {
     // Vérificateur de portée (grille dd2vtt) : ne propose comme cible QUE les
     // tokens effectivement à portée du type d'attaque choisi (Contact/
     // Distance/Magique), plutôt que lister tout le monde avec un verdict —
-    // Contact = 1 case (mêlée de base), Distance = porteeMinCases/
-    // porteeMaxCases de l'arme équipée, Magique = 5 cases de base (aucune
-    // arme concernée, valeur fixe indépendante de l'équipement).
-    const PORTEE_CONTACT = { min: 0, max: 1 };
+    // Contact = porteeMinCases/porteeMaxCases de l'arme de contact équipée
+    // (cf. prompt_portees_armes.md, §3.2 — une arme d'ALLONGE comme la lance
+    // doit pouvoir cibler à 2 cases sur la battlemap), repli 1 case si le
+    // champ manque (mains nues, objet forgé/personnalisé sans ces champs).
+    // Distance = porteeMinCases/porteeMaxCases de l'arme équipée, Magique =
+    // 5 cases de base (aucune arme concernée, valeur fixe indépendante de
+    // l'équipement).
+    const PORTEE_CONTACT_DEFAUT = { min: 0, max: 1 };
     const PORTEE_MAGIQUE_BASE = { min: 0, max: 5 };
-    const porteesParType = { contact: PORTEE_CONTACT };
+    const porteesParType = {
+      contact: (armeContact && armeContact.porteeMaxCases != null)
+        ? { min: armeContact.porteeMinCases || 0, max: armeContact.porteeMaxCases }
+        : PORTEE_CONTACT_DEFAUT,
+    };
     if (armeDistance && armeDistance.porteeMaxCases !== undefined) {
       porteesParType.distance = { min: armeDistance.porteeMinCases || 0, max: armeDistance.porteeMaxCases };
     }
@@ -2216,7 +2236,7 @@ const App = (() => {
     const attContact = perso.bonusAttaque("contact") - (actifFrappePuissante ? 2 : 0) + (actifArmeBenie ? 1 : 0);
     // "tournoyante" (francisque, cf. lot "malgré la limite") : cf. même
     // garde-fou d'usage que rendreFicheSidebarBattlemap.
-    const armeDistanceEstJetContact = !!(armeDistance && Personnage._estArmeContact(armeDistance));
+    const armeDistanceEstJetContact = !!(armeDistance && armeDistance.categoriePortee === "jet");
     const jetArmeDispo = armeDistanceEstJetContact ? _itemLancerArmeDisponible(p) : null;
     const attDistance = armeDistance && (!armeDistanceEstJetContact || jetArmeDispo) ? perso.bonusAttaque("distance") - (actifTirPrecision ? 2 : 0) : null;
 
@@ -7777,7 +7797,6 @@ const App = (() => {
     // Guerrier "Force herculéenne" (Voie de l'élite rang 4) : même principe
     // sur Athlétisme (cf. Personnage.aForceHerculeenne).
     const COMPETENCES_ACTEUR = ["Bluff", "Représentation"];
-    const COMPETENCES_DOUBLE_HERITAGE = ["Perception", "Bluff", "Intimidation", "Représentation", "Persuasion"];
     zone.querySelectorAll(".competence-btn").forEach((el) => {
       el.onclick = (e) => {
         e.stopPropagation();
@@ -7787,7 +7806,7 @@ const App = (() => {
         let modeForce = (perso.aActeur() && COMPETENCES_ACTEUR.includes(nom)) || (nom === "Athlétisme" && perso.aForceHerculeenne())
           ? "avantage" : null;
         if (COMPETENCES_DOUBLE_HERITAGE.includes(nom) && _armerAvantageJournalier("arme-double-heritage", "race:demi_elfe:5")) modeForce = "avantage";
-        lancerTest(`Test de ${nom}`, bonus, null, modeForce, { persoId: perso.id, caracCode: code });
+        lancerTest(`Test de ${nom}`, bonus, null, modeForce, { persoId: perso.id, caracCode: code, competence: nom });
         allerVers("des");
       };
     });
@@ -7811,7 +7830,7 @@ const App = (() => {
     zone.querySelectorAll("[data-attaque]").forEach((el) => {
       el.onclick = () => {
         const bonus = parseInt(el.dataset.bonus, 10);
-        lancerTest(`Attaque ${el.dataset.attaque}`, bonus, perso.critMinAttaque(el.dataset.attaque), null, { persoId: perso.id, caracCode: _caracPourTypeAttaque(el.dataset.attaque, perso) });
+        lancerTest(`Attaque ${el.dataset.attaque}`, bonus, perso.critMinAttaque(el.dataset.attaque), null, { persoId: perso.id, caracCode: _caracPourTypeAttaque(el.dataset.attaque, perso), typeAttaque: el.dataset.attaque });
         allerVers("des");
       };
     });
@@ -8649,6 +8668,17 @@ const App = (() => {
     return el ? el.value : "normal";
   }
 
+  // Case "🏠 En intérieur" (#panneau-des, décochée par défaut) : lue
+  // directement ici plutôt que transmise en opts par chaque appelant de
+  // lancerTest — même patron que modeD20()/#jet-cache ci-dessus. L'app ne
+  // peut pas savoir si une scène se joue dedans ou dehors ; c'est la seule
+  // information que le joueur doit fournir pour le malus météo "social"
+  // (cf. Meteo.modificateurPourJet, prompt_meteo_porte_ciel.md §4.3).
+  function estInterieur() {
+    const el = document.getElementById("panneau-des-interieur");
+    return !!(el && el.checked);
+  }
+
   // Lance 1 ou 2d20 selon le mode (normal/avantage/désavantage) — factorisé
   // entre lancerTest (tests avec bonus) et lancerDeSimple (bouton "d20" brut
   // de la section Dés simples), pour que le sélecteur global mode-d20
@@ -8684,11 +8714,23 @@ const App = (() => {
     critMin = critMin || 20;
     const bonusItems = opts.persoId ? _proposerBonusItemsLancer(opts.persoId, opts.caracCode) : 0;
     bonus += bonusItems;
+    // Modificateur météo (cf. prompt_meteo_porte_ciel.md §4.2, patron exact de
+    // _proposerBonusItemsLancer ci-dessus) : symétrique PJ/monstre, résolu à
+    // partir de opts.competence/opts.typeAttaque (cf. call sites : tests de
+    // compétence, boutons d'attaque PJ, _resoudreAttaqueMonstreVsPJ) et de la
+    // case "🏠 En intérieur" lue directement (cf. estInterieur ci-dessus).
+    // Un malus météo n'est JAMAIS silencieux : modificateurPourJet renvoie
+    // null s'il n'y a rien à afficher (palier "Sec"/0, souterrain...), sinon
+    // il est ajouté à bonus ET visible dans detail ci-dessous.
+    const modMeteo = (typeof Meteo !== "undefined")
+      ? Meteo.modificateurPourJet({ competence: opts.competence, typeAttaque: opts.typeAttaque, interieur: estInterieur() })
+      : null;
+    if (modMeteo) bonus += modMeteo.valeur;
     const mode = modeForce || modeD20();
     const { de, d1, d2, detailDes } = _lancerD20SelonMode(mode);
     const total = de + bonus;
     const crit = (de >= critMin), echec = (de === 1);
-    const detail = `${detailDes} ${signe(bonus)}`;
+    const detail = `${detailDes} ${signe(bonus)}${modMeteo ? ` · 🌤 ${signe(modMeteo.valeur)} (${modMeteo.libelle})` : ""}`;
     afficherResultat(label, total, detail, crit, echec);
     ajouterHisto(label + " " + signe(bonus), total, crit, echec, detail, { mode, d1, d2, estMonstre: !!opts.estMonstre });
     if (echec && opts.persoId) _apresJetAnneauChance(opts.persoId);
@@ -10564,6 +10606,29 @@ const App = (() => {
     return m ? parseInt(m[1].replace(/\s/g, ""), 10) : 0;
   }
 
+  // Une arme d'ALLONGE (lance, hallebarde, fouet…) reste une attaque de
+  // CONTACT du point de vue des ripostes/renvoyeurs (cf. prompt_portees_
+  // armes.md, "le piège à traiter en premier") : ce qui compte pour ces
+  // déclencheurs est qu'on frappe avec un manche, pas qu'on soit à une ou
+  // deux cases. Remplace l'ancien test textuel sur le préfixe "contact" du
+  // champ portee — categoriePortee est désormais la SOURCE DE VÉRITÉ
+  // (cf. data/loot.json), plus de texte libre à deviner.
+  const EST_MELEE = (cat) => cat === "contact" || cat === "allonge";
+
+  // data/armes_monstres.js n'a pas reçu la même normalisation que
+  // data/loot.json (catalogue séparé, hors périmètre de ce chantier —
+  // aucune table fournie pour ses ~90 entrées) : pas de categoriePortee
+  // explicite. Repli dérivé du champ portee libre existant — "contact" en
+  // préfixe (y compris "contact +1 case", "contact (zone adjacente)"...)
+  // compte comme mêlée, le reste comme distance. Volontairement PAS le
+  // même test textuel littéral que l'ancien piège ci-dessus : cette
+  // dérivation de catalogue est une source différente (armes_monstres, pas
+  // loot), un futur monstre peut recevoir un categoriePortee explicite qui prime.
+  function _categoriePorteeMonstre(arme) {
+    if (arme.categoriePortee) return arme.categoriePortee;
+    return /^contact/.test(arme.portee || "") ? "contact" : "distance";
+  }
+
   // Résout une entrée m.attaques[] dans un format commun, quelle que soit sa
   // source : le bestiaire migré (data/bestiaire.json + data/armes_monstres.js,
   // cf. armeId+bonusAttaque) OU une invocation de joueur (js/carte.js,
@@ -10599,7 +10664,7 @@ const App = (() => {
         nom: a.nom, bonusAttaque,
         degats: Array(touches).fill(expr).join("+"),
         degatsTexte: touches > 1 ? `${expr} ×${touches}` : expr,
-        portee: arme.portee, typedegats: arme.typedegats, elementaire: arme.elementaire || null,
+        portee: arme.portee, categoriePortee: _categoriePorteeMonstre(arme), typedegats: arme.typedegats, elementaire: arme.elementaire || null,
         jetTexte: `1d20${signe(bonusAttaque)} vs DEF`,
         effetSpecial: a.effetSpecial,
         // Aucune arme de monstre n'a de seuil de critique abaissé aujourd'hui
@@ -10610,7 +10675,7 @@ const App = (() => {
     }
     return {
       nom: a.nom, bonusAttaque: extraireBonusJetMonstre(a.jet),
-      degats: a.degats, degatsTexte: a.degats, portee: a.portee, typedegats: a.type, elementaire: null,
+      degats: a.degats, degatsTexte: a.degats, portee: a.portee, categoriePortee: _categoriePorteeMonstre(a), typedegats: a.type, elementaire: null,
       jetTexte: a.jet,
       effetSpecial: a.effetSpecial,
       critMin: 20,
@@ -10643,7 +10708,14 @@ const App = (() => {
     const cibleP = pjId ? chargerPersos()[pjId] : null;
     const cible = cibleP ? Personnage.depuisJSON(cibleP) : null;
     const modeForce = cible && cible.aExpertBouclier() ? "desavantage" : null;
-    const jet = lancerTest(label, bonus, critMin, modeForce, { estMonstre: true });
+    // typeAttaque (contact/distance, déjà résolu par l'appelant via EST_MELEE/
+    // categoriePortee, cf. _resoudreAttaqueEtSuite) : transmis à lancerTest
+    // pour le malus météo (Meteo.modificateurPourJet, prompt_meteo_porte_ciel.md
+    // §4.3) — symétrique aux PJ, un monstre tirant à l'arc subit le même malus
+    // de vent qu'un archer joueur, sans "résoudre armeId dans le catalogue
+    // loot" comme l'esquissait le prompt : categoriePortee répond déjà à la
+    // question (cf. prompt_portees_armes.md), pas besoin d'un second calcul.
+    const jet = lancerTest(label, bonus, critMin, modeForce, { estMonstre: true, typeAttaque });
     const defCible = cible ? _defPjAvecAura(cible, pjId, typeAttaque) : null;
     const touche = _toucheVsDef(jet, !!pjId, defCible);
     return { touche, critique: jet.crit, echecCritique: jet.echec, totalAttaque: jet.total, defCible };
@@ -11789,11 +11861,11 @@ const App = (() => {
         // attaquesMonstresEnAttente/toast/rendu sont posés par
         // _resoudreAttaqueEtSuite (branche "jetMonstreArme"), jamais ici.
         // contact (cf. parade/reactifs, porteeRequise:"contact") : même
-        // logique que r.portee.startsWith("contact") déjà utilisée pour
-        // subitContact — "contact +1 case (3m)" (armes d'hast) compte aussi.
+        // logique EST_MELEE que subitContact ci-dessous — une arme d'allonge
+        // (hast) compte aussi comme contact pour ces déclencheurs.
         _declencherAttaqueMonstreVsPJ({
           label: `${m.nom} — ${r.nom}`, bonus: r.bonusAttaque + _bonusEtatsMonstre(m, "attaque"), critMin: r.critMin, pjId,
-          contact: !!(r.portee && r.portee.startsWith("contact")),
+          contact: EST_MELEE(r.categoriePortee),
           suite: { type: "jetMonstreArme", monstreId: m.id, idxAttaque: idx },
         });
       };
@@ -11822,10 +11894,10 @@ const App = (() => {
           const totalAjuste = _reduireDegatsSubisSiDisponible(pjId, total, typeDegatsNormalise);
           subirDegats(pjId, totalAjuste, typeDegatsNormalise, undefined, undefined, undefined, r.elementaire);
           // "quand le porteur est touché" (cf. Affixes phase 2 §C, épineuse/
-          // renvoyeur) : seulement sur une attaque de CONTACT — r.portee peut
-          // valoir "contact" ou "contact +1 case (3m)" (armes d'hast), les
-          // deux comptent comme une attaque de contact.
-          if (r.portee && r.portee.startsWith("contact")) _gererDeclencheursSubitContact(pjId, m.id, typeDegatsNormalise);
+          // renvoyeur) : seulement sur une attaque de CONTACT — categoriePortee
+          // "contact" ou "allonge" (armes d'hast), cf. EST_MELEE en tête de
+          // _resoudreAttaqueMonstre, comptent tous deux comme une attaque de contact.
+          if (EST_MELEE(r.categoriePortee)) _gererDeclencheursSubitContact(pjId, m.id, typeDegatsNormalise);
         }
       };
     });
@@ -12144,5 +12216,5 @@ const App = (() => {
   function rafraichirFicheActive() {
     if (ficheActiveId) afficherFiche(ficheActiveId);
   }
-  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire, ajusterPv, proposerAttaqueOpportunite, autoriserPreparationGrimoire, ajouterAInventaire, obtenirJoueurId: () => joueurId, obtenirJoueurNom: () => joueurNom, reinitialiserTentativesAtelier, rafraichirFicheActive };
+  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire, ajusterPv, proposerAttaqueOpportunite, autoriserPreparationGrimoire, ajouterAInventaire, obtenirJoueurId: () => joueurId, obtenirJoueurNom: () => joueurNom, reinitialiserTentativesAtelier, rafraichirFicheActive, obtenirCompetencesDoubleHeritage: () => COMPETENCES_DOUBLE_HERITAGE };
 })();

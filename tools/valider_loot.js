@@ -341,6 +341,7 @@ if (!Array.isArray(items)) { console.error("❌ data/loot.json : champ `items` a
 const TYPES_VALIDES = ["arme", "armure", "bouclier", "accessoire", "consommable"];
 const CATEGORIES_ARMURE_VALIDES = ["legere", "moyenne", "lourde"];
 const MAITRISE_ARME_VALIDES = ["simple", "martiale"];
+const CATEGORIES_PORTEE_VALIDES = ["contact", "allonge", "jet", "distance"];
 
 // Champs autorisés sur TOUT item, quel que soit le type.
 const COMMUN = ["id", "nom", "type", "porte", "description", "prixPo"];
@@ -368,7 +369,12 @@ const COMMUN_MULTI_TYPE = ["horsMarche", "effet", "rarete", "rareteNom", "rarete
 const PAR_TYPE = {
   // bonusDegatsCreature (Grisfer) : dé (ex. "1d6"), pas un nombre — même
   // exception que "degats"/"degatsAuMoinsRare", cf. CHAMPS_NOMBRE_STRICT.
-  arme: ["degats", "portee", "typedegats", "enchantement", "deuxMains", "categorieArme", "maitrise", "porteeMinCases", "porteeMaxCases", "rechargement", "degatsAuMoinsRare", "bonusAttaqueMagique", "bonusDegatsMagiques", "bonusDegatsCreature"],
+  // categoriePortee (prompt_portees_armes.md) : source de vérité pour toute
+  // règle qui a besoin du TYPE d'attaque (contact/allonge/jet/distance) —
+  // porteeMinCases/porteeMaxCases servent à la géométrie de la carte,
+  // categoriePortee sert aux règles (ripostes, météo...). Les deux
+  // coexistent délibérément, l'un ne se déduit pas de l'autre.
+  arme: ["degats", "portee", "typedegats", "enchantement", "deuxMains", "categorieArme", "maitrise", "porteeMinCases", "porteeMaxCases", "rechargement", "degatsAuMoinsRare", "bonusAttaqueMagique", "bonusDegatsMagiques", "bonusDegatsCreature", "categoriePortee"],
   // reductionDegatsCreature (Grisfer) : bonus fixe, même patron que
   // reductionDegats — dans CHAMPS_NOMBRE_STRICT ci-dessous.
   armure: ["valeurCA", "malusDEX", "categorie", "reductionDegats", "reductionDegatsCreature"],
@@ -474,6 +480,12 @@ items.forEach((it, index) => {
   // Forge du MJ, jamais écrits ici : cf. js/forge.js, SyncStore["loot:custom"]).
   if (it.type === "arme") {
     if (!MAITRISE_ARME_VALIDES.includes(it.maitrise)) signaler(cle, `arme avec maitrise invalide ou absente : "${it.maitrise}" (attendu : ${MAITRISE_ARME_VALIDES.join("|")}).`);
+    // categoriePortee (prompt_portees_armes.md) : requise sur toute arme du
+    // catalogue statique, même contrat que maitrise ci-dessus — porteeMinCases/
+    // porteeMaxCases doivent être renseignés en cohérence (source de vérité
+    // "cases" pour la carte, categoriePortee source de vérité pour les règles).
+    if (!CATEGORIES_PORTEE_VALIDES.includes(it.categoriePortee)) signaler(cle, `arme avec categoriePortee invalide ou absente : "${it.categoriePortee}" (attendu : ${CATEGORIES_PORTEE_VALIDES.join("|")}).`);
+    if (it.porteeMinCases == null || it.porteeMaxCases == null) signaler(cle, `arme sans porteeMinCases/porteeMaxCases renseignés.`);
   }
 
   // 6ter. consommable : sortAppris (cf. "Parchemins de sorts complets") doit

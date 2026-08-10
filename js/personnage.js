@@ -1345,18 +1345,19 @@ class Personnage extends Entite {
     }
   }
 
-  // "contact" couvre aussi les armes d'allonge dont la portée précise une
-  // extension ("contact +1 case", "contact étendu", "contact/lancer") —
-  // toujours des armes de mêlée avant tout, cf. Expert en hast (lance,
-  // hallebarde, pique, glaive de guerre) qui ne s'affichaient plus du tout
-  // en armeContactEquipee() avec une comparaison stricte à "contact".
-  static _estArmeContact(it) { return !!it && it.type === "arme" && typeof it.portee === "string" && it.portee.startsWith("contact"); }
-  // "tournoyante" (francisque, cf. lot "malgré la limite") : une arme de
-  // contact affublée de porteeMaxCases (posé par l'affixe via son passif,
-  // cf. _appliquerPassif js/raretes.js) peut AUSSI être lancée à distance
-  // courte — aucune autre arme de contact du catalogue ne porte ce champ,
-  // donc sa seule présence suffit à distinguer ce cas sans marqueur dédié.
-  static _estArmeContactJetable(it) { return Personnage._estArmeContact(it) && it.porteeMaxCases !== undefined; }
+  // categoriePortee (cf. prompt_portees_armes.md) est la SOURCE DE VÉRITÉ —
+  // "contact" ET "allonge" comptent comme mêlée (lance, hallebarde, pique,
+  // glaive de guerre restent des armes de contact du point de vue de
+  // l'équipement, malgré leurs 1-2 cases). Ancien test textuel sur le
+  // préfixe "contact" du champ portee ABANDONNÉ : il cassait silencieusement
+  // dès que portee devenait "1 case"/"1-2 cases" (texte normalisé). Un objet
+  // sans categoriePortee (Forge du MJ, avant mise à jour de son formulaire)
+  // se comporte comme contact par défaut, cf. prompt_portees_armes.md §3.4.
+  static _estArmeContact(it) {
+    if (!it || it.type !== "arme") return false;
+    if (!it.categoriePortee) return true;
+    return it.categoriePortee === "contact" || it.categoriePortee === "allonge";
+  }
   static _estArmeContactCourte(it) { return Personnage._estArmeContact(it) && it.categorieArme === "courte"; }
   static _estArbaleteCourte(it) { return !!it && it.type === "arme" && it.portee !== "contact" && (it.id || "").startsWith("arbalete"); }
   static _estArcCourt(it) { return !!it && it.type === "arme" && it.portee !== "contact" && (it.id || "").startsWith("arc"); }
@@ -1877,12 +1878,15 @@ class Personnage extends Entite {
   armeDistanceEquipee() {
     for (const main of ["main_droite", "main_gauche"]) {
       const arme = this.armeEquipee(main);
+      // francisque/fronde/javelot (categoriePortee "jet") entrent ici tout
+      // seuls depuis la normalisation des portées (prompt_portees_armes.md) :
+      // avant, la francisque restait classée "contact" par défaut et son
+      // usage à distance (affixe "tournoyante") devait être détecté via un
+      // second test dédié (ancien _estArmeContactJetable, qui piggy-backait
+      // sur "porter porteeMaxCases" — signal devenu FAUX POSITIF pour
+      // n'importe quelle arme de contact depuis que toutes en portent un).
+      // Supprimé : plus rien à ajouter, categoriePortee suffit désormais.
       if (arme && arme.portee && !Personnage._estArmeContact(arme)) return arme;
-      // "tournoyante" (francisque, cf. lot "malgré la limite") : usage
-      // (1x/combat au rare, illimité au légendaire) vérifié séparément au
-      // rendu du bouton (cf. _itemLancerArmeDisponible, js/app.js), pas ici —
-      // cette méthode reste une lecture pure de l'équipement.
-      if (Personnage._estArmeContactJetable(arme)) return arme;
     }
     return null;
   }
@@ -2081,12 +2085,15 @@ class Personnage extends Entite {
         .reduce((t, it) => t + (it.bonusAttaqueDistance || 0), 0);
       // Malus de proficience d'armure (-2, cf. estArmureNonMaitrisee).
       const malusProficience = Personnage.estArmureNonMaitrisee(this) ? -2 : 0;
-      // "tournoyante" (francisque, cf. lot "malgré la limite") : une arme de
-      // contact lancée à distance courte reste un jet de FORCE (comme
-      // "lancer" ci-dessous), jamais de DEX — seule une vraie arme à distance
-      // (arc, arbalète...) utilise DEX.
+      // Une arme de JET (fronde, javelot, francisque — cf. categoriePortee,
+      // prompt_portees_armes.md) reste un jet de FORCE (comme "lancer"
+      // ci-dessous), jamais de DEX — seule une vraie arme à distance (arc,
+      // arbalète...) utilise DEX. Ancien test _estArmeContactJetable
+      // (détection via "porte porteeMaxCases malgré être classée contact")
+      // abandonné : categoriePortee encode directement cette distinction
+      // maintenant, plus besoin de heuristique.
       const armeDist = this.armeDistanceEquipee();
-      const modCarac = Personnage._estArmeContactJetable(armeDist) ? this.mod("FOR") : this.mod("DEX");
+      const modCarac = (armeDist && armeDist.categoriePortee === "jet") ? this.mod("FOR") : this.mod("DEX");
       // Malus d'arme non maîtrisée (-3, cf. estArmeNonMaitrisee).
       const malusArme = Personnage.estArmeNonMaitrisee(this, armeDist) ? -3 : 0;
       return b + modCarac + bonusGantsDistance + malusProficience + malusArme;

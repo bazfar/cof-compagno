@@ -528,6 +528,17 @@ const Repos = (() => {
     // cuisine (cf. contrainte de séquencement en tête de fonction).
     if (servis && typeof App !== "undefined" && App.reinitialiserTentativesAtelier) App.reinitialiserTentativesAtelier();
 
+    // Une nouvelle journée commence : le ciel dérive (cf.
+    // prompt_meteo_porte_ciel.md §3). On POUSSE une demande au Porte-Ciel
+    // plutôt que de tirer ici — le jet reste un acte de joueur. Silencieux
+    // (aucune demande émise, Meteo.demanderLectureCiel renvoie false sans
+    // lever d'erreur) si : région souterraine, aucun Porte-Ciel désigné, ou
+    // demande déjà en cours. Ce n'est pas un échec, juste un non-évènement —
+    // APRÈS les resets ci-dessus, jamais avant (le temps change quand la
+    // nuit est passée, pas pendant qu'on la traite). Seulement si au moins
+    // un convive a été servi (un repos où personne n'a payé n'a pas eu lieu).
+    if (servis && typeof Meteo !== "undefined") Meteo.demanderLectureCiel("repos");
+
     sauverEncours(null);
     sauverVote(null);
     _arreterMinuteur();

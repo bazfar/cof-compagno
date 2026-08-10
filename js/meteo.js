@@ -150,6 +150,50 @@ const Meteo = (() => {
   // (arbitrage de Thomas : "tout ce qui cible à distance").
   function malusDistance() { return palierCourant().distance || 0; }
 
+  // Compétences sociales (cf. §4.1) : réutilise COMPETENCES_DOUBLE_HERITAGE
+  // (exposée par App, cf. js/app.js) plutôt que d'en dupliquer une seconde
+  // liste — MAIS retire "Perception", qui y figure pour le don racial
+  // demi-elfe (avantage journalier) et n'a rien de social : elle a déjà son
+  // propre mapping ci-dessous (Détection/SAG). La resservir ici aurait
+  // cumulé malus détection ET malus social sur le même jet de Perception.
+  function _competencesSociales() {
+    const liste = (typeof App !== "undefined" && App.obtenirCompetencesDoubleHeritage) ? App.obtenirCompetencesDoubleHeritage() : [];
+    return liste.filter((c) => c !== "Perception");
+  }
+
+  // Renvoie { valeur, libelle } ou null si aucun modificateur ne s'applique
+  // (cf. §4.1) — un malus météo doit TOUJOURS être visible, jamais silencieux,
+  // donc null seulement quand il n'y a vraiment rien à afficher (palier "Sec",
+  // souterrain, ou aucune des quatre entrées de la table ci-dessous).
+  //
+  // Table de correspondance (priorité dans cet ordre) :
+  //   competence === "Discrétion"                    -> discretion
+  //   competence === "Perception"                     -> detection
+  //   typeAttaque === "distance" ou "magique"          -> distance
+  //   compétence sociale ET interieur === true         -> social
+  //
+  // Classification distance/contact des armes (cf. §4.4 du prompt) : la
+  // fonction _armeEstDistance qu'il esquissait (deviner depuis le texte
+  // libre `portee`) est OBSOLÈTE — prompt_portees_armes.md a normalisé
+  // categoriePortee sur les 37 armes AVANT ce chantier, précisément pour que
+  // ce module n'ait pas à deviner. typeAttaque ci-dessous vient déjà
+  // classifié : côté PJ, le bouton cliqué (contact/distance/magique, cf.
+  // js/app.js ~7819) place nativement les armes "jet" (francisque, javelot,
+  // fronde) sous "distance" (armeDistanceEquipee() les y range depuis la
+  // normalisation) ; côté monstre, _resoudreAttaqueMonstreVsPJ résout
+  // typeAttaque via EST_MELEE(categoriePortee) — jet et distance comptent
+  // tous deux comme "en l'air", donc vent, exactement comme pour un PJ.
+  function modificateurPourJet({ competence, typeAttaque, interieur } = {}) {
+    const p = palierCourant();
+    let valeur, cle;
+    if (competence === "Discrétion") { valeur = p.discretion; cle = "discretion"; }
+    else if (competence === "Perception") { valeur = p.detection; cle = "detection"; }
+    else if (typeAttaque === "distance" || typeAttaque === "magique") { valeur = p.distance; cle = "distance"; }
+    else if (interieur === true && competence && _competencesSociales().includes(competence)) { valeur = p.social; cle = "social"; }
+    if (!cle || !valeur) return null;
+    return { valeur, libelle: p.nom };
+  }
+
   // ── Jets ───────────────────────────────────────────────────
   function _borner(valeur, cell, mod) {
     const min = Math.max(1, cell.fenetre[0] + mod);
@@ -157,15 +201,21 @@ const Meteo = (() => {
     return Math.max(min, Math.min(max, valeur));
   }
 
-  function lirePremierCiel() {
-    if (!estPorteCiel()) return null;
+  function lirePremierCiel(forcerMJ) {
+    // Le garde-fou estPorteCiel() reste la règle : le jet est un ACTE DE
+    // JOUEUR (cf. en-tête du module). forcerMJ est l'unique dérogation,
+    // réservée au relais après 30 s d'absence de réponse (cf. §2.4) — sans
+    // elle, un Porte-Ciel déconnecté bloquerait la journée entière.
+    if (!forcerMJ && !estPorteCiel()) return null;
+    if (forcerMJ && !_estMJ()) return null;
     const e = obtenirEtat();
     const cell = _cellule(e.regionId, e.saisonId);
     if (!cell) return null; // souterrain : aucun jet
     const mod = _rudesse(e.rudesseId).mod;
     const brut = _d(20);
     const intensite = _borner(brut + mod, cell, mod);
-    _appliquer(e, cell, intensite, 1, `d20 [${brut}]${mod ? ` ${mod > 0 ? "+" : ""}${mod}` : ""}`);
+    _appliquer(e, cell, intensite, 1, `d20 [${brut}]${mod ? ` ${mod > 0 ? "+" : ""}${mod}` : ""}`, forcerMJ);
+    _cloreDemandeEnCours();
     return intensite;
   }
 
@@ -174,23 +224,38 @@ const Meteo = (() => {
   // une amplitude franche, pas une gaussienne centrée qui ne changerait
   // presque jamais de palier — la table aurait la même météo pendant six
   // séances.
-  function deriverJour() {
-    if (!estPorteCiel()) return null;
+  function deriverJour(forcerMJ) {
+    if (!forcerMJ && !estPorteCiel()) return null;
+    if (forcerMJ && !_estMJ()) return null;
     const e = obtenirEtat();
     const cell = _cellule(e.regionId, e.saisonId);
     if (!cell) return null;
-    if (!e.intensite) return lirePremierCiel();
+    if (!e.intensite) return lirePremierCiel(forcerMJ);
     const mod = _rudesse(e.rudesseId).mod;
     const ampl = _d(6);
     const sens = _d(2) === 1 ? -1 : 1;
     const intensite = _borner(e.intensite + sens * ampl, cell, mod);
-    _appliquer(e, cell, intensite, (e.jour || 1) + 1, `${e.intensite} ${sens > 0 ? "+" : "−"} 1d6 [${ampl}]`);
+    _appliquer(e, cell, intensite, (e.jour || 1) + 1, `${e.intensite} ${sens > 0 ? "+" : "−"} 1d6 [${ampl}]`, forcerMJ);
+    _cloreDemandeEnCours();
     return intensite;
   }
 
-  function _appliquer(etat, cell, intensite, jour, detail) {
-    const nom = (typeof App !== "undefined" && App.obtenirJoueurNom) ? App.obtenirJoueurNom() : "—";
-    const id = (typeof App !== "undefined" && App.obtenirJoueurId) ? App.obtenirJoueurId() : null;
+  function _appliquer(etat, cell, intensite, jour, detail, forcerMJ) {
+    // _appliquer() enregistre jeteurNom : quand le MJ relaie (forcerMJ), on
+    // écrit "<nom du Porte-Ciel> (lu par le MJ)" plutôt que le nom du MJ
+    // lui-même (App.obtenirJoueurNom() renverrait celui du client qui a
+    // cliqué, pas celui du Porte-Ciel) — le journal reste honnête sur QUI
+    // était censé lire le ciel (cf. §2.4).
+    let nom, id;
+    if (forcerMJ) {
+      id = obtenirPorteCiel();
+      const joueurs = (typeof window.DepotJoueurs !== "undefined") ? window.DepotJoueurs.liste() : [];
+      const pc = joueurs.find((j) => j.id === id);
+      nom = `${(pc && pc.nom) || "Porte-Ciel"} (lu par le MJ)`;
+    } else {
+      nom = (typeof App !== "undefined" && App.obtenirJoueurNom) ? App.obtenirJoueurNom() : "—";
+      id = (typeof App !== "undefined" && App.obtenirJoueurId) ? App.obtenirJoueurId() : null;
+    }
     _ecrire({
       regionId: etat.regionId, saisonId: etat.saisonId, rudesseId: etat.rudesseId,
       registre: cell.registre, intensite, jour,
@@ -245,6 +310,149 @@ const Meteo = (() => {
     return true;
   }
 
+  // ── Demande de jet (cf. prompt_meteo_porte_ciel.md étape 2) ───────────
+  // Le jet reste un ACTE DE JOUEUR (cf. en-tête du module) : le MJ ne tire
+  // plus lui-même, il SOLLICITE le Porte-Ciel, qui voit une modale s'ouvrir
+  // chez lui où qu'il soit dans l'app. Document unique (pas de file
+  // d'attente) : une demande à la fois, cohérent avec un seul Porte-Ciel actif.
+  const CLE_DEMANDE = "meteo:demande"; // null hors demande
+
+  function _toast(msg) {
+    const t = document.getElementById("toast");
+    if (!t) return;
+    t.textContent = msg; t.classList.add("visible");
+    setTimeout(() => t.classList.remove("visible"), 2800);
+  }
+
+  function obtenirDemande() { return SyncStore.get(CLE_DEMANDE) || null; }
+
+  // origine : "mj" (bouton du panneau) | "repos" (validation du repos long,
+  // cf. js/repos.js). Silencieux (renvoie false, aucune erreur) si la région
+  // est souterraine, si aucun Porte-Ciel n'est désigné, ou si une demande est
+  // déjà en cours — ce n'est pas un échec à signaler, juste un non-évènement
+  // (cf. étape 3 : un repos long sans Porte-Ciel ne doit rien faire ni crier).
+  function demanderLectureCiel(origine) {
+    if (estSouterrain()) return false;
+    const joueurId = obtenirPorteCiel();
+    if (!joueurId) return false;
+    const actuelle = obtenirDemande();
+    if (actuelle && actuelle.statut === "en_attente") return false;
+    const joueurs = (typeof window.DepotJoueurs !== "undefined") ? window.DepotJoueurs.liste() : [];
+    const nom = (joueurs.find((j) => j.id === joueurId) || {}).nom || "Porte-Ciel";
+    const e = obtenirEtat();
+    const ouvertTs = Date.now();
+    SyncStore.set(CLE_DEMANDE, {
+      porteCielJoueurId: joueurId, porteCielNom: nom,
+      type: e.intensite ? "derive" : "premier", // deriverJour() retombe déjà sur lirePremierCiel() si intensite===0, cf. §3
+      origine, ouvertTs, echeanceTs: ouvertTs + 30000,
+      statut: "en_attente",
+    });
+    return true;
+  }
+
+  // Remet la demande à null une fois le jet réellement lancé (par le
+  // Porte-Ciel via la modale, ou par le MJ via le relais) — appelé depuis
+  // lirePremierCiel/deriverJour après _appliquer, jamais avant (cf. plus bas).
+  function _cloreDemandeEnCours() {
+    const d = obtenirDemande();
+    if (d && d.statut === "en_attente") SyncStore.set(CLE_DEMANDE, null);
+  }
+
+  // Bloc "demande" dans la carte Porte-Ciel du panneau MJ : bouton de
+  // sollicitation hors demande, décompte + relais pendant une demande.
+  function _htmlDemandeMJ(idPorteCiel, souterrain, e) {
+    if (!idPorteCiel || souterrain) return "";
+    const demande = obtenirDemande();
+    if (!demande || demande.statut !== "en_attente") {
+      const libelle = e.intensite ? "🎲 Demander la dérive du temps" : "🎲 Demander la lecture du ciel";
+      return `<div style="margin-top:8px;"><button class="btn petit" id="meteo-btn-demander">${_echapper(libelle)}</button></div>`;
+    }
+    const echu = Date.now() >= demande.echeanceTs;
+    const restant = Math.max(0, Math.ceil((demande.echeanceTs - Date.now()) / 1000));
+    return `<div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <span style="font-size:0.82rem;color:#6a6278;">⏳ En attente de ${_echapper(demande.porteCielNom)}${echu ? "" : ` (${restant}s)`}</span>
+      <button class="btn petit secondaire" id="meteo-btn-relais"${echu ? "" : " disabled"}>⏩ Lire à sa place</button>
+    </div>`;
+  }
+
+  // Modale chez le Porte-Ciel (#modal-porte-ciel, patron de
+  // #modal-couleur-joueur) : ouverte UNIQUEMENT chez le client dont
+  // joueurId === demande.porteCielJoueurId, fermée chez tous à la
+  // résolution (demande remise à null, cf. _cloreDemandeEnCours) —
+  // entièrement piloté par _surChangementDemande ci-dessous.
+  function _rendreModalPorteCiel() {
+    const modal = document.getElementById("modal-porte-ciel");
+    if (!modal) return;
+    const demande = obtenirDemande();
+    const moi = (typeof App !== "undefined" && App.obtenirJoueurId) ? App.obtenirJoueurId() : null;
+    if (!demande || demande.statut !== "en_attente" || demande.porteCielJoueurId !== moi) {
+      modal.style.display = "none";
+      return;
+    }
+    const corps = document.getElementById("modal-porte-ciel-corps");
+    if (!corps) return;
+    const e = obtenirEtat();
+    const reg = _region(e.regionId);
+    const climat = _climat(e.regionId);
+    const cell = _cellule(e.regionId, e.saisonId);
+    const saison = SAISONS_METEO.find((s) => s.id === e.saisonId) || SAISONS_METEO[0];
+    const estDerive = demande.type === "derive";
+    corps.innerHTML = `
+      <p style="font-size:0.85rem;color:#6a6278;margin:0 0 8px;">
+        ${_echapper(reg.nom)} · ${_echapper(climat.nom)} · ${_echapper(saison.nom)}
+        ${cell ? ` · fenêtre ${cell.fenetre[0]}–${cell.fenetre[1]}` : ""}
+      </p>
+      ${estDerive ? `<p style="font-size:0.85rem;margin:0 0 12px;">Temps actuel : <strong>${_echapper(nomDuTemps())}</strong></p>` : ""}
+      <button class="btn or" id="modal-porte-ciel-btn">${estDerive ? "🎲 Faire dériver le temps" : "🎲 Lire le ciel"}</button>
+    `;
+    modal.style.display = "flex";
+    const btn = document.getElementById("modal-porte-ciel-btn");
+    if (btn) btn.onclick = () => {
+      // lirePremierCiel()/deriverJour() SANS forcerMJ : c'est bien le
+      // Porte-Ciel qui clique, estPorteCiel() est vrai pour lui — aucune
+      // duplication de la logique de tirage/bornage/journalisation (cf. §2.3).
+      if (estDerive) deriverJour(); else lirePremierCiel();
+      if (document.getElementById("zone-meteo")) rendrePanneauMeteo();
+    };
+  }
+
+  // Minuteur d'affichage (décompte MJ + activation du relais) — un
+  // setInterval local par client, démarré/arrêté selon l'état de la
+  // demande, même patron que Repos._demarrerMinuteur/_arreterMinuteur.
+  let _minuteurRelaisId = null;
+  function _gererMinuteurRelaisSelonDemande(demande) {
+    const active = demande && demande.statut === "en_attente";
+    if (active && !_minuteurRelaisId) {
+      _minuteurRelaisId = setInterval(() => {
+        const d = obtenirDemande();
+        if (!d || d.statut !== "en_attente") { clearInterval(_minuteurRelaisId); _minuteurRelaisId = null; return; }
+        if (document.getElementById("zone-meteo")) rendrePanneauMeteo();
+      }, 1000);
+    } else if (!active && _minuteurRelaisId) {
+      clearInterval(_minuteurRelaisId);
+      _minuteurRelaisId = null;
+    }
+  }
+
+  // Dédoublonnage du toast d'ouverture (cf. §2.5) : le document CLE_DEMANDE
+  // peut être re-poussé plusieurs fois par Firestore pour la MÊME demande
+  // (cache optimiste + snapshot serveur) — ouvertTs identifie la demande de
+  // façon stable, un seul toast par ouverture réelle.
+  let _dernierToastOuvertTs = null;
+  function _surChangementDemande(demande) {
+    if (demande && demande.statut === "en_attente" && demande.ouvertTs !== _dernierToastOuvertTs) {
+      _dernierToastOuvertTs = demande.ouvertTs;
+      // Toast à TOUS (cf. §2.5) — le Porte-Ciel voit en plus sa modale
+      // s'ouvrir (cf. _rendreModalPorteCiel) ; les autres n'ont que ce toast.
+      _toast(`🌤 ${demande.porteCielNom} lit le ciel…`);
+    } else if (!demande || demande.statut !== "en_attente") {
+      _dernierToastOuvertTs = null;
+    }
+    _rendreModalPorteCiel();
+    _gererMinuteurRelaisSelonDemande(demande);
+    if (document.getElementById("zone-meteo")) rendrePanneauMeteo();
+  }
+
   // ── Rendu ──────────────────────────────────────────────────
   function _echapper(s) {
     const d = document.createElement("div");
@@ -268,12 +476,30 @@ const Meteo = (() => {
     const cell = _cellule(e.regionId, e.saisonId);
     const p = palierCourant();
     const estMJ = _estMJ();
-    const porteCiel = estPorteCiel();
     const souterrain = !cell;
     const saison = SAISONS_METEO.find((s) => s.id === e.saisonId) || SAISONS_METEO[0];
 
-    const joueurs = (typeof window.DepotJoueurs !== "undefined") ? window.DepotJoueurs.liste() : [];
+    // Porte-Ciel choisi parmi les présents (cf. prompt_meteo_porte_ciel.md §1) :
+    // Presence.presents() reflète qui est réellement à la table CE soir, pas
+    // tout le dépôt (qui inclut les absents). Repli explicite sur
+    // DepotJoueurs.liste() si aucune séance n'est ouverte ou si personne ne
+    // s'est déclaré présent — la séance ne verrouille rien (cf. prompt_seance.md),
+    // le MJ doit pouvoir désigner un Porte-Ciel même hors séance plutôt que de
+    // se retrouver avec un sélecteur vide.
     const idPorteCiel = obtenirPorteCiel();
+    const presents = (typeof Presence !== "undefined") ? Presence.presents() : [];
+    let joueurs = presents.length
+      ? presents.map((j) => ({ id: j.joueurId, nom: j.nom }))
+      : ((typeof window.DepotJoueurs !== "undefined") ? window.DepotJoueurs.liste() : []);
+    // Si le Porte-Ciel désigné cesse d'être présent, ne pas le désélectionner
+    // automatiquement (cf. §1) : il reste dans la liste, marqué "(absent)"
+    // plus bas, le MJ décide s'il en change.
+    let porteCielAbsent = false;
+    if (idPorteCiel && !joueurs.some((j) => j.id === idPorteCiel)) {
+      porteCielAbsent = true;
+      const dep = (typeof window.DepotJoueurs !== "undefined") ? window.DepotJoueurs.charger(idPorteCiel) : null;
+      joueurs = joueurs.concat([{ id: idPorteCiel, nom: (dep && dep.nom) || "Porte-Ciel" }]);
+    }
     const nomPorteCiel = (joueurs.find((j) => j.id === idPorteCiel) || {}).nom || null;
 
     const icone = souterrain ? "🕳"
@@ -322,18 +548,14 @@ const Meteo = (() => {
       <div class="carte">
         <h3 class="titre-bandeau" style="font-size:0.95rem;">Porte-Ciel</h3>
         <p style="font-size:0.82rem;color:#6a6278;margin:2px 0 8px;">
-          ${nomPorteCiel ? `<strong>${_echapper(nomPorteCiel)}</strong> lit le ciel pour cette session.` : "Aucun Porte-Ciel désigné — le MJ doit en choisir un."}
+          ${nomPorteCiel ? `<strong>${_echapper(nomPorteCiel)}</strong>${porteCielAbsent ? ' <span style="opacity:.6;">(absent)</span>' : ""} lit le ciel pour cette session.` : "Aucun Porte-Ciel désigné — le MJ doit en choisir un."}
         </p>
         ${estMJ ? `
           <select id="meteo-select-porteciel" class="champ">
             <option value="">— personne —</option>
-            ${joueurs.map((j) => `<option value="${_echapper(j.id)}"${j.id === idPorteCiel ? " selected" : ""}>${_echapper(j.nom)}</option>`).join("")}
+            ${joueurs.map((j) => `<option value="${_echapper(j.id)}"${j.id === idPorteCiel ? " selected" : ""}>${_echapper(j.nom)}${j.id === idPorteCiel && porteCielAbsent ? " (absent)" : ""}</option>`).join("")}
           </select>` : ""}
-        ${(porteCiel && !souterrain) ? `
-          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
-            ${!e.intensite ? `<button class="btn petit" id="meteo-btn-lire">🌤 Lire le ciel</button>` : ""}
-            ${e.intensite ? `<button class="btn petit" id="meteo-btn-deriver">🌅 Nouveau jour — dérive ±1d6</button>` : ""}
-          </div>` : ""}
+        ${estMJ ? _htmlDemandeMJ(idPorteCiel, souterrain, e) : ""}
       </div>
 
       ${estMJ ? `
@@ -390,8 +612,17 @@ const Meteo = (() => {
     on("meteo-select-region", "change", (ev) => { definirRegion(ev.target.value); rendrePanneauMeteo(); });
     on("meteo-select-saison", "change", (ev) => { definirSaison(ev.target.value); rendrePanneauMeteo(); });
     on("meteo-select-rudesse", "change", (ev) => { definirRudesse(ev.target.value); rendrePanneauMeteo(); });
-    on("meteo-btn-lire", "click", () => { lirePremierCiel(); rendrePanneauMeteo(); });
-    on("meteo-btn-deriver", "click", () => { deriverJour(); rendrePanneauMeteo(); });
+    // Les anciens boutons "Lire le ciel"/"Nouveau jour" cliqués directement
+    // par le Porte-Ciel depuis ce panneau ont disparu (cf. §2 : c'est
+    // désormais le MJ qui sollicite, le jet vient à lui via #modal-porte-ciel,
+    // cf. _rendreModalPorteCiel) — remplacés par la demande MJ ci-dessous.
+    on("meteo-btn-demander", "click", () => { demanderLectureCiel("mj"); rendrePanneauMeteo(); });
+    on("meteo-btn-relais", "click", () => {
+      const d = obtenirDemande();
+      if (!d || Date.now() < d.echeanceTs) return;
+      if (d.type === "derive") deriverJour(true); else lirePremierCiel(true);
+      rendrePanneauMeteo();
+    });
     on("meteo-btn-forcer", "click", () => {
       const el = document.getElementById("meteo-input-forcer");
       if (el && el.value) { forcerIntensite(el.value); rendrePanneauMeteo(); }
@@ -401,13 +632,23 @@ const Meteo = (() => {
     });
   }
 
+  // Temps réel (cf. §2.5) : ouverture de la modale chez le Porte-Ciel,
+  // décompte + relais chez le MJ, toast chez tous, fermeture chez tous à la
+  // résolution — un seul point d'entrée, enregistré au chargement du module
+  // (comme Presence/Seance s'abonnent à leurs propres clés en tête de
+  // js/seance.js), pas seulement quand le panneau Météo est monté : la
+  // modale doit pouvoir s'ouvrir chez le Porte-Ciel même s'il regarde "Ma
+  // fiche" ou la Battlemap au moment de la demande.
+  SyncStore.subscribe(CLE_DEMANDE, _surChangementDemande);
+
   return {
     obtenirEtat, registreCourant, palierCourant, palierPour, nomDuTemps,
     estSouterrain, effetPermanent,
-    modificateursPour, porteeEffective, malusDistance,
+    modificateursPour, porteeEffective, malusDistance, modificateurPourJet,
     obtenirPorteCiel, definirPorteCiel, estPorteCiel,
     lirePremierCiel, deriverJour, forcerIntensite, reinitialiser,
     definirRegion, definirSaison, definirRudesse, rendrePanneauMeteo,
+    demanderLectureCiel, obtenirDemande,
   };
 })();
 
