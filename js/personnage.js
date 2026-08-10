@@ -125,7 +125,17 @@ class Personnage extends Entite {
     this.portrait = d.portrait;
     this.pvHistorique = d.pvHistorique;
     this.pvNiveauActuel = d.pvNiveauActuel;
-    this.equipement = d.equipement;
+    this.equipement = d.equipement || equipementVide();
+    // Migration : ajoute les clés des emplacements ajoutés à SLOTS_EQUIPEMENT
+    // après la création de cette fiche (ex. "mains", introduit par le commit
+    // "Gants du Poing"). equiper()/deséquiper() exigent `slot in this.equipement` ;
+    // sans cette clé (absente, pas juste `null`, sur une vieille sauvegarde),
+    // équiper un gant dans "mains" échouait silencieusement avec le message
+    // "Cet objet ne peut pas être équipé dans cet emplacement." même quand
+    // l'objet était parfaitement compatible.
+    SLOTS_EQUIPEMENT.forEach((s) => {
+      if (!(s in this.equipement)) this.equipement[s] = null;
+    });
     // Migration slot "botte" -> "jambe" (fusion des deux emplacements,
     // cf. commit "fusion jambe/botte") : une fiche sauvegardée avant la
     // fusion peut encore porter un objet dans equipement.botte, un slot qui
