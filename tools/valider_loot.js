@@ -72,6 +72,13 @@ const ctxCuisine = chargerGlobals(["data/cuisine.js"], ["CUISINE_RECETTES"]);
 const CUISINE_RECETTES = ctxCuisine.CUISINE_RECETTES;
 if (!CUISINE_RECETTES) { console.error("❌ CUISINE_RECETTES introuvable (data/cuisine.js n'a pas chargé)."); process.exit(1); }
 const RECETTE_IDS_VALIDES = new Set(CUISINE_RECETTES.map((r) => r.id));
+
+// MILIEUX_RECOLTE (prompt_recolte_1_donnees.md) : valide les valeurs du
+// champ `milieux` d'un item récoltable.
+const ctxRecolte = chargerGlobals(["data/recolte.js"], ["MILIEUX_RECOLTE"]);
+const MILIEUX_RECOLTE = ctxRecolte.MILIEUX_RECOLTE;
+if (!MILIEUX_RECOLTE) { console.error("❌ MILIEUX_RECOLTE introuvable (data/recolte.js n'a pas chargé)."); process.exit(1); }
+const MILIEUX_RECOLTE_IDS_VALIDES = new Set(MILIEUX_RECOLTE.map((m) => m.id));
 function etatExiste(id) {
   return Object.prototype.hasOwnProperty.call(ETATS, /^marquee_.+/.test(id || "") ? "marquee" : id);
 }
@@ -366,7 +373,16 @@ const FAMILLES_VIVRE_VALIDES = ["viande", "poisson", "cereale", "legume", "champ
 const COMMUN = ["id", "nom", "type", "porte", "description", "prixPo"];
 // Champs valides sur plusieurs types sans être universels (cf. usage réel
 // dans le catalogue et dans le code de résolution des raretés/effets).
-const COMMUN_MULTI_TYPE = ["horsMarche", "effet", "rarete", "rareteNom", "rareteCouleur",
+// recolte/milieux (prompt_recolte_1_donnees.md) : posés sur des entrées
+// "ingredient" (vivres déjà tagués vivre:true) ET "consommable" (réactifs
+// d'alchimie/poison qui n'ont jamais reçu le passage à "ingredient" du
+// prompt marché) — d'où leur place ici plutôt que dans PAR_TYPE. `rarete`
+// (déjà multi-type ci-dessous) est RÉUTILISÉ pour le palier de récolte
+// (commun/peu_commun/rare/legendaire, cf. data/recolte.js RARETES_RECOLTE) —
+// collision de nom délibérée du prompt avec le `rarete` d'affichage des
+// objets uniques (ex. epee_cupidite) : les deux usages ne se recouvrent
+// jamais, seuls les items marqués `recolte` sont lus par js/recolte.js.
+const COMMUN_MULTI_TYPE = ["horsMarche", "effet", "rarete", "rareteNom", "rareteCouleur", "recolte", "milieux",
   // formules/declencheurs : mêmes champs data-driven que la Forge du MJ (cf.
   // js/forge.js, prompt_declencheurs_forge.md) — génériques par nature (pas
   // liés à un type d'objet précis), utilisables aussi bien sur un objet du
@@ -514,6 +530,31 @@ items.forEach((it, index) => {
   if (it.type === "ingredient") {
     if (!FAMILLES_VIVRE_VALIDES.includes(it.familleVivre)) signaler(cle, `ingredient avec familleVivre invalide ou absente : "${it.familleVivre}" (attendu : ${FAMILLES_VIVRE_VALIDES.join("|")}).`);
     if (!it.origine) signaler(cle, `ingredient sans origine renseignée.`);
+  }
+
+  // 6ter0ter. recolte/rarete/milieux (prompt_recolte_1_donnees.md) : les
+  // trois champs vont ensemble ou pas du tout — `recolte` absent = non
+  // récoltable, c'est le signal, jamais `recolte: null` avec rarete/milieux
+  // orphelins. `rarete` réutilise le vocabulaire RARETES_RECOLTE (cf. data/
+  // recolte.js), PAS celui des raretés d'objets uniques (même nom de champ,
+  // deux vocabulaires disjoints — cf. commentaire de COMMUN_MULTI_TYPE).
+  //
+  // Portée du contrôle DÉLIBÉRÉMENT restreinte à "recolte ou milieux
+  // présent" (pas "rarete présent") : le prompt demande aussi de vérifier
+  // qu'aucune entrée ne porte `rarete` sans `recolte`, mais appliqué mot
+  // pour mot au catalogue ENTIER ça signalerait à tort epee_cupidite/
+  // marteau_grisfer/cotte_grisfer, qui portent un `rarete` d'objet unique
+  // sans aucun rapport avec la récolte (champ pré-existant, cf. ci-dessus).
+  // Le contrôle qui compte reste couvert : aucune des 52 entrées récoltables
+  // ne porte `rarete` sans `recolte`, puisque c'est justement ce bloc qui
+  // les a posés ensemble.
+  const RECOLTE_VALIDES = ["traque", "alchimie"];
+  const RARETES_RECOLTE_VALIDES = ["commun", "peu_commun", "rare", "legendaire"];
+  if (it.recolte !== undefined || it.milieux !== undefined) {
+    if (!RECOLTE_VALIDES.includes(it.recolte)) signaler(cle, `recolte invalide ou absente alors que rarete/milieux est posé : "${it.recolte}" (attendu : ${RECOLTE_VALIDES.join("|")}).`);
+    if (!RARETES_RECOLTE_VALIDES.includes(it.rarete)) signaler(cle, `rarete de récolte invalide ou absente : "${it.rarete}" (attendu : ${RARETES_RECOLTE_VALIDES.join("|")}).`);
+    if (!Array.isArray(it.milieux) || !it.milieux.length) signaler(cle, `milieux devrait être un tableau non vide, reçu ${JSON.stringify(it.milieux)}.`);
+    else it.milieux.forEach((m) => { if (!MILIEUX_RECOLTE_IDS_VALIDES.has(m)) signaler(cle, `milieux référence un id inconnu de MILIEUX_RECOLTE : "${m}".`); });
   }
 
   // 6ter0bis. recette (prompt_recettes_achetables.md) : recetteApprise doit
