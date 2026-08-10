@@ -18,7 +18,13 @@ const Forge = (() => {
   const CARACS = ["FOR", "DEX", "CON", "INT", "SAG", "CHA"];
   // Emplacements proposés pour un accessoire (les mains gauche/droite sont
   // réservées aux armes/boucliers, le torse à l'armure — non listés ici).
-  const EMPLACEMENTS = ["collier", "bague", "avant_bras", "tete", "jambe", "botte", "mains"];
+  // "botte" RETIRÉ (bug corrigé) : ce slot a été fusionné dans "jambe"
+  // ("Jambes / Bottes", cf. LABELS_SLOT dans js/app.js et le commentaire de
+  // migration dans Personnage — constructeur) et n'existe plus dans
+  // SLOTS_EQUIPEMENT. Un accessoire forgé avec "botte" recevait un
+  // item.slot valide en apparence mais qu'aucune case d'équipement de la
+  // fiche ne pouvait jamais matcher : équipable nulle part, à vie.
+  const EMPLACEMENTS = ["collier", "bague", "avant_bras", "tete", "jambe", "mains"];
   const RARETES = [
     ["commun", "Commun"], ["peu_commun", "Peu commun"], ["rare", "Rare"], ["legendaire", "Légendaire"],
   ];

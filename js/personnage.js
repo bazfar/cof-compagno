@@ -1438,9 +1438,26 @@ class Personnage extends Entite {
 
   // Emplacements compatibles avec le type d'un item (ou son slot explicite
   // si le catalogue le précise un jour, ex. une armure de jambes future).
+  //
+  // item.slot === null (sentinelle EXPLICITE, ex. les 6 instruments du
+  // Musicien, data/loot.json) : jamais équipable, distinct d'un slot
+  // simplement ABSENT (undefined), qui retombe sur le défaut par type
+  // ci-dessous. "on ne les équipe pas, on les porte" (prompt_musicien_6_
+  // metier.md §5) — resté un vœu jusqu'à ce bugfix : `if (item.slot)` est
+  // faux pour null ET pour undefined, donc ces objets tombaient dans le
+  // défaut "accessoire" (collier/bague/avant_bras) au lieu de rester
+  // strictement inventaire.
+  //
+  // "botte" → "jambe" : alias de compat pour tout objet forgé (Forge du
+  // MJ, SyncStore "loot:custom") créé avant la fusion des deux slots dans
+  // SLOTS_EQUIPEMENT — "botte" n'existe plus comme case d'équipement, un
+  // item qui le porterait encore resterait sinon équipable nulle part.
+  // Même principe que la migration equipement.botte→jambe posée dans le
+  // constructeur ci-dessus, appliquée ici à la DÉFINITION de l'objet.
   static slotsPourType(item) {
     if (!item) return [];
-    if (item.slot) return [item.slot];
+    if (item.slot === null) return [];
+    if (item.slot) return [item.slot === "botte" ? "jambe" : item.slot];
     switch (item.type) {
       case "arme": return ["main_droite", "main_gauche"];
       case "bouclier": return ["main_gauche"];
