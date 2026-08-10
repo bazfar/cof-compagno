@@ -127,6 +127,24 @@ const Seance = (() => {
     </div>`;
   }
 
+  // Veillée du Musicien (prompt_musicien_7_veillee.md §6) : côté MJ, la
+  // liste des personnages couverts par le buff en cours — pour qu'il en
+  // tienne compte en posant ses DD. Purement informatif, ne pilote rien.
+  function _htmlVeilleeMj() {
+    if (typeof SyncStore === "undefined") return "";
+    const buff = SyncStore.get("musique:veillee");
+    if (!buff) return "";
+    const persos = (typeof App !== "undefined" && App.chargerPersos) ? App.chargerPersos() : {};
+    const morceau = (typeof REPERTOIRE_MUSIQUE !== "undefined") ? REPERTOIRE_MUSIQUE.find((m) => m.id === buff.morceauId) : null;
+    const noms = buff.portee.map((id) => (persos[id] ? persos[id].nom : id));
+    const libelleSauv = (buff.cible && typeof Sauvegardes !== "undefined" && Sauvegardes.LIBELLES[buff.cible]) || buff.cible;
+    const signeVal = (n) => (n >= 0 ? "+" : "") + n;
+    return `<div class="carte" style="margin-top:10px;">
+      <strong>🎵 Veillée active</strong> — ${echapper(morceau ? morceau.nom : buff.morceauId)}${libelleSauv ? ` (${signeVal(buff.valeur)} ${echapper(libelleSauv)})` : ""}
+      <p style="font-size:0.85rem;color:#6a6278;margin-top:4px;">Convives couverts : ${noms.length ? noms.map(echapper).join(", ") : "—"}</p>
+    </div>`;
+  }
+
   function _htmlVueMj(cour, presents) {
     const nb = nbSeancesJouees();
     const compteur = `<p style="margin-top:8px;font-size:0.85rem;color:#6a6278;">${nb} séance${nb > 1 ? "s" : ""} jouée${nb > 1 ? "s" : ""}</p>`;
@@ -137,7 +155,7 @@ const Seance = (() => {
         </label>
         <button class="btn or" id="btn-seance-ouvrir" style="margin-top:8px;">▶ Ouvrir la séance ${numeroSuivant()}</button>
         ${compteur}
-      </div>`;
+      </div>${_htmlVeilleeMj()}`;
     }
     const lignes = presents.length
       ? presents.map((p) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.06);">
@@ -151,7 +169,7 @@ const Seance = (() => {
       ${lignes}
       <button class="btn danger" id="btn-seance-fermer" style="margin-top:8px;">⏹ Clore la séance</button>
       ${compteur}
-    </div>`;
+    </div>${_htmlVeilleeMj()}`;
   }
 
   function rendreZoneSeance() {
@@ -203,6 +221,9 @@ const Seance = (() => {
     _rendreSiPartyActif();
   });
   SyncStore.subscribe("presence:table", () => { _rendreSiPartyActif(); });
+  // Veillée du Musicien (cf. _htmlVeilleeMj ci-dessus) : re-rend le panneau
+  // MJ dès que le buff change (posé, remplacé, ou expiré dans validerRepos).
+  SyncStore.subscribe("musique:veillee", () => { _rendreSiPartyActif(); });
 
   return { courante, estActive, numeroSuivant, ouvrir, fermer, nbSeancesJouees, rendreZoneSeance };
 })();

@@ -45,6 +45,10 @@ const Repos = (() => {
   // une espèce prend plus de temps que lire le ciel).
   const KEY_DEMANDE_RECOLTE = "recolte:demande"; // null hors requête
   const ECHEANCE_DEMANDE_RECOLTE_MS = 60000;
+  // Requête de veillée (prompt_musicien_7_veillee.md §2) — même patron
+  // exact que KEY_DEMANDE_RECOLTE ci-dessus, échéance 60s également.
+  const KEY_DEMANDE_MUSIQUE = "musique:demande"; // null hors requête
+  const ECHEANCE_DEMANDE_MUSIQUE_MS = 60000;
 
   function lireAttente() { return SyncStore.get(STORAGE_REPOS_ATTENTE) || {}; }
   function sauverAttente(a) { SyncStore.set(STORAGE_REPOS_ATTENTE, a); }
@@ -54,6 +58,8 @@ const Repos = (() => {
   function sauverEncours(e) { SyncStore.set(KEY_ENCOURS, e); }
   function lireDemandeRecolte() { return SyncStore.get(KEY_DEMANDE_RECOLTE) || null; }
   function sauverDemandeRecolte(d) { SyncStore.set(KEY_DEMANDE_RECOLTE, d); }
+  function lireDemandeMusique() { return SyncStore.get(KEY_DEMANDE_MUSIQUE) || null; }
+  function sauverDemandeMusique(d) { SyncStore.set(KEY_DEMANDE_MUSIQUE, d); }
 
   /* ── Utilitaires (copie locale, même convention que js/marche.js) ── */
   function echapper(s) {
@@ -317,6 +323,14 @@ const Repos = (() => {
       // Récolte ne s'affiche juste jamais) pour que Recolte.tenter()
       // (js/recolte.js) trouve toujours la forme attendue.
       recoltes: {},
+      // veillee (prompt_musicien_7_veillee.md §2) : null jusqu'à ce qu'un
+      // musicien joue, puis { persoId, morceauId, qualiteId, portee } — sa
+      // seule présence vaut compteur "une seule veillée par repos long,
+      // tous musiciens confondus", même patron que recoltes ci-dessus.
+      // Contrairement à la récolte, le bloc Veillée s'affiche à TOUS les
+      // couchages (on joue aussi en salle d'auberge) — veillee est donc
+      // TOUJOURS pertinent, jamais conditionné au couchage.
+      veillee: null,
     });
   }
 
@@ -720,6 +734,266 @@ const Repos = (() => {
     _rendreOverlayRepos();
   }
 
+  /* ================================================================
+     VEILLÉE DANS L'OVERLAY (prompt_musicien_7_veillee.md) — un bloc
+     SUPPLÉMENTAIRE, jamais une phase : elle ne touche JAMAIS
+     encours.statut/_recalculerStatut, ne peut donc jamais empêcher un
+     groupe de valider son repos. Contrairement à la Récolte, PAS limitée
+     au couchage "camp" : on joue aussi en salle d'auberge, et c'est même
+     là que c'est le plus naturel — le bloc apparaît donc à TOUS les
+     couchages. Ordre du bloc camp, documenté ici car un futur remaniement
+     d'UI le réordonnera "pour la lisibilité" sinon : Récolte → Cuisine →
+     Veillée. On chasse avant de cuisiner, on joue après avoir mangé.
+     ================================================================ */
+
+  // Métiers effectivement "pratiqués" pour p — même repli que
+  // js/app.js htmlMetiersPratiques (prompt_musicien_6_metier.md §7) : un
+  // Barde jamais renseigné (p.metiersPratiques undefined) est traité comme
+  // ayant Musique par défaut jusqu'à un premier choix explicite (même un
+  // tableau vide, qui prime alors pour toujours). Dupliqué ici plutôt que
+  // d'exposer une fonction privée d'app.js — même discipline que les
+  // autres modules self-contained (cf. js/alchimie.js).
+  function _metiersEffectifs(p) {
+    if (p.metiersPratiques !== undefined) return p.metiersPratiques;
+    return (typeof METIERS !== "undefined") ? Object.keys(METIERS).filter((m) => METIERS[m].autoClasse === p.classe) : [];
+  }
+
+  // Convives éligibles à une requête de veillée : ont déclaré Musique
+  // (ou en héritent par défaut, cf. _metiersEffectifs) — PAS de condition
+  // sur encours.veillee ici (contrairement à la Récolte, qui exclut ceux
+  // qui ont déjà récolté) : TOUS les musiciens sont sollicités à la fois,
+  // "s'ils sont deux, ils choisissent qui joue" (§2) — c'est Musique.jouer()
+  // qui refuse une deuxième veillée, pas le filtre d'éligibilité.
+  function _convivesEligiblesMusique(encours, persos) {
+    return encours.convives.filter((persoId) => {
+      const p = persos[persoId];
+      if (!p) return false;
+      return _metiersEffectifs(p).includes("musicien");
+    });
+  }
+
+  // MJ uniquement — construit `cibles` et ouvre la requête. Pas
+  // d'automatisme : un clic délibéré du MJ, même patron que lancerRecoltes.
+  function lancerVeillee() {
+    const role = (typeof App !== "undefined" && App.obtenirRole) ? App.obtenirRole() : "joueur";
+    if (role !== "mj") return;
+    const encours = lireEncours();
+    if (!encours) return;
+    if (encours.veillee) { toast("Une veillée a déjà été jouée ce repos-ci."); return; }
+    if (lireDemandeMusique()) return; // une requête à la fois
+    const persos = App.chargerPersos();
+    const eligibles = _convivesEligiblesMusique(encours, persos);
+    if (!eligibles.length) { toast("Aucun convive n'a déclaré le métier de Musique sur sa fiche."); return; }
+    const cibles = eligibles.map((persoId) => {
+      const p = persos[persoId];
+      return { persoId, joueurId: _joueurIdDuConvive(p), nom: p.nom };
+    });
+    const ouvertTs = Date.now();
+    sauverDemandeMusique({ ouvertTs, echeanceTs: ouvertTs + ECHEANCE_DEMANDE_MUSIQUE_MS, cibles, repondus: [], statut: "en_attente" });
+    toast(`🎵 Requête de veillée envoyée à ${cibles.length} convive${cibles.length > 1 ? "s" : ""}.`);
+    _demarrerMinuteurMusique();
+    _rendreOverlayRepos();
+  }
+
+  // Relais MJ ("⏩ Clore la veillée") — clôt sans attendre le décompte.
+  function clorerVeillee() {
+    const role = (typeof App !== "undefined" && App.obtenirRole) ? App.obtenirRole() : "joueur";
+    if (role !== "mj") return;
+    if (!lireDemandeMusique()) return;
+    sauverDemandeMusique(null);
+    _arreterMinuteurMusique();
+    toast("Veillée close.");
+    _rendreOverlayRepos();
+  }
+
+  // Minuteur local, même patron que _demarrerMinuteurRecolte : la requête
+  // se clôt elle-même à l'échéance (60 s), contrairement à la demande
+  // météo qui attend un relais manuel.
+  let _minuteurMusiqueId = null;
+  function _demarrerMinuteurMusique() {
+    if (_minuteurMusiqueId) return;
+    _minuteurMusiqueId = setInterval(() => {
+      const d = lireDemandeMusique();
+      if (!d || d.statut !== "en_attente") { _arreterMinuteurMusique(); return; }
+      if (Date.now() >= d.echeanceTs) { sauverDemandeMusique(null); _arreterMinuteurMusique(); _rendreOverlayRepos(); return; }
+      _rendreOverlayRepos();
+      _rendreModalVeillee();
+    }, 1000);
+  }
+  function _arreterMinuteurMusique() {
+    if (_minuteurMusiqueId) { clearInterval(_minuteurMusiqueId); _minuteurMusiqueId = null; }
+  }
+
+  /* ── Modale du musicien (#modal-veillee), chez le joueur sollicité —
+     même patron que #modal-recolte (donc #modal-porte-ciel). Une requête
+     peut solliciter PLUSIEURS musiciens à la fois ; dès que l'un joue
+     (encours.veillee non-null), _maCibleVeillee renvoie null pour TOUS les
+     autres — leur modale se referme, même sans qu'ils aient eux-mêmes
+     répondu (cf. §2 : "s'ils sont deux, ils choisissent qui joue"). ── */
+
+  let _veilleeChoix = { morceauId: null, cible: null };
+
+  function _maCibleVeillee(demande) {
+    if (!demande || demande.statut !== "en_attente") return null;
+    const encours = lireEncours();
+    if (encours && encours.veillee) return null; // le créneau est déjà pris
+    const moi = (typeof App !== "undefined" && App.obtenirJoueurId) ? App.obtenirJoueurId() : null;
+    return demande.cibles.find((c) => c.joueurId === moi && !demande.repondus.includes(c.persoId)) || null;
+  }
+
+  function _rendreModalVeillee() {
+    const modal = document.getElementById("modal-veillee");
+    if (!modal) return;
+    const demande = lireDemandeMusique();
+    const cible = _maCibleVeillee(demande);
+    if (!cible) { modal.style.display = "none"; _veilleeChoix = { morceauId: null, cible: null }; return; }
+    const corps = document.getElementById("modal-veillee-corps");
+    if (!corps) return;
+    const persos = App.chargerPersos();
+    const p = persos[cible.persoId];
+    if (!p) { modal.style.display = "none"; return; }
+    modal.style.display = "flex";
+
+    // 1. Morceau — Musique.morceauxDisponibles filtre déjà rang+bardeSeul ;
+    // les morceaux hors de portée ne sont PAS listés (même règle que la
+    // Récolte : listés, ils inviteraient à négocier une dérogation chaque
+    // soir).
+    const rangMusicien = (typeof Metiers !== "undefined") ? Metiers.rang(p, "musicien") : 0;
+    const morceaux = (typeof Musique !== "undefined") ? Musique.morceauxDisponibles(p, rangMusicien) : [];
+    if (!morceaux.length) {
+      corps.innerHTML = `<p><strong>${echapper(p.nom)}</strong></p>
+        <p class="vide">Aucun morceau accessible à ce rang.</p>
+        <div class="barre-actions"><button class="btn secondaire" id="veillee-btn-fermer-vide">Fermer</button></div>`;
+      document.getElementById("veillee-btn-fermer-vide").onclick = () => _repondreVeillee(cible.persoId);
+      return;
+    }
+    if (!_veilleeChoix.morceauId || !morceaux.some((m) => m.id === _veilleeChoix.morceauId)) {
+      _veilleeChoix.morceauId = morceaux[0].id;
+    }
+    const morceau = morceaux.find((m) => m.id === _veilleeChoix.morceauId);
+
+    const parRang = {};
+    morceaux.forEach((m) => { (parRang[m.rang] = parRang[m.rang] || []).push(m); });
+    const optionsMorceaux = Object.keys(parRang).sort((a, b) => a - b).map((r) => {
+      const opts = parRang[r].map((m) =>
+        `<option value="${m.id}"${m.id === _veilleeChoix.morceauId ? " selected" : ""}>${echapper(m.nom)} — difficulté ${difficulteMorceau(m)}</option>`
+      ).join("");
+      return `<optgroup label="Rang ${r}">${opts}</optgroup>`;
+    }).join("");
+
+    // 2. Sauvegarde visée — UNIQUEMENT si morceau.cible === "choix" (Le
+    // Repas long), déclarée AVANT le jet, jamais après.
+    let blocCible = "";
+    if (morceau.cible === "choix") {
+      if (!_veilleeChoix.cible) _veilleeChoix.cible = Object.keys(SAUVEGARDES)[0];
+      blocCible = `<label>Sauvegarde visée
+        <select id="veillee-select-cible">${Object.keys(SAUVEGARDES).map((s) =>
+          `<option value="${s}"${s === _veilleeChoix.cible ? " selected" : ""}>${echapper((typeof Sauvegardes !== "undefined" && Sauvegardes.LIBELLES[s]) || s)}</option>`
+        ).join("")}</select>
+      </label>`;
+    } else {
+      _veilleeChoix.cible = null;
+    }
+
+    // 3. Détail du bonus — une ligne par terme, aucun modificateur silencieux.
+    const mods = (typeof Musique !== "undefined") ? Musique.bonusJet(p) : { bonus: 0, detail: [] };
+    const signe = (n) => (n >= 0 ? "+" : "") + n;
+    const detailMods = mods.detail.map((d) => `<div>${echapper(d.libelle)} ${signe(d.valeur)}</div>`).join("");
+
+    corps.innerHTML = `
+      <p><strong>${echapper(p.nom)}</strong></p>
+      <label>Morceau
+        <select id="veillee-select-morceau">${optionsMorceaux}</select>
+      </label>
+      <p style="font-size:0.85rem;color:#8a8296;margin:4px 0;">${echapper(morceau.description)}</p>
+      ${blocCible}
+      <div class="carte" style="margin-top:8px;">
+        ${detailMods}
+        <div style="margin-top:4px;"><strong>Total : ${signe(mods.bonus)}</strong></div>
+      </div>
+      <div class="barre-actions" style="margin-top:10px;">
+        <button class="btn or" id="veillee-btn-lancer">🎲 Jouer</button>
+      </div>
+      <div id="veillee-resultat" style="margin-top:10px;"></div>
+    `;
+    document.getElementById("veillee-select-morceau").onchange = (e) => {
+      _veilleeChoix.morceauId = e.target.value; _veilleeChoix.cible = null; _rendreModalVeillee();
+    };
+    const selCible = document.getElementById("veillee-select-cible");
+    if (selCible) selCible.onchange = (e) => { _veilleeChoix.cible = e.target.value; };
+    document.getElementById("veillee-btn-lancer").onclick = () => _lancerJetVeillee(cible.persoId);
+  }
+
+  function _lancerJetVeillee(persoId) {
+    const res = (typeof Musique !== "undefined") ? Musique.jouer(persoId, _veilleeChoix.morceauId, _veilleeChoix.cible) : { ok: false, raison: "Musique indisponible." };
+    const zone = document.getElementById("veillee-resultat");
+    if (!res.ok) { if (zone) zone.innerHTML = `<p class="vide">${echapper(res.raison)}</p>`; return; }
+    if (zone) {
+      const libelle = (typeof Musique !== "undefined") ? Musique.libelleQualite(res.qualiteId) : res.qualiteId;
+      zone.innerHTML = `<p><strong>${echapper(libelle)}</strong> — ${res.portee.length ? `${res.portee.length} convive${res.portee.length > 1 ? "s" : ""} couvert${res.portee.length > 1 ? "s" : ""}` : "aucun effet"}</p>
+        <button class="btn or" id="veillee-btn-fermer-resultat">Fermer</button>`;
+      document.getElementById("veillee-btn-fermer-resultat").onclick = () => _repondreVeillee(persoId);
+    }
+    // Musique.jouer() a déjà écrit encours.veillee et musique:veillee — un
+    // simple re-rendu local suffit (SyncStore notifiera les autres clients,
+    // dont les autres musiciens sollicités, dont la modale se refermera
+    // via _maCibleVeillee ci-dessus).
+    _rendreOverlayRepos();
+  }
+
+  // Marque le convive comme "répondu" (jet fait, ou aucun morceau
+  // accessible constaté) — ferme la modale chez lui ; les autres clients
+  // se mettent à jour via SyncStore.subscribe(KEY_DEMANDE_MUSIQUE) plus bas.
+  function _repondreVeillee(persoId) {
+    const demande = lireDemandeMusique();
+    if (demande && demande.statut === "en_attente" && !demande.repondus.includes(persoId)) {
+      demande.repondus = demande.repondus.concat([persoId]);
+      sauverDemandeMusique(demande);
+    }
+    _veilleeChoix = { morceauId: null, cible: null };
+    _rendreModalVeillee();
+  }
+
+  /* ── Bloc "🎵 Veillée" de l'overlay (vue MJ complète, vue joueur =
+     récapitulatif seul) — affiché à TOUS les couchages, contrairement au
+     bloc Récolte (cf. en-tête de section). ── */
+  function _htmlBlocVeillee(encours, persos, role) {
+    const v = encours.veillee;
+    let recap = "";
+    if (v) {
+      const p = persos[v.persoId];
+      const morceau = (typeof REPERTOIRE_MUSIQUE !== "undefined") ? REPERTOIRE_MUSIQUE.find((m) => m.id === v.morceauId) : null;
+      const libelle = (typeof Musique !== "undefined") ? Musique.libelleQualite(v.qualiteId) : v.qualiteId;
+      recap = `<div>🎵 ${echapper(p ? p.nom : "?")} — ${echapper(morceau ? morceau.nom : v.morceauId)} — ${echapper(libelle)}${v.portee.length ? `, ${v.portee.length} convive${v.portee.length > 1 ? "s" : ""} couvert${v.portee.length > 1 ? "s" : ""}` : ""}</div>`;
+    }
+
+    let corpsMJ = "";
+    if (role === "mj") {
+      const demande = lireDemandeMusique();
+      if (demande && demande.statut === "en_attente") {
+        const secondes = Math.max(0, Math.ceil((demande.echeanceTs - Date.now()) / 1000));
+        const statuts = demande.cibles.map((c) => `<div>${(demande.repondus.includes(c.persoId) || v) ? "✅" : "⏳"} ${echapper(c.nom)}</div>`).join("");
+        corpsMJ = `<div style="margin-top:6px;">⏳ ${secondes}s restantes — ${demande.repondus.length}/${demande.cibles.length} ont répondu.</div>
+          ${statuts}
+          <button class="btn petit secondaire" id="btn-clore-veillee" style="margin-top:6px;">⏩ Clore la veillée</button>`;
+      } else {
+        const eligibles = _convivesEligiblesMusique(encours, persos);
+        const desactive = !eligibles.length || !!v;
+        let explication = "";
+        if (!eligibles.length) explication = "personne n'a déclaré le métier de Musique sur sa fiche";
+        else if (v) explication = "Une veillée a déjà été jouée ce repos-ci.";
+        corpsMJ = `<button class="btn or" id="btn-lancer-veillee"${desactive ? " disabled" : ""}>🎵 Demander une veillée</button>
+          ${explication ? `<div style="font-size:0.82rem;color:#6a6278;margin-top:4px;">${echapper(explication)}</div>` : ""}`;
+      }
+    }
+
+    return `<div class="carte" style="margin-top:10px;">
+      <h4 style="margin-top:0;">🎵 Veillée</h4>
+      ${corpsMJ}
+      ${recap ? `<div style="margin-top:8px;">${recap}</div>` : ""}
+    </div>`;
+  }
+
   // Validation — actionnable par l'initiateur ou le MJ. Séquence imposée
   // (cf. prompt_repos_long_scrutin.md) : la cuisine et l'attribution sont
   // déjà closes à ce stade (phases précédentes de l'overlay) ; on pose
@@ -924,6 +1198,20 @@ const Repos = (() => {
     // un convive a été servi (un repos où personne n'a payé n'a pas eu lieu).
     if (servis && typeof Meteo !== "undefined") Meteo.demanderLectureCiel("repos");
 
+    // Expiration du buff de veillée (prompt_musicien_7_veillee.md §4) — À LA
+    // FIN de CE repos long, pas à son ouverture : on profite de la nuit
+    // qu'on vient de passer, pas de celle qui commence. Une seule fois ici
+    // (musique:veillee est une clé GLOBALE, pas par convive, contrairement
+    // au sweep pvTemporairesExpiration/malusSocialTemporaire ci-dessus).
+    // survitUnReposDePlus (Ovation) : le drapeau retombe à false et le buff
+    // survit un repos de plus ; sinon il est effacé.
+    const buffMusique = SyncStore.get("musique:veillee");
+    if (buffMusique) {
+      SyncStore.set("musique:veillee", buffMusique.survitUnReposDePlus
+        ? Object.assign({}, buffMusique, { survitUnReposDePlus: false })
+        : null);
+    }
+
     sauverEncours(null);
     sauverVote(null);
     _arreterMinuteur();
@@ -949,7 +1237,10 @@ const Repos = (() => {
   // rien — ne pas "corriger" ça en remboursant plus tard. Même logique pour
   // les récoltes déjà faites (encours.recoltes) : le gibier/les ingrédients
   // récoltés et l'XP de métier déjà accordée ne sont PAS repris non plus —
-  // Recolte.tenter() s'arrête dès que le produit entre en inventaire.
+  // Recolte.tenter() s'arrête dès que le produit entre en inventaire. Et
+  // pour la veillée : on a joué, on a joué — le morceau déjà joué
+  // (encours.veillee), le buff qu'il a posé (musique:veillee) et l'XP de
+  // Musique déjà accordée ne sont PAS annulés non plus.
   function annulerRepos() {
     const role = (typeof App !== "undefined" && App.obtenirRole) ? App.obtenirRole() : "joueur";
     const vote = lireVote();
@@ -1144,6 +1435,7 @@ const Repos = (() => {
         <h4 style="margin-top:0;">Attribution</h4>
         ${lignesAttribution}
       </div>
+      ${_htmlBlocVeillee(encours, persos, role)}
       <div class="barre-actions" style="margin-top:10px;">
         ${peutValider ? `<button class="btn or" id="btn-overlay-valider">😴 Valider le repos</button>` : ""}
         ${peutValider ? `<button class="btn danger" id="btn-overlay-annuler">Annuler le repos</button>` : ""}
@@ -1194,6 +1486,10 @@ const Repos = (() => {
     document.querySelectorAll("[data-traiter-rencontre]").forEach((btn) => {
       btn.onclick = () => _traiterRencontre(parseInt(btn.dataset.traiterRencontre, 10));
     });
+    const btnLancerVeillee = document.getElementById("btn-lancer-veillee");
+    if (btnLancerVeillee) btnLancerVeillee.onclick = () => lancerVeillee();
+    const btnClorerVeillee = document.getElementById("btn-clore-veillee");
+    if (btnClorerVeillee) btnClorerVeillee.onclick = () => clorerVeillee();
   }
 
   function _rendreOverlayRepos() {
@@ -1221,18 +1517,24 @@ const Repos = (() => {
     if (p && p.classList.contains("actif")) rendreZoneRepos();
     if (typeof App !== "undefined" && App.rafraichirFicheActive) App.rafraichirFicheActive();
   });
-  SyncStore.subscribe(KEY_ENCOURS, () => { _rendreOverlayRepos(); _rendreModalRecolte(); });
+  SyncStore.subscribe(KEY_ENCOURS, () => { _rendreOverlayRepos(); _rendreModalRecolte(); _rendreModalVeillee(); });
   SyncStore.subscribe(KEY_DEMANDE_RECOLTE, (val) => {
     if (val && val.statut === "en_attente") _demarrerMinuteurRecolte(); else _arreterMinuteurRecolte();
     _rendreOverlayRepos();
     _rendreModalRecolte();
   });
   SyncStore.subscribe("recolte:rencontres", () => { _rendreOverlayRepos(); });
+  SyncStore.subscribe(KEY_DEMANDE_MUSIQUE, (val) => {
+    if (val && val.statut === "en_attente") _demarrerMinuteurMusique(); else _arreterMinuteurMusique();
+    _rendreOverlayRepos();
+    _rendreModalVeillee();
+  });
+  SyncStore.subscribe("musique:veillee", () => { _rendreOverlayRepos(); });
 
   return {
     rendreZoneRepos, reposCourt, lancerJetRepos, purgerAttente,
     estScrutinEnCours, ouvrirScrutin, voter, resoudreScrutinMaintenant: _resoudreScrutin,
     changerConvive, cuisinerDansOverlay, jeterPlat, attribuer, validerRepos, annulerRepos,
-    lancerRecoltes, clorerRecoltes,
+    lancerRecoltes, clorerRecoltes, lancerVeillee, clorerVeillee,
   };
 })();

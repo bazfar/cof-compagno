@@ -4893,6 +4893,22 @@ const App = (() => {
     </div>`;
   }
 
+  // Ligne discrète sous "Jets de sauvegarde" (Musicien, prompt_musicien_7_
+  // veillee.md §6) : un buff qui dure jusqu'au lendemain doit être visible
+  // en dehors de l'overlay de repos, sinon personne ne s'en souvient au
+  // troisième combat. Le terme est déjà compté dans les 3 boutons
+  // ci-dessus (bonusSauvegardeMusique, cf. modSauvegarde) — cette ligne
+  // n'ajoute RIEN au calcul, elle l'explique.
+  function _htmlLigneVeillee(p) {
+    if (typeof SyncStore === "undefined" || typeof REPERTOIRE_MUSIQUE === "undefined") return "";
+    const buff = SyncStore.get("musique:veillee");
+    if (!buff || !buff.portee.includes(p.id)) return "";
+    const morceau = REPERTOIRE_MUSIQUE.find((m) => m.id === buff.morceauId);
+    const libelleSauv = (buff.cible && typeof Sauvegardes !== "undefined" && Sauvegardes.LIBELLES[buff.cible]) || buff.cible;
+    const signeVal = (n) => (n >= 0 ? "+" : "") + n;
+    return `<p style="font-size:0.85rem;color:var(--or);margin-top:6px;">🎵 ${echapper(morceau ? morceau.nom : buff.morceauId)} — ${signeVal(buff.valeur)} ${echapper(libelleSauv || "")} (jusqu'au prochain repos long${buff.survitUnReposDePlus ? ", et un de plus — Ovation" : ""})</p>`;
+  }
+
   // Chant de veille (Musicien, effetSpecial "initiative_avantage",
   // prompt_musicien_6_metier.md §5) : aucun point d'accroche "avantage" dans
   // js/combat.js — Combat.lancerInitiativeJoueur fait un d20+mod nu, sans
@@ -7611,6 +7627,7 @@ const App = (() => {
               ${(perso.detailSauvegardeConditionnel(_contexteSauvegardeFiche) || []).map((l) => `<div>${echapper(l.libelle)} ${signe(l.valeur)}</div>`).join("")}
             </div>
             <p style="font-size:0.75rem;color:#8a8296;margin-top:6px;">Le défenseur lance : 1d20 + modificateur contre le DD annoncé par le MJ. Choisis la nature de la menace avant de lancer — certains bonus ne s'appliquent que contre la magie, le poison ou la corruption.</p>
+            ${_htmlLigneVeillee(p)}
 
             <h3>Attaques rapides</h3>
             <div class="barre-actions">
