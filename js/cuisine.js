@@ -102,6 +102,27 @@ const Cuisine = (() => {
     return QUALITES.find((q) => q.id === "chef");
   }
 
+  // Bandes de qualité pour un couple (rang recette, rang cuisinier), dérivées
+  // de _qualitePour ci-dessus — AUCUN recalcul indépendant des seuils : on
+  // relance jetBrut de 1 à 20 et on regroupe les résultats contigus. C'est
+  // délibérément la manière la plus lente de calculer ça, mais c'est la SEULE
+  // qui garantit que l'onglet Cuisine (js/cuisine_reference.js, catalogue de
+  // référence) affiche EXACTEMENT ce que produirait un vrai jet ici — deux
+  // implémentations des bornes dériveraient au premier ajustement
+  // d'équilibrage (cf. prompt_onglet_cuisine.md, "aucune duplication de la
+  // logique de résolution").
+  function bandesPour(rangRecette, rangCuisinier) {
+    const S = seuilEffectif({ rang: rangRecette }, rangCuisinier);
+    const bandes = [];
+    for (let jetBrut = 1; jetBrut <= 20; jetBrut++) {
+      const q = _qualitePour(jetBrut, S);
+      const derniere = bandes[bandes.length - 1];
+      if (derniere && derniere.qualiteId === q.id) derniere.max = jetBrut;
+      else bandes.push({ qualiteId: q.id, nom: q.nom, min: jetBrut, max: jetBrut, dePlat: q.dPlat });
+    }
+    return { seuil: S, bandes };
+  }
+
   // Résout un jet de cuisine — pure, ne touche à rien (cf. Alchimie.resoudre,
   // même patron). registre n'est JAMAIS lu ici : purement descriptif (cf.
   // data/cuisine.js, en-tête).
@@ -261,7 +282,7 @@ const Cuisine = (() => {
     rendreZoneCuisine(persoId);
   }
 
-  return { rendreZoneCuisine, resoudre, seuilEffectif, tenterRecette, construirePlat: _construirePlat, tentativesJourMax: _tentativesJourMax, tentativesJour: _tentativesJour };
+  return { rendreZoneCuisine, resoudre, seuilEffectif, bandesPour, tenterRecette, construirePlat: _construirePlat, tentativesJourMax: _tentativesJourMax, tentativesJour: _tentativesJour };
 })();
 
 if (typeof window !== "undefined") window.Cuisine = Cuisine;

@@ -33,6 +33,7 @@
       <button data-panneau="loot" data-role="mj">Loot</button>
       <button data-panneau="marche">🏪 Marché</button>
       <button data-panneau="atelier">🔨 Atelier</button>
+      <button data-panneau="cuisine">🍳 Cuisine</button>
       <button data-panneau="reputation">🏛 Réputation</button>
       <button data-panneau="meteo">🌤 Météo</button>
       <button data-panneau="regles">Règles</button>
@@ -602,6 +603,11 @@
       </div>
     </section>
 
+    <!-- CUISINE (catalogue de référence, LECTURE SEULE — cf. js/cuisine_reference.js) -->
+    <section class="panneau" id="panneau-cuisine">
+      <div id="zone-cuisine-reference"></div>
+    </section>
+
     <!-- REGLES -->
     <section class="panneau" id="panneau-regles">
       <div class="carte">
@@ -889,7 +895,7 @@
   <script src="data/meteo.js?v=1"></script>
   <script src="data/equipement_depart.js?v=7"></script>
   <script src="data/metiers.js?v=1"></script>
-  <script src="data/cuisine.js?v=1"></script>
+  <script src="data/cuisine.js?v=2"></script>
   <script src="js/emblemes.js?v=15"></script>
   <script src="js/carte-monde.js?v=9"></script>
   <!-- Modèle OOP (Phase 1) : socle additif, n'altère pas l'app existante -->
@@ -915,7 +921,8 @@
   <script src="js/marche.js?v=12"></script>
   <script src="js/forge.js?v=11"></script>
   <script src="js/metiers.js?v=1"></script>
-  <script src="js/cuisine.js?v=2"></script>
+  <script src="js/cuisine.js?v=3"></script>
+  <script src="js/cuisine_reference.js?v=1"></script>
   <script src="js/repos.js?v=6"></script>
   <script src="js/reputation.js?v=1"></script>
   <script src="js/meteo.js?v=2"></script>
@@ -923,6 +930,6 @@
   <script src="js/capacites.js?v=61"></script>
   <script src="js/capacites_monstres.js?v=1"></script>
   <script src="js/combat.js?v=24"></script>
-  <script src="js/app.js?v=245"></script>
+  <script src="js/app.js?v=246"></script>
 </body>
 </html>

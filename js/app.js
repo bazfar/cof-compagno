@@ -35,6 +35,15 @@ const App = (() => {
   // le font déjà pour ce même module.
   const COMPETENCES_DOUBLE_HERITAGE = ["Perception", "Bluff", "Intimidation", "Représentation", "Persuasion"];
 
+  // Compétences "Social" au sens de bonusTemporaire testsSociaux (cf.
+  // prompt_cuisine_bonus_rang5.md §2 : "réutiliser COMPETENCES_DOUBLE_HERITAGE,
+  // ne pas en créer une seconde") : les 4 mêmes, MOINS Perception, qui n'y
+  // figure que pour le don racial demi-elfe et n'a rien de social. Même
+  // filtre que Meteo._competencesSociales() côté js/meteo.js (qui, lui, ne
+  // peut pas lire COMPETENCES_DOUBLE_HERITAGE directement — IIFE séparée —
+  // et repasse donc par App.obtenirCompetencesDoubleHeritage() ci-dessous).
+  function _competencesSociales() { return COMPETENCES_DOUBLE_HERITAGE.filter((c) => c !== "Perception"); }
+
   function _skinDeActuel() {
     return localStorage.getItem(STORAGE_SKIN_DE) || SKIN_DE_DEFAUT;
   }
@@ -2582,6 +2591,7 @@ const App = (() => {
     if (panneau === "reputation" && typeof Reputation !== "undefined") Reputation.rendrePanneauReputation();
     if (panneau === "meteo" && typeof Meteo !== "undefined") Meteo.rendrePanneauMeteo();
     if (panneau === "atelier") rendrePanneauAtelier();
+    if (panneau === "cuisine" && typeof CuisineReference !== "undefined") CuisineReference.rendrePanneau();
     if (panneau === "regles") rendreRegles();
     if (panneau === "bestiaire") rendreBestiaire();
     if (panneau === "table-combat") { rendreOrdreInitiative(); rendreTableCombat(); }
@@ -4994,7 +5004,22 @@ const App = (() => {
   // retrait manuel via le ✕, à la table, quand la durée annoncée est passée.
   function htmlEtatsActifs(p) {
     const liste = p.etatsActifs || [];
-    if (!liste.length) return "";
+    // Bonus de repas de rang 5 (cf. prompt_cuisine_bonus_rang5.md §4 : "un
+    // joueur doit pouvoir répondre à pourquoi ai-je +1 sans ouvrir un autre
+    // onglet") : PAS des entrées etatsActifs — testsCarac/testsSociaux
+    // vivent dans le champ dédié p.bonusRepasRang5 (cf. js/repos.js), jamais
+    // lus via Personnage.mod()/bonusTemporaire(cible) comme les entrées
+    // "bonus" ci-dessous (piège de formulation explicite du prompt). Affichés
+    // à part, sans bouton ✕ : un bonus de repas ne se retire pas à la main,
+    // seulement au prochain repos long qui le remplace ou l'efface.
+    const extraItems = [];
+    if (p.bonusRepasRang5) {
+      extraItems.push(`<span class="etat-actif">${echapper(p.bonusRepasRang5.libelle)} · ${echapper(p.bonusRepasRang5.origineNom)} (jusqu'au prochain repos long)</span>`);
+    }
+    if (p.pvTemporairesExpiration && p.pvTemporairesExpiration.motCle === "reposLong" && p.pvTemporaires) {
+      extraItems.push(`<span class="etat-actif">+${p.pvTemporaires} PV temporaires · Le Repas long (jusqu'au prochain repos long)</span>`);
+    }
+    if (!liste.length && !extraItems.length) return "";
     const items = liste.map((e, idx) => {
       let libelle;
       if (e.idEtat) {
@@ -5023,7 +5048,7 @@ const App = (() => {
       }
       return `<span class="etat-actif">${libelle}${dureeTxt ? ` (${dureeTxt})` : ""}${e.source ? ` · ${e.source}` : ""} ` +
         `<button class="btn-retirer-etat" data-etat-idx="${idx}" title="Retirer cet état/bonus">✕</button></span>`;
-    }).join(" ");
+    }).concat(extraItems).join(" ");
     return `<div class="carte"><h3>États actifs</h3><div class="etats-actifs-liste">${items}</div></div>`;
   }
 
@@ -8726,11 +8751,31 @@ const App = (() => {
       ? Meteo.modificateurPourJet({ competence: opts.competence, typeAttaque: opts.typeAttaque, interieur: estInterieur() })
       : null;
     if (modMeteo) bonus += modMeteo.valeur;
+    // bonusTemporaire de rang 5 (Cuisine, cf. prompt_cuisine_bonus_rang5.md
+    // §2) : +n AJOUTÉ AU JET, jamais à la caractéristique elle-même — le
+    // piège explicite du prompt est que Personnage.mod() applique (valeur−10)/2
+    // arrondi à l'inférieur, donc +1 à une caractéristique brute (via
+    // bonusTemporaire(code) déjà utilisé par mod(), cf. personnage.js:285) ne
+    // changerait souvent RIEN au modificateur réellement lancé. D'où
+    // l'injection ICI, au même niveau que bonusItems/modMeteo ci-dessus,
+    // jamais dans Personnage.mod()/modCompetence(). opts.caracCode couvre à
+    // la fois un test de carac brute, un test de compétence adossée (même
+    // caracCode transmis, cf. call sites ~7775/~7798), un jet de sauvegarde
+    // et une attaque : toutes portent ce même caracCode, "tests de X" au
+    // sens large de la table du prompt.
+    let bonusRepas = 0, libelleBonusRepas = null;
+    if (opts.persoId) {
+      const pRepas = chargerPersos()[opts.persoId];
+      const br = pRepas && pRepas.bonusRepasRang5;
+      if (br && br.type === "testsCarac" && opts.caracCode === br.carac) { bonusRepas = br.valeur; libelleBonusRepas = br.libelle; }
+      else if (br && br.type === "testsSociaux" && opts.competence && _competencesSociales().includes(opts.competence)) { bonusRepas = br.valeur; libelleBonusRepas = br.libelle; }
+    }
+    bonus += bonusRepas;
     const mode = modeForce || modeD20();
     const { de, d1, d2, detailDes } = _lancerD20SelonMode(mode);
     const total = de + bonus;
     const crit = (de >= critMin), echec = (de === 1);
-    const detail = `${detailDes} ${signe(bonus)}${modMeteo ? ` · 🌤 ${signe(modMeteo.valeur)} (${modMeteo.libelle})` : ""}`;
+    const detail = `${detailDes} ${signe(bonus)}${modMeteo ? ` · 🌤 ${signe(modMeteo.valeur)} (${modMeteo.libelle})` : ""}${bonusRepas ? ` · 🍳 ${signe(bonusRepas)} (${libelleBonusRepas})` : ""}`;
     afficherResultat(label, total, detail, crit, echec);
     ajouterHisto(label + " " + signe(bonus), total, crit, echec, detail, { mode, d1, d2, estMonstre: !!opts.estMonstre });
     if (echec && opts.persoId) _apresJetAnneauChance(opts.persoId);

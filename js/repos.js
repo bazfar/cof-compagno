@@ -437,6 +437,7 @@ const Repos = (() => {
     const dejaEnAttente = [];
     const insuffisants = [];
     const fatigues = [];
+    const bonusAccordes = [];
     let servis = 0;
 
     encours.convives.forEach((persoId) => {
@@ -454,14 +455,19 @@ const Repos = (() => {
 
       // 1. Dé du plat attribué (ou ration), déjà déterminé en phase cuisine.
       const attrib = encours.attributions[persoId];
-      let effetRepos = null, nomPlat = null;
+      let effetRepos = null, nomPlat = null, recetteCuisinee = null;
       if (attrib === "ration") {
         const ration = (p.inventaireListe || []).find((it) => it.id === "ration_voyage" && it.effetRepos);
         if (ration) { effetRepos = ration.effetRepos; nomPlat = ration.nom; _consommerUneUnite(p.inventaireListe, "ration_voyage"); }
       } else if (typeof attrib === "number" && encours.plats[attrib]) {
         const cuisine = encours.plats[attrib];
         effetRepos = { des: [cuisine.de], maximise: cuisine.maximise, intoxication: cuisine.intoxication };
-        nomPlat = "plat cuisiné";
+        // Résolu par recetteId (cf. cuisinerDansOverlay) plutôt que le nom
+        // générique "plat cuisiné" d'avant ce chantier : nécessaire pour
+        // retrouver bonusTemporaire (cf. prompt_cuisine_bonus_rang5.md) ET
+        // pour que le joueur voie le VRAI nom du plat dans son jet en attente.
+        recetteCuisinee = CUISINE_RECETTES.find((r) => r.id === cuisine.recetteId) || null;
+        nomPlat = recetteCuisinee ? recetteCuisinee.nom : "plat cuisiné";
       }
 
       const instance = new Personnage(p);
@@ -510,6 +516,59 @@ const Repos = (() => {
         p.etatsActifs.push({ idEtat: "intoxication", dureeRestante: { tours: null, motCle: null, dureeAffichee: "prochain repos long" }, source: "Repos", poseLe: Date.now() });
       }
 
+      // bonusTemporaire de rang 5 (cf. prompt_cuisine_bonus_rang5.md §2-3) :
+      // posé APRÈS le nettoyage des effets ci-dessus, jamais avant. Le bonus
+      // de LA NUIT PRÉCÉDENTE disparaît d'abord (il dure "jusqu'au prochain
+      // repos long", pas au-delà) — un repos qui ne serait pas suivi d'un
+      // nouveau bonus laisse quand même le convive sans aucun bonus actif,
+      // c'est le comportement voulu.
+      p.bonusRepasRang5 = null;
+      if (p.pvTemporairesExpiration && p.pvTemporairesExpiration.motCle === "reposLong") {
+        p.pvTemporaires = 0;
+        p.pvTemporairesExpiration = null;
+      }
+      if (recetteCuisinee && recetteCuisinee.bonusTemporaire && recetteCuisinee.rang !== 5) {
+        // Exclusif au rang 5 (cf. prompt_cuisine_bonus_rang5.md §2) : le
+        // moteur IGNORE le champ s'il apparaît sur une autre recette plutôt
+        // que de l'appliquer silencieusement — signe d'une donnée mal posée
+        // dans data/cuisine.js, pas un cas à supporter.
+        console.warn(`bonusTemporaire ignoré sur "${recetteCuisinee.id}" (rang ${recetteCuisinee.rang}, exclusif au rang 5).`);
+      }
+      if (typeof attrib === "number" && encours.plats[attrib] && recetteCuisinee && recetteCuisinee.bonusTemporaire && recetteCuisinee.rang === 5) {
+        // "à partir d'Excellent" = qualiteId "bien" (Bien réussi) ou "chef"
+        // (Chef-d'œuvre) — cf. js/cuisine_reference.js, même mapping, vérifié
+        // contre le tableau de fréquence du prompt (5/5/15/25/35/45 %).
+        // Réussi (xpMult identique à Bien réussi/Chef-d'œuvre côté XP, mais
+        // AUCUN bonus ici) nourrit sans rien conférer de plus.
+        const qualiteId = encours.plats[attrib].qualiteId;
+        if (qualiteId === "bien" || qualiteId === "chef") {
+          const bt = recetteCuisinee.bonusTemporaire;
+          if (bt.type === "pvTemporaires") {
+            // Même sémantique "garde le plus haut" que
+            // Capacites.appliquerPvTemporairesSurPerso (js/capacites.js,
+            // interdit à la modification) — reproduite ici à la main car
+            // cette fonction ne connaît pas de dureeExpr "jusqu'au prochain
+            // repos long" (son vocabulaire s'arrête à permanente/finCombat/
+            // 24h/prochainTour/maintenue) : motCle "reposLong" est purement
+            // local à ce fichier, decompterEtatsDebutTour (js/capacites.js)
+            // l'ignore superbement (ne décrémente que motCle === null).
+            if (bt.valeur > (p.pvTemporaires || 0)) {
+              p.pvTemporaires = bt.valeur;
+              p.pvTemporairesExpiration = { tours: null, motCle: "reposLong" };
+              bonusAccordes.push(`${p.nom} : ${bt.libelle} (${recetteCuisinee.nom})`);
+            }
+          } else {
+            // testsCarac / testsSociaux — un seul bonus actif à la fois pour
+            // CE convive (remplace, ne s'additionne jamais) : chaque convive
+            // ne mange qu'un plat par repos long, donc l'assignation directe
+            // (pas de push dans un tableau) suffit à garantir l'absence de
+            // cumul du même type.
+            p.bonusRepasRang5 = Object.assign({ origineNom: recetteCuisinee.nom }, bt);
+            bonusAccordes.push(`${p.nom} : ${bt.libelle} (${recetteCuisinee.nom})`);
+          }
+        }
+      }
+
       p.reposCourtsDepuisReposLong = 0;
 
       attente[persoId] = {
@@ -547,6 +606,11 @@ const Repos = (() => {
     if (insuffisants.length) msg += ` Bourse insuffisante pour : ${insuffisants.join(", ")}.`;
     if (dejaEnAttente.length) msg += ` Déjà un repos en attente pour : ${dejaEnAttente.join(", ")}.`;
     if (fatigues.length) msg += ` Fatiguée (sans repas) : ${fatigues.join(", ")}.`;
+    // Annonce explicite des bonusTemporaire de rang 5 accordés (cf.
+    // prompt_cuisine_bonus_rang5.md §4, "annoncer explicitement les bonus
+    // accordés et à qui") — un joueur qui n'ouvre pas sa fiche voit quand
+    // même passer l'info dans le même toast que le reste du repos.
+    if (bonusAccordes.length) msg += ` 🎁 Bonus accordés — ${bonusAccordes.join(" · ")}.`;
     toast(msg);
     rendreZoneRepos();
     _rendreOverlayRepos();

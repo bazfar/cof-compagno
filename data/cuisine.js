@@ -72,13 +72,25 @@ const QUALITES = [
    prime sur le chiffre cité en introduction — ne PAS "corriger" à 47 en
    supprimant des entrées, le tableau source est la référence.
    Ordre du fichier : par nation, dans l'ordre du document source.
+
+   Amendement rang 5 (prompt_cuisine_bonus_rang5.md) : +2 recettes
+   (service_aetharion, table_de_prestige) → 59 recettes au total, rang 5
+   porté à 6. oie_confite et boeuf_de_lannee restent au rang 4 (TODO Thomas
+   de prompt_cuisine_facteurs_nutritifs.md explicitement levé, "ne pas
+   promouvoir"). Les 6 recettes de rang 5 portent désormais un champ décrivant
+   un bonus temporaire (cf. js/repos.js, validerRepos, qui l'accorde) — EXCLUSIF à ce rang.
    ============================================================ */
 const CUISINE_RECETTES = [
   // ── Solvarn — Zénith ──
   { id: "pain_soleil", nom: "Pain-soleil", rang: 3, indexDe: 1, registre: "haute",
     ingredients: [{ id: "froment", qte: 2 }, { id: "safran_autel", qte: 1 }] },
   { id: "sauce_or", nom: "Sauce d'Or", rang: 5, indexDe: 1, registre: "haute",
-    ingredients: [{ id: "poule_doree", qte: 1 }, { id: "safran_autel", qte: 1 }, { id: "miel_bruyere", qte: 1 }, { id: "beurre", qte: 2 }] },
+    ingredients: [{ id: "poule_doree", qte: 1 }, { id: "safran_autel", qte: 1 }, { id: "miel_bruyere", qte: 1 }, { id: "beurre", qte: 2 }],
+    // Bonus temporaire (cf. prompt_cuisine_bonus_rang5.md §2-3) : plat de
+    // Concile et de Chancellerie — "on juge un cuisinier solvarien à sa
+    // nappe de sauce". Accordé à partir d'Excellent, jusqu'au prochain
+    // repos long, remplace (ne s'additionne pas à) un bonus du même type.
+    bonusTemporaire: { type: "testsSociaux", valeur: 1, libelle: "+1 aux tests sociaux" } },
   { id: "volaille_zenith", nom: "Volaille du Zénith", rang: 4, indexDe: 4, registre: "haute",
     ingredients: [{ id: "poule_doree", qte: 1 }, { id: "safran_autel", qte: 1 }, { id: "beurre", qte: 1 }] },
   { id: "oie_confite", nom: "Oie confite de la Sombre", rang: 4, indexDe: 5, registre: "haute",
@@ -128,17 +140,23 @@ const CUISINE_RECETTES = [
 
   // ── Mornac ──
   { id: "jambon_mornhaven", nom: "Jambon de Mornhaven", rang: 5, indexDe: 4, registre: "haute",
-    ingredients: [{ id: "porc_noir", qte: 2 }, { id: "sel", qte: 2 }] },
+    ingredients: [{ id: "porc_noir", qte: 2 }, { id: "sel", qte: 2 }],
+    // Affiné trois ans, servi seul, dense — bonus temporaire, cf. sauce_or ci-dessus.
+    bonusTemporaire: { type: "testsCarac", valeur: 1, carac: "CON", libelle: "+1 aux tests de CON" } },
   { id: "matelote_lisdane", nom: "Matelote de la Lisdane", rang: 3, indexDe: 4, registre: "commune",
     ingredients: [{ id: "anguille", qte: 2 }, { id: "vin_noir_mornac", qte: 1 }, { id: "ail_levees", qte: 1 }] },
   { id: "quenelles_brochet", nom: "Quenelles de brochet", rang: 5, indexDe: 2, registre: "haute",
-    ingredients: [{ id: "brochet", qte: 2 }, { id: "oeuf", qte: 1 }] },
+    ingredients: [{ id: "brochet", qte: 2 }, { id: "oeuf", qte: 1 }],
+    // Technique pure, impossible sans apprentissage — bonus temporaire, cf. sauce_or ci-dessus.
+    bonusTemporaire: { type: "testsCarac", valeur: 1, carac: "DEX", libelle: "+1 aux tests de DEX" } },
   { id: "porc_noir_prunes", nom: "Porc noir aux prunes", rang: 4, indexDe: 4, registre: "haute",
     ingredients: [{ id: "porc_noir", qte: 1 }, { id: "prune_boigris", qte: 2 }, { id: "vin_noir_mornac", qte: 1 }] },
   { id: "repas_long", nom: "Le Repas long", rang: 5, indexDe: 6, registre: "haute",
     // Sommet du catalogue : seul indexDe 6 (2d10). Sept services, rang 5,
     // une tentative par jour. Coût en ingrédients délibérément prohibitif.
-    ingredients: [{ id: "porc_noir", qte: 1 }, { id: "brochet", qte: 1 }, { id: "anguille", qte: 1 }, { id: "vin_noir_mornac", qte: 2 }, { id: "beurre", qte: 1 }, { id: "prune_boigris", qte: 1 }] },
+    // Sept services, ordre fixe — le festin qui tient au corps.
+    ingredients: [{ id: "porc_noir", qte: 1 }, { id: "brochet", qte: 1 }, { id: "anguille", qte: 1 }, { id: "vin_noir_mornac", qte: 2 }, { id: "beurre", qte: 1 }, { id: "prune_boigris", qte: 1 }],
+    bonusTemporaire: { type: "pvTemporaires", valeur: 5, libelle: "+5 PV temporaires" } },
 
   // ── Serval ──
   { id: "fromage_de_col", nom: "Fromage de col", rang: 4, indexDe: 2, registre: "commune",
@@ -171,6 +189,21 @@ const CUISINE_RECETTES = [
     ingredients: [{ id: "feuille_argent", qte: 1 }] },
   { id: "chevreuil_aux_baies", nom: "Chevreuil aux baies", rang: 4, indexDe: 4, registre: "occasion",
     ingredients: [{ id: "chevreuil_halliers", qte: 2 }, { id: "baie_crepuscule", qte: 1 }, { id: "seve_ambree", qte: 1 }] },
+  { id: "service_aetharion", nom: "Le Service d'Aetharion", rang: 5, indexDe: 3, registre: "rite",
+    // Amendement rang 5 (prompt_cuisine_bonus_rang5.md, étape 1) : "repas en
+    // service ordonné, sève claire en ouverture, poisson cru, infusion de
+    // feuille d'argent en clôture" — ce n'est pas une invention, le document
+    // de référence décrit ce repas composé sans en faire une entrée de
+    // tableau. Aucun ingrédient nouveau : les 4 figurent déjà dans les vivres.
+    // Le prompt donne facteurNutritif 0,55 (échelle de prompt_cuisine_
+    // facteurs_nutritifs.md, JAMAIS appliqué à ce fichier — aucun champ
+    // facteurNutritif n'existe ici, cf. audit). Traduit sur l'échelle
+    // indexDe/ECHELLE_DES_PLAT réellement en usage via le même rapport que
+    // repas_long (facteurNutritif 0,95 ↔ indexDe 6, le plafond documenté) :
+    // 0,55 / 0,95 × 6 ≈ 3,5 → indexDe 3 (1d10).
+    ingredients: [{ id: "seve_montante", qte: 1 }, { id: "truite_source", qte: 1 }, { id: "trompette_seve", qte: 1 }, { id: "feuille_argent", qte: 1 }],
+    // Protocole, infusion de clôture, chaque étape a un mot dit à voix haute.
+    bonusTemporaire: { type: "testsCarac", valeur: 1, carac: "SAG", libelle: "+1 aux tests de SAG" } },
 
   // ── Aelindra ──
   { id: "pain_de_gland", nom: "Pain de gland", rang: 1, indexDe: 1, registre: "commune",
@@ -208,6 +241,15 @@ const CUISINE_RECETTES = [
     ingredients: [{ id: "boeuf_serval", qte: 2 }, { id: "sel_gemme", qte: 1 }] },
   { id: "sombre_truffe_rapee", nom: "Sombre-truffe râpée", rang: 2, indexDe: 1, registre: "haute",
     ingredients: [{ id: "sombre_truffe", qte: 1 }, { id: "cave_mousse", qte: 1 }] },
+  { id: "table_de_prestige", nom: "La Table de prestige", rang: 5, indexDe: 5, registre: "haute",
+    // Amendement rang 5 (prompt_cuisine_bonus_rang5.md, étape 1) : ce nom
+    // porte déjà celui-ci dans les amorces gastronomiques du document
+    // source — pas une invention. Aucun ingrédient nouveau.
+    // facteurNutritif 0,85 du prompt, traduit en indexDe via le même rapport
+    // que service_aetharion ci-dessus : 0,85 / 0,95 × 6 ≈ 5,4 → indexDe 5 (2d8).
+    ingredients: [{ id: "boeuf_serval", qte: 2 }, { id: "sombre_truffe", qte: 1 }, { id: "houblon_serval", qte: 1 }, { id: "sel_gemme", qte: 1 }],
+    // Bœuf de surface descendu vivant, cuisine calorique naine.
+    bonusTemporaire: { type: "testsCarac", valeur: 1, carac: "FOR", libelle: "+1 aux tests de FOR" } },
 
   // ── Khazrak Dûm ──
   { id: "chapeau_rouge_bouilli", nom: "Chapeau-rouge trois fois bouilli", rang: 3, indexDe: 1, registre: "commune",
