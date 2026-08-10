@@ -9863,9 +9863,9 @@ const App = (() => {
      ============================================================ */
   let _fauneFloreTypeFiltre = "";
   let _fauneFlorePeupleFiltre = "";
-  const _FAUNE_FLORE_COULEURS_PEUPLE = { commun: "#6a6278", humain: "#b8924a", elfe: "#3a7d44", nain: "#8a2f3b" };
+  const _FAUNE_FLORE_COULEURS_PEUPLE = { commun: "#6a6278", humain: "#b8924a", elfe: "#3a7d44", nain: "#8a2f3b", alchimie: "#6b3fa0" };
   const _FAUNE_FLORE_COULEURS_TYPE = { flore: "#3a7d44", faune: "#8a2f3b" };
-  const _FAUNE_FLORE_LIBELLES_PEUPLE = { commun: "Commun", humain: "Humain", elfe: "Elfe", nain: "Nain" };
+  const _FAUNE_FLORE_LIBELLES_PEUPLE = { commun: "Commun", humain: "Humain", elfe: "Elfe", nain: "Nain", alchimie: "Alchimie" };
 
   function rendreFauneFlore() {
     const zone = document.getElementById("zone-lore-faune-flore");

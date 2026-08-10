@@ -4514,6 +4514,12 @@ const FAUNE_FLORE = {
         "Rite : le champignon-écho avant les serments, le poisson-cloche aux mariages, le pain de la souche familiale aux funérailles.",
       ],
     },
+    {
+      peuple: "alchimie",
+      titre: "Flore alchimique",
+      principe:
+        "Les trois blocs culturels (humain, elfique, nain) décrivent ce qu'on mange. Cette section décrit ce qu'on distille — des espèces qui n'ont pas leur place dans une cuisine et n'ont jamais été traitées comme des vivres par personne. Ligne de partage, valable partout : la Barbade (cf. l'entrée « Barbade » en tête de liste, Commun) est le socle absolu de toute la pharmacopée, tout le reste est un accident géographique ou théologique — il faut une plante que personne ne cultive et un artisan qui sait quoi en faire. Comme pour le reste de ce document, ces espèces sont dispersées sans logique géographique : trouver une Fleur de Sève ne dit rien sur la proximité d'une Faille ou d'un lieu de pouvoir, c'est simplement une plante qui pousse là. Les fleurs de Sève (druidiques) et les fleurs du Flambeau (cléricales) sont l'exacte contrepartie l'une de l'autre, et la rivalité est explicite : là où le druide prélève ce qui pousse, le clergé solvarien consacre ce qu'il prélève, et tient que la consécration fait la vertu — une fleur du Flambeau non consacrée est, selon le Concile, une fleur ordinaire, position commode qui place le monopole du côté du rituel plutôt que du côté de la plante. Les quatre solitaires (fleur de lune, fleur rugissante, herbe-de-feu, barbade) n'ont aucune parenté entre elles et aucune école ne les revendique ; elles n'ont en commun que d'être utiles et de ne se laisser cultiver par personne. Les réactifs animaux, enfin, ne relèvent pas de la flore mais vivent au même endroit dans les besaces : c'est le traqueur qui les fournit, pas l'herboriste — division du travail qui oblige les deux métiers à s'entendre.",
+    },
   ],
   entrees: [
     // -- Espèce transversale --
@@ -4628,12 +4634,62 @@ const FAUNE_FLORE = {
     { nom: "Corbeau des cheminées", type: "faune", peuple: "nain", ou: "Bouches de surface", description: "Niche dans les évents de forge", usage: "Braconné par les gamins, rôti en cachette", rarete: "commun" },
     { nom: "Bœuf de surface", type: "faune", peuple: "nain", ou: "Importé de Serval", description: "Acheté vivant, descendu par les rampes", usage: "Viande de fête et de statut : servir du bœuf, c'est afficher son commerce", rarete: "rare (sous terre)" },
     { nom: "Poisson-cloche", type: "faune", peuple: "nain", ou: "Lacs profonds de Kaldrun", description: "Émet un son bas et régulier quand il est vivant hors de l'eau", usage: "Traditionnellement servi encore chantant aux mariages ; certains clans trouvent ça barbare", rarete: "rare" },
+
+    // -- Flore alchimique : les fleurs de Sève (druidiques) --
+    { nom: "Fleur de Sève naissante", type: "flore", peuple: "alchimie", ou: "Forêts, partout", rarete: "commun",
+      description: "Jeune pousse au pied des grands arbres, corolle encore fermée.",
+      usage: "Base des soins druidiques les plus simples (cf. loot.json, fleur_seve_naissante)." },
+    { nom: "Fleur de Sève éclose", type: "flore", peuple: "alchimie", ou: "Forêts, partout", rarete: "peu_commun",
+      description: "Pleinement ouverte ; la sève est nettement plus concentrée qu'à l'état naissant.",
+      usage: "Potions de soin courantes (cf. loot.json, fleur_seve_eclose)." },
+    { nom: "Fleur de Sève ancienne", type: "flore", peuple: "alchimie", ou: "Forêts, sur les plus vieux sujets", rarete: "rare",
+      description: "Corolle épaisse, presque ligneuse.",
+      usage: "Soins supérieurs. Cueillir la dernière d'un bosquet est, chez les Aelindra, une faute qu'on ne commet qu'une fois (cf. loot.json, fleur_seve_ancienne).",
+      note: "Point de doctrine : les druides soutiennent qu'une fleur cueillie trop tôt « ne repousse pas ancienne ». Aucun érudit des Académies n'a jamais pu le vérifier, et personne n'ose faire l'expérience." },
+
+    // -- Flore alchimique : les fleurs du Flambeau (cléricales) --
+    { nom: "Fleur du Flambeau", type: "flore", peuple: "alchimie", ou: "Plaines et contreforts, terres humaines", rarete: "peu_commun",
+      description: "Corolle rougeoyante, tiède au toucher en plein jour.",
+      usage: "Potions bénies, huile sainte. Consacrée lors des offices quotidiens (cf. loot.json, fleur_flambeau)." },
+    { nom: "Fleur du Flambeau embrasée", type: "flore", peuple: "alchimie", ou: "Hauteurs exposées, rare", rarete: "rare",
+      description: "Variante dont le cœur reste incandescent la nuit.",
+      usage: "Exige un rituel complet, pas une simple bénédiction — d'où son prix (cf. loot.json, fleur_flambeau_embrasee)." },
+    { nom: "Fleur d'Aurore éternelle", type: "flore", peuple: "alchimie", ou: "Nulle part en particulier", rarete: "legendaire",
+      description: "Ne fleurit qu'une fois par génération, jamais deux fois au même endroit.",
+      usage: "Reliquaires et potions de grande guérison. Un clerc qui en trouve une le déclare ; un clerc qui n'en déclare pas une n'est plus vraiment un clerc (cf. loot.json, fleur_aurore_eternelle).",
+      note: "Seul végétal légendaire de ce corpus, et seule espèce dont l'existence soit contestée par une partie des Académies de Liberra, au motif qu'aucun herbier n'en contient de spécimen — objection à laquelle le clergé répond qu'on ne met pas une aurore sous presse." },
+
+    // -- Flore alchimique : les quatre solitaires (aucune parenté, aucune école) --
+    { nom: "Fleur de lune", type: "flore", peuple: "alchimie", ou: "Sous-bois crépusculaires, Mordanel et ailleurs", rarete: "peu_commun",
+      description: "Ne s'ouvre qu'à la nuit tombée ; refermée, elle est introuvable.",
+      usage: "Élixir de vision nocturne (cf. loot.json, fleur_lune)." },
+    { nom: "Fleur rugissante", type: "flore", peuple: "alchimie", ou: "Plaines sèches, terres orques et marges arides", rarete: "peu_commun",
+      description: "Plante épineuse ; les épines écrasées libèrent une sève stimulante.",
+      usage: "Élixir de force. Les clans orques la mâchent directement, ce que tout apothicaire juge imprudent et efficace (cf. loot.json, fleur_rugissante)." },
+    { nom: "Herbe-de-feu", type: "flore", peuple: "alchimie", ou: "Éboulis et pierriers de montagne", rarete: "peu_commun",
+      description: "Dégage une chaleur légère au toucher, ne brûle pas.",
+      usage: "Bombes alchimiques. À ne pas confondre avec l'herbe-à-fumée servalienne (cf. Bloc humain), erreur qui a coûté un fumoir à Serval (cf. loot.json, herbe_feu)." },
+
+    // -- Flore alchimique : réactifs animaux (fournis par le traqueur, pas l'herboriste) --
+    { nom: "Venin brut", type: "faune", peuple: "alchimie", ou: "Forêts, plaines, galeries", rarete: "peu_commun",
+      description: "Prélevé à la glande sur petite créature venimeuse.",
+      usage: "Poisons, paliers 1-2 (cf. loot.json, venin_brut)." },
+    { nom: "Glande venimeuse", type: "faune", peuple: "alchimie", ou: "Forêts profondes, galeries", rarete: "rare",
+      description: "Glande entière, prélevée sur une créature plus puissante.",
+      usage: "Poisons, paliers 3-4 (cf. loot.json, glande_venimeuse)." },
+    { nom: "Fiel noir", type: "faune", peuple: "alchimie", ou: "—", rarete: "jamais récoltable",
+      description: "Bile d'une créature touchée par le Chaos.",
+      usage: "Poisons, palier 5 (cf. loot.json, fiel_noir).",
+      note: "Le fiel noir ne se cueille pas et ne se chasse pas. Il faut avoir croisé la chose, et l'avoir tuée. C'est une contrainte narrative assumée : le palier le plus haut du poison reste indexé sur ce que le MJ décide de faire croiser au groupe, jamais sur une compétence de récolte." },
   ],
   notes: [
     "Référence de cohérence, pas source de vérité narrative : le lore canonique reste dans les autres onglets de ce panneau.",
     "Les paliers de rareté sont alignés sur data/marche.js (commun, peu_commun, rare, legendaire) et se combinent avec les multiplicateurs d'origine (local ×0,8, importé allié ×1, importé rival ×1,5) : un jambon de Mornac à Solmaris n'est pas au même prix qu'à Mornhaven.",
     "Les espèces marquées par la magie (racine-de-lune, truite-miroir, coq de veille, miel de bosquet, fleur-de-veille, poisson-verre, champignon-lanterne, champignon-écho, truffe-braise, poisson-cloche) sont volontairement dispersées sans logique géographique. Ne pas en faire un indice de lieu a posteriori.",
     "Aucun effet mécanique n'est chiffré à ce stade : c'est un choix, pas un oubli. Si la gastronomie passe un jour en système, les candidats naturels sont le miel de bosquet, la fleur-de-veille, la racine-de-lune et le champignon-écho.",
+    "Flore alchimique : ces espèces existaient déjà dans data/loot.json avec la mention « Matériau provisoire (lore à valider) ». Cette section en est la validation — la mention a donc été retirée des réactifs animaux (venin brut, glande venimeuse, fiel noir) une fois leur lore posé ici.",
+    "Flore alchimique : ce ne sont pas des vivres — aucune de ces espèces n'apparaît dans une recette de data/cuisine.js, et aucune ne doit y entrer.",
+    "Flore alchimique : le partage traque/alchimie de ces entrées est mécanique (data/loot.json, champ recolte) autant que narratif — l'herboriste ne saigne pas les bêtes, le traqueur ne reconnaît pas les corolles.",
   ],
 };
 
