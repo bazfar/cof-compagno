@@ -33,6 +33,35 @@ const METIERS = {
     // l'équilibrage volontairement plat du système.
     caracteristique: null,
   },
+  traque: {
+    id: "traque",
+    nom: "Traque",
+    icone: "🏹",
+    titres: ["Rabatteur", "Pisteur", "Traqueur", "Traqueur confirmé", "Maître traqueur", "Grand veneur"],
+    // Contrairement à la Cuisine (caracteristique: null, jet volontairement
+    // nu), la Traque PORTE des modificateurs : mod SAG + bonusCompetence
+    // ("Survie") + météo. C'est ce qui empêche le métier d'être un doublon
+    // de la Cuisine et donne enfin au Chasseur et au Druide un terrain
+    // mécanique propre hors combat (un Chasseur rang 2 en Voie de la traque
+    // porte déjà +4 en Survie). La base de seuil est relevée de 8 à 10 pour
+    // compenser (cf. data/recolte.js, en-tête).
+    caracteristique: "SAG",
+    competence: "Survie",
+    domaine: "faune",
+  },
+  alchimie: {
+    id: "alchimie",
+    nom: "Alchimie",
+    icone: "⚗️",
+    titres: ["Touilleur", "Apprenti", "Herboriste", "Alchimiste", "Maître alchimiste", "Grand œuvre"],
+    // Deux usages du même rang : la cueillette de flore (js/recolte.js) et le
+    // brassage de potions/poisons (js/alchimie.js, cf. prompt 3). L'XP est
+    // commune aux deux — un herboriste qui cueille progresse aussi comme
+    // brasseur, c'est voulu.
+    caracteristique: "INT",
+    competence: null,
+    domaine: "flore",
+  },
 };
 
 if (typeof window !== "undefined") {

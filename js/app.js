@@ -7801,6 +7801,11 @@ const App = (() => {
           </div>` : ""}
 
           <div class="carte">
+            <h3>🧰 Métiers pratiqués</h3>
+            ${htmlMetiersPratiques(p, id)}
+          </div>
+
+          <div class="carte">
             <h3>Notes</h3>
             <textarea id="fiche-notes" rows="5" style="width:100%;resize:vertical;font-family:inherit;font-size:0.9rem;" placeholder="Notes libres (idées, quêtes en cours, objectifs...)">${echapper(p.notes || "")}</textarea>
           </div>
@@ -7821,6 +7826,9 @@ const App = (() => {
     document.getElementById("pv-moins").onclick = () => ajusterPv(id, -1);
     document.getElementById("pv-actuel").onchange = (e) => definirPv(id, parseInt(e.target.value, 10));
     document.getElementById("fiche-notes").onchange = (e) => definirNotes(id, e.target.value);
+    document.querySelectorAll(".check-metier-pratique").forEach((el) => {
+      el.onchange = () => definirMetierPratique(id, el.dataset.metier, el.checked);
+    });
     wireDegatsSubis(id, "");
     // Bourse (cf. htmlBlocBourse) — édition directe par le joueur.
     const _wireBourse = (elId, champ) => {
@@ -8305,6 +8313,46 @@ const App = (() => {
     const p = persos[id];
     p.notes = val;
     sauverPersos(persos);
+  }
+
+  // Métiers pratiqués (prompt_recolte_2_metiers.md, §3) : p.metiersPratiques
+  // ne sert QU'À savoir qui reçoit une requête de récolte au repos long
+  // (js/recolte.js, Recolte.metiersDe/tenter) — elle ne verrouille RIEN
+  // d'autre. L'onglet Atelier reste ouvert à tous, exactement comme
+  // aujourd'hui pour la Cuisine : ne pas "corriger" ça un jour en gatant
+  // l'Atelier dessus, ce serait changer le sens de ce champ.
+  // Liste DÉRIVÉE de METIERS (jamais écrite en dur) : un futur forgeron/
+  // herboriste apparaît ici sans retoucher cette carte.
+  function htmlMetiersPratiques(p, id) {
+    const pratiques = p.metiersPratiques || [];
+    const peutEditer = estProprietaire(p) || role === "mj";
+    return Object.keys(METIERS).map((metierId) => {
+      const def = METIERS[metierId];
+      const coche = pratiques.includes(metierId);
+      const rang = Metiers.rang(p, metierId);
+      const titre = Metiers.titre(p, metierId);
+      const xp = Metiers.xp(p, metierId);
+      const prog = Metiers.progressionVersRangSuivant(p, metierId);
+      return `<div style="margin-bottom:10px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:${peutEditer ? "pointer" : "default"};">
+          <input type="checkbox" class="check-metier-pratique" data-metier="${metierId}" ${coche ? "checked" : ""} ${peutEditer ? "" : "disabled"} />
+          <strong>${def.icone} ${echapper(def.nom)}</strong>
+        </label>
+        ${coche ? `<div style="font-size:0.85rem;margin-left:26px;">${echapper(titre)} (rang ${rang}) — ${xp} XP${prog ? ` — ${prog.actuel}/${prog.requis} vers le rang ${rang + 1}` : " — rang maximum"}</div>
+        ${prog ? `<div class="barre-pv" style="margin-top:3px;margin-left:26px;max-width:260px;"><div class="rempli" style="width:${prog.pct}%;"></div></div>` : ""}` : ""}
+      </div>`;
+    }).join("");
+  }
+
+  function definirMetierPratique(id, metierId, actif) {
+    const persos = chargerPersos();
+    const p = persos[id];
+    if (!p) return;
+    const pratiques = new Set(p.metiersPratiques || []);
+    if (actif) pratiques.add(metierId); else pratiques.delete(metierId);
+    p.metiersPratiques = Array.from(pratiques);
+    sauverPersos(persos);
+    afficherFiche(id);
   }
 
   // Applique un jet de dégâts subis : retranche la réduction de dégâts de
