@@ -142,12 +142,14 @@ class Personnage extends Entite {
     // n'existe plus dans SLOTS_EQUIPEMENT. On le rapatrie dans "jambe" s'il
     // est libre, sinon on le renvoie dans l'inventaire plutôt que de le
     // perdre silencieusement.
-    if (this.equipement && this.equipement.botte) {
+    if (this.equipement && "botte" in this.equipement) {
       const orphelin = this.equipement.botte;
-      if (!this.equipement.jambe) {
-        this.equipement.jambe = orphelin;
-      } else {
-        (d.inventaireListe || (d.inventaireListe = [])).push(orphelin);
+      if (orphelin) {
+        if (!this.equipement.jambe) {
+          this.equipement.jambe = orphelin;
+        } else {
+          (d.inventaireListe || (d.inventaireListe = [])).push(orphelin);
+        }
       }
       delete this.equipement.botte;
     }
