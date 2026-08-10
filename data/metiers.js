@@ -62,6 +62,20 @@ const METIERS = {
     competence: null,
     domaine: "flore",
   },
+  musicien: {
+    id: "musicien",
+    nom: "Musique",
+    icone: "🎵",
+    titres: ["Siffleur", "Ménestrel", "Musicien", "Musicien de cour", "Maître de chant", "Voix de la Fracture"],
+    caracteristique: "CHA",
+    competence: null,
+    // Pré-coché à la création pour la classe barde (cf. §7) mais
+    // DÉCOCHABLE et démarrant au rang 0 comme tout le monde : l'échelle
+    // RANGS_METIER est partagée, un métier qui démarrerait au rang 1 la
+    // casserait pour tous les autres.
+    autoClasse: "barde",
+    domaine: "musique",
+  },
 };
 
 if (typeof window !== "undefined") {

@@ -414,7 +414,14 @@ const COMMUN_MULTI_TYPE = ["horsMarche", "effet", "rarete", "rareteNom", "rarete
   // targe_elfique, amulette_prot, cotte_grisfer) — même logique multi-type
   // que materiau ci-dessus, aucune raison de les restreindre à un seul type
   // d'objet équipable.
-  "bonusSauvegardes", "bonusSauvegardesVs"];
+  "bonusSauvegardes", "bonusSauvegardesVs",
+  // origine/effetDeclaratif (Musicien, prompt_musicien_6_metier.md §5) : les
+  // 6 instruments sont des accessoires mais suivent le même modificateurRegional
+  // que les ingredients/recettes — origine y était jusqu'ici restreint à ces
+  // deux types, sans raison de l'y limiter. effetDeclaratif (déjà multi-type
+  // via "consommable", cf. Cuisine) sert ici sur cornemuse_col : texte libre
+  // affiché sur la carte, jamais interprété par le moteur.
+  "origine", "effetDeclaratif"];
 // Champs spécifiques à chaque type.
 const PAR_TYPE = {
   // bonusDegatsCreature (Grisfer) : dé (ex. "1d6"), pas un nombre — même
@@ -429,7 +436,11 @@ const PAR_TYPE = {
   // reductionDegats — dans CHAMPS_NOMBRE_STRICT ci-dessous.
   armure: ["valeurCA", "malusDEX", "categorie", "reductionDegats", "reductionDegatsCreature"],
   bouclier: ["bonusDEF", "categorieBouclier"],
-  accessoire: ["slot", "bonusCarac", "bonusCompetences", "bonusInitiative", "bonusDEF", "bonusAttaqueMagique", "bonusAttaqueDistance", "bonusDegatsMagiques", "bonusDegatsMainsNues", "bonusPvMaxDe", "grimoireClasses"],
+  // bonusInstrument (Musicien, prompt_musicien_6_metier.md §5) : les 6
+  // instruments sont type accessoire/slot null — "on ne les équipe pas, on
+  // les porte" — leur bonus est lu depuis l'inventaire (Musique.instrumentDe),
+  // jamais depuis un slot d'équipement.
+  accessoire: ["slot", "bonusCarac", "bonusCompetences", "bonusInitiative", "bonusDEF", "bonusAttaqueMagique", "bonusAttaqueDistance", "bonusDegatsMagiques", "bonusDegatsMainsNues", "bonusPvMaxDe", "grimoireClasses", "bonusInstrument"],
   // vivre (Cuisine, prompt_cuisine_recalage_gastronomie.md) : champ neutre
   // aujourd'hui, marque les ingrédients/rations de bouche pour un futur
   // regroupement UI au marché/inventaire — jamais lu par le moteur.

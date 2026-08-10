@@ -567,6 +567,22 @@ class Personnage extends Entite {
     return lignes;
   }
 
+  // Bonus de sauvegarde INCONDITIONNEL posé par la veillée du Musicien (cf.
+  // js/musique.js, jouer() → SyncStore["musique:veillee"]) — la musique
+  // porte quel que soit le contexte de menace (prompt_musicien_6_metier.md
+  // §8), donc lu dans TOUS les cas, jamais gated sur contexte. Un seul buff
+  // actif à la fois (un nouveau morceau remplace le précédent, cf. jouer()).
+  // Derrière un garde d'existence de SyncStore, comme le reste des modules
+  // self-contained en script classique — l'ordre de chargement n'est pas
+  // garanti entre js/sync.js et js/personnage.js.
+  bonusSauvegardeMusique(nom) {
+    if (typeof SyncStore === "undefined") return 0;
+    const buff = SyncStore.get("musique:veillee");
+    if (!buff || !buff.portee.includes(this.id)) return 0;
+    if (buff.cible !== "toutes" && buff.cible !== nom) return 0;
+    return buff.valeur;
+  }
+
   get classeDef() {
     return (typeof CLASSES !== "undefined" && CLASSES[this.classe]) || null;
   }

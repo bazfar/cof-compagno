@@ -4893,6 +4893,23 @@ const App = (() => {
     </div>`;
   }
 
+  // Chant de veille (Musicien, effetSpecial "initiative_avantage",
+  // prompt_musicien_6_metier.md §5) : aucun point d'accroche "avantage" dans
+  // js/combat.js — Combat.lancerInitiativeJoueur fait un d20+mod nu, sans
+  // paramètre modeForce (audité avant d'écrire ce bloc, cf. le commit de ce
+  // chantier). Repli assumé plutôt que de bricoler un branchement fragile
+  // dans le module de combat pour un métier : un état VISIBLE ici, retiré
+  // À LA MAIN par le joueur après avoir appliqué l'avantage lui-même
+  // (lancer 2d20, garder le meilleur) à son prochain jet d'initiative.
+  function htmlBlocChantVeille(id, p) {
+    if (!p.chantDeVeilleActif) return "";
+    return `<div class="carte" style="border-left:3px solid var(--or);">
+      <strong>🎵 Chant de veille actif</strong>
+      <p style="margin:4px 0;font-size:0.85rem;">Avantage sur ton prochain jet d'initiative — lance 2d20 et garde le meilleur, puis retire cet effet.</p>
+      <button class="btn petit secondaire" data-retirer-chant-veille="${id}">Retirer</button>
+    </div>`;
+  }
+
   // Bloc "Lancer mon initiative", visible sur la fiche vivante uniquement
   // pendant un combat où ce PJ n'a pas encore jeté (cf. js/combat.js —
   // Combat.lancerInitiativeJoueur, appelé par le joueur lui-même, jamais
@@ -7606,6 +7623,7 @@ const App = (() => {
 
           ${htmlBlocFenetreReaction(id, p)}
           ${htmlEtatsActifs(p)}
+          ${htmlBlocChantVeille(id, p)}
           ${htmlBlocInitiativeJoueur(id)}
           ${htmlBlocChance(p, perso)}
           ${htmlBlocPierreChance(id, p)}
@@ -7663,6 +7681,16 @@ const App = (() => {
     document.getElementById("fiche-notes").onchange = (e) => definirNotes(id, e.target.value);
     document.querySelectorAll(".check-metier-pratique").forEach((el) => {
       el.onchange = () => definirMetierPratique(id, el.dataset.metier, el.checked);
+    });
+    zone.querySelectorAll("[data-retirer-chant-veille]").forEach((el) => {
+      el.onclick = () => {
+        const persos = chargerPersos();
+        const pp = persos[id];
+        if (!pp) return;
+        pp.chantDeVeilleActif = false;
+        sauverPersos(persos);
+        afficherFiche(id);
+      };
     });
     wireDegatsSubis(id, "");
     // Bourse (cf. htmlBlocBourse) — édition directe par le joueur.
@@ -7746,13 +7774,27 @@ const App = (() => {
         const nomSauv = el.dataset.sauvegarde;
         const codeSauv = el.dataset.carac;
         const libelleSauv = (typeof Sauvegardes !== "undefined" && Sauvegardes.LIBELLES[nomSauv]) || nomSauv;
-        const modeForce = (codeSauv === "CON" && perso.aEnduranceDeFer()) || (codeSauv === "SAG" && perso.aAvantageResistanceMentale())
-          ? "avantage" : null;
         // Le contexte choisi via les puces au-dessus (cf. wiring
         // [data-contexte-sauvegarde]) part avec le jet — au libellé ET à la
         // valeur — pour que l'historique garde la trace de ce contre quoi on
         // a résisté (cf. §5).
         const ctx = _contexteSauvegardeFiche;
+        // Requiem d'Ysmaal (Musicien, prompt_musicien_6_metier.md §5) :
+        // avantage sur Volonté en contexte corruption pour qui est dans la
+        // portée du buff — PAS un terme additif (l'avantage ne s'additionne
+        // pas), donc résolu ici via modeForce, au même endroit et sur la
+        // même carac (SAG) qu'aAvantageResistanceMentale, jamais mélangé à
+        // modSauvegarde/bonusSauvegardeMusique.
+        const aAvantageMusiqueCorruption = codeSauv === "SAG" && ctx === "corruption"
+          && typeof SyncStore !== "undefined" && typeof REPERTOIRE_MUSIQUE !== "undefined"
+          && (() => {
+            const buff = SyncStore.get("musique:veillee");
+            if (!buff || !buff.portee.includes(perso.id)) return false;
+            const morceau = REPERTOIRE_MUSIQUE.find((m) => m.id === buff.morceauId);
+            return !!(morceau && morceau.effetSpecial === "avantage_corruption");
+          })();
+        const modeForce = (codeSauv === "CON" && perso.aEnduranceDeFer()) || (codeSauv === "SAG" && perso.aAvantageResistanceMentale()) || aAvantageMusiqueCorruption
+          ? "avantage" : null;
         const ctxLibelle = ctx ? ` (${ctx})` : "";
         lancerTest(`Sauvegarde de ${libelleSauv}${ctxLibelle}`, perso.modSauvegarde(nomSauv, ctx), null, modeForce, { persoId: perso.id, caracCode: codeSauv });
         allerVers("des");
@@ -8187,8 +8229,20 @@ const App = (() => {
   // l'Atelier dessus, ce serait changer le sens de ce champ.
   // Liste DÉRIVÉE de METIERS (jamais écrite en dur) : un futur forgeron/
   // herboriste apparaît ici sans retoucher cette carte.
+  //
+  // Auto-attribution (Musicien, prompt_musicien_6_metier.md §7) : un métier
+  // qui porte METIERS[m].autoClasse === p.classe est pré-coché tant que
+  // p.metiersPratiques est ABSENT (undefined) — jamais quand il vaut [],
+  // qui signifie "choix explicite, tout décoché". On ne réécrit JAMAIS
+  // p.metiersPratiques ici pour poser ce pré-cochage : c'est seulement
+  // l'AFFICHAGE qui simule le défaut, tant que definirMetierPratique n'a
+  // pas été appelé au moins une fois pour ce personnage. Un Barde qui
+  // décoche Musique écrit alors un tableau réel (même vide) qui prime pour
+  // toujours sur ce défaut.
   function htmlMetiersPratiques(p, id) {
-    const pratiques = p.metiersPratiques || [];
+    const pratiques = p.metiersPratiques !== undefined
+      ? p.metiersPratiques
+      : Object.keys(METIERS).filter((m) => METIERS[m].autoClasse === p.classe);
     const peutEditer = estProprietaire(p) || role === "mj";
     return Object.keys(METIERS).map((metierId) => {
       const def = METIERS[metierId];
