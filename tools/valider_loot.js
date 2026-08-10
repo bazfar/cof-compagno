@@ -233,6 +233,14 @@ function validerEffets(effets, signaler) {
 const COMPETENCES_VALIDES = new Set(Object.values(COMPETENCES_PAR_CARAC).flat());
 const CARACS_VALIDES = ["FOR", "DEX", "CON", "INT", "SAG", "CHA"];
 const SAUVEGARDES_VALIDES = Object.keys(SAUVEGARDES);
+// "toutes" : clé jokère de bonusSauvegardes (cf. Personnage.
+// bonusSauvegardeEquipement), pas une sauvegarde nommée — n'existe que sur ce
+// champ, jamais sur bonusSauvegardesVs (qui n'a que des contextes).
+const CLES_BONUS_SAUVEGARDES_VALIDES = [...SAUVEGARDES_VALIDES, "toutes"];
+// Contextes de menace (cf. Personnage.modSauvegarde/bonusSauvegardeVsEquipement,
+// prompt_musicien_5_sauvegardes_etape3.md §5) — même liste que le sélecteur de
+// puces sur la fiche.
+const CONTEXTES_SAUVEGARDE_VALIDES = ["magie", "poison", "corruption", "peur"];
 const CLASSES_VALIDES = ORDRE_CLASSES;
 
 // mecanique[palier].passif (cf. "Affixes phase 2" §A) — même chemin que
@@ -399,7 +407,14 @@ const COMMUN_MULTI_TYPE = ["horsMarche", "effet", "rarete", "rareteNom", "rarete
   // materiau/materiauNom/effetMateriau (cf. js/materiaux.js, MateriauxRarete
   // — axe Grisfer, prompt_grisfer_seve.md) : posés sur arme ET armure,
   // même patron multi-type que rarete/rareteNom/rareteCouleur ci-dessus.
-  "materiau", "materiauNom", "effetMateriau"];
+  "materiau", "materiauNom", "effetMateriau",
+  // bonusSauvegardes/bonusSauvegardesVs (Sauvegardes étape 3,
+  // prompt_musicien_5_sauvegardes_etape3.md) : posés indifféremment sur
+  // armure/bouclier/accessoire dans le catalogue actuel (cotte_runique,
+  // targe_elfique, amulette_prot, cotte_grisfer) — même logique multi-type
+  // que materiau ci-dessus, aucune raison de les restreindre à un seul type
+  // d'objet équipable.
+  "bonusSauvegardes", "bonusSauvegardesVs"];
 // Champs spécifiques à chaque type.
 const PAR_TYPE = {
   // bonusDegatsCreature (Grisfer) : dé (ex. "1d6"), pas un nombre — même
@@ -508,11 +523,19 @@ items.forEach((it, index) => {
     }
   }
 
-  // 5. bonusSauvegardes (aucun item actuel n'en porte, vérifié quand même si présent)
+  // 5. bonusSauvegardes (inconditionnel — "toutes" ou une sauvegarde nommée)
   if (it.bonusSauvegardes && typeof it.bonusSauvegardes === "object") {
     Object.keys(it.bonusSauvegardes).forEach((sauv) => {
-      if (!SAUVEGARDES_VALIDES.includes(sauv)) {
-        signaler(cle, `bonusSauvegardes référence une sauvegarde inconnue : "${sauv}" (attendu : ${SAUVEGARDES_VALIDES.join("|")}).`);
+      if (!CLES_BONUS_SAUVEGARDES_VALIDES.includes(sauv)) {
+        signaler(cle, `bonusSauvegardes référence une sauvegarde inconnue : "${sauv}" (attendu : ${CLES_BONUS_SAUVEGARDES_VALIDES.join("|")}).`);
+      }
+    });
+  }
+  // 5bis. bonusSauvegardesVs (conditionnel — un contexte de menace)
+  if (it.bonusSauvegardesVs && typeof it.bonusSauvegardesVs === "object") {
+    Object.keys(it.bonusSauvegardesVs).forEach((ctx) => {
+      if (!CONTEXTES_SAUVEGARDE_VALIDES.includes(ctx)) {
+        signaler(cle, `bonusSauvegardesVs référence un contexte inconnu : "${ctx}" (attendu : ${CONTEXTES_SAUVEGARDE_VALIDES.join("|")}).`);
       }
     });
   }

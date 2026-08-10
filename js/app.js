@@ -82,6 +82,18 @@ const App = (() => {
   let etapeDebloquee = 1;
   let ficheActiveId = null;  // id du perso affiché dans "Ma fiche"
   let ficheSidebarActiveId = null;  // id du perso affiché dans la mini-fiche battlemap (sidebar)
+  // Contexte de menace choisi sur la fiche pour les jets de sauvegarde (cf.
+  // Personnage.modSauvegarde) — état LOCAL de la vue, jamais persisté : c'est
+  // un choix par jet, pas un réglage. Remis à null à chaque (ré)ouverture de
+  // fiche (cf. afficherFiche).
+  let _contexteSauvegardeFiche = null;
+  const _CONTEXTES_SAUVEGARDE = [
+    { id: null, libelle: "Aucune" },
+    { id: "magie", libelle: "✨ Magie" },
+    { id: "poison", libelle: "☠️ Poison" },
+    { id: "corruption", libelle: "🕳️ Corruption" },
+    { id: "peur", libelle: "😱 Peur" },
+  ];
   // Bascules manuelles des dons Frappe puissante / Tir de précision (-2 attaque
   // / +4 dégâts) dans le dock de combat — état de session, pas persisté, ne
   // distingue pas les personnages (cf. rendreDockCombat). Arme bénie n'en fait
@@ -7285,6 +7297,7 @@ const App = (() => {
     // fiche de quelqu'un d'autre.
     if (role === "joueur" && !estProprietaire(p)) { toast("Ce n'est pas ton personnage."); return; }
     ficheActiveId = id;
+    _contexteSauvegardeFiche = null; // choix par jet, jamais persisté (cf. §5)
     const c = CLASSES[p.classe];
     const niveau = p.niveau;
     const perso = Personnage.depuisJSON(p); // modèle OOP : règles centralisées
@@ -7561,18 +7574,26 @@ const App = (() => {
             </div>
 
             <h3>Jets de sauvegarde</h3>
+            <div class="barre-actions" id="sauvegardes-contextes" style="margin-bottom:8px;">
+              ${_CONTEXTES_SAUVEGARDE.map((c) =>
+                `<button type="button" class="btn petit ${_contexteSauvegardeFiche === c.id ? "or" : "secondaire"}" data-contexte-sauvegarde="${c.id || ""}">${c.libelle}</button>`
+              ).join("")}
+            </div>
             <div class="sauvegardes-liste">
               ${Object.keys(SAUVEGARDES).map((nomSauv) => {
                 const libelleSauv = (typeof Sauvegardes !== "undefined" && Sauvegardes.LIBELLES[nomSauv]) || nomSauv;
                 const codeSauv = SAUVEGARDES[nomSauv];
                 return `<button type="button" class="sauvegarde-btn" data-sauvegarde="${nomSauv}" data-carac="${codeSauv}" title="Lancer un jet de sauvegarde de ${libelleSauv} (${codeSauv})">
                   <span class="sauv-nom">${libelleSauv}</span>
-                  <span class="sauv-valeur">${signe(perso.modSauvegarde(nomSauv))}</span>
+                  <span class="sauv-valeur" id="sauv-valeur-${nomSauv}">${signe(perso.modSauvegarde(nomSauv, _contexteSauvegardeFiche))}</span>
                   <span class="sauv-carac">${codeSauv}</span>
                 </button>`;
               }).join("")}
             </div>
-            <p style="font-size:0.75rem;color:#8a8296;margin-top:6px;">Le défenseur lance : 1d20 + modificateur contre le DD annoncé par le MJ. Les bonus d'objets et les bonus conditionnels (vs magie, poison, corruption) ne sont pas encore chiffrés ici — à ajouter à la main au moment du jet.</p>
+            <div id="sauvegardes-detail-conditionnel" style="font-size:0.8rem;color:var(--or);margin-top:4px;">
+              ${(perso.detailSauvegardeConditionnel(_contexteSauvegardeFiche) || []).map((l) => `<div>${echapper(l.libelle)} ${signe(l.valeur)}</div>`).join("")}
+            </div>
+            <p style="font-size:0.75rem;color:#8a8296;margin-top:6px;">Le défenseur lance : 1d20 + modificateur contre le DD annoncé par le MJ. Choisis la nature de la menace avant de lancer — certains bonus ne s'appliquent que contre la magie, le poison ou la corruption.</p>
 
             <h3>Attaques rapides</h3>
             <div class="barre-actions">
@@ -7727,8 +7748,37 @@ const App = (() => {
         const libelleSauv = (typeof Sauvegardes !== "undefined" && Sauvegardes.LIBELLES[nomSauv]) || nomSauv;
         const modeForce = (codeSauv === "CON" && perso.aEnduranceDeFer()) || (codeSauv === "SAG" && perso.aAvantageResistanceMentale())
           ? "avantage" : null;
-        lancerTest(`Sauvegarde de ${libelleSauv}`, perso.modSauvegarde(nomSauv), null, modeForce, { persoId: perso.id, caracCode: codeSauv });
+        // Le contexte choisi via les puces au-dessus (cf. wiring
+        // [data-contexte-sauvegarde]) part avec le jet — au libellé ET à la
+        // valeur — pour que l'historique garde la trace de ce contre quoi on
+        // a résisté (cf. §5).
+        const ctx = _contexteSauvegardeFiche;
+        const ctxLibelle = ctx ? ` (${ctx})` : "";
+        lancerTest(`Sauvegarde de ${libelleSauv}${ctxLibelle}`, perso.modSauvegarde(nomSauv, ctx), null, modeForce, { persoId: perso.id, caracCode: codeSauv });
         allerVers("des");
+      };
+    });
+    // Sélecteur de contexte de menace (cf. §5) — re-rend UNIQUEMENT les trois
+    // valeurs des boutons de sauvegarde et le détail des termes conditionnels,
+    // jamais toute la fiche (afficherFiche la réouvrirait au même endroit
+    // mais perdrait le scroll/l'état des autres accordéons pour rien).
+    zone.querySelectorAll("[data-contexte-sauvegarde]").forEach((el) => {
+      el.onclick = () => {
+        _contexteSauvegardeFiche = el.dataset.contexteSauvegarde || null;
+        zone.querySelectorAll("[data-contexte-sauvegarde]").forEach((btn) => {
+          const actif = (btn.dataset.contexteSauvegarde || null) === _contexteSauvegardeFiche;
+          btn.classList.toggle("or", actif);
+          btn.classList.toggle("secondaire", !actif);
+        });
+        Object.keys(SAUVEGARDES).forEach((nomSauv) => {
+          const span = document.getElementById(`sauv-valeur-${nomSauv}`);
+          if (span) span.textContent = signe(perso.modSauvegarde(nomSauv, _contexteSauvegardeFiche));
+        });
+        const detailZone = document.getElementById("sauvegardes-detail-conditionnel");
+        if (detailZone) {
+          detailZone.innerHTML = (perso.detailSauvegardeConditionnel(_contexteSauvegardeFiche) || [])
+            .map((l) => `<div>${echapper(l.libelle)} ${signe(l.valeur)}</div>`).join("");
+        }
       };
     });
     // Attaques

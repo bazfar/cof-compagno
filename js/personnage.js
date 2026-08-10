@@ -441,30 +441,51 @@ class Personnage extends Entite {
 
   // Modificateur total d'un jet de sauvegarde (cf. SAUVEGARDES, data/donnees.js :
   // Reflexes→DEX, Vigueur→CON, Volonte→SAG). Modèle RÉACTIF assumé (décision du
-  // 04/08/2026) : c'est le DÉFENSEUR qui lance. Attention, js/capacites.js
-  // expose encore une défense mentale PASSIVE concurrente (obtenirVolonteCible,
-  // 10 + Mod.SAG, consommée par jetOppose.caracDefenseur === "defMentale") :
-  // les deux modèles coexistent tant que l'alignement de defMentale sur un jet
-  // (étape 2) n'est pas fait. Ne pas supposer que les deux donnent le même
-  // résultat — un PJ à Mod.SAG +3 a une défense passive de 13 et un jet moyen
-  // de 13,5, proche par construction mais avec une variance que le passif n'a pas.
+  // 04/08/2026) : c'est le DÉFENSEUR qui lance.
   //
-  // Composition (étape 1 — affichage seul, aucune mécanique nouvelle) :
+  // `defMentale` est un ALIAS historique de "Volonte" : js/capacites.js le
+  // convertit avant de résoudre (cf. nomSauvegarde dans Capacites.lancer,
+  // chantier du 04/08/2026) et appelle ensuite cette fonction. Tout terme
+  // ajouté ici se propage donc automatiquement à Domination, Fascination,
+  // Éclat chaotique et Drain d'âme, sans migration des données.
+  // obtenirVolonteCible ne sert plus qu'aux MONSTRES.
+  //
+  // contexte : null | "magie" | "poison" | "corruption" | "peur"
+  // null = total inconditionnel, seul affiché sur la fiche au repos. Les
+  // bonus conditionnels ne sont JAMAIS comptés sans contexte explicite :
+  // afficher +4 vs poison en permanence mentirait sur toutes les autres
+  // menaces, ce qui est exactement le défaut que l'étape 1 refusait.
+  //
+  // Composition :
   //   - mod() de la carac porteuse ;
   //   - bonusTestCaracCapacites() : déjà appliqué aux tests de carac bruts,
-  //     porte le Moine « Discipline du corps » (+2 sur SAG, donc sur Volonté) ;
+  //     porte le Moine « Discipline du corps » (+2 sur SAG, donc sur Volonté) —
+  //     appliqué EN PERMANENCE et non seulement contre la Peur, imprécision
+  //     antérieure à ce chantier qu'on ne corrige pas aujourd'hui ;
   //   - malus de proficience d'armure (-2) sur RÉFLEXES uniquement, même
   //     patron que modCompetence() pour les compétences DEX (une armure trop
-  //     lourde gêne l'esquive comme elle gêne l'Acrobatie).
-  // NE COMPOSE PAS ENCORE : le champ bonusSauvegardes des objets (étape 3), les
-  // bonus conditionnels « vs magie / poison / corruption » des voies raciales
-  // (étape 3), l'aura Volonté du Chevalier (étape 4). Choix délibéré : un
-  // modificateur incomplet mais exact plutôt qu'un total qui mentirait.
+  //     lourde gêne l'esquive comme elle gêne l'Acrobatie) ;
+  //   - bonusResistanceMentaleEquipement() sur VOLONTÉ, champ legacy
+  //     (bonusResistanceMentale) actuellement porté par ZÉRO objet du
+  //     catalogue. Laissé en place mais plus alimenté : le chemin d'avenir
+  //     est bonusSauvegardes ci-dessous — ne rien ajouter ici, sous peine de
+  //     faire diverger les deux champs ;
+  //   - bonusSauvegardeEquipement(nom) : inconditionnel (objets, étape 3) ;
+  //   - bonusSauvegardeRace(nom, contexte) : conditionnel (voies raciales,
+  //     étape 3), renvoie 0 sans contexte ;
+  //   - bonusSauvegardeVsEquipement(contexte) : conditionnel (objets, étape
+  //     3), renvoie 0 sans contexte ;
+  //   - bonusSauvegardeMusique(nom) : posé par le métier Musicien (étape
+  //     ultérieure), inconditionnel — gardé derrière un test d'existence pour
+  //     ne pas dépendre de l'ordre de chargement des scripts classiques.
+  // NE COMPOSE PAS ENCORE : l'aura Volonté du Chevalier (« Autorité de
+  // sang », +1 aux alliés à ≤3 cases — étape 4, non traitée ici parce
+  // qu'elle dépend des positions sur la battlemap).
   //
   // L'avantage automatique (Endurance de fer → Vigueur, Verdict/Vœu
   // inébranlable → Volonté) n'est PAS un terme additif : il est appliqué au
   // moment du jet via modeForce côté app.js, comme pour les tests de carac.
-  modSauvegarde(nom) {
+  modSauvegarde(nom, contexte = null) {
     const code = (typeof SAUVEGARDES !== "undefined" && SAUVEGARDES[nom]) || null;
     if (!code) return 0;
     const malusProficience = (nom === "Reflexes" && Personnage.estArmureNonMaitrisee(this)) ? -2 : 0;
@@ -474,8 +495,76 @@ class Personnage extends Entite {
     // jamais mécanisé — le save concerné y dépend du sort). Même principe que
     // Verdict/Vœu inébranlable (aAvantageResistanceMentale), qui forcent déjà
     // l'avantage sur ce même jet SAG — ici un bonus fixe, pas un avantage.
+    // NB : collier_clarte n'affiche en réalité aucune valeur numérique
+    // (« Immunisé à la lecture de pensées ») — s'il porte un jour ce
+    // commentaire comme justification de bonusResistanceMentale, c'est une
+    // confusion avec un autre objet, pas une donnée à répliquer ici.
     const bonusResistanceMentale = (nom === "Volonte") ? this.bonusResistanceMentaleEquipement() : 0;
-    return this.mod(code) + this.bonusTestCaracCapacites(code) + malusProficience + bonusResistanceMentale;
+    const bonusEquipement = this.bonusSauvegardeEquipement(nom);
+    const bonusRace = this.bonusSauvegardeRace(nom, contexte);
+    const bonusVsEquipement = this.bonusSauvegardeVsEquipement(contexte);
+    const bonusMusique = (typeof this.bonusSauvegardeMusique === "function") ? this.bonusSauvegardeMusique(nom) : 0;
+    return this.mod(code) + this.bonusTestCaracCapacites(code) + malusProficience + bonusResistanceMentale
+      + bonusEquipement + bonusRace + bonusVsEquipement + bonusMusique;
+  }
+
+  // Bonus de sauvegarde INCONDITIONNEL porté par l'équipement (champ
+  // bonusSauvegardes: { toutes, Reflexes, Vigueur, Volonte }, cf. data/loot.json)
+  // — même patron de réduction que bonusResistanceMentaleEquipement, mais sur
+  // les trois sauvegardes plutôt que la seule Volonté.
+  bonusSauvegardeEquipement(nom) {
+    return this._itemsEquipesUniques().reduce((t, it) => {
+      const b = it.bonusSauvegardes; if (!b) return t;
+      return t + (b.toutes || 0) + (b[nom] || 0);
+    }, 0);
+  }
+
+  // Bonus de sauvegarde CONDITIONNELS portés par l'équipement (champ
+  // bonusSauvegardesVs: { magie, poison, corruption, peur }). Renvoie 0 sans
+  // contexte : cf. modSauvegarde.
+  bonusSauvegardeVsEquipement(contexte) {
+    if (!contexte) return 0;
+    return this._itemsEquipesUniques().reduce((t, it) =>
+      t + ((it.bonusSauvegardesVs && it.bonusSauvegardesVs[contexte]) || 0), 0);
+  }
+
+  // Bonus de sauvegarde CONDITIONNELS portés par les voies raciales.
+  // Renvoie 0 sans contexte : cf. modSauvegarde. Les rangs et les races sont
+  // vérifiés sur data/donnees.js — ne pas les déduire du nom de la voie.
+  // Le quatrième conditionnel connu — Moine « Discipline du corps », +2
+  // Volonté vs Peur et Intimidation — ne se traite PAS ici : il transite déjà
+  // par bonusTestCaracCapacites("SAG") et serait compté deux fois.
+  bonusSauvegardeRace(nom, contexte) {
+    if (!contexte) return 0;
+    let b = 0;
+    if (this.race === "humain" && this.estChoisieRace(1) && (contexte === "magie" || contexte === "corruption")) b += 1;
+    if (this.race === "nain" && this.estChoisieRace(1) && contexte === "poison") b += 4;
+    if (this.race === "demi_elfe" && this.estChoisieRace(2) && contexte === "magie") b += 1;
+    return b;
+  }
+
+  // Détail NOMMÉ des termes conditionnels actifs pour un contexte donné —
+  // usage UI uniquement (afficherFiche, sélecteur de menace) : un bonus qui
+  // apparaît sans être expliqué sera contesté à table (cf. §5). Mêmes
+  // conditions que bonusSauvegardeRace/bonusSauvegardeVsEquipement, jamais
+  // recalculées différemment. [] sans contexte.
+  detailSauvegardeConditionnel(contexte) {
+    if (!contexte) return [];
+    const lignes = [];
+    if (this.race === "humain" && this.estChoisieRace(1) && (contexte === "magie" || contexte === "corruption")) {
+      lignes.push({ libelle: "Sang Divin", valeur: 1 });
+    }
+    if (this.race === "nain" && this.estChoisieRace(1) && contexte === "poison") {
+      lignes.push({ libelle: "Résistance de Pierre", valeur: 4 });
+    }
+    if (this.race === "demi_elfe" && this.estChoisieRace(2) && contexte === "magie") {
+      lignes.push({ libelle: "Sang Mêlé", valeur: 1 });
+    }
+    this._itemsEquipesUniques().forEach((it) => {
+      const v = it.bonusSauvegardesVs && it.bonusSauvegardesVs[contexte];
+      if (v) lignes.push({ libelle: it.nom, valeur: v });
+    });
+    return lignes;
   }
 
   get classeDef() {
