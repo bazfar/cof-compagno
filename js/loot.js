@@ -91,11 +91,21 @@ const Loot = (() => {
   function _peuplerFiltreTypes() {
     const sel = document.getElementById("loot-filtre-type");
     if (!sel || sel.dataset.pret) return;
-    ["arme","armure","bouclier","accessoire","consommable"].forEach(t => {
-      const o = document.createElement("option");
-      o.value = t; o.textContent = t.charAt(0).toUpperCase() + t.slice(1);
-      sel.appendChild(o);
-    });
+    // Types DÉRIVÉS du catalogue, jamais écrits en dur : la liste figée
+    // ["arme"…"consommable"] a survécu à l'arrivée des 82 ingrédients puis
+    // des 24 recettes achetables, qui s'affichaient mais étaient
+    // infiltrables. Tout nouveau type apparaîtra désormais tout seul.
+    // ORDRE ne sert qu'à l'affichage : un type absent de cette liste n'est
+    // pas ignoré, il passe simplement en fin, trié alphabétiquement.
+    const ORDRE = ["arme", "armure", "bouclier", "accessoire", "consommable", "ingredient", "recette"];
+    const rang = (t) => { const i = ORDRE.indexOf(t); return i < 0 ? 99 : i; };
+    [...new Set(catalogue.map((it) => it.type).filter(Boolean))]
+      .sort((a, b) => rang(a) - rang(b) || a.localeCompare(b))
+      .forEach((t) => {
+        const o = document.createElement("option");
+        o.value = t; o.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+        sel.appendChild(o);
+      });
     sel.dataset.pret = "1";
     sel.onchange = () => { filtreType = sel.value; _afficherCatalogue(); };
     const rech = document.getElementById("loot-recherche");

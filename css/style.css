@@ -2054,6 +2054,8 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .loot-badge-bouclier  { background: #d2f0ec; color: #0e5c52; }
 .loot-badge-accessoire{ background: #f5dbe6; color: #70204a; }
 .loot-badge-consommable{ background: #e2e2ee; color: #33334f; }
+.loot-badge-ingredient{ background: #e6efd8; color: #3d5a1e; }
+.loot-badge-recette   { background: #f0e4cf; color: #6b4a12; }
 .loot-badge-magic     { background: var(--or); color: #fff; }
 
 /* Vote en cours (MJ) */
