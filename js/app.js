@@ -3777,6 +3777,7 @@ const App = (() => {
   }
 
   function rendrePartyPanneau() {
+    if (typeof Seance !== "undefined") Seance.rendreZoneSeance();
     if (typeof Repos !== "undefined") Repos.rendreZoneRepos();
     const zone = document.getElementById("zone-party");
     if (!zone) return;
@@ -7427,6 +7428,15 @@ const App = (() => {
                 <button class="btn petit secondaire" id="btn-editer-fiche">✎ Modifier</button>
                 <button class="btn petit secondaire" id="btn-exporter-fiche">Exporter</button>
               </div>
+              ${estProprietaire(p) && typeof Repos !== "undefined" ? (() => {
+                const scrutinEnCours = Repos.estScrutinEnCours();
+                return `<div class="barre-actions" style="margin-top:6px;">
+                  <select id="repos-long-palier" ${scrutinEnCours ? "disabled" : ""} style="width:auto;">
+                    ${PALIERS_AUBERGE.map((pal) => `<option value="${pal.id}"${pal.id === "camp" ? " selected" : ""}>${pal.nom} (${pal.prixPo} po)</option>`).join("")}
+                  </select>
+                  <button class="btn petit secondaire" id="btn-ouvrir-scrutin-repos" ${scrutinEnCours ? `disabled title="Un scrutin de repos long est déjà en cours"` : ""}>🌙 Repos long</button>
+                </div>`;
+              })() : ""}
             </div>
 
             <div class="stats-rapides">
@@ -7453,7 +7463,6 @@ const App = (() => {
                   <span style="font-weight:700;">${p.ppActuel != null ? p.ppActuel : ppMax} / ${ppMax}</span>
                 </div>
                 <div class="barre-actions" style="margin-top:6px;">
-                  <button class="btn petit secondaire" id="btn-repos-long-pp" title="Reset complet des PP et Points de Cercle">🌙 Repos long</button>
                   <button class="btn petit secondaire" id="btn-repos-court-pp" title="+25% des PP max, arrondi supérieur, plafonné">☕ Repos court</button>
                 </div>
               </div>
@@ -7843,27 +7852,24 @@ const App = (() => {
       afficherFiche(id);
       toast(pp.cercleSpecialisation ? `Cercle de spécialisation : ${selectCercle.value}.` : "Cercle de spécialisation retiré.");
     };
-    // Repos long/court PP (cf. reference_systeme_magie_pp.md) : boutons
-    // manuels, comme Capacites.reinitialiserUsage — pas de cycle jour/nuit
-    // automatique dans l'app. Absents du DOM pour les classes sans PP
-    // (ppMax === null), d'où les gardes getElementById.
-    const btnReposLongPP = document.getElementById("btn-repos-long-pp");
-    if (btnReposLongPP) btnReposLongPP.onclick = () => {
-      const persos = chargerPersos();
-      const pp = persos[id];
-      if (!pp) return;
-      const instance = new Personnage(pp);
-      instance.reposLongPP();
-      instance.reposLongPointsCercle();
-      pp.ppActuel = instance.ppActuel;
-      pp.pointsBenediction = instance.pointsBenediction;
-      pp.pointsConviction = instance.pointsConviction;
-      pp.pointsBannissement = instance.pointsBannissement;
-      pp.pointsJugement = instance.pointsJugement;
-      sauverPersos(persos);
+    // Repos long : plus de bouton PP-only ici — cf. Repos.ouvrirScrutin
+    // (js/repos.js), qui inclut désormais le reset PP/Points de Cercle
+    // parmi tout le reste (scrutin + overlay collectif). Le bouton "🌙
+    // Repos long" est rendu dans la barre-actions du haut, pas dans ce
+    // bloc conditionné à ppMax (visible pour TOUTE classe, pas seulement
+    // les classes à PP).
+    const btnOuvrirScrutinRepos = document.getElementById("btn-ouvrir-scrutin-repos");
+    if (btnOuvrirScrutinRepos) btnOuvrirScrutinRepos.onclick = () => {
+      const selPalier = document.getElementById("repos-long-palier");
+      Repos.ouvrirScrutin(id, selPalier ? selPalier.value : "camp");
       afficherFiche(id);
-      toast("Repos long : Points de Pouvoir et Points de Cercle restaurés au maximum.");
     };
+    // Repos court PP (cf. reference_systeme_magie_pp.md) : bouton manuel,
+    // comme Capacites.reinitialiserUsage — pas de cycle jour/nuit
+    // automatique dans l'app. Absent du DOM pour les classes sans PP
+    // (ppMax === null), d'où la garde getElementById. INCHANGÉ par le
+    // chantier scrutin (cf. prompt_repos_long_scrutin.md : "le repos court
+    //... et tout le reste sont inchangés").
     const btnReposCourtPP = document.getElementById("btn-repos-court-pp");
     if (btnReposCourtPP) btnReposCourtPP.onclick = () => {
       const persos = chargerPersos();
@@ -12127,8 +12133,16 @@ const App = (() => {
   // doit être réécrit que par enregistrerJoueurCourant (fusion d'identité
   // par prénom).
   // — reinitialiserTentativesAtelier est en plus exposée pour js/repos.js
-  // (Repos.reposLong appelle EXACTEMENT la même remise à zéro que le bouton
-  // MJ "🌅 Nouveau jour" — "le repos long est le nouveau jour", cf. son
-  // commentaire en tête de fichier).
-  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire, ajusterPv, proposerAttaqueOpportunite, autoriserPreparationGrimoire, ajouterAInventaire, obtenirJoueurId: () => joueurId, obtenirJoueurNom: () => joueurNom, reinitialiserTentativesAtelier };
+  // (Repos.validerRepos appelle EXACTEMENT la même remise à zéro que le
+  // bouton MJ "🌅 Nouveau jour" — "le repos long est le nouveau jour", cf.
+  // son commentaire en tête de fichier).
+  // — rafraichirFicheActive est en plus exposée pour js/repos.js : le
+  // scrutin/l'overlay de repos long changent l'état du bouton "🌙 Repos
+  // long" (désactivé pendant un scrutin) sur "Ma fiche" depuis un AUTRE
+  // client — sans ça, le bouton resterait figé jusqu'au prochain rendu
+  // déclenché par autre chose.
+  function rafraichirFicheActive() {
+    if (ficheActiveId) afficherFiche(ficheActiveId);
+  }
+  return { allerVers, allerVersCarteMode, chargerPersos, sauverPersos, lancerDe, ajouterHisto, obtenirRole: () => role, estProprietaire, ajusterPv, proposerAttaqueOpportunite, autoriserPreparationGrimoire, ajouterAInventaire, obtenirJoueurId: () => joueurId, obtenirJoueurNom: () => joueurNom, reinitialiserTentativesAtelier, rafraichirFicheActive };
 })();

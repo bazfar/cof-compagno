@@ -1,51 +1,50 @@
 /* ============================================================
-   Repos — auberge/camp (couchage + boissons) et point d'entrée unique du
-   repos long/court, dans l'onglet 🎭 Party.
+   Repos — couchage/boissons, scrutin et overlay collectif de repos long,
+   repos court, dans l'onglet 🎭 Party (+ bouton d'ouverture sur la fiche).
 
-   Refonte (09/08/2026, cf. prompt_repos_cuisine_metiers.md) : avant cette
-   passe, le "repos" n'existait pas comme système — il était éclaté entre
-   cette auberge payante (nuitée + repas à 3 crans + boissons, inutilisable
-   hors ville), les boutons manuels de fiche (reposLongPP/reposCourtPP/
-   reposLongPointsCercle, sans lien entre eux ni avec l'auberge) et le
-   bouton MJ "🌅 Nouveau jour" (Atelier, tentatives d'artisanat seulement).
-   Repos.reposLong()/Repos.reposCourt() sont désormais l'UNIQUE point
-   d'entrée : ils appellent tout le reste (PP, Points de Cercle, capacités
-   1x/jour et 1x/scène, Grimoire, tentatives d'atelier, état Fatiguée) —
-   plus aucun de ces resets ne se déclenche indépendamment.
+   Refonte (09/08/2026, cf. prompt_repos_cuisine_metiers.md) puis scrutin
+   (cf. prompt_repos_long_scrutin.md, qui AMENDE le déclenchement du repos
+   long ci-dessus) : le repos long n'est plus lancé par un formulaire MJ
+   multi-sélection — un JOUEUR propose un repos long depuis sa propre
+   fiche (#panneau-fiche), les joueurs déclarés présents (cf. js/seance.js,
+   Presence.presents()) votent oui/non pendant 30 secondes, et l'adoption
+   ouvre un overlay collectif (cuisine + attribution des portions) avant
+   validation. Le repos COURT (6.4) et le patron "jet de PV en attente,
+   joueur lance lui-même" (attente/lancerJetRepos/purgerAttente) sont
+   INCHANGÉS par cette passe.
 
-   Stockage de l'attente : SyncStore, même convention que js/marche.js
-   (demandes). Le coût du couchage/des boissons est débité IMMÉDIATEMENT
-   (pas de validation MJ) ; la régénération de PV, elle, n'est JAMAIS
-   automatique — chaque joueur concerné lance lui-même son jet depuis
-   l'encart "🛌 Repos en attente" (patron conservé du système d'auberge
-   d'origine). Tout le reste (PP/Cercle/capacités/Grimoire/Fatiguée/
-   tentatives) est en revanche appliqué IMMÉDIATEMENT à Repos.reposLong(),
-   pas différé au jet — ce sont des resets déterministes, pas des jets.
+   Stockage : SyncStore, même convention que js/marche.js. Le coût du
+   couchage est débité IMMÉDIATEMENT à la validation (pas de re-vote sur
+   l'argent) ; la régénération de PV n'est JAMAIS automatique — chaque
+   joueur concerné lance lui-même son jet depuis l'encart "🛌 Repos en
+   attente" (patron conservé du système d'auberge d'origine). PP/Cercle/
+   capacités/Grimoire/Fatiguée/tentatives d'atelier sont appliqués
+   IMMÉDIATEMENT à la validation, pas différés au jet.
    Paliers/boissons : cf. data/repos.js. Plats : cf. js/cuisine.js
-   (contrat unique : le champ effetRepos d'un consommable).
+   (contrat unique : le champ effetRepos d'un consommable, et désormais
+   aussi Cuisine.tenterRecette, extrait pour être appelé depuis l'overlay
+   SANS dupliquer la logique de résolution de jet/qualité/XP/ingrédients).
 
-   Audit hérité (09/08/2026, avant la refonte) : envoyerRepos écrasait
-   silencieusement toute entrée en attente déjà existante pour un
-   personnage — un joueur qui n'avait pas encore lancé son jet perdait à la
-   fois l'or déjà prélevé et la régénération de la nuitée précédente, sans
-   le moindre message. Corrigé et CONSERVÉ dans reposLong ci-dessous : un
-   personnage déjà en attente est ignoré (signalé au MJ) plutôt que
-   re-servi. purgerAttente() reste le moyen explicite de vider une entrée
-   bloquée avant de pouvoir renvoyer un repos au même personnage — sans
-   remboursement automatique, décision de table laissée au MJ.
-
-   reposLong accepte aussi un tarif de couchage négocié (optionnel), qui
-   remplace palier.prixPo pour cette nuitée sans toucher au dé de
-   régénération — ex. chambre privée obtenue au prix d'un dortoir.
+   Audit hérité (avant la refonte) : un personnage déjà en attente (jet
+   non lancé) n'est JAMAIS re-servi — purgerAttente() reste le moyen
+   explicite de vider une entrée bloquée avant de pouvoir renvoyer un
+   repos au même personnage — sans remboursement automatique, décision de
+   table laissée au MJ.
    ============================================================ */
 
 const Repos = (() => {
   "use strict";
 
   const STORAGE_REPOS_ATTENTE = "repos:enAttente"; // { [persoId]: { label, desPositifs:[..], flatPositif, desNegatifs:[..], horodatage } }
+  const KEY_VOTE = "repos:vote";       // null hors scrutin
+  const KEY_ENCOURS = "repos:encours"; // null hors overlay
 
   function lireAttente() { return SyncStore.get(STORAGE_REPOS_ATTENTE) || {}; }
   function sauverAttente(a) { SyncStore.set(STORAGE_REPOS_ATTENTE, a); }
+  function lireVote() { return SyncStore.get(KEY_VOTE) || null; }
+  function sauverVote(v) { SyncStore.set(KEY_VOTE, v); }
+  function lireEncours() { return SyncStore.get(KEY_ENCOURS) || null; }
+  function sauverEncours(e) { SyncStore.set(KEY_ENCOURS, e); }
 
   /* ── Utilitaires (copie locale, même convention que js/marche.js) ── */
   function echapper(s) {
@@ -56,6 +55,17 @@ const Repos = (() => {
     if (!t) return;
     t.textContent = msg; t.classList.add("visible");
     setTimeout(() => t.classList.remove("visible"), 2800);
+  }
+  // Copie locale de App.memeNom (privée à app.js, non exposée) — même
+  // normalisation, nécessaire ici pour retrouver le(s) personnage(s) d'un
+  // joueur présent (Presence.presents() ne donne que joueurId+nom, jamais
+  // de persoId directement).
+  function _memeNom(a, b) {
+    if (!a || !b) return false;
+    const norm = (s) => String(s).trim().toLowerCase().normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "");
+    const na = norm(a), nb = norm(b);
+    if (!na || na === "joueur") return false;
+    return na === nb;
   }
 
   function _palier(id) { return PALIERS_AUBERGE.find((p) => p.id === id); }
@@ -78,156 +88,7 @@ const Repos = (() => {
     else it.quantite -= 1;
   }
 
-  // Plats/rations disponibles dans l'inventaire d'un perso — seul contrat lu
-  // ici : le champ effetRepos (cf. js/cuisine.js, en-tête). Repos ne connaît
-  // ni les recettes ni les qualités.
-  function _platsDisponibles(p) {
-    return (p.inventaireListe || []).filter((it) => it.effetRepos);
-  }
-
-  /* ── État local du formulaire MJ (par onglet/navigateur, pas synchronisé) ── */
-  let _persoIdsDecoches = new Set(); // ids explicitement décochés — vide = tout le monde coché par défaut
-  let _palierId = null;
-  let _nbBoissons = 0;
-  let _typeBoissonId = null;
-  let _prixNegocieChambre = ""; // chaîne brute du champ — vide = pas de tarif négocié, on retombe sur palier.prixPo
-  let _platParPersoId = {}; // { [persoId]: itemId choisi dans SON inventaire, ou "" = aucun }
-
-  function _assurerDefauts() {
-    if (!_palierId) _palierId = PALIERS_AUBERGE[0].id;
-    if (!_typeBoissonId) _typeBoissonId = TYPES_BOISSON[0].id;
-  }
-
-  /* ── Repos long (MJ) — point d'entrée unique ─────────────────────
-     options = { palierId, prixNegocieChambre, nbBoissons, typeBoissonId,
-                 platParPersoId: { [persoId]: itemId|"" } } */
-  function reposLong(persoIds, options) {
-    if (typeof App !== "undefined" && App.obtenirRole && App.obtenirRole() !== "mj") return;
-    const opts = options || {};
-    const palier = _palier(opts.palierId);
-    const boisson = _boisson(opts.typeBoissonId);
-    if (!palier || !boisson) return;
-    const prixChambre = (opts.prixNegocieChambre !== undefined && opts.prixNegocieChambre !== "" && !Number.isNaN(Number(opts.prixNegocieChambre)))
-      ? Math.max(0, Number(opts.prixNegocieChambre)) : palier.prixPo;
-    const nbBoissons = opts.nbBoissons || 0;
-    const coutPoParPersonne = prixChambre + nbBoissons * boisson.prixPo;
-    const coutPb = Math.round(coutPoParPersonne * 100);
-    const platParPersoId = opts.platParPersoId || {};
-
-    const persos = App.chargerPersos();
-    const attente = lireAttente();
-    const insuffisants = [];
-    // cf. audit hérité en tête de fichier : un personnage déjà en attente
-    // (jet non lancé) n'est JAMAIS re-servi — purgerAttente() d'abord.
-    const dejaEnAttente = [];
-    const fatigues = [];
-    let servis = 0;
-
-    persoIds.forEach((persoId) => {
-      const p = persos[persoId];
-      if (!p) return;
-      if (attente[persoId]) { dejaEnAttente.push(p.nom); return; }
-      const totalPb = (p.piecesOr || 0) * 100 + (p.piecesArgent || 0) * 10 + (p.piecesBronze || 0);
-      if (totalPb < coutPb) { insuffisants.push(p.nom); return; }
-      const restePb = totalPb - coutPb;
-      p.piecesOr = Math.floor(restePb / 100);
-      p.piecesArgent = Math.floor((restePb % 100) / 10);
-      p.piecesBronze = restePb % 10;
-
-      // Plat/ration choisi (optionnel) — seul contrat lu : effetRepos.
-      const platId = platParPersoId[persoId];
-      const plat = platId ? (p.inventaireListe || []).find((it) => it.id === platId && it.effetRepos) : null;
-
-      // Formule : (NIV × 1d8) + Mod.CON + dé de couchage + dé du plat.
-      const instance = new Personnage(p);
-      const niveau = p.niveau || 1;
-      const desPositifs = Array(niveau).fill(8);
-      let flatPositif = instance.mod("CON");
-      const desNegatifs = [];
-      if (palier.de) {
-        const dCouchage = _parseDe(palier.de);
-        if (dCouchage) for (let i = 0; i < dCouchage.nb; i++) desPositifs.push(dCouchage.faces);
-      }
-      if (plat) {
-        (plat.effetRepos.des || []).forEach((formule) => {
-          const d = _parseDe(formule);
-          if (!d) return;
-          if (plat.effetRepos.intoxication) { for (let i = 0; i < d.nb; i++) desNegatifs.push(d.faces); }
-          else if (plat.effetRepos.maximise) { flatPositif += d.nb * d.faces; }
-          else { for (let i = 0; i < d.nb; i++) desPositifs.push(d.faces); }
-        });
-      }
-
-      // PP / Points de Cercle : reset complet, IMMÉDIAT (mêmes méthodes que
-      // les anciens boutons manuels de fiche, désormais appelées d'ici).
-      instance.reposLongPP();
-      instance.reposLongPointsCercle();
-      p.ppActuel = instance.ppActuel;
-      p.pointsBenediction = instance.pointsBenediction;
-      p.pointsConviction = instance.pointsConviction;
-      p.pointsBannissement = instance.pointsBannissement;
-      p.pointsJugement = instance.pointsJugement;
-
-      // Capacités "1x/jour" et "1x/scène" redeviennent disponibles — PAS
-      // "1x/scénario", qui reste au bouton manuel du MJ (décision explicite :
-      // un repos ne "consomme" pas tout un scénario, contrairement à un jour
-      // ou une scène — cf. Capacites.reinitialiserUsagesPeriode, lu en
-      // lecture seule, jamais modifié par ce chantier).
-      if (typeof Capacites !== "undefined" && Capacites.reinitialiserUsagesPeriode) {
-        Capacites.reinitialiserUsagesPeriode(p, "jour");
-        Capacites.reinitialiserUsagesPeriode(p, "scene");
-      }
-
-      // Grimoire v3 : re-préparation immédiatement disponible (plus besoin
-      // d'attendre le jet de PV, contrairement à l'ancien système).
-      if (App.autoriserPreparationGrimoire) App.autoriserPreparationGrimoire(persoId);
-
-      // Fatiguée : retirée avant d'être éventuellement réappliquée — jamais
-      // les deux à la fois. Premier déclencheur réel de cet état dans l'app.
-      p.etatsActifs = (p.etatsActifs || []).filter((e) => e.idEtat !== "fatiguee");
-      if (!plat) {
-        p.etatsActifs.push({ idEtat: "fatiguee", dureeRestante: { tours: null, motCle: null, dureeAffichee: "prochain repos long" }, source: "Repos", poseLe: Date.now() });
-        fatigues.push(p.nom);
-      }
-      // Intoxication (désastre culinaire) : posée EN PLUS du dé négatif ci-
-      // dessus, jusqu'au prochain repos long — cf. js/etats.js.
-      p.etatsActifs = p.etatsActifs.filter((e) => e.idEtat !== "intoxication");
-      if (plat && plat.effetRepos.intoxication) {
-        p.etatsActifs.push({ idEtat: "intoxication", dureeRestante: { tours: null, motCle: null, dureeAffichee: "prochain repos long" }, source: "Repos", poseLe: Date.now() });
-      }
-
-      // Consommation du plat/ration choisi (une seule unité).
-      if (plat) _consommerUneUnite(p.inventaireListe, plat.id);
-
-      // Repos courts : nouveau cycle.
-      p.reposCourtsDepuisReposLong = 0;
-
-      attente[persoId] = {
-        label: `Repos long — ${palier.nom}${prixChambre !== palier.prixPo ? ` (tarif négocié ${_formatPo(prixChambre)} po)` : ""}${plat ? ` + ${plat.nom}` : " — sans repas (Fatiguée)"}`,
-        desPositifs, flatPositif, desNegatifs,
-        horodatage: Date.now(),
-      };
-      servis++;
-    });
-
-    App.sauverPersos(persos);
-    sauverAttente(attente);
-    // Le repos long EST le nouveau jour : mêmes tentatives d'atelier
-    // (enchantement/alchimie/cuisine) réinitialisées que via le bouton MJ
-    // "🌅 Nouveau jour" — même fonction partagée, cf. js/app.js.
-    if (servis && typeof App !== "undefined" && App.reinitialiserTentativesAtelier) App.reinitialiserTentativesAtelier();
-
-    let msg = servis
-      ? `🌙 Repos long organisé pour ${servis} personnage${servis > 1 ? "s" : ""} (${_formatPo(coutPoParPersonne * servis)} po prélevés au total).`
-      : "🌙 Aucun personnage servi.";
-    if (insuffisants.length) msg += ` Bourse insuffisante pour : ${insuffisants.join(", ")}.`;
-    if (dejaEnAttente.length) msg += ` Déjà un repos en attente (non lancé) pour : ${dejaEnAttente.join(", ")} — purge-le d'abord si besoin.`;
-    if (fatigues.length) msg += ` Fatiguée (sans repas) : ${fatigues.join(", ")}.`;
-    toast(msg);
-    rendreZoneRepos();
-  }
-
-  /* ── Repos court (propriétaire ou MJ) — immédiat, pas de dé en attente ── */
+  /* ── Repos court (propriétaire ou MJ) — immédiat, INCHANGÉ ────────── */
   // Décision en suspens (cf. prompt_repos_cuisine_metiers.md 6.4) : pas de
   // plafond de repos courts entre deux repos longs — affiché au MJ via le
   // compteur, à arbitrer à la table.
@@ -264,7 +125,7 @@ const Repos = (() => {
     rendreZoneRepos();
   }
 
-  /* ── Lancer le jet de PV en attente (joueur ou MJ) ────────────────── */
+  /* ── Lancer le jet de PV en attente (joueur ou MJ) — INCHANGÉ ────── */
   function lancerJetRepos(persoId) {
     const attente = lireAttente();
     const entree = attente[persoId];
@@ -289,14 +150,7 @@ const Repos = (() => {
     rendreZoneRepos();
   }
 
-  /* ── Purge MJ d'un repos en attente non lancé ─────────────────── */
-  // Le joueur ne récupère AUCUN PV (aucun jet n'a été fait) et l'or déjà
-  // prélevé au moment de reposLong n'est PAS remboursé automatiquement —
-  // c'est une décision de table, pas un calcul : au MJ de compenser à la
-  // main (boutons +/- PO sur la fiche) s'il l'estime nécessaire. Pensé pour
-  // débloquer une entrée abandonnée (joueur déconnecté, oubli, changement
-  // de plan du MJ) avant de pouvoir renvoyer un nouveau repos au même
-  // personnage — cf. le garde "dejaEnAttente" dans reposLong ci-dessus.
+  /* ── Purge MJ d'un repos en attente non lancé — INCHANGÉ ─────────── */
   function purgerAttente(persoId) {
     if (typeof App !== "undefined" && App.obtenirRole && App.obtenirRole() !== "mj") return;
     const attente = lireAttente();
@@ -309,83 +163,447 @@ const Repos = (() => {
     rendreZoneRepos();
   }
 
-  /* ── Rendu ────────────────────────────────────────────────────── */
-  function _htmlFormulaireMj(ids, persos) {
-    if (!ids.length) return "";
-    const checks = ids.map((id) => {
-      const coche = !_persoIdsDecoches.has(id);
-      return `<label style="display:flex;align-items:center;gap:4px;">
-        <input type="checkbox" class="repos-chk-perso" data-perso-id="${id}" ${coche ? "checked" : ""}/> ${echapper(persos[id].nom)}
-      </label>`;
-    }).join("");
-    const optionsPalier = PALIERS_AUBERGE.map((p) =>
-      `<option value="${p.id}" ${p.id === _palierId ? "selected" : ""}>${echapper(p.nom)} (${p.prixPo} po${p.de ? `, ${echapper(p.de)}` : ""})</option>`).join("");
-    const optionsBoisson = TYPES_BOISSON.map((b) =>
-      `<option value="${b.id}" ${b.id === _typeBoissonId ? "selected" : ""}>${echapper(b.nom)} (${b.prixPo} po)</option>`).join("");
-    // Un sélecteur de plat par personnage — chaque joueur mange ce qu'IL a
-    // en stock (plat cuisiné ou ration_voyage), jamais un choix centralisé
-    // par le MJ comme l'étaient les anciens "repas" à 3 crans.
-    const platsParPerso = ids.map((id) => {
-      const plats = _platsDisponibles(persos[id]);
-      const valeurActuelle = _platParPersoId[id] || "";
-      const options = `<option value="">— Aucun (Fatiguée) —</option>` +
-        plats.map((it) => `<option value="${echapper(it.id)}" ${it.id === valeurActuelle ? "selected" : ""}>${echapper(it.nom)}${it.quantite > 1 ? ` (×${it.quantite})` : ""}</option>`).join("");
-      return `<label style="display:flex;align-items:center;gap:4px;">🍽 ${echapper(persos[id].nom)}
-        <select class="repos-select-plat" data-perso-id="${id}">${options}</select>
-      </label>`;
-    }).join("");
-    return `<div class="carte">
-      <h3 style="margin-top:0;">🌙 Organiser un repos long</h3>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">${checks}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px;">
-        <label>Couchage
-          <select id="repos-select-palier">${optionsPalier}</select>
-        </label>
-        <label title="Remplace le prix du couchage pour cette nuitée seulement — ex. chambre privée négociée au prix d'un dortoir. Laisser vide pour le tarif normal.">Tarif négocié (po, optionnel)
-          <input type="number" id="repos-prix-negocie" min="0" step="0.1" value="${echapper(_prixNegocieChambre)}" placeholder="prix normal" style="width:90px;" />
-        </label>
-        <label>Boissons
-          <input type="number" id="repos-nb-boissons" min="0" max="4" value="${_nbBoissons}" style="width:50px;" /> ×
-          <select id="repos-select-boisson">${optionsBoisson}</select>
-        </label>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">${platsParPerso}</div>
-      <button class="btn or" id="btn-repos-envoyer">🌙 Envoyer le repos long</button>
-    </div>`;
+  /* ================================================================
+     SCRUTIN DE REPOS LONG (repos:vote)
+     ================================================================ */
+
+  function estScrutinEnCours() { return !!lireVote(); }
+
+  // Ouverture — bouton "🌙 Repos long" sur la fiche du propriétaire. Le
+  // couchage (palierId) est choisi par l'initiateur à l'ouverture (pas de
+  // négociation de tarif dans ce chantier, contrairement à l'ancien
+  // formulaire MJ — hors périmètre du prompt de scrutin) et PORTÉ PAR LE
+  // VOTE jusqu'à la création de l'overlay : extension délibérée du schéma
+  // documenté (qui ne liste que initiateur/échéance/votants/votes/statut),
+  // pour éviter une étape UI supplémentaire à l'adoption.
+  function ouvrirScrutin(persoId, palierId) {
+    if (lireVote()) return; // un seul scrutin à la fois
+    const persos = App.chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    if (typeof App === "undefined" || !App.estProprietaire || !App.estProprietaire(p)) return;
+    const joueurId = App.obtenirJoueurId ? App.obtenirJoueurId() : null;
+    const joueurNom = App.obtenirJoueurNom ? App.obtenirJoueurNom() : null;
+    if (!joueurId || !joueurNom) { toast("Seul un joueur identifié peut proposer un repos long."); return; }
+
+    // Votants = présents moins l'initiateur, GELÉ à l'ouverture — quelqu'un
+    // qui se déclare présent pendant les 30 secondes ne rejoint pas le
+    // scrutin en cours, sinon le dénominateur bouge sous les pieds du calcul.
+    const votants = (typeof Presence !== "undefined" ? Presence.presents() : [])
+      .filter((j) => j.joueurId !== joueurId)
+      .map((j) => j.joueurId);
+    const ouvertTs = Date.now();
+    const vote = {
+      initiateurJoueurId: joueurId, initiateurNom: joueurNom, initiateurPersoId: persoId,
+      ouvertTs, echeanceTs: ouvertTs + 30000,
+      votants, votes: {}, statut: "en_cours",
+      palierId: palierId || "camp",
+    };
+    sauverVote(vote);
+    toast(`🌙 ${joueurNom} propose un repos long.`);
+    _demarrerMinuteur();
+    rendreZoneRepos();
+    if (typeof App !== "undefined" && App.rafraichirFicheActive) App.rafraichirFicheActive();
   }
 
-  function _wireFormulaireMj(ids) {
-    document.querySelectorAll(".repos-chk-perso").forEach((cb) => {
-      cb.onchange = () => {
-        if (cb.checked) _persoIdsDecoches.delete(cb.dataset.persoId);
-        else _persoIdsDecoches.add(cb.dataset.persoId);
-      };
-    });
-    const selPalier = document.getElementById("repos-select-palier");
-    if (selPalier) selPalier.onchange = () => { _palierId = selPalier.value; };
-    const inputPrixNegocie = document.getElementById("repos-prix-negocie");
-    if (inputPrixNegocie) inputPrixNegocie.onchange = () => { _prixNegocieChambre = inputPrixNegocie.value; };
-    const inputBoissons = document.getElementById("repos-nb-boissons");
-    if (inputBoissons) inputBoissons.onchange = () => { _nbBoissons = Math.max(0, Math.min(4, parseInt(inputBoissons.value, 10) || 0)); };
-    const selBoisson = document.getElementById("repos-select-boisson");
-    if (selBoisson) selBoisson.onchange = () => { _typeBoissonId = selBoisson.value; };
-    document.querySelectorAll(".repos-select-plat").forEach((sel) => {
-      sel.onchange = () => { _platParPersoId[sel.dataset.persoId] = sel.value; };
-    });
-    const btn = document.getElementById("btn-repos-envoyer");
-    if (btn) {
-      btn.onclick = () => {
-        const persoIds = ids.filter((id) => !_persoIdsDecoches.has(id));
-        if (!persoIds.length) { toast("Choisis au moins un personnage."); return; }
-        reposLong(persoIds, {
-          palierId: _palierId,
-          prixNegocieChambre: _prixNegocieChambre,
-          nbBoissons: _nbBoissons,
-          typeBoissonId: _typeBoissonId,
-          platParPersoId: _platParPersoId,
-        });
-      };
+  // Le MJ ne vote pas (bouton "Résoudre maintenant" séparé). L'initiateur
+  // ne vote pas non plus : il n'est jamais dans `votants`, sa voix "oui"
+  // est ajoutée d'office à la résolution (cf. _resoudreScrutin).
+  function voter(choix) {
+    const vote = lireVote();
+    if (!vote || vote.statut !== "en_cours") return;
+    const joueurId = App.obtenirJoueurId ? App.obtenirJoueurId() : null;
+    if (!joueurId || !vote.votants.includes(joueurId)) return;
+    if (vote.votes[joueurId] !== undefined) return; // déjà voté
+    vote.votes[joueurId] = choix;
+    sauverVote(vote);
+    rendreZoneRepos();
+    // Résolution anticipée dès que tous les votants ont répondu.
+    if (vote.votants.every((id) => vote.votes[id] !== undefined)) _resoudreScrutin();
+  }
+
+  // n'importe quel client peut écrire la résolution une fois l'échéance
+  // passée (pas de serveur de tâches planifiées) — deux clients qui
+  // résolvent à la même seconde écrivent la MÊME valeur (calcul pur,
+  // déterministe à partir de votes), et SyncStore étant en dernier-
+  // écrivain-gagne, le résultat est identique quel que soit celui qui
+  // "gagne" la course d'écriture. La garde ci-dessous n'empêche donc pas
+  // un bug de course (il n'y en a pas ici) : elle évite juste le travail
+  // et les toasts redondants d'une résolution déjà faite. NE PAS
+  // "corriger" en la retirant au prétexte d'une condition de course.
+  function _resoudreScrutin() {
+    const vote = lireVote();
+    if (!vote || vote.statut !== "en_cours") return;
+    const ouis = vote.votants.filter((id) => vote.votes[id] === "oui").length + 1; // +1 : l'initiateur compte comme un oui d'office
+    const nons = vote.votants.filter((id) => vote.votes[id] === "non").length;
+    const adopte = ouis >= nons; // égalité -> adopté, le oui l'emporte
+    vote.statut = adopte ? "adopte" : "rejete";
+    sauverVote(vote);
+    _arreterMinuteur();
+    if (adopte) {
+      _creerOverlay(vote);
+      toast(`🌙 Repos long adopté (${ouis} oui / ${nons} non).`);
+    } else {
+      toast(`Repos long rejeté (${ouis} oui / ${nons} non).`);
+      // La bannière affiche le rejet 5 secondes avant de revenir à zéro.
+      setTimeout(() => {
+        const v = lireVote();
+        if (v && v.statut === "rejete") sauverVote(null);
+        rendreZoneRepos();
+      }, 5000);
     }
+    rendreZoneRepos();
+    if (typeof App !== "undefined" && App.rafraichirFicheActive) App.rafraichirFicheActive();
+  }
+
+  // Minuteur local, sans serveur — un setInterval par client qui affiche un
+  // scrutin en_cours, arrêté dès que le scrutin n'est plus en_cours (ici ou
+  // via un autre client). Rafraîchit aussi le décompte affiché chaque
+  // seconde, pas seulement à l'échéance.
+  let _minuteurId = null;
+  function _demarrerMinuteur() {
+    if (_minuteurId) return;
+    _minuteurId = setInterval(() => {
+      const vote = lireVote();
+      if (!vote || vote.statut !== "en_cours") { _arreterMinuteur(); return; }
+      if (Date.now() >= vote.echeanceTs) _resoudreScrutin();
+      else rendreZoneRepos();
+    }, 1000);
+  }
+  function _arreterMinuteur() {
+    if (_minuteurId) { clearInterval(_minuteurId); _minuteurId = null; }
+  }
+
+  /* ================================================================
+     OVERLAY COLLECTIF DE REPOS LONG (repos:encours)
+     ================================================================ */
+
+  // Convives = personnages des joueurs déclarés présents. Un joueur avec
+  // deux fiches est pré-affecté à la première trouvée (ordre des clés) —
+  // switchable ensuite depuis l'overlay (cf. data-changer-convive). Le
+  // couchage est celui choisi par l'initiateur à l'ouverture du scrutin
+  // (cf. vote.palierId).
+  function _creerOverlay(vote) {
+    const persos = App.chargerPersos();
+    const presents = (typeof Presence !== "undefined") ? Presence.presents() : [];
+    const convives = [];
+    presents.forEach((joueur) => {
+      const mesPersos = Object.keys(persos).filter((id) => persos[id] && persos[id].classe && _memeNom(persos[id].proprietaireNom, joueur.nom));
+      if (mesPersos.length) convives.push(mesPersos[0]);
+    });
+    // L'initiateur vient d'agir : toujours convive, même s'il n'apparaît
+    // pas dans Presence pour une raison ou une autre.
+    if (vote.initiateurPersoId && !convives.includes(vote.initiateurPersoId)) convives.unshift(vote.initiateurPersoId);
+
+    sauverEncours({
+      convives,
+      couchage: vote.palierId || "camp",
+      plats: [],
+      attributions: {},
+      statut: "cuisine",
+    });
+  }
+
+  // Un joueur avec plusieurs personnages peut changer lequel mange —
+  // remplace l'entrée dans `convives` (l'ancien persoId perd toute
+  // attribution en cours, la nouvelle repart de "rien").
+  function changerConvive(ancienPersoId, nouveauPersoId) {
+    const encours = lireEncours();
+    if (!encours) return;
+    const idx = encours.convives.indexOf(ancienPersoId);
+    if (idx === -1) return;
+    encours.convives[idx] = nouveauPersoId;
+    const attrib = encours.attributions[ancienPersoId];
+    delete encours.attributions[ancienPersoId];
+    if (typeof attrib === "number" && encours.plats[attrib]) encours.plats[attrib].portionsRestantes++;
+    _recalculerStatut(encours);
+    sauverEncours(encours);
+    _rendreOverlayRepos();
+  }
+
+  function _recalculerStatut(encours) {
+    const portionsPool = encours.plats.reduce((t, pl) => t + pl.portionsRestantes, 0);
+    encours.statut = portionsPool >= encours.convives.length ? "pret" : "cuisine";
+  }
+
+  // N'importe quel convive peut se déclarer cuisinier. Le jet/qualité/XP/
+  // consommation passent par Cuisine.tenterRecette (moteur existant, cf.
+  // js/cuisine.js) — cette fonction ne fait QUE décider quoi faire du plat
+  // produit : ici, un pool PARTAGÉ de 4 portions (jamais placé dans
+  // l'inventaire du cuisinier, contrairement à l'Atelier).
+  function cuisinerDansOverlay(cuisinierPersoId, recetteId) {
+    const encours = lireEncours();
+    if (!encours) return;
+    if (!encours.convives.includes(cuisinierPersoId)) { toast("Seul un convive peut cuisiner pour le groupe."); return; }
+    const t = Cuisine.tenterRecette(cuisinierPersoId, recetteId);
+    if (!t.ok) { toast(t.raison); return; }
+
+    let msg = `${t.nomCuisinier} — ${t.resultat.qualite.nom}`;
+    if (t.resultat.produit) {
+      const plat = {
+        cuisinierPersoId, recetteId,
+        qualiteId: t.resultat.qualite.id, indexDe: t.recette.indexDe,
+        de: t.resultat.de, maximise: t.resultat.maximise, intoxication: t.resultat.intoxication,
+        portionsRestantes: 4,
+      };
+      encours.plats.push(plat);
+      const idx = encours.plats.length - 1;
+      // Pré-remplissage automatique dans l'ordre des convives — n'écrase
+      // JAMAIS une attribution déjà faite (rien, ration, ou un autre plat) :
+      // seuls les convives encore sans choix sont servis en premier.
+      encours.convives.forEach((persoId) => {
+        if (plat.portionsRestantes <= 0 || encours.attributions[persoId] !== undefined) return;
+        encours.attributions[persoId] = idx;
+        plat.portionsRestantes--;
+      });
+      msg += ` : plat ajouté au pool commun (4 portions).`;
+    } else {
+      msg += t.resultat.qualite.id === "rate" ? " : rien produit, ingrédients perdus." : " : intoxication — dé soustrait au repos.";
+    }
+    if (t.resultat.xpGagne) msg += ` +${t.resultat.xpGagne} XP Cuisine.`;
+    _recalculerStatut(encours);
+    sauverEncours(encours);
+    toast(msg);
+    _rendreOverlayRepos();
+  }
+
+  // Raté/désastre → le cuisinier peut retenter tant qu'il lui reste des
+  // tentatives (cf. Cuisine.tenterRecette, même compteur atelier:tentatives
+  // que l'Atelier) — aucune limite propre à ajouter ici.
+
+  // Le cuisinier (ou le MJ) peut jeter un plat de désastre plutôt que de le
+  // servir. Réindexe les attributions pointant sur un index supérieur
+  // (décalées par le splice) et libère celles qui pointaient sur CE plat.
+  function jeterPlat(index) {
+    const encours = lireEncours();
+    if (!encours || !encours.plats[index]) return;
+    Object.keys(encours.attributions).forEach((persoId) => {
+      const a = encours.attributions[persoId];
+      if (a === index) delete encours.attributions[persoId];
+      else if (typeof a === "number" && a > index) encours.attributions[persoId] = a - 1;
+    });
+    encours.plats.splice(index, 1);
+    _recalculerStatut(encours);
+    sauverEncours(encours);
+    toast("Plat jeté.");
+    _rendreOverlayRepos();
+  }
+
+  // choix : index numérique (plat), "ration", ou null (rien — Fatiguée).
+  // Décrémente/ré-incrémente portionsRestantes du plat concerné.
+  function attribuer(persoId, choix) {
+    const encours = lireEncours();
+    if (!encours) return;
+    const ancien = encours.attributions[persoId];
+    if (typeof ancien === "number" && encours.plats[ancien]) encours.plats[ancien].portionsRestantes++;
+    if (typeof choix === "number" && encours.plats[choix] && encours.plats[choix].portionsRestantes > 0) {
+      encours.plats[choix].portionsRestantes--;
+      encours.attributions[persoId] = choix;
+    } else if (choix === "ration") {
+      encours.attributions[persoId] = "ration";
+    } else {
+      delete encours.attributions[persoId];
+    }
+    _recalculerStatut(encours);
+    sauverEncours(encours);
+    _rendreOverlayRepos();
+  }
+
+  // Validation — actionnable par l'initiateur ou le MJ. Séquence imposée
+  // (cf. prompt_repos_long_scrutin.md) : la cuisine et l'attribution sont
+  // déjà closes à ce stade (phases précédentes de l'overlay) ; on pose
+  // ICI, dans l'ordre, pour chaque convive : 1. le dé du plat attribué
+  // (déjà résolu, cf. cuisinerDansOverlay/attribuer) 2. rien → Fatiguée
+  // 3. le jet de PV en attente (patron existant, jamais automatique)
+  // 4. seulement ENSUITE les resets (PP/Cercle/usages/Grimoire/tentatives).
+  // Puisque cuisine+attribution sont déjà terminées avant cet appel, le
+  // risque documenté par le prompt (relance rétroactive après un reset des
+  // tentatives) ne peut pas se produire : aucun reset ne part avant que
+  // cette fonction ne soit explicitement déclenchée par l'initiateur/MJ.
+  function validerRepos() {
+    const role = (typeof App !== "undefined" && App.obtenirRole) ? App.obtenirRole() : "joueur";
+    const vote = lireVote();
+    const encours = lireEncours();
+    if (!encours) return;
+    const joueurId = App.obtenirJoueurId ? App.obtenirJoueurId() : null;
+    const estInitiateur = !!(vote && joueurId === vote.initiateurJoueurId);
+    if (role !== "mj" && !estInitiateur) return;
+
+    const persos = App.chargerPersos();
+    const palier = _palier(encours.couchage) || _palier("camp");
+    const coutPb = Math.round(palier.prixPo * 100);
+
+    const attente = lireAttente();
+    const dejaEnAttente = [];
+    const insuffisants = [];
+    const fatigues = [];
+    let servis = 0;
+
+    encours.convives.forEach((persoId) => {
+      const p = persos[persoId];
+      if (!p) return;
+      // cf. audit hérité en tête de fichier : jamais re-servir un
+      // personnage déjà en attente (jet non lancé).
+      if (attente[persoId]) { dejaEnAttente.push(p.nom); return; }
+      const totalPb = (p.piecesOr || 0) * 100 + (p.piecesArgent || 0) * 10 + (p.piecesBronze || 0);
+      if (totalPb < coutPb) { insuffisants.push(p.nom); return; }
+      const restePb = totalPb - coutPb;
+      p.piecesOr = Math.floor(restePb / 100);
+      p.piecesArgent = Math.floor((restePb % 100) / 10);
+      p.piecesBronze = restePb % 10;
+
+      // 1. Dé du plat attribué (ou ration), déjà déterminé en phase cuisine.
+      const attrib = encours.attributions[persoId];
+      let effetRepos = null, nomPlat = null;
+      if (attrib === "ration") {
+        const ration = (p.inventaireListe || []).find((it) => it.id === "ration_voyage" && it.effetRepos);
+        if (ration) { effetRepos = ration.effetRepos; nomPlat = ration.nom; _consommerUneUnite(p.inventaireListe, "ration_voyage"); }
+      } else if (typeof attrib === "number" && encours.plats[attrib]) {
+        const cuisine = encours.plats[attrib];
+        effetRepos = { des: [cuisine.de], maximise: cuisine.maximise, intoxication: cuisine.intoxication };
+        nomPlat = "plat cuisiné";
+      }
+
+      const instance = new Personnage(p);
+      const niveau = p.niveau || 1;
+      const desPositifs = Array(niveau).fill(8);
+      let flatPositif = instance.mod("CON");
+      const desNegatifs = [];
+      if (palier.de) {
+        const dCouchage = _parseDe(palier.de);
+        if (dCouchage) for (let i = 0; i < dCouchage.nb; i++) desPositifs.push(dCouchage.faces);
+      }
+      if (effetRepos) {
+        (effetRepos.des || []).forEach((formule) => {
+          const d = _parseDe(formule);
+          if (!d) return;
+          if (effetRepos.intoxication) { for (let i = 0; i < d.nb; i++) desNegatifs.push(d.faces); }
+          else if (effetRepos.maximise) { flatPositif += d.nb * d.faces; }
+          else { for (let i = 0; i < d.nb; i++) desPositifs.push(d.faces); }
+        });
+      }
+
+      // 4. Resets — APRÈS le calcul du jet en attente ci-dessus, jamais avant.
+      instance.reposLongPP();
+      instance.reposLongPointsCercle();
+      p.ppActuel = instance.ppActuel;
+      p.pointsBenediction = instance.pointsBenediction;
+      p.pointsConviction = instance.pointsConviction;
+      p.pointsBannissement = instance.pointsBannissement;
+      p.pointsJugement = instance.pointsJugement;
+
+      // "jour"/"scene" redeviennent disponibles — PAS "scenario", qui reste
+      // au bouton manuel du MJ (un repos ne consomme pas tout un scénario).
+      if (typeof Capacites !== "undefined" && Capacites.reinitialiserUsagesPeriode) {
+        Capacites.reinitialiserUsagesPeriode(p, "jour");
+        Capacites.reinitialiserUsagesPeriode(p, "scene");
+      }
+      if (App.autoriserPreparationGrimoire) App.autoriserPreparationGrimoire(persoId);
+
+      p.etatsActifs = (p.etatsActifs || []).filter((e) => e.idEtat !== "fatiguee");
+      if (!effetRepos) {
+        p.etatsActifs.push({ idEtat: "fatiguee", dureeRestante: { tours: null, motCle: null, dureeAffichee: "prochain repos long" }, source: "Repos", poseLe: Date.now() });
+        fatigues.push(p.nom);
+      }
+      p.etatsActifs = p.etatsActifs.filter((e) => e.idEtat !== "intoxication");
+      if (effetRepos && effetRepos.intoxication) {
+        p.etatsActifs.push({ idEtat: "intoxication", dureeRestante: { tours: null, motCle: null, dureeAffichee: "prochain repos long" }, source: "Repos", poseLe: Date.now() });
+      }
+
+      p.reposCourtsDepuisReposLong = 0;
+
+      attente[persoId] = {
+        label: `Repos long — ${palier.nom}${nomPlat ? ` + ${nomPlat}` : " — sans repas (Fatiguée)"}`,
+        desPositifs, flatPositif, desNegatifs,
+        horodatage: Date.now(),
+      };
+      servis++;
+    });
+
+    App.sauverPersos(persos);
+    sauverAttente(attente);
+    // Le repos long EST le nouveau jour : mêmes tentatives d'atelier
+    // (enchantement/alchimie/cuisine) réinitialisées que via le bouton MJ
+    // "🌅 Nouveau jour" — appelé ICI seulement, jamais pendant la phase
+    // cuisine (cf. contrainte de séquencement en tête de fonction).
+    if (servis && typeof App !== "undefined" && App.reinitialiserTentativesAtelier) App.reinitialiserTentativesAtelier();
+
+    sauverEncours(null);
+    sauverVote(null);
+    _arreterMinuteur();
+
+    let msg = servis ? `😴 Repos long validé pour ${servis} convive${servis > 1 ? "s" : ""}.` : "😴 Aucun convive servi.";
+    if (insuffisants.length) msg += ` Bourse insuffisante pour : ${insuffisants.join(", ")}.`;
+    if (dejaEnAttente.length) msg += ` Déjà un repos en attente pour : ${dejaEnAttente.join(", ")}.`;
+    if (fatigues.length) msg += ` Fatiguée (sans repas) : ${fatigues.join(", ")}.`;
+    toast(msg);
+    rendreZoneRepos();
+    _rendreOverlayRepos();
+    if (typeof App !== "undefined" && App.rafraichirFicheActive) App.rafraichirFicheActive();
+  }
+
+  // Abandon — réservé à l'initiateur et au MJ. Les ingrédients déjà
+  // consommés pendant la phase cuisine NE SONT PAS rendus : on a cuisiné,
+  // ce n'est pas un bug si un repos abandonné a coûté des vivres pour
+  // rien — ne pas "corriger" ça en remboursant plus tard.
+  function annulerRepos() {
+    const role = (typeof App !== "undefined" && App.obtenirRole) ? App.obtenirRole() : "joueur";
+    const vote = lireVote();
+    const joueurId = App.obtenirJoueurId ? App.obtenirJoueurId() : null;
+    const estInitiateur = !!(vote && joueurId === vote.initiateurJoueurId);
+    if (role !== "mj" && !estInitiateur) return;
+    sauverEncours(null);
+    sauverVote(null);
+    _arreterMinuteur();
+    toast("Repos long annulé.");
+    rendreZoneRepos();
+    _rendreOverlayRepos();
+    if (typeof App !== "undefined" && App.rafraichirFicheActive) App.rafraichirFicheActive();
+  }
+
+  /* ── Rendu — bannière de scrutin dans #zone-repos ─────────────────── */
+
+  function _htmlBanniereScrutin(vote) {
+    if (!vote) return "";
+    const role = (typeof App !== "undefined" && App.obtenirRole) ? App.obtenirRole() : "joueur";
+    const joueurId = App.obtenirJoueurId ? App.obtenirJoueurId() : null;
+
+    if (vote.statut === "rejete") {
+      return `<div class="carte" style="border-left:3px solid var(--chaos);"><strong>❌ Repos long rejeté.</strong></div>`;
+    }
+    if (vote.statut === "adopte") {
+      return `<div class="carte"><strong>✅ Repos long adopté</strong> — préparation en cours (cf. fenêtre de repos collectif).</div>`;
+    }
+    const secondes = Math.max(0, Math.ceil((vote.echeanceTs - Date.now()) / 1000));
+    const nbRepondu = vote.votants.filter((id) => vote.votes[id] !== undefined).length;
+    let corps;
+    if (role === "mj") {
+      corps = `<div>${nbRepondu}/${vote.votants.length} ont répondu — ${secondes}s restantes.</div>
+        <button class="btn petit or" id="btn-resoudre-scrutin-maintenant" style="margin-top:6px;">⏩ Résoudre maintenant</button>`;
+    } else if (joueurId === vote.initiateurJoueurId) {
+      corps = `<div>Ton repos long est soumis au vote — ${secondes}s restantes (${nbRepondu}/${vote.votants.length} ont répondu).</div>`;
+    } else if (vote.votants.includes(joueurId)) {
+      const monVote = vote.votes[joueurId];
+      corps = monVote !== undefined
+        ? `<div>Tu as voté <strong>${monVote === "oui" ? "Oui" : "Non"}</strong> — ${secondes}s restantes (${nbRepondu}/${vote.votants.length} ont répondu).</div>`
+        : `<div>${echapper(vote.initiateurNom)} propose un repos long — ${secondes}s restantes.</div>
+           <div style="display:flex;gap:8px;margin-top:6px;">
+             <button class="btn petit or" id="btn-vote-repos-oui">✅ Oui</button>
+             <button class="btn petit secondaire" id="btn-vote-repos-non">❌ Non</button>
+           </div>`;
+    } else {
+      corps = `<div>${echapper(vote.initiateurNom)} propose un repos long.</div>`;
+    }
+    return `<div class="carte"><strong>🌙 Scrutin de repos long</strong>${corps}</div>`;
+  }
+
+  function _wireBanniereScrutin() {
+    const btnOui = document.getElementById("btn-vote-repos-oui");
+    if (btnOui) btnOui.onclick = () => voter("oui");
+    const btnNon = document.getElementById("btn-vote-repos-non");
+    if (btnNon) btnNon.onclick = () => voter("non");
+    const btnResoudre = document.getElementById("btn-resoudre-scrutin-maintenant");
+    if (btnResoudre) btnResoudre.onclick = () => _resoudreScrutin();
   }
 
   function _htmlReposCourt(ids, persos, role) {
@@ -446,30 +664,155 @@ const Repos = (() => {
   function rendreZoneRepos() {
     const zone = document.getElementById("zone-repos");
     if (!zone) return;
-    _assurerDefauts();
     const role = (typeof App !== "undefined" && App.obtenirRole) ? App.obtenirRole() : "joueur";
     const persos = App.chargerPersos();
     const ids = Object.keys(persos).filter((id) => persos[id] && persos[id].classe);
     const attente = lireAttente();
+    const vote = lireVote();
 
-    let html = "";
-    if (role === "mj") html += _htmlFormulaireMj(ids, persos);
+    let html = _htmlBanniereScrutin(vote);
     html += _htmlReposCourt(ids, persos, role);
     html += _htmlCartesAttente(attente, persos, role);
     zone.innerHTML = html;
 
-    if (role === "mj") _wireFormulaireMj(ids);
+    _wireBanniereScrutin();
     _wireReposCourt();
     _wireCartesAttente();
   }
 
-  // Notification temps réel — un joueur qui a l'onglet Party déjà ouvert voit
-  // apparaître son encart "Repos en attente" sans reload, dès que le MJ
-  // envoie un repos (même schéma que marche:stock/marche:demandes).
+  /* ── Rendu — overlay collectif (#modal-repos-long), GLOBAL (pas gated
+     par l'onglet Party : le repos peut être adopté pendant que quelqu'un
+     consulte "Ma fiche" ou "Dés", l'overlay doit s'ouvrir quand même) ── */
+
+  function _htmlOverlay(encours) {
+    const persos = App.chargerPersos();
+    const role = (typeof App !== "undefined" && App.obtenirRole) ? App.obtenirRole() : "joueur";
+    const vote = lireVote();
+    const joueurId = App.obtenirJoueurId ? App.obtenirJoueurId() : null;
+    const estInitiateur = !!(vote && joueurId === vote.initiateurJoueurId);
+    const peutValider = role === "mj" || estInitiateur;
+
+    const couverts = encours.convives.filter((id) => encours.attributions[id] !== undefined).length;
+    const recettesOptions = CUISINE_RECETTES.slice().sort((a, b) => a.rang - b.rang).map((r) => `<option value="${r.id}">${echapper(r.nom)} (rang ${r.rang})</option>`).join("");
+    const convivesOptions = encours.convives.map((id) => `<option value="${id}">${echapper((persos[id] || {}).nom || id)}</option>`).join("");
+
+    const listePlats = encours.plats.map((pl, idx) => {
+      const cuisinierNom = (persos[pl.cuisinierPersoId] || {}).nom || "?";
+      return `<div class="carte" style="margin-top:6px;">
+        <strong>Plat #${idx + 1}</strong> — cuisiné par ${echapper(cuisinierNom)}, dé ${echapper(pl.de)}${pl.maximise ? " (maximisé)" : ""}${pl.intoxication ? " ⚠ intoxication (soustrait)" : ""}
+        <div>Portions restantes : ${pl.portionsRestantes}/4</div>
+        <button class="btn petit secondaire" data-jeter-plat="${idx}">🗑 Jeter ce plat</button>
+      </div>`;
+    }).join("");
+
+    const lignesAttribution = encours.convives.map((id) => {
+      const p = persos[id];
+      if (!p) return "";
+      const attrib = encours.attributions[id];
+      const aRation = (p.inventaireListe || []).some((it) => it.id === "ration_voyage" && it.effetRepos);
+      const options = [`<option value="">— Rien (Fatiguée) —</option>`]
+        .concat(aRation ? [`<option value="ration"${attrib === "ration" ? " selected" : ""}>🎒 Sa ration de voyage</option>`] : [])
+        .concat(encours.plats.map((pl, idx) => (pl.portionsRestantes > 0 || attrib === idx)
+          ? `<option value="${idx}"${attrib === idx ? " selected" : ""}>Plat #${idx + 1} (${pl.portionsRestantes} portion${pl.portionsRestantes > 1 ? "s" : ""})</option>` : ""));
+      const sansRepas = attrib === undefined;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;${sansRepas ? "color:var(--chaos);" : ""}">
+        <span>${echapper(p.nom)}${sansRepas ? " ⚠" : ""}</span>
+        <select data-attribuer="${id}">${options.join("")}</select>
+      </div>`;
+    }).join("");
+
+    return `
+      <div class="carte">
+        <strong>🍽 Portions couvertes : ${couverts}/${encours.convives.length}</strong>
+      </div>
+      <div class="carte" style="margin-top:10px;">
+        <h4 style="margin-top:0;">Cuisiner</h4>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <select id="overlay-select-cuisinier">${convivesOptions}</select>
+          <select id="overlay-select-recette">${recettesOptions}</select>
+          <button class="btn petit or" id="btn-overlay-cuisiner">🍳 Cuisiner</button>
+        </div>
+        ${listePlats}
+      </div>
+      <div class="carte" style="margin-top:10px;">
+        <h4 style="margin-top:0;">Attribution</h4>
+        ${lignesAttribution}
+      </div>
+      <div class="barre-actions" style="margin-top:10px;">
+        ${peutValider ? `<button class="btn or" id="btn-overlay-valider">😴 Valider le repos</button>` : ""}
+        ${peutValider ? `<button class="btn danger" id="btn-overlay-annuler">Annuler le repos</button>` : ""}
+      </div>`;
+  }
+
+  function _wireOverlay() {
+    const btnCuisiner = document.getElementById("btn-overlay-cuisiner");
+    if (btnCuisiner) btnCuisiner.onclick = () => {
+      const cuisinierId = document.getElementById("overlay-select-cuisinier").value;
+      const recetteId = document.getElementById("overlay-select-recette").value;
+      const persos = App.chargerPersos();
+      const role = App.obtenirRole ? App.obtenirRole() : "joueur";
+      if (role !== "mj" && !(App.estProprietaire && App.estProprietaire(persos[cuisinierId]))) {
+        toast("Tu ne peux cuisiner que pour ton propre personnage.");
+        return;
+      }
+      cuisinerDansOverlay(cuisinierId, recetteId);
+    };
+    document.querySelectorAll("[data-jeter-plat]").forEach((btn) => {
+      btn.onclick = () => {
+        const idx = parseInt(btn.dataset.jeterPlat, 10);
+        const encours = lireEncours();
+        const plat = encours && encours.plats[idx];
+        if (!plat) return;
+        const persos = App.chargerPersos();
+        const role = App.obtenirRole ? App.obtenirRole() : "joueur";
+        const estCuisinier = App.estProprietaire && App.estProprietaire(persos[plat.cuisinierPersoId]);
+        if (role !== "mj" && !estCuisinier) { toast("Seul le cuisinier (ou le MJ) peut jeter ce plat."); return; }
+        if (confirm("Jeter ce plat ? Ses portions restantes seront perdues.")) jeterPlat(idx);
+      };
+    });
+    document.querySelectorAll("[data-attribuer]").forEach((sel) => {
+      sel.onchange = () => {
+        const val = sel.value;
+        const choix = val === "" ? null : (val === "ration" ? "ration" : parseInt(val, 10));
+        attribuer(sel.dataset.attribuer, choix);
+      };
+    });
+    const btnValider = document.getElementById("btn-overlay-valider");
+    if (btnValider) btnValider.onclick = () => { if (confirm("Valider le repos long pour tout le groupe ?")) validerRepos(); };
+    const btnAnnuler = document.getElementById("btn-overlay-annuler");
+    if (btnAnnuler) btnAnnuler.onclick = () => { if (confirm("Annuler ce repos long ? Les ingrédients déjà consommés ne seront pas rendus.")) annulerRepos(); };
+  }
+
+  function _rendreOverlayRepos() {
+    const modal = document.getElementById("modal-repos-long");
+    const corps = document.getElementById("modal-repos-long-corps");
+    if (!modal || !corps) return;
+    const encours = lireEncours();
+    if (!encours) { modal.style.display = "none"; return; }
+    modal.style.display = "flex";
+    corps.innerHTML = _htmlOverlay(encours);
+    _wireOverlay();
+  }
+
+  // Notification temps réel — même schéma que marche:stock/marche:demandes.
+  // KEY_ENCOURS n'est PAS gated par l'onglet Party : l'overlay est une
+  // modale globale, elle doit s'ouvrir même si le client consulte un autre
+  // onglet au moment de l'adoption.
   SyncStore.subscribe(STORAGE_REPOS_ATTENTE, () => {
     const p = document.getElementById("panneau-party");
     if (p && p.classList.contains("actif")) rendreZoneRepos();
   });
+  SyncStore.subscribe(KEY_VOTE, (val) => {
+    if (val && val.statut === "en_cours") _demarrerMinuteur(); else _arreterMinuteur();
+    const p = document.getElementById("panneau-party");
+    if (p && p.classList.contains("actif")) rendreZoneRepos();
+    if (typeof App !== "undefined" && App.rafraichirFicheActive) App.rafraichirFicheActive();
+  });
+  SyncStore.subscribe(KEY_ENCOURS, () => { _rendreOverlayRepos(); });
 
-  return { rendreZoneRepos, reposLong, reposCourt, lancerJetRepos, purgerAttente };
+  return {
+    rendreZoneRepos, reposCourt, lancerJetRepos, purgerAttente,
+    estScrutinEnCours, ouvrirScrutin, voter, resoudreScrutinMaintenant: _resoudreScrutin,
+    changerConvive, cuisinerDansOverlay, jeterPlat, attribuer, validerRepos, annulerRepos,
+  };
 })();

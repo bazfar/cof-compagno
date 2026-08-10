@@ -176,21 +176,51 @@ const Cuisine = (() => {
     });
   }
 
-  function _cuisiner(persoId, recetteId) {
+  // Nom + description d'un plat produit à partir d'un résultat de jet — pur,
+  // aucun effet de bord. Partagé par l'Atelier (plat personnel, ajouté à
+  // l'inventaire du cuisinier) ET par l'overlay de repos long collectif
+  // (js/repos.js, plat partagé en 4 portions, jamais placé en inventaire) —
+  // cf. tenterRecette ci-dessous pour la raison du découpage.
+  function _construirePlat(recette, resultat) {
+    return {
+      id: `plat_${recette.id}_${resultat.qualite.id}`,
+      nom: `${recette.nom} (${resultat.qualite.nom})`,
+      type: "consommable",
+      porte: false,
+      quantite: 1,
+      prixPo: 0, // un plat cuisiné ne se revend pas
+      horsMarche: true,
+      vivre: true,
+      description: `${recette.nom}, ${resultat.qualite.nom.toLowerCase()}. `
+        + (resultat.intoxication
+          ? `Intoxication : dé de repos long soustrait (${resultat.de}), pas ajouté.`
+          : `Dé de repos long : ${resultat.de}${resultat.maximise ? " (maximisé, non lancé)" : ""}.`)
+        + (recette.effetDeclaratif ? ` ${recette.effetDeclaratif}` : ""),
+      effetRepos: { des: [resultat.de], maximise: resultat.maximise, intoxication: resultat.intoxication },
+    };
+  }
+
+  // Tentative de cuisson complète (jet, résolution, consommation des
+  // ingrédients, XP, tentative/jour, annonce dans l'historique) — SANS
+  // décider quoi faire du plat produit : l'Atelier l'ajoute à l'inventaire
+  // du cuisinier (_cuisiner ci-dessous), l'overlay de repos long collectif
+  // (js/repos.js) l'ajoute au pool partagé de 4 portions. Extrait pour que
+  // les deux endroits appellent la MÊME logique de résolution — cf.
+  // prompt_repos_long_scrutin.md, "aucune duplication de la logique de
+  // résolution". Sauvegarde les persos elle-même (XP + tentative + Ingrédients).
+  function tenterRecette(persoId, recetteId) {
     const recette = CUISINE_RECETTES.find((r) => r.id === recetteId);
     const persos = App.chargerPersos();
     const p = persos[persoId];
-    if (!recette || !p) return;
+    if (!recette || !p) return { ok: false, raison: "Recette ou personnage introuvable." };
 
     const rangCuisinier = Metiers.rang(p, METIER_ID);
     const maxTentatives = _tentativesJourMax(recette.rang);
     if (_tentativesJour(persoId, recetteId) >= maxTentatives) {
-      toast("Plus de tentatives pour cette recette aujourd'hui.");
-      return;
+      return { ok: false, raison: "Plus de tentatives pour cette recette aujourd'hui." };
     }
     if (!_ingredientsDisponibles(p.inventaireListe, recette.ingredients)) {
-      toast("Ingrédients insuffisants.");
-      return;
+      return { ok: false, raison: "Ingrédients insuffisants." };
     }
 
     const jetBrut = App.lancerDe(20);
@@ -200,26 +230,6 @@ const Cuisine = (() => {
     // rater brûle les vivres, c'est voulu (cf. prompt_repos_cuisine_metiers.md).
     recette.ingredients.forEach((c) => _consommerQuantite(p.inventaireListe, c.id, c.qte));
 
-    if (resultat.produit) {
-      const plat = {
-        id: `plat_${recette.id}_${resultat.qualite.id}`,
-        nom: `${recette.nom} (${resultat.qualite.nom})`,
-        type: "consommable",
-        porte: false,
-        quantite: 1,
-        prixPo: 0, // un plat cuisiné ne se revend pas
-        horsMarche: true,
-        vivre: true,
-        description: `${recette.nom}, ${resultat.qualite.nom.toLowerCase()}. `
-          + (resultat.intoxication
-            ? `Intoxication : dé de repos long soustrait (${resultat.de}), pas ajouté.`
-            : `Dé de repos long : ${resultat.de}${resultat.maximise ? " (maximisé, non lancé)" : ""}.`)
-          + (recette.effetDeclaratif ? ` ${recette.effetDeclaratif}` : ""),
-        effetRepos: { des: [resultat.de], maximise: resultat.maximise, intoxication: resultat.intoxication },
-      };
-      App.ajouterAInventaire(p, plat);
-    }
-
     const gainXp = Metiers.gagnerXp(p, METIER_ID, resultat.xpGagne);
     _incrementerTentative(persoId, recetteId);
     App.sauverPersos(persos);
@@ -227,15 +237,31 @@ const Cuisine = (() => {
     const detailJet = `d20[${jetBrut}] vs seuil ${resultat.S} — ${resultat.qualite.nom}${resultat.produit ? "" : " (rien produit)"}`;
     const label = `${p.nom} — Cuisine (${recette.nom})`;
     App.ajouterHisto(label, jetBrut, jetBrut === 20, jetBrut === 1, detailJet);
+
+    return { ok: true, recette, resultat, gainXp, jetBrut, nomCuisinier: p.nom };
+  }
+
+  function _cuisiner(persoId, recetteId) {
+    const t = tenterRecette(persoId, recetteId);
+    if (!t.ok) { toast(t.raison); return; }
+    const { recette, resultat, gainXp } = t;
+
+    if (resultat.produit) {
+      const persos = App.chargerPersos();
+      const p = persos[persoId];
+      App.ajouterAInventaire(p, _construirePlat(recette, resultat));
+      App.sauverPersos(persos);
+    }
+
     let msg = `${resultat.qualite.nom} — ${resultat.produit ? `« ${recette.nom} » produit.` : "rien produit, ingrédients perdus."}`;
     if (resultat.xpGagne) msg += ` +${resultat.xpGagne} XP Cuisine.`;
-    if (gainXp.montee) msg += ` 🍳 Nouveau rang : ${Metiers.titre(p, METIER_ID)} !`;
+    if (gainXp.montee) msg += ` 🍳 Nouveau rang : ${Metiers.titre(App.chargerPersos()[persoId], METIER_ID)} !`;
     toast(msg);
 
     rendreZoneCuisine(persoId);
   }
 
-  return { rendreZoneCuisine, resoudre, seuilEffectif };
+  return { rendreZoneCuisine, resoudre, seuilEffectif, tenterRecette, construirePlat: _construirePlat, tentativesJourMax: _tentativesJourMax, tentativesJour: _tentativesJour };
 })();
 
 if (typeof window !== "undefined") window.Cuisine = Cuisine;
