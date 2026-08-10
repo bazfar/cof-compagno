@@ -1466,9 +1466,18 @@ class Personnage extends Entite {
   // item qui le porterait encore resterait sinon équipable nulle part.
   // Même principe que la migration equipement.botte→jambe posée dans le
   // constructeur ci-dessus, appliquée ici à la DÉFINITION de l'objet.
+  //
+  // Arme à deux mains : PRIORITAIRE sur un slot explicite éventuel — occupe
+  // toujours main_droite ET main_gauche (cf. equiper()), jamais un seul des
+  // deux. Aucune arme du catalogue actuel n'a de champ slot (toutes
+  // retombent sur le défaut par type ci-dessous), mais si l'une en avait un
+  // jour un (Forge du MJ, faute de frappe...), un slot unique romprait
+  // l'invariant "deux mains occupées ensemble" — même classe de bug que
+  // botte/mains, blindée par anticipation plutôt qu'après coup.
   static slotsPourType(item) {
     if (!item) return [];
     if (item.slot === null) return [];
+    if (item.type === "arme" && item.deuxMains) return ["main_droite", "main_gauche"];
     if (item.slot) return [item.slot === "botte" ? "jambe" : item.slot];
     switch (item.type) {
       case "arme": return ["main_droite", "main_gauche"];
