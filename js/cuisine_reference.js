@@ -222,6 +222,27 @@ const CuisineReference = (() => {
     return true;
   }
 
+  // Distinction répertoire vs achetable/à obtenir en jeu (prompt_recettes_
+  // achetables.md étape 5, second point) : le catalogue reste ENTIÈREMENT
+  // consultable sans personnage (cf. en-tête de ce module) — ce badge
+  // n'apparaît donc que si un perso est sélectionné, comme blocPerso
+  // ci-dessous, qui suit la même convention. Une recette au répertoire de
+  // p.metiers.cuisine.repertoire (cf. js/app.js, apprendreRecetteDepuisAchat)
+  // prime sur son rang ; sinon rang 1-2 = achetable au marché (24 recettes,
+  // cf. data/loot.json type "recette"), rang 3+ = à obtenir en jeu (MJ,
+  // hors périmètre de ce module).
+  function _badgeRepertoire(r, p) {
+    if (!p) return "";
+    const repertoire = (p.metiers && p.metiers.cuisine && p.metiers.cuisine.repertoire) || [];
+    if (repertoire.includes(r.id)) {
+      return `<span style="background:var(--or);color:#2a2430;border-radius:4px;padding:1px 6px;font-size:0.78rem;font-weight:700;">📖 Au répertoire</span>`;
+    }
+    if (r.rang <= 2) {
+      return `<span style="background:rgba(58,125,68,.2);color:var(--succes);border-radius:4px;padding:1px 6px;font-size:0.78rem;">🛒 Achetable au marché</span>`;
+    }
+    return `<span style="background:rgba(138,47,59,.18);color:var(--chaos);border-radius:4px;padding:1px 6px;font-size:0.78rem;">✦ À obtenir en jeu</span>`;
+  }
+
   function _htmlCarteRecette(r, p, rangCuisinier) {
     const des = _dePlatParQualite(r);
     const registre = REGISTRES_TABLE[r.registre];
@@ -258,6 +279,7 @@ const CuisineReference = (() => {
         <span style="display:flex;gap:6px;align-items:center;">
           <span style="font-weight:700;background:var(--violet);color:#fff;border-radius:4px;padding:1px 6px;font-size:0.78rem;">Rang ${r.rang}</span>
           ${realisable ? `<span style="background:var(--succes);color:#fff;border-radius:4px;padding:1px 6px;font-size:0.78rem;">✔ réalisable</span>` : ""}
+          ${_badgeRepertoire(r, p)}
         </span>
       </div>
       <div style="font-size:0.82rem;color:#6a6278;">

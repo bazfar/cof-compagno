@@ -58,18 +58,25 @@ const Marche = (() => {
     return { localite: null, marchand: null };
   }
 
+  // Types portant une `origine` et passant par le calcul d'import automatique
+  // (cf. modificateurOrigineAutomatique, data/marche.js) — vivres d'abord
+  // (prompt_marche_ingredients.md), recettes achetées ensuite
+  // (prompt_recettes_achetables.md étape 5 : "les recettes portent une
+  // origine et passent par le même calcul que les vivres").
+  const TYPES_AVEC_ORIGINE = ["ingredient", "recette"];
+
   // Modificateur "par défaut" effectif pour CET item chez CE marchand dans
   // CETTE localité (prompt_marche_ingredients.md étape 5) : le marché noir
   // garde toujours la priorité (son modificateurParDefaut l'emporte, cf.
-  // "Le marché noir garde la priorité" du prompt) ; sinon, pour un vivre
-  // (type "ingredient") avec une localité qui porte une `nation`, le calcul
-  // automatique origine/nation remplace modificateurParDefaut ; pour tout
-  // le reste (armes, potions, vivre sans origine résoluble...), comportement
-  // inchangé. Reste une VALEUR PAR DÉFAUT seulement : le menu déroulant MJ
-  // (marche-select-mod) l'écrase toujours au moment du clic.
+  // "Le marché noir garde la priorité" du prompt) ; sinon, pour un item à
+  // origine (TYPES_AVEC_ORIGINE) avec une localité qui porte une `nation`,
+  // le calcul automatique origine/nation remplace modificateurParDefaut ;
+  // pour tout le reste (armes, potions, item sans origine résoluble...),
+  // comportement inchangé. Reste une VALEUR PAR DÉFAUT seulement : le menu
+  // déroulant MJ (marche-select-mod) l'écrase toujours au moment du clic.
   function _modificateurEffectif(item, marchand, localite) {
     if (marchand.estMarcheNoir) return marchand.modificateurParDefaut;
-    if (item.type === "ingredient" && localite && localite.nation) {
+    if (TYPES_AVEC_ORIGINE.includes(item.type) && localite && localite.nation) {
       return modificateurOrigineAutomatique(item.origine, localite.nation);
     }
     return marchand.modificateurParDefaut;
@@ -145,14 +152,36 @@ const Marche = (() => {
 
   // Libellé court du modificateur EFFECTIF (pas forcément un des 5 choix du
   // menu déroulant MJ, ex. ×0,8 automatique local) — affiché sur chaque
-  // vivre en vitrine (prompt_marche_ingredients.md étape 6 : « Kaldrun ·
-  // importé rival ×1,5 »), pour qu'un joueur comprenne pourquoi ce prix-là.
+  // vivre ET recette en vitrine (prompt_marche_ingredients.md étape 6 puis
+  // prompt_recettes_achetables.md étape 5 : « Kaldrun · importé rival
+  // ×1,5 »), pour qu'un joueur comprenne pourquoi ce prix-là. Fonction
+  // renommée (elle couvrait initialement les seuls vivres) quand les
+  // recettes achetables ont repris le même mécanisme d'origine.
   const _LIBELLES_MOD_COURT = { local: "local", importe_allie: "importé allié", importe_rival: "importé rival", marche_noir_2: "marché noir", marche_noir_3: "marché noir" };
-  function _infoOrigineVivre(item, modValeur) {
-    if (item.type !== "ingredient") return "";
+  function _infoOrigineEtModificateur(item, modValeur) {
+    if (!TYPES_AVEC_ORIGINE.includes(item.type)) return "";
     const idProche = _idModificateurLePlusProche(modValeur);
     const libelleMod = _LIBELLES_MOD_COURT[idProche] || idProche;
     return `${echapper(_nomOrigine(item.origine))} · ${echapper(libelleMod)} ×${modValeur}`;
+  }
+
+  // Rang, facteur nutritif et "déjà connue" d'une recette achetable
+  // (prompt_recettes_achetables.md étape 5) — la nation est déjà couverte
+  // par _infoOrigineEtModificateur (même ligne "🌍 origine · modificateur"
+  // que les vivres, réutilisée telle quelle). facteurNutritif n'est stocké
+  // NULLE PART sur l'item (seul prixPo l'est, cf. NOTE de comptage dans
+  // data/loot.js) : reconstruit ici par division exacte (prixPo/200) — la
+  // table source du prompt ne produit que des multiples de 5 qui redivisent
+  // proprement, aucun arrondi ne se perd à l'affichage.
+  function _infoRecette(item, personnageSelectionne) {
+    if (item.type !== "recette") return "";
+    const recette = (typeof CUISINE_RECETTES !== "undefined") ? CUISINE_RECETTES.find((r) => r.id === item.recetteApprise) : null;
+    const rang = recette ? recette.rang : "?";
+    const facteurNutritif = (item.prixPo / 200).toFixed(2).replace(".", ",");
+    const repertoire = (personnageSelectionne && personnageSelectionne.metiers && personnageSelectionne.metiers.cuisine
+      && personnageSelectionne.metiers.cuisine.repertoire) || [];
+    const dejaConnue = repertoire.includes(item.recetteApprise);
+    return `Rang ${rang} · Facteur nutritif ${facteurNutritif}${dejaConnue ? ` · <strong style="color:var(--or);">déjà connue</strong>` : ""}`;
   }
 
   function _statsItem(it) {
@@ -171,17 +200,19 @@ const Marche = (() => {
   let _persoId = null;
   let _localiteId = null;
   let _marchandId = null;
-  let _filtreType = "tous"; // "tous" | "equip" | "conso" | "vivres" — filtre d'affichage du stock
+  let _filtreType = "tous"; // "tous" | "equip" | "conso" | "vivres" | "recettes" — filtre d'affichage du stock
 
   // Un objet est un consommable, un vivre ("ingredient", cf.
-  // prompt_marche_ingredients.md) ou un "équipement" (tout le reste : arme,
+  // prompt_marche_ingredients.md), une recette achetable ("recette", cf.
+  // prompt_recettes_achetables.md) ou un "équipement" (tout le reste : arme,
   // armure, bouclier, accessoire, charme…). "equip" exclut désormais les
-  // DEUX types empilables (TYPES_EMPILABLES), pas seulement "consommable" —
-  // sinon les 81 vivres réapparaîtraient tous sous "Équipements" depuis leur
-  // passage à "ingredient". Sert au filtre du marché.
+  // TROIS types empilables (TYPES_EMPILABLES), pas seulement "consommable" —
+  // sinon vivres et recettes réapparaîtraient tous sous "Équipements". Sert
+  // au filtre du marché.
   function _correspondFiltre(item) {
     if (_filtreType === "conso") return item.type === "consommable";
     if (_filtreType === "vivres") return item.type === "ingredient";
+    if (_filtreType === "recettes") return item.type === "recette";
     if (_filtreType === "equip") return !TYPES_EMPILABLES.includes(item.type);
     return true;
   }
@@ -382,17 +413,20 @@ const Marche = (() => {
     return `<span class="loot-badge loot-badge-rarete-${rareteId}">${echapper(_labelCourtRarete(rareteId))}</span>`;
   }
 
-  function _carteStockJoueur(slot, marchand, localite) {
+  function _carteStockJoueur(slot, marchand, localite, personnageSelectionne) {
     const item = slot.item;
     const modEffectif = _modificateurEffectif(item, marchand, localite);
     const prix = calculerPrix(item, modEffectif, _valeurRarete(slot.rareteId), 0, marchand.faction);
     const refuse = prix == null;
     const stats = _statsItem(item);
-    // Étape 6 : un vivre affiche son origine et le modificateur appliqué
-    // ("Kaldrun · importé rival ×1,5") pour que le prix ne soit jamais une
-    // boîte noire, et son effetDeclaratif (les 6 vivres hors système) sur
-    // sa fiche, jamais comme une règle chiffrée.
-    const infoOrigine = _infoOrigineVivre(item, modEffectif);
+    // Étape 6 (vivres) puis étape 5 (recettes) : un vivre OU une recette
+    // achetable affiche son origine et le modificateur appliqué ("Kaldrun ·
+    // importé rival ×1,5") pour que le prix ne soit jamais une boîte noire,
+    // et son effetDeclaratif (les 6 vivres hors système) sur sa fiche,
+    // jamais comme une règle chiffrée. Une recette ajoute en plus son rang,
+    // son facteur nutritif et si elle est déjà connue du perso sélectionné.
+    const infoOrigine = _infoOrigineEtModificateur(item, modEffectif);
+    const infoRecette = _infoRecette(item, personnageSelectionne);
     return `<div class="loot-item">
       <div class="loot-item-header">
         <span class="loot-item-nom">${item.icone ? `<img class="loot-item-icone" src="${item.icone}" alt="" />` : ""}${echapper(item.nom)}</span>
@@ -402,6 +436,7 @@ const Marche = (() => {
       </div>
       ${stats ? `<div class="loot-item-stats">${echapper(stats)}</div>` : ""}
       ${infoOrigine ? `<div class="loot-item-stats">🌍 ${infoOrigine}</div>` : ""}
+      ${infoRecette ? `<div class="loot-item-stats">${infoRecette}</div>` : ""}
       <div class="loot-item-desc">${echapper(item.description)}</div>
       ${item.effetDeclaratif ? `<div class="aide" style="margin-top:4px;">✦ ${echapper(item.effetDeclaratif)}</div>` : ""}
       <div class="marche-prix">${refuse ? "Commerce refusé" : prix + " po"}</div>
@@ -411,14 +446,15 @@ const Marche = (() => {
     </div>`;
   }
 
-  function _carteStockMj(slot, marchand, localite) {
+  function _carteStockMj(slot, marchand, localite, personnageSelectionne) {
     const item = slot.item;
     const stats = _statsItem(item);
     const modEffectif = _modificateurEffectif(item, marchand, localite);
     const modDefautId = _idModificateurLePlusProche(modEffectif);
     const prixInitial = calculerPrix(item, modEffectif, _valeurRarete(slot.rareteId), 0, marchand.faction);
     const afficheRarete = _peutAvoirRarete(item);
-    const infoOrigine = _infoOrigineVivre(item, modEffectif);
+    const infoOrigine = _infoOrigineEtModificateur(item, modEffectif);
+    const infoRecette = _infoRecette(item, personnageSelectionne);
     return `<div class="loot-item">
       <div class="loot-item-header">
         <span class="loot-item-nom">${item.icone ? `<img class="loot-item-icone" src="${item.icone}" alt="" />` : ""}${echapper(item.nom)}</span>
@@ -428,6 +464,7 @@ const Marche = (() => {
       </div>
       ${stats ? `<div class="loot-item-stats">${echapper(stats)}</div>` : ""}
       ${infoOrigine ? `<div class="loot-item-stats">🌍 ${infoOrigine}</div>` : ""}
+      ${infoRecette ? `<div class="loot-item-stats">${infoRecette}</div>` : ""}
       <div class="loot-item-desc">${echapper(item.description)}</div>
       ${item.effetDeclaratif ? `<div class="aide" style="margin-top:4px;">✦ ${echapper(item.effetDeclaratif)}</div>` : ""}
       <div class="marche-controles" data-slot-id="${slot.slotId}" data-item-id="${item.id}">
@@ -454,11 +491,15 @@ const Marche = (() => {
     if (!slots.length) { zone.innerHTML = '<p class="vide">Ce marchand n\'a rien en stock pour l\'instant.</p>'; return; }
     const slotsFiltres = slots.filter((s) => _correspondFiltre(s.item));
     if (!slotsFiltres.length) {
-      const libelleFiltreVide = _filtreType === "conso" ? "consommable" : _filtreType === "vivres" ? "vivre" : "équipement";
+      const libelleFiltreVide = _filtreType === "conso" ? "consommable" : _filtreType === "vivres" ? "vivre" : _filtreType === "recettes" ? "recette" : "équipement";
       zone.innerHTML = `<p class="vide">Aucun ${libelleFiltreVide} en stock chez ce marchand.</p>`;
       return;
     }
-    zone.innerHTML = slotsFiltres.map((s) => role === "mj" ? _carteStockMj(s, marchand, localite) : _carteStockJoueur(s, marchand, localite)).join("");
+    // Personnage sélectionné (cf. select-marche-perso) : sert à afficher
+    // "déjà connue" sur une recette achetable (prompt_recettes_achetables.md
+    // étape 5) — null si aucun perso choisi, _infoRecette gère ce cas.
+    const personnageSelectionne = _persoId ? lirePersos()[_persoId] : null;
+    zone.innerHTML = slotsFiltres.map((s) => role === "mj" ? _carteStockMj(s, marchand, localite, personnageSelectionne) : _carteStockJoueur(s, marchand, localite, personnageSelectionne)).join("");
 
     if (role === "mj") {
       zone.querySelectorAll(".marche-controles select").forEach((sel) => {

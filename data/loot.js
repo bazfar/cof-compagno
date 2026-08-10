@@ -11,7 +11,12 @@
 // js/marche.js) — jamais un `type === "consommable"` recopié à la main,
 // pour ne pas laisser une future extension diverger d'un seul endroit à
 // l'autre.
-const TYPES_EMPILABLES = ["consommable", "ingredient"];
+// Étendu à "recette" (prompt_recettes_achetables.md, étape 2) : acheter la
+// même "Recette : Potée de cendre" trois fois doit donner UNE ligne
+// quantite:3, pas trois lignes — même raisonnement, même garde (raretés/
+// matériaux/affixes ignorent aussi ce type, cf. rariteFixe:true systématique
+// sur ces items).
+const TYPES_EMPILABLES = ["consommable", "ingredient", "recette"];
 
 // NOTE DE COMPTAGE (cf. prompt_marche_ingredients.md, même piège que le
 // "47 recettes" de prompt_cuisine_recalage_gastronomie.md) : le prompt
@@ -386,5 +391,69 @@ const LOOT_CATALOGUE = [
   { "id": "fleur_veille", "nom": "Fleur-de-veille", "type": "ingredient", "porte": false, "description": "Corolle blanche qui se ferme au bruit. En infusion, on ne dort pas mais on rêve éveillé une nuit entière. Outil d'érudits, vice discret de cour.", "quantite": 1, "prixPo": 25, "vivre": true, "familleVivre": "boisson", "origine": "partout", "effetDeclaratif": "Corolle blanche qui se ferme au bruit. En infusion, on ne dort pas mais on rêve éveillé une nuit entière. Outil d'érudits, vice discret de cour." },
   { "id": "poisson_verre", "nom": "Poisson-verre", "type": "ingredient", "porte": false, "description": "Transparent, visible seulement quand il bouge. Presque impossible à attraper ; servi entier pour prouver qu'on l'a eu.", "quantite": 1, "prixPo": 20, "vivre": true, "familleVivre": "poisson", "origine": "aetharion", "effetDeclaratif": "Transparent, visible seulement quand il bouge. Presque impossible à attraper ; servi entier pour prouver qu'on l'a eu." },
   { "id": "truffe_braise", "nom": "Truffe-braise", "type": "ingredient", "porte": false, "description": "Reste tiède des heures après la récolte. Glissée dans les rations des mineurs longue-distance.", "quantite": 1, "prixPo": 18, "vivre": true, "familleVivre": "champignon", "origine": "khazrak", "effetDeclaratif": "Reste tiède des heures après la récolte. Glissée dans les rations des mineurs longue-distance." },
-  { "id": "ration_voyage", "nom": "Ration de voyage", "type": "consommable", "porte": false, "description": "Vivres de route sans prétention — suffit à éviter la faim, ne remplace pas un vrai plat.", "quantite": 1, "prixPo": 1, "vivre": true, "effetRepos": { "des": ["1d4"] } }
+  { "id": "ration_voyage", "nom": "Ration de voyage", "type": "consommable", "porte": false, "description": "Vivres de route sans prétention — suffit à éviter la faim, ne remplace pas un vrai plat.", "quantite": 1, "prixPo": 1, "vivre": true, "effetRepos": { "des": ["1d4"] } },
+
+  // Recettes achetables (prompt_recettes_achetables.md) : type "recette" DÉDIÉ
+  // (pas "consommable") — le stock se tire au hasard dans un pool filtré PAR
+  // TYPE (cf. tirerStockMarchand, data/marche.js) ; sous "consommable", une
+  // recette serait indiscernable d'une potion pour le tirage, impossible d'en
+  // vendre plus à l'épicerie qu'au généraliste (précisément l'objectif de
+  // quotas.recette). Conserve tout le comportement d'un consommable :
+  // empilable (cf. TYPES_EMPILABLES ci-dessus), consommé à l'usage — même
+  // patron exact que les parchemins sortAppris (cf. js/app.js,
+  // estRecetteAchat/apprendreRecetteDepuisAchat). rariteFixe:true est
+  // INDISPENSABLE : sans lui, tirerStockMarchand tirerait une rareté de stock
+  // aléatoire (jusqu'à ×6) et la même recette coûterait un prix différent à
+  // chaque réapprovisionnement.
+  //
+  // Seuls les 24 rangs 1-2 sont vendus (étape 1 du prompt) : le socle commun
+  // (bouillie_du_pot/soupe_du_pot/pain_gris, "tout le monde le connaît déjà")
+  // et les rangs 3-5 ("jamais vendus, s'obtiennent par le jeu") n'ont
+  // délibérément AUCUNE entrée ici. Le socle commun n'existe d'ailleurs nulle
+  // part dans ce fichier ni dans CUISINE_RECETTES (data/cuisine.js) — la
+  // frontière posée par le prompt est déjà satisfaite sans rien y ajouter.
+  //
+  // Prix = facteurNutritif × 200 arrondi au multiple de 5 (indexé sur la
+  // valeur NOURRISSANTE de la recette, jamais son rang technique — même
+  // découplage que le système de cuisine lui-même, cf. data/cuisine.js).
+  // facteurNutritif n'existe pas comme champ ici (cf. NOTE de data/loot.js
+  // sur "ingredient", même famille de terminologie non appliquée) : le
+  // prompt ne le stocke jamais sur l'item, seulement prixPo — l'UI (cf.
+  // js/marche.js, _infoRecette) le réaffiche en le reconstituant par
+  // prixPo/200, exact par construction puisque la table source ne produit
+  // que des multiples de 5 qui redivisent proprement.
+  //
+  // origine : nation d'origine dans data/cuisine.js (regroupement par
+  // commentaires "── Nation ──", identique à la table NATION_PAR_RECETTE de
+  // js/cuisine_reference.js — aucune donnée inventée, juste retraduite en id
+  // de nation pour reprendre le même calcul d'import que les vivres). Seule
+  // exception : champignon_echo_prepare, une des deux recettes "Rites de
+  // table" SANS nation propre dans ce regroupement (cf. commentaire de
+  // NATION_PAR_RECETTE) — origine "nain" choisie par déduction de son unique
+  // ingrédient (champignon_echo, vivre d'origine "nain"), pas une donnée
+  // du prompt : seul choix éditorial de ce lot, documenté ici faute de mieux.
+  { "id": "recette_la_grise", "nom": "Recette : La Grise", "type": "recette", "recetteApprise": "la_grise", "origine": "solvarn", "porte": false, "quantite": 1, "prixPo": 30, "rariteFixe": true, "description": "Un bout de parchemin graisseux, gribouillé à la craie sur planche de taverne. La recette de La Grise, le pain-brique qui nourrit les faubourgs de Solvarn." },
+  { "id": "recette_seve_claire", "nom": "Recette : Sève claire", "type": "recette", "recetteApprise": "seve_claire", "origine": "aetharion", "porte": false, "quantite": 1, "prixPo": 30, "rariteFixe": true, "description": "Un rouleau d'écorce fine, l'écriture tracée à la sève. Le rite de la Sève claire tel que le transmettent les druides d'Aetharion." },
+  { "id": "recette_graisse_de_ver", "nom": "Recette : Graisse de ver", "type": "recette", "recetteApprise": "graisse_de_ver", "origine": "khazrak", "porte": false, "quantite": 1, "prixPo": 30, "rariteFixe": true, "description": "Une écaille de schiste gravée au poinçon. La façon khazrakienne de rendre la graisse d'un ver-de-roche mangeable — et nourrissante." },
+  { "id": "recette_feuille_dargent", "nom": "Recette : Feuille d'argent", "type": "recette", "recetteApprise": "feuille_dargent", "origine": "aetharion", "porte": false, "quantite": 1, "prixPo": 30, "rariteFixe": true, "description": "Un ruban de tissu argenté, cousu de fil de rite. La préparation de la Feuille d'argent, réservée aux infusions cérémonielles d'Aetharion." },
+  { "id": "recette_pomme", "nom": "Recette : Pommé", "type": "recette", "recetteApprise": "pomme", "origine": "valdorne", "porte": false, "quantite": 1, "prixPo": 40, "rariteFixe": true, "description": "Un carnet de cuisine familial, taché de cidre. La recette du Pommé, tel qu'on le sert dans tous les vergers de Valdorne." },
+  { "id": "recette_le_gris", "nom": "Recette : Le gris", "type": "recette", "recetteApprise": "le_gris", "origine": "solvarn", "porte": false, "quantite": 1, "prixPo": 40, "rariteFixe": true, "description": "Un feuillet gras, corné aux quatre coins. La recette du Gris, le chou-sel des tables basses de Solvarn." },
+  { "id": "recette_prunes_pales_macerees", "nom": "Recette : Prunes pâles macérées", "type": "recette", "recetteApprise": "prunes_pales_macerees", "origine": "mordanel", "porte": false, "quantite": 1, "prixPo": 40, "rariteFixe": true, "description": "Un bout de tissu ciré, l'encre presque effacée par la sève. La macération des prunes pâles, spécialité discrète de Mordanel." },
+  { "id": "recette_champignon_echo_prepare", "nom": "Recette : Champignon-écho", "type": "recette", "recetteApprise": "champignon_echo_prepare", "origine": "nain", "porte": false, "quantite": 1, "prixPo": 40, "rariteFixe": true, "description": "Une pierre plate, gravée d'un mot rituel. La préparation du Champignon-écho — la voix qu'il donne une heure ne se jure pas d'une voix ordinaire." },
+  { "id": "recette_barbade_infusion", "nom": "Recette : Barbade pâle en infusion", "type": "recette", "recetteApprise": "barbade_infusion", "origine": "khazrak", "porte": false, "quantite": 1, "prixPo": 40, "rariteFixe": true, "description": "Un carré de cuir tanné, l'écriture pressée au fer. La façon khazrakienne d'infuser la barbade pâle." },
+  { "id": "recette_soupe_de_fer", "nom": "Recette : Soupe de fer", "type": "recette", "recetteApprise": "soupe_de_fer", "origine": "solvarn", "porte": false, "quantite": 1, "prixPo": 50, "rariteFixe": true, "description": "Un feuillet rêche, taché de suie. La Soupe de fer, plat d'hiver des faubourgs de Solvarn." },
+  { "id": "recette_hareng_dessale", "nom": "Recette : Hareng dessalé", "type": "recette", "recetteApprise": "hareng_dessale", "origine": "solvarn", "porte": false, "quantite": 1, "prixPo": 50, "rariteFixe": true, "description": "Un morceau de toile huilée, l'écriture presque effacée par le sel. Le dessalage du hareng en barrique, tel qu'on le pratique à Solvarn." },
+  { "id": "recette_galette_sarrasin", "nom": "Recette : Galette de sarrasin", "type": "recette", "recetteApprise": "galette_sarrasin", "origine": "arveth", "porte": false, "quantite": 1, "prixPo": 50, "rariteFixe": true, "description": "Un carnet de ferme relié de corde. La Galette de sarrasin, identique sur toutes les tables d'Arveth — le noble mange comme ses hommes." },
+  { "id": "recette_pain_de_gland", "nom": "Recette : Pain de gland", "type": "recette", "recetteApprise": "pain_de_gland", "origine": "aelindra", "porte": false, "quantite": 1, "prixPo": 50, "rariteFixe": true, "description": "Un rouleau d'écorce fine, gravé au canif. Le Pain de gland, tel qu'on le pétrit dans les clairières d'Aelindra." },
+  { "id": "recette_bouillie_de_cave", "nom": "Recette : Bouillie de cave", "type": "recette", "recetteApprise": "bouillie_de_cave", "origine": "kaldrun", "porte": false, "quantite": 1, "prixPo": 50, "rariteFixe": true, "description": "Une tablette d'ardoise, gravée au poinçon de galerie. La Bouillie de cave, plat commun des tunnels de Kaldrun." },
+  { "id": "recette_barrique_grillee", "nom": "Recette : Barrique grillée", "type": "recette", "recetteApprise": "barrique_grillee", "origine": "kaldrun", "porte": false, "quantite": 1, "prixPo": 50, "rariteFixe": true, "description": "Une planchette de bois de galerie, l'écriture brûlée au tisonnier. La Barrique grillée, champignon de mine préparé à la naine." },
+  { "id": "recette_rat_des_veines", "nom": "Recette : Rat des veines", "type": "recette", "recetteApprise": "rat_des_veines", "origine": "khazrak", "porte": false, "quantite": 1, "prixPo": 50, "rariteFixe": true, "description": "Un lambeau de cuir noirci, gratté à la pointe. La façon khazrakienne d'apprêter le rat des veines — ordinaire à Khazrak Dûm, insulte ailleurs." },
+  { "id": "recette_pain_naros", "nom": "Recette : Pain de Naros", "type": "recette", "recetteApprise": "pain_naros", "origine": "solvarn", "porte": false, "quantite": 1, "prixPo": 60, "rariteFixe": true, "description": "Un feuillet de seigle séché, presque un pain lui-même. Le Pain de Naros, base des tables basses de Solvarn." },
+  { "id": "recette_champignons_farcis", "nom": "Recette : Champignons farcis", "type": "recette", "recetteApprise": "champignons_farcis", "origine": "serval", "porte": false, "quantite": 1, "prixPo": 60, "rariteFixe": true, "description": "Une carte de recette encadrée de cuir, tachée de graisse de lard. Les Champignons farcis, plat commun des cols servaliens." },
+  { "id": "recette_bouillon_trompette", "nom": "Recette : Bouillon de trompette", "type": "recette", "recetteApprise": "bouillon_trompette", "origine": "aetharion", "porte": false, "quantite": 1, "prixPo": 60, "rariteFixe": true, "description": "Un rouleau d'écorce noueuse, l'écriture à la sève séchée. Le Bouillon de trompette, potage commun d'Aetharion." },
+  { "id": "recette_soupe_lanterne", "nom": "Recette : Soupe-lanterne", "type": "recette", "recetteApprise": "soupe_lanterne", "origine": "mordanel", "porte": false, "quantite": 1, "prixPo": 60, "rariteFixe": true, "description": "Un feuillet phosphorescent par endroits, séché depuis longtemps. La Soupe-lanterne, plat commun des sous-bois de Mordanel." },
+  { "id": "recette_sombre_truffe_rapee", "nom": "Recette : Sombre-truffe râpée", "type": "recette", "recetteApprise": "sombre_truffe_rapee", "origine": "kaldrun", "porte": false, "quantite": 1, "prixPo": 60, "rariteFixe": true, "description": "Une tablette de galerie, gravée avec soin. La Sombre-truffe râpée, mets de prestige discret des tables naines de Kaldrun." },
+  { "id": "recette_potee_de_cendre", "nom": "Recette : Potée de cendre", "type": "recette", "recetteApprise": "potee_de_cendre", "origine": "valdorne", "porte": false, "quantite": 1, "prixPo": 70, "rariteFixe": true, "description": "Un feuillet corné, taché de graisse. La Potée de cendre, plat d'hiver que toute cuisinière valdornienne connaît par cœur." },
+  { "id": "recette_ver_grille", "nom": "Recette : Ver grillé", "type": "recette", "recetteApprise": "ver_grille", "origine": "khazrak", "porte": false, "quantite": 1, "prixPo": 90, "rariteFixe": true, "description": "Un lambeau de cuir noirci aux braises. Le Ver grillé, plat commun des Failles Rouges de Khazrak Dûm — mieux vaut bien le cuire." },
+  { "id": "recette_anguille_grand_port", "nom": "Recette : Anguille fumée du Grand Port", "type": "recette", "recetteApprise": "anguille_grand_port", "origine": "liberra", "porte": false, "quantite": 1, "prixPo": 90, "rariteFixe": true, "description": "Un rouleau de toile cirée, sentant encore la fumée. L'Anguille fumée du Grand Port, la seule vraie spécialité que Libris revendique comme sienne." },
 ];

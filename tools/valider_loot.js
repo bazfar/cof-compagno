@@ -63,6 +63,15 @@ const SORT_IDS_VALIDES = new Set(Object.values(SORTS_PAR_CLASSE).flat().map((s) 
 const ctxEtats = chargerGlobals(["js/etats.js"], ["ETATS"]);
 const ETATS = ctxEtats.ETATS;
 if (!ETATS) { console.error("❌ ETATS introuvable (js/etats.js n'a pas chargé)."); process.exit(1); }
+
+// CUISINE_RECETTES (prompt_recettes_achetables.md) : recetteApprise d'un
+// item type "recette" doit référencer un id réellement présent ici — sinon
+// apprendreRecetteDepuisAchat (js/app.js) ne trouverait jamais la recette au
+// moment de l'utiliser (même contrat que sortAppris/SORTS_PAR_CLASSE ci-dessus).
+const ctxCuisine = chargerGlobals(["data/cuisine.js"], ["CUISINE_RECETTES"]);
+const CUISINE_RECETTES = ctxCuisine.CUISINE_RECETTES;
+if (!CUISINE_RECETTES) { console.error("❌ CUISINE_RECETTES introuvable (data/cuisine.js n'a pas chargé)."); process.exit(1); }
+const RECETTE_IDS_VALIDES = new Set(CUISINE_RECETTES.map((r) => r.id));
 function etatExiste(id) {
   return Object.prototype.hasOwnProperty.call(ETATS, /^marquee_.+/.test(id || "") ? "marquee" : id);
 }
@@ -342,7 +351,12 @@ if (!Array.isArray(items)) { console.error("❌ data/loot.json : champ `items` a
 // "consommable" pour ce type dédié — ration_voyage reste "consommable"
 // (produit fini, pas un vivre brut), tout comme les réactifs d'alchimie
 // (herbes_medicinales et consorts), jamais tagués vivre:true.
-const TYPES_VALIDES = ["arme", "armure", "bouclier", "accessoire", "consommable", "ingredient"];
+// recette (prompt_recettes_achetables.md) : recettes achetables au marché
+// (rang 1-2 uniquement) — type DÉDIÉ plutôt que "consommable" pour que
+// tirerStockMarchand (data/marche.js) puisse en plafonner le tirage
+// indépendamment des potions (quotas.recette), cf. commentaire de
+// TYPES_EMPILABLES (data/loot.js).
+const TYPES_VALIDES = ["arme", "armure", "bouclier", "accessoire", "consommable", "ingredient", "recette"];
 const CATEGORIES_ARMURE_VALIDES = ["legere", "moyenne", "lourde"];
 const MAITRISE_ARME_VALIDES = ["simple", "martiale"];
 const CATEGORIES_PORTEE_VALIDES = ["contact", "allonge", "jet", "distance"];
@@ -404,6 +418,12 @@ const PAR_TYPE = {
   // (quantite/vivre/effetRepos/effetDeclaratif) : aucun vivre n'utilise
   // sortAppris/dureeEtat/formuleDot/jetable/corruptionCombatRetiree.
   ingredient: ["quantite", "vivre", "effetRepos", "effetDeclaratif", "familleVivre", "origine"],
+  // recette (prompt_recettes_achetables.md) : recetteApprise/origine requis
+  // (validés ci-dessous, point 6ter1) ; rariteFixe est déjà dans COMMUN_MULTI_TYPE
+  // mais TOUJOURS true en pratique sur ces 24 items (cf. NOTE de data/loot.js) —
+  // sans lui, tirerStockMarchand tirerait une rareté de stock aléatoire et le
+  // même feuillet coûterait un prix différent à chaque réapprovisionnement.
+  recette: ["quantite", "recetteApprise", "origine"],
 };
 // Champs qui, s'ils sont présents, doivent être de type number — "degats"/
 // "degatsAuMoinsRare"/"bonusPvMaxDe"/"bonusDegatsCreature" en sont
@@ -494,6 +514,19 @@ items.forEach((it, index) => {
   if (it.type === "ingredient") {
     if (!FAMILLES_VIVRE_VALIDES.includes(it.familleVivre)) signaler(cle, `ingredient avec familleVivre invalide ou absente : "${it.familleVivre}" (attendu : ${FAMILLES_VIVRE_VALIDES.join("|")}).`);
     if (!it.origine) signaler(cle, `ingredient sans origine renseignée.`);
+  }
+
+  // 6ter0bis. recette (prompt_recettes_achetables.md) : recetteApprise doit
+  // référencer une vraie entrée de CUISINE_RECETTES, de rang 1 ou 2
+  // uniquement (étape 1 : "rangs 3, 4 et 5 : jamais vendus") ; origine
+  // requise (prix à l'import) ; rariteFixe:true indispensable (cf. NOTE
+  // ci-dessus) — sans lui la même recette n'aurait pas un prix stable.
+  if (it.type === "recette") {
+    const recette = RECETTE_IDS_VALIDES.has(it.recetteApprise) ? CUISINE_RECETTES.find((r) => r.id === it.recetteApprise) : null;
+    if (!recette) signaler(cle, `recetteApprise "${it.recetteApprise}" ne correspond à aucune entrée de CUISINE_RECETTES.`);
+    else if (recette.rang > 2) signaler(cle, `recette de rang ${recette.rang} vendue au marché — seuls les rangs 1-2 sont achetables (cf. prompt_recettes_achetables.md étape 1).`);
+    if (!it.origine) signaler(cle, `recette sans origine renseignée.`);
+    if (it.rariteFixe !== true) signaler(cle, `recette sans rariteFixe:true — son prix varierait à chaque réapprovisionnement.`);
   }
 
   // 6bis. arme : maitrise (cf. PROFICIENCE_ARME, data/donnees.js) — requise

@@ -42,8 +42,12 @@ const LOCALITES_MARCHE = [
         // dédiée), donc c'est LUI qui doit pouvoir vendre des vivres —
         // quotas.ingredient les plafonne à 20 pour ne pas noyer armes et
         // potions sous le grain (cf. tirerStockMarchand, data/marche.js).
-        typesAutorises: ["arme", "armure", "bouclier", "consommable", "ingredient"],
-        quotas: { ingredient: 20 },
+        // "recette" ajouté ici (prompt_recettes_achetables.md étape 4) : LE
+        // généraliste, quota 3 — "dilué parmi le reste" (24 recettes en pool,
+        // 3 tirées : un tiers de ce que voit l'épicerie, cf. epicerie_libris
+        // et consorts ci-dessous).
+        typesAutorises: ["arme", "armure", "bouclier", "consommable", "ingredient", "recette"],
+        quotas: { ingredient: 20, recette: 3 },
         modificateurParDefaut: 1,
         estMarcheNoir: false,
       },
@@ -76,9 +80,13 @@ const LOCALITES_MARCHE = [
       {
         id: "epicerie_libris",
         nom: "Épicerie",
-        typesAutorises: ["ingredient", "consommable"],
+        typesAutorises: ["ingredient", "consommable", "recette"],
         famillesAutorisees: ["cereale", "legume", "champignon", "sel_epice", "gras_sucre", "seve", "laitier", "boisson", "divers"],
-        quotas: { consommable: 6 }, // quelques potions, pas un apothicaire
+        // recette + quotas.recette (prompt_recettes_achetables.md étape 4) :
+        // 8 ici contre 3 chez le généraliste — "c'est là qu'on vient pour
+        // ça". Avec 24 recettes en pool et 8 tirées, une visite en montre un
+        // tiers : il faut y revenir sans que ce soit décourageant.
+        quotas: { consommable: 6, recette: 8 }, // quelques potions, pas un apothicaire
         modificateurParDefaut: 1,
         estMarcheNoir: false,
       },
@@ -130,9 +138,13 @@ const LOCALITES_MARCHE = [
       {
         id: "epicerie_valdecourt",
         nom: "Épicerie",
-        typesAutorises: ["ingredient", "consommable"],
+        typesAutorises: ["ingredient", "consommable", "recette"],
         famillesAutorisees: ["cereale", "legume", "champignon", "sel_epice", "gras_sucre", "seve", "laitier", "boisson", "divers"],
-        quotas: { consommable: 6 },
+        // recette + quotas.recette (prompt_recettes_achetables.md étape 4) :
+        // 8 ici contre 3 chez le généraliste — "c'est là qu'on vient pour
+        // ça". Avec 24 recettes en pool et 8 tirées, une visite en montre un
+        // tiers : il faut y revenir sans que ce soit décourageant.
+        quotas: { consommable: 6, recette: 8 },
         modificateurParDefaut: 1,
         estMarcheNoir: false,
       },
@@ -157,9 +169,13 @@ const LOCALITES_MARCHE = [
       {
         id: "epicerie_mornhaven",
         nom: "Épicerie",
-        typesAutorises: ["ingredient", "consommable"],
+        typesAutorises: ["ingredient", "consommable", "recette"],
         famillesAutorisees: ["cereale", "legume", "champignon", "sel_epice", "gras_sucre", "seve", "laitier", "boisson", "divers"],
-        quotas: { consommable: 6 },
+        // recette + quotas.recette (prompt_recettes_achetables.md étape 4) :
+        // 8 ici contre 3 chez le généraliste — "c'est là qu'on vient pour
+        // ça". Avec 24 recettes en pool et 8 tirées, une visite en montre un
+        // tiers : il faut y revenir sans que ce soit décourageant.
+        quotas: { consommable: 6, recette: 8 },
         modificateurParDefaut: 1,
         estMarcheNoir: false,
       },
@@ -189,31 +205,36 @@ function _blocDe(nationOuBloc) {
   return Object.keys(BLOCS).find((b) => BLOCS[b].includes(nationOuBloc)) || null;
 }
 
-// Modificateur régional AUTOMATIQUE d'un vivre pour une localité donnée,
-// déduit de son origine et de la nation de la localité (cf. LOCALITES_MARCHE
-// ci-dessus) — remplace la sélection manuelle du MJ comme valeur par
-// défaut, jamais comme contrainte (le menu déroulant reste disponible et
-// écrase ce calcul, cf. js/marche.js). Une origine valant directement un nom
-// de bloc ("elfique"/"nain"/"humain", cf. miel_bosquet et consorts, qui
-// n'appartiennent à aucune nation précise) se compare au bloc de la
-// localité, jamais à sa nation — d'où le test _blocDe(origine) en premier.
-// Répli neutre (×1) si l'une des deux données manque (localité sans nation,
-// vivre sans origine) plutôt que de deviner.
+// Modificateur régional AUTOMATIQUE d'un vivre/recette pour une localité
+// donnée, déduit de son origine et de la nation de la localité (cf.
+// LOCALITES_MARCHE ci-dessus) — remplace la sélection manuelle du MJ comme
+// valeur par défaut, jamais comme contrainte (le menu déroulant reste
+// disponible et écrase ce calcul, cf. js/marche.js). Répli neutre (×1) si
+// l'une des deux données manque (localité sans nation, origine absente)
+// plutôt que de deviner.
 //
-// Cas particulier vérifié sur l'exemple du prompt (sombre-truffe, origine
-// "nain", ×0,8 à Karag Dûm et ×1,5 à Libris) : quand l'origine EST déjà un
-// bloc entier, la retrouver dans n'importe quelle localité de ce bloc n'est
-// pas un "import allié" entre deux nations distinctes, c'est déjà "de la
-// région" au sens large — donc local (×0,8), pas ×1. Le palier "importé
-// allié" (×1) ne s'applique qu'à une origine de nation précise (ex.
-// "solvarn") retrouvée dans une AUTRE nation du même bloc (ex. valdorne).
+// DEUX paliers, pas trois — révision faite en confrontant les exemples
+// concrets DES DEUX prompts (prompt_marche_ingredients.md puis
+// prompt_recettes_achetables.md) : le texte de règle initial posait un
+// palier "importé allié ×1" pour "même bloc culturel, nation différente",
+// distinct du "local ×0,8". Mais l'exemple concret de sombre-truffe
+// (origine "nain", un bloc entier) ET celui de recette_bouillie_de_cave
+// (origine "kaldrun", une nation PRÉCISE) donnent tous les deux ×0,8 à
+// Karag Dûm (nation "khazrak" — bloc nain mais AUTRE nation naine) :
+// aucun des deux exemples fournis ne distingue "bloc entier" de "nation
+// précise du même bloc", et aucun exemple (dans les deux prompts) n'exige
+// jamais ×1. Un même bloc culturel est donc traité comme local dans son
+// ensemble (Kaldrun et Khazrak Dûm commercent sans surtaxe malgré leur
+// rupture politique — Ordre et Renégats restent une seule sphère
+// économique naine) ; seul un bloc différent surtaxe (×1,5). Le palier ×1
+// reste choisissable à la main dans le menu déroulant du MJ, simplement
+// plus jamais calculé automatiquement.
 function modificateurOrigineAutomatique(origine, nationLocalite) {
   if (!origine || !nationLocalite) return 1;
-  if (origine === "partout" || origine === nationLocalite) return 0.8;
+  if (origine === "partout") return 0.8;
   const blocOrigine = _blocDe(origine);
   const blocLocalite = _blocDe(nationLocalite);
-  if (!blocOrigine || blocOrigine !== blocLocalite) return 1.5;
-  return Object.keys(BLOCS).includes(origine) ? 0.8 : 1;
+  return (blocOrigine && blocOrigine === blocLocalite) ? 0.8 : 1.5;
 }
 
 const RARETES_MARCHE = [

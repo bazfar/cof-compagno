@@ -6271,6 +6271,7 @@ const App = (() => {
           const soin = formuleSoinItem(it);
           const resurrection = estParcheminResurrection(it);
           const parcheminSort = estParcheminSort(it);
+          const recetteAchat = estRecetteAchat(it);
           const toileSeve = estRetireCorruptionCombat(it);
           return `<div class="inv-item">
             <div class="inv-item-header">
@@ -6291,6 +6292,7 @@ const App = (() => {
               ${resurrection && persoId ? `<button class="btn petit or btn-reanimer-allie" data-idx="${idx}">📜 Réanimer un allié</button>` : ""}
               ${parcheminSort && persoId ? `<button class="btn petit or btn-apprendre-sort" data-idx="${idx}">📖 Apprendre</button>` : ""}
               ${parcheminSort && persoId ? `<button class="btn petit or btn-lancer-parchemin" data-idx="${idx}">✨ Lancer</button>` : ""}
+              ${recetteAchat && persoId ? `<button class="btn petit or btn-apprendre-recette" data-idx="${idx}">📖 Apprendre</button>` : ""}
               ${toileSeve && persoId ? `<button class="btn petit or btn-appliquer-toile" data-idx="${idx}">🧵 Appliquer</button>` : ""}
               ${persoId ? `<button class="btn petit secondaire btn-donner-item" data-idx="${idx}">🎁 Donner</button>` : ""}
               <button class="btn petit danger btn-jeter-item" data-idx="${idx}">Jeter</button>
@@ -7144,6 +7146,60 @@ const App = (() => {
     if (!_apprendreSortGrimoireLocal(p, item.sortAppris)) return;
     _consommerUnite(p, idx);
     sauverPersos(persos);
+    afficherFiche(persoId);
+  }
+
+  // "Recette : X" achetée au marché (cf. prompt_recettes_achetables.md, étape
+  // 0 : "js/app.js ~6733, le patron exact à cloner") — consommable-like
+  // (type "recette") référençant un id de CUISINE_RECETTES via
+  // recetteApprise, même patron qu'estParcheminSort/sortAppris ci-dessus.
+  function estRecetteAchat(it) {
+    return !!it && it.type === "recette" && typeof it.recetteApprise === "string";
+  }
+
+  // Consomme une "Recette : X" et ajoute son id à p.metiers.cuisine.repertoire
+  // (nouveau champ — aucune trace de "répertoire" dans ce dépôt avant ce
+  // prompt malgré la dépendance annoncée sur prompt_cuisine_repertoire_
+  // garde_manger.md : ce prompt n'a jamais été appliqué ici, cf. TYPES_
+  // EMPILABLES/facteurNutritif pour le même type d'écart. Champ construit au
+  // plus près de ce que CE prompt exige, sans toucher à l'accès aux recettes
+  // dans l'Atelier : js/cuisine.js reste inchangé, TOUTE recette y reste
+  // tentable par rang comme avant (aucune régression pour les personnages
+  // déjà en jeu) — le répertoire ne fait ici QUE la comptabilité "achetée/
+  // apprise formellement" que ce prompt demande (contrôle "déjà connue",
+  // refus de doublon), pas un nouveau verrou sur la cuisson elle-même.
+  //
+  // Contrairement à un parchemin de sort, ÉCHOUER (déjà connue) ne coûte
+  // jamais l'objet — cf. commentaire du prompt : "sans cette garde, un
+  // joueur brûle 70 po par inadvertance."
+  function apprendreRecetteDepuisAchat(persoId, idx) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const item = p.inventaireListe[idx];
+    if (!item || !estRecetteAchat(item)) return;
+    // Sans le métier Cuisine encore ouvert (jamais gagné d'XP Cuisine, cf.
+    // js/metiers.js : p.metiers.cuisine n'existe qu'après un premier
+    // Metiers.gagnerXp) : on PROPOSE d'ouvrir le métier plutôt que de
+    // refuser sèchement (cf. prompt) — la recette n'est PAS consommée, rien
+    // n'est perdu. "Choix d'origine" (mentionné par le prompt comme
+    // conséquence de l'ouverture du métier) ne correspond à aucun mécanisme
+    // existant dans ce dépôt (aucune notion d'origine de personnage nulle
+    // part) — hors périmètre de ce prompt précis, non inventé ici.
+    if (!p.metiers || !p.metiers.cuisine) {
+      toast("Ouvre d'abord le métier Cuisine (Atelier → Cuisine, cuisine n'importe quel plat) avant d'apprendre cette recette.");
+      return;
+    }
+    const repertoire = (p.metiers.cuisine.repertoire = p.metiers.cuisine.repertoire || []);
+    if (repertoire.includes(item.recetteApprise)) {
+      toast(`« ${item.nom} » est déjà dans ton répertoire de Cuisine — non consommée.`);
+      return;
+    }
+    repertoire.push(item.recetteApprise);
+    _consommerUnite(p, idx);
+    sauverPersos(persos);
+    const recette = (typeof CUISINE_RECETTES !== "undefined") ? CUISINE_RECETTES.find((r) => r.id === item.recetteApprise) : null;
+    toast(`📖 « ${recette ? recette.nom : item.recetteApprise} » ajoutée au répertoire de Cuisine.`);
     afficherFiche(persoId);
   }
 
@@ -8014,6 +8070,10 @@ const App = (() => {
     // Inventaire — apprendre un sort depuis un parchemin (Grimoire)
     zone.querySelectorAll(".btn-apprendre-sort").forEach((el) => {
       el.onclick = () => apprendreSortDepuisParchemin(id, parseInt(el.dataset.idx, 10));
+    });
+    // Inventaire — apprendre une recette achetée (ajout à p.metiers.cuisine.repertoire)
+    zone.querySelectorAll(".btn-apprendre-recette").forEach((el) => {
+      el.onclick = () => apprendreRecetteDepuisAchat(id, parseInt(el.dataset.idx, 10));
     });
     // Inventaire — lancer directement le sort d'un parchemin, sans l'inscrire
     // au Grimoire (cf. lancerSortDepuisParchemin).
