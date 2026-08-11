@@ -54,6 +54,22 @@ const Marche = (() => {
     setTimeout(() => t.classList.remove("visible"), 2800);
   }
 
+  // Affichage d'un prix en pièces (prompt_prix_vivres_recalibrage.md, étape 3).
+  // 1 po = 10 pa = 100 pb. On convertit d'abord en pb (entier), puis on montre
+  // chaque unité non nulle, de la plus grande à la plus petite :
+  //   1,5 → "1 po 5 pa" · 0,4 → "4 pa" · 0,05 → "5 pb" · 0,15 → "1 pa 5 pb".
+  // Un prix nul (ou négatif) → "hors commerce" (ex. cerf_blanc, jamais vendu).
+  function formaterPrix(po) {
+    if (!po || po <= 0) return "hors commerce";
+    const pb = Math.round(po * 100);
+    const o = Math.floor(pb / 100), a = Math.floor((pb % 100) / 10), b = pb % 10;
+    const parts = [];
+    if (o) parts.push(`${o} po`);
+    if (a) parts.push(`${a} pa`);
+    if (b) parts.push(`${b} pb`);
+    return parts.join(" ");
+  }
+
   function _catalogue() {
     const base = (typeof LOOT_CATALOGUE !== "undefined") ? LOOT_CATALOGUE : [];
     // Objets forgés par le MJ (cf. js/forge.js) : fusionnés au catalogue pour
@@ -140,7 +156,12 @@ const Marche = (() => {
     }
     if (remisePct) prix *= (1 - remisePct / 100);
     prix *= lireInflation(); // inflation globale MJ (1 si aucune) — cf. lireInflation
-    prix = Math.ceil(prix);
+    // Vivres : arrondi au pb le plus proche (2 décimales) pour préserver les
+    // prix sous le po et l'affichage pa/pb (prompt_prix_vivres_recalibrage.md,
+    // étape 3). Sans ça, le Math.ceil ramènerait un vivre à 0,15 po à 1 po et
+    // écraserait tout le recalibrage. Armes/armures/objets restent arrondis à
+    // la po entière supérieure (« en po pleines », format actuel inchangé).
+    prix = (item.vivre === true) ? Math.round(prix * 100) / 100 : Math.ceil(prix);
     if (factionId && typeof Reputation !== "undefined") {
       const resultat = Reputation.appliquerModifierPrix(factionId, prix);
       return resultat.refuse ? null : resultat.prix;
@@ -419,7 +440,7 @@ const Marche = (() => {
     const remisePct = selRemise ? parseInt(selRemise.value, 10) || 0 : 0;
     const prix = calculerPrix(item, modVal, rareteVal, remisePct, marchand ? marchand.faction : null);
     const span = controles.querySelector(".marche-prix-calcule");
-    if (span) span.textContent = prix == null ? "Refusé" : `${prix} po`;
+    if (span) span.textContent = prix == null ? "Refusé" : formaterPrix(prix);
     return prix;
   }
 
@@ -454,7 +475,7 @@ const Marche = (() => {
       ${infoRecette ? `<div class="loot-item-stats">${infoRecette}</div>` : ""}
       <div class="loot-item-desc">${echapper(item.description)}</div>
       ${item.effetDeclaratif ? `<div class="aide" style="margin-top:4px;">✦ ${echapper(item.effetDeclaratif)}</div>` : ""}
-      <div class="marche-prix">${refuse ? "Commerce refusé" : prix + " po"}</div>
+      <div class="marche-prix">${refuse ? "Commerce refusé" : formaterPrix(prix)}</div>
       <div class="barre-actions" style="margin-top:8px;">
         <button class="btn petit or btn-marche-demander" data-item-id="${item.id}" data-rarete-id="${slot.rareteId}" ${refuse ? "disabled" : ""}>🛒 Demander l'achat</button>
       </div>
@@ -486,7 +507,7 @@ const Marche = (() => {
         ${!item.sansModificateurRegional ? `<select class="marche-select-mod">${_optionsModificateur(item, modDefautId)}</select>` : ""}
         ${afficheRarete ? `<select class="marche-select-rarete">${_optionsRarete(slot.rareteId)}</select>` : ""}
         <select class="marche-select-remise" ${marchand.estMarcheNoir ? "disabled" : ""}>${_optionsRemise(0)}</select>
-        <span class="marche-prix-calcule">${prixInitial == null ? "Refusé" : prixInitial + " po"}</span>
+        <span class="marche-prix-calcule">${prixInitial == null ? "Refusé" : formaterPrix(prixInitial)}</span>
       </div>
       <div class="barre-actions" style="margin-top:8px;">
         <button class="btn petit or btn-marche-acheter-direct" data-slot-id="${slot.slotId}" data-item-id="${item.id}">💰 Acheter (direct)</button>
@@ -559,7 +580,7 @@ const Marche = (() => {
         ${!item.sansModificateurRegional ? `<select class="marche-select-mod" data-demande-id="${d.id}">${_optionsModificateur(item, d.modRegionalId)}</select>` : ""}
         ${afficheRarete ? `<select class="marche-select-rarete" data-demande-id="${d.id}">${_optionsRarete(d.rariteId)}</select>` : ""}
         <select class="marche-select-remise" data-demande-id="${d.id}" ${marchand.estMarcheNoir ? "disabled" : ""}>${_optionsRemise(marchand.estMarcheNoir ? 0 : d.remisePct)}</select>
-        <span class="marche-prix-calcule" data-demande-id="${d.id}">${prixActuel == null ? "Refusé" : prixActuel + " po"}</span>
+        <span class="marche-prix-calcule" data-demande-id="${d.id}">${prixActuel == null ? "Refusé" : formaterPrix(prixActuel)}</span>
       </div>
       <div class="barre-actions" style="margin-top:8px;">
         <button class="btn petit or btn-marche-valider" data-demande-id="${d.id}">✅ Valider</button>
@@ -583,7 +604,7 @@ const Marche = (() => {
     const { marchand } = _trouverMarchandEtLocalite(d.marchandId);
     const prix = calculerPrix(item, modVal, rareteVal, remisePct, marchand ? marchand.faction : null);
     const span = zone.querySelector(`.marche-prix-calcule[data-demande-id="${demandeId}"]`);
-    if (span) span.textContent = prix == null ? "Refusé" : `${prix} po`;
+    if (span) span.textContent = prix == null ? "Refusé" : formaterPrix(prix);
     return { prix, modId: selMod ? selMod.value : d.modRegionalId, rariteId: selRarete ? selRarete.value : d.rariteId, remisePct };
   }
 
@@ -813,5 +834,5 @@ const Marche = (() => {
     SyncStore.subscribe("meteo:courante", _presrelectionnerLocalitePourRegion);
   }
 
-  return { rendrePanneauMarche, acheterObjetMarche, demanderAchatMarche, calculerPrix, mettreEnVente, retirerDuMarche, estEnVente };
+  return { rendrePanneauMarche, acheterObjetMarche, demanderAchatMarche, calculerPrix, formaterPrix, mettreEnVente, retirerDuMarche, estEnVente };
 })();
