@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=103" />
+  <link rel="stylesheet" href="css/style.css?v=104" />
 </head>
 <body>
   <header>
@@ -562,6 +562,19 @@
         <select id="select-marche-marchand"></select>
         <button class="btn petit secondaire" id="btn-marche-reassort" data-role="mj">🔄 Réassort (40 objets)</button>
       </div>
+      <div class="marche-inflation" data-role="mj">
+        <label for="select-marche-inflation">📈 Inflation</label>
+        <select id="select-marche-inflation">
+          <option value="1">Prix normal</option>
+          <option value="2">×2</option>
+          <option value="2.5">×2,5</option>
+          <option value="3">×3</option>
+          <option value="3.5">×3,5</option>
+          <option value="4">×4</option>
+          <option value="perso">Personnalisé…</option>
+        </select>
+        <input type="number" id="input-marche-inflation" min="0" step="0.1" placeholder="× (0 = prix normal)" style="display:none;" />
+      </div>
       <div class="marche-ajout-manuel" data-role="mj">
         <select id="select-marche-ajout-item"></select>
         <select id="select-marche-ajout-rarete"></select>
@@ -953,7 +966,7 @@
   <script src="js/enchantement.js?v=5"></script>
   <script src="js/alchimie.js?v=3"></script>
   <script src="js/loot.js?v=15"></script>
-  <script src="js/marche.js?v=14"></script>
+  <script src="js/marche.js?v=15"></script>
   <script src="js/forge.js?v=13"></script>
   <script src="js/metiers.js?v=1"></script>
   <script src="js/cuisine.js?v=3"></script>
@@ -967,6 +980,6 @@
   <script src="js/capacites.js?v=61"></script>
   <script src="js/capacites_monstres.js?v=1"></script>
   <script src="js/combat.js?v=24"></script>
-  <script src="js/app.js?v=253"></script>
+  <script src="js/app.js?v=254"></script>
 </body>
 </html>

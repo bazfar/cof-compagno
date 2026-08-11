@@ -10,9 +10,23 @@ const Marche = (() => {
 
   const KEY_STOCK = "marche:stock";       // { [marchandId]: [{ slotId, itemId, rareteId }, ...] (40 max) }
   const KEY_DEMANDES = "marche:demandes"; // [{ id, persoId, persoNom, marchandId, localiteId, itemId, modRegionalId, rariteId, remisePct, prixFinalPo, statut, horodatage }]
+  const KEY_INFLATION = "marche:inflation"; // nombre : multiplicateur global des prix (0/1/absent ⇒ prix normal)
 
   function lireStock() { return SyncStore.get(KEY_STOCK) || {}; }
   function sauverStock(s) { SyncStore.set(KEY_STOCK, s); }
+
+  // Inflation globale (MJ) : tous les prix du marché sont multipliés par ce
+  // facteur, joueurs comme MJ (stocké dans SyncStore, donc partagé en temps
+  // réel comme le stock). 0, 1, absent ou valeur invalide ⇒ prix initial
+  // (multiplicateur 1) : « si la valeur est 0 alors c'est prix initial ».
+  function lireInflation() {
+    const v = parseFloat(SyncStore.get(KEY_INFLATION));
+    return (isFinite(v) && v > 0) ? v : 1;
+  }
+  function sauverInflation(v) {
+    const n = parseFloat(v);
+    SyncStore.set(KEY_INFLATION, (isFinite(n) && n > 0) ? n : 0);
+  }
 
   // Compat : une ancienne entrée de stock (juste l'id de l'objet, format
   // d'avant l'ajout de la rareté aléatoire) est traitée comme un objet
@@ -125,6 +139,7 @@ const Marche = (() => {
       prix *= _multiplicateurEnchantement(item.enchantement);
     }
     if (remisePct) prix *= (1 - remisePct / 100);
+    prix *= lireInflation(); // inflation globale MJ (1 si aucune) — cf. lireInflation
     prix = Math.ceil(prix);
     if (factionId && typeof Reputation !== "undefined") {
       const resultat = Reputation.appliquerModifierPrix(factionId, prix);
@@ -671,6 +686,40 @@ const Marche = (() => {
     };
   }
 
+  /* ── Inflation globale (MJ) ──────────────────────────────────── */
+  // Menu déroulant de facteurs prédéfinis (×2 à ×4) + une saisie libre pour
+  // toute autre valeur ("Personnalisé…") ; 0 (ou vide) rétablit le prix
+  // initial. Le facteur est partagé via SyncStore : dès que le MJ le change,
+  // joueurs et MJ voient les prix recalculés.
+  const _INFLATION_PRESETS = [1, 2, 2.5, 3, 3.5, 4];
+  function _wireInflation() {
+    const sel = document.getElementById("select-marche-inflation");
+    const input = document.getElementById("input-marche-inflation");
+    if (!sel || !input) return;
+    const courant = lireInflation();
+    const estPreset = _INFLATION_PRESETS.includes(courant);
+
+    sel.value = estPreset ? String(courant) : "perso";
+    input.style.display = estPreset ? "none" : "";
+    if (!estPreset) input.value = String(courant); // input[type=number] veut un point décimal, pas une virgule
+
+    sel.onchange = () => {
+      if (sel.value === "perso") {
+        input.style.display = "";
+        input.value = "";
+        input.focus();
+        return;
+      }
+      input.style.display = "none";
+      sauverInflation(sel.value);
+      rendrePanneauMarche();
+    };
+    input.onchange = () => {
+      sauverInflation((input.value || "").replace(",", "."));
+      rendrePanneauMarche();
+    };
+  }
+
   /* ── Filtre d'affichage (Tout / Équipements / Consommables) ────── */
   function _wireFiltreType() {
     const barre = document.getElementById("marche-filtres");
@@ -703,6 +752,7 @@ const Marche = (() => {
     }
     _wireReassort();
     if (role === "mj") {
+      _wireInflation();
       _peuplerAjoutManuel(marchand);
       _wireAjoutManuel(marchand);
     }

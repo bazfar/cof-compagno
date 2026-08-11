@@ -2195,6 +2195,9 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .marche-prix-calcule { font-weight: 700; color: var(--or); font-size: 0.85rem; white-space: nowrap; }
 .marche-ajout-manuel { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; padding: 10px; background: #fffdf7; border: 1px dashed var(--parchemin-fonce); border-radius: var(--radius); }
 .marche-ajout-manuel select { flex: 1; min-width: 160px; }
+.marche-inflation { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.marche-inflation label { font-weight: 600; font-size: 0.9rem; }
+.marche-inflation input { width: 9em; }
 .marche-filtres { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .marche-filtres .btn.actif { border-color: var(--or); background: var(--or); color: #fff; }
 /* Forge du MJ (js/forge.js) */

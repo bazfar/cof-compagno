@@ -10424,6 +10424,10 @@ const App = (() => {
       const p = document.getElementById("panneau-marche");
       if (p && p.classList.contains("actif") && typeof Marche !== "undefined") Marche.rendrePanneauMarche();
     });
+    SyncStore.subscribe("marche:inflation", () => {
+      const p = document.getElementById("panneau-marche");
+      if (p && p.classList.contains("actif") && typeof Marche !== "undefined") Marche.rendrePanneauMarche();
+    });
     // Bestiaire — une stat de monstre modifiée par un MJ se répercute en direct.
     SyncStore.subscribe("bestiaire:overrides", () => {
       const p = document.getElementById("panneau-bestiaire");
