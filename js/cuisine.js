@@ -74,8 +74,54 @@ const Cuisine = (() => {
       else { it.quantite = dispo - restant; restant = 0; }
     }
   }
-  function _ingredientsDisponibles(inventaireListe, ingredients) {
-    return ingredients.every((c) => _quantiteDisponible(inventaireListe, c.id) >= c.qte);
+  /* ── Ingrédients "au choix" par famille (prompt_animaux_recettes_basiques_
+     v2.md, étape 2) ────────────────────────────────────────────────────
+     Une entrée d'ingrédient prend deux formes :
+       { id: "sel", qte: 1 }          → cet ingrédient précis
+       { famille: "viande", qte: 2 }  → n'importe quel vivre de cette famille
+     La famille s'appuie sur `familleVivre`, déjà porté par les 88 vivres du
+     catalogue — aucune taxonomie nouvelle. La valeur nourrissante (indexDe) ne
+     dépend JAMAIS du vivre choisi : griller du rat des veines à 0,3 po nourrit
+     autant que griller du bœuf de Serval à 9 po. C'est voulu (les recettes de
+     base tirent leur valeur de leur FLEXIBILITÉ, pas de leur dé), ne pas
+     "corriger" en modulant le dé selon le prix. ─────────────────────────── */
+  function _catalogueVivres() {
+    return (typeof LOOT_CATALOGUE !== "undefined") ? LOOT_CATALOGUE : [];
+  }
+  // Vivres d'une famille, triés du moins cher au plus cher (départage par nom
+  // pour un ordre stable) — l'ordre du sélecteur "au choix", premier = moins
+  // cher = présélectionné.
+  function _vivresDeFamille(famille) {
+    return _catalogueVivres()
+      .filter((it) => it.vivre && it.familleVivre === famille)
+      .sort((a, b) => (a.prixPo || 0) - (b.prixPo || 0) || (a.nom || "").localeCompare(b.nom || ""));
+  }
+  // Vivres de la famille présents en inventaire en quantité suffisante pour
+  // couvrir `qte` À EUX SEULS. PAS DE PANACHAGE : on grille un morceau de
+  // viande, pas un assortiment de restes — ne jamais sommer deux vivres
+  // différents pour atteindre le compte (règle la plus susceptible d'être
+  // "corrigée" par erreur).
+  function _eligiblesFamille(inventaireListe, famille, qte) {
+    return _vivresDeFamille(famille).filter((it) => _quantiteDisponible(inventaireListe, it.id) >= qte);
+  }
+  // Id du vivre à employer pour UNE entrée, compte tenu d'un choix explicite du
+  // joueur (choix[famille]) — sinon le moins cher éligible. Une entrée { id } se
+  // résout à elle-même. null si rien ne couvre l'entrée. Hypothèse assumée :
+  // une recette ne répète jamais deux fois la même famille (vrai pour les 63
+  // recettes), le choix est donc indexable par famille sans ambiguïté.
+  function _resoudreEntree(inventaireListe, entree, choix) {
+    if (entree.id) return _quantiteDisponible(inventaireListe, entree.id) >= entree.qte ? entree.id : null;
+    const elig = _eligiblesFamille(inventaireListe, entree.famille, entree.qte);
+    if (!elig.length) return null;
+    const voulu = choix && choix[entree.famille];
+    if (voulu && elig.some((it) => it.id === voulu)) return voulu;
+    return elig[0].id;
+  }
+  function _entreeCouverte(inventaireListe, entree) {
+    return _resoudreEntree(inventaireListe, entree, null) !== null;
+  }
+  function _ingredientsDisponibles(inventaireListe, ingredients, choix) {
+    return ingredients.every((c) => _resoudreEntree(inventaireListe, c, choix) !== null);
   }
   function _nomIngredient(id) {
     const it = (typeof LOOT_CATALOGUE !== "undefined") ? LOOT_CATALOGUE.find((l) => l.id === id) : null;
@@ -165,9 +211,21 @@ const Cuisine = (() => {
     const restantes = maxTentatives - tentatives;
     const ok = _ingredientsDisponibles(p.inventaireListe, recette.ingredients);
     const coutTxt = recette.ingredients.map((c) => {
-      const dispo = _quantiteDisponible(p.inventaireListe, c.id);
-      const manque = dispo < c.qte;
-      return `<span${manque ? ' style="color:var(--chaos);font-weight:700;"' : ""}>${c.qte}× ${echapper(_nomIngredient(c.id))} (${dispo} en stock)</span>`;
+      if (c.id) {
+        const dispo = _quantiteDisponible(p.inventaireListe, c.id);
+        const manque = dispo < c.qte;
+        return `<span${manque ? ' style="color:var(--chaos);font-weight:700;"' : ""}>${c.qte}× ${echapper(_nomIngredient(c.id))} (${dispo} en stock)</span>`;
+      }
+      // Entrée "au choix" : un <select> des vivres éligibles de la famille,
+      // moins cher présélectionné (cf. _eligiblesFamille). Rien d'éligible → on
+      // nomme la FAMILLE manquante, jamais un id ("il manque du sanglier"
+      // serait faux quand n'importe quelle viande ferait l'affaire).
+      const elig = _eligiblesFamille(p.inventaireListe, c.famille, c.qte);
+      if (!elig.length) {
+        return `<span style="color:var(--chaos);font-weight:700;">${echapper(c.famille)} ×${c.qte} — aucun vivre disponible</span>`;
+      }
+      const opts = elig.map((it) => `<option value="${echapper(it.id)}">${echapper(it.nom)} (${_quantiteDisponible(p.inventaireListe, it.id)}/${c.qte})</option>`).join("");
+      return `<span>${echapper(c.famille)} ×${c.qte} — <select class="cuisine-choix-famille" data-recette="${echapper(recette.id)}" data-famille="${echapper(c.famille)}">${opts}</select></span>`;
     }).join(", ");
     const registre = REGISTRES_TABLE[recette.registre];
     const desactive = restantes <= 0 || !ok;
@@ -229,7 +287,10 @@ const Cuisine = (() => {
   // les deux endroits appellent la MÊME logique de résolution — cf.
   // prompt_repos_long_scrutin.md, "aucune duplication de la logique de
   // résolution". Sauvegarde les persos elle-même (XP + tentative + Ingrédients).
-  function tenterRecette(persoId, recetteId) {
+  // choix (optionnel) : { [famille]: vivreId } — vivre retenu par le joueur
+  // pour une entrée "au choix". Absent (overlay de repos long, appel direct) →
+  // chaque famille prend automatiquement son vivre le moins cher éligible.
+  function tenterRecette(persoId, recetteId, choix) {
     const recette = CUISINE_RECETTES.find((r) => r.id === recetteId);
     const persos = App.chargerPersos();
     const p = persos[persoId];
@@ -240,16 +301,20 @@ const Cuisine = (() => {
     if (_tentativesJour(persoId, recetteId) >= maxTentatives) {
       return { ok: false, raison: "Plus de tentatives pour cette recette aujourd'hui." };
     }
-    if (!_ingredientsDisponibles(p.inventaireListe, recette.ingredients)) {
+    if (!_ingredientsDisponibles(p.inventaireListe, recette.ingredients, choix)) {
       return { ok: false, raison: "Ingrédients insuffisants." };
     }
+
+    // Vivre retenu figé pour chaque entrée AVANT toute consommation (une entrée
+    // "au choix" est résolue sur le vivre du joueur, sinon le moins cher).
+    const resolus = recette.ingredients.map((c) => ({ qte: c.qte, id: _resoudreEntree(p.inventaireListe, c, choix) }));
 
     const jetBrut = App.lancerDe(20);
     const resultat = resoudre(recette, rangCuisinier, jetBrut);
 
     // Ingrédients consommés dans TOUS les cas, y compris raté et désastre —
     // rater brûle les vivres, c'est voulu (cf. prompt_repos_cuisine_metiers.md).
-    recette.ingredients.forEach((c) => _consommerQuantite(p.inventaireListe, c.id, c.qte));
+    resolus.forEach((r) => { if (r.id) _consommerQuantite(p.inventaireListe, r.id, r.qte); });
 
     const gainXp = Metiers.gagnerXp(p, METIER_ID, resultat.xpGagne);
     _incrementerTentative(persoId, recetteId);
@@ -262,8 +327,19 @@ const Cuisine = (() => {
     return { ok: true, recette, resultat, gainXp, jetBrut, nomCuisinier: p.nom };
   }
 
+  // Lit les vivres choisis dans les <select> "au choix" de la carte de CETTE
+  // recette (data-recette unique par carte) — { [famille]: vivreId }.
+  function _lireChoix(recetteId) {
+    const choix = {};
+    const sel = (window.CSS && CSS.escape) ? CSS.escape(recetteId) : recetteId;
+    document.querySelectorAll(`.cuisine-choix-famille[data-recette="${sel}"]`).forEach((s) => {
+      choix[s.dataset.famille] = s.value;
+    });
+    return choix;
+  }
+
   function _cuisiner(persoId, recetteId) {
-    const t = tenterRecette(persoId, recetteId);
+    const t = tenterRecette(persoId, recetteId, _lireChoix(recetteId));
     if (!t.ok) { toast(t.raison); return; }
     const { recette, resultat, gainXp } = t;
 
@@ -282,7 +358,11 @@ const Cuisine = (() => {
     rendreZoneCuisine(persoId);
   }
 
-  return { rendreZoneCuisine, resoudre, seuilEffectif, bandesPour, tenterRecette, construirePlat: _construirePlat, tentativesJourMax: _tentativesJourMax, tentativesJour: _tentativesJour };
+  return { rendreZoneCuisine, resoudre, seuilEffectif, bandesPour, tenterRecette, construirePlat: _construirePlat, tentativesJourMax: _tentativesJourMax, tentativesJour: _tentativesJour,
+    // Résolution des entrées "au choix" par famille — réutilisée telle quelle
+    // par js/cuisine_reference.js pour afficher une entrée famille sans
+    // dupliquer la logique (cf. prompt étape 2 : "ils lisent les mêmes données").
+    eligiblesFamille: _eligiblesFamille, entreeCouverte: _entreeCouverte, ingredientsDisponibles: _ingredientsDisponibles };
 })();
 
 if (typeof window !== "undefined") window.Cuisine = Cuisine;

@@ -336,6 +336,21 @@ const LOOT_CATALOGUE = [
   { "id": "poule_doree", "nom": "Poule dorée", "type": "ingredient", "porte": false, "description": "Volaille de race élevée dans les jardins-autels de Solvarn — Zénith.", "quantite": 1, "prixPo": 6, "vivre": true, "familleVivre": "viande", "origine": "solvarn" },
   { "id": "oie", "nom": "Oie", "type": "ingredient", "porte": false, "description": "Volaille grasse, confite pour tenir l'hiver.", "quantite": 1, "prixPo": 5, "vivre": true, "familleVivre": "viande", "origine": "solvarn", "recolte": "traque", "rarete": "peu_commun", "milieux": ["eau_douce", "littoral"] },
   { "id": "lard", "nom": "Lard", "type": "ingredient", "porte": false, "description": "Gras de porc salé, base des soupes et potées les plus modestes.", "quantite": 1, "prixPo": 1, "vivre": true, "familleVivre": "gras_sucre", "origine": "partout" },
+  // ── Six animaux ordinaires (prompt_animaux_recettes_basiques_v2.md, étape 1) ──
+  // Le catalogue régionalisait TOUTES les viandes (bœuf des landes, porc noir de
+  // Mornac, poule dorée…) sans laisser une seule viande banale, alors qu'un
+  // `oeuf` d'origine "partout" existe déjà sans volaille pour le pondre. Ces six
+  // vivres comblent le socle ordinaire, strictement sur le modèle de `lard`
+  // ci-dessus (mêmes champs, même ordre). `volaille` est le seul léger
+  // élargissement (le corpus ne connaît que la poule dorée de Solmaris, trop
+  // typée) ; `oeufs_caille` se rattache à la Caille de brume d'Aelindra,
+  // migratrice une semaine par an — d'où son prix et son origine elfique.
+  { "id": "porc", "nom": "Porc de basse-cour", "type": "ingredient", "porte": false, "description": "Cochon de ferme élevé partout, viande grasse et bon marché des tables ordinaires — seul le lard en avait été tiré jusqu'ici.", "quantite": 1, "prixPo": 1.5, "vivre": true, "familleVivre": "viande", "origine": "partout" },
+  { "id": "volaille", "nom": "Volaille de basse-cour", "type": "ingredient", "porte": false, "description": "Poule ou canard de ferme, la viande la plus commune des basses-cours — celle qui pond aussi l'œuf de tous les jours.", "quantite": 1, "prixPo": 1, "vivre": true, "familleVivre": "viande", "origine": "partout" },
+  { "id": "mouton", "nom": "Mouton", "type": "ingredient", "porte": false, "description": "Adulte du Mouton des Contreforts dont l'agneau est déjà connu : plus coriace, moins cher, viande de tous les jours à Serval.", "quantite": 1, "prixPo": 3, "vivre": true, "familleVivre": "viande", "origine": "serval" },
+  { "id": "chevre", "nom": "Chèvre-des-cols", "type": "ingredient", "porte": false, "description": "Chèvre rustique des cols de Serval — donne aussi son lait, ses chevreaux et sa peau à outres.", "quantite": 1, "prixPo": 2, "vivre": true, "familleVivre": "viande", "origine": "serval" },
+  { "id": "lait", "nom": "Lait", "type": "ingredient", "porte": false, "description": "Lait de chèvre ou de vache, base des tables comme des cuisines, partout où l'on garde du bétail.", "quantite": 1, "prixPo": 0.4, "vivre": true, "familleVivre": "laitier", "origine": "partout" },
+  { "id": "oeufs_caille", "nom": "Œufs de caille", "type": "ingredient", "porte": false, "description": "Œufs de la Caille de brume d'Aelindra, migratrice une semaine par an — d'où leur prix. Ce n'est pas l'œuf du pauvre.", "quantite": 1, "prixPo": 3, "vivre": true, "familleVivre": "divers", "origine": "aelindra" },
   { "id": "cerf_brumes", "nom": "Cerf-des-brumes", "type": "ingredient", "porte": false, "description": "Gibier noble des forêts brumeuses de Valdorne.", "quantite": 1, "prixPo": 8, "vivre": true, "familleVivre": "viande", "origine": "valdorne", "recolte": "traque", "rarete": "peu_commun", "milieux": ["foret"] },
   { "id": "cerf_blanc", "nom": "Cerf blanc", "type": "ingredient", "porte": false,
     "description": "Robe crème, presque translucide sous la lune. Chasse rituelle, jamais commercialisée — le tuer sans droit est un crime chez les trois nations elfiques.",

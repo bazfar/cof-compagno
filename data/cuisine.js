@@ -274,6 +274,33 @@ const CUISINE_RECETTES = [
     effetDeclaratif: "Grave la voix une heure. On ne jure pas d'une voix ordinaire : à prendre avant un serment de clan ou un chant de forge. Le MJ arbitre l'effet sur la scène concernée." },
   { id: "poisson_cloche_servi", nom: "Poisson-cloche", rang: 3, indexDe: 2, registre: "rite",
     ingredients: [{ id: "poisson_cloche", qte: 1 }] },
+
+  // ── Recettes de base (prompt_animaux_recettes_basiques_v2.md, étape 3) ──
+  // Connues de TOUT cuisinier, sans achat ni attribution : le sous-onglet
+  // Atelier (js/cuisine.js) propose déjà l'INTÉGRALITÉ de CUISINE_RECETTES à
+  // tout le monde — le "répertoire" (p.metiers.cuisine.repertoire) ne fait que
+  // la comptabilité "recette achetée/apprise" pour le marché, il n'a jamais
+  // verrouillé la cuisson. Ajouter ces 4 entrées ici suffit donc à les rendre
+  // accessibles à tous ; on ne crée AUCUNE constante de socle ni champ nouveau,
+  // et on ne les met PAS dans les 24 recettes achetables (data/loot.js).
+  //
+  // indexDe volontairement BAS. Distribution réelle du rang 1 dans ce fichier :
+  // indexDe 0 ×4, 1 ×7, 2 ×1 — une seule recette nationale de rang 1 atteint 2.
+  // Les recettes de base sont donc plafonnées à 0 au rang 1 et 1 au rang 2.
+  // Leur valeur n'est PAS nutritive mais leur FLEXIBILITÉ : elles acceptent
+  // n'importe quelle viande / n'importe quel poisson (entrée { famille }) là où
+  // les recettes nationales exigent un ingrédient nommé. Ça se paie du dé le
+  // plus bas — monter ces indexDe rendrait le répertoire national inutile.
+  { id: "oeufs_au_lard", nom: "Œufs au lard", rang: 1, indexDe: 0, registre: "basse",
+    ingredients: [{ id: "oeuf", qte: 2 }, { id: "lard", qte: 1 }] },
+  { id: "grillade", nom: "Grillade", rang: 1, indexDe: 0, registre: "basse",
+    ingredients: [{ famille: "viande", qte: 2 }, { id: "sel", qte: 1 }] },
+  { id: "poisson_grille", nom: "Poisson grillé", rang: 1, indexDe: 0, registre: "basse",
+    ingredients: [{ famille: "poisson", qte: 2 }, { id: "sel", qte: 1 }] },
+  // rang 2 : demande un feu vif entretenu, ce que le document oppose à la
+  // marmite (« le bois coûte, la marmite ne demande personne »).
+  { id: "roti", nom: "Rôti", rang: 2, indexDe: 1, registre: "basse",
+    ingredients: [{ famille: "viande", qte: 3 }, { id: "sel", qte: 1 }, { id: "lard", qte: 1 }] },
 ];
 
 /* ── Exclusions volontaires (à ne PAS rajouter plus tard) ──────────

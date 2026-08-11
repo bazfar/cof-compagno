@@ -212,12 +212,14 @@ const CuisineReference = (() => {
     if (_recherche) {
       const q = _recherche.toLowerCase();
       const dansNom = r.nom.toLowerCase().includes(q);
-      const dansIngredients = r.ingredients.some((c) => _nomIngredient(c.id).toLowerCase().includes(q));
+      // Entrée "au choix" : on cherche sur le nom de la FAMILLE, pas d'id.
+      const dansIngredients = r.ingredients.some((c) => (c.id ? _nomIngredient(c.id) : c.famille).toLowerCase().includes(q));
       if (!dansNom && !dansIngredients) return false;
     }
     if (_filtreRealisable) {
       if (!p) return false;
-      if (!r.ingredients.every((c) => _quantiteDisponible(p.inventaireListe, c.id) >= c.qte)) return false;
+      // Couverture famille-aware (cf. Cuisine.entreeCouverte, source unique).
+      if (!r.ingredients.every((c) => Cuisine.entreeCouverte(p.inventaireListe, c))) return false;
     }
     return true;
   }
@@ -249,12 +251,22 @@ const CuisineReference = (() => {
     const nation = _nationPour(r);
     const tentativesMax = Cuisine.tentativesJourMax(r.rang);
     const ingredientsHtml = r.ingredients.map((c) => {
+      // Entrée "au choix" par famille : afficher la famille, jamais un id. Sans
+      // perso, juste "famille ×qte" ; avec perso, le vivre éligible le moins
+      // cher (celui présélectionné à la cuisson) et sa quantité en stock.
+      if (!c.id) {
+        if (!p) return `${echapper(c.famille)} ×${c.qte}`;
+        const elig = Cuisine.eligiblesFamille(p.inventaireListe, c.famille, c.qte);
+        if (!elig.length) return `<span style="color:var(--chaos);font-weight:700;">${echapper(c.famille)} ×${c.qte} — aucun vivre disponible</span>`;
+        const v = elig[0];
+        return `<span style="color:var(--succes);">${echapper(c.famille)} ×${c.qte} — ${echapper(v.nom)} (${_quantiteDisponible(p.inventaireListe, v.id)} en stock)</span>`;
+      }
       if (!p) return `${c.qte}× ${echapper(_nomIngredient(c.id))}`;
       const dispo = _quantiteDisponible(p.inventaireListe, c.id);
       const suffisant = dispo >= c.qte;
       return `<span style="color:${suffisant ? "var(--succes)" : "var(--chaos)"};font-weight:${suffisant ? 400 : 700};">${c.qte}× ${echapper(_nomIngredient(c.id))} (${dispo} en stock)</span>`;
     }).join(", ");
-    const realisable = p && r.ingredients.every((c) => _quantiteDisponible(p.inventaireListe, c.id) >= c.qte);
+    const realisable = p && r.ingredients.every((c) => Cuisine.entreeCouverte(p.inventaireListe, c));
 
     let blocPerso = "";
     if (p && rangCuisinier != null) {

@@ -1057,7 +1057,17 @@ const Repos = (() => {
 
       const instance = new Personnage(p);
       const niveau = p.niveau || 1;
-      const desPositifs = Array(niveau).fill(8);
+      // Base du repos long : un dé de vie DU PERSONNAGE par tranche de deux
+      // niveaux (prompt_repos_base_de_de_vie.md). Le dé plat 1d8 précédent
+      // rendait ~58 % des PV max d'un guerrier mais ~124 % de ceux d'un magicien
+      // — la base remboursait à elle seule plus que la réserve entière des
+      // classes à petit dé, et le plat n'avait plus aucune marge où s'exprimer
+      // (sans effet au-dessus de 30 % de PV pour un guerrier, jamais pour un
+      // barde ou un magicien). Indexer sur facesDeVie() ramène le soin de base à
+      // 43-46 % pour TOUTES les classes et rend le plat utile en dessous de
+      // 40-45 % pour tout le monde. NE PAS revenir à un dé plat "pour
+      // simplifier" : c'est précisément ce qui ne marchait pas.
+      const desPositifs = Array(Math.ceil(niveau / 2)).fill(instance.facesDeVie());
       let flatPositif = instance.mod("CON");
       const desNegatifs = [];
       if (palier.de) {
