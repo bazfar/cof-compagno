@@ -653,6 +653,11 @@ const Capacites = (() => {
     // vs: undefined serait sérialisée telle quelle dans Firestore sur toutes
     // les entrées de bonus existantes.
     if (effet.vs) bonus.vs = effet.vs;
+    // effet.formule (optionnel, cf. cible "prochainJet") : formule NON résolue,
+    // tirée au moment du jet plutôt qu'à la pose. Posée seulement si présente,
+    // pour ne pas sérialiser une clé undefined sur toutes les entrées de bonus
+    // existantes.
+    if (effet.formule) bonus.formule = effet.formule;
     pCible.etatsActifs.push({
       idEtat: null,
       bonus,
@@ -1390,6 +1395,27 @@ const Capacites = (() => {
       if (voie === "Voie de la sombre magie" && rang === 2 && perso.classe === "necromancien"
           && effet.valeur === "-1d4" && perso.rangMaxVoie("Voie de la sombre magie") >= 4) {
         valeurBrute = "-1d6";
+      }
+      // cible "prochainJet" (sentinelle, cf. App.lancerTest) : le bonus ne porte
+      // pas sur une stat mais sur le PROCHAIN jet de d20 du bénéficiaire, quel
+      // qu'il soit. La formule est stockée NON RÉSOLUE (bonus.formule) et le dé
+      // est tiré au moment du jet — décision de Thomas : un +1d4 annoncé à
+      // l'avance retire tout le suspense du jet, et le joueur verrait le montant
+      // avant de décider s'il tente l'action.
+      // bonus.valeur reste null : c'est ce qui rend l'entrée invisible pour
+      // Personnage.bonusTemporaire() (qui filtre sur typeof valeur === "number"),
+      // donc jamais comptée deux fois. Ne PAS y mettre un nombre.
+      if (effetAjuste.cible === "prochainJet") {
+        if (cible && cible.genre === "perso" && persos[cible.id]) {
+          appliquerBonusSurPerso(persos[cible.id], effetAjuste, libelle, { perso, rang }, null);
+          return `Bonus (${effetAjuste.formule} au prochain jet) appliqué à ${cible.nom} — le dé sera tiré au moment du jet.`;
+        }
+        // Formulation volontairement DIFFÉRENTE de la branche "aucune cible
+        // sélectionnée" plus bas (pas de virgule-durée, pas de valeur signée) :
+        // la regex de _appliquerBonusMonstreDepuisMessages (js/app.js) ne doit
+        // JAMAIS matcher cette ligne, sinon elle ferait un parseInt sur une
+        // formule ("1d4") et poserait bonus.valeur: NaN sur un monstre.
+        return `Bonus (${effetAjuste.formule} au prochain jet) — aucune cible sélectionnée, à appliquer manuellement.`;
       }
       const { total: valeurResolue } = resoudreExpression(valeurBrute, { perso, rang });
       if (effetAjuste.duree === "permanente") {

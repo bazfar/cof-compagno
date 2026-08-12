@@ -4862,6 +4862,12 @@ const App = (() => {
       if (e.idEtat) {
         const etat = typeof ETATS !== "undefined" ? ETATS[/^marquee_.+/.test(e.idEtat) ? "marquee" : e.idEtat] : null;
         libelle = etat ? etat.nom : e.idEtat;
+      } else if (e.bonus && e.bonus.cible === "prochainJet") {
+        // cible "prochainJet" (cf. App.lancerTest) : bonus.valeur reste NULL
+        // (résolu au moment du jet, jamais à la pose) — la branche générique
+        // ci-dessous afficherait "Bonus prochainJet +null", ce champ existe
+        // pour l'éviter.
+        libelle = `${e.bonus.formule} au prochain jet`;
       } else if (e.bonus) {
         // Traduction de la cible pour les nouvelles clés de sauvegarde (cf.
         // Personnage.modSauvegarde/bonusTemporaire) : "sauvegardes"/"Reflexes"/
@@ -8856,11 +8862,61 @@ const App = (() => {
       else if (br && br.type === "testsSociaux" && opts.competence && _competencesSociales().includes(opts.competence)) { bonusRepas = br.valeur; libelleBonusRepas = br.libelle; }
     }
     bonus += bonusRepas;
+    // Bonus au PROCHAIN JET (entrées etatsActifs de cible "prochainJet", cf.
+    // Capacites.resoudreEffet — ex. Bénédiction mineure) : s'applique à
+    // n'importe quel jet de d20 passant par ici (test de carac, compétence,
+    // sauvegarde, attaque) puis est CONSOMMÉ, qu'il ait aidé ou non.
+    // Formule tirée maintenant, pas à la pose du buff.
+    // Limite connue et assumée : les jets internes de js/capacites.js
+    // (App.lancerDe(20) en direct — Bannissement, Mutation sauvage, jets
+    // opposés de capacités) ne passent pas par lancerTest et ne consommeront
+    // donc PAS ce bonus. Documenté dans la note des sorts concernés.
+    // Toutes les entrées présentes sont consommées d'un coup si plusieurs ont
+    // été posées : elles se cumulent sur le même jet plutôt que de faire la
+    // queue, ce qui évite qu'un joueur traîne trois buffs oubliés.
+    //
+    // Résolution de formule : ni lancerFormule() ni _tirerEtAnnoncer()
+    // (ci-dessus) ne conviennent tels quels — les deux postent LEUR PROPRE
+    // entrée d'historique, ce qui doublerait le journal alors que ce terme
+    // doit vivre dans le detail de CE jet, comme bonusRepas ci-dessus. D'où
+    // un parseur minimal dédié, silencieux, qui réutilise lancerDe() pour le
+    // tirage — même forme NdM(+Z) que la regex de _tirerEtAnnoncer, pas une
+    // réimplémentation ad hoc limitée à "1d4"/"-2" : un futur "1d4+1" reste
+    // couvert.
+    let bonusProchainJet = 0;
+    const libellesProchainJet = [];
+    if (opts.persoId) {
+      const persosPJ = chargerPersos();
+      const pPJ = persosPJ[opts.persoId];
+      const entrees = ((pPJ && pPJ.etatsActifs) || []).filter((e) => e.bonus && e.bonus.cible === "prochainJet");
+      if (entrees.length) {
+        entrees.forEach((e) => {
+          const m = /^(\d*)d(\d+)([+-]\d+)?$/.exec((e.bonus.formule || "").trim().toLowerCase().replace(/\s/g, ""));
+          let v = 0, d = "";
+          if (m) {
+            const nb = parseInt(m[1] || "1", 10);
+            const faces = parseInt(m[2], 10);
+            const plat = parseInt(m[3] || "0", 10);
+            const jets = [];
+            for (let i = 0; i < nb; i++) jets.push(lancerDe(faces));
+            v = jets.reduce((a, b) => a + b, 0) + plat;
+            d = `[${jets.join(",")}]${plat ? signe(plat) : ""}`;
+          } else {
+            v = parseInt(e.bonus.formule, 10) || 0; // repli : formule déjà un entier (ex. "-2")
+          }
+          bonusProchainJet += v;
+          libellesProchainJet.push(`${e.source || "Bonus"} ${signe(v)} (${e.bonus.formule}${d ? " : " + d : ""})`);
+        });
+        pPJ.etatsActifs = pPJ.etatsActifs.filter((e) => !(e.bonus && e.bonus.cible === "prochainJet"));
+        sauverPersos(persosPJ);
+      }
+    }
+    bonus += bonusProchainJet;
     const mode = modeForce || modeD20();
     const { de, d1, d2, detailDes } = _lancerD20SelonMode(mode);
     const total = de + bonus;
     const crit = (de >= critMin), echec = (de === 1);
-    const detail = `${detailDes} ${signe(bonus)}${modMeteo ? ` · 🌤 ${signe(modMeteo.valeur)} (${modMeteo.libelle})` : ""}${bonusRepas ? ` · 🍳 ${signe(bonusRepas)} (${libelleBonusRepas})` : ""}`;
+    const detail = `${detailDes} ${signe(bonus)}${modMeteo ? ` · 🌤 ${signe(modMeteo.valeur)} (${modMeteo.libelle})` : ""}${bonusRepas ? ` · 🍳 ${signe(bonusRepas)} (${libelleBonusRepas})` : ""}${libellesProchainJet.length ? ` · ✨ ${libellesProchainJet.join(", ")}` : ""}`;
     afficherResultat(label, total, detail, crit, echec);
     ajouterHisto(label + " " + signe(bonus), total, crit, echec, detail, { mode, d1, d2, estMonstre: !!opts.estMonstre });
     if (echec && opts.persoId) _apresJetAnneauChance(opts.persoId);

@@ -2120,10 +2120,17 @@ const SORTS_MAGICIEN = [
       effets: [ { type: "bonus", cible: "Volonte", valeur: 1, duree: "3" } ] } },
 
   { id: "benediction_mineure", nom: "Bénédiction mineure", rang: 2, categorie: "abjuration",
-    effet: "La cible dans un rayon de 5 cases gagne un bonus de 1d4 sur son prochain jet de dé",
+    effet: "La cible à portée gagne un bonus de 1d4 sur son prochain jet de dé",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
       cible: "allie", portee: 5, zone: null, jetOppose: null,
-      effets: [ { type: "special", note: "+1d4 sur le PROCHAIN jet de dé de la cible, quel qu'il soit (test, attaque, sauvegarde...) — un bonus générique applicable au prochain jet, n'importe lequel, n'a pas de représentation dans le schéma bonus existant (limité à attaque/DEF sur une durée en tours), application manuelle par la table." } ] } },
+      // cible "prochainJet" : sentinelle lue par App.lancerTest, pas une
+      // stat. Le 1d4 est tiré au moment du jet (décision de Thomas), et
+      // l'entrée est consommée que le bonus ait aidé ou non.
+      // Limite : les jets internes de js/capacites.js (Bannissement,
+      // Mutation sauvage, jets opposés de capacités) ne passent pas par
+      // lancerTest et ne consomment donc pas ce bonus — arbitrage manuel de
+      // la table dans ces cas précis.
+      effets: [ { type: "bonus", cible: "prochainJet", formule: "1d4", duree: "finCombat" } ] } },
 
   { id: "sphere_vitriol", nom: "Sphère de vitriol", rang: 3, categorie: "abjuration",
     effet: "Sphère de 5 cases de diamètre, dure 1+Mod.INT tours : toute cible dans ou entrant dans la zone subit 3d4 dégâts d'acide immédiatement puis 2d4 par tour tant qu'elle y reste ; sauvegarde Réflexes DD 14 pour ne subir que la moitié",
@@ -2192,11 +2199,21 @@ const SORTS_ENCHANTEUR = [
       effets: [ { type: "etat", id: "charmee", duree: { tours: "1+Mod.CHA" } } ] } },
 
   { id: "manipulation_emotions", nom: "Manipulation des émotions", rang: 2, categorie: "enchantement",
-    effet: "Une cible à portée subit -2 ou +2 (au choix) à son prochain jet, selon l'émotion insufflée (peur/confiance)",
+    effet: "Une cible à portée subit -2 à ses jets d'attaque jusqu'à son prochain tour (peur), ou gagne +2 (confiance, effet narratif)",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
       cible: "ennemi", portee: 12, zone: null,
       jetOppose: { caracAttaquant: "CHA", caracDefenseur: "Volonte" },
-      effets: [ { type: "special", note: "-2 ou +2 (au choix du lanceur à l'activation) au prochain jet de la cible, selon l'émotion insufflée — 'tous les tests' et la polarité au choix ne sont pas modélisables par le type 'bonus' standard (une seule stat, une seule valeur fixe), même limite que l'ancienne Voix de la foi du Prêtre. Résolution manuelle par la table." } ] } },
+      // Seule la variante "peur" (-2) est automatisée : elle passe par le
+      // schéma bonus standard côté monstre (cf.
+      // _appliquerBonusMonstreDepuisMessages, js/app.js) sur la cible
+      // "attaque". La variante "confiance" (+2) reste narrative — sur un
+      // ennemi elle n'a d'usage qu'en scène sociale, où l'app ne suit aucun
+      // jet de PNJ. Le choix de polarité à l'activation demanderait
+      // d'étendre le mécanisme effet.choix à la VALEUR (aujourd'hui limité
+      // à la cible, substitué en 3 endroits de Capacites.lancer) : écart
+      // signalé à Thomas, à trancher séparément.
+      effets: [ { type: "bonus", cible: "attaque", valeur: -2, duree: "prochainTour" },
+        { type: "special", note: "Variante « confiance » (+2) : effet narratif, arbitré par la table — l'app ne suit pas les jets d'un PNJ hors combat." } ] } },
 
   { id: "sommeil_enchanteur", nom: "Sommeil", rang: 3, categorie: "enchantement",
     effet: "Attaque magique contre une cible avec moins de [Mod.CHA×5] PV actuels : endormie jusqu'à blessure ou réveil manuel",
@@ -2281,10 +2298,17 @@ const SORTS_ENCHANTEUR = [
       effets: [ { type: "bonus", cible: "Volonte", valeur: 1, duree: "3" } ] } },
 
   { id: "benediction_mineure", nom: "Bénédiction mineure", rang: 2, categorie: "abjuration",
-    effet: "La cible dans un rayon de 5 cases gagne un bonus de 1d4 sur son prochain jet de dé",
+    effet: "La cible à portée gagne un bonus de 1d4 sur son prochain jet de dé",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
       cible: "allie", portee: 5, zone: null, jetOppose: null,
-      effets: [ { type: "special", note: "+1d4 sur le PROCHAIN jet de dé de la cible, quel qu'il soit (test, attaque, sauvegarde...) — un bonus générique applicable au prochain jet, n'importe lequel, n'a pas de représentation dans le schéma bonus existant (limité à attaque/DEF sur une durée en tours), application manuelle par la table." } ] } },
+      // cible "prochainJet" : sentinelle lue par App.lancerTest, pas une
+      // stat. Le 1d4 est tiré au moment du jet (décision de Thomas), et
+      // l'entrée est consommée que le bonus ait aidé ou non.
+      // Limite : les jets internes de js/capacites.js (Bannissement,
+      // Mutation sauvage, jets opposés de capacités) ne passent pas par
+      // lancerTest et ne consomment donc pas ce bonus — arbitrage manuel de
+      // la table dans ces cas précis.
+      effets: [ { type: "bonus", cible: "prochainJet", formule: "1d4", duree: "finCombat" } ] } },
 
   { id: "sphere_vitriol", nom: "Sphère de vitriol", rang: 3, categorie: "abjuration",
     effet: "Sphère de 5 cases de diamètre, dure 1+Mod.INT tours : toute cible dans ou entrant dans la zone subit 3d4 dégâts d'acide immédiatement puis 2d4 par tour tant qu'elle y reste ; sauvegarde Réflexes DD 14 pour ne subir que la moitié",
@@ -2572,10 +2596,17 @@ const SORTS_PRETRE = [
       effets: [ { type: "bonus", cible: "Volonte", valeur: 1, duree: "3" } ] } },
 
   { id: "benediction_mineure", nom: "Bénédiction mineure", rang: 2, categorie: "abjuration",
-    effet: "La cible dans un rayon de 5 cases gagne un bonus de 1d4 sur son prochain jet de dé",
+    effet: "La cible à portée gagne un bonus de 1d4 sur son prochain jet de dé",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
       cible: "allie", portee: 5, zone: null, jetOppose: null,
-      effets: [ { type: "special", note: "+1d4 sur le PROCHAIN jet de dé de la cible, quel qu'il soit (test, attaque, sauvegarde...) — un bonus générique applicable au prochain jet, n'importe lequel, n'a pas de représentation dans le schéma bonus existant (limité à attaque/DEF sur une durée en tours), application manuelle par la table." } ] } },
+      // cible "prochainJet" : sentinelle lue par App.lancerTest, pas une
+      // stat. Le 1d4 est tiré au moment du jet (décision de Thomas), et
+      // l'entrée est consommée que le bonus ait aidé ou non.
+      // Limite : les jets internes de js/capacites.js (Bannissement,
+      // Mutation sauvage, jets opposés de capacités) ne passent pas par
+      // lancerTest et ne consomment donc pas ce bonus — arbitrage manuel de
+      // la table dans ces cas précis.
+      effets: [ { type: "bonus", cible: "prochainJet", formule: "1d4", duree: "finCombat" } ] } },
 
   { id: "sphere_vitriol", nom: "Sphère de vitriol", rang: 3, categorie: "abjuration",
     effet: "Sphère de 5 cases de diamètre, dure 1+Mod.INT tours : toute cible dans ou entrant dans la zone subit 3d4 dégâts d'acide immédiatement puis 2d4 par tour tant qu'elle y reste ; sauvegarde Réflexes DD 14 pour ne subir que la moitié",
