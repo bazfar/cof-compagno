@@ -1960,6 +1960,43 @@ const Capacites = (() => {
       return { ok: true, messages };
     }
 
+    // Multi-cible générique (mecanique.maxCibles, ex. Aide/Forteresse de
+    // l'esprit) : applique TOUS les effets de la mécanique à CHACUNE des cibles
+    // sélectionnées (cibleIds), là où le flux standard n'en résout qu'une
+    // (cibleId). Généralise la branche Soins divins ci-dessus, qui reste
+    // distincte parce qu'elle est identifiée par choixEffet et n'applique
+    // qu'un soin d'une formule différente de celle du mode cible unique.
+    //
+    // AUCUNE vérification de distance : listeCibles() ignore les positions
+    // (décision de Thomas). Un sort dont le texte parle d'une zone doit donc
+    // décrire un nombre de cibles, pas un rayon — cf. le texte d'Aide et de
+    // Forteresse de l'esprit, réécrits dans le même chantier.
+    //
+    // Ressources décomptées UNE SEULE FOIS pour l'ensemble des cibles (patron
+    // de la règle zone/ligne automatisée ci-dessus) : un sort de zone coûte le
+    // prix d'un lancer, pas le prix d'un lancer par tête.
+    if (mecanique.maxCibles && cibleIds && cibleIds.length) {
+      const ciblesRetenues = cibleIds
+        .slice(0, mecanique.maxCibles)
+        .map((cid) => listeCibles(persoId).find((c) => c.id === cid))
+        .filter(Boolean);
+      if (!ciblesRetenues.length) return { ok: false, messages: ["Cible(s) introuvable(s)."] };
+      ciblesRetenues.forEach((c) => {
+        (mecanique.effets || []).forEach((effet) => {
+          const msg = resoudreEffet(effet, { perso, rang: source.rang, voie: source.voie, cible: c, libelle, persos });
+          if (msg) messages.push(`${c.nom} — ${msg}`);
+        });
+      });
+      usage.appliquer && usage.appliquer();
+      if (coutPPReel) {
+        p.ppActuel = Math.max(0, (p.ppActuel || 0) - coutPPReel);
+        if (typeof Remous !== "undefined") Remous.ajouter(p, coutPPReel * (mecanique.remousMultiplicateur || 1));
+        messages.push(`PP -${coutPPReel} (${p.ppActuel} restants).`);
+      }
+      App.sauverPersos(persos);
+      return { ok: true, messages };
+    }
+
     // Moine — Voie des éléments, rang 1 "Poing élémentaire" (1x/tour) :
     // choix à l'activation entre 4 éléments (feu/glace/terre/air, via
     // mecanique.effets[].choix — modal générique déjà utilisé par Toucher

@@ -2109,10 +2109,15 @@ const SORTS_MAGICIEN = [
   // débloque l'école abjuration — mêmes 4 entrées dans SORTS_MAGICIEN,
   // SORTS_PRETRE et SORTS_ENCHANTEUR, pas réservées à une seule classe) ---
   { id: "forteresse_esprit", nom: "Forteresse de l'esprit", rang: 2, categorie: "abjuration",
-    effet: "Les cibles dans un rayon de 5 cases gagnent +1 à leurs jets de sauvegarde de Volonté",
+    effet: "Jusqu'à 3 alliés à portée gagnent +1 à leurs jets de sauvegarde de Volonté pendant 3 tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
-      effets: [ { type: "special", note: "+1 à tous les jets de sauvegarde de Volonté des alliés dans la zone (5 cases), durée à fixer par la table (non précisée par le sort) — un bonus à un TYPE de sauvegarde précis n'a pas de représentation dans le schéma bonus existant (cible ∈ {attaque,DEF} seulement), application manuelle par la table, même limite que Globe de protection." } ] } },
+      cible: "allie", portee: 5, zone: null, jetOppose: null, maxCibles: 3,
+      // Durée 3 tours : le texte d'origine ne la précisait pas (décision de
+      // Thomas, alignée sur les autres buffs de rang 3-5). Cible de bonus
+      // "Volonte" (sans accent, clé de SAUVEGARDES) : lue par
+      // Personnage.modSauvegarde via bonusTemporaire, cf. le chantier
+      // "bonus temporaires sur les sauvegardes".
+      effets: [ { type: "bonus", cible: "Volonte", valeur: 1, duree: "3" } ] } },
 
   { id: "benediction_mineure", nom: "Bénédiction mineure", rang: 2, categorie: "abjuration",
     effet: "La cible dans un rayon de 5 cases gagne un bonus de 1d4 sur son prochain jet de dé",
@@ -2129,11 +2134,13 @@ const SORTS_MAGICIEN = [
         { type: "special", note: "Dégâts initiaux (3d4, ou moitié sur sauvegarde réussie) déjà résolus ci-dessus pour la première cible touchée. La persistance (2d4/tour tant que dans la zone, et le déclenchement pour toute créature qui ENTRE dans la zone après la pose, pendant 1+Mod.INT tours) n'a pas d'équivalent dans le moteur (pas de zone de terrain persistante déclenchée par l'entrée d'un jeton) — application manuelle par la table pour chaque cible et chaque tour, comme Mur de force pour l'obstacle qu'il pose." } ] } },
 
   { id: "aide", nom: "Aide", rang: 2, categorie: "abjuration",
-    effet: "Les alliés dans une zone de 5 cases de diamètre autour de vous gagnent 5 PV temporaires (se dissipent à la fin du combat)",
+    effet: "Jusqu'à 3 alliés à portée gagnent 5 PV temporaires (se dissipent à la fin du combat)",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
-      effets: [ { type: "pvTemp", formule: "5", duree: "finCombat" },
-        { type: "special", note: "mecanique.cible='zone' sans cibleId automatique : application manuelle allié par allié dans la zone (chacun reçoit sa propre entrée de PV temporaires, cf. appliquerPvTemporairesSurPerso), même limite que Globe de protection." } ] } },
+      // cible "allie" + maxCibles (et non "zone") : le picker multi n'est
+      // câblé que sur "allie"/"ennemi", et le moteur ne mesure aucune
+      // distance — le texte annonce donc un nombre de cibles, pas un rayon.
+      cible: "allie", portee: 5, zone: null, jetOppose: null, maxCibles: 3,
+      effets: [ { type: "pvTemp", formule: "5", duree: "finCombat" } ] } },
 ];
 
 /* Liste autonome de sorts piochés par l'Enchanteur (même principe que
@@ -2263,10 +2270,15 @@ const SORTS_ENCHANTEUR = [
   // débloque l'école abjuration — mêmes 4 entrées dans SORTS_MAGICIEN,
   // SORTS_PRETRE et SORTS_ENCHANTEUR, pas réservées à une seule classe) ---
   { id: "forteresse_esprit", nom: "Forteresse de l'esprit", rang: 2, categorie: "abjuration",
-    effet: "Les cibles dans un rayon de 5 cases gagnent +1 à leurs jets de sauvegarde de Volonté",
+    effet: "Jusqu'à 3 alliés à portée gagnent +1 à leurs jets de sauvegarde de Volonté pendant 3 tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
-      effets: [ { type: "special", note: "+1 à tous les jets de sauvegarde de Volonté des alliés dans la zone (5 cases), durée à fixer par la table (non précisée par le sort) — un bonus à un TYPE de sauvegarde précis n'a pas de représentation dans le schéma bonus existant (cible ∈ {attaque,DEF} seulement), application manuelle par la table, même limite que Globe de protection." } ] } },
+      cible: "allie", portee: 5, zone: null, jetOppose: null, maxCibles: 3,
+      // Durée 3 tours : le texte d'origine ne la précisait pas (décision de
+      // Thomas, alignée sur les autres buffs de rang 3-5). Cible de bonus
+      // "Volonte" (sans accent, clé de SAUVEGARDES) : lue par
+      // Personnage.modSauvegarde via bonusTemporaire, cf. le chantier
+      // "bonus temporaires sur les sauvegardes".
+      effets: [ { type: "bonus", cible: "Volonte", valeur: 1, duree: "3" } ] } },
 
   { id: "benediction_mineure", nom: "Bénédiction mineure", rang: 2, categorie: "abjuration",
     effet: "La cible dans un rayon de 5 cases gagne un bonus de 1d4 sur son prochain jet de dé",
@@ -2283,11 +2295,13 @@ const SORTS_ENCHANTEUR = [
         { type: "special", note: "Dégâts initiaux (3d4, ou moitié sur sauvegarde réussie) déjà résolus ci-dessus pour la première cible touchée. La persistance (2d4/tour tant que dans la zone, et le déclenchement pour toute créature qui ENTRE dans la zone après la pose, pendant 1+Mod.INT tours) n'a pas d'équivalent dans le moteur (pas de zone de terrain persistante déclenchée par l'entrée d'un jeton) — application manuelle par la table pour chaque cible et chaque tour, comme Mur de force pour l'obstacle qu'il pose." } ] } },
 
   { id: "aide", nom: "Aide", rang: 2, categorie: "abjuration",
-    effet: "Les alliés dans une zone de 5 cases de diamètre autour de vous gagnent 5 PV temporaires (se dissipent à la fin du combat)",
+    effet: "Jusqu'à 3 alliés à portée gagnent 5 PV temporaires (se dissipent à la fin du combat)",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
-      effets: [ { type: "pvTemp", formule: "5", duree: "finCombat" },
-        { type: "special", note: "mecanique.cible='zone' sans cibleId automatique : application manuelle allié par allié dans la zone (chacun reçoit sa propre entrée de PV temporaires, cf. appliquerPvTemporairesSurPerso), même limite que Globe de protection." } ] } },
+      // cible "allie" + maxCibles (et non "zone") : le picker multi n'est
+      // câblé que sur "allie"/"ennemi", et le moteur ne mesure aucune
+      // distance — le texte annonce donc un nombre de cibles, pas un rayon.
+      cible: "allie", portee: 5, zone: null, jetOppose: null, maxCibles: 3,
+      effets: [ { type: "pvTemp", formule: "5", duree: "finCombat" } ] } },
 ];
 
 /* ============================================================
@@ -2547,10 +2561,15 @@ const SORTS_PRETRE = [
   // débloque l'école abjuration — mêmes 4 entrées dans SORTS_MAGICIEN,
   // SORTS_PRETRE et SORTS_ENCHANTEUR, pas réservées à une seule classe) ---
   { id: "forteresse_esprit", nom: "Forteresse de l'esprit", rang: 2, categorie: "abjuration",
-    effet: "Les cibles dans un rayon de 5 cases gagnent +1 à leurs jets de sauvegarde de Volonté",
+    effet: "Jusqu'à 3 alliés à portée gagnent +1 à leurs jets de sauvegarde de Volonté pendant 3 tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
-      effets: [ { type: "special", note: "+1 à tous les jets de sauvegarde de Volonté des alliés dans la zone (5 cases), durée à fixer par la table (non précisée par le sort) — un bonus à un TYPE de sauvegarde précis n'a pas de représentation dans le schéma bonus existant (cible ∈ {attaque,DEF} seulement), application manuelle par la table, même limite que Globe de protection." } ] } },
+      cible: "allie", portee: 5, zone: null, jetOppose: null, maxCibles: 3,
+      // Durée 3 tours : le texte d'origine ne la précisait pas (décision de
+      // Thomas, alignée sur les autres buffs de rang 3-5). Cible de bonus
+      // "Volonte" (sans accent, clé de SAUVEGARDES) : lue par
+      // Personnage.modSauvegarde via bonusTemporaire, cf. le chantier
+      // "bonus temporaires sur les sauvegardes".
+      effets: [ { type: "bonus", cible: "Volonte", valeur: 1, duree: "3" } ] } },
 
   { id: "benediction_mineure", nom: "Bénédiction mineure", rang: 2, categorie: "abjuration",
     effet: "La cible dans un rayon de 5 cases gagne un bonus de 1d4 sur son prochain jet de dé",
@@ -2567,11 +2586,13 @@ const SORTS_PRETRE = [
         { type: "special", note: "Dégâts initiaux (3d4, ou moitié sur sauvegarde réussie) déjà résolus ci-dessus pour la première cible touchée. La persistance (2d4/tour tant que dans la zone, et le déclenchement pour toute créature qui ENTRE dans la zone après la pose, pendant 1+Mod.INT tours) n'a pas d'équivalent dans le moteur (pas de zone de terrain persistante déclenchée par l'entrée d'un jeton) — application manuelle par la table pour chaque cible et chaque tour, comme Mur de force pour l'obstacle qu'il pose." } ] } },
 
   { id: "aide", nom: "Aide", rang: 2, categorie: "abjuration",
-    effet: "Les alliés dans une zone de 5 cases de diamètre autour de vous gagnent 5 PV temporaires (se dissipent à la fin du combat)",
+    effet: "Jusqu'à 3 alliés à portée gagnent 5 PV temporaires (se dissipent à la fin du combat)",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
-      effets: [ { type: "pvTemp", formule: "5", duree: "finCombat" },
-        { type: "special", note: "mecanique.cible='zone' sans cibleId automatique : application manuelle allié par allié dans la zone (chacun reçoit sa propre entrée de PV temporaires, cf. appliquerPvTemporairesSurPerso), même limite que Globe de protection." } ] } },
+      // cible "allie" + maxCibles (et non "zone") : le picker multi n'est
+      // câblé que sur "allie"/"ennemi", et le moteur ne mesure aucune
+      // distance — le texte annonce donc un nombre de cibles, pas un rayon.
+      cible: "allie", portee: 5, zone: null, jetOppose: null, maxCibles: 3,
+      effets: [ { type: "pvTemp", formule: "5", duree: "finCombat" } ] } },
 
   // --- Sorts additionnels (familles Jugement/Guérison, chantier "sorts
   // dictés en chat" du 12/08/2026) ---

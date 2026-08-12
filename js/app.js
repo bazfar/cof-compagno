@@ -5563,14 +5563,15 @@ const App = (() => {
             const aCoutCercle = mecanique.coutPointsBenediction || mecanique.coutPointsConviction || mecanique.coutPointsBannissement || mecanique.coutPointsJugement;
             optionSupplementCS.style.display = (perso.classe === "pretre" && perso.estChoisie("Voie du chaos", 3) && aCoutCercle) ? "" : "none";
           }
-          // Prêtre — Cercle de Vie, sort "Soins divins", choix "trois_cibles" :
-          // jusqu'à 3 cibles indépendantes plutôt qu'une seule — réutilise
-          // pickerSelect en <select multiple> (aucun nouveau composant), même
-          // mécanisme que l'ancienne Bénédiction/"soin_partage" (cf.
-          // prompt_pretre_cercle_vie.md Partie 6).
-          const troisCibles = mecanique.cible === "allie" && lancerCapaciteEnAttente.choixEffet === "trois_cibles";
-          pickerSelect.multiple = troisCibles;
-          pickerSelect.size = troisCibles ? 5 : 1;
+          // Multi-cible : soit mecanique.maxCibles (champ générique, ex. Aide,
+          // Forteresse de l'esprit), soit le cas historique de Soins divins
+          // (choixEffet "trois_cibles", plafond implicite de 3) — un <select
+          // multiple>, aucun composant nouveau. Le plafond est relu à la
+          // soumission (cf. btnConfirmerCible) : ne pas le dupliquer en dur ici.
+          const plafondCibles = mecanique.maxCibles || (lancerCapaciteEnAttente.choixEffet === "trois_cibles" ? 3 : 1);
+          const multiCible = plafondCibles > 1 && (mecanique.cible === "allie" || mecanique.cible === "zone");
+          pickerSelect.multiple = multiCible;
+          pickerSelect.size = multiCible ? 5 : 1;
           if (mecanique.cible === "allie" || mecanique.cible === "ennemi") {
             const cibles = Capacites.listeCibles(id).filter((cc) =>
               mecanique.cible === "allie" ? cc.genre === "perso" : cc.genre === "monstre"
@@ -5578,7 +5579,7 @@ const App = (() => {
             pickerSelect.innerHTML = cibles.length
               ? cibles.map((cc) => `<option value="${cc.id}">${echapper(cc.nom)}${cc.soi ? " (soi-même)" : ""}</option>`).join("")
               : `<option value="">Aucune cible disponible</option>`;
-            if (troisCibles) toast("Sélectionne jusqu'à 3 alliés (Ctrl/Cmd + clic).");
+            if (multiCible) toast(`Sélectionne jusqu'à ${plafondCibles} allié${plafondCibles > 1 ? "s" : ""} (Ctrl/Cmd + clic).`);
             pickerForme.style.display = "flex";
           } else if (mecanique.cible === "zone" && (mecanique.jetOppose || mecanique.portee)
               && (_zoneCibleHostile(mecanique) || mecanique.cibleZoneHostile)
@@ -5659,7 +5660,9 @@ const App = (() => {
     if (btnConfirmerCible) {
       btnConfirmerCible.onclick = () => {
         if (pickerSelect.multiple) {
-          const ids = Array.from(pickerSelect.selectedOptions).map((o) => o.value).filter(Boolean).slice(0, 3);
+          const mec = lancerCapaciteEnAttente.mecanique;
+          const plafond = mec.maxCibles || 3; // 3 = plafond historique de Soins divins
+          const ids = Array.from(pickerSelect.selectedOptions).map((o) => o.value).filter(Boolean).slice(0, plafond);
           if (!ids.length) { toast("Choisis au moins un allié."); return; }
           resoudreCapaciteEtRafraichir(null, ids);
           return;
