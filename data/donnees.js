@@ -2240,7 +2240,15 @@ const SORTS_ENCHANTEUR = [
     effet: "La cible gagne +2 cases de déplacement pendant 3 tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
       cible: "allie", portee: 5, zone: null, jetOppose: null,
-      effets: [ { type: "special", note: "+2 à Combat._deplacementMax() du bénéficiaire pendant 3 tours — nécessite un hook dans combat.js/etatsActifs, même famille de patron que les autres bonus temporaires de déplacement déjà gérés (cf. don Mobile)." } ] } },
+      // État nommé plutôt qu'un effet "bonus" : Combat._deplacementMax ne lit
+      // que des idEtat (cf. totem_velocite/elan_commandant/forme_loup), et un
+      // état nommé s'affiche avec son nom sur la fiche.
+      // duree: "3" (chaîne brute), PAS { tours: 3 } — resoudreDureeInitiale
+      // passe la valeur telle quelle à resoudreExpression, qui fait
+      // String(expr) : un objet y deviendrait "[object Object]" et la durée
+      // resterait indéfinie, jamais décomptée. Même forme que le "3" de
+      // Forteresse de l'esprit (chantier bonus temporaires sauvegardes).
+      effets: [ { type: "etat", id: "vitesse_transmutee", duree: "3" } ] } },
 
   { id: "arme_enchantee_grimoire", nom: "Arme enchantée", rang: 3, categorie: "transmutation",
     effet: "Une arme ou objet gagne +2 attaque et +1d6 DM magiques pendant [3+Mod.CHA] tours",

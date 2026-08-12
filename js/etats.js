@@ -91,6 +91,8 @@ const ETATS = {
     description: "Divise par 2 (arrondi inférieur) les dégâts physiques subis tant que l'état dure (Magicien, Voie du chaos, rang 5). +2d6 DM à tous les sorts non modélisé (bonus récurrent) — à ajouter manuellement à chaque jet de dégâts." },
   totem_velocite: { nom: "Totem de la vélocité", categorie: "buff",
     description: "Une action de mouvement supplémentaire chaque tour (déplacement doublé) tant que l'état dure (Druide, Voie du shaman, rang 4)." },
+  vitesse_transmutee: { nom: "Vitesse transmutée", categorie: "buff",
+    description: "+2 cases de déplacement (cf. Combat._deplacementMax) tant que l'état dure (Enchanteur, sort Vitesse transmutée, rang 2)." },
   apogee_physique: { nom: "Apogée physique", categorie: "buff",
     description: "Double le modificateur de la caractéristique choisie à Spécimen d'élite tant que l'état dure (Guerrier, Voie de l'élite, rang 5)." },
   maitrise_tactique: { nom: "Maîtrise tactique", categorie: "buff",

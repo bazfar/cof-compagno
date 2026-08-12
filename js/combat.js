@@ -119,6 +119,12 @@ const Combat = (() => {
     // (doublement complet), cohérent avec un bonus parmi d'autres de la même
     // capacité plutôt qu'une capacité dédiée au déplacement.
     if ((p.etatsActifs || []).some((e) => e.idEtat === "forme_loup")) bonus += 2;
+    // Enchanteur — sort "Vitesse transmutée" (SORTS_ENCHANTEUR, rang 2, cible
+    // allié) : +2 cases tant que l'état 'vitesse_transmutee' est actif. Même
+    // patron que forme_loup ci-dessus (bonus fixe modeste), pas que
+    // totem_velocite (doublement complet) : un sort de rang 2 ne doit pas
+    // valoir un rang 4 de Voie.
+    if ((p.etatsActifs || []).some((e) => e.idEtat === "vitesse_transmutee")) bonus += 2;
     // Malus de proficience d'armure (-2, cf. Personnage.estArmureNonMaitrisee).
     if (Personnage.estArmureNonMaitrisee(p)) bonus -= 2;
     // bottes_vitesse.fulgurantes/esquivantes (cf. lot "malgré la limite") :
