@@ -93,6 +93,9 @@ const App = (() => {
     { id: "poison", libelle: "☠️ Poison" },
     { id: "corruption", libelle: "🕳️ Corruption" },
     { id: "peur", libelle: "😱 Peur" },
+    // Cinquième contexte (chantier Tannerie, doublure_duvet) : Thomas a
+    // explicitement choisi le contexte mécanique plutôt que le déclaratif.
+    { id: "froid", libelle: "❄️ Froid" },
   ];
   // Bascules manuelles des dons Frappe puissante / Tir de précision (-2 attaque
   // / +4 dégâts) dans le dock de combat — état de session, pas persisté, ne

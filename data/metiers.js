@@ -91,6 +91,20 @@ const METIERS = {
     // une raison chiffrée.
     domaine: "ecriture",
   },
+  tannerie: {
+    id: "tannerie",
+    nom: "Tannerie",
+    icone: "🪶",
+    titres: ["Écorcheur", "Peaussier", "Tanneur", "Tanneur confirmé", "Maître tanneur", "Main de Valdaan"],
+    // DEX et non FOR : le métier est un travail de main (racler, coudre,
+    // river) et c'est la seule occasion du jeu de donner à la DEX un usage
+    // hors combat et hors Réflexes. Décision de Thomas.
+    caracteristique: "DEX",
+    competence: null,
+    // Modèle à DIFFICULTÉ ABSOLUE (cf. Alchimie, Musicien, Scribe). Rang ×1
+    // et non ×2 : le cuir tanné apporte jusqu'à +2, comme l'encre du Scribe.
+    domaine: "cuir",
+  },
 };
 
 if (typeof window !== "undefined") {

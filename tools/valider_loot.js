@@ -239,8 +239,9 @@ const SAUVEGARDES_VALIDES = Object.keys(SAUVEGARDES);
 const CLES_BONUS_SAUVEGARDES_VALIDES = [...SAUVEGARDES_VALIDES, "toutes"];
 // Contextes de menace (cf. Personnage.modSauvegarde/bonusSauvegardeVsEquipement,
 // prompt_musicien_5_sauvegardes_etape3.md §5) — même liste que le sélecteur de
-// puces sur la fiche.
-const CONTEXTES_SAUVEGARDE_VALIDES = ["magie", "poison", "corruption", "peur"];
+// puces sur la fiche. "froid" ajouté au chantier Tannerie (doublure_duvet) :
+// Thomas a choisi le contexte mécanique plutôt que le texte déclaratif.
+const CONTEXTES_SAUVEGARDE_VALIDES = ["magie", "poison", "corruption", "peur", "froid"];
 const CLASSES_VALIDES = ORDRE_CLASSES;
 
 // mecanique[palier].passif (cf. "Affixes phase 2" §A) — même chemin que
@@ -459,7 +460,12 @@ const PAR_TYPE = {
   // à l'import (cf. data/marche.js, BLOCS). Sous-ensemble du whitelist "consommable"
   // (quantite/vivre/effetRepos/effetDeclaratif) : aucun vivre n'utilise
   // sortAppris/dureeEtat/formuleDot/jetable/corruptionCombatRetiree.
-  ingredient: ["quantite", "vivre", "effetRepos", "effetDeclaratif", "familleVivre", "origine"],
+  // peau (chantier Tannerie, prompt_tanneur_10_donnees.md §3) : posé sur les
+  // espèces de traque, référence l'id de la dépouille produite en plus de la
+  // viande. surfaceCuir (§3.2) : posé sur les dépouilles elles-mêmes, unités
+  // de cuir tanné qu'elles rendent — 0 = structurellement intannable
+  // (peau_cerf_blanc, duvet_caille).
+  ingredient: ["quantite", "vivre", "effetRepos", "effetDeclaratif", "familleVivre", "origine", "peau", "surfaceCuir"],
   // recette (prompt_recettes_achetables.md) : recetteApprise/origine requis
   // (validés ci-dessous, point 6ter1) ; rariteFixe est déjà dans COMMUN_MULTI_TYPE
   // mais TOUJOURS true en pratique sur ces 24 items (cf. NOTE de data/loot.js) —

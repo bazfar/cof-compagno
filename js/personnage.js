@@ -462,7 +462,7 @@ class Personnage extends Entite {
   // Éclat chaotique et Drain d'âme, sans migration des données.
   // obtenirVolonteCible ne sert plus qu'aux MONSTRES.
   //
-  // contexte : null | "magie" | "poison" | "corruption" | "peur"
+  // contexte : null | "magie" | "poison" | "corruption" | "peur" | "froid"
   // null = total inconditionnel, seul affiché sur la fiche au repos. Les
   // bonus conditionnels ne sont JAMAIS comptés sans contexte explicite :
   // afficher +4 vs poison en permanence mentirait sur toutes les autres
@@ -532,8 +532,8 @@ class Personnage extends Entite {
   }
 
   // Bonus de sauvegarde CONDITIONNELS portés par l'équipement (champ
-  // bonusSauvegardesVs: { magie, poison, corruption, peur }). Renvoie 0 sans
-  // contexte : cf. modSauvegarde.
+  // bonusSauvegardesVs: { magie, poison, corruption, peur, froid }). Renvoie 0
+  // sans contexte : cf. modSauvegarde.
   bonusSauvegardeVsEquipement(contexte) {
     if (!contexte) return 0;
     return this._itemsEquipesUniques().reduce((t, it) =>
