@@ -2033,6 +2033,28 @@ const SORTS_MAGICIEN = [
     mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 25, typeSort: "majeur",
       cible: "soi", portee: null, zone: null, jetOppose: null,
       effets: [ { type: "special", note: "Immunité totale aux dégâts magiques pendant 2+Mod.INT tours — même patron que 'Sanctuaire' (capstone rang 5 de la Voie de la magie protectrice, capacité distincte non affectée par cet ajout) mais accessible via Grimoire indépendamment de la voie." } ] } },
+
+  // --- Sorts additionnels (famille Illusion — jusqu'ici seulement rangs
+  // 2/4 via invisibilite_mineure/image_miroir/invisibilite_majeure, aucun
+  // rang 1) ---
+  { id: "deguisement_magique", nom: "Déguisement magique", rang: 1, categorie: "illusion",
+    effet: "Prend l'apparence d'une personne visualisée durant l'heure précédente, pendant 10 + (Mod.CHA × 2) minutes",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "soi", portee: null, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "Prend l'apparence d'une personne que le lanceur a visualisée durant l'heure précédente, pendant 10 + (Mod.CHA × 2) minutes — durée en minutes hors échelle de tours de combat, résolution manuelle par la table (pas de minuteur temps réel dans l'app), même limite que Détection de la magie/Téléportation." } ] } },
+
+  { id: "lame_ombre", nom: "Lame d'ombre", rang: 3, categorie: "illusion",
+    effet: "Manifeste une lame d'ombre servant d'arme de contact : votre attaque de contact inflige 2d6 dégâts magiques au lieu de son type habituel, pendant 3 tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "soi", portee: null, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "Pendant 3 tours, l'attaque de contact du lanceur inflige 2d6 dégâts magiques au lieu de son type habituel (bénéficie normalement du bonus de dégâts magiques d'un objet de Grimoire équipé, ex. bonusDegatsMagiques) — substitution du type/de la formule de dégâts d'une arme non modélisée par le moteur (pas d'arme réelle dans inventaireListe/equipement), résolution manuelle par la table comme Image miroir/Mur de force." } ] } },
+
+  { id: "assassin_imaginaire", nom: "Assassin imaginaire", rang: 4, categorie: "illusion",
+    effet: "Conjure dans l'esprit de la cible la présence d'un assassin : jet de sauvegarde Volonté (SAG) ou 3d8 dégâts",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
+      cible: "ennemi", portee: 10, zone: null,
+      jetOppose: { caracAttaquant: "INT", caracDefenseur: "Volonte" },
+      effets: [ { type: "degats", formule: "3d8", typeDegats: "magique" } ] } },
 ];
 
 /* Liste autonome de sorts piochés par l'Enchanteur (même principe que
