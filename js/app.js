@@ -4412,6 +4412,7 @@ const App = (() => {
       enchantement: "sous-panneau-atelier-enchantement",
       alchimie: "sous-panneau-atelier-alchimie",
       cuisine: "sous-panneau-atelier-cuisine",
+      scribe: "sous-panneau-atelier-scribe",
     });
     const sel = document.getElementById("select-atelier-perso");
     if (!sel) return;
@@ -4423,6 +4424,7 @@ const App = (() => {
       document.getElementById("zone-atelier").innerHTML = vide;
       document.getElementById("zone-atelier-alchimie").innerHTML = "";
       document.getElementById("zone-atelier-cuisine").innerHTML = "";
+      document.getElementById("zone-atelier-scribe").innerHTML = "";
       return;
     }
     sel.innerHTML = ids.map((id) => `<option value="${id}">${echapper(persos[id].nom)}</option>`).join("");
@@ -4434,10 +4436,12 @@ const App = (() => {
       _rendreAtelierItems();
       if (typeof Alchimie !== "undefined" && Alchimie.rendreZoneAlchimie) Alchimie.rendreZoneAlchimie(atelierPersoId);
       if (typeof Cuisine !== "undefined") Cuisine.rendreZoneCuisine(atelierPersoId);
+      if (typeof Scribe !== "undefined" && Scribe.rendreZoneScribe) Scribe.rendreZoneScribe(atelierPersoId);
     };
     _rendreAtelierItems();
     if (typeof Alchimie !== "undefined" && Alchimie.rendreZoneAlchimie) Alchimie.rendreZoneAlchimie(atelierPersoId);
     if (typeof Cuisine !== "undefined") Cuisine.rendreZoneCuisine(atelierPersoId);
+    if (typeof Scribe !== "undefined" && Scribe.rendreZoneScribe) Scribe.rendreZoneScribe(atelierPersoId);
   }
 
   /* ---------- Sous-onglet Enchantement ---------- */
@@ -6137,6 +6141,7 @@ const App = (() => {
               <span class="inv-item-nom" style="color:${it.rareteCouleur || ""}">${echapper(it.nom)}</span>${badgeRareteHtml(it)}
               ${(it.quantite || 1) > 1 ? `<span class="loot-badge">×${it.quantite}</span>` : ""}
               ${it.type ? `<span class="loot-badge loot-badge-${it.type}">${echapper(it.type)}</span>` : ""}
+              ${it.parcheminFautif ? `<span class="loot-badge loot-badge-fautif" title="Copie Médiocre d'un scribe — se délite sans effet sur un 1-5 naturel à la lecture">⚠ Fautif</span>` : ""}
             </div>
             ${badge ? `<div class="inv-item-stats">${echapper(badge)}</div>` : ""}
             ${it.effetRarete ? `<div class="inv-item-stats" style="color:${it.rareteCouleur || ""}">✨ ${echapper(it.effetRarete)}</div>` : ""}
@@ -7003,6 +7008,20 @@ const App = (() => {
     const item = p.inventaireListe[idx];
     if (!item || !estParcheminSort(item)) return;
     if (!_apprendreSortGrimoireLocal(p, item.sortAppris)) return;
+    // Parchemin fautif (copie Médiocre d'un scribe, cf. js/scribe.js) : se
+    // consume sans effet sur un 1-5 naturel. Le lecteur perd le parchemin et
+    // rien d'autre — pas de corruption, pas de place d'inscription bloquée
+    // (décision de Thomas). Un parchemin acheté au marché n'a jamais ce champ.
+    if (item.parcheminFautif) {
+      const d = lancerDe(20);
+      if (d <= 5) {
+        _consommerUnite(p, idx);
+        sauverPersos(persos);
+        toast(`Le parchemin se délite avant la fin de la copie (${d}/20). Sort non appris.`);
+        afficherFiche(persoId);
+        return;
+      }
+    }
     _consommerUnite(p, idx);
     sauverPersos(persos);
     afficherFiche(persoId);

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=104" />
+  <link rel="stylesheet" href="css/style.css?v=105" />
 </head>
 <body>
   <header>
@@ -605,6 +605,7 @@
           <button type="button" class="sous-tab actif" data-sous-panneau="enchantement">🛡 Enchantement</button>
           <button type="button" class="sous-tab" data-sous-panneau="alchimie">🧪 Alchimie</button>
           <button type="button" class="sous-tab" data-sous-panneau="cuisine">🍳 Cuisine</button>
+          <button type="button" class="sous-tab" data-sous-panneau="scribe">✒️ Écriture</button>
         </nav>
       </div>
       <div class="sous-panneau actif" id="sous-panneau-atelier-enchantement">
@@ -615,6 +616,9 @@
       </div>
       <div class="sous-panneau" id="sous-panneau-atelier-cuisine">
         <div id="zone-atelier-cuisine"></div>
+      </div>
+      <div class="sous-panneau" id="sous-panneau-atelier-scribe">
+        <div id="zone-atelier-scribe"></div>
       </div>
     </section>
 
@@ -933,16 +937,17 @@
   <script src="data/armes_monstres.js?v=7"></script>
   <script src="data/armures_monstres.js?v=3"></script>
   <script src="data/equilibrage.js?v=1"></script>
-  <script src="data/loot.js?v=56"></script>
+  <script src="data/loot.js?v=57"></script>
   <script src="data/marche.js?v=8"></script>
   <script src="data/repos.js?v=2"></script>
   <script src="data/reputation.js?v=1"></script>
   <script src="data/meteo.js?v=1"></script>
   <script src="data/equipement_depart.js?v=7"></script>
-  <script src="data/metiers.js?v=3"></script>
+  <script src="data/metiers.js?v=4"></script>
   <script src="data/cuisine.js?v=4"></script>
   <script src="data/recolte.js?v=1"></script>
   <script src="data/alchimie.js?v=1"></script>
+  <script src="data/scribe.js?v=1"></script>
   <script src="data/musique.js?v=1"></script>
   <script src="js/emblemes.js?v=15"></script>
   <script src="js/carte-monde.js?v=9"></script>
@@ -970,6 +975,7 @@
   <script src="js/forge.js?v=13"></script>
   <script src="js/metiers.js?v=1"></script>
   <script src="js/cuisine.js?v=5"></script>
+  <script src="js/scribe.js?v=1"></script>
   <script src="js/cuisine_reference.js?v=4"></script>
   <script src="js/recolte.js?v=2"></script>
   <script src="js/musique.js?v=1"></script>
@@ -980,6 +986,6 @@
   <script src="js/capacites.js?v=61"></script>
   <script src="js/capacites_monstres.js?v=1"></script>
   <script src="js/combat.js?v=24"></script>
-  <script src="js/app.js?v=255"></script>
+  <script src="js/app.js?v=256"></script>
 </body>
 </html>

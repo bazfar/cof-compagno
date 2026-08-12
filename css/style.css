@@ -2057,6 +2057,7 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .loot-badge-ingredient{ background: #e6efd8; color: #3d5a1e; }
 .loot-badge-recette   { background: #f0e4cf; color: #6b4a12; }
 .loot-badge-magic     { background: var(--or); color: #fff; }
+.loot-badge-fautif    { background: var(--chaos); color: #fff; }
 
 /* Vote en cours (MJ) */
 .vote-item-titre { font-family: "Cinzel", serif; font-weight: 700; color: var(--violet); margin-bottom: 8px; font-size: 0.95rem; }
