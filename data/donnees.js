@@ -2032,7 +2032,11 @@ const SORTS_MAGICIEN = [
     effet: "Immunité totale aux dégâts magiques pendant [2+Mod.INT] tours",
     mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 25, typeSort: "majeur",
       cible: "soi", portee: null, zone: null, jetOppose: null,
-      effets: [ { type: "special", note: "Immunité totale aux dégâts magiques pendant 2+Mod.INT tours — même patron que 'Sanctuaire' (capstone rang 5 de la Voie de la magie protectrice, capacité distincte non affectée par cet ajout) mais accessible via Grimoire indépendamment de la voie." } ] } },
+      // État dédié plutôt que réutilisation de 'sanctuaire_magicien'
+      // (décision de Thomas) : durées et sources différentes, et les deux
+      // doivent pouvoir coexister sur un Magicien qui a la voie. Une seule
+      // condition les lit dans App.subirDegats.
+      effets: [ { type: "etat", id: "bastion_arcanique", duree: "2+Mod.INT" } ] } },
 
   // --- Sorts additionnels (famille Illusion — jusqu'ici seulement rangs
   // 2/4 via invisibilite_mineure/image_miroir/invisibilite_majeure, aucun
@@ -2059,10 +2063,20 @@ const SORTS_MAGICIEN = [
   // --- Sorts additionnels (familles Illusion/Évocation, chantier "sorts
   // dictés en chat" du 12/08/2026) ---
   { id: "silence", nom: "Silence", rang: 3, categorie: "illusion",
-    effet: "Zone de 4 cases, portée 6 cases : pendant 1+Mod.CHA tours, immunité aux dégâts d'éclair/électriques et sorts à composante verbale impossibles à lancer dans la zone",
+    effet: "Jusqu'à 3 créatures à portée sont immunisées aux dégâts électriques pendant [1+Mod.CHA] tours ; les sorts à composante verbale y sont impossibles",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
-      cible: "zone", portee: 6, zone: { taille: 4 }, jetOppose: null,
-      effets: [ { type: "special", note: "Pendant 1+Mod.CHA tours, toute créature dans la zone (alliée comme ennemie) est immunisée aux dégâts d'éclair/électriques et ne peut lancer aucun sort à composante verbale — une immunité à un type de dégâts et un blocage de sorts par composante n'ont pas de représentation dans le schéma degats/etat/bonus existant, résolution manuelle par la table, même limite que Mur de force pour l'obstacle qu'il pose." } ] } },
+      // cible "allie" + maxCibles (et non "zone") : le picker multi n'est
+      // câblé que sur "allie"/"ennemi" et le moteur ne mesure aucune
+      // distance (cf. chantier maxCibles). Le texte annonce donc un nombre
+      // de cibles, pas un rayon. Distorsion assumée pour un sort nommé
+      // "Silence" : décision de Thomas, ne pas "corriger" plus tard.
+      cible: "allie", portee: 6, zone: null, jetOppose: null, maxCibles: 3,
+      // Seule l'immunité électrique est automatisée. Le blocage des sorts à
+      // composante verbale demanderait un verrou dans Capacites.lancer() ;
+      // l'application aux monstres est inapplicable (leurs dégâts sont
+      // saisis à la main par le MJ). Les deux restent narratifs.
+      effets: [ { type: "etat", id: "silence_zone", duree: "1+Mod.CHA" },
+        { type: "special", note: "Aucun sort à composante verbale ne peut être lancé par une créature affectée, et les créatures non ciblées présentes dans la zone décrite en fiction sont affectées de la même façon — arbitrage de la table dans les deux cas." } ] } },
 
   { id: "prison_mentale", nom: "Prison mentale", rang: 5, categorie: "illusion",
     effet: "Cible à 6 cases : sauvegarde Volonté DD 16 ou subit 4d8 dégâts et reste prisonnière de sa case ; si elle se déplace ou est déplacée, l'illusion se brise et elle subit 8d8 dégâts supplémentaires",

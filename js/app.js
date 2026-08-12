@@ -8455,12 +8455,20 @@ const App = (() => {
       if (res.ok) { res.appliquer(); coeurMontagneActif = true; }
       else toast(res.raison);
     }
-    // Magicien — Voie de la magie protectrice, rang 5 "Sanctuaire" : pendant
-    // sa durée (état 'sanctuaire_magicien', posé par Capacites.lancer et
-    // décompté automatiquement comme tout autre état), immunité totale aux
-    // dégâts marqués "magique" — détection automatique, pas de case à
-    // cocher (même principe que l'état 'renversee' ailleurs dans l'app).
-    const sanctuaireActif = typeDegats === "magique" && (p.etatsActifs || []).some((e) => e.idEtat === "sanctuaire_magicien");
+    // Magicien — Voie de la magie protectrice r5 "Sanctuaire" (capacité) ET
+    // sort "Bastion arcanique" (rang 5 du Grimoire, 1x/scénario) : deux
+    // sources distinctes de la même immunité totale aux dégâts "magique".
+    // États séparés à dessein (durées et sources différentes, la fiche doit
+    // nommer la bonne) mais une seule condition ici.
+    const sanctuaireActif = typeDegats === "magique" && (p.etatsActifs || []).some(
+      (e) => e.idEtat === "sanctuaire_magicien" || e.idEtat === "bastion_arcanique");
+    // Sort "Silence" (Magicien rang 3) : immunité totale aux dégâts
+    // ÉLECTRIQUES, lue sur elementDegats et non sur typeDegats — l'électrique
+    // est un élément (cumulable avec magique/naturel), pas un type.
+    // Semi-automatique par construction : aucun sort n'émet d'élément
+    // aujourd'hui, c'est le MJ qui sélectionne "Électrique" dans le
+    // formulaire de dégâts subis. Même fonctionnement que feu/froid.
+    const silenceActif = elementDegats === "electrique" && (p.etatsActifs || []).some((e) => e.idEtat === "silence_zone");
     // Druide — Voie du chaos, rang 5 "Forme du chaos sauvage" : pendant sa
     // durée (état 'forme_chaos_sauvage'), divise par 2 (arrondi inf.) les
     // dégâts PHYSIQUES uniquement — détection automatique, même principe.
@@ -8514,7 +8522,7 @@ const App = (() => {
     // lieu d'un simple /2 codé en dur.
     const fractionChute = typeDegats === "chute" ? perso.fractionReductionChuteEquipement() : 0;
     if (fractionChute > 0) degatsNets = Math.floor(degatsNets * (1 - fractionChute));
-    if (coeurMontagneActif || sanctuaireActif) degatsNets = 0;
+    if (coeurMontagneActif || sanctuaireActif || silenceActif) degatsNets = 0;
 
     // PV temporaires (cf. Capacites.appliquerPvTemporairesSurPerso) : absorbent
     // les dégâts en priorité, avant les PV réels — jamais de réduction
@@ -8539,7 +8547,16 @@ const App = (() => {
 
     let message;
     if (coeurMontagneActif) message = `🏔 Cœur de Montagne : ${degatsBruts} dégâts encaissés sans dommage.`;
-    else if (sanctuaireActif) message = `✨ Sanctuaire : ${degatsBruts} dégâts magiques encaissés sans dommage.`;
+    else if (sanctuaireActif) {
+      // Deux états distincts peuvent déclencher sanctuaireActif (cf.
+      // ci-dessus) : le message doit nommer celui réellement présent, pas
+      // toujours "Sanctuaire" en dur.
+      const viaBastion = (p.etatsActifs || []).some((e) => e.idEtat === "bastion_arcanique");
+      message = viaBastion
+        ? `✨ Bastion arcanique : ${degatsBruts} dégâts magiques encaissés sans dommage.`
+        : `✨ Sanctuaire : ${degatsBruts} dégâts magiques encaissés sans dommage.`;
+    }
+    else if (silenceActif) message = `✨ Silence : ${degatsBruts} dégâts électriques encaissés sans dommage.`;
     else {
       const sources = [];
       if (reductionArmure > 0) sources.push("armure");
@@ -8595,6 +8612,7 @@ const App = (() => {
           <option value="chaos">Chaos</option>
           <option value="mental">Mental</option>
           <option value="sacre">Sacré</option>
+          <option value="electrique">Électrique</option>
         </select>
         ${coeurMontagneDispo ? `<label style="display:flex;align-items:center;gap:4px;font-size:0.78rem;"><input type="checkbox" id="${prefixe}coeur-montagne" /> 🏔 Cœur de Montagne (annule ces dégâts, 1x/jour)</label>` : ""}
         ${rempartDispo ? `<label style="display:flex;align-items:center;gap:4px;font-size:0.78rem;"><input type="checkbox" id="${prefixe}rempart" /> 🛡️ Rempart (protège activement un allié, −2)</label>` : ""}
