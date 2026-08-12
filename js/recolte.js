@@ -357,11 +357,30 @@ const Recolte = (() => {
       App.ajouterAInventaire(p, Object.assign({}, itemCatalogue, { quantite: unitesFinal }));
     }
 
+    // Dépouille (cf. champ `peau` de data/loot.json, chantier Tannerie) : une
+    // traque qui rapporte quelque chose rapporte AUSSI la peau, sans second
+    // jet — on dépèce la bête qu'on a tuée, ce n'est pas une deuxième chance.
+    // Lue sur cible.item (l'ESPÈCE réellement chassée), pas sur itemProduit
+    // (qui peut avoir été substitué par un aléa) : la peau vient de la bête
+    // au sol, pas de ce que l'aléa a mis dans le sac. Une seule unité quelle
+    // que soit la qualité : c'est `surfaceCuir` de la peau, et non la
+    // quantité de peaux, qui distingue le lièvre du cerf.
+    let peauObtenue = null;
+    let peauNom = null;
+    if (unitesFinal > 0 && cible.item.peau) {
+      const dep = _catalogueItem(cible.item.peau);
+      if (dep) {
+        App.ajouterAInventaire(p, Object.assign({}, dep, { quantite: 1 }));
+        peauObtenue = dep.id;
+        peauNom = dep.nom;
+      }
+    }
+
     const gainXp = Metiers.gagnerXp(p, metierId, resultat.xpGagne);
     encours.recoltes = encours.recoltes || {};
     encours.recoltes[persoId] = {
       metierId, milieuId, itemId: itemProduit.id, qualiteId: resultat.qualiteId,
-      unites: unitesFinal, aleaD: aleaResultat ? aleaResultat.alea.d : null,
+      unites: unitesFinal, aleaD: aleaResultat ? aleaResultat.alea.d : null, peauId: peauObtenue,
     };
     SyncStore.set("repos:encours", encours);
     App.sauverPersos(persos);
@@ -371,10 +390,11 @@ const Recolte = (() => {
     // mutations qu'on vient d'écrire, pas une version périmée.
     if (degatsAlea) App.ajusterPv(persoId, -degatsAlea);
 
+    const suffixePeau = peauNom ? ` + 1 « ${peauNom} »` : "";
     if (aleaResultat) toast(aleaResultat.message);
-    else toast(`${libelleQualite(resultat.qualiteId)} — ${unitesFinal > 0 ? `${unitesFinal}× « ${itemProduit.nom} ».` : "rien récolté."}${resultat.xpGagne ? ` +${resultat.xpGagne} XP ${METIERS[metierId].nom}.` : ""}`);
+    else toast(`${libelleQualite(resultat.qualiteId)} — ${unitesFinal > 0 ? `${unitesFinal}× « ${itemProduit.nom} ».${suffixePeau}` : "rien récolté."}${resultat.xpGagne ? ` +${resultat.xpGagne} XP ${METIERS[metierId].nom}.` : ""}`);
 
-    return { ok: true, resultat, alea: aleaResultat, gainXp, jetBrut, unitesFinal, itemProduit, nomPerso: p.nom };
+    return { ok: true, resultat, alea: aleaResultat, gainXp, jetBrut, unitesFinal, itemProduit, peauId: peauObtenue, peauNom, nomPerso: p.nom };
   }
 
   return {

@@ -11,9 +11,21 @@
    Les armures sont verrouillées par palier (cuir CA 12/1, clouté CA
    13/2, mailles CA 14/3 …). Un tanneur ne peut pas produire mieux que
    du cuir clouté sans casser cette échelle : le cuir ne devient pas de
-   l'acier. Mais js/raretes.js ajoute bonusRarete à valeurCA ET à
-   reductionDegats pour les armures — un cuir clouté peu commun vaut
-   donc CA 14/réd. 3, soit une cotte de mailles, sans en être une.
+   l'acier. js/raretes.js ajoute bonusRarete à valeurCA pour les
+   armures — un cuir clouté peu commun vaut donc CA 14/réd. 2, un rare
+   CA 15/réd. 2, sans jamais toucher réductionDegats (figée à sa valeur
+   de catalogue depuis le recalibrage équilibrage, cf. le commentaire
+   au-dessus de "case 'armure'" dans Raretes.appliquer).
+   ── ÉCART AVEC LE PROMPT ─────────────────────────────────────
+   Les deux prompts Tanneur (10 et 11) affirment que le bonus de rareté
+   s'ajoute AUSSI à reductionDegats ("CA 14/réd. 3, soit une cotte de
+   mailles") — c'était vrai à l'écriture du commentaire d'en-tête de
+   js/raretes.js, mais plus depuis le recalibrage équilibrage qui a
+   volontairement retiré reductionDegats de ce bonus. Le commentaire
+   d'en-tête de raretes.js lui-même n'a pas été mis à jour (dérive
+   documentaire pré-existante, hors scope ici — interdiction absolue de
+   toucher à ce fichier). La progression reste réelle (le bonus de CA
+   n'est pas rien), juste plus modeste que ce que les prompts annoncent.
    C'est le PREMIER usage du système de rareté par un joueur plutôt que
    par le MJ. Ne pas "corriger" ça en donnant au tanneur accès aux
    paliers supérieurs : ce serait casser deux systèmes à la fois.

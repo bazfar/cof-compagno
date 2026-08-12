@@ -4416,6 +4416,7 @@ const App = (() => {
       alchimie: "sous-panneau-atelier-alchimie",
       cuisine: "sous-panneau-atelier-cuisine",
       scribe: "sous-panneau-atelier-scribe",
+      tannerie: "sous-panneau-atelier-tannerie",
     });
     const sel = document.getElementById("select-atelier-perso");
     if (!sel) return;
@@ -4428,6 +4429,7 @@ const App = (() => {
       document.getElementById("zone-atelier-alchimie").innerHTML = "";
       document.getElementById("zone-atelier-cuisine").innerHTML = "";
       document.getElementById("zone-atelier-scribe").innerHTML = "";
+      document.getElementById("zone-atelier-tannerie").innerHTML = "";
       return;
     }
     sel.innerHTML = ids.map((id) => `<option value="${id}">${echapper(persos[id].nom)}</option>`).join("");
@@ -4440,11 +4442,13 @@ const App = (() => {
       if (typeof Alchimie !== "undefined" && Alchimie.rendreZoneAlchimie) Alchimie.rendreZoneAlchimie(atelierPersoId);
       if (typeof Cuisine !== "undefined") Cuisine.rendreZoneCuisine(atelierPersoId);
       if (typeof Scribe !== "undefined" && Scribe.rendreZoneScribe) Scribe.rendreZoneScribe(atelierPersoId);
+      if (typeof Tannerie !== "undefined" && Tannerie.rendreZoneTannerie) Tannerie.rendreZoneTannerie(atelierPersoId);
     };
     _rendreAtelierItems();
     if (typeof Alchimie !== "undefined" && Alchimie.rendreZoneAlchimie) Alchimie.rendreZoneAlchimie(atelierPersoId);
     if (typeof Cuisine !== "undefined") Cuisine.rendreZoneCuisine(atelierPersoId);
     if (typeof Scribe !== "undefined" && Scribe.rendreZoneScribe) Scribe.rendreZoneScribe(atelierPersoId);
+    if (typeof Tannerie !== "undefined" && Tannerie.rendreZoneTannerie) Tannerie.rendreZoneTannerie(atelierPersoId);
   }
 
   /* ---------- Sous-onglet Enchantement ---------- */

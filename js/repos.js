@@ -554,7 +554,7 @@ const Repos = (() => {
     const zone = document.getElementById("recolte-resultat");
     if (!res.ok) { if (zone) zone.innerHTML = `<p class="vide">${echapper(res.raison)}</p>`; return; }
     if (zone) {
-      zone.innerHTML = `<p><strong>${echapper(Recolte.libelleQualite(res.resultat.qualiteId))}</strong> — ${res.unitesFinal > 0 ? `${res.unitesFinal}× ${echapper(res.itemProduit.nom)}` : "rien récolté"}${res.alea ? `<br><span style="color:var(--chaos);">⚠ ${echapper(res.alea.message)}</span>` : ""}</p>
+      zone.innerHTML = `<p><strong>${echapper(Recolte.libelleQualite(res.resultat.qualiteId))}</strong> — ${res.unitesFinal > 0 ? `${res.unitesFinal}× ${echapper(res.itemProduit.nom)}` : "rien récolté"}${res.peauNom ? ` + 1 ${echapper(res.peauNom)}` : ""}${res.alea ? `<br><span style="color:var(--chaos);">⚠ ${echapper(res.alea.message)}</span>` : ""}</p>
         <button class="btn or" id="recolte-btn-fermer-resultat">Fermer</button>`;
       document.getElementById("recolte-btn-fermer-resultat").onclick = () => _repondreRecolte(persoId);
     }
@@ -590,7 +590,11 @@ const Repos = (() => {
       const milieu = (typeof MILIEUX_RECOLTE !== "undefined") ? MILIEUX_RECOLTE.find((m) => m.id === r.milieuId) : null;
       const icone = r.metierId === "traque" ? "🏹" : "⚗️";
       const nomMetier = (typeof METIERS !== "undefined" && METIERS[r.metierId]) ? METIERS[r.metierId].nom : r.metierId;
-      let ligne = `<div>${icone} ${echapper(p.nom)} — ${echapper(nomMetier)} · ${milieu ? echapper(milieu.nom) : echapper(r.milieuId)} · ${item ? echapper(item.nom) : echapper(r.itemId)} — ${echapper((typeof Recolte !== "undefined") ? Recolte.libelleQualite(r.qualiteId) : r.qualiteId)}${r.unites ? `, ${r.unites} unité${r.unites > 1 ? "s" : ""}` : ""}</div>`;
+      // r.peauId (chantier Tannerie) : dépouille rapportée en plus de l'item
+      // principal, cf. Recolte.tenter — jamais posé hors Traque sur une
+      // espèce sans champ `peau`.
+      const peau = r.peauId && typeof LOOT_CATALOGUE !== "undefined" ? LOOT_CATALOGUE.find((it) => it.id === r.peauId) : null;
+      let ligne = `<div>${icone} ${echapper(p.nom)} — ${echapper(nomMetier)} · ${milieu ? echapper(milieu.nom) : echapper(r.milieuId)} · ${item ? echapper(item.nom) : echapper(r.itemId)} — ${echapper((typeof Recolte !== "undefined") ? Recolte.libelleQualite(r.qualiteId) : r.qualiteId)}${r.unites ? `, ${r.unites} unité${r.unites > 1 ? "s" : ""}` : ""}${peau ? ` + 1 ${echapper(peau.nom)}` : ""}</div>`;
       if (r.aleaD != null && typeof ALEAS_RECOLTE !== "undefined") {
         const alea = ALEAS_RECOLTE.find((a) => a.d === r.aleaD);
         if (alea) ligne += `<div style="font-size:0.82rem;color:var(--chaos);margin-left:22px;">${echapper(alea.nom)} — ${echapper(alea[r.metierId] || "")}</div>`;
