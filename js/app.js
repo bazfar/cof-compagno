@@ -9559,11 +9559,19 @@ const App = (() => {
     if (!filtreZone || typeof SORTS_PAR_CLASSE === "undefined") return;
 
     // Tous les sorts de toutes les classes casteuses (cf. SORTS_PAR_CLASSE),
-    // taggés avec leur classe d'origine pour l'affichage — reste générique à
-    // une nouvelle classe qui rejoindrait cette table plus tard.
-    const tousLesSorts = Object.keys(SORTS_PAR_CLASSE).flatMap((classe) =>
-      (SORTS_PAR_CLASSE[classe] || []).map((s) => Object.assign({ classe }, s))
-    );
+    // DÉDUPLIQUÉS par id — un même sort partagé entre plusieurs classes (ex.
+    // necromancien: SORTS_MAGICIEN, réutilisation temporaire du même tableau
+    // en attendant une liste dédiée, cf. data/donnees.js) ne doit apparaître
+    // qu'UNE fois par école, avec la liste des classes qui le partagent,
+    // plutôt qu'une carte dupliquée par classe.
+    const sortsParId = new Map();
+    Object.keys(SORTS_PAR_CLASSE).forEach((classe) => {
+      (SORTS_PAR_CLASSE[classe] || []).forEach((s) => {
+        if (sortsParId.has(s.id)) sortsParId.get(s.id).classes.push(classe);
+        else sortsParId.set(s.id, Object.assign({ classes: [classe] }, s));
+      });
+    });
+    const tousLesSorts = [...sortsParId.values()];
 
     // Écoles réellement présentes dans les données, dans l'ordre de
     // ORDRE_ECOLES_MAGIE puis les éventuelles nouvelles écoles non listées
@@ -9593,7 +9601,7 @@ const App = (() => {
       const sorts = tousLesSorts.filter((s) => s.categorie === ecole).sort((a, b) => a.rang - b.rang);
       if (!sorts.length) return "";
       const items = sorts.map((s) => `<div class="etat-regle">
-          <div class="etat-regle-nom">${echapper(s.nom)} <span class="badge-reserve">${echapper(CLASSES[s.classe] ? CLASSES[s.classe].nom_affiche : s.classe)}</span></div>
+          <div class="etat-regle-nom">${echapper(s.nom)} ${s.classes.map((c) => `<span class="badge-reserve">${echapper(CLASSES[c] ? CLASSES[c].nom_affiche : c)}</span>`).join(" ")}</div>
           <div class="sort-regle-meta">Rang ${s.rang} · ${_coutAffiche(s.mecanique)}</div>
           <div class="etat-regle-desc">${echapper(s.effet)}</div>
         </div>`).join("");
