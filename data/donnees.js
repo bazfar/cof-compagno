@@ -2535,10 +2535,17 @@ const SORTS_PRETRE = [
 
   // Rang 5 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)
   { id: "aura_divine", nom: "Aura divine", rang: 5, categorie: "foi",
-    effet: "+2 CA à vous et vos alliés, -2 CA aux ennemis, en zone, pendant 3 tours. Coûte 2 Points de Conviction",
+    effet: "+2 CA à tous vos alliés et -2 CA à jusqu'à 3 ennemis à portée, pendant 3 tours. Coûte 2 Points de Conviction",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPointsConviction: 2,
-      cible: "zone", portee: null, zone: { taille: 3 }, jetOppose: null,
-      effets: [ { type: "special", note: "+2 CA aux alliés et -2 CA aux ennemis dans la zone, pendant 3 tours — double polarité et ciblage multiple non modélisés par le type 'bonus' standard (une seule cible résolue, une seule stat). Résolution manuelle par la table, même limite que l'ancienne 'Voix de la foi' que ce sort remplace." } ] } },
+      // cible "ennemi" + maxCibles : c'est le picker des ennemis. Le volet
+      // allié passe par cibleGroupe et ne consomme pas de sélection.
+      // Aucune distance mesurée dans les deux cas (décision de Thomas) : le
+      // texte annonce donc "tous vos alliés" et un nombre d'ennemis, pas un
+      // rayon — c'est au MJ d'autoriser le lancer selon la fiction.
+      cible: "ennemi", portee: 10, zone: null, jetOppose: null, maxCibles: 3,
+      effets: [
+        { type: "bonus", cible: "DEF", valeur: 2, duree: "3", cibleGroupe: "tousLesPJ" },
+        { type: "bonus", cible: "DEF", valeur: -2, duree: "3" } ] } },
 
   // --- Famille bannissement (7 sorts, cf. prompt_pretre_cercle_bannissement.md) ---
   // Rang 1 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)

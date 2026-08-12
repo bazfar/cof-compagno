@@ -1432,6 +1432,34 @@ const Capacites = (() => {
       if (effetAjuste.duree === "permanente") {
         return `Bonus permanent (${effetAjuste.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}) — normalement fixé une fois pour toutes à l'acquisition de la capacité, pas à relancer ici.`;
       }
+      // effet.cibleGroupe (optionnel) : l'effet ne s'applique pas à la cible
+      // sélectionnée mais à un GROUPE entier, sans picker. Seule valeur
+      // reconnue aujourd'hui : "tousLesPJ". Généralise ce que la Charge
+      // collective du Chevalier fait via un cas particulier en dur dans
+      // lancer() (laissé intact : elle pose un état, pas un bonus).
+      //
+      // AUCUNE notion de distance : "tous les PJ" signifie tous les
+      // personnages du dépôt, y compris ceux absents de la scène. C'est au MJ
+      // d'autoriser le lancer selon la fiction — même approximation assumée que
+      // maxCibles, cf. le texte des sorts concernés.
+      //
+      // Remplace toute pose précédente du même bonus sur chaque PJ, pour qu'un
+      // double lancer ne cumule pas (contrairement au comportement générique) :
+      // une aura ne s'empile pas sur elle-même.
+      if (effetAjuste.cibleGroupe === "tousLesPJ") {
+        Object.keys(persos).forEach((pid) => {
+          const pAllie = persos[pid];
+          if (!pAllie) return;
+          pAllie.etatsActifs = (pAllie.etatsActifs || []).filter(
+            (e) => !(e.bonus && e.bonus.cible === effetAjuste.cible && e.source === libelle));
+          appliquerBonusSurPerso(pAllie, effetAjuste, libelle, { perso, rang }, valeurResolue);
+        });
+        // Formulation volontairement DIFFÉRENTE de "… — aucune cible
+        // sélectionnée, à appliquer manuellement." plus bas : cette dernière
+        // est captée par la regex de _appliquerBonusMonstreDepuisMessages
+        // (js/app.js), qui poserait sinon ce bonus par erreur sur un monstre.
+        return `Bonus (${effetAjuste.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}, ${effetAjuste.duree}) appliqué à tous les PJ.`;
+      }
       if (cible && cible.genre === "perso" && persos[cible.id]) {
         appliquerBonusSurPerso(persos[cible.id], effetAjuste, libelle, { perso, rang }, valeurResolue);
         // effet.ciblesSupplementaires (optionnel, ex. ["sauvegardes"] pour
@@ -2018,8 +2046,18 @@ const Capacites = (() => {
         .map((cid) => listeCibles(persoId).find((c) => c.id === cid))
         .filter(Boolean);
       if (!ciblesRetenues.length) return { ok: false, messages: ["Cible(s) introuvable(s)."] };
+      // Les effets à cibleGroupe ne concernent pas les cibles sélectionnées :
+      // ils sont résolus UNE FOIS, hors de la boucle (cf. Aura divine, dont le
+      // +2 CA va à tous les PJ pendant que le -2 CA va aux ennemis choisis).
+      // Sans ce filtre, ils seraient appliqués une fois PAR cible.
+      const effetsGroupe = (mecanique.effets || []).filter((e) => e.cibleGroupe);
+      const effetsParCible = (mecanique.effets || []).filter((e) => !e.cibleGroupe);
+      effetsGroupe.forEach((effet) => {
+        const msg = resoudreEffet(effet, { perso, rang: source.rang, voie: source.voie, cible: null, libelle, persos });
+        if (msg) messages.push(msg);
+      });
       ciblesRetenues.forEach((c) => {
-        (mecanique.effets || []).forEach((effet) => {
+        effetsParCible.forEach((effet) => {
           const msg = resoudreEffet(effet, { perso, rang: source.rang, voie: source.voie, cible: c, libelle, persos });
           if (msg) messages.push(`${c.nom} — ${msg}`);
         });
@@ -2030,6 +2068,21 @@ const Capacites = (() => {
         if (typeof Remous !== "undefined") Remous.ajouter(p, coutPPReel * (mecanique.remousMultiplicateur || 1));
         messages.push(`PP -${coutPPReel} (${p.ppActuel} restants).`);
       }
+      // Points de Cercle (Bénédiction/Conviction/Bannissement/Jugement) :
+      // même patron que le décompte du chemin standard plus bas dans lancer()
+      // (cf. RESSOURCES_CERCLE) — absent de cette branche jusqu'ici, ce qui
+      // aurait laissé un sort à coutPointsConviction en maxCibles ne RIEN
+      // décompter (trou du prompt 3, signalé plutôt que corrigé en silence).
+      [
+        { cout: "coutPointsBenediction", champ: "pointsBenediction", nom: "Points de Bénédiction" },
+        { cout: "coutPointsConviction", champ: "pointsConviction", nom: "Points de Conviction" },
+        { cout: "coutPointsBannissement", champ: "pointsBannissement", nom: "Points de Bannissement" },
+        { cout: "coutPointsJugement", champ: "pointsJugement", nom: "Points de Jugement" },
+      ].forEach((r) => {
+        if (!mecanique[r.cout]) return;
+        p[r.champ] = Math.max(0, (p[r.champ] || 0) - mecanique[r.cout]);
+        messages.push(`${r.nom} -${mecanique[r.cout]} (${p[r.champ]} restants).`);
+      });
       App.sauverPersos(persos);
       return { ok: true, messages };
     }
