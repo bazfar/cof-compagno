@@ -2048,10 +2048,16 @@ const SORTS_MAGICIEN = [
       effets: [ { type: "special", note: "Prend l'apparence d'une personne que le lanceur a visualisée durant l'heure précédente, pendant 10 + (Mod.CHA × 2) minutes — durée en minutes hors échelle de tours de combat, résolution manuelle par la table (pas de minuteur temps réel dans l'app), même limite que Détection de la magie/Téléportation." } ] } },
 
   { id: "lame_ombre", nom: "Lame d'ombre", rang: 3, categorie: "illusion",
-    effet: "Manifeste une lame d'ombre servant d'arme de contact : votre attaque de contact inflige 2d6 dégâts magiques au lieu de son type habituel, pendant 3 tours",
+    effet: "Manifeste une lame d'ombre : votre attaque de contact inflige 2d6 dégâts magiques au lieu de sa formule d'arme, pendant 3 tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
       cible: "soi", portee: null, zone: null, jetOppose: null,
-      effets: [ { type: "special", note: "Pendant 3 tours, l'attaque de contact du lanceur inflige 2d6 dégâts magiques au lieu de son type habituel (bénéficie normalement du bonus de dégâts magiques d'un objet de Grimoire équipé, ex. bonusDegatsMagiques) — substitution du type/de la formule de dégâts d'une arme non modélisée par le moteur (pas d'arme réelle dans inventaireListe/equipement), résolution manuelle par la table comme Image miroir/Mur de force." } ] } },
+      // Substitution de la formule de contact (App, trois sites de
+      // construction de dmgContact) : 2d6 magiques remplacent l'arme, et les
+      // bonus qui dérivent de l'arme PHYSIQUE ou de la force brute sont
+      // coupés (affixes brutale/écrasant, objet forgé, Force herculéenne).
+      // Les bonus magiques et génériques restent. Décision de Thomas.
+      // Fonctionne sans arme équipée : la lame est manifestée.
+      effets: [ { type: "etat", id: "lame_ombre", duree: "3" } ] } },
 
   { id: "assassin_imaginaire", nom: "Assassin imaginaire", rang: 4, categorie: "illusion",
     effet: "Conjure dans l'esprit de la cible la présence d'un assassin : jet de sauvegarde Volonté (SAG) ou 3d8 dégâts",

@@ -1755,6 +1755,18 @@ const App = (() => {
     const formuleSecondaire = armeSecondaire ? formuleDegats(armeSecondaire) : null;
     const pctSecondaire = armeSecondaire ? perso.pourcentageDegatsSecondaire() : 0;
     let dmgContact = formuleDegats(armeContact) || perso.degatsPoings();
+    // Sort "Lame d'ombre" (Magicien rang 3) : substitue 2d6 magiques à la
+    // formule de l'arme de contact — y compris sans arme équipée, la lame
+    // étant manifestée et non portée (d'où la pose AVANT la pile de bonus,
+    // toute gardée par `if (dmgContact && …)` : sans cette ligne, un
+    // personnage à mains nues n'obtiendrait rien du tout).
+    // Coupe les bonus qui dérivent de l'ARME PHYSIQUE ou de la force brute
+    // (affixes brutale/écrasant, objet forgé, Force herculéenne) : ils
+    // décrivent une lame réelle restée au fourreau. Conserve les bonus
+    // magiques (Arme enchantée, Avatar du pacte, Marque du serment brisé) et
+    // les bonus génériques de capacité. Décision de Thomas.
+    const lameOmbreActive = (p.etatsActifs || []).some((e) => e.idEtat === "lame_ombre");
+    if (lameOmbreActive) dmgContact = "2d6";
     if (dmgContact && actifFrappePuissante) dmgContact += "+4";
     if (dmgContact && actifArmeBenie) dmgContact += "+2";
     // Don Expert en hast : +1 dégâts au contact avec une arme d'allonge
@@ -1764,9 +1776,9 @@ const App = (() => {
     // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
-    if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
-    if (dmgContact && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
-    if (dmgContact && perso.bonusDegatsContactEquipement()) dmgContact += "+" + perso.bonusDegatsContactEquipement(); // affixes "brutale"/"ecrasant", cf. Personnage.bonusDegatsContactEquipement
+    if (dmgContact && !lameOmbreActive && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
+    if (dmgContact && !lameOmbreActive && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
+    if (dmgContact && !lameOmbreActive && perso.bonusDegatsContactEquipement()) dmgContact += "+" + perso.bonusDegatsContactEquipement(); // affixes "brutale"/"ecrasant", cf. Personnage.bonusDegatsContactEquipement
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
@@ -2271,6 +2283,18 @@ const App = (() => {
     const formuleSecondaire = armeSecondaire ? formuleDegats(armeSecondaire) : null;
     const pctSecondaire = armeSecondaire ? perso.pourcentageDegatsSecondaire() : 0;
     let dmgContact = formuleDegats(armeContact) || perso.degatsPoings();
+    // Sort "Lame d'ombre" (Magicien rang 3) : substitue 2d6 magiques à la
+    // formule de l'arme de contact — y compris sans arme équipée, la lame
+    // étant manifestée et non portée (d'où la pose AVANT la pile de bonus,
+    // toute gardée par `if (dmgContact && …)` : sans cette ligne, un
+    // personnage à mains nues n'obtiendrait rien du tout).
+    // Coupe les bonus qui dérivent de l'ARME PHYSIQUE ou de la force brute
+    // (affixes brutale/écrasant, objet forgé, Force herculéenne) : ils
+    // décrivent une lame réelle restée au fourreau. Conserve les bonus
+    // magiques (Arme enchantée, Avatar du pacte, Marque du serment brisé) et
+    // les bonus génériques de capacité. Décision de Thomas.
+    const lameOmbreActive = (p.etatsActifs || []).some((e) => e.idEtat === "lame_ombre");
+    if (lameOmbreActive) dmgContact = "2d6";
     if (dmgContact && actifFrappePuissante) dmgContact += "+4";
     if (dmgContact && actifArmeBenie) dmgContact += "+2";
     // Don Expert en hast : +1 dégâts au contact avec une arme d'allonge
@@ -2280,9 +2304,9 @@ const App = (() => {
     // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
-    if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
-    if (dmgContact && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
-    if (dmgContact && perso.bonusDegatsContactEquipement()) dmgContact += "+" + perso.bonusDegatsContactEquipement(); // affixes "brutale"/"ecrasant", cf. Personnage.bonusDegatsContactEquipement
+    if (dmgContact && !lameOmbreActive && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
+    if (dmgContact && !lameOmbreActive && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
+    if (dmgContact && !lameOmbreActive && perso.bonusDegatsContactEquipement()) dmgContact += "+" + perso.bonusDegatsContactEquipement(); // affixes "brutale"/"ecrasant", cf. Personnage.bonusDegatsContactEquipement
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.
@@ -6012,14 +6036,26 @@ const App = (() => {
         const formuleSecondaire = armeSecondaire ? formuleDegats(armeSecondaire) : null;
         const pctSecondaire = armeSecondaire ? perso.pourcentageDegatsSecondaire() : 0;
         let dmgContact = formuleDegats(armeContact) || perso.degatsPoings();
+        // Sort "Lame d'ombre" (Magicien rang 3) : substitue 2d6 magiques à
+        // la formule de l'arme de contact — y compris sans arme équipée, la
+        // lame étant manifestée et non portée (d'où la pose AVANT la pile de
+        // bonus, toute gardée par `if (dmgContact && …)` : sans cette ligne,
+        // un personnage à mains nues n'obtiendrait rien du tout).
+        // Coupe les bonus qui dérivent de l'ARME PHYSIQUE ou de la force
+        // brute (affixes brutale/écrasant, objet forgé, Force herculéenne) :
+        // ils décrivent une lame réelle restée au fourreau. Conserve les
+        // bonus magiques (Arme enchantée, Avatar du pacte, Marque du serment
+        // brisé) et les bonus génériques de capacité. Décision de Thomas.
+        const lameOmbreActive = (pp.etatsActifs || []).some((e) => e.idEtat === "lame_ombre");
+        if (lameOmbreActive) dmgContact = "2d6";
         if (dmgContact && perso.aExpertHastQualifie()) dmgContact += "+1";
     // Chevalier — Voie du chaos rang 4 "Marque du serment brisé", choix
     // "degats" (dès CA 5+) : +1d8 DM chaotique sur l'arme de contact.
     if (dmgContact && perso.bonusDegatsArmeChaos()) dmgContact += "+" + perso.bonusDegatsArmeChaos();
     if (dmgContact && perso.bonusDegatsDechainement()) dmgContact += "+" + perso.bonusDegatsDechainement();
-    if (dmgContact && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
-    if (dmgContact && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
-    if (dmgContact && perso.bonusDegatsContactEquipement()) dmgContact += "+" + perso.bonusDegatsContactEquipement(); // affixes "brutale"/"ecrasant", cf. Personnage.bonusDegatsContactEquipement
+    if (dmgContact && !lameOmbreActive && perso.bonusDegatsForceHerculeenne()) dmgContact += "+" + perso.bonusDegatsForceHerculeenne();
+    if (dmgContact && !lameOmbreActive && perso.bonusDegatsFormuleEquipement()) dmgContact += "+" + perso.bonusDegatsFormuleEquipement(); // objet forgé « +dmg par variable » (Forge)
+    if (dmgContact && !lameOmbreActive && perso.bonusDegatsContactEquipement()) dmgContact += "+" + perso.bonusDegatsContactEquipement(); // affixes "brutale"/"ecrasant", cf. Personnage.bonusDegatsContactEquipement
     // Enchanteur — Voie de la transfiguration rang 3 "Arme enchantée" (cible :
     // n'importe quel allié équipé) : +1d6 DM magiques tant que l'état
     // 'arme_enchantee' reste actif.

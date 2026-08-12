@@ -123,6 +123,8 @@ const ETATS = {
     description: "Immunité totale aux dégâts magiques tant que l'état dure (Magicien, sort Bastion arcanique, rang 5) — état dédié, distinct de sanctuaire_magicien (durée et source différentes, peuvent coexister), même condition lue par subirDegats côté app.js." },
   silence_zone: { nom: "Silence", categorie: "buff",
     description: "Immunité aux dégâts électriques ; les sorts à composante verbale sont impossibles à lancer (arbitrage de la table) — (Magicien, sort Silence, rang 3)." },
+  lame_ombre: { nom: "Lame d'ombre", categorie: "buff",
+    description: "2d6 dégâts magiques en remplacement de l'arme de contact (Magicien, sort Lame d'ombre, rang 3) ; les bonus liés à l'arme physique ne s'appliquent pas." },
   sursaut: { nom: "Sursaut", categorie: "buff",
     description: "Réduite à 0 PV mais encore debout : agit une dernière fois, puis tombe au début de son prochain tour (capacitesSpeciales, évènement \"tombeA0\", cf. Combat._estKO) — distinct de increvable/protection_mort ci-dessus, qui évitent le 0 plutôt que d'y tomber ; ici la créature y tombe et agit quand même. Tout nouveau dégât reçu pendant le sursaut y met fin immédiatement (cf. Carte.appliquerDegatsCombat)." },
   apaise: { nom: "Apaisé", categorie: "controle",
