@@ -2055,6 +2055,85 @@ const SORTS_MAGICIEN = [
       cible: "ennemi", portee: 10, zone: null,
       jetOppose: { caracAttaquant: "INT", caracDefenseur: "Volonte" },
       effets: [ { type: "degats", formule: "3d8", typeDegats: "magique" } ] } },
+
+  // --- Sorts additionnels (familles Illusion/Évocation, chantier "sorts
+  // dictés en chat" du 12/08/2026) ---
+  { id: "silence", nom: "Silence", rang: 3, categorie: "illusion",
+    effet: "Zone de 4 cases, portée 6 cases : pendant 1+Mod.CHA tours, immunité aux dégâts d'éclair/électriques et sorts à composante verbale impossibles à lancer dans la zone",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "zone", portee: 6, zone: { taille: 4 }, jetOppose: null,
+      effets: [ { type: "special", note: "Pendant 1+Mod.CHA tours, toute créature dans la zone (alliée comme ennemie) est immunisée aux dégâts d'éclair/électriques et ne peut lancer aucun sort à composante verbale — une immunité à un type de dégâts et un blocage de sorts par composante n'ont pas de représentation dans le schéma degats/etat/bonus existant, résolution manuelle par la table, même limite que Mur de force pour l'obstacle qu'il pose." } ] } },
+
+  { id: "prison_mentale", nom: "Prison mentale", rang: 5, categorie: "illusion",
+    effet: "Cible à 6 cases : sauvegarde Volonté DD 16 ou subit 4d8 dégâts et reste prisonnière de sa case ; si elle se déplace ou est déplacée, l'illusion se brise et elle subit 8d8 dégâts supplémentaires",
+    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 25, typeSort: "majeur",
+      cible: "ennemi", portee: 6, zone: null,
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Volonte", difficulteFixe: 16 },
+      effets: [ { type: "degats", formule: "4d8", typeDegats: "magique" },
+        { type: "etat", id: "prisonniere_illusoire", duree: { tours: null, motCle: null, dureeAffichee: "jusqu'à un déplacement" } } ] } },
+
+  { id: "chatiment_calcinant", nom: "Châtiment calcinant", rang: 1, categorie: "evocation",
+    effet: "Enchante votre arme ou une arme à portée (3 cases) — canalisation 1 PP/tour : la prochaine attaque touchée par cette arme inflige +1d6 dégâts de feu",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "allie", portee: 3, zone: null, jetOppose: null,
+      effets: [ { type: "etat", id: "chatiment_calcinant_actif", duree: "maintenue", coutMaintienPP: 1 } ] } },
+
+  { id: "secousse", nom: "Secousse", rang: 1, categorie: "evocation",
+    effet: "Le sol tremble sur une zone de 3 cases de diamètre : sauvegarde Réflexes DD 13 ou étourdie",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "zone", portee: 8, zone: { taille: 3 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", difficulteFixe: 13 },
+      effets: [ { type: "etat", id: "etourdie", duree: { tours: 1 } } ] } },
+
+  { id: "eclair_tracant", nom: "Éclair traçant", rang: 2, categorie: "evocation",
+    effet: "Marque une cible à 5 cases : sauvegarde Réflexes DD 14 ou subit 1d8 dégâts électriques par tour pendant 3 tours",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "ennemi", portee: 5, zone: null,
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", difficulteFixe: 14 },
+      effets: [ { type: "etat", id: "marque_eclair", duree: { tours: 3 }, formuleDot: "1d8" } ] } },
+
+  { id: "chatiment_ame", nom: "Châtiment de l'âme", rang: 4, categorie: "evocation",
+    effet: "Marque une cible à 5 cases : la prochaine fois qu'elle est touchée par une attaque de contact, sauvegarde Vigueur DD 15 ou subit 3d8 dégâts magiques supplémentaires",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
+      cible: "ennemi", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "etat", id: "marque_chatiment_ame", duree: { tours: 5 } } ] } },
+
+  { id: "parole_divine", nom: "Parole divine", rang: 5, categorie: "evocation",
+    effet: "Portée 6 cases : puise directement dans la Mer des âmes (compte 1,5× son coût pour la Rupture). Ciblez autant de cibles que vous le souhaitez dans votre champ de vision : 50 PV ou moins → étourdie 1 tour ; 40 PV ou moins → endormie 2 tours ; 30 PV ou moins → paralysée 3 tours ; 20 PV ou moins → tuée sur le coup",
+    mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 25, typeSort: "majeur",
+      cible: "zone", portee: 6, zone: null, jetOppose: null, remousMultiplicateur: 1.5,
+      effets: [ { type: "special", note: "Cible librement un nombre quelconque de créatures en vue (pas de picker multi-cible libre dans l'app) ; pour CHACUNE, selon ses PV actuels au moment du sort : ≤50 étourdie 1 tour, ≤40 endormie 2 tours, ≤30 paralysée 3 tours, ≤20 tuée sur le coup (aucun jet de sauvegarde) — ciblage libre et seuils multiples non modélisés par le moteur, application manuelle par la table. Le ×1,5 pour la Rupture (mecanique.remousMultiplicateur, lu par Remous.ajouter) est, lui, bien automatisé." } ] } },
+
+  // --- Sorts d'Abjuration partagés (chantier "sorts dictés en chat" du
+  // 12/08/2026, décision de Thomas : accessibles à toute classe qui
+  // débloque l'école abjuration — mêmes 4 entrées dans SORTS_MAGICIEN,
+  // SORTS_PRETRE et SORTS_ENCHANTEUR, pas réservées à une seule classe) ---
+  { id: "forteresse_esprit", nom: "Forteresse de l'esprit", rang: 2, categorie: "abjuration",
+    effet: "Les cibles dans un rayon de 5 cases gagnent +1 à leurs jets de sauvegarde de Volonté",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
+      effets: [ { type: "special", note: "+1 à tous les jets de sauvegarde de Volonté des alliés dans la zone (5 cases), durée à fixer par la table (non précisée par le sort) — un bonus à un TYPE de sauvegarde précis n'a pas de représentation dans le schéma bonus existant (cible ∈ {attaque,DEF} seulement), application manuelle par la table, même limite que Globe de protection." } ] } },
+
+  { id: "benediction_mineure", nom: "Bénédiction mineure", rang: 2, categorie: "abjuration",
+    effet: "La cible dans un rayon de 5 cases gagne un bonus de 1d4 sur son prochain jet de dé",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "+1d4 sur le PROCHAIN jet de dé de la cible, quel qu'il soit (test, attaque, sauvegarde...) — un bonus générique applicable au prochain jet, n'importe lequel, n'a pas de représentation dans le schéma bonus existant (limité à attaque/DEF sur une durée en tours), application manuelle par la table." } ] } },
+
+  { id: "sphere_vitriol", nom: "Sphère de vitriol", rang: 3, categorie: "abjuration",
+    effet: "Sphère de 5 cases de diamètre, dure 1+Mod.INT tours : toute cible dans ou entrant dans la zone subit 3d4 dégâts d'acide immédiatement puis 2d4 par tour tant qu'elle y reste ; sauvegarde Réflexes DD 14 pour ne subir que la moitié",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "zone", portee: 10, zone: { taille: 5 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", difficulteFixe: 14, modeSauvegarde: "moitie" },
+      effets: [ { type: "degats", formule: "3d4", typeDegats: "magique" },
+        { type: "special", note: "Dégâts initiaux (3d4, ou moitié sur sauvegarde réussie) déjà résolus ci-dessus pour la première cible touchée. La persistance (2d4/tour tant que dans la zone, et le déclenchement pour toute créature qui ENTRE dans la zone après la pose, pendant 1+Mod.INT tours) n'a pas d'équivalent dans le moteur (pas de zone de terrain persistante déclenchée par l'entrée d'un jeton) — application manuelle par la table pour chaque cible et chaque tour, comme Mur de force pour l'obstacle qu'il pose." } ] } },
+
+  { id: "aide", nom: "Aide", rang: 2, categorie: "abjuration",
+    effet: "Les alliés dans une zone de 5 cases de diamètre autour de vous gagnent 5 PV temporaires (se dissipent à la fin du combat)",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
+      effets: [ { type: "pvTemp", formule: "5", duree: "finCombat" },
+        { type: "special", note: "mecanique.cible='zone' sans cibleId automatique : application manuelle allié par allié dans la zone (chacun reçoit sa propre entrée de PV temporaires, cf. appliquerPvTemporairesSurPerso), même limite que Globe de protection." } ] } },
 ];
 
 /* Liste autonome de sorts piochés par l'Enchanteur (même principe que
@@ -2178,6 +2257,37 @@ const SORTS_ENCHANTEUR = [
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
       cible: "aucune", portee: "contact", zone: null, jetOppose: null,
       effets: [ { type: "special", note: "Rituel narratif (10 min), information résolue par la table." } ] } },
+
+  // --- Sorts d'Abjuration partagés (chantier "sorts dictés en chat" du
+  // 12/08/2026, décision de Thomas : accessibles à toute classe qui
+  // débloque l'école abjuration — mêmes 4 entrées dans SORTS_MAGICIEN,
+  // SORTS_PRETRE et SORTS_ENCHANTEUR, pas réservées à une seule classe) ---
+  { id: "forteresse_esprit", nom: "Forteresse de l'esprit", rang: 2, categorie: "abjuration",
+    effet: "Les cibles dans un rayon de 5 cases gagnent +1 à leurs jets de sauvegarde de Volonté",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
+      effets: [ { type: "special", note: "+1 à tous les jets de sauvegarde de Volonté des alliés dans la zone (5 cases), durée à fixer par la table (non précisée par le sort) — un bonus à un TYPE de sauvegarde précis n'a pas de représentation dans le schéma bonus existant (cible ∈ {attaque,DEF} seulement), application manuelle par la table, même limite que Globe de protection." } ] } },
+
+  { id: "benediction_mineure", nom: "Bénédiction mineure", rang: 2, categorie: "abjuration",
+    effet: "La cible dans un rayon de 5 cases gagne un bonus de 1d4 sur son prochain jet de dé",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "+1d4 sur le PROCHAIN jet de dé de la cible, quel qu'il soit (test, attaque, sauvegarde...) — un bonus générique applicable au prochain jet, n'importe lequel, n'a pas de représentation dans le schéma bonus existant (limité à attaque/DEF sur une durée en tours), application manuelle par la table." } ] } },
+
+  { id: "sphere_vitriol", nom: "Sphère de vitriol", rang: 3, categorie: "abjuration",
+    effet: "Sphère de 5 cases de diamètre, dure 1+Mod.INT tours : toute cible dans ou entrant dans la zone subit 3d4 dégâts d'acide immédiatement puis 2d4 par tour tant qu'elle y reste ; sauvegarde Réflexes DD 14 pour ne subir que la moitié",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "zone", portee: 10, zone: { taille: 5 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", difficulteFixe: 14, modeSauvegarde: "moitie" },
+      effets: [ { type: "degats", formule: "3d4", typeDegats: "magique" },
+        { type: "special", note: "Dégâts initiaux (3d4, ou moitié sur sauvegarde réussie) déjà résolus ci-dessus pour la première cible touchée. La persistance (2d4/tour tant que dans la zone, et le déclenchement pour toute créature qui ENTRE dans la zone après la pose, pendant 1+Mod.INT tours) n'a pas d'équivalent dans le moteur (pas de zone de terrain persistante déclenchée par l'entrée d'un jeton) — application manuelle par la table pour chaque cible et chaque tour, comme Mur de force pour l'obstacle qu'il pose." } ] } },
+
+  { id: "aide", nom: "Aide", rang: 2, categorie: "abjuration",
+    effet: "Les alliés dans une zone de 5 cases de diamètre autour de vous gagnent 5 PV temporaires (se dissipent à la fin du combat)",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
+      effets: [ { type: "pvTemp", formule: "5", duree: "finCombat" },
+        { type: "special", note: "mecanique.cible='zone' sans cibleId automatique : application manuelle allié par allié dans la zone (chacun reçoit sa propre entrée de PV temporaires, cf. appliquerPvTemporairesSurPerso), même limite que Globe de protection." } ] } },
 ];
 
 /* ============================================================
@@ -2427,6 +2537,64 @@ const SORTS_PRETRE = [
       jetOppose: { caracAttaquant: "SAG", caracDefenseur: "DEF" },
       effets: [ { type: "degats", formule: "5d6", typeDegats: "magique" },
         { type: "special", note: "Doublement des dégâts (10d6) si la culpabilité de la cible est confirmée dans la fiction — jugement narratif de la table, pas de condition mécanique automatisable. Remplace l'ancienne limite '1x/scénario' par un coût de 2 Points de Jugement (pool de 3 max au rang 5). Restriction 'cible déjà Marquée' : même remarque que Confession forcée, non gatée automatiquement." } ] } },
+
+  // --- Sorts d'Abjuration partagés (chantier "sorts dictés en chat" du
+  // 12/08/2026, décision de Thomas : accessibles à toute classe qui
+  // débloque l'école abjuration — mêmes 4 entrées dans SORTS_MAGICIEN,
+  // SORTS_PRETRE et SORTS_ENCHANTEUR, pas réservées à une seule classe) ---
+  { id: "forteresse_esprit", nom: "Forteresse de l'esprit", rang: 2, categorie: "abjuration",
+    effet: "Les cibles dans un rayon de 5 cases gagnent +1 à leurs jets de sauvegarde de Volonté",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
+      effets: [ { type: "special", note: "+1 à tous les jets de sauvegarde de Volonté des alliés dans la zone (5 cases), durée à fixer par la table (non précisée par le sort) — un bonus à un TYPE de sauvegarde précis n'a pas de représentation dans le schéma bonus existant (cible ∈ {attaque,DEF} seulement), application manuelle par la table, même limite que Globe de protection." } ] } },
+
+  { id: "benediction_mineure", nom: "Bénédiction mineure", rang: 2, categorie: "abjuration",
+    effet: "La cible dans un rayon de 5 cases gagne un bonus de 1d4 sur son prochain jet de dé",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "allie", portee: 5, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "+1d4 sur le PROCHAIN jet de dé de la cible, quel qu'il soit (test, attaque, sauvegarde...) — un bonus générique applicable au prochain jet, n'importe lequel, n'a pas de représentation dans le schéma bonus existant (limité à attaque/DEF sur une durée en tours), application manuelle par la table." } ] } },
+
+  { id: "sphere_vitriol", nom: "Sphère de vitriol", rang: 3, categorie: "abjuration",
+    effet: "Sphère de 5 cases de diamètre, dure 1+Mod.INT tours : toute cible dans ou entrant dans la zone subit 3d4 dégâts d'acide immédiatement puis 2d4 par tour tant qu'elle y reste ; sauvegarde Réflexes DD 14 pour ne subir que la moitié",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "zone", portee: 10, zone: { taille: 5 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", difficulteFixe: 14, modeSauvegarde: "moitie" },
+      effets: [ { type: "degats", formule: "3d4", typeDegats: "magique" },
+        { type: "special", note: "Dégâts initiaux (3d4, ou moitié sur sauvegarde réussie) déjà résolus ci-dessus pour la première cible touchée. La persistance (2d4/tour tant que dans la zone, et le déclenchement pour toute créature qui ENTRE dans la zone après la pose, pendant 1+Mod.INT tours) n'a pas d'équivalent dans le moteur (pas de zone de terrain persistante déclenchée par l'entrée d'un jeton) — application manuelle par la table pour chaque cible et chaque tour, comme Mur de force pour l'obstacle qu'il pose." } ] } },
+
+  { id: "aide", nom: "Aide", rang: 2, categorie: "abjuration",
+    effet: "Les alliés dans une zone de 5 cases de diamètre autour de vous gagnent 5 PV temporaires (se dissipent à la fin du combat)",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
+      effets: [ { type: "pvTemp", formule: "5", duree: "finCombat" },
+        { type: "special", note: "mecanique.cible='zone' sans cibleId automatique : application manuelle allié par allié dans la zone (chacun reçoit sa propre entrée de PV temporaires, cf. appliquerPvTemporairesSurPerso), même limite que Globe de protection." } ] } },
+
+  // --- Sorts additionnels (familles Jugement/Guérison, chantier "sorts
+  // dictés en chat" du 12/08/2026) ---
+  { id: "chatiment_sacre", nom: "Châtiment", rang: 1, categorie: "jugement",
+    effet: "Enchante votre arme ou une arme à portée (3 cases) — canalisation 1 PP/tour : la prochaine attaque touchée sur une cible Marquée inflige +1d8 dégâts sacrés",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
+      cible: "allie", portee: 3, zone: null, jetOppose: null,
+      effets: [ { type: "etat", id: "chatiment_sacre_actif", duree: "maintenue", coutMaintienPP: 1 } ] } },
+
+  { id: "aura_sacree", nom: "Aura sacrée", rang: 2, categorie: "jugement",
+    effet: "Enchante les armes de vous et vos alliés dans un rayon de 3 cases — canalisation 1 PP/tour : leurs attaques touchées infligent +1d8 dégâts sacrés",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
+      cible: "zone", portee: null, zone: { taille: 3 }, jetOppose: null,
+      effets: [ { type: "etat", id: "aura_sacree_active", duree: "maintenue", coutMaintienPP: 1 } ] } },
+
+  { id: "colonne_flamme_sacree", nom: "Colonne de flamme sacrée", rang: 4, categorie: "jugement",
+    effet: "Zone de 5 cases de diamètre : sauvegarde Réflexes DD 15 ou subit 3d6 dégâts de feu et 3d6 dégâts sacrés",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
+      cible: "zone", portee: 10, zone: { taille: 5 },
+      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", difficulteFixe: 15 },
+      effets: [ { type: "degats", formule: "3d6", typeDegats: "magique" }, { type: "degats", formule: "3d6", typeDegats: "magique" } ] } },
+
+  { id: "aura_vitalite", nom: "Aura de vitalité", rang: 3, categorie: "guerison",
+    effet: "Soigne vous et vos alliés à portée (5 cases de diamètre) — canalisation 2 PP/tour : 1d8 PV par tour",
+    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
+      cible: "zone", portee: null, zone: { taille: 5 }, jetOppose: null,
+      effets: [ { type: "etat", id: "aura_vitalite_active", duree: "maintenue", coutMaintienPP: 2, formuleSoin: "1d8" } ] } },
 ];
 
 /* Table des sorts accordés directement par un rang de voie (pas appris via

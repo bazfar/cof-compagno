@@ -1716,8 +1716,11 @@ const Capacites = (() => {
         p.ppActuel = Math.max(0, (p.ppActuel || 0) - coutPPReel);
         // Remous (accord explicite de Thomas, 09/08/2026, cf.
         // prompt_remous_ui.md §3) : alimente la jauge de Remous du lieu
-        // avec le coût PP réellement décompté.
-        if (typeof Remous !== "undefined") Remous.ajouter(p, coutPPReel);
+        // avec le coût PP réellement décompté. remousMultiplicateur (Magicien,
+        // sort Parole divine, rang 5) : quelques sorts puisent plus
+        // directement dans la Mer des âmes que leur coût PP ne le laisse
+        // paraître — absent = ×1, comportement inchangé pour tous les autres.
+        if (typeof Remous !== "undefined") Remous.ajouter(p, coutPPReel * (mecanique.remousMultiplicateur || 1));
         messages.push(`PP -${coutPPReel} (${p.ppActuel} restants).`);
       }
       App.sauverPersos(persos);
@@ -2481,8 +2484,9 @@ const Capacites = (() => {
       p.ppActuel = (p.ppActuel || 0) - coutPPReel;
       // Remous (accord explicite de Thomas, 09/08/2026, cf.
       // prompt_remous_ui.md §3) : alimente la jauge de Remous du lieu
-      // avec le coût PP réellement décompté.
-      if (typeof Remous !== "undefined") Remous.ajouter(p, coutPPReel);
+      // avec le coût PP réellement décompté. remousMultiplicateur : cf.
+      // l'autre site d'appel de Remous.ajouter plus haut dans lancer().
+      if (typeof Remous !== "undefined") Remous.ajouter(p, coutPPReel * (mecanique.remousMultiplicateur || 1));
       App.ajouterHisto(`${libelle} — PP`, p.ppActuel, false, false, `-${coutPPReel} PP (${p.nom}, ${p.ppActuel} restants)`, { sansOverlay: true });
       messages.push(`PP -${coutPPReel} (${p.ppActuel} restants).`);
     }
