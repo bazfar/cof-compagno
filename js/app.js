@@ -4863,7 +4863,18 @@ const App = (() => {
         const etat = typeof ETATS !== "undefined" ? ETATS[/^marquee_.+/.test(e.idEtat) ? "marquee" : e.idEtat] : null;
         libelle = etat ? etat.nom : e.idEtat;
       } else if (e.bonus) {
-        libelle = `Bonus ${e.bonus.cible} ${e.bonus.valeur >= 0 ? "+" : ""}${e.bonus.valeur}`;
+        // Traduction de la cible pour les nouvelles clés de sauvegarde (cf.
+        // Personnage.modSauvegarde/bonusTemporaire) : "sauvegardes"/"Reflexes"/
+        // "Vigueur"/"Volonte" sont des identifiants sérialisés, pas du texte
+        // d'UI — Sauvegardes.LIBELLES fait la traduction, comme pour le
+        // sélecteur de sauvegardes de la fiche. Toute autre cible (DEF,
+        // attaque, DM...) reste affichée telle quelle, inchangée.
+        const cibleTxt = e.bonus.cible === "sauvegardes" ? "Sauvegardes"
+          : (typeof Sauvegardes !== "undefined" && Sauvegardes.LIBELLES[e.bonus.cible]) || e.bonus.cible;
+        // e.bonus.vs (conditionnel, cf. Personnage.bonusTemporaireVsSauvegarde) :
+        // affiché explicitement, sans quoi un bonus conditionnel se lirait
+        // comme inconditionnel — exactement le mensonge que ce champ refuse.
+        libelle = `Bonus ${cibleTxt} ${e.bonus.valeur >= 0 ? "+" : ""}${e.bonus.valeur}${e.bonus.vs ? ` vs ${e.bonus.vs}` : ""}`;
       } else {
         libelle = "État";
       }

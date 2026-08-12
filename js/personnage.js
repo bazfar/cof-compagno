@@ -516,8 +516,40 @@ class Personnage extends Entite {
     const bonusRace = this.bonusSauvegardeRace(nom, contexte);
     const bonusVsEquipement = this.bonusSauvegardeVsEquipement(contexte);
     const bonusMusique = (typeof this.bonusSauvegardeMusique === "function") ? this.bonusSauvegardeMusique(nom) : 0;
+    // Bonus TEMPORAIRES posés par une capacité ou un sort (etatsActifs, cf.
+    // Capacites.appliquerBonusSurPerso) — absents de ce calcul avant ce
+    // chantier : aucun sort ne pouvait accorder un bonus de sauvegarde à
+    // durée limitée. Deux clés reconnues, cf. bonus.cible :
+    //   "sauvegardes"                        -> les trois jets
+    //   "Reflexes" | "Vigueur" | "Volonte"   -> un seul jet
+    // Vocabulaire aligné sur le champ bonusSauvegardes des objets, à ceci
+    // près que son "toutes" devient "sauvegardes" ici : bonus.cible est un
+    // espace de noms plat partagé avec DEF/attaque/DM, où "toutes" serait
+    // ambigu. Un bonus CONDITIONNEL temporaire (bonus.vs) est traité juste
+    // après, jamais compté sans contexte explicite.
+    //
+    // ÉCART VOLONTAIRE avec le snippet du prompt : celui-ci sommait
+    // this.bonusTemporaire("sauvegardes") + this.bonusTemporaire(nom), mais
+    // bonusTemporaire() (laissé intact, hors périmètre du chantier) ignore
+    // totalement bonus.vs — une entrée CONDITIONNELLE ({ cible:
+    // "sauvegardes", valeur: 2, vs: "magie" }) se serait donc comptée ICI
+    // aussi, sans contexte (fuite : elle deviendrait inconditionnelle) et EN
+    // PLUS de bonusTempoVs quand le contexte correspond (double compte).
+    // Vérifié par test : modSauvegarde("Vigueur") passait de 4 à 6 après la
+    // seule pose d'une entrée vs:"magie", sans jamais choisir ce contexte —
+    // exactement le test de non-régression que l'étape 8 du prompt demande
+    // de faire réussir. D'où ce calcul dédié, qui exclut explicitement tout
+    // bonus.vs (repris exclusivement par bonusTemporaireVsSauvegarde), sans
+    // toucher à bonusTemporaire() lui-même.
+    const bonusTempo = (this.etatsActifs || []).reduce((total, e) => {
+      const b = e.bonus;
+      if (!b || b.vs || typeof b.valeur !== "number") return total;
+      if (b.cible !== "sauvegardes" && b.cible !== nom) return total;
+      return total + b.valeur;
+    }, 0);
+    const bonusTempoVs = this.bonusTemporaireVsSauvegarde(contexte, nom);
     return this.mod(code) + this.bonusTestCaracCapacites(code) + malusProficience + bonusResistanceMentale
-      + bonusEquipement + bonusRace + bonusVsEquipement + bonusMusique;
+      + bonusEquipement + bonusRace + bonusVsEquipement + bonusMusique + bonusTempo + bonusTempoVs;
   }
 
   // Bonus de sauvegarde INCONDITIONNEL porté par l'équipement (champ
@@ -538,6 +570,27 @@ class Personnage extends Entite {
     if (!contexte) return 0;
     return this._itemsEquipesUniques().reduce((t, it) =>
       t + ((it.bonusSauvegardesVs && it.bonusSauvegardesVs[contexte]) || 0), 0);
+  }
+
+  // Bonus de sauvegarde TEMPORAIRES ET CONDITIONNELS (etatsActifs portant
+  // bonus.vs, ex. "+2 vs magie pendant 3 tours"). Renvoie 0 sans contexte,
+  // exactement comme bonusSauvegardeVsEquipement/bonusSauvegardeRace : un
+  // bonus conditionnel n'est JAMAIS compté sans menace nommée, sinon la
+  // fiche au repos afficherait un total qui mentirait sur toutes les autres
+  // menaces. Contextes reconnus : cf. modSauvegarde ("magie", "poison",
+  // "corruption", "peur", "froid").
+  // `nom` permet de restreindre un conditionnel à UNE sauvegarde
+  // (bonus.cible), ex. "+2 Volonté vs peur" : une entrée dont la cible est
+  // une sauvegarde précise ne compte que pour celle-là, une entrée
+  // "sauvegardes" compte pour les trois.
+  bonusTemporaireVsSauvegarde(contexte, nom) {
+    if (!contexte) return 0;
+    return (this.etatsActifs || []).reduce((total, e) => {
+      const b = e.bonus;
+      if (!b || b.vs !== contexte || typeof b.valeur !== "number") return total;
+      if (b.cible !== "sauvegardes" && b.cible !== nom) return total;
+      return total + b.valeur;
+    }, 0);
   }
 
   // Bonus de sauvegarde CONDITIONNELS portés par les voies raciales.
@@ -575,6 +628,21 @@ class Personnage extends Entite {
     this._itemsEquipesUniques().forEach((it) => {
       const v = it.bonusSauvegardesVs && it.bonusSauvegardesVs[contexte];
       if (v) lignes.push({ libelle: it.nom, valeur: v });
+    });
+    // etatsActifs conditionnels (bonus.vs) — MÊMES CONDITIONS que
+    // bonusTemporaireVsSauvegarde (typeof valeur === "number", vs ===
+    // contexte), jamais recalculées différemment : sinon un bonus figurerait
+    // dans le total d'un jet de sauvegarde sans apparaître ici. Ce bloc est
+    // partagé par les trois jets (comme les deux boucles ci-dessus, qui ne
+    // filtrent déjà pas par sauvegarde) : une entrée ciblant une seule
+    // sauvegarde (bonus.cible: "Volonte") s'affiche donc ici même si elle ne
+    // compte que sur ce jet précis — signalé par son libellé (e.source, déjà
+    // le nom de la capacité), pas par sauvegarde.
+    (this.etatsActifs || []).forEach((e) => {
+      const b = e.bonus;
+      if (!b || b.vs !== contexte || typeof b.valeur !== "number") return;
+      if (b.cible !== "sauvegardes" && !SAUVEGARDES[b.cible]) return;
+      lignes.push({ libelle: e.source, valeur: b.valeur });
     });
     return lignes;
   }

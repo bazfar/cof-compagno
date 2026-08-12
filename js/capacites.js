@@ -645,9 +645,17 @@ const Capacites = (() => {
   // ne calculer/afficher qu'une seule fois une formule comme "Mod.SAG".
   function appliquerBonusSurPerso(pCible, effet, source, ctx, valeurResolue) {
     pCible.etatsActifs = pCible.etatsActifs || [];
+    const bonus = { cible: effet.cible, valeur: valeurResolue };
+    // effet.vs (optionnel) : rend le bonus CONDITIONNEL à un type de menace
+    // ("magie" | "poison" | "corruption" | "peur" | "froid"), lu par
+    // Personnage.bonusTemporaireVsSauvegarde — pertinent uniquement pour les
+    // cibles de sauvegarde. Posé seulement s'il existe : une clé
+    // vs: undefined serait sérialisée telle quelle dans Firestore sur toutes
+    // les entrées de bonus existantes.
+    if (effet.vs) bonus.vs = effet.vs;
     pCible.etatsActifs.push({
       idEtat: null,
-      bonus: { cible: effet.cible, valeur: valeurResolue },
+      bonus,
       dureeRestante: Object.assign(resoudreDureeInitiale(effet.duree, ctx), { dureeAffichee: effet.duree }),
       source,
       poseLe: Date.now(),
@@ -1389,7 +1397,19 @@ const Capacites = (() => {
       }
       if (cible && cible.genre === "perso" && persos[cible.id]) {
         appliquerBonusSurPerso(persos[cible.id], effetAjuste, libelle, { perso, rang }, valeurResolue);
-        return `Bonus (${effetAjuste.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}, ${effetAjuste.duree}) appliqué à ${cible.nom}.`;
+        // effet.ciblesSupplementaires (optionnel, ex. ["sauvegardes"] pour
+        // Bénédiction) : un MÊME bonus qui porte sur plusieurs cibles à la
+        // fois. Une entrée etatsActifs par cible, mais TOUTES avec la même
+        // valeurResolue déjà tirée ci-dessus — c'est tout l'intérêt du champ :
+        // deux effets "bonus" séparés relanceraient le dé indépendamment et
+        // donneraient deux montants différents, ce que le texte de Bénédiction
+        // interdit explicitement ("même montant que le bonus d'attaque").
+        (effetAjuste.ciblesSupplementaires || []).forEach((cibleSupp) => {
+          appliquerBonusSurPerso(persos[cible.id],
+            Object.assign({}, effetAjuste, { cible: cibleSupp, ciblesSupplementaires: null }),
+            libelle, { perso, rang }, valeurResolue);
+        });
+        return `Bonus (${effetAjuste.cible}${(effetAjuste.ciblesSupplementaires || []).length ? " + " + effetAjuste.ciblesSupplementaires.join(" + ") : ""} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}, ${effetAjuste.duree}) appliqué à ${cible.nom}.`;
       }
       return `Bonus (${effetAjuste.cible} ${valeurResolue >= 0 ? "+" : ""}${valeurResolue}, ${effetAjuste.duree}) — aucune cible sélectionnée, à appliquer manuellement.`;
     }

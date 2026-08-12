@@ -2315,8 +2315,12 @@ const SORTS_PRETRE = [
     effet: "Un allié gagne +1d4 à ses jets d'attaque et de Sauvegarde pendant 10 tours",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
       cible: "allie", portee: 10, zone: null, jetOppose: null,
-      effets: [ { type: "bonus", cible: "attaque", valeur: "1d4", duree: "10" },
-        { type: "special", note: "+1d4 (même montant que le bonus d'attaque ci-dessus) aux jets de Sauvegarde — l'app ne modélise aucun jet de sauvegarde générique côté PJ, seul le volet attaque est automatisable." } ] } },
+      effets: [ { type: "bonus", cible: "attaque", valeur: "1d4", duree: "10",
+            // ciblesSupplementaires (cf. Capacites.resoudreEffet) : le d4
+            // est tiré UNE fois et le même montant s'applique à l'attaque
+            // et aux trois sauvegardes, conformément au texte du sort.
+            // Deux effets "bonus" séparés auraient relancé le dé.
+            ciblesSupplementaires: ["sauvegardes"] } ] } },
 
   { id: "premiers_secours", nom: "Premiers secours", rang: 1, categorie: "guerison",
     effet: "Stabilise une cible à 0 PV (ne la soigne pas, l'empêche de mourir)",
