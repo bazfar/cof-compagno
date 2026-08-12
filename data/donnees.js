@@ -2369,10 +2369,16 @@ const SORTS_PRETRE = [
             ciblesSupplementaires: ["sauvegardes"] } ] } },
 
   { id: "premiers_secours", nom: "Premiers secours", rang: 1, categorie: "guerison",
-    effet: "Stabilise une cible à 0 PV (ne la soigne pas, l'empêche de mourir)",
+    effet: "La cible Mourante réussit automatiquement son prochain jet de mort",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
       cible: "allie", portee: 5, zone: null, jetOppose: null,
-      effets: [ { type: "special", note: "Retire l'état 'mourant'/stabilise à 0 PV — réutiliser le mécanisme de stabilisation déjà existant dans l'app si un patron équivalent existe (ex. jet de stabilisation automatique), sinon état dédié à ajouter." } ] } },
+      // Décision de Thomas : les règles maison ne connaissent pas de
+      // "stabilisé à 0 PV" (cf. REGLES_GENERALES "Mort et stabilisation",
+      // qui ne produit que "1 PV debout"). Plutôt que d'inventer un
+      // troisième statut ou de dupliquer la compétence gratuite "Relever
+      // un allié", le sort achète un jet de mort. État consommé par
+      // App.jetDeMort.
+      effets: [ { type: "etat", id: "premiers_secours", duree: "finCombat" } ] } },
 
   // Rang 2
   { id: "soins_moderes", nom: "Soins modérés", rang: 2, categorie: "guerison",
@@ -2452,11 +2458,22 @@ const SORTS_PRETRE = [
   // --- Famille foi (7 sorts, cf. prompt_pretre_cercle_foi.md) ---
   // Rang 1
   { id: "mot_de_commandement", nom: "Mot de commandement", rang: 1, categorie: "foi",
-    effet: "Un mot simple (Fuis/Tombe/Arrête-toi) forcé sur une cible. Jet de Sauvegarde Volonté",
+    effet: "Un mot simple forcé sur une cible (Fuis / Tombe / Arrête-toi). Jet de Sauvegarde Volonté",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 2, typeSort: "majeur",
       cible: "ennemi", portee: 10, zone: null,
       jetOppose: { caracAttaquant: "SAG", caracDefenseur: "Volonte" },
-      effets: [ { type: "special", note: "Effet narratif selon le mot choisi (Fuis = déplacement forcé, Tombe = à terre, Arrête-toi = ne peut plus agir 1 tour) — résolution manuelle par la table pour le comportement exact." } ] } },
+      // Les trois mots correspondent à trois états déjà au catalogue
+      // (validé par Thomas). Durée 1 tour pour les trois, y compris
+      // Renversée : uniformité assumée, un rang 1 à 2 PP ne doit pas
+      // immobiliser plus longtemps qu'un rang supérieur.
+      effets: [ { type: "etat", id: "renversee", duree: "1",
+          etatParChoix: { fuis: "repoussee", tombe: "renversee", arrete: "etourdie" },
+          choix: { titre: "Mot de commandement", consigne: "Quel mot prononces-tu ?",
+            options: [
+              { valeur: "fuis", label: "Fuis (Repoussée)" },
+              { valeur: "tombe", label: "Tombe (Renversée)" },
+              { valeur: "arrete", label: "Arrête-toi (Étourdie)" },
+            ] } } ] } },
 
   { id: "bouclier_de_la_foi", nom: "Bouclier de la foi", rang: 1, categorie: "foi",
     effet: "+2 CA à un allié pendant 3 tours",

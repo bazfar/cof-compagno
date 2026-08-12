@@ -7349,8 +7349,19 @@ const App = (() => {
     const persos = chargerPersos();
     const p = persos[id];
     if (!p || p.pvActuel > 0 || p.etatMort) return;
-    const d20 = lancerDe(20);
-    const reussite = d20 >= 11;
+    // Sort "Premiers secours" (Prêtre rang 1) : l'état posé par le sort force
+    // la réussite du PROCHAIN jet de mort, puis est consommé — que le d20
+    // aurait réussi ou non, et sans le lancer (inutile de tirer un dé dont le
+    // résultat est ignoré : le journal annoncerait un chiffre sans effet, ce
+    // qui serait contesté à table). Consommé même si c'est le 3e succès qui
+    // stabilise : le sort a bien servi. Le chemin "succès" ci-dessous reste
+    // unique (booléen reussiteForcee court-circuitant le seul le tirage et
+    // le seuil), pour ne jamais dupliquer la règle des 3 succès.
+    const idxSecours = (p.etatsActifs || []).findIndex((e) => e.idEtat === "premiers_secours");
+    const reussiteForcee = idxSecours !== -1;
+    if (reussiteForcee) p.etatsActifs.splice(idxSecours, 1);
+    const d20 = reussiteForcee ? null : lancerDe(20);
+    const reussite = reussiteForcee || d20 >= 11;
     if (reussite) p.mortSucces = (p.mortSucces || 0) + 1;
     else p.mortEchecs = (p.mortEchecs || 0) + 1;
 
@@ -7366,10 +7377,14 @@ const App = (() => {
       issue = ` ${p.nom} succombe...`;
     }
     ajouterHisto(`${p.nom} — Jet de mort`, d20, d20 === 20, d20 === 1,
-      `d20 [${d20}] → ${reussite ? "succès" : "échec"} (${p.mortSucces || 0}/3 succès, ${p.mortEchecs || 0}/3 échecs)`);
+      reussiteForcee
+        ? `Premiers secours : succès automatique (${p.mortSucces || 0}/3 succès, ${p.mortEchecs || 0}/3 échecs)`
+        : `d20 [${d20}] → ${reussite ? "succès" : "échec"} (${p.mortSucces || 0}/3 succès, ${p.mortEchecs || 0}/3 échecs)`);
     sauverPersos(persos);
     _syncPvAffichages(id, p);
-    toast(`🎲 Jet de mort (${d20}) : ${reussite ? "succès" : "échec"}.${issue}`);
+    toast(reussiteForcee
+      ? `✨ Premiers secours : succès automatique.${issue}`
+      : `🎲 Jet de mort (${d20}) : ${reussite ? "succès" : "échec"}.${issue}`);
     if (ficheActiveId === id) afficherFiche(id);
     rendreDockCombat();
   }

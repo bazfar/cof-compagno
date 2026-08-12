@@ -1029,7 +1029,7 @@ const Capacites = (() => {
   // texte destiné au joueur (toast) — ne journalise PAS lui-même dans
   // l'historique partagé pour les effets sans jet de dé (etat/bonus/special).
   function resoudreEffet(effet, ctx) {
-    const { perso, rang, voie, cible, libelle, persos, critique, multiplicateurDegats, groupeJetId } = ctx;
+    const { perso, rang, voie, cible, libelle, persos, critique, multiplicateurDegats, groupeJetId, choixEffet } = ctx;
     if (effet.type === "degats") {
       // critique (cf. liaison attaque->dégâts, lancer()/resoudreDegatsEnAttente)
       // double les termes de dés de la formule, pas les modificateurs fixes.
@@ -1247,6 +1247,17 @@ const Capacites = (() => {
       return `${total} PV temporaires (${detail}) — aucune cible sélectionnée, à appliquer manuellement.`;
     }
     if (effet.type === "etat") {
+      // effet.etatParChoix (optionnel) : table {valeurDuChoix -> idEtat}, pour
+      // les capacités dont l'option choisie à l'activation détermine un ÉTAT
+      // DIFFÉRENT et non une simple valeur (ex. sort "Mot de commandement" :
+      // Fuis/Tombe/Arrête-toi -> repoussee/renversee/etourdie). Généralise ce
+      // que le Poing élémentaire du Moine fait aujourd'hui via un cas
+      // particulier en dur dans lancer() — NE PAS y toucher : son choix
+      // mémorise en plus l'élément dans extra.element pour une résolution de
+      // dégâts ULTÉRIEURE, ce n'est pas un simple remplacement d'id.
+      if (effet.etatParChoix && choixEffet && effet.etatParChoix[choixEffet]) {
+        effet = Object.assign({}, effet, { id: effet.etatParChoix[choixEffet] });
+      }
       const idEtatCatalogue = /^marquee_.+/.test(effet.id) ? "marquee" : effet.id;
       const etat = getEtat(idEtatCatalogue); // lève si inconnu — l'entrée existe forcément (validée par tools/valider_mecaniques.js)
       if (cible && cible.genre === "perso" && persos[cible.id]) {
@@ -2303,7 +2314,7 @@ const Capacites = (() => {
               const effetResolu = (effet.cible === "choix" && choixEffet) ? Object.assign({}, effet, { cible: choixEffet }) : effet;
               const msg = resoudreEffet(effetResolu, {
                 perso, rang: source.rang, voie: source.voie, cible, libelle, persos,
-                critique: resolutionDegats.critique, multiplicateurDegats: resolutionDegats.multiplicateurDegats, groupeJetId,
+                critique: resolutionDegats.critique, multiplicateurDegats: resolutionDegats.multiplicateurDegats, groupeJetId, choixEffet,
               });
               if (msg) messages.push(msg);
             });
@@ -2466,7 +2477,7 @@ const Capacites = (() => {
       // (copie superficielle — ne jamais muter l'objet effet d'origine, partagé
       // par tous les personnages via data/donnees.js).
       const effetResolu = (effetVoieAjuste.cible === "choix" && choixEffet) ? Object.assign({}, effetVoieAjuste, { cible: choixEffet }) : effetVoieAjuste;
-      const msg = resoudreEffet(effetResolu, { perso, rang: source.rang, voie: source.voie, cible, libelle, persos });
+      const msg = resoudreEffet(effetResolu, { perso, rang: source.rang, voie: source.voie, cible, libelle, persos, choixEffet });
       if (msg) messages.push(msg);
     });
 
@@ -2635,7 +2646,7 @@ const Capacites = (() => {
       // substitution que dans lancer() ci-dessus, à partir du choix capturé
       // au moment du jet d'attaque (resolutionDegats.choixEffet).
       const effetResolu = (effet.cible === "choix" && choixEffet) ? Object.assign({}, effet, { cible: choixEffet }) : effet;
-      const msg = resoudreEffet(effetResolu, { perso, rang: source.rang, voie: source.voie, cible, libelle, persos, critique, multiplicateurDegats });
+      const msg = resoudreEffet(effetResolu, { perso, rang: source.rang, voie: source.voie, cible, libelle, persos, critique, multiplicateurDegats, choixEffet });
       if (msg) messages.push(msg);
     });
 

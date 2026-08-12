@@ -117,6 +117,8 @@ const ETATS = {
     description: "Les PV ne peuvent pas descendre sous 1 tant que l'état dure (Prêtre, Voie du chaos rang 5 « Le fléau, c'est moi ! ») — plancher spécial, distinct du KO normal à 0 PV, cf. subirDegats côté app.js." },
   protection_mort: { nom: "Protection contre la mort", categorie: "buff",
     description: "La prochaine fois que la cible tomberait à 0 PV ce combat, elle reste à 1 PV à la place (Prêtre, Cercle de Vie, sort Protection contre la mort, rang 3) — résolution manuelle, non chiffrée." },
+  premiers_secours: { nom: "Premiers secours", categorie: "buff",
+    description: "Prochain jet de mort automatiquement réussi (Prêtre, sort Premiers secours, rang 1) — consommé par App.jetDeMort, que ce soit ou non le 3e succès qui stabilise." },
   sursaut: { nom: "Sursaut", categorie: "buff",
     description: "Réduite à 0 PV mais encore debout : agit une dernière fois, puis tombe au début de son prochain tour (capacitesSpeciales, évènement \"tombeA0\", cf. Combat._estKO) — distinct de increvable/protection_mort ci-dessus, qui évitent le 0 plutôt que d'y tomber ; ici la créature y tombe et agit quand même. Tout nouveau dégât reçu pendant le sursaut y met fin immédiatement (cf. Carte.appliquerDegatsCombat)." },
   apaise: { nom: "Apaisé", categorie: "controle",
