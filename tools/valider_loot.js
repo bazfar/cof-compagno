@@ -559,12 +559,16 @@ items.forEach((it, index) => {
   }
 
   // 6ter0. ingredient (prompt_marche_ingredients.md) : familleVivre/origine
-  // requis sur tout vivre — pilotent respectivement quel marchand spécialisé
-  // peut le vendre et le prix à l'import (cf. data/marche.js).
-  if (it.type === "ingredient") {
+  // requis sur tout VIVRE — pilotent respectivement quel marchand spécialisé
+  // peut le vendre et le prix à l'import (cf. data/marche.js). familleVivre
+  // n'a pas de sens pour un ingredient non-vivre (ex. matériel de Scribe,
+  // prompt_scribe_8_donnees.md §4 : encre/vélin/calame) — condition
+  // resserrée sur `it.vivre` pour matcher ce que dit déjà ce commentaire,
+  // plutôt que tout `type === "ingredient"` sans distinction.
+  if (it.type === "ingredient" && it.vivre) {
     if (!FAMILLES_VIVRE_VALIDES.includes(it.familleVivre)) signaler(cle, `ingredient avec familleVivre invalide ou absente : "${it.familleVivre}" (attendu : ${FAMILLES_VIVRE_VALIDES.join("|")}).`);
-    if (!it.origine) signaler(cle, `ingredient sans origine renseignée.`);
   }
+  if (it.type === "ingredient" && !it.origine) signaler(cle, `ingredient sans origine renseignée.`);
 
   // 6ter0ter. recolte/rarete/milieux (prompt_recolte_1_donnees.md) : les
   // trois champs vont ensemble ou pas du tout — `recolte` absent = non

@@ -76,6 +76,21 @@ const METIERS = {
     autoClasse: "barde",
     domaine: "musique",
   },
+  scribe: {
+    id: "scribe",
+    nom: "Écriture",
+    icone: "✒️",
+    titres: ["Copiste", "Scribe", "Calligraphe", "Maître copiste", "Enlumineur", "Main d'Ithanor"],
+    caracteristique: "INT",
+    competence: null,
+    // Modèle à DIFFICULTÉ ABSOLUE (cf. Alchimie, Musicien), pas à seuil
+    // relatif (cf. Cuisine, Traque) : difficulte = 10 + 2 × rang du SORT.
+    // Le rang de métier compte ×1 et non ×2 comme en Alchimie, parce que
+    // le matériel ajoute jusqu'à +5 — même raison que l'instrument du
+    // Musicien. Ne pas "harmoniser" ces coefficients : ils diffèrent pour
+    // une raison chiffrée.
+    domaine: "ecriture",
+  },
 };
 
 if (typeof window !== "undefined") {
