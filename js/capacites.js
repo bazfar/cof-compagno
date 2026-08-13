@@ -1544,6 +1544,37 @@ const Capacites = (() => {
       }
       return `Purge un effet néfaste — aucune cible sélectionnée, à appliquer manuellement (pas de suivi d'état automatique pour les monstres).`;
     }
+    if (effet.type === "dissipation") {
+      // Sort "Dissipation mineure" : retire de la cible l'entrée etatsActifs
+      // désignée par choixEffet (poseLe de l'entrée, cf. CHOIX_DYNAMIQUES
+      // côté app.js — PAS un index, fragile si la liste a changé entre
+      // l'ouverture du modal et la résolution). Inscrit dans
+      // TYPES_EFFETS_DIFFERES : n'atteint ce point QUE si le jet opposé
+      // (INT vs INT) a échoué côté cible, déjà tranché par le moteur
+      // (_resoudreSauvegardeReactive) avant d'arriver ici — pas réimplémenté.
+      if (!cible) return null;
+      if (cible.genre === "perso" && persos[cible.id]) {
+        const cibleP = persos[cible.id];
+        const idx = (cibleP.etatsActifs || []).findIndex((e) => String(e.poseLe) === choixEffet);
+        if (idx === -1) return `${cible.nom} ne porte plus l'effet choisi (déjà expiré ou retiré entre-temps).`;
+        const retire = cibleP.etatsActifs[idx];
+        const idCatalogue = retire.idEtat && /^marquee_.+/.test(retire.idEtat) ? "marquee" : retire.idEtat;
+        const nomEffet = retire.idEtat ? getEtat(idCatalogue).nom : `Bonus ${retire.bonus ? retire.bonus.cible : "?"}`;
+        cibleP.etatsActifs.splice(idx, 1);
+        return `« ${nomEffet} » dissipé sur ${cible.nom}.`;
+      }
+      if (cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat && Carte.retirerEtatCombat) {
+        const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
+        const idx = tok ? (tok.etatsActifs || []).findIndex((e) => String(e.poseLe) === choixEffet) : -1;
+        if (idx === -1) return `${cible.nom} ne porte plus l'effet choisi (déjà expiré ou retiré entre-temps).`;
+        const retire = tok.etatsActifs[idx];
+        const idCatalogue = retire.idEtat && /^marquee_.+/.test(retire.idEtat) ? "marquee" : retire.idEtat;
+        const nomEffet = retire.idEtat ? getEtat(idCatalogue).nom : `Bonus ${retire.bonus ? retire.bonus.cible : "?"}`;
+        Carte.retirerEtatCombat(cible.id, idx);
+        return `« ${nomEffet} » dissipé sur ${cible.nom}.`;
+      }
+      return `Dissipation à appliquer manuellement sur ${cible.nom} (pas de suivi automatique pour cette cible).`;
+    }
     if (effet.type === "special") {
       return `ℹ️ ${effet.note}`;
     }
@@ -1554,7 +1585,34 @@ const Capacites = (() => {
 
   // Types d'effets dont l'application est DIFFÉRÉE (cf. lancer()) pour les
   // capacités d'attaque vs DEF, jusqu'à confirmation que l'attaque touche.
-  const TYPES_EFFETS_DIFFERES = ["degats", "etat"];
+  // "dissipation" (Dissipation mineure, jetOppose INT vs INT) : sans cette
+  // entrée, le type ne serait jamais traité comme conditionné à la réussite
+  // du jet — il se résoudrait comme n'importe quel bonus/special ordinaire,
+  // inconditionnellement. Écart du prompt d'origine (sa donnée suggérée
+  // n'avait pas non plus de champ `differe`) trouvé en auditant "comment un
+  // effet sait que le jet opposé a réussi" avant d'écrire, comme demandé.
+  const TYPES_EFFETS_DIFFERES = ["degats", "etat", "dissipation"];
+
+  // Résolution des champs "à choix" d'un effet, à partir de la valeur
+  // choisie à l'activation (choixEffet). Deux mécanismes, cumulables :
+  //   - cible: "choix"  -> la valeur choisie EST la cible du bonus
+  //     (ex. Barde Voie de l'alcoolisme, Nécromancien Toucher flétrissant)
+  //   - valeurParChoix: { option: valeur }  -> la valeur choisie sélectionne
+  //     le MONTANT, la cible restant fixe (ex. sort Manipulation des
+  //     émotions : -2 "peur" ou +2 "confiance" sur la même cible "attaque")
+  // Extrait de trois sites de lancer()/resoudreDegatsEnAttente qui portaient
+  // la même ligne dupliquée : une quatrième copie aurait fini par diverger.
+  // Renvoie l'effet inchangé si rien ne s'applique — jamais une copie
+  // inutile, pour ne pas casser les comparaisons par référence ailleurs.
+  function resoudreChoixEffet(effet, choixEffet) {
+    if (!choixEffet) return effet;
+    let resolu = effet;
+    if (effet.cible === "choix") resolu = Object.assign({}, resolu, { cible: choixEffet });
+    if (effet.valeurParChoix && effet.valeurParChoix[choixEffet] !== undefined) {
+      resolu = Object.assign({}, resolu, { valeur: effet.valeurParChoix[choixEffet] });
+    }
+    return resolu;
+  }
 
   // { persoId, source, mecanique, cibleId?, choixEffet? }
   // source : { origine: "classe"|"race"|"variante", cle, voie?, rang?, code?, nomCap }
@@ -1587,7 +1645,10 @@ const Capacites = (() => {
     if (!mecanique || mecanique.type === "passive") {
       return { ok: false, messages: ["Cette capacité est passive : rien à lancer."] };
     }
-    if (!choixEffet && (mecanique.effets || []).some((e) => e.cible === "choix")) {
+    // valeurParChoix (cf. resoudreChoixEffet) : un effet qui n'a QUE ce champ,
+    // sans cible: "choix", doit aussi bloquer sans choixEffet — sinon il
+    // s'appliquerait avec sa valeur de repli sans jamais avoir demandé le choix.
+    if (!choixEffet && (mecanique.effets || []).some((e) => e.cible === "choix" || e.valeurParChoix)) {
       return { ok: false, messages: ["Cette capacité demande un choix à l'activation — relance-la depuis la fiche."] };
     }
 
@@ -2417,7 +2478,7 @@ const Capacites = (() => {
           if (aEffetsDifferes) {
             (mecanique.effets || []).forEach((effet) => {
               if (!TYPES_EFFETS_DIFFERES.includes(effet.type) && !effet.differe) return;
-              const effetResolu = (effet.cible === "choix" && choixEffet) ? Object.assign({}, effet, { cible: choixEffet }) : effet;
+              const effetResolu = resoudreChoixEffet(effet, choixEffet);
               const msg = resoudreEffet(effetResolu, {
                 perso, rang: source.rang, voie: source.voie, cible, libelle, persos,
                 critique: resolutionDegats.critique, multiplicateurDegats: resolutionDegats.multiplicateurDegats, groupeJetId, choixEffet,
@@ -2579,10 +2640,10 @@ const Capacites = (() => {
           && perso.rangMaxVoie("Voie de l'enchantement") >= 3) {
         effetVoieAjuste = { type: "etat", id: "image_decalee", duree: "3" };
       }
-      // effet.cible === "choix" : substitue la vraie cible choisie à l'activation
-      // (copie superficielle — ne jamais muter l'objet effet d'origine, partagé
-      // par tous les personnages via data/donnees.js).
-      const effetResolu = (effetVoieAjuste.cible === "choix" && choixEffet) ? Object.assign({}, effetVoieAjuste, { cible: choixEffet }) : effetVoieAjuste;
+      // Résolution des champs à choix (cible: "choix" et/ou valeurParChoix,
+      // cf. resoudreChoixEffet) : copie superficielle, ne mute jamais l'objet
+      // effet d'origine, partagé par tous les personnages via data/donnees.js.
+      const effetResolu = resoudreChoixEffet(effetVoieAjuste, choixEffet);
       const msg = resoudreEffet(effetResolu, { perso, rang: source.rang, voie: source.voie, cible, libelle, persos, choixEffet });
       if (msg) messages.push(msg);
     });
@@ -2748,10 +2809,10 @@ const Capacites = (() => {
     const messages = [];
     (mecanique.effets || []).forEach((effet) => {
       if (!TYPES_EFFETS_DIFFERES.includes(effet.type) && !effet.differe) return;
-      // effet.cible === "choix" différé (ex. Barde "Note discordante") : même
-      // substitution que dans lancer() ci-dessus, à partir du choix capturé
-      // au moment du jet d'attaque (resolutionDegats.choixEffet).
-      const effetResolu = (effet.cible === "choix" && choixEffet) ? Object.assign({}, effet, { cible: choixEffet }) : effet;
+      // Résolution des champs à choix, différée (ex. Barde "Note discordante") :
+      // même helper que dans lancer() ci-dessus, à partir du choix capturé au
+      // moment du jet d'attaque (resolutionDegats.choixEffet).
+      const effetResolu = resoudreChoixEffet(effet, choixEffet);
       const msg = resoudreEffet(effetResolu, { perso, rang: source.rang, voie: source.voie, cible, libelle, persos, critique, multiplicateurDegats, choixEffet });
       if (msg) messages.push(msg);
     });

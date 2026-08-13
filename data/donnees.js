@@ -2042,11 +2042,28 @@ const SORTS_MAGICIEN = [
       effets: [ { type: "bonus", cible: "DEF", valeur: 2, duree: "5" } ] } },
 
   { id: "dissipation_mineure", nom: "Dissipation mineure", rang: 2, categorie: "abjuration",
-    effet: "Jet opposé INT contre le lanceur d'un effet magique mineur à portée : succès = annule",
+    effet: "Jet opposé INT contre une cible à portée : succès = annule un effet magique actif de votre choix",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
       cible: "ennemi", portee: 10, zone: null,
-      jetOppose: { caracAttaquant: "INT", caracDefenseur: "INT" },
-      effets: [ { type: "special", note: "Annule un effet magique mineur en cours si le jet opposé réussit — résolution manuelle par la table pour juger ce qui compte comme 'mineur', pas de liste fermée." } ] } },
+      // caracDefenseur "defMentale" (alias Volonte, PAS "INT" comme le
+      // texte du sort le suggère) : trouvé en auditant avant d'écrire —
+      // "INT" n'est ni une clé SAUVEGARDES (Reflexes/Vigueur/Volonte) ni
+      // "DEF", donc ni la branche réactive ni la branche attaqueVsDef de
+      // lancer() ne l'auraient automatisé. Sans ce changement,
+      // resolutionDegats ne serait JAMAIS posé et le sort n'aurait rien
+      // résolu du tout, quel que soit le jet — pas un simple défaut de
+      // gating, une non-fonctionnalité totale. Même limite structurelle
+      // que Manipulation des émotions/etc : seule "Volonte" (et ses alias)
+      // a un chemin automatisé, un vrai "INT vs INT" demanderait de
+      // toucher js/personnage.js (SAUVEGARDES), hors périmètre ici.
+      jetOppose: { caracAttaquant: "INT", caracDefenseur: "defMentale" },
+      // choixApresCible : les options SONT les effets actifs de la cible,
+      // donc le modal ne peut s'ouvrir qu'une fois la cible connue —
+      // inversion opt-in du flux choix/ciblage (cf. js/app.js).
+      // Aucun filtre sur ce qui est "mineur" : le sort le laisse
+      // volontairement ouvert, c'est le MJ qui autorise ou refuse le lancer.
+      effets: [ { type: "dissipation", choixApresCible: true, choixDynamique: "etatsDeLaCible",
+        choix: { titre: "Dissipation mineure", consigne: "Quel effet dissiper ?", options: [] } } ] } },
 
   { id: "globe_de_protection", nom: "Globe de protection", rang: 3, categorie: "abjuration",
     effet: "Alliés à ≤2 cases du lanceur gagnent +1 CA pendant 3 tours",
@@ -2260,21 +2277,20 @@ const SORTS_ENCHANTEUR = [
       effets: [ { type: "etat", id: "charmee", duree: { tours: "1+Mod.CHA" } } ] } },
 
   { id: "manipulation_emotions", nom: "Manipulation des émotions", rang: 2, categorie: "enchantement",
-    effet: "Une cible à portée subit -2 à ses jets d'attaque jusqu'à son prochain tour (peur), ou gagne +2 (confiance, effet narratif)",
+    effet: "Insuffle peur ou confiance à une cible : -2 ou +2 à ses jets d'attaque jusqu'à son prochain tour, au choix du lanceur",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
       cible: "ennemi", portee: 12, zone: null,
       jetOppose: { caracAttaquant: "CHA", caracDefenseur: "Volonte" },
-      // Seule la variante "peur" (-2) est automatisée : elle passe par le
-      // schéma bonus standard côté monstre (cf.
-      // _appliquerBonusMonstreDepuisMessages, js/app.js) sur la cible
-      // "attaque". La variante "confiance" (+2) reste narrative — sur un
-      // ennemi elle n'a d'usage qu'en scène sociale, où l'app ne suit aucun
-      // jet de PNJ. Le choix de polarité à l'activation demanderait
-      // d'étendre le mécanisme effet.choix à la VALEUR (aujourd'hui limité
-      // à la cible, substitué en 3 endroits de Capacites.lancer) : écart
-      // signalé à Thomas, à trancher séparément.
-      effets: [ { type: "bonus", cible: "attaque", valeur: -2, duree: "prochainTour" },
-        { type: "special", note: "Variante « confiance » (+2) : effet narratif, arbitré par la table — l'app ne suit pas les jets d'un PNJ hors combat." } ] } },
+      // valeurParChoix (cf. Capacites.resoudreChoixEffet) : la polarité est
+      // choisie à l'activation, la cible du bonus reste "attaque".
+      // Le +2 sur un ennemi n'a d'usage qu'en scène (rendre un adversaire
+      // téméraire) : conservé parce que le sort le prévoit, pas parce que
+      // le moteur en tire quelque chose.
+      effets: [ { type: "bonus", cible: "attaque", valeur: -2, duree: "prochainTour",
+        valeurParChoix: { peur: -2, confiance: 2 },
+        choix: { titre: "Manipulation des émotions", consigne: "Quelle émotion insuffles-tu ?",
+          options: [ { valeur: "peur", label: "Peur (-2 attaque)" },
+                     { valeur: "confiance", label: "Confiance (+2 attaque)" } ] } } ] } },
 
   { id: "sommeil_enchanteur", nom: "Sommeil", rang: 3, categorie: "enchantement",
     effet: "Attaque magique contre une cible avec moins de [Mod.CHA×5] PV actuels : endormie jusqu'à blessure ou réveil manuel",

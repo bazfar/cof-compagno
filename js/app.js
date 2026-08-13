@@ -3453,9 +3453,47 @@ const App = (() => {
     },
   };
 
-  function ouvrirModalChoixCapacite(config, onChoisi) {
+  // Constructeurs d'options de choix dépendant de la cible (cf.
+  // effet.choixApresCible, Capacites.resoudreEffet type "dissipation"). Clé
+  // posée dans les données (choixDynamique), pas d'identification par
+  // idSort : le prochain sort de dissipation réutilisera la même clé sans
+  // toucher au code.
+  const CHOIX_DYNAMIQUES = {
+    // "Effets magiques actifs" d'une cible = ses entrées etatsActifs (perso
+    // OU jeton monstre, même champ des deux côtés), états nommés comme bonus
+    // temporaires. Le sort dit "effet magique mineur" sans liste fermée :
+    // c'est VOULU, c'est le MJ qui autorise ou non le lancer selon ce qu'il
+    // juge mineur. On ne filtre donc pas par catégorie, on expose tout et on
+    // laisse la table trancher.
+    // valeur = poseLe (timestamp de pose), PAS l'index dans le tableau :
+    // un index serait fragile si etatsActifs change entre l'ouverture du
+    // modal et la résolution (un autre client peut synchroniser une
+    // modification entre-temps) — poseLe reste valide même si l'ordre ou la
+    // longueur du tableau a bougé, contrairement à un index positionnel.
+    etatsDeLaCible: (cibleRaw) => ((cibleRaw && cibleRaw.etatsActifs) || []).map((e) => {
+      const idCatalogue = e.idEtat && /^marquee_.+/.test(e.idEtat) ? "marquee" : e.idEtat;
+      return {
+        valeur: String(e.poseLe),
+        label: e.idEtat ? ((typeof ETATS !== "undefined" && ETATS[idCatalogue]) ? ETATS[idCatalogue].nom : e.idEtat)
+                        : `Bonus ${e.bonus ? e.bonus.cible : "?"} (${e.source || "?"})`,
+      };
+    }),
+  };
+
+  // Callback d'annulation du modal EN COURS (✕ ou clic sur le fond) — jamais
+  // appelé sur un choix effectué (cf. le onclick des boutons d'option
+  // ci-dessous, qui le vide avant de fermer). null si le modal a été ouvert
+  // sans 3e argument (tous les appelants historiques).
+  let _modalChoixCapaciteOnAnnule = null;
+
+  function ouvrirModalChoixCapacite(config, onChoisi, onAnnule) {
     const modal = document.getElementById("modal-choix-capacite");
-    if (!modal) { onChoisi(config.options[0].valeur); return; } // filet de sécurité si le DOM manque
+    // Filet de sécurité si le DOM manque : un tableau options VIDE (cf.
+    // effet.choix.options: [] des sorts choixApresCible, cf. Dissipation
+    // mineure — les vraies options ne sont injectées qu'à l'exécution)
+    // ferait planter options[0].valeur ici si on ne le gardait pas.
+    if (!modal) { if (config.options && config.options.length) onChoisi(config.options[0].valeur); return; }
+    _modalChoixCapaciteOnAnnule = onAnnule || null;
     document.getElementById("modal-choix-capacite-titre").textContent = config.titre;
     document.getElementById("modal-choix-capacite-consigne").textContent = config.consigne;
     const zone = document.getElementById("modal-choix-capacite-options");
@@ -3465,7 +3503,7 @@ const App = (() => {
       btn.type = "button";
       btn.className = "btn or";
       btn.textContent = opt.label;
-      btn.onclick = () => { fermerModalChoixCapacite(); onChoisi(opt.valeur); };
+      btn.onclick = () => { _modalChoixCapaciteOnAnnule = null; fermerModalChoixCapacite(); onChoisi(opt.valeur); };
       zone.appendChild(btn);
     });
     modal.style.display = "flex";
@@ -3474,6 +3512,17 @@ const App = (() => {
   function fermerModalChoixCapacite() {
     const modal = document.getElementById("modal-choix-capacite");
     if (modal) modal.style.display = "none";
+  }
+
+  // Fermeture par ✕ ou clic sur le fond — UNE VRAIE annulation, contrairement
+  // à fermerModalChoixCapacite (aussi appelée après un choix réussi, cf.
+  // ci-dessus) : c'est pour ça que les deux restent distinctes plutôt que de
+  // détecter l'annulation depuis fermerModalChoixCapacite elle-même.
+  function _annulerModalChoixCapacite() {
+    fermerModalChoixCapacite();
+    const cb = _modalChoixCapaciteOnAnnule;
+    _modalChoixCapaciteOnAnnule = null;
+    if (cb) cb();
   }
 
   // Sélecteur de Don (niveaux 4/8/12, cf. data/dons.js) : un seul choix, jamais
@@ -5522,6 +5571,38 @@ const App = (() => {
     // circulaires — ignoré par Capacites.lancer pour tout le reste.
     function resoudreCapaciteEtRafraichir(cibleId, cibleIds, cerclesParCible) {
       const mecaniqueLancee = lancerCapaciteEnAttente.mecanique;
+      // choixApresCible (cf. Dissipation mineure) : la fonction devient
+      // asynchrone de fait — tant que choixEffet n'est pas encore connu, on
+      // construit les options à partir de la cible fraîchement sélectionnée,
+      // on ouvre le modal, et on ne rappelle CETTE MÊME fonction (avec
+      // choixEffet posé cette fois) que depuis son callback. Capacites.lancer
+      // n'est donc appelé qu'une fois le choix fait — les PP ne sont jamais
+      // décomptés pour un choix jamais résolu.
+      const effetChoixApresCible = !lancerCapaciteEnAttente.choixEffet &&
+        (mecaniqueLancee.effets || []).find((e) => e.choixApresCible);
+      if (effetChoixApresCible) {
+        const cibleDesc = cibleId ? Capacites.listeCibles(id).find((c) => c.id === cibleId) : null;
+        // Source BRUTE portant réellement etatsActifs : un perso (persos[id])
+        // ou un jeton monstre (Carte.listeMonstresCombat()), jamais le
+        // descripteur léger {id,nom,genre} renvoyé par listeCibles.
+        let cibleRaw = null;
+        if (cibleDesc && cibleDesc.genre === "perso") cibleRaw = chargerPersos()[cibleDesc.id];
+        else if (cibleDesc && cibleDesc.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
+          cibleRaw = (Carte.listeMonstresCombat() || []).find((m) => m.id === cibleDesc.id);
+        }
+        const constructeur = CHOIX_DYNAMIQUES[effetChoixApresCible.choixDynamique];
+        const options = (constructeur && cibleRaw) ? constructeur(cibleRaw) : [];
+        if (!options.length) {
+          fermerPickerCibleCapacite();
+          toast(`${cibleDesc ? cibleDesc.nom : "La cible"} ne porte aucun effet dissipable — PP non décomptés.`);
+          return;
+        }
+        ouvrirModalChoixCapacite(Object.assign({}, effetChoixApresCible.choix, { options }), (valeurChoisie) => {
+          lancerCapaciteEnAttente.choixEffet = valeurChoisie;
+          resoudreCapaciteEtRafraichir(cibleId, cibleIds, cerclesParCible);
+        }, () => { lancerCapaciteEnAttente = null; fermerPickerCibleCapacite(); });
+        return;
+      }
       const sourceLancee = lancerCapaciteEnAttente.source;
       const res = Capacites.lancer({
         persoId: id,
@@ -5757,12 +5838,18 @@ const App = (() => {
         // concerne que la substitution de cible des effets "bonus", cf.
         // resoudreEffet) : un effet "etat" comme Poing élémentaire (Moine)
         // peut aussi porter un choix d'activation sans passer par ce chemin.
-        const effetChoix = (mecanique.effets || []).find((e) => e.choix);
+        // choixApresCible : le modal s'ouvre APRÈS la sélection de cible,
+        // parce que ses options DÉPENDENT de la cible (cf. Dissipation
+        // mineure, dont les options sont les effets magiques actifs de la
+        // victime) — géré par resoudreCapaciteEtRafraichir, PAS ici. Opt-in
+        // par effet : l'ordre historique (choix puis ciblage) reste celui de
+        // toutes les autres capacités, qui n'ont aucune raison d'en changer.
+        const effetChoix = (mecanique.effets || []).find((e) => (e.choix || e.valeurParChoix) && !e.choixApresCible);
         if (effetChoix) {
           ouvrirModalChoixCapacite(effetChoix.choix, (valeurChoisie) => {
             lancerCapaciteEnAttente.choixEffet = valeurChoisie;
             procederCiblage();
-          });
+          }, () => { lancerCapaciteEnAttente = null; });
         } else {
           procederCiblage();
         }
@@ -10470,10 +10557,10 @@ const App = (() => {
 
     // Modal choix permanent d'une capacité (ex. +2 DEF OU +1d8 DM)
     const btnFermerModalChoix = document.getElementById("btn-fermer-modal-choix-capacite");
-    if (btnFermerModalChoix) btnFermerModalChoix.onclick = fermerModalChoixCapacite;
+    if (btnFermerModalChoix) btnFermerModalChoix.onclick = _annulerModalChoixCapacite;
     const modalChoixCapacite = document.getElementById("modal-choix-capacite");
     if (modalChoixCapacite) modalChoixCapacite.addEventListener("click", (e) => {
-      if (e.target === e.currentTarget) fermerModalChoixCapacite();
+      if (e.target === e.currentTarget) _annulerModalChoixCapacite();
     });
 
     // Modal choix d'un Don (niveaux 4/8/12)
