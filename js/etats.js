@@ -36,6 +36,8 @@ const ETATS = {
   // ── Malus continus ─────────────────────────────────────────
   influencee: { nom: "Influencée", categorie: "malus",
     description: "-2 à une caractéristique au choix du lanceur, OU vulnérabilité accrue au prochain test de manipulation." },
+  defie_noble: { nom: "Défié", categorie: "malus",
+    description: "−2 à tous ses tests tant qu'elle n'attaque pas le Chevalier (Chevalier, Voie du noble, sort/rang 2 « Défi loyal ») — seul le jet d'attaque (-2, cible « attaque ») est automatisé, le reste est un arbitrage de table." },
   marquee: { nom: "Marquée", categorie: "malus", parSource: true,
     description: "Tag posé par une capacité spécifique. Le bonus dépend TOUJOURS de la source : "
       + "marquee_pretre → +1d6 DM sacrés contre elle ; marquee_chasseur → +1 attaque contre elle ; "

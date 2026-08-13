@@ -576,7 +576,7 @@ const CLASSES = {
           { rang: 5, nom: "Faveur divine (passive)", effet: "+1 Point de Bénédiction (pool à 3), +1 CON et +1 CHA permanents",
             mecanique: { type: "passive", usage: { frequence: "permanente" },
               cible: "soi", portee: null, zone: null, jetOppose: null,
-              effets: [ { type: "bonusCarac", carac: "CON", valeur: 1 }, { type: "bonusCarac", carac: "CHA", valeur: 1 },
+              effets: [ { type: "special", note: "+1 CON et +1 CHA permanents : appliqués en dur par Personnage.bonusCaracCapacites (test classe + voie + rang), PAS par un effet du moteur — resoudreEffet ne connaît aucun type 'bonusCarac'. Ne pas transformer en effet mécanique sans retirer d'abord le chemin en dur, sous peine de double comptage." },
                 { type: "special", note: "pointsBenedictionMax passe à 3 (2 du rang 4 + 1 ici)." } ] } },
         ],
       },
@@ -1367,16 +1367,38 @@ const CLASSES = {
               effets: [ { type: "special", note: "Lu par Personnage.bonusInitiativeCapacites() : +Mod.CHA à l'Initiative, sans condition." } ] } },
           { rang: 2, nom: "Défi loyal (activable)", effet: "Jet opposé CHA vs Volonté : la cible subit -2 à tous ses tests jusqu'à son prochain tour si elle n'attaque pas le Chevalier",
             mecanique: { type: "activable", usage: { frequence: "libre" },
-              cible: "unique", portee: "vue", zone: null,
+              // cible "ennemi" (et non "unique", qui n'est pas une valeur
+              // reconnue : le picker n'est armé que sur allie/ennemi, tout
+              // le reste tombe dans la résolution SANS cible — la capacité
+              // ne faisait donc rien).
+              cible: "ennemi", portee: "vue", zone: null,
               jetOppose: { caracAttaquant: "CHA", caracDefenseur: "Volonte" },
-              effets: [ { type: "etat", id: "defie_noble", duree: { motCle: "prochainTour" } } ] } },
+              // duree en CHAÎNE : resoudreDureeInitiale compare des chaînes
+              // (=== "prochainTour"), un objet { motCle: … } échoue à toutes
+              // les comparaisons et finit dans resoudreExpression.
+              effets: [ { type: "etat", id: "defie_noble", duree: "prochainTour" },
+                // Malus numérique réel : type "bonus", PAS "etat" — un idEtat
+                // seul (ci-dessus) ne porte aucun champ .bonus, donc aucun
+                // effet mécanique tant qu'aucun code dédié ne le vérifie
+                // explicitement (_bonusEtatsMonstre/Personnage.bonusTemporaire
+                // lisent .bonus, jamais idEtat). Seule "attaque" est suivie
+                // côté monstre (_bonusEtatsMonstre) : "tous ses tests" au
+                // sens large n'a pas de cible générique, cf. le special.
+                { type: "bonus", cible: "attaque", valeur: -2, duree: "prochainTour" },
+                { type: "special", note: "\"Si elle n'attaque pas le Chevalier\" est un arbitrage de table : le bonus -2 attaque et l'état « Défié » ci-dessus s'appliquent sans condition suivie par le moteur — à dissiper narrativement si la cible n'attaque effectivement pas. Seul le jet d'attaque est automatisé ; 'tous ses tests' (Perception, Sauvegardes...) reste manuel. Limite signalée séparément : le bonus -2 attaque, contrairement à l'état 'Défié', N'EST PAS conditionné à la réussite du jet opposé CHA vs Volonté (type 'bonus' non inscrit dans TYPES_EFFETS_DIFFERES — limite structurelle du moteur déjà signalée pour Manipulation des émotions, hors périmètre d'un nettoyage de données)." } ] } },
           { rang: 3, nom: "Autorité de sang (passive)", effet: "Alliés à ≤3 cases gagnent +1 à leurs jets de Sauvegarde Volonté tant que le Chevalier est conscient",
             mecanique: { type: "passive", usage: { frequence: "permanente" },
               cible: "zone", portee: null, zone: { taille: 3 }, jetOppose: null,
               effets: [ { type: "special", note: "+1 Sauvegarde Volonté pour les alliés à ≤3 cases (Carte.distanceCasesEntre) tant que ce Chevalier est conscient (pvActuel > 0) — à câbler dans Personnage.bonusSauvegardeCapacites('Volonte') pour un allié donné, en vérifiant la présence d'un Chevalier qualifié à portée, même patron que bonusDefAuraPeuple." } ] } },
           { rang: 4, nom: "Duel d'honneur (activable, 1x/combat)", effet: "Défie une cible en duel singulier : +2 attaque et +2 CA contre cette cible tant que dure le duel, mais -2 CA contre toute autre cible",
             mecanique: { type: "limitee", usage: { frequence: "1x/combat" },
-              cible: "unique", portee: "vue", zone: null, jetOppose: null,
+              // cible "ennemi" (et non "unique", non reconnue — même bug
+              // que Défi loyal ci-dessus). Changement de comportement
+              // ASSUMÉ, signalé à Thomas : un picker de cible apparaît
+              // désormais là où la capacité se résolvait immédiatement sans
+              // rien faire — c'est le comportement correct pour un duel qui
+              // désigne un adversaire.
+              cible: "ennemi", portee: "vue", zone: null, jetOppose: null,
               effets: [ { type: "special", note: "Pose un état 'duel_honneur' avec référence à la cible désignée — +2 attaque/+2 CA si la cible active est celle du duel, -2 CA sinon. Résolution manuelle par la table pour l'instant (pas de moteur de bonus conditionnel par cible ciblée dans capacites.js) — même limite que d'autres capacités déjà notées ainsi." } ] } },
           { rang: 5, nom: "Souverain du champ de bataille (L, 1x/scénario)", effet: "Le Chevalier et ses alliés à ≤5 cases gagnent +2 attaque et +2 CA pendant [3+Mod.CHA] tours",
             mecanique: { type: "activable", usage: { frequence: "1x/scenario" },
@@ -2642,7 +2664,7 @@ const SORTS_PRETRE = [
     effet: "Tente de renvoyer une créature morte-vivante/démoniaque de dangerosité ≤5 vers son plan d'origine. Jet d20+Mod.CHA : DD 14 (dangerosité 1-2), DD 16 (dangerosité 3), DD 17 (dangerosité 4, interpolé), DD 18 (dangerosité 5). Coûte 1 Point de Bannissement",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPointsBannissement: 1,
       cible: "ennemi", portee: 10, zone: null, jetOppose: null,
-      effets: [ { type: "special", note: "Jet 1d20+Mod.CHA (PAS Mod.SAG) contre un DD variable selon la dangerosité de la cible (table ci-dessus, DD dangerosité 4 = 17 interpolé, à confirmer par Thomas). Réussite = créature renvoyée (retirée du combat). Réservé aux cibles race:'mort_vivant'/'demon', dangerosité ≤5." } ] } },
+      effets: [ { type: "special", note: "Automatisé (js/capacites.js, cas spécial identifié par idSort 'bannissement') : jet 1d20+Mod.CHA (PAS Mod.SAG) contre un DD variable selon la dangerosité de la cible (table ci-dessus, DD dangerosité 4 = 17 interpolé, à confirmer par Thomas), réservé aux cibles race:'mort_vivant'/'demon' de dangerosité ≤5, message annonçant réussite/échec. Reste MANUEL : sur une réussite, rien ne retire le jeton monstre de la table de combat — le message dit 'renvoyé(e)' mais le MJ doit encore le supprimer lui-même de Carte." } ] } },
 
   // Rang 5 (accordé, cf. SORTS_ACCORDES_PAR_VOIE)
   { id: "sceau_inviolable", nom: "Sceau inviolable", rang: 5, categorie: "bannissement",
@@ -2655,7 +2677,7 @@ const SORTS_PRETRE = [
     effet: "Comme Bannissement, mais tente l'effet sur toutes les cibles éligibles d'une zone de 4 cases, avec Mod.SAG ajouté au jet en plus de Mod.CHA. Coûte 1 Point de Bannissement",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPointsBannissement: 1,
       cible: "zone", portee: 10, zone: { taille: 4 }, jetOppose: null, cibleZoneHostile: true,
-      effets: [ { type: "special", note: "Jet 1d20+Mod.CHA+Mod.SAG (bonus cumulé, confirmé par Thomas — la version de zone est délibérément plus facile à réussir que la version cible unique) contre le même barème de DD que 'bannissement', appliqué indépendamment à chaque cible éligible de la zone." } ] } },
+      effets: [ { type: "special", note: "Automatisé (js/capacites.js, cas spécial identifié par idSort 'bannissement_zone', même bloc que 'bannissement') : jet 1d20+Mod.CHA+Mod.SAG (bonus cumulé, confirmé par Thomas — la version de zone est délibérément plus facile à réussir que la version cible unique) contre le même barème de DD que 'bannissement', appliqué à UNE cible (pas encore à toutes les cibles éligibles d'une zone : le cas spécial lit `cible`, une cible unique déjà résolue, pas de boucle sur une zone ici — le texte annonce une zone que le moteur ne mesure pas, même limite que les autres sorts 'maxCibles'/'zone' de ce chantier). Reste MANUEL comme 'bannissement' : le jeton monstre n'est jamais retiré de la table de combat sur une réussite." } ] } },
   // cibleZoneHostile: true (ci-dessus) — sans jetOppose ni effet degats/bonus
   // négatif, _zoneCibleHostile (app.js) ne peut pas deviner que cette zone
   // vise des ennemis (résolution custom par idSort dans Capacites.lancer,

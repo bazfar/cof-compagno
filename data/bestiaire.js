@@ -563,7 +563,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Armure naturelle",
-        "description": "Réduit tous les dégâts physiques de 3. Vulnérable aux dégâts de foudre (+2 dégâts par dé)."
+        "description": "Réduit tous les dégâts physiques de 3. Vulnérable aux dégâts électriques (+2 dégâts par dé)."
       },
       {
         "nom": "Mot d'arrêt",

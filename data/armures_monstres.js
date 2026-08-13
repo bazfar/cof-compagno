@@ -38,7 +38,7 @@ const ARMURES_MONSTRES = [
     "nom": "Corps de granit",
     "reduction": 10,
     "naturelle": true,
-    "note": "Vulnérable à la foudre (annule la réduction)."
+    "note": "Vulnérable aux dégâts électriques (annule la réduction)."
   },
   {
     "id": "armure_d_ombre_elfique_legere",

@@ -67,7 +67,11 @@ if (!RACES) { console.error("❌ RACES introuvable (data/donnees.js n'a pas char
 
 const TYPES_VALIDES = ["activable", "passive", "limitee", "rituel"];
 const CIBLES_VALIDES = ["soi", "allie", "ennemi", "zone", "aucune"];
-const TYPES_EFFET_VALIDES = ["degats", "soin", "pvTemp", "etat", "bonus", "special", "retraitEtat"];
+// Doit rester synchronisé avec les branches de Capacites.resoudreEffet.
+// Ce validateur ne parcourt QUE CLASSES/RACES, jamais les tableaux SORTS_*
+// (magicien/enchanteur/prêtre) — un sort à type inconnu ne serait donc pas
+// détecté ici. Limite connue, cf. reference_schema_sorts.md.
+const TYPES_EFFET_VALIDES = ["degats", "soin", "pvTemp", "etat", "bonus", "special", "retraitEtat", "seuilsPv", "dissipation"];
 
 const problemes = []; // { ou: "classe/voie/rang nom", message }
 let totalRangs = 0;
