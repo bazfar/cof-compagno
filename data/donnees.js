@@ -1837,17 +1837,21 @@ const DEGRADE_ZONE_PAR_CERCLE = [1, 0.75, 0.5]; // index = numéro de cercle (0/
 /* Liste autonome de sorts piochés par le Magicien (apprentissage via
    parchemin/recherche/montée de niveau, cf. reference_sorts_connus.md) —
    séparée des Voies de classe, à la manière d'un catalogue de sorts D&D.
-   20 sorts, rangs 1-5, coût PP = rang×2 (cf. reference_systeme_magie_pp.md).
-   Portée limitée à la donnée : PP réel sur Personnage, slots de Grimoire,
-   UI de sélection, verifierRessourcePP()/verifierSortConnu() dans
-   capacites.js restent des chantiers séparés — cette liste n'est pas
-   encore utilisable en jeu tant qu'ils ne sont pas branchés.
-   modeSauvegarde: "moitie" (sorts de zone à jet de sauvegarde, ex. Boule de
-   feu/Éclair) : donnée posée, résolution ("moitié dégâts si Sauvegarde
-   réussie") pas encore câblée dans capacites.js — sans précédent exact
-   avant ce champ. Les effets type:"special" avec note "résolution
-   manuelle" ne sont pas automatisables aujourd'hui, cohérent avec d'autres
-   capacités déjà en jeu dans ce cas (Rage incontrôlée, Bastion improvisé). */
+   40 sorts (r1:9, r2:11, r3:8, r4:7, r5:5). Coût PP : cf. COUT_PP_PAR_RANG
+   plus bas — NON linéaire depuis le correctif d'équilibrage (r1-r3 = rang×2,
+   r4 = 16, r5 = 25) ; ne jamais recalculer un coutPP en rang×2 sur cette
+   base. Réutilisée telle quelle par le Nécromancien (cf. SORTS_PAR_CLASSE)
+   tant que SORTS_NECROMANCIEN n'existe pas.
+   Cette liste EST branchée en jeu : PP réel sur Personnage
+   (calculerPPMax/ppActuel), emplacements de Grimoire (slotsGrimoire), UI
+   d'apprentissage et de lancement, décompte PP et garde-fou "sort connu"
+   dans Capacites.lancer(). modeSauvegarde: "moitie" (sorts de zone à jet de
+   sauvegarde, ex. Boule de feu/Éclair) est câblé également.
+   Reste NON automatisable : les effets type:"special", que resoudreEffet
+   renvoie tels quels en message d'information (ℹ️) sans jamais rien
+   appliquer — cohérent avec d'autres capacités déjà en jeu dans ce cas
+   (Rage incontrôlée, Bastion improvisé). Un sort dont TOUS les effets sont
+   "special" est donc entièrement résolu à la table, par choix. */
 const SORTS_MAGICIEN = [
   // --- Rang 1 (coût PP: 2) ---
   { id: "trait_de_feu", nom: "Trait de feu", rang: 1, categorie: "evocation",
@@ -2171,9 +2175,12 @@ const SORTS_MAGICIEN = [
 ];
 
 /* Liste autonome de sorts piochés par l'Enchanteur (même principe que
-   SORTS_MAGICIEN ci-dessus, cf. prompt_enchanteur_familles.md) — 13 sorts
-   répartis en 3 familles (enchantement/transmutation/divination), coût PP =
-   rang×2. Carac de lancer : CHA (CARAC_MAGIE.enchanteur). Cette liste EST
+   SORTS_MAGICIEN ci-dessus, cf. prompt_enchanteur_familles.md) — 19 sorts
+   (r1:5, r2:7, r3:4, r4:3 — aucun rang 5), répartis en 5 catégories
+   (enchantement 5, transmutation 4, divination 4, abjuration 4, illusion 2 —
+   les 4 entrées d'abjuration sont les sorts partagés, cf. étape 3). Coût PP :
+   cf. COUT_PP_PAR_RANG plus bas, non linéaire.
+   Carac de lancer : CHA (CARAC_MAGIE.enchanteur). Cette liste EST
    désormais branchée sur le Grimoire (cf. SORTS_PAR_CLASSE plus bas) et
    passée en audit de correction (cf. prompt de vérification post-chantier
    Prêtre) : le schéma "bonusTemporaire"/durée-objet, jamais résolu par
@@ -2744,6 +2751,45 @@ const CERCLE_SORT_GRATUIT = {
   bannissement: "flamme_sacree",
   jugement: "oeil_inquisiteur",
 };
+
+/* PIÈGE DE MAINTENANCE — sorts partagés dupliqués.
+   Quatre sorts existent en TROIS copies littérales indépendantes, une par
+   tableau (SORTS_MAGICIEN, SORTS_ENCHANTEUR, SORTS_PRETRE) :
+   benediction_mineure, forteresse_esprit, sphere_vitriol, aide.
+   Aucun mécanisme de partage (pas de spread, pas de référence commune) :
+   modifier l'une des copies ne modifie PAS les deux autres, et les trois
+   portent le même `id`, donc une divergence serait silencieuse — le
+   Grimoire résout un sort par id dans le catalogue de la classe du
+   personnage, il trouverait simplement une version différente selon qui
+   lance.
+   Toute correction de mécanique sur l'un de ces quatre sorts doit être
+   appliquée TROIS FOIS. Ne pas "factoriser" pour autant sans décision
+   explicite : la duplication est le statu quo et un tableau partagé
+   changerait l'identité des objets, ce dont dépendent d'autres chemins
+   (cf. SORTS_PAR_CLASSE.necromancien qui pointe volontairement sur le MÊME
+   tableau que magicien). */
+
+/* CONVENTIONS DE CIBLAGE — issues du chantier de câblage des sorts.
+   1. AUCUNE distance n'est mesurée. mecanique.maxCibles (Aide, Forteresse
+      de l'esprit, Silence, Aura divine) et effet.cibleGroupe "tousLesPJ"
+      (Aura divine) listent les cibles sans notion de position :
+      Capacites.listeCibles() ignore les coordonnées. Les textes de ces
+      sorts annoncent donc un NOMBRE de cibles, jamais un rayon — c'est une
+      décision de Thomas, pas un oubli, et c'est au MJ d'autoriser le
+      lancer selon la fiction. La vraie géométrie existe
+      (Carte.jetonsEnZoneCombat) mais rendrait ces sorts inutilisables hors
+      battlemap.
+   2. La cible "prochainJet" (Bénédiction mineure) est une sentinelle lue
+      par App.lancerTest, pas une stat. Les jets internes de
+      js/capacites.js (App.lancerDe(20) en direct — Bannissement, Mutation
+      sauvage, jets opposés) ne passent PAS par lancerTest et ne consomment
+      donc pas ce bonus. Limite connue et assumée.
+   3. Les immunités à un ÉLÉMENT (Silence) sont semi-manuelles : aucun sort
+      n'émet de champ `element`, c'est le MJ qui le sélectionne dans le
+      formulaire de dégâts subis. Même fonctionnement que feu/froid. Ne pas
+      ajouter `element` aux sorts d'éclair sans décision d'équilibrage :
+      cela activerait d'un coup toutes les résistances élémentaires futures
+      contre eux. */
 
 /* Catalogue de sorts par classe (cf. reference_sorts_connus.md) — le Grimoire
    (js/app.js) lit cette table plutôt qu'une constante SORTS_* hardcodée, pour
