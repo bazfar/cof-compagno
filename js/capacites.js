@@ -1953,7 +1953,7 @@ const Capacites = (() => {
       messages.push(reussite
         ? `Bannissement réussi : ${total} vs DD${dd} — ${cible.nom} est renvoyé(e) vers son plan d'origine.`
         : `Bannissement raté : ${total} vs DD${dd} — aucun effet sur ${cible.nom}.`);
-      usage.appliquer();
+      usage.appliquer && usage.appliquer();
       if (mecanique.coutPointsBannissement) {
         p.pointsBannissement = Math.max(0, (p.pointsBannissement || 0) - mecanique.coutPointsBannissement);
         messages.push(`Points de Bannissement -${mecanique.coutPointsBannissement} (${p.pointsBannissement} restants).`);
