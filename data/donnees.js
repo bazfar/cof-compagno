@@ -1915,10 +1915,23 @@ const SORTS_MAGICIEN = [
       effets: [ { type: "etat", id: "invisible", duree: { motCle: "jusquaActionOffensive" } } ] } },
 
   { id: "image_miroir", nom: "Image miroir", rang: 2, categorie: "illusion",
-    effet: "Crée 2 doubles illusoires : chance qu'une attaque touche un double au lieu du Magicien",
+    effet: "Crée 2 doubles illusoires : chaque attaque de monstre qui vous toucherait peut frapper un double à la place, qui disparaît",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
       cible: "soi", portee: null, zone: null, jetOppose: null,
-      effets: [ { type: "special", note: "2 doubles ; résolution manuelle par la table (pas de moteur de redirection aléatoire d'attaque dans l'app) — même limite que Contresort/Mur de force." } ] } },
+      // Redirection résolue dans App._resoudreAttaqueMonstreVsPJ, passage
+      // obligé des attaques de monstre contre un PJ : 1d3, 1-2 = un double
+      // encaisse et disparaît, 3 = le Magicien encaisse. La probabilité
+      // décroît avec le nombre de doubles restants (compteur
+      // doublesRestants sur l'entrée etatsActifs, initialisé à 2 à la
+      // première lecture côté app.js — effet.extra n'est PAS un canal
+      // générique lu par la branche "etat" de resoudreEffet, vérifié avant
+      // d'écrire : il n'existe que pour des cas particuliers codés en dur
+      // ailleurs, donc pas posé ici pour ne pas laisser un champ mort).
+      // LIMITE ASSUMÉE : seules les attaques de monstre passent par ce
+      // funnel. Sorts, dégâts saisis manuellement par le MJ et attaques
+      // PJ-vs-PJ ne consomment aucun double — arbitrage de la table.
+      effets: [ { type: "etat", id: "image_miroir", duree: "finCombat" },
+        { type: "special", note: "Un sort ou un effet qui n'est pas une attaque de monstre (dégâts de zone, effet saisi manuellement par le MJ) ne consomme pas de double : à arbitrer à la table." } ] } },
 
   // --- Rang 3 (coût PP: 6) ---
   { id: "boule_de_feu", nom: "Boule de feu", rang: 3, categorie: "evocation",

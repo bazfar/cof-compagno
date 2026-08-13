@@ -4943,6 +4943,13 @@ const App = (() => {
       if (e.idEtat) {
         const etat = typeof ETATS !== "undefined" ? ETATS[/^marquee_.+/.test(e.idEtat) ? "marquee" : e.idEtat] : null;
         libelle = etat ? etat.nom : e.idEtat;
+        // Sort "Image miroir" (Magicien rang 2) : le joueur doit voir combien
+        // de doubles il lui reste, sinon il ne saura jamais où il en est.
+        // Repli à 2 si l'entrée n'a pas encore été touchée (même repli que
+        // _resoudreAttaqueMonstreVsPJ, cf. App.js ~11043).
+        if (e.idEtat === "image_miroir") {
+          libelle += ` — ${e.doublesRestants === undefined ? 2 : e.doublesRestants} double(s)`;
+        }
       } else if (e.bonus && e.bonus.cible === "prochainJet") {
         // cible "prochainJet" (cf. App.lancerTest) : bonus.valeur reste NULL
         // (résolu au moment du jet, jamais à la pose) — la branche générique
@@ -11054,7 +11061,45 @@ const App = (() => {
     const jet = lancerTest(label, bonus, critMin, modeForce, { estMonstre: true, typeAttaque });
     const defCible = cible ? _defPjAvecAura(cible, pjId, typeAttaque) : null;
     const touche = _toucheVsDef(jet, !!pjId, defCible);
-    return { touche, critique: jet.crit, echecCritique: jet.echec, totalAttaque: jet.total, defCible };
+    // Sort "Image miroir" (Magicien rang 2) : tant que des doubles restent,
+    // une attaque qui TOUCHERAIT a une chance de frapper un double à la place.
+    // 2 doubles + le vrai Magicien = 3 cibles apparentes, donc 1d3 : 1-2 =
+    // un double encaisse et disparaît, 3 = le Magicien encaisse (décision de
+    // Thomas). Le tirage n'a lieu que si l'attaque touche : une attaque qui
+    // rate de toute façon ne coûte pas de double.
+    // Limite assumée : SEULES les attaques de monstre passent par cette
+    // fonction. Sorts, dégâts saisis à la main et attaques PJ-vs-PJ ne
+    // consomment aucun double — documenté dans la note du sort.
+    let doubleTouche = false;
+    if (touche && cibleP) {
+      const entree = (cibleP.etatsActifs || []).find((e) => e.idEtat === "image_miroir");
+      // Compteur porté par doublesRestants ; initialisé à 2 s'il est absent
+      // (extra.doublesRestants n'est PAS transmis par les données — vérifié :
+      // la branche "etat" de resoudreEffet ne lit jamais effet.extra, ce
+      // champ n'existe que pour des cas particuliers codés en dur — donc ce
+      // repli est le SEUL chemin qui initialise le compteur, pas un filet de
+      // sécurité pour un cas rare).
+      if (entree) {
+        if (entree.doublesRestants === undefined) entree.doublesRestants = 2;
+        if (entree.doublesRestants > 0) {
+          const de = lancerDe(3);
+          if (de <= entree.doublesRestants) {
+            entree.doublesRestants -= 1;
+            doubleTouche = true;
+            // L'état disparaît quand le dernier double tombe : laisser une
+            // entrée à 0 afficherait un buff qui ne protège plus.
+            if (entree.doublesRestants === 0) {
+              cibleP.etatsActifs = cibleP.etatsActifs.filter((e) => e !== entree);
+            }
+            const persosMaj = chargerPersos();
+            persosMaj[pjId] = cibleP;
+            sauverPersos(persosMaj);
+            toast(`🪞 L'attaque frappe un double de ${cibleP.nom} — ${entree.doublesRestants} double(s) restant(s).`);
+          }
+        }
+      }
+    }
+    return { touche: touche && !doubleTouche, critique: jet.crit, echecCritique: jet.echec, totalAttaque: jet.total, defCible };
   }
 
   // Visibilité du bouton "Dégâts" et doublement des dés pour une attaque de

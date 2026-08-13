@@ -77,6 +77,8 @@ const ETATS = {
   // ── Buffs ───────────────────────────────────────────────────
   sanctuaire_magicien: { nom: "Sanctuaire", categorie: "buff",
     description: "Immunité totale aux dégâts d'origine magique tant que l'état dure (Magicien, Voie de la magie protectrice, rang 5)." },
+  image_miroir: { nom: "Image miroir", categorie: "buff",
+    description: "2 doubles ; chaque attaque de monstre qui toucherait a 2 chances sur 3 de frapper un double à la place, qui disparaît (Magicien, sort Image miroir, rang 2). Ne s'applique pas aux sorts ni aux dégâts saisis manuellement." },
   sanctuaire_gardien: { nom: "Sanctuaire du gardien", categorie: "buff",
     description: "Régénère des PV en début de tour tant que l'état dure (Druide, Voie du protecteur, rang 5) — cf. formuleSoin, symétrique de formuleDot." },
   forme_chaos_sauvage: { nom: "Forme du chaos sauvage", categorie: "buff",
