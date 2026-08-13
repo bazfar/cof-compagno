@@ -1548,6 +1548,11 @@ const Carte = (() => {
     let modeDessinMur = false;
     let _depotMursManuels = null;
     let _dessinMurEnCours = null; // { scene, x1, y1, x2, y2 } en pixels natifs de la scène
+    // Mur TEMPORAIRE en attente (sort "Mur de force", cf. armerMurTemporaire
+    // plus bas) : { toursRestants, ancrePersoId }, consommé par le PROCHAIN
+    // mur tracé puis remis à null immédiatement — un second tracé après le
+    // premier redevient un mur permanent ordinaire.
+    let _murTemporaireEnAttente = null;
 
     // Portes/fenêtres dessinées à la main par le MJ (indispensable pour une
     // scène importée en simple image, cf. chargerImage — sans .dd2vtt, aucun
@@ -2414,6 +2419,22 @@ const Carte = (() => {
         : 'Mode mur désactivé.');
     }
 
+    // Arme le mode dessin pour UN mur temporaire (sort "Mur de force") : le
+    // prochain tracé produit un mur porteur de toursRestants/ancrePersoId,
+    // puis le mode se désarme tout seul — contrairement à
+    // basculerModeDessinMur, où le MJ enchaîne les murs jusqu'à ce qu'il
+    // coupe l'outil.
+    // Renvoie false si aucune scène n'est active (jeu de théâtre) : l'appelant
+    // doit alors ANNULER le lancer, pas décompter les PP.
+    function armerMurTemporaire(toursRestants, ancrePersoId) {
+      const scene = scenes[sceneActive];
+      if (!scene) return false;
+      _murTemporaireEnAttente = { toursRestants, ancrePersoId };
+      if (!modeDessinMur) basculerModeDessinMur();
+      toastCarte(`✨ Mur de force : trace ton mur sur la carte (clique-glisse) — il disparaîtra dans ${toursRestants} tour(s).`);
+      return true;
+    }
+
     function _demarrerDessinMur(ev) {
       if (!modeDessinMur) return;
       if (ev.target && ev.target.closest && ev.target.closest('.dd-token')) return;
@@ -2462,6 +2483,16 @@ const Carte = (() => {
       }
       const id = 'mur-' + Date.now();
       const mur = { x1, y1, x2, y2 };
+      // Mur TEMPORAIRE (sort "Mur de force") : l'attente posée par
+      // armerMurTemporaire est consommée par CE tracé, puis remise à null
+      // immédiatement — un second tracé après celui-ci redevient un mur
+      // permanent ordinaire, cf. son propre commentaire.
+      if (_murTemporaireEnAttente) {
+        mur.toursRestants = _murTemporaireEnAttente.toursRestants;
+        mur.ancrePersoId = _murTemporaireEnAttente.ancrePersoId;
+        _murTemporaireEnAttente = null;
+        if (modeDessinMur) basculerModeDessinMur();
+      }
       if (!scene.mursManuelsBruts) scene.mursManuelsBruts = {};
       scene.mursManuelsBruts[id] = mur;
       scene.segmentsMursManuels = Object.values(scene.mursManuelsBruts).map(o => [[o.x1, o.y1], [o.x2, o.y2]]);
@@ -2469,7 +2500,23 @@ const Carte = (() => {
       rendreScene(scene);
       calculerEtRendreLoS(scene);
       if (_depotMursManuels) _depotMursManuels.sauver(mur, id);
-      toastCarte('Mur ajouté.');
+      toastCarte(mur.toursRestants ? `Mur temporaire ajouté (${mur.toursRestants} tours).` : 'Mur ajouté.');
+    }
+
+    // Séquence de suppression d'un mur manuel PAR ID — extraite pour être
+    // partagée entre _supprimerMurManuelProche (clic joueur, ci-dessous) et
+    // decompterMursTemporaires (expiration automatique, cf. plus bas) :
+    // la suppression doit TOUJOURS passer par le dépôt, sinon le mur ne
+    // disparaît que chez celui qui l'a retiré (piège de synchro).
+    function _retirerMurManuelParId(scene, id) {
+      const bruts = scene.mursManuelsBruts || {};
+      if (!bruts[id]) return false;
+      delete bruts[id];
+      scene.segmentsMursManuels = Object.values(bruts).map(o => [[o.x1, o.y1], [o.x2, o.y2]]);
+      rendreScene(scene);
+      calculerEtRendreLoS(scene);
+      if (_depotMursManuels) _depotMursManuels.supprimer(id);
+      return true;
     }
 
     function _supprimerMurManuelProche(scene, x, y) {
@@ -2481,12 +2528,31 @@ const Carte = (() => {
         if (d < meilleureDist) { meilleureDist = d; meilleurId = id; }
       });
       if (!meilleurId) { rendreScene(scene); toastCarte('Aucun mur à cet endroit.'); return; }
-      delete bruts[meilleurId];
-      scene.segmentsMursManuels = Object.values(bruts).map(o => [[o.x1, o.y1], [o.x2, o.y2]]);
-      rendreScene(scene);
-      calculerEtRendreLoS(scene);
-      if (_depotMursManuels) _depotMursManuels.supprimer(meilleurId);
+      _retirerMurManuelParId(scene, meilleurId);
       toastCarte('Mur retiré.');
+    }
+
+    // Murs temporaires (sort "Mur de force") : décomptés à l'entrée de tour
+    // de leur LANCEUR (persoId), comme les états de ce même personnage —
+    // même convention de durée, même point de décompte, pour qu'un "3 tours"
+    // veuille dire la même chose partout dans l'app. Ne regarde QUE la scène
+    // active : un mur posé sur une scène qui n'est plus affichée n'est pas
+    // décompté tant qu'on n'y revient pas (même limite que le reste de l'app,
+    // qui ne modélise qu'une scène active à la fois).
+    function decompterMursTemporaires(persoId) {
+      const scene = scenes[sceneActive];
+      if (!scene || !scene.mursManuelsBruts) return;
+      Object.keys(scene.mursManuelsBruts).forEach((id) => {
+        const mur = scene.mursManuelsBruts[id];
+        if (mur.ancrePersoId !== persoId || typeof mur.toursRestants !== "number") return;
+        mur.toursRestants -= 1;
+        if (mur.toursRestants <= 0) {
+          _retirerMurManuelParId(scene, id);
+          toastCarte('🧱 Le Mur de force se dissipe.');
+        } else if (_depotMursManuels) {
+          _depotMursManuels.sauver(mur, id);
+        }
+      });
     }
 
     // ── Dessin manuel de portes/fenêtres — MJ uniquement ─────────────────
@@ -3957,6 +4023,7 @@ const Carte = (() => {
       supprimerToken: supprimerTokenDD, onChange, actualiserTokens, reinitialiserExploration, revelerToutExploration,
       onMonstreDevientVisible, reinitialiserDetectionVisibilite, estMonstreVisible,
       activerModeCiblage, desactiverModeCiblage, effacerSelection: _effacerSelection,
+      armerMurTemporaire, decompterMursTemporaires,
     };
   })();
   // Un changement de token dd2vtt (ajout/dégâts/suppression, local ou distant
@@ -4014,6 +4081,19 @@ const Carte = (() => {
     if (typeof DD2VTT !== "undefined" && DD2VTT.desactiverModeCiblage) DD2VTT.desactiverModeCiblage();
   }
 
+  // Sort "Mur de force" (cf. DD2VTT.armerMurTemporaire/decompterMursTemporaires,
+  // qui vivent dans le scope DD2VTT comme scenes/sceneActive/_finDessinMur) :
+  // même patron de délégation que activerModeCiblage/desactiverModeCiblage
+  // ci-dessus. Renvoie false (pas d'exception) si DD2VTT n'est pas encore
+  // initialisé, comme le reste des délégations de ce fichier.
+  function armerMurTemporaire(toursRestants, ancrePersoId) {
+    return (typeof DD2VTT !== "undefined" && DD2VTT.armerMurTemporaire)
+      ? DD2VTT.armerMurTemporaire(toursRestants, ancrePersoId) : false;
+  }
+  function decompterMursTemporaires(persoId) {
+    if (typeof DD2VTT !== "undefined" && DD2VTT.decompterMursTemporaires) DD2VTT.decompterMursTemporaires(persoId);
+  }
+
   // Appelé en quittant l'onglet Carte (cf. app.js allerVers) : referme la
   // bulle "fiche rapide" d'un token sélectionné (cf. DD2VTT.effacerSelection)
   // — sans ça elle restait affichée par-dessus les autres onglets, étant en
@@ -4031,5 +4111,6 @@ const Carte = (() => {
     onMonstreDevientVisible, reinitialiserDetectionVisibilite, idPersoDepuisRef, tokenIdPourPerso, monstreEstVisible,
     initiales, rafraichirCouleurJoueur, COULEURS_JOUEURS,
     activerModeCiblage, desactiverModeCiblage,
+    armerMurTemporaire, decompterMursTemporaires,
   };
 })();

@@ -394,6 +394,13 @@ const Combat = (() => {
         let regenAppliquee = 0;
         if (regenCombat > 0) regenAppliquee = Personnage.appliquerGainPv(p, regenCombat).gain;
         const { retires, degats, testsVolonte, soins } = Capacites.decompterEtatsDebutTour(p);
+        // Murs temporaires (sort "Mur de force") : décomptés à l'entrée de tour
+        // de leur lanceur, comme les états de ce même personnage — même
+        // convention de durée, même point de décompte, pour qu'un "3 tours"
+        // veuille dire la même chose partout dans l'app.
+        if (typeof Carte !== "undefined" && Carte.decompterMursTemporaires) {
+          Carte.decompterMursTemporaires(actif.id);
+        }
         App.sauverPersos(persos);
         if (regenAppliquee > 0) App.ajouterHisto(
           `Tissée de sève — Régénération`, regenAppliquee, false, false,

@@ -5557,6 +5557,25 @@ const App = (() => {
           sauverPersos(persosApresSoin);
         }
       }
+      // Sort "Mur de force" (Magicien rang 4) : le seul sort dont la
+      // résolution est un GESTE de carte et non un effet appliqué à une
+      // cible. Capacites.lancer a déjà décompté les PP quand on arrive ici
+      // (cible: "aucune", donc aucun garde-fou de ciblage ne l'a bloqué) —
+      // si aucune scène n'est active, armerMurTemporaire renvoie false et on
+      // le signale franchement plutôt que de laisser croire que le sort est
+      // parti dans le vide. Auditer si le cas se présente en séance : un
+      // garde-fou AVANT le décompte (vérifier une scène active avant
+      // d'appeler Capacites.lancer) mériterait alors sa propre décision de
+      // Thomas — pas implémenté ici (changement de flux hors périmètre de
+      // ce chantier).
+      // 3 tours : valeur du texte du sort (data/donnees.js), pas de champ
+      // structuré dédié — mecanique.effets ne porte qu'un effet "special"
+      // narratif pour ce sort, cf. son commentaire.
+      if (res.ok && sourceLancee.idSort === "mur_de_force") {
+        if (typeof Carte === "undefined" || !Carte.armerMurTemporaire || !Carte.armerMurTemporaire(3, id)) {
+          toast("⚠️ Mur de force : aucune scène de battlemap active, impossible de tracer le mur (PP déjà décomptés).");
+        }
+      }
       // Barde "Note discordante"/"Chant brisant" (et toute future capacité de
       // zone/attaque à bonus) ciblant un MONSTRE : Capacites.lancer ne stocke
       // rien pour lui (cf. appliquerBonusSurPerso, PJ uniquement) — reproduit

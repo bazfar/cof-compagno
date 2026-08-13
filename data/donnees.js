@@ -1985,10 +1985,19 @@ const SORTS_MAGICIEN = [
       effets: [ { type: "etat", id: "aveugle_ou_sourd", duree: { tours: 3 } } ] } },
 
   { id: "mur_de_force", nom: "Mur de force", rang: 4, categorie: "abjuration",
-    effet: "Érige un mur temporaire infranchissable",
+    effet: "Érige un mur infranchissable de la longueur tracée, pendant 3 tours (battlemap uniquement)",
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
-      cible: "zone", portee: 10, zone: { taille: 3 }, jetOppose: null,
-      effets: [ { type: "special", note: "Résolution manuelle par la table — pas de moteur d'obstacle bloquant LoS/mouvement dans l'app." } ] } },
+      // Aucun effet au sens du moteur : la résolution est un GESTE de carte,
+      // armé par App.resoudreCapaciteEtRafraichir (cas particulier par
+      // idSort, cf. Résurrection) et réalisé par Carte.armerMurTemporaire.
+      // Le moteur d'obstacle existait déjà (murs manuels du MJ, qui bloquent
+      // la LoS ET le déplacement) : ce sort ne fait qu'y ajouter une
+      // expiration et un moyen de le poser depuis un lancer.
+      // Longueur libre : le joueur trace ce qu'il veut. Assumé — un plafond
+      // demanderait une validation géométrique que rien d'autre dans l'app
+      // ne fait, et le MJ voit le tracé.
+      cible: "aucune", portee: 10, zone: null, jetOppose: null,
+      effets: [ { type: "special", note: "Battlemap uniquement : sans scène active, le sort ne peut pas être tracé. Longueur libre, arbitrée par le MJ au moment du tracé. Le mur bloque la vue ET le passage, et disparaît après 3 tours du lanceur." } ] } },
 
   { id: "invisibilite_majeure", nom: "Invisibilité majeure", rang: 4, categorie: "illusion",
     effet: "Invisibilité complète prolongée, ne se rompt pas à la première action offensive",
