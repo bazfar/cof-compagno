@@ -1331,6 +1331,59 @@ const Capacites = (() => {
       }
       return `État « ${etat.nom} » (${effet.duree}) à appliquer manuellement à ${cible ? cible.nom : "la cible"} (pas de suivi d'état automatique pour les monstres).`;
     }
+    if (effet.type === "seuilsPv") {
+      // Type "seuilsPv" (sort "Parole divine") : l'effet appliqué dépend des
+      // PV ACTUELS de la cible au moment du lancer. Paliers exclusifs,
+      // évalués du plus BAS au plus haut : le premier qui matche gagne, une
+      // cible à 25 PV est paralysée (≤30) et non endormie ni étourdie.
+      // Aucune sauvegarde. Type à part entière : ne partage ni la forme des
+      // données ni la logique avec la branche "etat" ci-dessus.
+      if (!cible) return null;
+      let pvCible = null;
+      let tokMonstre = null;
+      if (cible.genre === "perso" && persos[cible.id]) {
+        pvCible = persos[cible.id].pvActuel || 0;
+      } else if (cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.listeMonstresCombat) {
+        tokMonstre = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
+        if (tokMonstre) pvCible = tokMonstre.pvActuel ?? tokMonstre.pvMax ?? 0;
+      }
+      if (pvCible === null) {
+        return `${cible.nom} — PV inconnus, palier à déterminer à la table.`;
+      }
+      const palier = (effet.paliers || [])
+        .slice()
+        .sort((a, b) => a.pvMax - b.pvMax)
+        .find((s) => pvCible <= s.pvMax);
+      if (!palier) return `${cible.nom} (${pvCible} PV) — au-dessus de tous les paliers, aucun effet.`;
+      if (palier.mort) {
+        // Mort instantanée automatisée sur les MONSTRES uniquement (décision
+        // de Thomas) : sur un PJ, tuer sans jet ni confirmation n'est pas une
+        // décision que le moteur doit prendre seul, le palier est annoncé et
+        // c'est le MJ qui l'applique. PV à 0 via Carte.definirPvCombat : même
+        // chemin que Trophée ultime/Botte mortelle (Chasseur/Barde) pour
+        // écrire des PV de monstre directement, réutilisé tel quel — pas une
+        // suppression du jeton, cohérent avec le reste de l'app où "mort"
+        // pour un monstre veut dire "0 PV", jamais un retrait de la table.
+        if (cible.genre === "monstre" && typeof Carte !== "undefined" && Carte.definirPvCombat) {
+          Carte.definirPvCombat(cible.id, 0);
+          return `☠️ ${cible.nom} (${pvCible} PV) est tué·e sur le coup.`;
+        }
+        return `☠️ ${cible.nom} (${pvCible} PV) devrait être tué·e sur le coup — application manuelle par le MJ sur un PJ.`;
+      }
+      const etatPalier = getEtat(palier.idEtat); // lève si inconnu — validé par tools/valider_mecaniques.js
+      // Poser un état sur un monstre n'a PAS d'équivalent automatisé dans
+      // l'app (vérifié : la branche "etat" ci-dessus, pour tout effet 'etat'
+      // ordinaire, retombe elle-même sur un message "à appliquer
+      // manuellement" dès que cible.genre !== "perso" — aucun suivi d'état
+      // de monstre n'existe nulle part dans le moteur). Même limite reprise
+      // ici plutôt qu'inventée : ne PAS confondre avec la mort ci-dessus, qui
+      // elle mute un champ (pvActuel) réellement suivi côté Carte.
+      if (cible.genre === "perso" && persos[cible.id]) {
+        appliquerEtatSurPerso(persos[cible.id], { id: palier.idEtat, duree: palier.duree }, libelle, { perso, rang });
+        return `${cible.nom} (${pvCible} PV) — « ${etatPalier.nom} » (${palier.duree} tour(s)) appliqué.`;
+      }
+      return `${cible.nom} (${pvCible} PV) — « ${etatPalier.nom} » (${palier.duree} tour(s)) à appliquer manuellement (pas de suivi d'état automatique pour les monstres).`;
+    }
     if (effet.type === "bonus") {
       // Guerrier — Voie du soldat, rang 1 "Posture de combat" : une option de
       // choix peut représenter un TRANSFERT entre deux stats (ex. "+ Attaque

@@ -2136,10 +2136,22 @@ const SORTS_MAGICIEN = [
       effets: [ { type: "etat", id: "marque_chatiment_ame", duree: { tours: 5 } } ] } },
 
   { id: "parole_divine", nom: "Parole divine", rang: 5, categorie: "evocation",
-    effet: "Portée 6 cases : puise directement dans la Mer des âmes (compte 1,5× son coût pour la Rupture). Ciblez autant de cibles que vous le souhaitez dans votre champ de vision : 50 PV ou moins → étourdie 1 tour ; 40 PV ou moins → endormie 2 tours ; 30 PV ou moins → paralysée 3 tours ; 20 PV ou moins → tuée sur le coup",
+    effet: "Portée 6 cases, jusqu'à 8 cibles (compte 1,5× son coût pour la Rupture). Selon les PV actuels de chacune : 50 ou moins → étourdie 1 tour ; 40 ou moins → endormie 2 tours ; 30 ou moins → paralysée 3 tours ; 20 ou moins → tuée sur le coup. Aucun jet de sauvegarde",
     mecanique: { type: "activable", usage: { frequence: "1x/scenario" }, coutPP: 25, typeSort: "majeur",
-      cible: "zone", portee: 6, zone: null, jetOppose: null, remousMultiplicateur: 1.5,
-      effets: [ { type: "special", note: "Cible librement un nombre quelconque de créatures en vue (pas de picker multi-cible libre dans l'app) ; pour CHACUNE, selon ses PV actuels au moment du sort : ≤50 étourdie 1 tour, ≤40 endormie 2 tours, ≤30 paralysée 3 tours, ≤20 tuée sur le coup (aucun jet de sauvegarde) — ciblage libre et seuils multiples non modélisés par le moteur, application manuelle par la table. Le ×1,5 pour la Rupture (mecanique.remousMultiplicateur, lu par Remous.ajouter) est, lui, bien automatisé." } ] } },
+      // "autant de cibles que vous voulez" n'est pas représentable : le
+      // picker a besoin d'un plafond. 8 (décision de Thomas), et le texte
+      // du sort le dit désormais au lieu de promettre l'illimité.
+      cible: "ennemi", portee: 6, zone: null, jetOppose: null, maxCibles: 8,
+      remousMultiplicateur: 1.5,
+      // Paliers EXCLUSIFS évalués du plus bas au plus haut (cf.
+      // resoudreEffet, type "seuilsPv") : une cible à 25 PV est paralysée,
+      // pas endormie. La mort n'est automatisée que sur les monstres ;
+      // sur un PJ, le message annonce le palier et le MJ applique.
+      effets: [ { type: "seuilsPv", paliers: [
+        { pvMax: 20, mort: true },
+        { pvMax: 30, idEtat: "paralysee", duree: "3" },
+        { pvMax: 40, idEtat: "endormie", duree: "2" },
+        { pvMax: 50, idEtat: "etourdie", duree: "1" } ] } ] } },
 
   // --- Sorts d'Abjuration partagés (chantier "sorts dictés en chat" du
   // 12/08/2026, décision de Thomas : accessibles à toute classe qui
