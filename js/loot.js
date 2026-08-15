@@ -17,10 +17,16 @@ const Loot = (() => {
   function lireHisto()  { return SyncStore.get(KEY_HISTO) || []; }
   function sauverHisto(h){ SyncStore.set(KEY_HISTO, h.slice(-20)); }
 
-  // Fiches des personnages : instance partagée avec app.js/carte.js
-  // (window.DepotPersos, cf. depot.js) — un seul cache/abonnement Firestore.
-  function lirePersos() { return window.DepotPersos.charger(); }
-  function sauverPersos(p){ window.DepotPersos.remplacerTout(p); }
+  // Fiches des personnages : passe par App.chargerPersos/sauverPersos (cf.
+  // js/combat.js, même pattern) plutôt que window.DepotPersos.remplacerTout
+  // directement — remplacerTout écrase toute la collection cof_persos avec
+  // l'instantané reçu, y compris les personnages modifiés entre-temps par
+  // d'AUTRES joueurs si celui-ci est périmé (bug réellement rencontré :
+  // niveau et livret d'un joueur repartis en arrière après une action Loot
+  // sur un autre personnage). App.sauverPersos fait la fusion champ par
+  // champ contre la version serveur la plus fraîche.
+  function lirePersos() { return App.chargerPersos(); }
+  function sauverPersos(p){ App.sauverPersos(p); }
 
   function persoNom(id) { const p = lirePersos(); return p[id] ? p[id].nom : "Inconnu"; }
 
