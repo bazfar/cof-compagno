@@ -319,21 +319,51 @@ const App = (() => {
     if (_fusionnerConsommablesDupliquesAuChargement(persos)) sauverPersos(persos);
     return persos;
   }
+  // Clés top-level (avant vs après) qui diffèrent réellement — ajoutées,
+  // modifiées ou retirées. Comparaison au niveau du CHAMP (niveau, livres,
+  // inventaire...), pas du document entier : deux clients peuvent modifier
+  // des champs différents du même perso sans se marcher dessus. On ne
+  // descend pas plus bas (à l'intérieur d'un tableau/objet imbriqué, ex.
+  // fusionner deux ajouts indépendants dans `inventaire`) : la sémantique
+  // d'une fusion partielle de tableau est ambiguë (ordre, doublons...), un
+  // champ modifié est donc traité comme un tout, à l'ancienne.
+  function _champsModifiesPerso(avant, apres) {
+    const cles = new Set([...Object.keys(avant || {}), ...Object.keys(apres || {})]);
+    const modifies = [];
+    cles.forEach((c) => {
+      if (JSON.stringify((avant || {})[c]) !== JSON.stringify((apres || {})[c])) modifies.push(c);
+    });
+    return modifies;
+  }
   // sauverPersos écrasait historiquement toute la collection partagée
   // cof_persos (remplacerTout) avec l'objet passé tel quel — dangereux en
   // multi-client : un onglet resté ouvert avec un instantané un peu vieux
   // écrasait silencieusement les personnages modifiés entre-temps par
   // d'AUTRES joueurs (bug réellement rencontré à table : niveau ET éléments
   // de livret d'un joueur repartis en arrière ensemble d'un coup — signe
-  // d'un même objet persona réécrit avec une ancienne version). Corrigé en
-  // ne laissant passer que les personas RÉELLEMENT modifiés par CE client
-  // (différents de la baseline associée à `obj`, l'instantané pris à SON
-  // chargerPersos() d'origine) — tout le reste repart du cache serveur le
-  // plus frais disponible (depotPersos.charger(), tenu à jour en continu
-  // par l'écoute Firestore, cf. DepotDistant) plutôt que de la copie de ce
-  // client, potentiellement périmée. Si `obj` ne vient pas de chargerPersos()
-  // (pas de baseline connue), on ne peut pas faire ce tri en confiance : on
-  // retombe sur l'ancien comportement (écrase tout avec `obj`) plutôt que de
+  // d'un même objet persona réécrit avec une ancienne version).
+  //
+  // Corrigé en deux temps : (1) seuls les persos RÉELLEMENT modifiés par CE
+  // client (différents de la baseline associée à `obj`, l'instantané pris à
+  // SON chargerPersos() d'origine) sont même considérés ; (2) pour un perso
+  // modifié, seuls SES champs top-level qui ont réellement changé sont
+  // écrits par-dessus la version serveur la plus fraîche — pas le document
+  // entier. Ça couvre aussi le cas plus étroit où DEUX clients modifient le
+  // MÊME perso sur des champs différents sans qu'aucun ne recharge entre
+  // les deux (ex. le MJ ajoute un objet à l'inventaire pendant que le
+  // joueur monte de niveau sur son propre onglet) : avant, le second à
+  // sauvegarder écrasait le document entier, y compris le champ modifié par
+  // l'autre ; maintenant chacun ne touche que son propre champ.
+  //
+  // Écritures par document (depotPersos.sauver/supprimer) plutôt qu'un
+  // remplacerTout global : on ne touche plus du tout aux persos que ce
+  // client n'a pas modifiés (au lieu de les réécrire à l'identique à chaque
+  // sauvegarde), et un perso non chargé par ce client (apparu côté serveur
+  // après son chargement) n'est jamais ni lu ni réécrit.
+  //
+  // Si `obj` ne vient pas de chargerPersos() (pas de baseline connue), on ne
+  // peut pas faire ce tri en confiance : on retombe sur l'ancien
+  // comportement (remplacerTout, écrase tout avec `obj`) plutôt que de
   // deviner.
   function sauverPersos(obj) {
     const baseline = _baselinesPersos.get(obj);
@@ -342,21 +372,28 @@ const App = (() => {
       return;
     }
     const fraisServeur = depotPersos.charger();
-    const resultat = {};
     Object.keys(obj).forEach((id) => {
-      const inchangeDepuisChargement = baseline[id] !== undefined
-        && JSON.stringify(obj[id]) === JSON.stringify(baseline[id]);
-      resultat[id] = (inchangeDepuisChargement && fraisServeur[id] !== undefined) ? fraisServeur[id] : obj[id];
+      if (!(id in baseline)) {
+        depotPersos.sauver(obj[id], id); // nouveau perso créé par ce client depuis son chargement
+        return;
+      }
+      const champsModifies = _champsModifiesPerso(baseline[id], obj[id]);
+      if (champsModifies.length === 0) return; // pas touché par ce client : rien à faire
+      const base = fraisServeur[id] || baseline[id];
+      const fusion = Object.assign({}, base);
+      champsModifies.forEach((champ) => {
+        if (champ in obj[id]) fusion[champ] = obj[id][champ];
+        else delete fusion[champ];
+      });
+      depotPersos.sauver(fusion, id);
     });
-    // Personas apparus côté serveur après le chargement d'origine de `obj`
-    // (créés par un autre joueur entre-temps) : absents de `obj` simplement
-    // parce que ce client ne les connaissait pas encore à ce moment-là,
-    // jamais une suppression volontaire (cf. supprimerPerso, qui les aurait
-    // connus via baseline avant de les retirer) — à conserver, pas à effacer.
-    Object.keys(fraisServeur).forEach((id) => {
-      if (!(id in obj) && !(id in baseline)) resultat[id] = fraisServeur[id];
+    // Persos présents dans la baseline mais absents de `obj` : suppression
+    // volontaire par ce client (cf. supprimerPerso, qui les connaissait via
+    // baseline avant de les retirer) — pas une simple lacune de chargement,
+    // ceux-là sont déjà exclus par le `if (!(id in baseline))` ci-dessus.
+    Object.keys(baseline).forEach((id) => {
+      if (!(id in obj)) depotPersos.supprimer(id);
     });
-    depotPersos.remplacerTout(resultat);
   }
 
   /* ---------- Rôle Joueur / MJ ---------- */
