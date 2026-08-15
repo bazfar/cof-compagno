@@ -2388,51 +2388,6 @@ const SORTS_ENCHANTEUR = [
     mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 16, typeSort: "majeur",
       cible: "aucune", portee: "contact", zone: null, jetOppose: null,
       effets: [ { type: "special", note: "Rituel narratif (10 min), information résolue par la table." } ] } },
-
-  // --- Sorts d'Abjuration partagés (chantier "sorts dictés en chat" du
-  // 12/08/2026, décision de Thomas : accessibles à toute classe qui
-  // débloque l'école abjuration — mêmes 4 entrées dans SORTS_MAGICIEN,
-  // SORTS_PRETRE et SORTS_ENCHANTEUR, pas réservées à une seule classe) ---
-  { id: "forteresse_esprit", nom: "Forteresse de l'esprit", rang: 2, categorie: "abjuration",
-    effet: "Jusqu'à 3 alliés à portée gagnent +1 à leurs jets de sauvegarde de Volonté pendant 3 tours",
-    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "allie", portee: 5, zone: null, jetOppose: null, maxCibles: 3,
-      // Durée 3 tours : le texte d'origine ne la précisait pas (décision de
-      // Thomas, alignée sur les autres buffs de rang 3-5). Cible de bonus
-      // "Volonte" (sans accent, clé de SAUVEGARDES) : lue par
-      // Personnage.modSauvegarde via bonusTemporaire, cf. le chantier
-      // "bonus temporaires sur les sauvegardes".
-      effets: [ { type: "bonus", cible: "Volonte", valeur: 1, duree: "3" } ] } },
-
-  { id: "benediction_mineure", nom: "Bénédiction mineure", rang: 2, categorie: "abjuration",
-    effet: "La cible à portée gagne un bonus de 1d4 sur son prochain jet de dé",
-    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      cible: "allie", portee: 5, zone: null, jetOppose: null,
-      // cible "prochainJet" : sentinelle lue par App.lancerTest, pas une
-      // stat. Le 1d4 est tiré au moment du jet (décision de Thomas), et
-      // l'entrée est consommée que le bonus ait aidé ou non.
-      // Limite : les jets internes de js/capacites.js (Bannissement,
-      // Mutation sauvage, jets opposés de capacités) ne passent pas par
-      // lancerTest et ne consomment donc pas ce bonus — arbitrage manuel de
-      // la table dans ces cas précis.
-      effets: [ { type: "bonus", cible: "prochainJet", formule: "1d4", duree: "finCombat" } ] } },
-
-  { id: "sphere_vitriol", nom: "Sphère de vitriol", rang: 3, categorie: "abjuration",
-    effet: "Sphère de 5 cases de diamètre, dure 1+Mod.INT tours : toute cible dans ou entrant dans la zone subit 3d4 dégâts d'acide immédiatement puis 2d4 par tour tant qu'elle y reste ; sauvegarde Réflexes DD 14 pour ne subir que la moitié",
-    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 6, typeSort: "majeur",
-      cible: "zone", portee: 10, zone: { taille: 5 },
-      jetOppose: { caracAttaquant: null, caracDefenseur: "Reflexes", difficulteFixe: 14, modeSauvegarde: "moitie" },
-      effets: [ { type: "degats", formule: "3d4", typeDegats: "magique" },
-        { type: "special", note: "Dégâts initiaux (3d4, ou moitié sur sauvegarde réussie) déjà résolus ci-dessus pour la première cible touchée. La persistance (2d4/tour tant que dans la zone, et le déclenchement pour toute créature qui ENTRE dans la zone après la pose, pendant 1+Mod.INT tours) n'a pas d'équivalent dans le moteur (pas de zone de terrain persistante déclenchée par l'entrée d'un jeton) — application manuelle par la table pour chaque cible et chaque tour, comme Mur de force pour l'obstacle qu'il pose." } ] } },
-
-  { id: "aide", nom: "Aide", rang: 2, categorie: "abjuration",
-    effet: "Jusqu'à 3 alliés à portée gagnent 5 PV temporaires (se dissipent à la fin du combat)",
-    mecanique: { type: "activable", usage: { frequence: "libre" }, coutPP: 4, typeSort: "majeur",
-      // cible "allie" + maxCibles (et non "zone") : le picker multi n'est
-      // câblé que sur "allie"/"ennemi", et le moteur ne mesure aucune
-      // distance — le texte annonce donc un nombre de cibles, pas un rayon.
-      cible: "allie", portee: 5, zone: null, jetOppose: null, maxCibles: 3,
-      effets: [ { type: "pvTemp", formule: "5", duree: "finCombat" } ] } },
 ];
 
 /* ============================================================
@@ -2870,15 +2825,35 @@ const CERCLE_SORT_GRATUIT = {
    absente jusqu'ici de cette table malgré l'existence de SORTS_ENCHANTEUR,
    le garde-fou de niveau minimum (js/capacites.js) ne pouvait pas retrouver
    le rang des sorts Enchanteur sans elle. */
+// Catalogue arcane unifié (Magicien/Enchanteur/Nécromancien) : les trois
+// classes partagent PP + le mécanisme d'école débloquée (cf.
+// ECOLE_VERS_VOIE_DEBLOCAGE) sur les 6 écoles arcaniques (évocation,
+// abjuration, enchantement, illusion, divination, transmutation) — un sort
+// du Magicien est donc apprenable par un Enchanteur et réciproquement,
+// simplement à ×2 PP tant que la voie de déblocage correspondante n'est
+// pas prise (cf. Capacites.lancer, coutPPReel). Fusionné SORTS_MAGICIEN +
+// SORTS_ENCHANTEUR puis dédupliqué par id (filter défensif : les 4 sorts
+// d'abjuration partagés du 12/08/2026 étaient déjà dupliqués à l'identique
+// dans les deux tableaux avant cette fusion, cf. SORTS_ENCHANTEUR d'où ces
+// 4 copies ont été retirées — le filter protège aussi contre une future
+// réintroduction accidentelle du même piège).
+// Le Prêtre reste hors de cette fusion : ses sorts de Cercle utilisent des
+// ressources dédiées (Points de Bénédiction/Conviction/Bannissement/
+// Jugement), pas des PP — catalogue SORTS_PRETRE non fusionné ici. Les 4
+// sorts d'abjuration partagés restent dupliqués dans SORTS_PRETRE tels
+// quels (décision de Thomas du 12/08/2026, antérieure à cette fusion et
+// non remise en cause par elle).
+const SORTS_ARCANIQUES = SORTS_MAGICIEN.concat(
+  SORTS_ENCHANTEUR.filter((s) => !SORTS_MAGICIEN.some((m) => m.id === s.id))
+);
+
 const SORTS_PAR_CLASSE = {
-  magicien: SORTS_MAGICIEN,
+  magicien: SORTS_ARCANIQUES,
+  enchanteur: SORTS_ARCANIQUES,
+  // Nécromancien n'a pas de liste propre — partage le catalogue arcane
+  // commun comme Magicien/Enchanteur (même tableau, pas une copie).
+  necromancien: SORTS_ARCANIQUES,
   pretre: SORTS_PRETRE,
-  enchanteur: SORTS_ENCHANTEUR,
-  // Nécromancien n'a pas encore sa propre liste (cf. discussion du
-  // 04/08/2026) — réutilise SORTS_MAGICIEN en attendant. À remplacer par
-  // SORTS_NECROMANCIEN le jour où cette liste existera (juste cette ligne
-  // à changer, rien d'autre ne dépend de l'identité du tableau).
-  necromancien: SORTS_MAGICIEN,
 };
 
 /* Correctif d'équilibrage PP (cf. prompt_correctif_pp_nonlineaire.md) : coût
