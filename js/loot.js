@@ -566,11 +566,14 @@ const Loot = (() => {
   function _voterJoueur(persoId, type) {
     const vote = lireVote();
     if (!vote || !vote.votes[persoId]) return;
-    vote.votes[persoId].type = type;
-    vote.votes[persoId].jet  = type === "greed" ? Math.ceil(Math.random() * 100) : null;
-    sauverVote(vote);
+    const jet = type === "greed" ? Math.ceil(Math.random() * 100) : null;
+    // setChamp, pas sauverVote(vote) : le vote besoin/greed se déclare
+    // typiquement par PLUSIEURS joueurs en même temps (le loot vient de
+    // tomber) — écrire tout l'objet vote depuis une copie locale risquerait
+    // d'effacer le vote qu'un autre joueur vient d'enregistrer.
+    SyncStore.setChamp(KEY_VOTE, "votes." + persoId, { type, jet });
     rendreNotificationVote(persoId);
-    toast(type === "besoin" ? "❤ Besoin déclaré !" : "🎲 Greed lancé : " + vote.votes[persoId].jet);
+    toast(type === "besoin" ? "❤ Besoin déclaré !" : "🎲 Greed lancé : " + jet);
   }
 
   // NB : l'inventaire/équipement du joueur n'est plus rendu ici — le bloc
