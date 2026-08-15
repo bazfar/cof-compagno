@@ -68,9 +68,10 @@ const Scribe = (() => {
   }
   function _incrementerTentative(persoId) {
     const table = _tentativesAtelier();
-    table[persoId] = table[persoId] || {};
-    table[persoId][CLE_TENTATIVE] = (table[persoId][CLE_TENTATIVE] || 0) + 1;
-    SyncStore.set(STORAGE_ATELIER_TENTATIVES, table);
+    const nouveau = ((table[persoId] && table[persoId][CLE_TENTATIVE]) || 0) + 1;
+    // setChamp, pas SyncStore.set(table) : table PARTAGÉE entre tous les
+    // ateliers et tous les persos — cf. même correctif dans js/app.js.
+    SyncStore.setChamp(STORAGE_ATELIER_TENTATIVES, persoId + "." + CLE_TENTATIVE, nouveau);
   }
 
   /* ── §2.2 : sorts copiables ─────────────────────────────────── */

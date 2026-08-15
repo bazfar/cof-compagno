@@ -51,10 +51,11 @@ const Cuisine = (() => {
   }
   function _incrementerTentative(persoId, recetteId) {
     const table = _tentativesAtelier();
-    table[persoId] = table[persoId] || {};
     const cle = _cle(recetteId);
-    table[persoId][cle] = (table[persoId][cle] || 0) + 1;
-    SyncStore.set(STORAGE_ATELIER_TENTATIVES, table);
+    const nouveau = ((table[persoId] && table[persoId][cle]) || 0) + 1;
+    // setChamp, pas SyncStore.set(table) : table PARTAGÉE entre tous les
+    // ateliers et tous les persos — cf. même correctif dans js/app.js.
+    SyncStore.setChamp(STORAGE_ATELIER_TENTATIVES, persoId + "." + cle, nouveau);
   }
   // Nb de tentatives/jour dérivé du rang (cf. prompt_cuisine_recalage_
   // gastronomie.md, amendement 1) : plus la recette est technique, moins on

@@ -251,8 +251,11 @@ const Presence = (() => {
     if (!id || !nom) return false;
     const table = lire();
     const present = !(table[id] && table[id].present);
-    table[id] = { nom, present, ts: Date.now() };
-    sauver(table);
+    // setChamp, pas sauver(table) : chaque joueur bascule SA PROPRE
+    // présence, typiquement à quelques instants d'écart d'un autre —
+    // écrire toute la map depuis une copie locale risquerait d'effacer la
+    // présence qu'un autre joueur vient de déclarer entre-temps.
+    SyncStore.setChamp(KEY_PRESENCE, id, { nom, present, ts: Date.now() });
     return present;
   }
 
@@ -282,9 +285,10 @@ const Presence = (() => {
   function reinitialiser(joueurId) {
     if (typeof App === "undefined" || !App.obtenirRole || App.obtenirRole() !== "mj") return;
     if (joueurId) {
-      const table = lire();
-      delete table[joueurId];
-      sauver(table);
+      // supprimerChamp, pas sauver(table) : ce retrait ciblé par le MJ ne
+      // doit pas écraser la présence qu'un AUTRE joueur vient de basculer
+      // au même instant (cf. basculer() ci-dessus).
+      SyncStore.supprimerChamp(KEY_PRESENCE, joueurId);
     } else {
       sauver({});
     }

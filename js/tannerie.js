@@ -109,9 +109,10 @@ const Tannerie = (() => {
   }
   function _incrementerTentative(persoId, cle) {
     const table = _tentativesAtelier();
-    table[persoId] = table[persoId] || {};
-    table[persoId][cle] = (table[persoId][cle] || 0) + 1;
-    SyncStore.set(STORAGE_ATELIER_TENTATIVES, table);
+    const nouveau = ((table[persoId] && table[persoId][cle]) || 0) + 1;
+    // setChamp, pas SyncStore.set(table) : table PARTAGÉE entre tous les
+    // ateliers et tous les persos — cf. même correctif dans js/app.js.
+    SyncStore.setChamp(STORAGE_ATELIER_TENTATIVES, persoId + "." + cle, nouveau);
   }
 
   /* ── §3 : peaux/agents/cuirs portés ─────────────────────────────── */

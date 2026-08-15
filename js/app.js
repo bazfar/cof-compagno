@@ -4570,9 +4570,13 @@ const App = (() => {
   }
   function _incrementerTentative(persoId, cle) {
     const table = _tentativesAtelier();
-    table[persoId] = table[persoId] || {};
-    table[persoId][cle] = (table[persoId][cle] || 0) + 1;
-    SyncStore.set(STORAGE_ATELIER_TENTATIVES, table);
+    const nouveau = ((table[persoId] && table[persoId][cle]) || 0) + 1;
+    // setChamp, pas SyncStore.set(table) : cette table est PARTAGÉE entre
+    // TOUS les ateliers (enchantement/alchimie/cuisine/scribe/tannerie) ET
+    // tous les persos — deux joueurs qui fabriquent au même moment (même
+    // un atelier différent) écrivaient sinon chacun leur copie entière de
+    // la table, celui qui écrit en second effaçant la tentative de l'autre.
+    SyncStore.setChamp(STORAGE_ATELIER_TENTATIVES, persoId + "." + cle, nouveau);
   }
 
   // Onglet "🔨 Atelier" : sélecteur de personnage commun aux deux sous-onglets
