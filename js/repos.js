@@ -160,8 +160,13 @@ const Repos = (() => {
     const detailNeg = rollsNeg.length ? " -" + (entree.desNegatifs || []).map((d, i) => `1d${d}[${rollsNeg[i]}]`).join("-") : "";
     App.ajouterHisto(entree.label, total, false, false, detailPos + detailFlat + detailNeg);
     toast(`🛌 ${p.nom} récupère ${total} PV.`);
-    delete attente[persoId];
-    sauverAttente(attente);
+    // supprimerChamp, pas sauverAttente(attente) : chaque convive réclame
+    // SON PROPRE jet en attente, potentiellement au même instant qu'un
+    // autre joueur réclame le sien — écrire tout l'objet `attente` d'après
+    // une copie locale prise avant risquerait de faire réapparaître
+    // l'entrée d'un autre convive déjà résolue entre-temps (même famille
+    // de bug que celui corrigé sur les fiches perso).
+    SyncStore.supprimerChamp(STORAGE_REPOS_ATTENTE, persoId);
     rendreZoneRepos();
   }
 
@@ -172,8 +177,7 @@ const Repos = (() => {
     if (!attente[persoId]) return;
     const persos = App.chargerPersos();
     const nom = (persos[persoId] && persos[persoId].nom) || persoId;
-    delete attente[persoId];
-    sauverAttente(attente);
+    SyncStore.supprimerChamp(STORAGE_REPOS_ATTENTE, persoId);
     toast(`🗑 Repos en attente purgé pour ${nom} — aucun PV récupéré, or déjà prélevé non remboursé automatiquement.`);
     rendreZoneRepos();
   }
@@ -230,8 +234,14 @@ const Repos = (() => {
     const joueurId = App.obtenirJoueurId ? App.obtenirJoueurId() : null;
     if (!joueurId || !vote.votants.includes(joueurId)) return;
     if (vote.votes[joueurId] !== undefined) return; // déjà voté
-    vote.votes[joueurId] = choix;
-    sauverVote(vote);
+    vote.votes[joueurId] = choix; // mutation locale : sert juste à la vérif "tout le monde a voté" ci-dessous
+    // Écrit UNIQUEMENT ce chemin (votes.<joueurId>), pas tout l'objet vote :
+    // plusieurs joueurs votent typiquement à quelques instants d'écart, un
+    // sauverVote(vote) sur l'objet ENTIER ferait courir le risque qu'un
+    // client avec une copie un peu périmée écrase le vote d'un autre
+    // joueur déjà enregistré côté serveur (même famille de bug que celui
+    // corrigé sur les fiches perso, cf. App.sauverPersos).
+    SyncStore.setChamp(KEY_VOTE, "votes." + joueurId, choix);
     rendreZoneRepos();
     // Résolution anticipée dès que tous les votants ont répondu.
     if (vote.votants.every((id) => vote.votes[id] !== undefined)) _resoudreScrutin();
@@ -253,7 +263,12 @@ const Repos = (() => {
     const nons = vote.votants.filter((id) => vote.votes[id] === "non").length;
     const adopte = ouis >= nons; // égalité -> adopté, le oui l'emporte
     vote.statut = adopte ? "adopte" : "rejete";
-    sauverVote(vote);
+    // setChamp, pas sauverVote(vote) : ce client a pu lire `vote.votes` un
+    // instant avant qu'un DERNIER votant n'enregistre le sien côté serveur
+    // (cf. voter() ci-dessus) — un sauverVote() sur l'objet entier écrirait
+    // alors un `votes` périmé par-dessus, effaçant ce tout dernier vote.
+    // On ne touche donc QUE `statut`, jamais `votes`.
+    SyncStore.setChamp(KEY_VOTE, "statut", vote.statut);
     _arreterMinuteur();
     if (adopte) {
       _creerOverlay(vote);

@@ -43,6 +43,65 @@ const SyncStore = (() => {
     return true;
   }
 
+  // Applique un chemin pointé (ex. "votes.joueur123") sur une COPIE de
+  // l'objet — même logique que la fusion Firestore côté serveur (cf.
+  // setChamp/supprimerChamp ci-dessous), pour tenir le cache local
+  // optimiste cohérent avec ce qui vient d'être envoyé.
+  function _cheminDefinir(obj, chemin, valeur) {
+    const parts = chemin.split(".");
+    const copie = obj ? JSON.parse(JSON.stringify(obj)) : {};
+    let node = copie;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const part = parts[i];
+      if (typeof node[part] !== "object" || node[part] === null) node[part] = {};
+      node = node[part];
+    }
+    node[parts[parts.length - 1]] = valeur;
+    return copie;
+  }
+  function _cheminSupprimer(obj, chemin) {
+    const parts = chemin.split(".");
+    const copie = obj ? JSON.parse(JSON.stringify(obj)) : {};
+    let node = copie;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const part = parts[i];
+      if (typeof node[part] !== "object" || node[part] === null) return copie;
+      node = node[part];
+    }
+    delete node[parts[parts.length - 1]];
+    return copie;
+  }
+
+  // Fusionne UNE clé (chemin pointé, ex. "votes.joueur123") dans l'objet
+  // stocké sous `cle`, SANS lire-modifier-réécrire tout l'objet côté
+  // client : Firestore fusionne le champ nativement, atomique côté serveur
+  // (set + merge:true avec un chemin pointé) — deux clients qui touchent
+  // des CLÉS DIFFÉRENTES du même objet au même instant ne s'écrasent
+  // jamais l'un l'autre, même avec de la latence réseau, contrairement à
+  // get()+set() sur l'objet entier (même famille de bug que celui corrigé
+  // dans App.sauverPersos, mais fermée ici à la racine plutôt que
+  // rapiécée par une comparaison de baseline côté client — plus simple
+  // pour un simple couple clé/valeur). À réserver aux maps où PLUSIEURS
+  // joueurs écrivent chacun leur PROPRE entrée (vote, présence, tentative
+  // d'atelier...) — pas à un tableau qui grossit (cf. ajouterListe
+  // ci-dessous, prévu pour ça) ni à un état à écrivain unique (MJ seul),
+  // où get()+set() ne présente pas ce risque.
+  function setChamp(cle, chemin, valeur) {
+    _cache[cle] = _cheminDefinir(_cache[cle], chemin, valeur); // optimiste
+    window.suivreEcritureFirestore(_doc(cle).set({ ["valeur." + chemin]: valeur }, { merge: true }))
+      .catch((e) => console.error(`SyncStore.setChamp(${cle}, ${chemin}) échoué :`, e));
+    return true;
+  }
+
+  // Retire UNE clé (chemin pointé) sans toucher au reste — même principe
+  // que setChamp, via FieldValue.delete() côté Firestore.
+  function supprimerChamp(cle, chemin) {
+    _cache[cle] = _cheminSupprimer(_cache[cle], chemin);
+    window.suivreEcritureFirestore(_doc(cle).set({ ["valeur." + chemin]: firebase.firestore.FieldValue.delete() }, { merge: true }))
+      .catch((e) => console.error(`SyncStore.supprimerChamp(${cle}, ${chemin}) échoué :`, e));
+    return true;
+  }
+
   // Abonnement temps réel. Retourne une fonction de désabonnement, comme
   // avant (Firestore onSnapshot renvoie directement cette fonction).
   function subscribe(cle, callback /*, intervalleMs (ignoré) */) {
@@ -136,7 +195,7 @@ const SyncStore = (() => {
     );
   }
 
-  return { get, set, subscribe, getListe, ajouterListe, viderListe, subscribeListe };
+  return { get, set, setChamp, supprimerChamp, subscribe, getListe, ajouterListe, viderListe, subscribeListe };
 })();
 
 if (typeof window !== "undefined") window.SyncStore = SyncStore;
