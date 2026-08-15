@@ -231,9 +231,12 @@ const Recolte = (() => {
     const e = alea.effet;
     switch (e.type) {
       case "rencontre": {
-        const liste = SyncStore.get("recolte:rencontres") || [];
-        liste.push({ persoId, nom: p.nom, majeure: !!e.majeure, ts: Date.now() });
-        SyncStore.set("recolte:rencontres", liste);
+        // ajouterElement, pas get()+push+set() : PLUSIEURS joueurs peuvent
+        // déclencher une rencontre en récoltant au même moment — un
+        // get()+push+set() sur le tableau entier risquait de faire
+        // disparaître le signalement de l'un si celui de l'autre s'écrivait
+        // juste après (même famille de bug que marche:demandes).
+        SyncStore.ajouterElement("recolte:rencontres", { persoId, nom: p.nom, majeure: !!e.majeure, ts: Date.now() });
         return { message: `⚠ ${alea.nom} — signalé au MJ. Le repos long n'est PAS interrompu automatiquement.` };
       }
       case "degats": {
