@@ -302,13 +302,61 @@ const App = (() => {
     return modifie;
   }
 
+  // Associe à CHAQUE map retournée par chargerPersos() (par identité
+  // d'objet, pas globalement) l'instantané pris à ce moment-là. Une WeakMap
+  // plutôt qu'une simple variable partagée : l'appli déclenche plusieurs
+  // chaînes chargerPersos()/sauverPersos() indépendantes et entrelacées (une
+  // action du joueur, mais aussi des écoutes Firestore réactives comme le
+  // rattrapage de grimoire côté MJ) — avec une seule référence globale,
+  // l'une de ces chaînes fait avancer la baseline sous le nez d'une autre,
+  // encore en cours, et fausse sa comparaison. Ici chaque objet garde SA
+  // propre baseline, quoi qu'il se passe par ailleurs.
+  const _baselinesPersos = new WeakMap();
+
   function chargerPersos() {
     const persos = depotPersos.charger(); // map { id: perso }
+    _baselinesPersos.set(persos, JSON.parse(JSON.stringify(persos)));
     if (_fusionnerConsommablesDupliquesAuChargement(persos)) sauverPersos(persos);
     return persos;
   }
+  // sauverPersos écrasait historiquement toute la collection partagée
+  // cof_persos (remplacerTout) avec l'objet passé tel quel — dangereux en
+  // multi-client : un onglet resté ouvert avec un instantané un peu vieux
+  // écrasait silencieusement les personnages modifiés entre-temps par
+  // d'AUTRES joueurs (bug réellement rencontré à table : niveau ET éléments
+  // de livret d'un joueur repartis en arrière ensemble d'un coup — signe
+  // d'un même objet persona réécrit avec une ancienne version). Corrigé en
+  // ne laissant passer que les personas RÉELLEMENT modifiés par CE client
+  // (différents de la baseline associée à `obj`, l'instantané pris à SON
+  // chargerPersos() d'origine) — tout le reste repart du cache serveur le
+  // plus frais disponible (depotPersos.charger(), tenu à jour en continu
+  // par l'écoute Firestore, cf. DepotDistant) plutôt que de la copie de ce
+  // client, potentiellement périmée. Si `obj` ne vient pas de chargerPersos()
+  // (pas de baseline connue), on ne peut pas faire ce tri en confiance : on
+  // retombe sur l'ancien comportement (écrase tout avec `obj`) plutôt que de
+  // deviner.
   function sauverPersos(obj) {
-    depotPersos.remplacerTout(obj);
+    const baseline = _baselinesPersos.get(obj);
+    if (!baseline) {
+      depotPersos.remplacerTout(obj);
+      return;
+    }
+    const fraisServeur = depotPersos.charger();
+    const resultat = {};
+    Object.keys(obj).forEach((id) => {
+      const inchangeDepuisChargement = baseline[id] !== undefined
+        && JSON.stringify(obj[id]) === JSON.stringify(baseline[id]);
+      resultat[id] = (inchangeDepuisChargement && fraisServeur[id] !== undefined) ? fraisServeur[id] : obj[id];
+    });
+    // Personas apparus côté serveur après le chargement d'origine de `obj`
+    // (créés par un autre joueur entre-temps) : absents de `obj` simplement
+    // parce que ce client ne les connaissait pas encore à ce moment-là,
+    // jamais une suppression volontaire (cf. supprimerPerso, qui les aurait
+    // connus via baseline avant de les retirer) — à conserver, pas à effacer.
+    Object.keys(fraisServeur).forEach((id) => {
+      if (!(id in obj) && !(id in baseline)) resultat[id] = fraisServeur[id];
+    });
+    depotPersos.remplacerTout(resultat);
   }
 
   /* ---------- Rôle Joueur / MJ ---------- */
