@@ -265,17 +265,21 @@ const Carte = (() => {
     const persos = (typeof window.DepotPersos !== "undefined") ? window.DepotPersos.charger() : {};
     const ids = Object.keys(persos);
     if (!ids.length) { toastCarte("Aucun personnage enregistré."); return; }
-    // Si une battlemap .dd2vtt est active, on pose les persos comme tokens de combat
+    // Si une battlemap .dd2vtt est active, on arme une pose groupée plutôt que
+    // de poser chaque perso immédiatement par formule (cf. DD2VTT.demarrerPoseGroupe) —
+    // un clic sur la carte les posera tous d'un coup en grille compacte. Pas de
+    // filtre de doublon ici : DD2VTT._tokenAutorise s'en charge au moment de la
+    // pose (seul endroit où cette règle doit vivre), sinon un perso déjà sur la
+    // carte compterait quand même dans la géométrie de la grille.
     if (typeof DD2VTT !== "undefined" && DD2VTT.estActive && DD2VTT.estActive()) {
-      let n = 0;
-      ids.forEach((pid) => {
+      const liste = ids.map((pid) => {
         const p = persos[pid];
-        if (DD2VTT.ajouterTokenData({
+        return {
           nom: p.nom, couleur: _couleurJoueur(p.proprietaire, p.proprietaireNom), pj: true, ref: "pj-" + pid,
           classe: p.classe || null, race: p.race || null, raceVariante: p.raceVariante || null, genre: p.genre || null,
-        })) n++;
+        };
       });
-      toastCarte(n + " perso(s) sur la battlemap.");
+      DD2VTT.demarrerPoseGroupe(liste);
       return;
     }
     let ajout = 0, i = etat.jetons.length;
@@ -1911,6 +1915,11 @@ const Carte = (() => {
       if (!scenes[nom]) return;
       sceneActive = nom;
       const scene = scenes[nom];
+      // Un mode d'ancrage armé (pose groupée) pointe implicitement sur la
+      // scène active au moment de l'armement — un changement de scène doit
+      // le désarmer, sinon le prochain clic sur la nouvelle scène poserait le
+      // lot en attente sur une scène qui n'est plus celle visée.
+      _annulerPoseGroupe();
 
       // Le MJ active une scène → force l'affichage chez les joueurs (bascule
       // leur onglet actif sur Carte/Battlemap), comme un partage d'écran.
@@ -2696,6 +2705,11 @@ const Carte = (() => {
     // callback appelé au clic sur un jeton valide ; ne résout rien, c'est à
     // l'appelant de décider quoi faire du choix (ex. présélectionner un <select>).
     let modeCiblage = null;
+    // Mode d'ancrage (pose groupée) : { liste, onAnnule } quand actif, sinon
+    // null. Distinct de modeCiblage ci-dessus, qui vise un JETON existant
+    // (portée d'attaque) — ici on vise une CASE vide de la scène pour y poser
+    // tout un lot de nouveaux jetons (cf. demarrerPoseGroupe/ajouterTokensLot).
+    let modeAncrage = null;
     let _depotTokens = null;
     let _depotPortails = null;
     let _desabonnerTokens = null;
@@ -3128,8 +3142,12 @@ const Carte = (() => {
     //    de ref : plusieurs instances de la même créature sont attendues
     //    (ex. un zombie par rang possédé dans la voie).
     function estActive() { return !!sceneActive && !!scenes[sceneActive]; }
-    function ajouterTokenData(d) {
-      if (!estActive()) return false;
+
+    // Extrait de l'ancien ajouterTokenData monolithique — reste le SEUL
+    // endroit où vivent la garde de rôle et la règle de doublon, réutilisé
+    // tel quel par la pose groupée (ajouterTokensLot) pour ne pas dupliquer
+    // ces deux règles à deux endroits qui pourraient diverger.
+    function _tokenAutorise(d) {
       if (role === 'joueur') {
         const estMonPJ = !!(d && d.pj && d.ref === 'pj-' + monPersoId);
         const estMonInvocation = !!(d && !d.pj && d.invocateur && d.invocateur === monPersoId);
@@ -3142,15 +3160,18 @@ const Carte = (() => {
         toastCarte("Ce personnage est déjà sur la carte.");
         return false;
       }
-      const scene = scenes[sceneActive];
-      const couleurs = ['#e74c3c','#3498db','#2ecc71','#9b59b6','#f39c12','#1abc9c'];
+      return true;
+    }
+
+    // Placement par défaut (hors pose groupée, cf. _casesGrilleAutour pour
+    // l'équivalent en lot) : les PJ arrivent en colonne sur le bord gauche de
+    // la carte (case 1, pas 0, pour éviter d'atterrir pile sur un mur de
+    // bordure), empilés verticalement autour du centre au fur et à mesure
+    // qu'ils rejoignent la scène — plutôt qu'au centre de la grille comme les
+    // monstres/PNJ, que le MJ positionne lui-même à la main (embuscade, etc.).
+    function _posePlacementParDefaut(scene, d) {
       const n = tokensDD.length;
       const estPJ = !!(d && d.pj);
-      // Les PJ arrivent en colonne sur le bord gauche de la carte (case 1,
-      // pas 0, pour éviter d'atterrir pile sur un mur de bordure), empilés
-      // verticalement autour du centre au fur et à mesure qu'ils rejoignent
-      // la scène — plutôt qu'au centre de la grille comme les monstres/PNJ,
-      // que le MJ positionne lui-même à la main (embuscade, etc.).
       const nPJ = tokensDD.filter(t => t.pj).length;
       const cx = estPJ
         ? Math.max(0, Math.min(scene.lc - 1, 1))
@@ -3158,7 +3179,16 @@ const Carte = (() => {
       const cy = estPJ
         ? Math.max(0, Math.min(scene.hc - 1, Math.floor(scene.hc / 2) - 2 + nPJ))
         : Math.max(0, Math.min(scene.hc - 1, Math.floor(scene.hc / 2) + Math.floor(n / 4)));
-      const nouveauToken = {
+      return { cx, cy };
+    }
+
+    // Construit l'objet token final à partir des données fournies et d'une
+    // case déjà résolue (cx/cy) — extrait pour être réutilisé aussi bien par
+    // le placement par défaut que par la pose groupée, qui calculent cx/cy
+    // très différemment mais construisent le même objet.
+    function _construireToken(d, cx, cy, n) {
+      const couleurs = ['#e74c3c','#3498db','#2ecc71','#9b59b6','#f39c12','#1abc9c'];
+      return {
         id: 'dd-' + Date.now() + '-' + n,
         nom: (d && d.nom) ? d.nom : 'Jeton',
         cx, cy,
@@ -3192,12 +3222,176 @@ const Carte = (() => {
         invocationId: (d && d.invocationId) || null,
         attaques: (d && d.attaques) || null,
       };
+    }
+
+    function ajouterTokenData(d) {
+      if (!estActive()) return false;
+      if (!_tokenAutorise(d)) return false;
+      const scene = scenes[sceneActive];
+      const n = tokensDD.length;
+      const { cx, cy } = _posePlacementParDefaut(scene, d);
+      const nouveauToken = _construireToken(d, cx, cy, n);
       tokensDD.push(nouveauToken);
       rendreTokensDD(scene);
       calculerEtRendreLoS(scene);
       _sauverToken(nouveauToken);
       _onChangeMonstres && _onChangeMonstres();
       return true;
+    }
+
+    // ── Pose groupée (mode d'ancrage) ─────────────────────────
+    // Géométrie de la grille théorique : cols colonnes (racine carrée
+    // arrondie au-dessus), assez de rangs pour n cases, centrée sur la case
+    // d'ancrage. Remplissage gauche→droite puis haut→bas pour que l'ordre de
+    // la liste (ex. l'ordre des persos) corresponde à l'ordre visuel à
+    // l'écran — sinon la formation semblerait aléatoire d'une pose à l'autre.
+    function _casesGrilleAutour(n, cxAncre, cyAncre) {
+      const cols = Math.ceil(Math.sqrt(n));
+      const rangs = Math.ceil(n / cols);
+      const decalCol = Math.floor((cols - 1) / 2);
+      const decalRang = Math.floor((rangs - 1) / 2);
+      const cases = [];
+      for (let i = 0; i < n; i++) {
+        const col = i % cols;
+        const rang = Math.floor(i / cols);
+        cases.push({ cx: cxAncre + (col - decalCol), cy: cyAncre + (rang - decalRang) });
+      }
+      return cases;
+    }
+
+    // Résout la case finale d'UN jeton du lot à partir de sa case théorique.
+    // (cxOrigine, cyOrigine) est l'origine du test de mur pour CE jeton (cf.
+    // "Origine en chaîne" dans ajouterTokensLot) — fixe pendant toute la
+    // recherche ci-dessous, y compris en spirale : on teste toujours "peut-on
+    // atteindre CETTE case candidate depuis la case du jeton précédent",
+    // jamais depuis la case théorique elle-même.
+    function _resoudreCase(scene, cxTh, cyTh, estPJ, cxOrigine, cyOrigine, cxAncre, cyAncre) {
+      const essai = (cx, cy) => {
+        cx = Math.max(0, Math.min(scene.lc - 1, cx));
+        cy = Math.max(0, Math.min(scene.hc - 1, cy));
+        if (tokensDD.some(t => t.cx === cx && t.cy === cy)) return null;
+        if (estPJ && _deplacementBloque(scene, cxOrigine, cyOrigine, cx, cy)) return null;
+        return { cx, cy };
+      };
+      const direct = essai(cxTh, cyTh);
+      if (direct) return { cx: direct.cx, cy: direct.cy, empile: false };
+      // Spirale sortante : garantit la case libre la plus proche (au sens des
+      // anneaux) de la position théorique. Un balayage ligne par ligne (ex.
+      // gauche→droite, haut→bas) donnerait au contraire une formation qui
+      // dérive toujours dans la même direction dès qu'une case est prise,
+      // au lieu de rester groupée autour du point cliqué.
+      for (let rayon = 1; rayon <= 12; rayon++) {
+        for (let dx = -rayon; dx <= rayon; dx++) {
+          for (let dy = -rayon; dy <= rayon; dy++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) !== rayon) continue; // seul l'anneau du rayon courant, pas l'intérieur déjà testé
+            const r = essai(cxTh + dx, cyTh + dy);
+            if (r) return { cx: r.cx, cy: r.cy, empile: false };
+          }
+        }
+      }
+      // Rayon 12 dépassé sans case libre : on empile sur la case d'ancrage
+      // plutôt que de perdre le jeton. Un jeton empilé se voit sur la carte
+      // et peut être déplacé à la souris ensuite ; un jeton refusé en
+      // silence ou posé hors scène serait perdu sans que le MJ le remarque.
+      return {
+        cx: Math.max(0, Math.min(scene.lc - 1, cxAncre)),
+        cy: Math.max(0, Math.min(scene.hc - 1, cyAncre)),
+        empile: true,
+      };
+    }
+
+    // Pose tout un lot de jetons en une fois, en grille compacte autour de
+    // (cxAncre, cyAncre) — cf. demarrerPoseGroupe pour l'armement du mode qui
+    // mène jusqu'ici.
+    //
+    // La grille théorique est calculée sur liste.length (le pire cas : aucun
+    // refus), mais l'index qui y pioche n'avance QUE sur un jeton réellement
+    // posé (cf. `poses` ci-dessous) — sinon un doublon refusé par
+    // _tokenAutorise laisserait un trou vide dans la formation au lieu de
+    // simplement utiliser une case de moins.
+    //
+    // Origine en chaîne du test de mur : _deplacementBloque exige une origine
+    // ET une destination (ce n'est pas un test "cette case est-elle dans un
+    // mur"). La case du jeton précédemment posé dans CE lot donne la
+    // sémantique "le groupe arrive ensemble, jeton après jeton" ; tester
+    // systématiquement depuis la seule case d'ancrage aurait au contraire
+    // bloqué toute formation qui contourne un angle de mur (le premier jeton
+    // passe, mais la ligne droite ancre→jeton suivant retraverse le mur que
+    // le premier vient de contourner).
+    //
+    // Occupation : les jetons sont poussés dans tokensDD au fur et à mesure
+    // de la boucle plutôt que construits à part puis poussés à la fin — un
+    // jeton du lot posé plus tôt est alors détecté comme "occupé" directement
+    // via tokensDD (cf. _resoudreCase/essai), sans Set ni tableau d'appoint à
+    // tenir en parallèle.
+    //
+    // Rendu hors boucle : rendreTokensDD/calculerEtRendreLoS reconstruisent
+    // tout l'affichage depuis zéro à chaque appel (pas un patch incrémental).
+    // Les appeler à chaque jeton recalculerait n-1 états aussitôt écrasés par
+    // le suivant, pour rien — un seul appel sur l'état final suffit.
+    function ajouterTokensLot(liste, cxAncre, cyAncre) {
+      if (!estActive()) return;
+      const scene = scenes[sceneActive];
+      const cellules = _casesGrilleAutour(liste.length, cxAncre, cyAncre);
+      let cxOrigine = cxAncre, cyOrigine = cyAncre; // le premier jeton du lot part de l'ancre elle-même
+      let poses = 0, empilements = 0;
+      liste.forEach((d) => {
+        if (!_tokenAutorise(d)) return; // ignoré, ne consomme pas de case de grille
+        const theorique = cellules[poses];
+        const resolue = _resoudreCase(scene, theorique.cx, theorique.cy, !!d.pj, cxOrigine, cyOrigine, cxAncre, cyAncre);
+        const n = tokensDD.length;
+        const tok = _construireToken(d, resolue.cx, resolue.cy, n);
+        tokensDD.push(tok);
+        _sauverToken(tok);
+        cxOrigine = resolue.cx; cyOrigine = resolue.cy;
+        poses++;
+        if (resolue.empile) empilements++;
+      });
+      rendreTokensDD(scene);
+      calculerEtRendreLoS(scene);
+      _onChangeMonstres && _onChangeMonstres();
+      toastCarte(poses + " jeton(s) posé(s)."
+        + (empilements ? " " + empilements + " empilement(s) forcé(s) (aucune case libre à proximité)." : ""));
+    }
+
+    // Arme l'attente d'un clic d'ancrage sur la carte pour poser `liste` en
+    // grille compacte (cf. ajouterTokensLot) — utilisé aujourd'hui par
+    // "+ Mes personnages" en battlemap. Router aussi "+ Mon perso",
+    // "+ Invocation" et la modale "+ Monstre" par ici (demarrerPoseGroupe([d]))
+    // serait un changement d'une ligne chacun, mais n'est volontairement pas
+    // fait ici : ces trois-là posent un seul jeton et leur placement par
+    // formule (_posePlacementParDefaut) reste inchangé.
+    function demarrerPoseGroupe(liste) {
+      if (!estActive() || !liste || !liste.length) return false;
+      if (modeAncrage) _annulerPoseGroupe(); // ré-armer remplace l'attente précédente plutôt que d'empiler deux écouteurs Échap
+      const scene2 = document.getElementById('carte-scene');
+      if (scene2) scene2.style.cursor = 'crosshair';
+      const onKeydown = (ev) => { if (ev.key === 'Escape') _annulerPoseGroupe(); };
+      document.addEventListener('keydown', onKeydown);
+      modeAncrage = { liste, onAnnule: () => document.removeEventListener('keydown', onKeydown) };
+      toastCarte(liste.length + " jeton(s) en attente — clique sur la carte pour les poser (Échap pour annuler).");
+      return true;
+    }
+
+    // Désarme le mode d'ancrage sans toast — utilisé aussi bien par une pose
+    // réussie (le clic sur la carte a déjà posé le lot, cf. le listener
+    // 'click' plus bas, qui a son propre toast de bilan) que par les deux cas
+    // d'annulation ci-dessous, qui ajoutent LEUR toast par-dessus.
+    function _desarmerPoseGroupe() {
+      if (!modeAncrage) return;
+      modeAncrage.onAnnule();
+      modeAncrage = null;
+      const scene2 = document.getElementById('carte-scene');
+      if (scene2) scene2.style.cursor = '';
+    }
+
+    // Annule le mode d'ancrage SANS rien poser — clic Échap, ou changement
+    // de scène (cf. activerScene) pour ne pas laisser un mode armé pointant
+    // sur une scène qui n'est plus la scène active.
+    function _annulerPoseGroupe() {
+      if (!modeAncrage) return;
+      _desarmerPoseGroupe();
+      toastCarte("Pose de groupe annulée.");
     }
 
     // ── Table de combat : monstres du bestiaire posés sur cette scène ────
@@ -3789,6 +3983,28 @@ const Carte = (() => {
       // du tracé (cf. _demarrerDessinObjet/_finDessinObjet) : on le court-circuite.
       const scene2 = document.getElementById('carte-scene');
       if (scene2) scene2.addEventListener('click', (ev) => {
+        // Mode d'ancrage (pose groupée) intercepté EN TOUT PREMIER, avant
+        // même les modes de dessin et _basculerPortailAuClic — sinon un clic
+        // d'ancrage tombé près d'une porte basculerait la porte au lieu de
+        // poser le groupe. _pointSceneDepuisEvent rend un [x, y] en unités
+        // scène natives (mêmes unités que scene.px) ; diviser par scene.px
+        // donne directement la case cliquée, comme le reste du fichier.
+        if (modeAncrage) {
+          const sc = scenes[sceneActive];
+          if (sc) {
+            const pt = _pointSceneDepuisEvent(ev, sc);
+            if (pt) {
+              const cx = Math.floor(pt[0] / sc.px);
+              const cy = Math.floor(pt[1] / sc.px);
+              ajouterTokensLot(modeAncrage.liste, cx, cy);
+            }
+          }
+          // Désarmement silencieux : ajouterTokensLot a déjà affiché son
+          // propre toast de bilan ("n jeton(s) posé(s)...") — pas celui
+          // d'annulation, qui parlerait d'un échec là où la pose a réussi.
+          _desarmerPoseGroupe();
+          return;
+        }
         if (modeDessinObjet || modeDessinPortail || modeDessinMur) return;
         const sc = scenes[sceneActive];
         if (sc && _basculerPortailAuClic(ev, sc)) return;
@@ -4017,6 +4233,7 @@ const Carte = (() => {
       init, scenes: () => scenes, sceneActive: () => sceneActive,
       ajouterToken: (sc) => ajouterTokenDD(sc),
       modeWorldmap: activerModeWorldmap, modeBattlemap: activerModeBattlemap, estActive, ajouterTokenData,
+      demarrerPoseGroupe,
       tokensMonstres, tokensPJ, distanceCases, jetonsSurLigne, jetonsEnZone, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
       renommerToken, changerCouleurToken,
       ajouterEtat: ajouterEtatToken, retirerEtat: retirerEtatToken, decompterEtats: decompterEtatsToken,
