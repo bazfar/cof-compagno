@@ -373,8 +373,14 @@ const Marche = (() => {
     const modEffectif = _modificateurEffectif(item, marchand, localite);
     const prixFinalPo = calculerPrix(item, modEffectif, _valeurRarete(rareteEffective), 0, marchand.faction);
     if (prixFinalPo == null) { toast("Ce marchand refuse de vous vendre quoi que ce soit."); return; }
-    const demandes = lireDemandes();
-    demandes.push({
+    // ajouterElement, pas lireDemandes()+push+sauverDemandes(demandes) :
+    // PLUSIEURS joueurs peuvent soumettre une demande d'achat au même
+    // instant (aucun rapport entre eux) — un get()+mutate+set() sur le
+    // tableau entier risquait de faire disparaître silencieusement la
+    // demande d'un joueur si la sienne s'écrivait juste après, sans même
+    // un message d'erreur pour l'alerter (même famille de bug que celui
+    // corrigé sur les fiches perso).
+    SyncStore.ajouterElement(KEY_DEMANDES, {
       id: "demande_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
       persoId,
       persoNom: perso.nom,
@@ -388,7 +394,6 @@ const Marche = (() => {
       statut: "attente",
       horodatage: Date.now(),
     });
-    sauverDemandes(demandes);
     toast("Demande envoyée, en attente du MJ.");
   }
 

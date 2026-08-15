@@ -102,6 +102,29 @@ const SyncStore = (() => {
     return true;
   }
 
+  // Ajoute `valeur` au TABLEAU stocké sous `cle`, via FieldValue.arrayUnion
+  // — fusion Firestore native, encore sans lecture préalable côté client :
+  // deux clients qui ajoutent chacun un élément au même instant se
+  // retrouvent tous les deux dans le tableau final, jamais l'un n'efface
+  // l'ajout de l'autre. À réserver aux tableaux alimentés par PLUSIEURS
+  // participants indépendants (ex. demandes d'achat au marché soumises par
+  // différents joueurs) où chaque élément est unique par construction (un
+  // id généré, cf. l'appelant) — arrayUnion déduplique par égalité
+  // profonde, donc deux éléments réellement identiques ne compteraient
+  // qu'une fois, ce qui ne peut pas arriver ici. Pour un journal qui reçoit
+  // aussi des mises à jour d'éléments déjà présents (pas seulement des
+  // ajouts), préférer ajouterListe/subscribeListe ci-dessous (une
+  // sous-collection, un document par entrée) plutôt que ce tableau plat.
+  function ajouterElement(cle, valeur) {
+    const liste = Array.isArray(_cache[cle]) ? _cache[cle].slice() : [];
+    const dejaPresent = liste.some((x) => JSON.stringify(x) === JSON.stringify(valeur));
+    if (!dejaPresent) liste.push(valeur);
+    _cache[cle] = liste; // optimiste
+    window.suivreEcritureFirestore(_doc(cle).set({ valeur: firebase.firestore.FieldValue.arrayUnion(valeur) }, { merge: true }))
+      .catch((e) => console.error(`SyncStore.ajouterElement(${cle}) échoué :`, e));
+    return true;
+  }
+
   // Abonnement temps réel. Retourne une fonction de désabonnement, comme
   // avant (Firestore onSnapshot renvoie directement cette fonction).
   function subscribe(cle, callback /*, intervalleMs (ignoré) */) {
@@ -195,7 +218,7 @@ const SyncStore = (() => {
     );
   }
 
-  return { get, set, setChamp, supprimerChamp, subscribe, getListe, ajouterListe, viderListe, subscribeListe };
+  return { get, set, setChamp, supprimerChamp, ajouterElement, subscribe, getListe, ajouterListe, viderListe, subscribeListe };
 })();
 
 if (typeof window !== "undefined") window.SyncStore = SyncStore;
