@@ -72,24 +72,60 @@ const SyncStore = (() => {
     return copie;
   }
 
+  /* ----------------------------------------------------------------
+     Écriture d'UN SEUL chemin dans l'objet stocké sous `cle`.
+
+     ⚠️ Piège Firestore, cause d'un bug resté silencieux plusieurs
+     semaines (présence de séance, votes de repos et de butin, tentatives
+     d'atelier : tous perdus) : set() N'INTERPRÈTE PAS les points dans les
+     clés de l'objet qu'on lui passe, contrairement à update().
+     `set({ "valeur.jean": x }, { merge: true })` ne fusionne donc RIEN
+     dans la map `valeur` — il crée, à la racine du document, un champ dont
+     le nom contient littéralement un point ("valeur.jean"), à côté de
+     `valeur` qui reste inchangée. subscribe() lisant snap.data().valeur,
+     l'écriture était invisible pour tous les postes, y compris celui qui
+     venait de l'émettre : son cache optimiste était écrasé par le snapshot
+     suivant (le bouton « Je suis là » repassait tout seul à l'état non
+     déclaré), sans la moindre erreur en console ni côté serveur.
+
+     La forme correcte est l'objet IMBRIQUÉ (_objetImbrique) accompagné
+     d'un masque de fusion explicite (mergeFields + FieldPath,
+     _cheminFirestore), construit segment par segment et jamais depuis une
+     chaîne pointée. Ne JAMAIS revenir à une clé pointée dans un set() ici.
+     ---------------------------------------------------------------- */
+  function _cheminFirestore(chemin) {
+    return new firebase.firestore.FieldPath("valeur", ...chemin.split("."));
+  }
+
+  // { valeur: { <chemin imbriqué> : valeur } } — la charge utile qui
+  // accompagne le masque _cheminFirestore ci-dessus.
+  function _objetImbrique(chemin, valeur) {
+    const parts = chemin.split(".");
+    const racine = {};
+    let node = racine;
+    for (let i = 0; i < parts.length - 1; i++) { node[parts[i]] = {}; node = node[parts[i]]; }
+    node[parts[parts.length - 1]] = valeur;
+    return { valeur: racine };
+  }
+
   // Fusionne UNE clé (chemin pointé, ex. "votes.joueur123") dans l'objet
   // stocké sous `cle`, SANS lire-modifier-réécrire tout l'objet côté
-  // client : Firestore fusionne le champ nativement, atomique côté serveur
-  // (set + merge:true avec un chemin pointé) — deux clients qui touchent
-  // des CLÉS DIFFÉRENTES du même objet au même instant ne s'écrasent
-  // jamais l'un l'autre, même avec de la latence réseau, contrairement à
-  // get()+set() sur l'objet entier (même famille de bug que celui corrigé
-  // dans App.sauverPersos, mais fermée ici à la racine plutôt que
-  // rapiécée par une comparaison de baseline côté client — plus simple
-  // pour un simple couple clé/valeur). À réserver aux maps où PLUSIEURS
-  // joueurs écrivent chacun leur PROPRE entrée (vote, présence, tentative
-  // d'atelier...) — pas à un tableau qui grossit (cf. ajouterListe
-  // ci-dessous, prévu pour ça) ni à un état à écrivain unique (MJ seul),
-  // où get()+set() ne présente pas ce risque.
+  // client : Firestore remplace ce seul chemin, atomiquement côté serveur
+  // — deux clients qui touchent des CLÉS DIFFÉRENTES du même objet au même
+  // instant ne s'écrasent jamais l'un l'autre, même avec de la latence
+  // réseau, contrairement à get()+set() sur l'objet entier (même famille de
+  // bug que celui corrigé dans App.sauverPersos, mais fermée ici à la
+  // racine plutôt que rapiécée par une comparaison de baseline côté client
+  // — plus simple pour un simple couple clé/valeur). À réserver aux maps où
+  // PLUSIEURS joueurs écrivent chacun leur PROPRE entrée (vote, présence,
+  // tentative d'atelier...) — pas à un tableau qui grossit (cf.
+  // ajouterListe ci-dessous, prévu pour ça) ni à un état à écrivain unique
+  // (MJ seul), où get()+set() ne présente pas ce risque.
   function setChamp(cle, chemin, valeur) {
     _cache[cle] = _cheminDefinir(_cache[cle], chemin, valeur); // optimiste
-    window.suivreEcritureFirestore(_doc(cle).set({ ["valeur." + chemin]: valeur }, { merge: true }))
-      .catch((e) => console.error(`SyncStore.setChamp(${cle}, ${chemin}) échoué :`, e));
+    window.suivreEcritureFirestore(
+      _doc(cle).set(_objetImbrique(chemin, valeur), { mergeFields: [_cheminFirestore(chemin)] })
+    ).catch((e) => console.error(`SyncStore.setChamp(${cle}, ${chemin}) échoué :`, e));
     return true;
   }
 
@@ -97,8 +133,9 @@ const SyncStore = (() => {
   // que setChamp, via FieldValue.delete() côté Firestore.
   function supprimerChamp(cle, chemin) {
     _cache[cle] = _cheminSupprimer(_cache[cle], chemin);
-    window.suivreEcritureFirestore(_doc(cle).set({ ["valeur." + chemin]: firebase.firestore.FieldValue.delete() }, { merge: true }))
-      .catch((e) => console.error(`SyncStore.supprimerChamp(${cle}, ${chemin}) échoué :`, e));
+    window.suivreEcritureFirestore(
+      _doc(cle).set(_objetImbrique(chemin, firebase.firestore.FieldValue.delete()), { mergeFields: [_cheminFirestore(chemin)] })
+    ).catch((e) => console.error(`SyncStore.supprimerChamp(${cle}, ${chemin}) échoué :`, e));
     return true;
   }
 
