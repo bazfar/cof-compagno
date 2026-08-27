@@ -3918,16 +3918,34 @@ const PNJ_CLES = [
     ],
   },
   {
+    id: "denis-fabrelle",
+    nom: "Denis Fabrelle",
+    titre: "Clerc du Comptoir, Quartier du Tissage",
+    faction: "Comptoir",
+    rencontre: true,
+    resume:
+      "Le clerc qui avait annoncé la pénurie au marché lors de la distribution. Roué de coups en pleine rue en menant un recensement pour affiner le rationnement.",
+    description:
+      "Consciencieux jusqu'à l'imprudence, Denis passait ses soirées à recenser les foyers du Tissage, seul, une torche à la main, pour que le rationnement colle enfin à la réalité du quartier plutôt qu'à de vieux chiffres. Il a été roué de coups sans qu'on lui vole rien — jambe et côtes brisées, traumatisme crânien. Stabilisé par Mira Sylvenne, il se remet chez un guérisseur près du Palais du Serment.",
+    accroches: [
+      "MJ — il n'a rien vu venir et ne reconnaît aucune des silhouettes aperçues par le groupe. Ce n'est pas de la réticence : le choc et l'obscurité ne lui ont rien laissé d'exploitable.",
+      "MJ — ses registres de recensement, s'ils sont retrouvés, ne contiennent rien sur les patrouilles ni sur Aldenne — seulement des foyers, des âges, des besoins. Ne pas en faire un indice supplémentaire sur l'entrepôt n° 7, c'est un fil séparé.",
+    ],
+  },
+  {
     id: "mira-sylvenne",
     nom: "Mira Sylvenne",
     titre: "Guérisseuse du Quartier du Tissage",
     faction: "Cercle des Peuples",
-    resume: "Aelindra installée à Libris depuis des années, elle soigne sans distinction et voit la tension monter avant qu'elle n'éclate.",
+    resume: "Cheveux dorés, née à Aetharion, installée depuis des années parmi les Aelindra de Libris — elle soigne sans distinction et voit la tension monter avant qu'elle n'éclate.",
     description:
-      "Figure discrète mais respectée du Quartier du Tissage, Mira est souvent la première à percevoir les signaux faibles d'une escalade — bien avant que l'Assemblée ne s'en préoccupe.",
+      "Figure discrète mais respectée du Quartier du Tissage, Mira est souvent la première à percevoir les signaux faibles d'une escalade — bien avant que l'Assemblée ne s'en préoccupe. Ses cheveux dorés, rares hors d'Aetharion, trahissent une origine qu'elle ne cache pas mais n'explique jamais sans qu'on le lui demande.",
     accroches: [
       "Première à alerter les PJ si une attaque des Fils de Libris se prépare contre le quartier.",
       "Peut demander une escorte ou une protection en échange de soins ou d'informations sur la communauté.",
+      "MJ — les Sylvenne sont une famille de guérisseurs née à Aetharion, exilée pour avoir rompu avec sa doctrine : convaincue que soigner l'Arbre-Monde exige de s'ouvrir aux autres peuples plutôt que de l'isoler, exactement la position aelindra. Aetharion ne pardonne pas l'hérésie de sang pur — ils ont été chassés comme tels, pas accueillis ailleurs par choix.",
+      "MJ — a stabilisé Denis Fabrelle après son passage à tabac sur la place qu'elle a ouverte aux siens, avant de l'envoyer chez un guérisseur près du Palais du Serment. Elle ne sait rien de plus que le groupe sur qui a fait le coup.",
+      "MJ — Shyrion a reconnu ses cheveux dorés pour ce qu'ils sont. Si le sujet vient, elle ne ment pas et ne s'étend pas : une origine aetharienne, une famille qui a choisi un autre chemin, et rien de plus à en dire à un inconnu — à un autre exilé d'Aetharion, peut-être un peu plus.",
     ],
   },
   {
@@ -4769,7 +4787,7 @@ const FACTIONS = [
     // factions pourront porter leur propre blason de la même façon.
     blason: "assets/blasons/blason_liberra.png",
     update:
-      "LA FIÈVRE DU GRENIER — niveau 2 sur 5\n\nLa distribution a eu lieu. Elle a nourri du monde et elle a mal tourné : les files se sont retournées sur elles-mêmes, on s'est battu pour des places, et le mouvement de foule qui devait suivre a été arrêté de justesse — devant tout le monde, par des gens qui ne sont pas de la Garde. La ville a retenu les deux moitiés de la journée : qu'elle a failli basculer, et que ce n'est pas la République qui l'en a empêchée.\n\nDepuis, on sert dans un certain ordre. Personne n'a rien décrété et personne n'a rien affiché, mais certains étals servent moins vite selon qui se présente, et le Quartier du Tissage l'a remarqué avant l'Assemblée. Les prix montent parce que le stock disparaît des étals, et le stock disparaît parce que les prix montent. Il y a encore assez de grain dans la ville pour trois mois — personne n'y croit.\n\nDes voisins se surveillent mutuellement les réserves. La Garde Citoyenne, déjà en sous-effectif, court d'un quartier à l'autre sans arriver à temps nulle part.\n\nÉchelle : 0 rien d'anormal · 1 la ville stocke (actuel) · 2 un commerçant refuse ouvertement de servir un non-humain · 3 une rixe fait un blessé grave · 4 le Tissage se barricade et le Comptoir suspend ses livraisons au quartier · 5 l'émeute part seule, il n'y a plus personne à convaincre.\n\nLe compteur monte d'un cran à chaque incident public non résolu, et descend d'un cran quand les personnages règlent visiblement quelque chose.",
+      "LA FIÈVRE DU GRENIER — niveau 3 sur 5\n\nSur la place centrale du Tissage, celle que Mira Sylvenne a ouverte aux siens, une file d'elfes attend depuis l'aube. Ceux qui la connaissent depuis des années ont remarqué autre chose : les torches qui marquaient les rondes de la Garde, plantées le long des rues depuis des mois, se sont éteintes une à une au fil des semaines. Ce soir, il n'en restait plus qu'une — celle de Denis Fabrelle, clerc du Comptoir, qui recensait les habitants du quartier pour affiner le rationnement.\n\nDes cris. Le temps d'y courir, il était trop tard : seules des silhouettes qui se dispersaient vers les toits, et Denis au sol, jambe et côtes brisées, un traumatisme crânien. Mira Sylvenne l'a stabilisé sur place avant de l'envoyer chez un guérisseur près du Palais du Serment. Il vivra — mais toute la ville aura entendu qu'un homme s'est fait rouer de coups en plein Tissage, sans une seule Garde pour intervenir.\n\nDepuis, on sert dans un certain ordre. Certains étals servent moins vite selon qui se présente, et le Quartier du Tissage l'a remarqué avant l'Assemblée. Les prix montent parce que le stock disparaît des étals, et le stock disparaît parce que les prix montent. Il y a encore assez de grain dans la ville pour trois mois — personne n'y croit.\n\nDes voisins se surveillent mutuellement les réserves. La Garde Citoyenne, déjà en sous-effectif, court d'un quartier à l'autre sans arriver à temps nulle part.\n\nÉchelle : 0 rien d'anormal · 1 la ville stocke · 2 un commerçant refuse ouvertement de servir un non-humain · 3 une rixe fait un blessé grave (actuel) · 4 le Tissage se barricade et le Comptoir suspend ses livraisons au quartier · 5 l'émeute part seule, il n'y a plus personne à convaincre.\n\nLe compteur monte d'un cran à chaque incident public non résolu, et descend d'un cran quand les personnages règlent visiblement quelque chose.",
     intro:
       "Contrairement à l'Empire, la République ne repose pas sur une noblesse mais sur une Assemblée de citoyens divisée en cinq blocs politiques, reflétant fidèlement ses fractures internes déjà connues : marchands, idéalistes, militaires, communautés non-humaines — auxquelles s'ajoute un cinquième bloc né du ressentiment, les Fils de Libris.\n\nDevise inscrite au fronton de l'Assemblée fondatrice : « La liberté ne s'hérite pas, elle se gagne. » Rarement brandi avec fierté unanime — chaque bloc préfère son propre insigne — le sceau d'État n'apparaît que sur les actes officiels, les frontières et la monnaie.",
     entites: [
