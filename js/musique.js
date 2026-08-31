@@ -194,8 +194,11 @@ const Musique = (() => {
       portee.forEach((pid) => { if (persos[pid]) persos[pid].chantDeVeilleActif = true; });
     }
 
-    encours.veillee = { persoId, morceauId, qualiteId, portee };
-    SyncStore.set("repos:encours", encours);
+    // setChamp, pas set(encours) : même règle que la récolte et les
+    // attributions — on n'écrit que le champ `veillee`, jamais le document
+    // entier, sinon la veillée effacerait les plats et les attributions
+    // posés par les autres convives dans la même seconde.
+    SyncStore.setChamp("repos:encours", "veillee", { persoId, morceauId, qualiteId, portee });
 
     const xpGagne = Math.ceil((2 * morceau.rang + 3 * Math.max(0, morceau.rang - rangMusicien)) * qualite.xpMult);
     const gainXp = Metiers.gagnerXp(p, METIER_ID, xpGagne);

@@ -325,12 +325,17 @@ const Repos = (() => {
     // pas dans Presence pour une raison ou une autre.
     if (vote.initiateurPersoId && !convives.includes(vote.initiateurPersoId)) convives.unshift(vote.initiateurPersoId);
 
+    // sauverEncours (document ENTIER) est légitime ICI et seulement ici :
+    // création de l'overlay par un écrivain unique, à un instant où personne
+    // ne peut encore rien y avoir écrit. Toutes les mutations ULTÉRIEURES
+    // passent par setChamp/supprimerChamp (cf. attribuer, cuisinerDansOverlay,
+    // Recolte.tenter, Musique.jouerVeillee) — un set() complet pendant
+    // l'overlay effacerait le geste qu'un autre convive vient de faire.
     sauverEncours({
       convives,
       couchage: vote.palierId || "camp",
       plats: [],
       attributions: {},
-      statut: "cuisine",
       // recoltes (prompt_recolte_4_repos.md §2.1) : { [persoId]: { metierId,
       // milieuId, itemId, qualiteId, unites, aleaD } }. Sa présence vaut
       // compteur — un convive qui y figure a déjà récolté ce repos-ci.
@@ -357,26 +362,55 @@ const Repos = (() => {
     if (!encours) return;
     const idx = encours.convives.indexOf(ancienPersoId);
     if (idx === -1) return;
-    encours.convives[idx] = nouveauPersoId;
-    const attrib = encours.attributions[ancienPersoId];
-    delete encours.attributions[ancienPersoId];
-    if (typeof attrib === "number" && encours.plats[attrib]) encours.plats[attrib].portionsRestantes++;
-    _recalculerStatut(encours);
-    sauverEncours(encours);
+    const convives = encours.convives.slice();
+    convives[idx] = nouveauPersoId;
+    // Deux champs distincts, deux écritures ciblées : `convives` et l'entrée
+    // du seul convive remplacé. Aucune portion à ré-incrémenter — elles se
+    // déduisent des attributions (cf. _portionsRestantes), donc retirer
+    // l'attribution rend la portion mécaniquement.
+    SyncStore.setChamp(KEY_ENCOURS, "convives", convives);
+    if (encours.attributions[ancienPersoId] !== undefined) {
+      SyncStore.supprimerChamp(KEY_ENCOURS, "attributions." + ancienPersoId);
+    }
     _rendreOverlayRepos();
   }
 
-  function _recalculerStatut(encours) {
-    const portionsPool = encours.plats.reduce((t, pl) => t + pl.portionsRestantes, 0);
-    encours.statut = portionsPool >= encours.convives.length ? "pret" : "cuisine";
+  /* ── Portions : DÉRIVÉES, jamais stockées ─────────────────────────────
+     `plat.portions` est la taille du plat (constante, posée à la cuisson) ;
+     ce qu'il en reste est toujours recalculé depuis `attributions`. Un
+     compteur `portionsRestantes` stocké était un état partagé de plus à
+     tenir d'accord entre les postes : chaque attribution devait le
+     décrémenter, donc réécrire le document entier, donc écraser le choix
+     qu'un autre convive venait de faire — à sept autour de la table, tout
+     le monde choisit son plat dans la même poignée de secondes. Dérivée,
+     la valeur est juste par construction : personne ne l'écrit.
+     Tolère l'ancienne forme (plats sans `portions`, pré-correctif) en
+     retombant sur 4 — un overlay déjà ouvert ne casse pas. */
+  const PORTIONS_PAR_PLAT = 4;
+  function _portionsTotal(plat) {
+    return (plat && typeof plat.portions === "number") ? plat.portions : PORTIONS_PAR_PLAT;
+  }
+  // saufPersoId : ne compte pas la part que ce convive-ci occupe déjà. Sert
+  // à attribuer(), qui réattribue quelqu'un et doit donc raisonner sur le
+  // plat vu SANS lui — sinon re-choisir le plat qu'on mange déjà, quand il
+  // affiche 0 restante, effacerait son propre repas. C'est l'équivalent
+  // exact de l'ancien « on ré-incrémente d'abord l'ancienne portion ».
+  function _portionsRestantes(encours, idx, saufPersoId) {
+    const attributions = encours.attributions || {};
+    const servies = Object.keys(attributions)
+      .filter((persoId) => persoId !== saufPersoId && attributions[persoId] === idx).length;
+    return Math.max(0, _portionsTotal(encours.plats[idx]) - servies);
   }
 
   /* ================================================================
      RÉCOLTE DANS L'OVERLAY (prompt_recolte_4_repos.md) — un bloc
-     SUPPLÉMENTAIRE, jamais une phase : elle ne touche JAMAIS
-     encours.statut/_recalculerStatut, ne peut donc jamais empêcher un
-     groupe de valider son repos. Uniquement au couchage "camp" — en
-     dortoir/chambre/luxe on est en ville, on achète (cf. §1 du prompt).
+     SUPPLÉMENTAIRE, jamais une phase : elle ne touche ni aux plats ni aux
+     attributions, ne peut donc jamais empêcher un groupe de valider son
+     repos. (Cette garantie s'énonçait avant « ne touche jamais
+     encours.statut/_recalculerStatut » ; ce statut, que rien ne lisait
+     nulle part, a disparu avec les portions dérivées — l'invariant, lui,
+     tient.) Uniquement au couchage "camp" — en dortoir/chambre/luxe on
+     est en ville, on achète (cf. §1 du prompt).
      ================================================================ */
 
   // joueurId d'un convive : un personnage n'a pas de joueurId propre, seul
@@ -688,25 +722,29 @@ const Repos = (() => {
         cuisinierPersoId, recetteId,
         qualiteId: t.resultat.qualite.id, indexDe: t.recette.indexDe,
         de: t.resultat.de, maximise: t.resultat.maximise, intoxication: t.resultat.intoxication,
-        portionsRestantes: 4,
+        portions: PORTIONS_PAR_PLAT,
       };
-      encours.plats.push(plat);
-      const idx = encours.plats.length - 1;
+      const plats = encours.plats.concat([plat]);
+      const idx = plats.length - 1;
+      // Écrit le SEUL champ `plats` : les attributions, récoltes et la
+      // veillée des autres convives restent intactes même si l'un d'eux
+      // vient d'agir (cf. le commentaire de _creerOverlay).
+      SyncStore.setChamp(KEY_ENCOURS, "plats", plats);
       // Pré-remplissage automatique dans l'ordre des convives — n'écrase
       // JAMAIS une attribution déjà faite (rien, ration, ou un autre plat) :
-      // seuls les convives encore sans choix sont servis en premier.
+      // seuls les convives encore sans choix sont servis en premier. Une
+      // écriture par convive servi, jamais la map entière.
+      let libres = _portionsTotal(plat);
       encours.convives.forEach((persoId) => {
-        if (plat.portionsRestantes <= 0 || encours.attributions[persoId] !== undefined) return;
-        encours.attributions[persoId] = idx;
-        plat.portionsRestantes--;
+        if (libres <= 0 || encours.attributions[persoId] !== undefined) return;
+        SyncStore.setChamp(KEY_ENCOURS, "attributions." + persoId, idx);
+        libres--;
       });
-      msg += ` : plat ajouté au pool commun (4 portions).`;
+      msg += ` : plat ajouté au pool commun (${_portionsTotal(plat)} portions).`;
     } else {
       msg += t.resultat.qualite.id === "rate" ? " : rien produit, ingrédients perdus." : " : intoxication — dé soustrait au repos.";
     }
     if (t.resultat.xpGagne) msg += ` +${t.resultat.xpGagne} XP Cuisine.`;
-    _recalculerStatut(encours);
-    sauverEncours(encours);
     toast(msg);
     _rendreOverlayRepos();
   }
@@ -721,43 +759,48 @@ const Repos = (() => {
   function jeterPlat(index) {
     const encours = lireEncours();
     if (!encours || !encours.plats[index]) return;
+    // Une écriture ciblée par convive concerné, plus le champ `plats` —
+    // les convives qui mangeaient un AUTRE plat non décalé ne sont pas
+    // réécrits du tout, et rien d'autre du document n'est touché.
     Object.keys(encours.attributions).forEach((persoId) => {
       const a = encours.attributions[persoId];
-      if (a === index) delete encours.attributions[persoId];
-      else if (typeof a === "number" && a > index) encours.attributions[persoId] = a - 1;
+      if (a === index) SyncStore.supprimerChamp(KEY_ENCOURS, "attributions." + persoId);
+      else if (typeof a === "number" && a > index) SyncStore.setChamp(KEY_ENCOURS, "attributions." + persoId, a - 1);
     });
-    encours.plats.splice(index, 1);
-    _recalculerStatut(encours);
-    sauverEncours(encours);
+    const plats = encours.plats.slice();
+    plats.splice(index, 1);
+    SyncStore.setChamp(KEY_ENCOURS, "plats", plats);
     toast("Plat jeté.");
     _rendreOverlayRepos();
   }
 
   // choix : index numérique (plat), "ration", ou null (rien — Fatiguée).
-  // Décrémente/ré-incrémente portionsRestantes du plat concerné.
+  // Le geste le plus concurrent de toute l'app : quand l'overlay s'ouvre,
+  // TOUS les convives choisissent leur plat en même temps, et chacun voit
+  // le sélecteur de chacun. Une seule entrée écrite — la sienne — donc
+  // jamais d'écrasement croisé, quel que soit le nombre de clics simultanés.
+  // Plus aucune portion à décrémenter ici : elles se dérivent de cette même
+  // map (cf. _portionsRestantes), c'est la même écriture qui fait les deux.
   function attribuer(persoId, choix) {
     const encours = lireEncours();
     if (!encours) return;
-    const ancien = encours.attributions[persoId];
-    if (typeof ancien === "number" && encours.plats[ancien]) encours.plats[ancien].portionsRestantes++;
-    if (typeof choix === "number" && encours.plats[choix] && encours.plats[choix].portionsRestantes > 0) {
-      encours.plats[choix].portionsRestantes--;
-      encours.attributions[persoId] = choix;
+    if (typeof choix === "number" && encours.plats[choix] && _portionsRestantes(encours, choix, persoId) > 0) {
+      SyncStore.setChamp(KEY_ENCOURS, "attributions." + persoId, choix);
     } else if (choix === "ration") {
-      encours.attributions[persoId] = "ration";
-    } else {
-      delete encours.attributions[persoId];
+      SyncStore.setChamp(KEY_ENCOURS, "attributions." + persoId, "ration");
+    } else if (encours.attributions[persoId] !== undefined) {
+      SyncStore.supprimerChamp(KEY_ENCOURS, "attributions." + persoId);
     }
-    _recalculerStatut(encours);
-    sauverEncours(encours);
     _rendreOverlayRepos();
   }
 
   /* ================================================================
      VEILLÉE DANS L'OVERLAY (prompt_musicien_7_veillee.md) — un bloc
-     SUPPLÉMENTAIRE, jamais une phase : elle ne touche JAMAIS
-     encours.statut/_recalculerStatut, ne peut donc jamais empêcher un
-     groupe de valider son repos. Contrairement à la Récolte, PAS limitée
+     SUPPLÉMENTAIRE, jamais une phase : elle ne touche ni aux plats ni aux
+     attributions, ne peut donc jamais empêcher un groupe de valider son
+     repos. (Même remarque que pour la Récolte ci-dessus : cette garantie
+     s'énonçait avant en termes d'encours.statut, disparu depuis.)
+     Contrairement à la Récolte, PAS limitée
      au couchage "camp" : on joue aussi en salle d'auberge, et c'est même
      là que c'est le plus naturel — le bloc apparaît donc à TOUS les
      couchages. Ordre du bloc camp, documenté ici car un futur remaniement
@@ -1424,7 +1467,7 @@ const Repos = (() => {
       const cuisinierNom = (persos[pl.cuisinierPersoId] || {}).nom || "?";
       return `<div class="carte" style="margin-top:6px;">
         <strong>Plat #${idx + 1}</strong> — cuisiné par ${echapper(cuisinierNom)}, dé ${echapper(pl.de)}${pl.maximise ? " (maximisé)" : ""}${pl.intoxication ? " ⚠ intoxication (soustrait)" : ""}
-        <div>Portions restantes : ${pl.portionsRestantes}/4</div>
+        <div>Portions restantes : ${_portionsRestantes(encours, idx)}/${_portionsTotal(pl)}</div>
         <button class="btn petit secondaire" data-jeter-plat="${idx}">🗑 Jeter ce plat</button>
       </div>`;
     }).join("");
@@ -1436,8 +1479,14 @@ const Repos = (() => {
       const aRation = (p.inventaireListe || []).some((it) => it.id === "ration_voyage" && it.effetRepos);
       const options = [`<option value="">— Rien (Fatiguée) —</option>`]
         .concat(aRation ? [`<option value="ration"${attrib === "ration" ? " selected" : ""}>🎒 Sa ration de voyage</option>`] : [])
-        .concat(encours.plats.map((pl, idx) => (pl.portionsRestantes > 0 || attrib === idx)
-          ? `<option value="${idx}"${attrib === idx ? " selected" : ""}>Plat #${idx + 1} (${pl.portionsRestantes} portion${pl.portionsRestantes > 1 ? "s" : ""})</option>` : ""));
+        .concat(encours.plats.map((pl, idx) => {
+          // Restantes VUES PAR CE CONVIVE : sa propre part ne se compte pas
+          // contre lui, sinon le plat qu'il mange déjà disparaîtrait de sa
+          // propre liste dès qu'il est complet (cf. _portionsRestantes).
+          const reste = _portionsRestantes(encours, idx, id);
+          return (reste > 0 || attrib === idx)
+            ? `<option value="${idx}"${attrib === idx ? " selected" : ""}>Plat #${idx + 1} (${reste} portion${reste > 1 ? "s" : ""})</option>` : "";
+        }));
       const sansRepas = attrib === undefined;
       return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;${sansRepas ? "color:var(--chaos);" : ""}">
         <span>${echapper(p.nom)}${sansRepas ? " ⚠" : ""}</span>

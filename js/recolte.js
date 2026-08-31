@@ -380,12 +380,15 @@ const Recolte = (() => {
     }
 
     const gainXp = Metiers.gagnerXp(p, metierId, resultat.xpGagne);
-    encours.recoltes = encours.recoltes || {};
-    encours.recoltes[persoId] = {
+    // setChamp, pas set(encours) : pendant l'overlay de repos long, les
+    // convives récoltent, cuisinent, s'attribuent un plat et jouent la
+    // veillée en même temps. Réécrire le document entier depuis cette copie
+    // locale effacerait ce qu'un autre vient d'y faire — on n'écrit donc que
+    // SA propre entrée de récolte (cf. js/repos.js, même règle partout).
+    SyncStore.setChamp("repos:encours", "recoltes." + persoId, {
       metierId, milieuId, itemId: itemProduit.id, qualiteId: resultat.qualiteId,
       unites: unitesFinal, aleaD: aleaResultat ? aleaResultat.alea.d : null, peauId: peauObtenue,
-    };
-    SyncStore.set("repos:encours", encours);
+    });
     App.sauverPersos(persos);
 
     // Dégâts d'aléa appliqués APRÈS la sauvegarde ci-dessus : App.ajusterPv
