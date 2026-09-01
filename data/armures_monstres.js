@@ -102,8 +102,8 @@ const ARMURES_MONSTRES = [
     "note": "Mobilité conservée pour la furie."
   },
   {
-    "id": "armure_de_plaques_runiques_liee_a_khoreth",
-    "nom": "Armure de plaques runiques liée à Khoreth",
+    "id": "armure_de_plaques_runiques_liee_au_meurtre",
+    "nom": "Armure de plaques runiques liée au Meurtre",
     "reduction": 5,
     "naturelle": false
   },

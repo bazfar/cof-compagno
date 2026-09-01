@@ -1359,7 +1359,7 @@
           "description": "−2 DEF pour +2 ATK et +2 dégâts."
         }
       ],
-      "lore": "Les berserkers orques ont laissé la rage de guerre consumé leur raison. Ils frappent jusqu'à la mort — la leur ou celle de l'ennemi. Certains sont liés au Chaos de Khoreth par des rituels tribaux.",
+      "lore": "Les berserkers orques ont laissé la rage de guerre consumé leur raison. Ils frappent jusqu'à la mort — la leur ou celle de l'ennemi. Certains sont liés au Chaos du Meurtre par des rituels tribaux.",
       "emoji": "🪓",
       "immunites": [
         "effrayee"
@@ -1388,7 +1388,7 @@
           "armeId": "masse_de_guerre_runique",
           "bonusAttaque": 9,
           "bonusDegats": 5,
-          "effetSpecial": "L'arme est liée à Khoreth. Contre les Elfes et créatures de la Sève pure : +1d6 dégâts supplémentaires."
+          "effetSpecial": "L'arme est liée au Meurtre. Contre les Elfes et créatures de la Sève pure : +1d6 dégâts supplémentaires."
         },
         {
           "nom": "Double frappe",
@@ -1453,7 +1453,7 @@
           "description": "Alliés à 9m : +1 ATK tant qu'il est debout."
         },
         {
-          "nom": "Aura de Khoreth",
+          "nom": "Aura du Meurtre",
           "description": "Dans un rayon de 6m, les tests de résistance au Chaos sont à -2 pour les non-orques."
         },
         {
@@ -1465,12 +1465,12 @@
           "description": "−2 DEF pour +2 ATK et +2 dégâts."
         }
       ],
-      "lore": "Le Warchief est l'incarnation vivante de Khoreth, dieu de la guerre né du Chaos après la Fracture. Il ne dirige pas par peur mais par légitimité — c'est lui qui forge l'unité entre les tribus. Sa mort crée un vide de pouvoir dangereux, souvent pire que sa survie.",
+      "lore": "Le Warchief est l'incarnation vivante du Meurtre — une conscience, pas un dieu : millénaire, sans culte propre, qui ne descend dans un corps qu'une fois par siècles. Ce que les tribus nomment leur dieu de la guerre est cela, et elles le nomment mal. Il ne dirige pas par peur mais par légitimité — c'est lui qui forge l'unité entre les tribus. Sa mort crée un vide de pouvoir dangereux, souvent pire que sa survie.",
       "emoji": "🪓",
       "immunites": [
         "effrayee"
       ],
-      "armureId": "armure_de_plaques_runiques_liee_a_khoreth"
+      "armureId": "armure_de_plaques_runiques_liee_au_meurtre"
     },
     {
       "id": "bandit_basique",
@@ -5124,7 +5124,7 @@
           "description": "À 0 PV, le corps qui tombe est celui d'un vieillard maigre que personne ne reconnaît. Dans la foule, quelqu'un se redresse. Ne rien expliciter — même usage que la 'Révélation' du Grand hôte de la Cupidité, un cran plus loin dans l'arc."
         }
       ],
-      "lore": "Il tient sa cour dans les fondations sous le Grand Marché de Libris — l'endroit le plus riche de la République — et ne possède rien. Khoreth étant le miroir de Valdaan (la pierre qui écrase, les profondeurs), le grand hôte de la Cupidité siège sous la richesse plutôt que dedans. Il parasite les Fils de Libris sans les avoir jamais approchés : Dessalles prétend parler pour les pauvres de Libris, le Roi les possède. PNJ unique — ne pas réutiliser ailleurs, contrairement à l'archétype générique 'Roi des mendiants'.",
+      "lore": "Il tient sa cour dans les fondations sous le Grand Marché de Libris — l'endroit le plus riche de la République — et ne possède rien. Khoreth n'aimant que l'objet possédé et jamais le geste qui le produit, le grand hôte de la Cupidité siège sous la richesse plutôt que dedans — il couve ce qu'il ne produit pas. Il parasite les Fils de Libris sans les avoir jamais approchés : Dessalles prétend parler pour les pauvres de Libris, le Roi les possède. PNJ unique — ne pas réutiliser ailleurs, contrairement à l'archétype générique 'Roi des mendiants'.",
       "emoji": "👑🥣",
       "armureId": "haillons_offerts_superposes",
       "immunites": [
