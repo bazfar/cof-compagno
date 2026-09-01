@@ -1637,12 +1637,39 @@ class Personnage extends Entite {
   }
 
   // Objets équipés uniques (une arme à deux mains occupe 2 slots mais ne
-  // doit compter qu'une fois dans les sommes ci-dessous).
+  // doit compter qu'une fois dans la trentaine de sommes ci-dessous).
+  //
+  // ⚠️ Le dédoublonnage ne peut PAS reposer sur la seule identité d'objet.
+  // equiper() pose bien la MÊME référence dans main_droite et main_gauche,
+  // mais toute fiche qui repasse par le stockage (Firestore sérialise en
+  // JSON : rechargement de page, et surtout l'instantané reçu par les
+  // AUTRES postes) revient avec deux objets distincts quoique égaux. Le
+  // `vus.has(it)` par référence ne les rapprochait plus, et l'arme comptait
+  // DOUBLE — bonusCarac, bonusDEF, bonusPvMax, initiative, réduction de
+  // dégâts, bonus de compétence : tout. Cas réel du catalogue : le glaive
+  // de guerre « impérial » (rare/légendaire, +1/+2 Intimidation), et
+  // n'importe quelle arme à deux mains sortie de la Forge du MJ. Le porteur
+  // voyait ses bonus justes juste après avoir cliqué « équiper », puis
+  // doublés dès le rechargement suivant — et doublés d'emblée chez tout le
+  // monde d'autre.
+  //
+  // On garde donc l'identité (elle suffit dans la session courante) ET on
+  // écarte explicitement la seconde main d'une arme à deux mains. Surtout
+  // pas un dédoublonnage par `id` sur tout l'équipement : deux dagues
+  // identiques, une par main, sont deux objets bien réels dont les deux
+  // bonus doivent compter.
   _itemsEquipesUniques() {
+    const equipement = this.equipement || {};
     const vus = new Set();
     const items = [];
-    Object.values(this.equipement || {}).forEach((it) => {
+    Object.keys(equipement).forEach((slot) => {
+      const it = equipement[slot];
       if (!it || vus.has(it)) return;
+      // Deuxième main d'une arme à deux mains : même arme, déjà comptée.
+      // Test indépendant de l'ordre des clés (jamais garanti), et jamais
+      // déclenché par une paire d'armes à une main.
+      const droite = equipement.main_droite;
+      if (slot === "main_gauche" && it.deuxMains && droite && droite.deuxMains && droite.id === it.id) return;
       vus.add(it);
       items.push(it);
     });
