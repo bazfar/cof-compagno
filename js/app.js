@@ -1061,7 +1061,22 @@ const App = (() => {
   // ci-dessous ("X subit N dégâts") s'affiche puis est immédiatement
   // écrasé, même bug déjà corrigé ailleurs (appliquerMalus, clic capacité
   // de monstre) pour la même raison : #toast est un élément unique.
-  function _appliquerDegatsCibleRapide(cibleId, total, ignoreReduction, silencieux, persoId) {
+  // Note de toast pour une résistance ou une vulnérabilité appliquée (cf.
+  // Carte.multiplicateurResistance) — vide si aucun multiplicateur.
+  function _noteResistance(info) {
+    if (!info || typeof info.multiplicateur !== "number" || info.multiplicateur === 1) return "";
+    const m = String(info.multiplicateur).replace(".", ",");
+    return info.multiplicateur < 1 ? ` (résistance ×${m})` : ` (vulnérabilité ×${m})`;
+  }
+
+  // Nature des dégâts d'une arme de PJ (cf. Capacites.natureDegatsArme) —
+  // repli physique si le module n'est pas chargé.
+  function _natureArme(perso, arme) {
+    return (typeof Capacites !== "undefined" && Capacites.natureDegatsArme) ? Capacites.natureDegatsArme(perso, arme) : "physique";
+  }
+
+  // typeDegats : cf. Carte.multiplicateurResistance — absent = non typé.
+  function _appliquerDegatsCibleRapide(cibleId, total, ignoreReduction, silencieux, persoId, typeDegats) {
     if (!cibleId || typeof total !== "number" || typeof Carte === "undefined") return null;
     const monstre = (Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : []).find((t) => t.id === cibleId);
     if (monstre) {
@@ -1074,8 +1089,8 @@ const App = (() => {
       // call sites qui ne le connaissent pas encore).
       const monstreEffectif = Carte.listeMonstresCombat().find((t) => t.id === cibleEffective);
       const pvAvant = monstreEffectif ? (monstreEffectif.pvActuel ?? monstreEffectif.pvMax ?? 0) : null;
-      const info = Carte.appliquerDegatsCombat(cibleEffective, total, ignoreReduction);
-      if (info && !silencieux) toast(`${info.nom} subit ${info.degatsNets} dégâts (PV ${info.pvActuel}).`);
+      const info = Carte.appliquerDegatsCombat(cibleEffective, total, ignoreReduction, typeDegats);
+      if (info && !silencieux) toast(`${info.nom} subit ${info.degatsNets} dégâts${_noteResistance(info)} (PV ${info.pvActuel}).`);
       if (info && pvAvant !== null && pvAvant > 0 && info.pvActuel === 0) {
         // "allieTombe" (cf. "Curée des cupides") ne dépend pas de qui a
         // porté le coup — diffusé dès que CE jeton précis passe à 0,
@@ -1289,7 +1304,9 @@ const App = (() => {
         if (!rawEffectif) { ctx.messagesToast.push(`${ctx.itNom} : ${viseAttaquant ? "attaquant" : "cible"} inconnu(e) — ${e.formule} dégâts à appliquer manuellement.`); return; }
         const total = lancerFormule(e.formule, `${ctx.itNom} — Dégâts`, false);
         if (typeof total === "number") {
-          _appliquerDegatsCibleRapide(idEffectif, total, viseAttaquant ? null : ctx.ignoreReductionCourant, true, ctx.persoId);
+          // Affixe élémentaire → magique ; sinon non typé (aucune résistance
+          // appliquée plutôt qu'une supposition).
+          _appliquerDegatsCibleRapide(idEffectif, total, viseAttaquant ? null : ctx.ignoreReductionCourant, true, ctx.persoId, e.elementaire ? "magique" : null);
           ctx.messagesToast.push(`${ctx.itNom} : +${total} dégâts${e.elementaire ? ` (${e.elementaire})` : ""}${viseAttaquant ? " à l'attaquant" : ""}.`);
         }
       } else if (e.type === "dot") {
@@ -2057,9 +2074,9 @@ const App = (() => {
         ${attDistance === null ? `<p class="aide" style="font-size:0.72rem;margin:6px 0 0;">Équipe un arc ou une arbalète pour débloquer l'attaque à distance.</p>` : ""}
         ${(dmgContact && etatDegC.visible) || (dmgDistance && etatDegD.visible) || (dmgMagique && etatDegM.visible) ? `
         <div class="barre-actions" style="margin-top:6px;">
-          ${dmgContact && etatDegC.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}" data-bm-degats-type="contact" data-bm-critique="${etatDegC.critique ? "1" : "0"}"${formuleSecondaire ? ` data-bm-degats-sec="${formuleSecondaire}" data-bm-degats-pct="${pctSecondaire}"` : ""} title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeSecondaire ? " + " + armeSecondaire.nom : ""))}">🎲 Dégâts Contact (${dmgContact})${formuleSecondaire ? ` (+ ${formuleSecondaire} à ${pctSecondaire}%)` : ""}${etatDegC.critique ? " CRIT" : ""}</button>` : ""}
-          ${dmgDistance && etatDegD.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}" data-bm-degats-type="distance" data-bm-critique="${etatDegD.critique ? "1" : "0"}" data-bm-mult="${perso.aTirFatal() ? "3" : "2"}" title="${echapper(armeDistance ? armeDistance.nom : "")}">🎲 Dégâts Distance (${dmgDistance})${etatDegD.critique ? " CRIT" : ""}</button>` : ""}
-          ${dmgMagique && etatDegM.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgMagique}" data-bm-degats-type="magique" data-bm-critique="${etatDegM.critique ? "1" : "0"}">🎲 Dégâts Magique (${dmgMagique})${etatDegM.critique ? " CRIT" : ""}</button>` : ""}
+          ${dmgContact && etatDegC.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgContact}" data-bm-degats-type="contact" data-bm-degats-nature="${_natureArme(perso, armeContact)}" data-bm-critique="${etatDegC.critique ? "1" : "0"}"${formuleSecondaire ? ` data-bm-degats-sec="${formuleSecondaire}" data-bm-degats-pct="${pctSecondaire}"` : ""} title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeSecondaire ? " + " + armeSecondaire.nom : ""))}">🎲 Dégâts Contact (${dmgContact})${formuleSecondaire ? ` (+ ${formuleSecondaire} à ${pctSecondaire}%)` : ""}${etatDegC.critique ? " CRIT" : ""}</button>` : ""}
+          ${dmgDistance && etatDegD.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgDistance}" data-bm-degats-type="distance" data-bm-degats-nature="${_natureArme(perso, armeDistance)}" data-bm-critique="${etatDegD.critique ? "1" : "0"}" data-bm-mult="${perso.aTirFatal() ? "3" : "2"}" title="${echapper(armeDistance ? armeDistance.nom : "")}">🎲 Dégâts Distance (${dmgDistance})${etatDegD.critique ? " CRIT" : ""}</button>` : ""}
+          ${dmgMagique && etatDegM.visible ? `<button class="btn petit secondaire" data-bm-degats="${dmgMagique}" data-bm-degats-type="magique" data-bm-degats-nature="magique" data-bm-critique="${etatDegM.critique ? "1" : "0"}">🎲 Dégâts Magique (${dmgMagique})${etatDegM.critique ? " CRIT" : ""}</button>` : ""}
         </div>` : ""}
         ${porteeHtml}
       </div>`}
@@ -2177,7 +2194,9 @@ const App = (() => {
         const type = el.dataset.bmDegatsType;
         const attente = type && attaquesRapidesEnAttente[type];
         if (attente && attente.persoId === id && attente.touche === true && attente.cibleId) {
-          _appliquerDegatsCibleRapide(attente.cibleId, total, attente.ignoreReduction, false, id);
+          // Nature de l'arme PRINCIPALE pour le total (bi-arme compris) —
+          // simplification assumée, cf. data-bm-degats-nature au rendu.
+          _appliquerDegatsCibleRapide(attente.cibleId, total, attente.ignoreReduction, false, id, el.dataset.bmDegatsNature || null);
         }
       };
     });
@@ -2452,9 +2471,9 @@ const App = (() => {
     if (attDistance !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="distance" data-bonus="${attDistance}"><span class="dock-ic">🏹</span><span class="dock-lbl">Distance ${signe(attDistance)}</span></button>`);
     if (attMagique !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="magique" data-bonus="${attMagique}"><span class="dock-ic">✨</span><span class="dock-lbl">Magique ${signe(attMagique)}</span></button>`);
     if (attLancer !== null) attTiles.push(`<button class="dock-tuile" data-bm-attaque="lancer" data-bonus="${attLancer}"><span class="dock-ic">🎯</span><span class="dock-lbl">Lancer ${signe(attLancer)}</span></button>`);
-    if (dmgContact && etatDegC.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}" data-bm-degats-type="contact" data-bm-critique="${etatDegC.critique ? "1" : "0"}"${formuleSecondaire ? ` data-bm-degats-sec="${formuleSecondaire}" data-bm-degats-pct="${pctSecondaire}"` : ""} title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeSecondaire ? " + " + armeSecondaire.nom : ""))}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}${formuleSecondaire ? ` (+ ${formuleSecondaire} à ${pctSecondaire}%)` : ""}${etatDegC.critique ? " CRIT" : ""}</span></button>`);
-    if (dmgDistance && etatDegD.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgDistance}" data-bm-degats-type="distance" data-bm-critique="${etatDegD.critique ? "1" : "0"}" data-bm-mult="${perso.aTirFatal() ? "3" : "2"}" title="${echapper(armeDistance.nom)}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgDistance}${etatDegD.critique ? " CRIT" : ""}</span></button>`);
-    if (dmgMagique && etatDegM.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgMagique}" data-bm-degats-type="magique" data-bm-critique="${etatDegM.critique ? "1" : "0"}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgMagique}${etatDegM.critique ? " CRIT" : ""}</span></button>`);
+    if (dmgContact && etatDegC.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgContact}" data-bm-degats-type="contact" data-bm-degats-nature="${_natureArme(perso, armeContact)}" data-bm-critique="${etatDegC.critique ? "1" : "0"}"${formuleSecondaire ? ` data-bm-degats-sec="${formuleSecondaire}" data-bm-degats-pct="${pctSecondaire}"` : ""} title="${echapper((armeContact ? armeContact.nom : "Poings (Voie des poings)") + (armeSecondaire ? " + " + armeSecondaire.nom : ""))}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgContact}${formuleSecondaire ? ` (+ ${formuleSecondaire} à ${pctSecondaire}%)` : ""}${etatDegC.critique ? " CRIT" : ""}</span></button>`);
+    if (dmgDistance && etatDegD.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgDistance}" data-bm-degats-type="distance" data-bm-degats-nature="${_natureArme(perso, armeDistance)}" data-bm-critique="${etatDegD.critique ? "1" : "0"}" data-bm-mult="${perso.aTirFatal() ? "3" : "2"}" title="${echapper(armeDistance.nom)}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgDistance}${etatDegD.critique ? " CRIT" : ""}</span></button>`);
+    if (dmgMagique && etatDegM.visible) attTiles.push(`<button class="dock-tuile dock-tuile-dmg" data-bm-degats="${dmgMagique}" data-bm-degats-type="magique" data-bm-degats-nature="magique" data-bm-critique="${etatDegM.critique ? "1" : "0"}"><span class="dock-ic">🎲</span><span class="dock-lbl">${dmgMagique}${etatDegM.critique ? " CRIT" : ""}</span></button>`);
     // Bascules Frappe puissante / Tir de précision : -2 attaque / +4 dégâts
     // tant qu'actives, visibles seulement si le don est acquis ET l'arme requise
     // équipée (cf. peutFrappePuissante/peutTirPrecision ci-dessus).
@@ -2631,7 +2650,8 @@ const App = (() => {
         const type = el.dataset.bmDegatsType;
         const attente = type && attaquesRapidesEnAttente[type];
         if (attente && attente.persoId === id && attente.touche === true && attente.cibleId) {
-          _appliquerDegatsCibleRapide(attente.cibleId, total, attente.ignoreReduction, false, id);
+          // Même règle que la barre latérale : nature de l'arme principale.
+          _appliquerDegatsCibleRapide(attente.cibleId, total, attente.ignoreReduction, false, id, el.dataset.bmDegatsNature || null);
         }
       };
     });
@@ -6327,7 +6347,7 @@ const App = (() => {
               if (typeof brut === "number") total += Math.max(1, Math.floor((brut * pctSecondaire) / 100));
             }
             if (typeof total === "number") {
-              const res = Carte.appliquerDegatsCombat(m.id, total);
+              const res = Carte.appliquerDegatsCombat(m.id, total, undefined, _natureArme(perso, armeContact));
               messages.push(`✅ Touché${resolution.critique ? " CRITIQUE" : ""} ${m.nom} : ${total} dégâts${res ? ` → ${res.pvActuel} PV restants` : ""}.`);
             }
           }
@@ -8877,6 +8897,7 @@ const App = (() => {
           <option value="magique">Magique</option>
           <option value="naturel">Naturel (froid/chaleur/chute/poison/animal)</option>
           <option value="chute">Chute (cf. "robuste", armure_cloute)</option>
+          ${perso ? "" : `<option value="grisfer">Grisfer (arme non enchantée)</option>`}
         </select>
         <select id="${prefixe}element-degats-subis" title="Élément (cumulable avec le type ci-dessus — cf. Toucher glacial : magique + froid) : lu par les résistances élémentaires (anneau_resistance, armure_ecailles)">
           <option value="" selected>Aucun élément</option>
@@ -11167,14 +11188,17 @@ const App = (() => {
 
   // Applique des dégâts bruts à un monstre de la table de combat (réduits par
   // son armure, comme subirDegats côté fiche joueur), puis rafraîchit la table.
-  function subirDegatsMonstre(id, degatsBruts, targetId) {
+  // typeDegats : valeur du sélecteur de blocDegatsSubisHtml ("physique",
+  // "magique", "naturel", "chute", "grisfer") — cf. Carte.multiplicateurResistance
+  // (tout ce qui n'est ni magique ni grisfer y compte comme physique).
+  function subirDegatsMonstre(id, degatsBruts, targetId, typeDegats) {
     degatsBruts = parseInt(degatsBruts, 10);
     if (isNaN(degatsBruts) || degatsBruts < 0) { toast("Entre un nombre de dégâts valide."); return; }
-    const info = Carte.appliquerDegatsCombat(id, degatsBruts);
+    const info = Carte.appliquerDegatsCombat(id, degatsBruts, undefined, typeDegats || "physique");
     if (!info) return;
     toast(info.reduction > 0
-      ? `🛡 ${degatsBruts} dégâts subis par ${info.nom} → ${info.degatsNets} après réduction d'armure (−${info.reduction}).`
-      : `${info.degatsNets} dégâts subis par ${info.nom}.`);
+      ? `🛡 ${degatsBruts} dégâts subis par ${info.nom} → ${info.degatsNets} après réduction d'armure (−${info.reduction})${_noteResistance(info)}.`
+      : `${info.degatsNets} dégâts subis par ${info.nom}${_noteResistance(info)}.`);
     rendreTableCombat(targetId);
   }
 
@@ -12443,7 +12467,7 @@ const App = (() => {
     }).join("")}</div>`;
 
     monstres.forEach((m) => {
-      wireDegatsSubisGenerique(`cm-${m.id}-`, (val) => subirDegatsMonstre(m.id, val, targetId));
+      wireDegatsSubisGenerique(`cm-${m.id}-`, (val, typeDegats) => subirDegatsMonstre(m.id, val, targetId, typeDegats));
     });
     zone.querySelectorAll("[data-cible-monstre]").forEach((sel) => {
       sel.onchange = () => {

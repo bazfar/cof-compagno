@@ -609,14 +609,17 @@ const Carte = (() => {
   // ignoreReduction (cf. affixes de rareté "broyeuse" et co., js/raretes.js) :
   // points de réduction d'armure de la cible neutralisés par CETTE attaque,
   // avant application — jamais persisté sur le jeton, recalculé à chaque appel.
-  function appliquerDegatsCombat(id, degatsBruts, ignoreReduction) {
+  // typeDegats (cf. multiplicateurResistance ci-dessous) : nature des dégâts,
+  // lue par les résistances des familles démoniaques — absente = aucune.
+  function appliquerDegatsCombat(id, degatsBruts, ignoreReduction, typeDegats) {
     if (_combatEnBattlemap() && DD2VTT.tokensMonstres().some((t) => t.id === id)) {
-      return DD2VTT.appliquerDegats(id, degatsBruts, ignoreReduction);
+      return DD2VTT.appliquerDegats(id, degatsBruts, ignoreReduction, typeDegats);
     }
     const tok = etat.jetons.find((j) => j.id === id);
     if (!tok) return null;
     const reduction = Math.max(0, (tok.armure || 0) - (ignoreReduction || 0));
-    const degatsNets = Math.max(0, degatsBruts - reduction);
+    const multiplicateur = multiplicateurResistance(tok.monstreId, typeDegats);
+    const degatsNets = Math.floor(Math.max(0, degatsBruts - reduction) * multiplicateur);
     tok.pvActuel = Math.max(0, (tok.pvActuel ?? tok.pvMax ?? 0) - degatsNets);
     // "sursaut" (cf. "tombeA0", capacitesSpeciales) : tout nouveau dégât
     // pendant le sursaut y met fin IMMÉDIATEMENT — retiré ici, pas via le
@@ -627,7 +630,30 @@ const Carte = (() => {
     }
     sauver(); rendreJetons();
     _notifierChangementMonstres();
-    return { nom: tok.nom, reduction, degatsNets, pvActuel: tok.pvActuel };
+    return { nom: tok.nom, reduction, degatsNets, pvActuel: tok.pvActuel, multiplicateur };
+  }
+
+  // Résistances aux dégâts typés (familles démoniaques, champ `resistances`
+  // de data/bestiaire.json) — décisions Thomas, refonte démons :
+  // - multiplicateur appliqué APRÈS la réduction d'armure, arrondi à
+  //   l'inférieur ;
+  // - typeDegats : "physique" | "magique" | "grisfer" ; absent/null = source
+  //   non typée, aucun multiplicateur (jamais de supposition) ;
+  // - Grisfer : compte comme magique pour FRANCHIR une résistance au
+  //   physique (< 1), jamais pour déclencher une résistance à la magie —
+  //   contre la Guerre (physique ×1,5, magie ×0,5) il frappe donc en
+  //   physique, à +50 %. Ne pas "simplifier" en grisfer = magique.
+  // Toute autre valeur ("naturel", "chute"...) est traitée comme physique.
+  function multiplicateurResistance(monstreId, typeDegats) {
+    if (!typeDegats || typeof BESTIAIRE_INDEX === "undefined") return 1;
+    const modele = BESTIAIRE_INDEX[monstreId];
+    const res = modele && modele.resistances;
+    if (!res) return 1;
+    const physique = typeof res.physique === "number" ? res.physique : 1;
+    const magique = typeof res.magique === "number" ? res.magique : 1;
+    if (typeDegats === "magique") return magique;
+    if (typeDegats === "grisfer") return physique < 1 ? magique : physique;
+    return physique;
   }
 
   function definirPvCombat(id, val) {
@@ -3597,15 +3623,17 @@ const Carte = (() => {
     // (comme Personnage.reductionDegats côté fiche joueur). Renvoie le détail
     // pour le toast de l'appelant, ou null si le token n'existe pas/plus.
     // ignoreReduction : cf. appliquerDegatsCombat plus haut, même principe.
-    function appliquerDegatsToken(id, degatsBruts, ignoreReduction) {
+    // typeDegats : cf. multiplicateurResistance (portée de Carte), même règle.
+    function appliquerDegatsToken(id, degatsBruts, ignoreReduction, typeDegats) {
       const tok = tokensDD.find(t => t.id === id);
       if (!tok) return null;
       const reduction = Math.max(0, (tok.armure || 0) - (ignoreReduction || 0));
-      const degatsNets = Math.max(0, degatsBruts - reduction);
+      const multiplicateur = multiplicateurResistance(tok.monstreId, typeDegats);
+      const degatsNets = Math.floor(Math.max(0, degatsBruts - reduction) * multiplicateur);
       tok.pvActuel = Math.max(0, (tok.pvActuel ?? tok.pvMax ?? 0) - degatsNets);
       _sauverToken(tok);
       _onChangeMonstres && _onChangeMonstres();
-      return { nom: tok.nom, reduction, degatsNets, pvActuel: tok.pvActuel };
+      return { nom: tok.nom, reduction, degatsNets, pvActuel: tok.pvActuel, multiplicateur };
     }
 
     // Renomme un token (utilisé par Carte._renommerMonstreCombat pour
@@ -4325,6 +4353,7 @@ const Carte = (() => {
   return {
     onOpen, onClose, definirRole, definirMonPerso, ajouterMonstre,
     listeMonstresCombat, listeTokensJoueursCombat, appliquerDegatsCombat, definirPvCombat, ajusterPvCombat,
+    multiplicateurResistance,
     ajouterEtatCombat, retirerEtatCombat, decompterEtatsMonstre, distanceCasesEntre,
     jetonsSurLigneCombat, jetonsEnZoneCombat,
     supprimerMonstreCombat, onMonstresChange, definirModeCarte,

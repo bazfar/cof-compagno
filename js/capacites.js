@@ -455,6 +455,47 @@ const Capacites = (() => {
   // capacité réservée aux mêmes cibles) — critère plus étroit que ci-dessus
   // (n'inclut PAS 'corrompu', le texte source ne parle que de démoniaque/
   // morte-vivante).
+  // Nature des dégâts d'une ARME de PJ, pour les résistances des familles
+  // démoniaques (cf. Carte.multiplicateurResistance) : une arme enchantée
+  // (enchantement > 0, ou états Arme enchantée / Arme bénie sur le porteur)
+  // frappe en magique ; une arme de Grisfer non enchantée frappe en
+  // "grisfer" ; tout le reste en physique. Exportée : js/app.js l'utilise
+  // pour les boutons de dégâts et l'attaque d'opportunité.
+  function natureDegatsArme(perso, arme) {
+    const etats = (perso && perso.etatsActifs) || [];
+    if ((arme && (arme.enchantement > 0 || arme.typedegats === "magique"))
+        || etats.some((e) => e.idEtat === "arme_enchantee" || e.idEtat === "arme_benie")) return "magique";
+    if (arme && arme.materiau === "grisfer") return "grisfer";
+    return "physique";
+  }
+
+  // Nature des dégâts d'une CAPACITÉ de PJ. Ordre de résolution :
+  // 1. effet.typeDegats explicite ("physique" | "magique") — surcharge
+  //    manuelle pour les cas que la règle générale classerait mal ;
+  // 2. un sort (source.idSort) ou un effet élémentaire → magique ;
+  // 3. le jet d'attaque de la capacité : attaqueMagique ou une carac
+  //    mentale (INT/SAG/CHA) → magique ; attaqueContact/FOR → nature de
+  //    l'arme de contact ; attaqueDistance/DEX → nature de l'arme à distance ;
+  // 4. sans jet d'attaque (sauvegarde, automatique) : archétype de la classe
+  //    (ARCHETYPE_CLASSE) — martial → physique, hybride/lanceur → magique.
+  function _natureDegatsCapacite(perso, source, mecanique, effet) {
+    if (effet && (effet.typeDegats === "physique" || effet.typeDegats === "magique")) return effet.typeDegats;
+    if ((source && source.idSort) || (effet && effet.elementaire)) return "magique";
+    const carac = mecanique && mecanique.jetOppose && mecanique.jetOppose.caracAttaquant;
+    if (["attaqueMagique", "INT", "SAG", "CHA"].includes(carac)) return "magique";
+    if (["attaqueContact", "FOR"].includes(carac)) return natureDegatsArme(perso, perso && perso.armeContactEquipee && perso.armeContactEquipee());
+    if (["attaqueDistance", "DEX"].includes(carac)) return natureDegatsArme(perso, perso && perso.armeDistanceEquipee && perso.armeDistanceEquipee());
+    const arch = (typeof ARCHETYPE_CLASSE !== "undefined" && perso && ARCHETYPE_CLASSE[perso.classe]) || null;
+    return arch === "martial" ? "physique" : "magique";
+  }
+
+  // Multiplicateur de résistance d'un jeton monstre (cf. Carte), 1 si
+  // Carte n'est pas chargée — pour les chemins qui écrivent les PV à la main
+  // (Trophée ultime, Botte mortelle) au lieu de passer par appliquerDegatsCombat.
+  function _multiplicateurResistance(tok, natureDegats) {
+    return (typeof Carte !== "undefined" && Carte.multiplicateurResistance) ? Carte.multiplicateurResistance(tok && tok.monstreId, natureDegats) : 1;
+  }
+
   function _cibleEstDemonOuMortVivant(cible) {
     const race = _raceMonstreCible(cible);
     return race.includes("mort-vivant") || race.includes("démon");
@@ -1031,6 +1072,10 @@ const Capacites = (() => {
   function resoudreEffet(effet, ctx) {
     const { perso, rang, voie, cible, libelle, persos, critique, multiplicateurDegats, groupeJetId, choixEffet } = ctx;
     if (effet.type === "degats") {
+      // Résistances des familles démoniaques (cf. _natureDegatsCapacite) —
+      // ctx.source/ctx.mecanique fournis par lancer(), absents ailleurs
+      // (repli sur l'archétype de la classe).
+      const natureDegats = _natureDegatsCapacite(perso, ctx.source, ctx.mecanique, effet);
       // critique (cf. liaison attaque->dégâts, lancer()/resoudreDegatsEnAttente)
       // double les termes de dés de la formule, pas les modificateurs fixes.
       // Nécromancien/Magicien — Voie du chaos rang 4 (Symbiose du chaos /
@@ -1135,7 +1180,7 @@ const Capacites = (() => {
           const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
           if (!tok) return `${total} dégâts (${detail}) — cible introuvable sur la table de combat.`;
           const reduction = Math.floor((tok.armure || 0) / 2);
-          const degatsNets = Math.max(0, total - reduction);
+          const degatsNets = Math.floor(Math.max(0, total - reduction) * _multiplicateurResistance(tok, natureDegats));
           const pvApres = Math.max(0, (tok.pvActuel ?? tok.pvMax ?? 0) - degatsNets);
           Carte.definirPvCombat(cible.id, pvApres);
           return `${total} dégâts (${detail}) → ${tok.nom} : -${degatsNets} après demi-RD (${reduction}), ${pvApres} PV restants.`;
@@ -1161,7 +1206,7 @@ const Capacites = (() => {
           const tok = (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
           if (!tok) return `${total} dégâts (${detail}) — cible introuvable sur la table de combat.`;
           const reduction = Math.max(0, (tok.armure || 0) - 2);
-          const degatsNets = Math.max(0, total - reduction);
+          const degatsNets = Math.floor(Math.max(0, total - reduction) * _multiplicateurResistance(tok, natureDegats));
           const pvApres = Math.max(0, (tok.pvActuel ?? tok.pvMax ?? 0) - degatsNets);
           Carte.definirPvCombat(cible.id, pvApres);
           return `${total} dégâts (${detail}) → ${tok.nom} : -${degatsNets} après RD-2 (${reduction}), ${pvApres} PV restants.`;
@@ -1187,7 +1232,7 @@ const Capacites = (() => {
         // qui peuvent dépasser les PV restants de la cible — "overkill").
         const tokAvant = Carte.listeMonstresCombat && (Carte.listeMonstresCombat() || []).find((m) => m.id === cible.id);
         const pvAvantM = tokAvant ? (tokAvant.pvActuel ?? tokAvant.pvMax ?? 0) : null;
-        const res = Carte.appliquerDegatsCombat(cible.id, total);
+        const res = Carte.appliquerDegatsCombat(cible.id, total, undefined, natureDegats);
         const noteVol = (res && volDeVieActif) ? _appliquerVolDeVie(persos, perso, rang, res.degatsNets, res.pvActuel) : "";
         const degatsReelsM = (res && pvAvantM !== null) ? Math.min(res.degatsNets, pvAvantM) : (res ? res.degatsNets : 0);
         const noteDrain = (res && drainAmeActif) ? _appliquerGainPPDrainAme(persos, perso, degatsReelsM) : "";
@@ -1899,13 +1944,14 @@ const Capacites = (() => {
     if (cibleIds && cibleIds.length && mecanique.cible === "zone"
         && (mecanique.effets || []).some((e) => e.type === "degats" && e.formule)) {
       const effetDegats = mecanique.effets.find((e) => e.type === "degats" && e.formule);
+      const natureZone = _natureDegatsCapacite(perso, source, mecanique, effetDegats);
       const estLigne = !!(mecanique.zone && mecanique.zone.forme === "ligne");
       const { total: degatsBruts, detail } = resoudreExpression(effetDegats.formule, { perso, rang: source.rang });
       App.ajouterHisto(`${libelle} — Dégâts`, degatsBruts, false, false, detail);
       cibleIds.forEach((cid) => {
         const multiplicateur = estLigne ? 1 : (DEGRADE_ZONE_PAR_CERCLE[(cerclesParCible || {})[cid]] ?? 1);
         const degatsFinal = Math.floor(degatsBruts * multiplicateur);
-        const res = Carte.appliquerDegatsCombat(cid, degatsFinal);
+        const res = Carte.appliquerDegatsCombat(cid, degatsFinal, undefined, natureZone);
         if (res) {
           messages.push(`${res.nom} : ${degatsFinal} dégâts${multiplicateur < 1 ? ` (cercle, ${Math.round(multiplicateur * 100)}%)` : ""}${res.reduction ? ` (armure -${res.reduction})` : ""}`);
         }
@@ -2101,7 +2147,7 @@ const Capacites = (() => {
         messages.push(`Table (1d20=${d20t}, 19-20) : ${cible.nom} se suicide de folie — mort. Applique manuellement (Carte.definirPvCombat à 0 ou ✕ sur le jeton) : aucun état de monstre suivi par l'app pour automatiser une "mort narrative" distincte d'un KO de combat.`);
       } else if (d20t >= 16) {
         const { total, detail } = resoudreExpression("1d10", { perso, rang: source.rang });
-        const resMonstre = typeof Carte !== "undefined" && Carte.appliquerDegatsCombat ? Carte.appliquerDegatsCombat(cible.id, total) : null;
+        const resMonstre = typeof Carte !== "undefined" && Carte.appliquerDegatsCombat ? Carte.appliquerDegatsCombat(cible.id, total, undefined, "magique") : null;
         messages.push(resMonstre
           ? `Table (1d20=${d20t}, 16-18) : ${total} dégâts (${detail}) → ${resMonstre.nom} : ${resMonstre.pvActuel} PV restants.`
           : `Table (1d20=${d20t}, 16-18) : ${total} dégâts (${detail}) → à appliquer manuellement à ${cible.nom} (jeton introuvable).`);
@@ -2175,12 +2221,12 @@ const Capacites = (() => {
       const effetsGroupe = (mecanique.effets || []).filter((e) => e.cibleGroupe);
       const effetsParCible = (mecanique.effets || []).filter((e) => !e.cibleGroupe);
       effetsGroupe.forEach((effet) => {
-        const msg = resoudreEffet(effet, { perso, rang: source.rang, voie: source.voie, cible: null, libelle, persos });
+        const msg = resoudreEffet(effet, { perso, rang: source.rang, voie: source.voie, cible: null, libelle, persos, source, mecanique });
         if (msg) messages.push(msg);
       });
       ciblesRetenues.forEach((c) => {
         effetsParCible.forEach((effet) => {
-          const msg = resoudreEffet(effet, { perso, rang: source.rang, voie: source.voie, cible: c, libelle, persos });
+          const msg = resoudreEffet(effet, { perso, rang: source.rang, voie: source.voie, cible: c, libelle, persos, source, mecanique });
           if (msg) messages.push(`${c.nom} — ${msg}`);
         });
       });
@@ -2315,7 +2361,7 @@ const Capacites = (() => {
         ` — ${totalDegats} DM au total.`);
       if (totalDegats > 0) {
         if (cible.genre === "monstre" && typeof Carte !== "undefined") {
-          const res = Carte.appliquerDegatsCombat(cible.id, totalDegats);
+          const res = Carte.appliquerDegatsCombat(cible.id, totalDegats, undefined, "physique");
           if (res) messages.push(`→ ${res.nom} : ${res.pvActuel} PV restants.`);
         } else if (cible.genre === "perso" && persos[cible.id]) {
           const res = appliquerDegatsPersoLocal(persos[cible.id], totalDegats);
@@ -2488,7 +2534,7 @@ const Capacites = (() => {
               if (!TYPES_EFFETS_DIFFERES.includes(effet.type) && !effet.differe) return;
               const effetResolu = resoudreChoixEffet(effet, choixEffet);
               const msg = resoudreEffet(effetResolu, {
-                perso, rang: source.rang, voie: source.voie, cible, libelle, persos,
+                perso, rang: source.rang, voie: source.voie, cible, libelle, persos, source, mecanique,
                 critique: resolutionDegats.critique, multiplicateurDegats: resolutionDegats.multiplicateurDegats, groupeJetId, choixEffet,
               });
               if (msg) messages.push(msg);
@@ -2836,6 +2882,7 @@ const Capacites = (() => {
   }
 
   return {
+    natureDegatsArme,
     resoudreExpression,
     resoudreDureeInitiale,
     decompterEtatsDebutTour,
