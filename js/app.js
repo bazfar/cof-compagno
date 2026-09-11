@@ -2731,7 +2731,14 @@ const App = (() => {
      CRÉATION
      ============================================================ */
 
+  // Instantané du personnage tel qu'il était à l'OUVERTURE de l'éditeur
+  // (cf. editerPerso). Sert à ne réécrire, au moment d'enregistrer, que les
+  // champs que l'éditeur a réellement touchés — cf. sauverPersonnage.
+  // null = création d'un nouveau personnage : tout est à écrire.
+  let baselineEdition = null;
+
   function nouvelleCreation() {
+    baselineEdition = null;
     creation = {
       id: null,
       nom: "",
@@ -3838,7 +3845,35 @@ const App = (() => {
 
     const persos = chargerPersos();
     if (!creation.id) creation.id = genererId(nom);
-    persos[creation.id] = creation;
+    // N'écrire QUE ce que l'éditeur a touché, par-dessus la version serveur
+    // la plus fraîche — jamais le brouillon entier.
+    //
+    // `creation` est un instantané pris à l'ouverture de l'éditeur
+    // (editerPerso), et remplir une fiche de montée de niveau prend des
+    // minutes : pendant ce temps, le MJ inflige des dégâts, un butin tombe,
+    // le marché prélève de l'or. Réaffecter le brouillon entier
+    // (persos[id] = creation) rendait TOUS ces champs à leur valeur d'il y
+    // a dix minutes — dégâts annulés, objet reçu disparu, or dépensé
+    // revenu. La fusion par champ de sauverPersos ne pouvait rien y faire :
+    // elle compare `obj` à la baseline FRAÎCHE, donc un champ modifié par
+    // quelqu'un d'autre entre-temps lui est indiscernable d'un champ
+    // modifié ici.
+    //
+    // baselineEdition (le perso tel qu'il était à l'ouverture) tranche
+    // justement cette ambiguïté : un champ que l'éditeur n'a pas touché est
+    // identique à la baseline, donc absent de la liste, donc jamais réécrit.
+    // Un nouveau personnage n'a pas de baseline : tout est à écrire.
+    if (baselineEdition && persos[creation.id]) {
+      const champsEditeur = _champsModifiesPerso(baselineEdition, creation);
+      const fusion = Object.assign({}, persos[creation.id]);
+      champsEditeur.forEach((champ) => {
+        if (champ in creation) fusion[champ] = creation[champ];
+        else delete fusion[champ];
+      });
+      persos[creation.id] = fusion;
+    } else {
+      persos[creation.id] = creation;
+    }
     sauverPersos(persos);
     ficheActiveId = creation.id;
     toast("Personnage enregistré ✔");
@@ -8897,6 +8932,13 @@ const App = (() => {
     if (!p) return;
     if (role === "joueur" && !estProprietaire(p)) { toast("Ce n'est pas ton personnage."); return; }
     creation = JSON.parse(JSON.stringify(p)); // copie
+    // Même contenu que `creation`, mais JAMAIS modifié ensuite : c'est le
+    // point de comparaison qui dira, à l'enregistrement, ce que l'éditeur a
+    // changé (cf. sauverPersonnage). Pris AVANT les rattrapages de compat
+    // ci-dessous, donc ceux-ci comptent comme des modifications et sont
+    // persistés avec le reste : ouvrir puis enregistrer une vieille fiche la
+    // migre pour de bon, au lieu de refaire le rattrapage à chaque ouverture.
+    baselineEdition = JSON.parse(JSON.stringify(p));
     if (!creation.capacitesRace) creation.capacitesRace = []; // compat fiches créées avant les voies raciales
     if (creation.race && !creation.capacitesRace.includes(1)) creation.capacitesRace.unshift(1); // rang 1 toujours acquis
     if (!creation.capacitesRaceChoix) creation.capacitesRaceChoix = {}; // compat fiches créées avant les rangs raciaux à choix
