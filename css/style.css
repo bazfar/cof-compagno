@@ -1982,6 +1982,13 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 .badge-tier-veteran { background: var(--tier-veteran); }
 .badge-tier-elite { background: var(--or); }
 .badge-tier-champion { background: var(--chaos); }
+/* Famille demon (D1-D5) : rampe violette propre (la Mer), distincte de la
+   ladder générique ; le Convive (boss) reprend le rouge chaos. */
+.badge-tier-reliquat { background: var(--violet-accent); }
+.badge-tier-affame { background: var(--violet-clair); }
+.badge-tier-insatiable { background: var(--violet); }
+.badge-tier-gouffre { background: var(--encre); }
+.badge-tier-convive { background: var(--chaos); }
 
 .monstre-emoji {
   font-size: 1.15rem;

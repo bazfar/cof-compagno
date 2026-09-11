@@ -5622,7 +5622,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Escalade",
-        "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Affamé, D2 au rythme de drain actuel, soit 3 touche(s) sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
+        "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Affamé, D2 au rythme de drain actuel, soit 3 touches sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
       },
       {
         "nom": "Chair d'ailleurs",
@@ -5630,7 +5630,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Retour à la Mer",
-        "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé. Déjà au plancher : un Reliquat banni revient en Reliquat."
+        "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé. Déjà au plancher : un Reliquat banni revient en Reliquat. Un Bannissement réussi (Prêtre) produit exactement cet effet — ce n'est jamais une Destruction définitive."
       },
       {
         "nom": "Immunité à la Déchirure",
@@ -5684,7 +5684,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Escalade",
-        "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Insatiable, D3 au rythme de drain actuel, soit 2 touche(s) sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
+        "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Insatiable, D3 au rythme de drain actuel, soit 2 touches sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
       },
       {
         "nom": "Chair d'ailleurs",
@@ -5692,7 +5692,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Retour à la Mer",
-        "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé."
+        "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé. Un Bannissement réussi (Prêtre) produit exactement cet effet — ce n'est jamais une Destruction définitive."
       },
       {
         "nom": "Immunité à la Déchirure",
@@ -5746,7 +5746,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Escalade",
-        "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Gouffre, D4 au rythme de drain actuel, soit 2 touche(s) sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
+        "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Gouffre, D4 au rythme de drain actuel, soit 2 touches sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
       },
       {
         "nom": "Chair d'ailleurs",
@@ -5754,7 +5754,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Retour à la Mer",
-        "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé."
+        "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé. Un Bannissement réussi (Prêtre) produit exactement cet effet — ce n'est jamais une Destruction définitive."
       },
       {
         "nom": "Immunité à la Déchirure",
@@ -5808,7 +5808,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Escalade",
-        "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Convive, D5 au rythme de drain actuel, soit 1 touche(s) sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
+        "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Convive, D5 au rythme de drain actuel, soit 1 touche sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
       },
       {
         "nom": "Chair d'ailleurs",
@@ -5816,7 +5816,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Retour à la Mer",
-        "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé."
+        "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé. Un Bannissement réussi (Prêtre) produit exactement cet effet — ce n'est jamais une Destruction définitive."
       },
       {
         "nom": "Immunité à la Déchirure",
@@ -5856,7 +5856,7 @@ const BESTIAIRE = [
         "nom": "Poigne du besoin",
         "armeId": "poigne_du_besoin",
         "bonusAttaque": 14,
-        "effetSpecial": "Morsure d'ancrage : draine aussi 8 PP à la cible touchée (8 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
+        "effetSpecial": "Morsure d'ancrage : draine aussi 12 PP à la cible touchée (12 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
       }
     ],
     "capacitesActives": [
@@ -5893,7 +5893,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Morsure d'ancrage",
-        "description": "Chaque attaque réussie inflige ses dégâts et draine en plus 8 PP à la cible touchée. Contre une cible sans PP, le drain se convertit en 8 dégâts de PV supplémentaires — non-casters et casters encaissent ainsi la même charge."
+        "description": "Chaque attaque réussie inflige ses dégâts et draine en plus 12 PP à la cible touchée. Contre une cible sans PP, le drain se convertit en 12 dégâts de PV supplémentaires — non-casters et casters encaissent ainsi la même charge."
       },
       {
         "nom": "Escalade",
@@ -5905,7 +5905,7 @@ const BESTIAIRE = [
       },
       {
         "nom": "Retour à la Mer",
-        "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé."
+        "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé. Un Bannissement réussi (Prêtre) produit exactement cet effet — ce n'est jamais une Destruction définitive."
       },
       {
         "nom": "Immunité à la Déchirure",
@@ -5913,11 +5913,11 @@ const BESTIAIRE = [
       },
       {
         "nom": "Destruction définitive",
-        "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit. Un Convive a mangé à la table d'un dieu : le filtrer pour de bon coûte nettement plus cher au dieu qui s'y risque qu'une bannissement de palier inférieur."
+        "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit. Un Convive a mangé à la table d'un dieu : le filtrer pour de bon coûte nettement plus cher au dieu qui s'y risque qu'un bannissement de palier inférieur."
       },
       {
         "nom": "A mangé à la table d'un dieu",
-        "description": "Le Convive n'est plus un reste de repas ordinaire : il a survécu assez longtemps, gorgé de PP volés, pour approcher ce que goûte un dieu banni. Sa seule présence impose un test de moral (SAG diff. 10) aux créatures de dangerosité 2 ou moins qui l'affrontent pour la première fois."
+        "description": "Le Convive n'est plus un reste de repas ordinaire : il a survécu assez longtemps, gorgé de PP volés, pour approcher ce que goûte un dieu banni. La première fois qu'on l'affronte, sa seule présence impose un test de SAG diff. 10 à chaque PJ et à chaque créature de dangerosité 2 ou moins. Échec : état Effrayée (Fuite) pendant 1 tour — doit s'éloigner, ne peut ni l'approcher ni l'attaquer. Note MJ — pas de jet automatisé."
       }
     ],
     "lore": "Un démon est un reste de repas — ce que laissent les trois dieux bannis quand ils se nourrissent d'âmes dans la Mer. Le Convive a mangé à leur table : plusieurs casters vidés d'un coup, ou une lente accumulation qu'aucune table n'a su interrompre à temps. Le filtrer pour de bon coûte au dieu qui s'y risque bien plus qu'un bannissement ordinaire — un coût que la prêtresse naine du groupe connaît mieux que quiconque, elle qui canalise déjà Valdaan pour bien moins que ça.",

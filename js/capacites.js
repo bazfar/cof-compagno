@@ -1950,8 +1950,17 @@ const Capacites = (() => {
       const reussite = total >= dd;
       App.ajouterHisto(`${libelle} — Bannissement`, total, false, false,
         `d20[${d20v}] ${modTotal >= 0 ? "+" : ""}${modTotal} (${enZone ? "Mod.CHA+Mod.SAG" : "Mod.CHA"}) vs DD${dd} (dangerosité ${dangerosite})`);
+      // Décision Thomas : sur un démon, un Bannissement réussi est un Retour
+      // à la Mer (banni pour la scène, -1 palier, plancher Reliquat ; revient
+      // au prochain jet de Remous réussi) — JAMAIS la Destruction définitive,
+      // cf. capacitesSpeciales "Retour à la Mer" de la famille demon
+      // (data/bestiaire.json). Message seul : l'échange de profil de palier
+      // reste manuel côté MJ, comme l'Escalade. Ne pas "corriger".
+      const estDemon = _raceMonstreCible(cible).includes("démon");
       messages.push(reussite
-        ? `Bannissement réussi : ${total} vs DD${dd} — ${cible.nom} est renvoyé(e) vers son plan d'origine.`
+        ? (estDemon
+          ? `Bannissement réussi : ${total} vs DD${dd} — Retour à la Mer : ${cible.nom} est banni pour la scène et perd un palier (plancher : Reliquat). Le démon revient au prochain jet de Remous réussi de la session — ce n'est pas une destruction définitive.`
+          : `Bannissement réussi : ${total} vs DD${dd} — ${cible.nom} est renvoyé(e) vers son plan d'origine.`)
         : `Bannissement raté : ${total} vs DD${dd} — aucun effet sur ${cible.nom}.`);
       usage.appliquer && usage.appliquer();
       if (mecanique.coutPointsBannissement) {

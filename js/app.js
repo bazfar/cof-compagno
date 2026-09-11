@@ -12696,7 +12696,12 @@ const App = (() => {
     return "★".repeat(Math.min(n, 5)) + "☆".repeat(Math.max(0, 5 - n));
   }
 
-  const TIER_LABELS = { basique: "Basique", veteran: "Vétéran", elite: "Élite", champion: "Champion" };
+  // Famille demon (paliers D1-D5, cf. tools/valider_bestiaire.js TIERS_VALIDES) :
+  // libellés accentués, l'id brut ("affame") ne doit jamais s'afficher.
+  const TIER_LABELS = {
+    basique: "Basique", veteran: "Vétéran", elite: "Élite", champion: "Champion",
+    reliquat: "Reliquat", affame: "Affamé", insatiable: "Insatiable", gouffre: "Gouffre", convive: "Convive",
+  };
 
   function _carteMonstreHTML(m) {
     const iconePath = typeof cheminIconeMonstre === "function" ? cheminIconeMonstre(m) : null;
