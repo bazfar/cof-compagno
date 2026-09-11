@@ -15,8 +15,13 @@
    Application du bonus selon le type :
    - arme       -> bonusRarete s'ajoute aux dégâts EN PLUS de
                    l'enchantement existant (jamais fusionné)
-   - armure     -> bonusRarete s'ajoute à valeurCA ET reductionDegats (les
-                   deux stats, depuis l'éclatement de l'ancien valeurArmure)
+   - armure     -> bonusRarete s'ajoute à valeurCA UNIQUEMENT. Surtout pas
+                   à reductionDegats : celle-ci est SOUSTRACTIVE, elle peut
+                   ramener à zéro les dégâts d'un monstre de faible
+                   dangerosité et efface alors des paliers entiers du
+                   bestiaire (rééquilibrage, cf. le commentaire long dans
+                   appliquer()). Ne pas "rétablir" les deux stats : le
+                   découplage est délibéré.
    - bouclier   -> bonusRarete s'ajoute à bonusDEF
    - accessoire -> le nombre du champ `effet` est augmenté (toujours),
                    EN PLUS d'une variante d'effet spécial si l'item en
