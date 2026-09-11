@@ -27,6 +27,11 @@ const ROLES_MONSTRE = {
   artilleur:     { nom: "Artilleur",     pv: 0.65, def: -1, atk:  1, init:  1, dpt: 1.0,  coeffPm: 0.7 },
   controleur:    { nom: "Contrôleur",    pv: 0.65, def:  0, atk: -1, init:  1, dpt: 0.7,  coeffPm: 0.65 },
   soigneur:      { nom: "Soigneur",      pv: 0.7,  def:  1, atk: -1, init:  0, dpt: 0.7,  coeffPm: 0.65 },
+  // Usure (famille demon_endurance) : très résistant, lent, dégâts directs
+  // réduits compensés par des dégâts sur la durée (état Maudite), jamais de
+  // burst — décision Thomas. coeffPm 1.0 PROVISOIRE, non mesuré en simulation
+  // contrairement aux autres rôles : à recalibrer une fois les fiches posées.
+  usure:         { nom: "Usure",         pv: 1.5,  def:  1, atk:  0, init: -1, dpt: 0.7,  coeffPm: 1.0 },
 };
 
 const PM_DANGEROSITE = { 1: 10, 2: 20, 3: 40, 4: 80, 5: 160 };

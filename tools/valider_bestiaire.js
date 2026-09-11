@@ -94,11 +94,20 @@ function estDeNu(f) {
 // anti-démons du Prêtre, du Moine et du Chevalier.
 const RACES_VALIDES = ["humanoïdes", "monstres", "mort-vivant", "corrompu", "démon"];
 const TIERS_VALIDES = ["basique", "veteran", "elite", "champion", "recrue", "meneur", "grand_hote",
-  // Famille demon (cf. prompt_famille_demons.md) : paliers D1-D5, pas la
-  // ladder générique basique/veteran/elite/champion — les 5 paliers montent
-  // en jeu par Escalade (drain de PP), pas par choix de fiche au moment de
-  // la rencontre.
-  "reliquat", "affame", "insatiable", "gouffre", "convive"];
+  // Familles démoniaques (cf. chiffrage_demons_A_systeme.md) : paliers
+  // génériques d1-d5 communs aux quatre familles, pas la ladder
+  // basique/veteran/elite/champion — un démon monte en jeu par sa faim
+  // (jauge), pas par choix de fiche au moment de la rencontre.
+  "d1", "d2", "d3", "d4", "d5"];
+// Familles démoniaques et faim attendue de chacune (cf. §17).
+const FAIM_PAR_FAMILLE_DEMON = {
+  demon_guerre: "degats_infliges",
+  demon_sorts: "pp_draines",
+  demon_tentation: "etats_controle",
+  demon_endurance: "rounds_survecus",
+};
+const TYPES_FAIM_VALIDES = Object.values(FAIM_PAR_FAMILLE_DEMON);
+const CLES_RESISTANCE_VALIDES = ["physique", "magique"];
 
 // ===========================================================================
 // SECTION A — data/armes_monstres.js
@@ -253,7 +262,10 @@ const CHAMPS_MONSTRE_OPTIONNELS = ["famille", "tier", "voies", "faction", "roleN
   "capacitesActives", "immunites", "immunitesConditionnelles",
   // Échappatoire MJ lue par js/sauvegardes.js:86, sans usage à ce jour.
   "resistanceLegendaire",
-  "armureId", "defMentale"];
+  "armureId", "defMentale",
+  // Familles démoniaques (cf. §17) : jauge de faim, paliers suivants,
+  // résistances aux dégâts typés, repousse (PV par tour) et berserk (Guerre).
+  "faim", "paliersSuivants", "resistances", "repousse", "berserk"];
 const CHAMPS_MONSTRE_AUTORISES = new Set([...CHAMPS_MONSTRE_OBLIGATOIRES, ...CHAMPS_MONSTRE_OPTIONNELS]);
 const TAILLES_VALIDES = ["petite", "moyenne", "grande", "très grande"];
 
@@ -383,6 +395,26 @@ monstres.forEach((m, index) => {
     if (!a.nom) signalerMonstre(cle, `attaques[${i}].nom manquant.`);
     if (a.effetSpecial !== null && typeof a.effetSpecial !== "string") {
       signalerMonstre(cle, `attaques[${i}].effetSpecial devrait être string|null, reçu ${typeof a.effetSpecial}.`);
+    }
+    // Familles démoniaques (cf. §17) : drain de PP sur touche (Sorts), attaque
+    // qui alimente la jauge de Remous (Sorts), état posé sur touche (Endurance).
+    if (a.drainPP !== undefined && !(Number.isInteger(a.drainPP) && a.drainPP >= 1)) {
+      signalerMonstre(cle, `attaques[${i}].drainPP devrait être un entier ≥ 1, reçu ${JSON.stringify(a.drainPP)}.`);
+    }
+    if (a.alimenteRemous !== undefined && typeof a.alimenteRemous !== "boolean") {
+      signalerMonstre(cle, `attaques[${i}].alimenteRemous devrait être un booléen.`);
+    }
+    if (a.etatSurTouche !== undefined) {
+      const est = a.etatSurTouche;
+      if (!est || typeof est !== "object") {
+        signalerMonstre(cle, `attaques[${i}].etatSurTouche devrait être un objet { id, duree, formuleDot? }.`);
+      } else {
+        if (!etatExiste(est.id)) signalerMonstre(cle, `attaques[${i}].etatSurTouche.id : état inconnu de js/etats.js : ${JSON.stringify(est.id)}.`);
+        if (!(Number.isInteger(est.duree) && est.duree >= 1)) signalerMonstre(cle, `attaques[${i}].etatSurTouche.duree devrait être un entier ≥ 1.`);
+        if (est.formuleDot !== undefined && (typeof est.formuleDot !== "string" || !est.formuleDot)) {
+          signalerMonstre(cle, `attaques[${i}].etatSurTouche.formuleDot devrait être une formule non vide.`);
+        }
+      }
     }
   });
 
@@ -563,6 +595,76 @@ monstres.forEach((m, index) => {
     });
     if (!ic.condition) signalerMonstre(cle, `${refIc}.condition manquante — c'est le texte affiché au MJ.`);
   });
+
+  // 17. Familles démoniaques (cf. chiffrage_demons_A_systeme.md).
+  if (m.famille === "demon") signalerMonstre(cle, `famille "demon" obsolète — utiliser ${Object.keys(FAIM_PAR_FAMILLE_DEMON).join(" | ")}.`);
+  const faimAttendue = FAIM_PAR_FAMILLE_DEMON[m.famille];
+  const paliersDemon = /^d[1-5]$/.test(m.tier || "");
+  if (faimAttendue) {
+    if (!paliersDemon) signalerMonstre(cle, `famille démoniaque sans palier d1-d5 (tier : ${JSON.stringify(m.tier)}).`);
+    else if (Number(m.tier.slice(1)) !== m.dangerosite) signalerMonstre(cle, `palier ${m.tier} incohérent avec la dangerosité ${m.dangerosite}.`);
+    if (!Array.isArray(m.race) || !m.race.includes("démon") || !m.race.includes("corrompu")) {
+      signalerMonstre(cle, `un démon est toujours race ["démon", "corrompu"].`);
+    }
+    // D1-D3 montent par la faim ; D4 est le sommet de l'escalade et D5 n'est
+    // placé que par le MJ (décision Thomas) — ni jauge ni palier suivant.
+    const monte = paliersDemon && Number(m.tier.slice(1)) <= 3;
+    if (monte && (!m.faim || !m.paliersSuivants)) signalerMonstre(cle, `palier ${m.tier} : faim et paliersSuivants obligatoires.`);
+    if (paliersDemon && !monte && (m.faim !== undefined || m.paliersSuivants !== undefined)) {
+      signalerMonstre(cle, `palier ${m.tier} : ni faim ni paliersSuivants (D4 = sommet de l'escalade, D5 placé par le MJ).`);
+    }
+    if (m.faim && m.faim.type !== faimAttendue) signalerMonstre(cle, `faim.type ${JSON.stringify(m.faim.type)} ≠ faim de la famille ${m.famille} (${faimAttendue}).`);
+  } else if (paliersDemon) {
+    signalerMonstre(cle, `palier ${m.tier} réservé aux familles démoniaques.`);
+  }
+  if (m.faim !== undefined) {
+    if (!m.faim || !TYPES_FAIM_VALIDES.includes(m.faim.type)) signalerMonstre(cle, `faim.type invalide (attendu : ${TYPES_FAIM_VALIDES.join(" | ")}).`);
+    if (!m.faim || !(Number.isInteger(m.faim.seuil) && m.faim.seuil >= 1)) signalerMonstre(cle, `faim.seuil devrait être un entier ≥ 1.`);
+  }
+  if (m.paliersSuivants !== undefined
+      && !(Array.isArray(m.paliersSuivants) && m.paliersSuivants.length && m.paliersSuivants.every((x) => typeof x === "string"))) {
+    signalerMonstre(cle, `paliersSuivants devrait être un tableau non vide d'ids.`);
+  }
+  if (m.resistances !== undefined) {
+    if (!m.resistances || typeof m.resistances !== "object") {
+      signalerMonstre(cle, `resistances devrait être un objet { physique?, magique? }.`);
+    } else {
+      Object.entries(m.resistances).forEach(([k, v]) => {
+        if (!CLES_RESISTANCE_VALIDES.includes(k)) signalerMonstre(cle, `resistances : clé inconnue ${JSON.stringify(k)} (attendu : ${CLES_RESISTANCE_VALIDES.join(" | ")}).`);
+        if (typeof v !== "number" || !(v > 0)) signalerMonstre(cle, `resistances.${k} devrait être un multiplicateur > 0, reçu ${JSON.stringify(v)}.`);
+      });
+    }
+  }
+  if (m.repousse !== undefined && !(Number.isInteger(m.repousse) && m.repousse >= 1)) {
+    signalerMonstre(cle, `repousse devrait être un entier ≥ 1 (PV par tour).`);
+  }
+  if (m.berserk !== undefined && !(m.berserk && Number.isInteger(m.berserk.parTouche) && m.berserk.parTouche >= 1)) {
+    signalerMonstre(cle, `berserk devrait être un objet { parTouche: entier ≥ 1 }.`);
+  }
+});
+
+// 18. Familles démoniaques — chaînes de paliers, après la boucle : toutes les
+// cibles de paliersSuivants doivent être connues.
+const monstresParId = new Map(monstres.map((m) => [m.id, m]));
+const avertissementsDemons = [];
+monstres.forEach((m) => {
+  (Array.isArray(m.paliersSuivants) ? m.paliersSuivants : []).forEach((id) => {
+    const cible = monstresParId.get(id);
+    if (!cible) { signalerMonstre(m.id, `paliersSuivants : id inconnu ${JSON.stringify(id)}.`); return; }
+    if (cible.famille !== m.famille) signalerMonstre(m.id, `paliersSuivants : ${id} n'est pas de la même famille (${cible.famille}).`);
+    if (cible.dangerosite !== m.dangerosite + 1) signalerMonstre(m.id, `paliersSuivants : ${id} n'est pas au palier suivant (dangerosité ${cible.dangerosite}).`);
+  });
+  if (m.tier === "d3" && FAIM_PAR_FAMILLE_DEMON[m.famille] && Array.isArray(m.paliersSuivants) && m.paliersSuivants.length < 2) {
+    avertissementsDemons.push(`${m.id} : ${m.paliersSuivants.length} profil(s) D4 proposé(s) à la montée (au moins 2 attendus).`);
+  }
+});
+// Complétude du catalogue — avertissement, pas erreur : une famille peut être
+// en cours d'écriture. Au moins 2 profils D4 et 2 profils D5 par famille.
+Object.keys(FAIM_PAR_FAMILLE_DEMON).forEach((fam) => {
+  ["d4", "d5"].forEach((t) => {
+    const n = monstres.filter((m) => m.famille === fam && m.tier === t).length;
+    if (n < 2) avertissementsDemons.push(`${fam} : ${n} profil(s) ${t.toUpperCase()} (au moins 2 attendus).`);
+  });
 });
 
 // 7. Arme jamais référencée (avertissement).
@@ -607,6 +709,9 @@ if (armesJamaisReferencees.length) {
 }
 if (armuresJamaisReferencees.length) {
   console.log(`⚠️  ${armuresJamaisReferencees.length} armure(s) jamais référencée(s) par aucun monstre : ${armuresJamaisReferencees.join(", ")}.\n`);
+}
+if (avertissementsDemons.length) {
+  console.log(`⚠️  Familles démoniaques incomplètes :\n${avertissementsDemons.map((a) => "      " + a).join("\n")}\n`);
 }
 // attaquesInlineHeritees (armeId manquant) est désormais une ERREUR (cf. §13/14
 // ci-dessus, déjà listée par monstre) — plus un simple avertissement "hors

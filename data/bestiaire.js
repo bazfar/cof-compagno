@@ -5589,8 +5589,15 @@ const BESTIAIRE = [
   {
     "id": "demon_reliquat",
     "nom": "Reliquat",
-    "famille": "demon",
-    "tier": "reliquat",
+    "famille": "demon_sorts",
+    "tier": "d1",
+    "faim": {
+      "type": "pp_draines",
+      "seuil": 6
+    },
+    "paliersSuivants": [
+      "demon_affame"
+    ],
     "race": [
       "démon",
       "corrompu"
@@ -5651,8 +5658,15 @@ const BESTIAIRE = [
   {
     "id": "demon_affame",
     "nom": "Affamé",
-    "famille": "demon",
-    "tier": "affame",
+    "famille": "demon_sorts",
+    "tier": "d2",
+    "faim": {
+      "type": "pp_draines",
+      "seuil": 9
+    },
+    "paliersSuivants": [
+      "demon_insatiable"
+    ],
     "race": [
       "démon",
       "corrompu"
@@ -5713,8 +5727,15 @@ const BESTIAIRE = [
   {
     "id": "demon_insatiable",
     "nom": "Insatiable",
-    "famille": "demon",
-    "tier": "insatiable",
+    "famille": "demon_sorts",
+    "tier": "d3",
+    "faim": {
+      "type": "pp_draines",
+      "seuil": 12
+    },
+    "paliersSuivants": [
+      "demon_gouffre"
+    ],
     "race": [
       "démon",
       "corrompu"
@@ -5775,8 +5796,8 @@ const BESTIAIRE = [
   {
     "id": "demon_gouffre",
     "nom": "Gouffre",
-    "famille": "demon",
-    "tier": "gouffre",
+    "famille": "demon_sorts",
+    "tier": "d4",
     "race": [
       "démon",
       "corrompu"
@@ -5837,8 +5858,8 @@ const BESTIAIRE = [
   {
     "id": "demon_convive",
     "nom": "Convive",
-    "famille": "demon",
-    "tier": "convive",
+    "famille": "demon_sorts",
+    "tier": "d5",
     "race": [
       "démon",
       "corrompu"

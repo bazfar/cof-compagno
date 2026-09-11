@@ -12616,7 +12616,13 @@ const App = (() => {
       familles.forEach(f => {
         const o = document.createElement("option");
         o.value = f;
-        o.textContent = f.charAt(0).toUpperCase() + f.slice(1);
+        // Familles démoniaques : libellé lisible au lieu de l'id brut
+        // ("Demon_sorts") — les autres familles gardent la capitalisation.
+        const LIBELLES_FAMILLE = {
+          demon_guerre: "Démons — Guerre", demon_sorts: "Démons — Sorts",
+          demon_tentation: "Démons — Tentation", demon_endurance: "Démons — Endurance",
+        };
+        o.textContent = LIBELLES_FAMILLE[f] || (f.charAt(0).toUpperCase() + f.slice(1));
         selFam.appendChild(o);
       });
       selFam.value = _bestFamille;
@@ -12696,11 +12702,12 @@ const App = (() => {
     return "★".repeat(Math.min(n, 5)) + "☆".repeat(Math.max(0, 5 - n));
   }
 
-  // Famille demon (paliers D1-D5, cf. tools/valider_bestiaire.js TIERS_VALIDES) :
-  // libellés accentués, l'id brut ("affame") ne doit jamais s'afficher.
+  // Familles démoniaques (demon_guerre/sorts/tentation/endurance) : paliers
+  // génériques d1-d5 communs aux quatre familles (décision Thomas) — le nom
+  // propre porte la personnalité à partir de D4, pas le palier.
   const TIER_LABELS = {
     basique: "Basique", veteran: "Vétéran", elite: "Élite", champion: "Champion",
-    reliquat: "Reliquat", affame: "Affamé", insatiable: "Insatiable", gouffre: "Gouffre", convive: "Convive",
+    d1: "D1", d2: "D2", d3: "D3", d4: "D4", d5: "D5",
   };
 
   function _carteMonstreHTML(m) {

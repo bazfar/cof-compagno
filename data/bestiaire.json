@@ -5592,8 +5592,15 @@
     {
       "id": "demon_reliquat",
       "nom": "Reliquat",
-      "famille": "demon",
-      "tier": "reliquat",
+      "famille": "demon_sorts",
+      "tier": "d1",
+      "faim": {
+        "type": "pp_draines",
+        "seuil": 6
+      },
+      "paliersSuivants": [
+        "demon_affame"
+      ],
       "race": [
         "démon",
         "corrompu"
@@ -5654,8 +5661,15 @@
     {
       "id": "demon_affame",
       "nom": "Affamé",
-      "famille": "demon",
-      "tier": "affame",
+      "famille": "demon_sorts",
+      "tier": "d2",
+      "faim": {
+        "type": "pp_draines",
+        "seuil": 9
+      },
+      "paliersSuivants": [
+        "demon_insatiable"
+      ],
       "race": [
         "démon",
         "corrompu"
@@ -5716,8 +5730,15 @@
     {
       "id": "demon_insatiable",
       "nom": "Insatiable",
-      "famille": "demon",
-      "tier": "insatiable",
+      "famille": "demon_sorts",
+      "tier": "d3",
+      "faim": {
+        "type": "pp_draines",
+        "seuil": 12
+      },
+      "paliersSuivants": [
+        "demon_gouffre"
+      ],
       "race": [
         "démon",
         "corrompu"
@@ -5778,8 +5799,8 @@
     {
       "id": "demon_gouffre",
       "nom": "Gouffre",
-      "famille": "demon",
-      "tier": "gouffre",
+      "famille": "demon_sorts",
+      "tier": "d4",
       "race": [
         "démon",
         "corrompu"
@@ -5840,8 +5861,8 @@
     {
       "id": "demon_convive",
       "nom": "Convive",
-      "famille": "demon",
-      "tier": "convive",
+      "famille": "demon_sorts",
+      "tier": "d5",
       "race": [
         "démon",
         "corrompu"
@@ -5927,6 +5948,6 @@
       "emoji": "🩸"
     }
   ],
-  "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide.",
+  "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide. Familles démoniaques (demon_guerre / demon_sorts / demon_tentation / demon_endurance) : paliers génériques d1-d5 au lieu de cette ladder, cf. Lore > Notes MJ, « Les familles démoniaques ».",
   "note_race": "race (tableau) : tags de catégorie de créature, indépendants de famille/categorie/faction. Valeurs possibles : humanoïdes, monstres, mort-vivant, corrompu, démon. Un monstre peut cumuler plusieurs tags (ex: une créature autrefois humaine et relevée par la corruption est à la fois humanoïdes, mort-vivant et corrompu ; un démon est toujours démon + corrompu, jamais humanoïdes — ce n'est pas une créature vivante détournée mais une âme figée en forme, cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous »). ATTENTION : la valeur exacte est \"démon\" (avec accent) — js/capacites.js teste race.includes(\"démon\") en dur (_cibleEstMortVivantDemonCorrompu, _cibleEstDemonOuMortVivant) ; un id sans accent ferait échouer silencieusement toutes les capacités anti-démons du Prêtre, du Moine et du Chevalier. Distinct du concept Race des Personnages joueurs (elfe, nain, humain...)."
 }

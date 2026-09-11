@@ -507,7 +507,10 @@ const Carte = (() => {
     if (!monstre) return;
     const couleurs = { 1: "#27ae60", 2: "#2980b9", 3: "#d35400", 4: "#c0392b", 5: "#7d1a24" };
     const couleur = monstre.boss ? "#8e44ad" : (couleurs[monstre.dangerosite] || "#7f8c8d");
-    const labelBase = monstre.tier ? monstre.nom + " [" + monstre.tier + "]" : monstre.nom;
+    // Paliers démoniaques d1-d5 affichés "D1".."D5" sur le jeton (les autres
+    // tiers gardent leur id tel quel, comportement inchangé).
+    const tierAffiche = /^d[1-5]$/.test(monstre.tier || "") ? monstre.tier.toUpperCase() : monstre.tier;
+    const labelBase = monstre.tier ? monstre.nom + " [" + tierAffiche + "]" : monstre.nom;
     const label = _labelMonstreDistinct(monstre.id, labelBase);
     // Stats de combat (table de combat MJ) : PV/DEF viennent du bestiaire,
     // repris tels quels. armure (réduction de dégâts, comme les PJ) est

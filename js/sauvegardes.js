@@ -32,12 +32,11 @@ const Sauvegardes = (function () {
   const LIBELLES = { Reflexes: "Réflexes", Vigueur: "Vigueur", Volonte: "Volonté" };
 
   const BONUS_TAILLE = { "petite": -1, "moyenne": 0, "grande": 1, "très grande": 2 };
-  // Famille demon (D1-D5) alignée sur la ladder basique→champion (décision
-  // Thomas) : 0/0/1/1/2. Sans ces clés, D1-D4 retombaient à +0 et le Convive
-  // sur le repli boss (+1) — ce n'était pas voulu.
+  // Familles démoniaques (paliers d1-d5) alignées sur la ladder
+  // basique→champion (décision Thomas) : 0/0/1/1/2.
   const BONUS_TIER = {
     recrue: 0, basique: 0, veteran: 0, elite: 1, meneur: 1, champion: 2, grand_hote: 2,
-    reliquat: 0, affame: 0, insatiable: 1, gouffre: 1, convive: 2,
+    d1: 0, d2: 0, d3: 1, d4: 1, d5: 2,
   };
 
   // Fusionne le token de combat et son modèle de bestiaire : le token prime

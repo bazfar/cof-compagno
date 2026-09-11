@@ -65,10 +65,10 @@ const Remous = (() => {
   // et les Remous ». index 0 = sous le palier 1 (rien ne s'applique).
   const PALIERS = [
     { palier: 0, nom: "Stable", coutSortsDelta: 0, degatsSortsDelta: 0, ppMaxDelta: 0, degatsZoneParTour: null, demon: null },
-    { palier: 1, nom: "Déchirure", coutSortsDelta: -1, degatsSortsDelta: 2, ppMaxDelta: 0, degatsZoneParTour: null, demon: "Un démon Reliquat (D1) se manifeste." },
+    { palier: 1, nom: "Déchirure", coutSortsDelta: -1, degatsSortsDelta: 2, ppMaxDelta: 0, degatsZoneParTour: null, demon: "Un démon D1 se manifeste (famille au choix du MJ)." },
     { palier: 2, nom: "Ouverture", coutSortsDelta: -2, degatsSortsDelta: 4, ppMaxDelta: 4, degatsZoneParTour: "1d6", demon: "Le démon monte d'un palier." },
     { palier: 3, nom: "Marée", coutSortsDelta: -3, degatsSortsDelta: 6, ppMaxDelta: 8, degatsZoneParTour: "2d6", demon: "Le démon monte d'un palier, et un second démon apparaît." },
-    { palier: 4, nom: "La Plaie", coutSortsDelta: -4, degatsSortsDelta: 8, ppMaxDelta: 12, degatsZoneParTour: "3d6", demon: "Le démon atteint son plafond. Le lieu reste déchiré." },
+    { palier: 4, nom: "La Plaie", coutSortsDelta: -4, degatsSortsDelta: 8, ppMaxDelta: 12, degatsZoneParTour: "3d6", demon: "Le démon atteint son plafond (D4). Le lieu reste déchiré." },
   ];
 
   function _estMJ() {
