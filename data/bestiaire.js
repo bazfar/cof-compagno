@@ -5606,7 +5606,7 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Étreinte",
-        "armeId": "etreinte",
+        "armeId": "demon_etreinte",
         "bonusAttaque": 4,
         "effetSpecial": "Morsure d'ancrage : draine aussi 2 PP à la cible touchée (2 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
       }
@@ -5668,7 +5668,7 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Étreinte écrasante",
-        "armeId": "etreinte_ecrasante",
+        "armeId": "demon_etreinte_ecrasante",
         "bonusAttaque": 6,
         "effetSpecial": "Morsure d'ancrage : draine aussi 3 PP à la cible touchée (3 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
       }
@@ -5730,7 +5730,7 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Griffes dévastatrices",
-        "armeId": "griffes_devastatrices",
+        "armeId": "demon_griffes_devastatrices",
         "bonusAttaque": 8,
         "effetSpecial": "Morsure d'ancrage : draine aussi 4 PP à la cible touchée (4 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
       }
@@ -5792,7 +5792,7 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Étreinte du charnier",
-        "armeId": "etreinte_du_charnier",
+        "armeId": "demon_etreinte_du_charnier",
         "bonusAttaque": 10,
         "effetSpecial": "Deux touches (cf. arme) : chacune draine en plus 6 PP à la cible touchée (6 dégâts de PV supplémentaires par touche si elle n'a pas de PP). Une seule touche suffit déjà à faire escalader le démon d'un palier. Cf. capacitesSpeciales."
       }
@@ -5854,7 +5854,7 @@ const BESTIAIRE = [
     "attaques": [
       {
         "nom": "Poigne du besoin",
-        "armeId": "poigne_du_besoin",
+        "armeId": "demon_poigne_du_besoin",
         "bonusAttaque": 14,
         "effetSpecial": "Morsure d'ancrage : draine aussi 12 PP à la cible touchée (12 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
       }

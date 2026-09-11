@@ -1001,6 +1001,48 @@ const ARMES_MONSTRES = [
     "degats": "4d10",
     "portee": "contact",
     "typedegats": "physique"
+  },
+  {
+    "id": "demon_etreinte",
+    "nom": "Étreinte",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "demon_etreinte_ecrasante",
+    "nom": "Étreinte écrasante",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "demon_griffes_devastatrices",
+    "nom": "Griffes dévastatrices",
+    "type": "arme",
+    "degats": "2d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "demon_etreinte_du_charnier",
+    "nom": "Étreinte du charnier",
+    "type": "arme",
+    "degats": "1d10",
+    "portee": "contact",
+    "typedegats": "physique",
+    "touches": 2
+  },
+  {
+    "id": "demon_poigne_du_besoin",
+    "nom": "Poigne du besoin",
+    "type": "arme",
+    "degats": "3d6",
+    "portee": "courte (6m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
   }
 ];
 
