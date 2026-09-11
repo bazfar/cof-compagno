@@ -1003,46 +1003,273 @@ const ARMES_MONSTRES = [
     "typedegats": "physique"
   },
   {
-    "id": "demon_etreinte",
-    "nom": "Étreinte",
+    "id": "morsure_ancrage_d1",
+    "nom": "Morsure d'ancrage",
     "type": "arme",
     "degats": "1d6",
     "portee": "contact",
-    "typedegats": "physique"
+    "typedegats": "magique",
+    "elementaire": "chaos"
   },
   {
-    "id": "demon_etreinte_ecrasante",
-    "nom": "Étreinte écrasante",
+    "id": "morsure_ancrage_d2",
+    "nom": "Morsure d'ancrage",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "morsure_ancrage_d3",
+    "nom": "Morsure d'ancrage",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "morsure_ancrage_d4",
+    "nom": "Morsure d'ancrage",
+    "type": "arme",
+    "degats": "3d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "morsure_ancrage_d5",
+    "nom": "Morsure d'ancrage",
+    "type": "arme",
+    "degats": "4d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "eclat_d1",
+    "nom": "Éclat",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "moyenne (18m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "eclat_d2",
+    "nom": "Éclat",
+    "type": "arme",
+    "degats": "2d4",
+    "portee": "moyenne (18m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "eclat_d3",
+    "nom": "Éclat",
+    "type": "arme",
+    "degats": "2d8",
+    "portee": "moyenne (18m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "eclat_d4",
+    "nom": "Éclat",
+    "type": "arme",
+    "degats": "3d8",
+    "portee": "moyenne (18m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "lance_d_aube",
+    "nom": "Lance d'aube",
+    "type": "arme",
+    "degats": "4d8",
+    "portee": "longue (36m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "poigne_du_besoin_convive",
+    "nom": "Poigne du besoin",
+    "type": "arme",
+    "degats": "5d6",
+    "portee": "courte (6m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "eclat_d_eternite",
+    "nom": "Éclat d'éternité",
+    "type": "arme",
+    "degats": "5d8",
+    "portee": "longue (36m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "griffes_de_rejet",
+    "nom": "Griffes de rejet",
     "type": "arme",
     "degats": "1d8",
     "portee": "contact",
     "typedegats": "physique"
   },
   {
-    "id": "demon_griffes_devastatrices",
-    "nom": "Griffes dévastatrices",
+    "id": "griffes_ronces",
+    "nom": "Griffes-ronces",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "griffes_ecorcheuses",
+    "nom": "Griffes écorcheuses",
     "type": "arme",
     "degats": "2d8",
     "portee": "contact",
     "typedegats": "physique"
   },
   {
-    "id": "demon_etreinte_du_charnier",
-    "nom": "Étreinte du charnier",
+    "id": "frappe_fendante",
+    "nom": "Frappe fendante",
     "type": "arme",
-    "degats": "1d10",
+    "degats": "2d6",
     "portee": "contact",
     "typedegats": "physique",
     "touches": 2
   },
   {
-    "id": "demon_poigne_du_besoin",
-    "nom": "Poigne du besoin",
+    "id": "greffe",
+    "nom": "Greffe",
+    "type": "arme",
+    "degats": "3d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "etreinte_de_ronces",
+    "nom": "Étreinte de ronces",
+    "type": "arme",
+    "degats": "4d8",
+    "portee": "contact +1 case (3m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "rage_de_seve",
+    "nom": "Rage de sève",
     "type": "arme",
     "degats": "3d6",
-    "portee": "courte (6m)",
+    "portee": "contact",
+    "typedegats": "physique",
+    "touches": 2
+  },
+  {
+    "id": "frolement_d1",
+    "nom": "Frôlement",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
     "typedegats": "magique",
-    "elementaire": "chaos"
+    "elementaire": "mental"
+  },
+  {
+    "id": "frolement_d2",
+    "nom": "Frôlement",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "mental"
+  },
+  {
+    "id": "frolement_d3",
+    "nom": "Frôlement",
+    "type": "arme",
+    "degats": "2d4",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "mental"
+  },
+  {
+    "id": "frolement_d5",
+    "nom": "Frôlement",
+    "type": "arme",
+    "degats": "4d4",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "mental"
+  },
+  {
+    "id": "baiser_d4",
+    "nom": "Baiser",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "mental"
+  },
+  {
+    "id": "baiser_d5",
+    "nom": "Baiser",
+    "type": "arme",
+    "degats": "3d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "mental"
+  },
+  {
+    "id": "morsure_jalouse",
+    "nom": "Morsure jalouse",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "mental"
+  },
+  {
+    "id": "toucher_putride_d1",
+    "nom": "Toucher putride",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "toucher_putride_d2",
+    "nom": "Toucher putride",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "toucher_putride_d3",
+    "nom": "Toucher putride",
+    "type": "arme",
+    "degats": "2d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "toucher_putride_d4",
+    "nom": "Toucher putride",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "toucher_putride_d5",
+    "nom": "Toucher putride",
+    "type": "arme",
+    "degats": "3d6",
+    "portee": "contact",
+    "typedegats": "physique"
   }
 ];
 

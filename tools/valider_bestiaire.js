@@ -176,18 +176,12 @@ ARMES_MONSTRES.forEach((a) => {
   if (!clesFusion.has(cle)) clesFusion.set(cle, []);
   clesFusion.get(cle).push(a.id);
 });
-// Doublons VOLONTAIRES (décision Thomas), copie → source : la famille demon
-// porte ses propres armeId pour que retoucher l'ours, la Charogne du chaos
-// ou le Roi des Mendiants ne modifie plus un démon (et inversement). Stats
-// identiques à la création, divergence libre ensuite. Seule la paire déclarée
-// est tolérée : tout autre membre d'un groupe de doublons reste signalé.
-const DOUBLONS_AUTORISES = {
-  demon_etreinte: "etreinte",
-  demon_etreinte_ecrasante: "etreinte_ecrasante",
-  demon_griffes_devastatrices: "griffes_devastatrices",
-  demon_etreinte_du_charnier: "etreinte_du_charnier",
-  demon_poigne_du_besoin: "poigne_du_besoin",
-};
+// Doublons VOLONTAIRES, copie → source : échappatoire explicite à la règle
+// anti-doublon ci-dessus. Seule une paire déclarée est tolérée, tout autre
+// membre d'un groupe de doublons reste signalé. Vide depuis la refonte des
+// familles démoniaques : leurs armes ont désormais des noms ou des dés
+// propres, elles ne copient plus celles de l'ours, de la Charogne ou du Roi.
+const DOUBLONS_AUTORISES = {};
 Object.entries(DOUBLONS_AUTORISES).forEach(([copie, source]) => {
   if (!idsArmesVus.has(copie)) signalerArme(copie, `DOUBLONS_AUTORISES : id absent du catalogue — retirer l'entrée.`);
   if (!idsArmesVus.has(source)) signalerArme(copie, `DOUBLONS_AUTORISES : source "${source}" absente du catalogue — retirer l'entrée.`);

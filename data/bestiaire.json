@@ -5605,42 +5605,88 @@
         "démon",
         "corrompu"
       ],
-      "pv": 16,
-      "def": 13,
+      "pv": 10,
+      "def": 10,
       "init": 3,
       "atk": 4,
       "dangerosite": 1,
       "boss": false,
-      "role": "escarmoucheur",
+      "role": "artilleur",
       "taille": "petite",
       "attaques": [
         {
-          "nom": "Étreinte",
-          "armeId": "demon_etreinte",
+          "nom": "Morsure d'ancrage",
+          "armeId": "morsure_ancrage_d1",
           "bonusAttaque": 4,
+          "drainPP": 2,
           "effetSpecial": "Morsure d'ancrage : draine aussi 2 PP à la cible touchée (2 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
+        },
+        {
+          "nom": "Éclat",
+          "armeId": "eclat_d1",
+          "bonusAttaque": 4,
+          "bonusDegats": 1,
+          "alimenteRemous": true,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Déflagration",
+          "description": "Un trait de lumière brûlante, une fois par combat : 2d6+1 dégâts magiques.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "ennemi",
+            "portee": 18,
+            "zone": null,
+            "typeSort": "majeur",
+            "rang": 1,
+            "ecole": "evocation",
+            "jetAttaque": 4,
+            "effets": [
+              {
+                "type": "degats",
+                "formule": "2d6+1"
+              }
+            ]
+          }
         }
       ],
       "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
         {
           "nom": "Traque du remueur",
           "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
         },
         {
           "nom": "Morsure d'ancrage",
-          "description": "Chaque attaque réussie inflige ses dégâts et draine en plus 2 PP à la cible touchée. Contre une cible sans PP, le drain se convertit en 2 dégâts de PV supplémentaires — non-casters et casters encaissent ainsi la même charge."
+          "description": "Chaque Morsure réussie draine en plus 2 PP à la cible. Contre une cible sans PP, le drain devient 2 dégâts de PV — qui ne nourrissent pas la jauge de faim. Pour se nourrir, il doit venir au contact : s'interposer entre lui et les lanceurs l'affame, littéralement."
         },
         {
-          "nom": "Escalade",
-          "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Affamé, D2 au rythme de drain actuel, soit 3 touches sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
+          "nom": "Chair fine",
+          "description": "Aucune résistance : ce démon n'est encore fait que de l'eau d'où il sort."
         },
         {
-          "nom": "Chair d'ailleurs",
-          "description": "Résistance (moitié dégâts) aux dégâts non magiques : ce démon n'est encore fait qu'en partie de la chair d'ailleurs qui compose les siens. Une arme de Grisfer compte comme magique face à cette résistance."
+          "nom": "Écho dans l'eau",
+          "description": "Chaque Éclat et chaque sort qu'il lance ajoute 1 PP à la jauge de Remous du lieu — la moitié de ce qu'agiterait un lanceur."
+        },
+        {
+          "nom": "Faim — PP drainés",
+          "description": "Monte d'un palier après avoir réellement drainé 6 PP — jamais les PV convertis faute de PP — soit 3 Morsures réussies sur un lanceur. Au seuil : Affamé."
+        },
+        {
+          "nom": "À peine formé",
+          "description": "Une bavure qui tient à peine debout : +1 à ses tests d'esquive et de déplacement (bonus déjà inclus dans les statistiques ci-dessus, à moduler par le MJ en poursuite ou fuite)."
         },
         {
           "nom": "Retour à la Mer",
-          "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé. Déjà au plancher : un Reliquat banni revient en Reliquat. Un Bannissement réussi (Prêtre) produit exactement cet effet — ce n'est jamais une Destruction définitive."
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
         },
         {
           "nom": "Immunité à la Déchirure",
@@ -5649,13 +5695,9 @@
         {
           "nom": "Destruction définitive",
           "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
-        },
-        {
-          "nom": "À peine formé",
-          "description": "Une bavure qui tient à peine debout : +1 à ses tests d'esquive et de déplacement (bonus déjà inclus dans les statistiques ci-dessus, à moduler par le MJ en poursuite ou fuite)."
         }
       ],
-      "lore": "Un démon n'est pas une créature : c'est une âme figée en forme, un reste de repas laissé par l'un des trois dieux bannis qui se nourrissent dans la Mer, faute d'ancrage mortel. Le Reliquat est le tout premier stade — à peine sorti de l'eau, encore incertain de sa propre silhouette, il tient debout par réflexe plus que par volonté. Pas de biologie, pas de sang, pas de peur de la mort : juste une faim qui cherche d'où elle vient.",
+      "lore": "Un démon n'est pas une créature : c'est une âme figée en forme, un reste de repas laissé par l'un des dieux déchus qui se nourrissent dans la Mer. Celui-ci porte la marque d'Aetharyn : à peine sorti de l'eau, il crache déjà une lumière qui brûle, et cherche d'où vient la faim qui le tient debout.",
       "emoji": "🫧"
     },
     {
@@ -5674,42 +5716,85 @@
         "démon",
         "corrompu"
       ],
-      "pv": 28,
-      "def": 15,
+      "pv": 17,
+      "def": 12,
       "init": 4,
       "atk": 6,
       "dangerosite": 2,
       "boss": false,
-      "role": "controleur",
-      "taille": "moyenne",
+      "role": "artilleur",
+      "taille": "petite",
       "attaques": [
         {
-          "nom": "Étreinte écrasante",
-          "armeId": "demon_etreinte_ecrasante",
+          "nom": "Morsure d'ancrage",
+          "armeId": "morsure_ancrage_d2",
           "bonusAttaque": 6,
+          "bonusDegats": 2,
+          "drainPP": 3,
           "effetSpecial": "Morsure d'ancrage : draine aussi 3 PP à la cible touchée (3 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
+        },
+        {
+          "nom": "Éclat",
+          "armeId": "eclat_d2",
+          "bonusAttaque": 6,
+          "bonusDegats": 2,
+          "alimenteRemous": true,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Déflagration",
+          "description": "Un trait de lumière brûlante, une fois par combat : 4d6 dégâts magiques.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "ennemi",
+            "portee": 18,
+            "zone": null,
+            "typeSort": "majeur",
+            "rang": 2,
+            "ecole": "evocation",
+            "jetAttaque": 6,
+            "effets": [
+              {
+                "type": "degats",
+                "formule": "4d6"
+              }
+            ]
+          }
         }
       ],
       "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
         {
           "nom": "Traque du remueur",
           "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
         },
         {
           "nom": "Morsure d'ancrage",
-          "description": "Chaque attaque réussie inflige ses dégâts et draine en plus 3 PP à la cible touchée. Contre une cible sans PP, le drain se convertit en 3 dégâts de PV supplémentaires — non-casters et casters encaissent ainsi la même charge."
+          "description": "Chaque Morsure réussie draine en plus 3 PP à la cible. Contre une cible sans PP, le drain devient 3 dégâts de PV — qui ne nourrissent pas la jauge de faim. Pour se nourrir, il doit venir au contact : s'interposer entre lui et les lanceurs l'affame, littéralement."
         },
         {
-          "nom": "Escalade",
-          "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Insatiable, D3 au rythme de drain actuel, soit 2 touches sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
+          "nom": "Chair fine",
+          "description": "Aucune résistance : ce démon n'est encore fait que de l'eau d'où il sort."
         },
         {
-          "nom": "Chair d'ailleurs",
-          "description": "Résistance (moitié dégâts) aux dégâts non magiques : ce démon n'est encore fait qu'en partie de la chair d'ailleurs qui compose les siens. Une arme de Grisfer compte comme magique face à cette résistance."
+          "nom": "Écho dans l'eau",
+          "description": "Chaque Éclat et chaque sort qu'il lance ajoute 2 PP à la jauge de Remous du lieu — la moitié de ce qu'agiterait un lanceur."
+        },
+        {
+          "nom": "Faim — PP drainés",
+          "description": "Monte d'un palier après avoir réellement drainé 9 PP — jamais les PV convertis faute de PP — soit 3 Morsures réussies sur un lanceur. Au seuil : Insatiable."
         },
         {
           "nom": "Retour à la Mer",
-          "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé. Un Bannissement réussi (Prêtre) produit exactement cet effet — ce n'est jamais une Destruction définitive."
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
         },
         {
           "nom": "Immunité à la Déchirure",
@@ -5718,13 +5803,9 @@
         {
           "nom": "Destruction définitive",
           "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
-        },
-        {
-          "nom": "Agrippement",
-          "description": "Une cible touchée est agrippée (DEF -2, ne peut s'éloigner sans test FOR ou DEX diff. 12) : l'Affamé reste au contact de ce qu'il draine plutôt que de le laisser filer."
         }
       ],
-      "lore": "Un démon est un reste de repas — ce que laissent les trois dieux bannis quand ils se nourrissent d'âmes dans la Mer. L'Affamé a déjà appris à retenir ce qu'il attrape : il ne relâche jamais une prise tant qu'il y a encore quelque chose à en tirer. Ce n'est pas de la cruauté, c'est de la faim organisée.",
+      "lore": "L'Affamé a appris à retenir ce qu'il attrape : chaque lanceur qu'il touche lui cède un peu de ce qui le fait briller. Ce n'est pas de la cruauté, c'est de la faim organisée.",
       "emoji": "🌀"
     },
     {
@@ -5737,48 +5818,123 @@
         "seuil": 12
       },
       "paliersSuivants": [
-        "demon_gouffre"
+        "demon_gouffre",
+        "demon_eblouissant"
       ],
       "race": [
         "démon",
         "corrompu"
       ],
-      "pv": 45,
-      "def": 16,
+      "pv": 26,
+      "def": 14,
       "init": 5,
       "atk": 8,
       "dangerosite": 3,
       "boss": false,
-      "role": "controleur",
+      "role": "artilleur",
       "taille": "moyenne",
       "attaques": [
         {
-          "nom": "Griffes dévastatrices",
-          "armeId": "demon_griffes_devastatrices",
+          "nom": "Morsure d'ancrage",
+          "armeId": "morsure_ancrage_d3",
           "bonusAttaque": 8,
+          "bonusDegats": 4,
+          "drainPP": 4,
           "effetSpecial": "Morsure d'ancrage : draine aussi 4 PP à la cible touchée (4 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
+        },
+        {
+          "nom": "Éclat",
+          "armeId": "eclat_d3",
+          "bonusAttaque": 8,
+          "bonusDegats": 2,
+          "alimenteRemous": true,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Déflagration",
+          "description": "Un trait de lumière brûlante, une fois par combat : 5d8 dégâts magiques.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "ennemi",
+            "portee": 18,
+            "zone": null,
+            "typeSort": "majeur",
+            "rang": 3,
+            "ecole": "evocation",
+            "jetAttaque": 8,
+            "effets": [
+              {
+                "type": "degats",
+                "formule": "5d8"
+              }
+            ]
+          }
+        },
+        {
+          "nom": "Temps dérobé",
+          "description": "Il vole un instant à sa cible, une fois par combat : jet de SAG DD 14, sinon Ralentie 2 tours.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "ennemi",
+            "portee": 18,
+            "zone": null,
+            "typeSort": "majeur",
+            "rang": 3,
+            "ecole": "transmutation",
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 14
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "ralentie",
+                "duree": "2"
+              }
+            ]
+          }
         }
       ],
       "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
         {
           "nom": "Traque du remueur",
           "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
         },
         {
           "nom": "Morsure d'ancrage",
-          "description": "Chaque attaque réussie inflige ses dégâts et draine en plus 4 PP à la cible touchée. Contre une cible sans PP, le drain se convertit en 4 dégâts de PV supplémentaires — non-casters et casters encaissent ainsi la même charge."
+          "description": "Chaque Morsure réussie draine en plus 4 PP à la cible. Contre une cible sans PP, le drain devient 4 dégâts de PV — qui ne nourrissent pas la jauge de faim. Pour se nourrir, il doit venir au contact : s'interposer entre lui et les lanceurs l'affame, littéralement."
         },
         {
-          "nom": "Escalade",
-          "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Gouffre, D4 au rythme de drain actuel, soit 2 touches sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
+          "nom": "Chair fine",
+          "description": "Aucune résistance : ce démon n'est encore fait que de l'eau d'où il sort."
         },
         {
-          "nom": "Chair d'ailleurs",
-          "description": "Résistance (moitié dégâts) aux dégâts non magiques : ce démon n'est encore fait qu'en partie de la chair d'ailleurs qui compose les siens. Une arme de Grisfer compte comme magique face à cette résistance."
+          "nom": "Écho dans l'eau",
+          "description": "Chaque Éclat et chaque sort qu'il lance ajoute 3 PP à la jauge de Remous du lieu — la moitié de ce qu'agiterait un lanceur."
+        },
+        {
+          "nom": "Faim — PP drainés",
+          "description": "Monte d'un palier après avoir réellement drainé 12 PP — jamais les PV convertis faute de PP — soit 3 Morsures réussies sur un lanceur. Au seuil : le MJ choisit entre le Gouffre et l'Éblouissant."
+        },
+        {
+          "nom": "Membrane amincie",
+          "description": "Sa seule présence amincit la membrane du lieu (effet de zone, 9 m) : à la discrétion du MJ, la jauge de Remous locale progresse plus vite tant qu'il reste sur place, ou la membrane du lieu descend d'un rang tant qu'il y demeure."
         },
         {
           "nom": "Retour à la Mer",
-          "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé. Un Bannissement réussi (Prêtre) produit exactement cet effet — ce n'est jamais une Destruction définitive."
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
         },
         {
           "nom": "Immunité à la Déchirure",
@@ -5787,13 +5943,9 @@
         {
           "nom": "Destruction définitive",
           "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
-        },
-        {
-          "nom": "Membrane amincie",
-          "description": "Sa seule présence amincit la membrane du lieu (effet de zone, 9 m) : à la discrétion du MJ, la jauge de Remous locale progresse plus vite tant qu'il reste sur place, ou la membrane du lieu descend d'un rang tant qu'il y demeure."
         }
       ],
-      "lore": "Un démon est un reste de repas — ce que laissent les trois dieux bannis quand ils se nourrissent d'âmes dans la Mer. L'Insatiable n'a plus besoin d'attendre qu'on remue l'eau : il en apporte assez avec lui pour amincir la paroi autour de lui. Là où il s'arrête, la Mer se rapproche.",
+      "lore": "L'Insatiable n'a plus besoin d'attendre qu'on remue l'eau : il en apporte assez avec lui pour amincir la paroi autour de lui. Là où il s'arrête, la Mer se rapproche — et le temps y coule de travers.",
       "emoji": "🕳️"
     },
     {
@@ -5805,42 +5957,104 @@
         "démon",
         "corrompu"
       ],
-      "pv": 72,
-      "def": 18,
-      "init": 5,
-      "atk": 10,
+      "pv": 40,
+      "def": 16,
+      "init": 6,
+      "atk": 11,
       "dangerosite": 4,
       "boss": false,
-      "role": "brute",
-      "taille": "grande",
+      "role": "artilleur",
+      "taille": "moyenne",
+      "resistances": {
+        "physique": 0.5
+      },
       "attaques": [
         {
-          "nom": "Étreinte du charnier",
-          "armeId": "demon_etreinte_du_charnier",
-          "bonusAttaque": 10,
-          "effetSpecial": "Deux touches (cf. arme) : chacune draine en plus 6 PP à la cible touchée (6 dégâts de PV supplémentaires par touche si elle n'a pas de PP). Une seule touche suffit déjà à faire escalader le démon d'un palier. Cf. capacitesSpeciales."
+          "nom": "Morsure d'ancrage",
+          "armeId": "morsure_ancrage_d4",
+          "bonusAttaque": 11,
+          "bonusDegats": 7,
+          "drainPP": 6,
+          "effetSpecial": "Morsure d'ancrage : draine aussi 6 PP à la cible touchée (6 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
+        },
+        {
+          "nom": "Éclat",
+          "armeId": "eclat_d4",
+          "bonusAttaque": 11,
+          "bonusDegats": 4,
+          "alimenteRemous": true,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Aspiration",
+          "description": "Une fois par combat, il aspire tout ce qui brille autour de lui : zone de 6 m, jet de SAG DD 15 pour moitié, 4d6 dégâts magiques et 4 PP drainés à chaque cible.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "zone",
+            "portee": null,
+            "zone": 6,
+            "typeSort": "majeur",
+            "rang": 4,
+            "ecole": "evocation",
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 15
+            },
+            "effets": [
+              {
+                "type": "degats",
+                "formule": "4d6",
+                "surReussite": "demi"
+              },
+              {
+                "type": "special",
+                "note": "Draine aussi 4 PP à chaque cible touchée (PV si elle n'a pas de PP) — rend 1 PV au Gouffre par PP drainé (Puits)."
+              }
+            ]
+          }
         }
       ],
       "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
         {
           "nom": "Traque du remueur",
           "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
         },
         {
           "nom": "Morsure d'ancrage",
-          "description": "Chaque attaque réussie inflige ses dégâts et draine en plus 6 PP à la cible touchée. Contre une cible sans PP, le drain se convertit en 6 dégâts de PV supplémentaires — non-casters et casters encaissent ainsi la même charge."
-        },
-        {
-          "nom": "Escalade",
-          "description": "6 PP réellement drainés (jamais les dégâts de PV convertis en l'absence de PP) font monter le démon d'un palier — Convive, D5 au rythme de drain actuel, soit 1 touche sur un caster. Le démon adopte alors le profil complet du palier supérieur. C'est ce qui rend le corps-à-corps d'un combattant utile : s'interposer entre le démon et les casters l'affame, littéralement."
+          "description": "Chaque Morsure réussie draine en plus 6 PP à la cible. Contre une cible sans PP, le drain devient 6 dégâts de PV — qui ne nourrissent pas la jauge de faim. Pour se nourrir, il doit venir au contact : s'interposer entre lui et les lanceurs l'affame, littéralement."
         },
         {
           "nom": "Chair d'ailleurs",
-          "description": "Immunité aux dégâts non magiques : seule une arme ou un sort magique peut le blesser. Une arme de Grisfer compte comme magique face à cette immunité."
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Écho dans l'eau",
+          "description": "Chaque Éclat et chaque sort qu'il lance ajoute 4 PP à la jauge de Remous du lieu — la moitié de ce qu'agiterait un lanceur."
+        },
+        {
+          "nom": "Sommet de l'escalade",
+          "description": "Palier le plus haut qu'un démon atteint en se nourrissant : plus de jauge de faim."
+        },
+        {
+          "nom": "Puits",
+          "description": "Ce qu'il boit le répare : chaque PP qu'il draine lui rend 1 PV."
+        },
+        {
+          "nom": "Membrane amincie",
+          "description": "Sa seule présence amincit la membrane du lieu (effet de zone, 9 m) : à la discrétion du MJ, la jauge de Remous locale progresse plus vite tant qu'il reste sur place, ou la membrane du lieu descend d'un rang tant qu'il y demeure."
         },
         {
           "nom": "Retour à la Mer",
-          "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé. Un Bannissement réussi (Prêtre) produit exactement cet effet — ce n'est jamais une Destruction définitive."
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
         },
         {
           "nom": "Immunité à la Déchirure",
@@ -5849,14 +6063,140 @@
         {
           "nom": "Destruction définitive",
           "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
-        },
-        {
-          "nom": "Inarrêtable",
-          "description": "Ne peut être ralenti, entravé ni repoussé par aucun effet non magique. Encaisse et avance : un Gouffre qui a choisi sa cible ne dévie pas de sa trajectoire."
         }
       ],
-      "lore": "Un démon est un reste de repas — ce que laissent les trois dieux bannis quand ils se nourrissent d'âmes dans la Mer. Le Gouffre a cessé de chasser comme une bête : il avance comme une marée, sans détour ni hésitation, et rien de ce qu'un mortel sait faire ne le fait dévier. Ce qu'il touche une fois, il ne le lâche plus vraiment.",
+      "lore": "Le Gouffre ne chasse plus : il aspire. Tout ce qu'il boit le répare, et une salle où il s'installe se vide de sa magie comme une baignoire qu'on débonde.",
       "emoji": "🌑"
+    },
+    {
+      "id": "demon_eblouissant",
+      "nom": "L'Éblouissant",
+      "famille": "demon_sorts",
+      "tier": "d4",
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 40,
+      "def": 16,
+      "init": 6,
+      "atk": 11,
+      "dangerosite": 4,
+      "boss": false,
+      "role": "artilleur",
+      "taille": "moyenne",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Morsure d'ancrage",
+          "armeId": "morsure_ancrage_d4",
+          "bonusAttaque": 11,
+          "bonusDegats": 7,
+          "drainPP": 6,
+          "effetSpecial": "Morsure d'ancrage : draine aussi 6 PP à la cible touchée (6 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
+        },
+        {
+          "nom": "Lance d'aube",
+          "armeId": "lance_d_aube",
+          "bonusAttaque": 11,
+          "alimenteRemous": true,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Midi",
+          "description": "Une fois par combat, un midi qu'on regarde en face : 7d8+3 dégâts magiques à une cible.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "ennemi",
+            "portee": 36,
+            "zone": null,
+            "typeSort": "majeur",
+            "rang": 4,
+            "ecole": "evocation",
+            "jetAttaque": 11,
+            "effets": [
+              {
+                "type": "degats",
+                "formule": "7d8+3"
+              }
+            ]
+          }
+        },
+        {
+          "nom": "Éblouissement",
+          "description": "Une fois par combat, un éclat autour de lui : zone de 6 m, jet de DEX DD 15, sinon Aveuglée 1 tour.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "zone",
+            "portee": null,
+            "zone": 6,
+            "typeSort": "majeur",
+            "rang": 4,
+            "ecole": "illusion",
+            "jetSauvegardeFixe": {
+              "carac": "DEX",
+              "dd": 15
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "aveuglee",
+                "duree": "1"
+              }
+            ]
+          }
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Morsure d'ancrage",
+          "description": "Chaque Morsure réussie draine en plus 6 PP à la cible. Contre une cible sans PP, le drain devient 6 dégâts de PV — qui ne nourrissent pas la jauge de faim. Pour se nourrir, il doit venir au contact : s'interposer entre lui et les lanceurs l'affame, littéralement."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Écho dans l'eau",
+          "description": "Chaque Éclat et chaque sort qu'il lance ajoute 4 PP à la jauge de Remous du lieu — la moitié de ce qu'agiterait un lanceur."
+        },
+        {
+          "nom": "Sommet de l'escalade",
+          "description": "Palier le plus haut qu'un démon atteint en se nourrissant : plus de jauge de faim."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Ce qu'Aetharyn a gardé de la lumière, c'est la brûlure. L'Éblouissant ne se voit pas : il se subit, comme un midi qu'on regarde en face.",
+      "emoji": "🔆"
     },
     {
       "id": "demon_convive",
@@ -5867,23 +6207,59 @@
         "démon",
         "corrompu"
       ],
-      "pv": 110,
-      "def": 20,
+      "pv": 59,
+      "def": 18,
       "init": 7,
       "atk": 14,
       "dangerosite": 5,
       "boss": true,
-      "role": "soldat",
+      "role": "artilleur",
       "taille": "grande",
+      "resistances": {
+        "physique": 0.5
+      },
       "attaques": [
         {
           "nom": "Poigne du besoin",
-          "armeId": "demon_poigne_du_besoin",
+          "armeId": "poigne_du_besoin_convive",
           "bonusAttaque": 14,
+          "bonusDegats": 7,
+          "drainPP": 12,
           "effetSpecial": "Morsure d'ancrage : draine aussi 12 PP à la cible touchée (12 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
         }
       ],
       "capacitesActives": [
+        {
+          "nom": "Festin",
+          "description": "Une fois par combat, il se sert sur tous : zone de 9 m, jet de SAG DD 16 pour moitié, 6d6 dégâts magiques et 4 PP drainés à chaque cible.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "zone",
+            "portee": null,
+            "zone": 9,
+            "typeSort": "majeur",
+            "rang": 5,
+            "ecole": "evocation",
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 16
+            },
+            "effets": [
+              {
+                "type": "degats",
+                "formule": "6d6",
+                "surReussite": "demi"
+              },
+              {
+                "type": "special",
+                "note": "Draine aussi 4 PP à chaque cible touchée (PV si elle n'a pas de PP)."
+              }
+            ]
+          }
+        },
         {
           "nom": "Rassasiement",
           "description": "Utilisable 1 fois par combat. Le Convive se repaît d'un instant de terreur pure : il regagne 2d8 PV et gagne +2 aux dégâts jusqu'à la fin de son prochain tour.",
@@ -5912,24 +6288,36 @@
       ],
       "capacitesSpeciales": [
         {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
           "nom": "Traque du remueur",
           "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
         },
         {
           "nom": "Morsure d'ancrage",
-          "description": "Chaque attaque réussie inflige ses dégâts et draine en plus 12 PP à la cible touchée. Contre une cible sans PP, le drain se convertit en 12 dégâts de PV supplémentaires — non-casters et casters encaissent ainsi la même charge."
-        },
-        {
-          "nom": "Escalade",
-          "description": "Déjà au palier maximal : la Morsure d'ancrage continue de drainer des PP, mais le démon ne peut plus escalader plus haut."
+          "description": "Chaque Morsure réussie draine en plus 12 PP à la cible. Contre une cible sans PP, le drain devient 12 dégâts de PV — qui ne nourrissent pas la jauge de faim. Pour se nourrir, il doit venir au contact : s'interposer entre lui et les lanceurs l'affame, littéralement."
         },
         {
           "nom": "Chair d'ailleurs",
-          "description": "Immunité aux dégâts non magiques : seule une arme ou un sort magique peut le blesser. Une arme de Grisfer compte comme magique face à cette immunité."
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Écho dans l'eau",
+          "description": "Chaque Éclat et chaque sort qu'il lance ajoute 5 PP à la jauge de Remous du lieu — la moitié de ce qu'agiterait un lanceur."
+        },
+        {
+          "nom": "Grand démon",
+          "description": "Entité à part entière, jamais atteinte par escalade : c'est le MJ qui la place."
+        },
+        {
+          "nom": "A mangé à la table d'un dieu",
+          "description": "Le Convive n'est plus un reste de repas ordinaire : il a survécu assez longtemps, gorgé de PP volés, pour approcher ce que goûte un dieu déchu. La première fois qu'on l'affronte, sa seule présence impose un test de SAG diff. 10 à chaque PJ et à chaque créature de dangerosité 2 ou moins. Échec : état Effrayée (Fuite) pendant 1 tour — doit s'éloigner, ne peut ni l'approcher ni l'attaquer. Note MJ — pas de jet automatisé."
         },
         {
           "nom": "Retour à la Mer",
-          "description": "À 0 PV, le démon n'est pas tué : il est banni pour la scène et perd un palier (plancher : Reliquat/D1, jamais détruit ainsi). Il revient si l'on remue encore — au prochain jet de Remous réussi de la même session, c'est ce même démon qui ressort, au palier où le bannissement l'a laissé. Un Bannissement réussi (Prêtre) produit exactement cet effet — ce n'est jamais une Destruction définitive."
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
         },
         {
           "nom": "Immunité à la Déchirure",
@@ -5937,15 +6325,2123 @@
         },
         {
           "nom": "Destruction définitive",
-          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit. Un Convive a mangé à la table d'un dieu : le filtrer pour de bon coûte nettement plus cher au dieu qui s'y risque qu'un bannissement de palier inférieur."
-        },
-        {
-          "nom": "A mangé à la table d'un dieu",
-          "description": "Le Convive n'est plus un reste de repas ordinaire : il a survécu assez longtemps, gorgé de PP volés, pour approcher ce que goûte un dieu banni. La première fois qu'on l'affronte, sa seule présence impose un test de SAG diff. 10 à chaque PJ et à chaque créature de dangerosité 2 ou moins. Échec : état Effrayée (Fuite) pendant 1 tour — doit s'éloigner, ne peut ni l'approcher ni l'attaquer. Note MJ — pas de jet automatisé."
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit. Un Convive a mangé à la table d'un dieu : le filtrer pour de bon coûte nettement plus cher au dieu qui s'y risque que la destruction d'un démon ordinaire."
         }
       ],
-      "lore": "Un démon est un reste de repas — ce que laissent les trois dieux bannis quand ils se nourrissent d'âmes dans la Mer. Le Convive a mangé à leur table : plusieurs casters vidés d'un coup, ou une lente accumulation qu'aucune table n'a su interrompre à temps. Le filtrer pour de bon coûte au dieu qui s'y risque bien plus qu'un bannissement ordinaire — un coût que la prêtresse naine du groupe connaît mieux que quiconque, elle qui canalise déjà Valdaan pour bien moins que ça.",
+      "lore": "Un démon est un reste de repas — ce que laissent les dieux déchus quand ils se nourrissent d'âmes dans la Mer. Le Convive a mangé à leur table : plusieurs lanceurs vidés d'un coup, ou une lente accumulation qu'aucune table n'a su interrompre à temps. Le filtrer pour de bon coûte au dieu qui s'y risque bien plus qu'un bannissement ordinaire — un coût que la prêtresse naine du groupe connaît mieux que quiconque, elle qui canalise déjà Valdaan pour bien moins que ça.",
       "emoji": "🩸"
+    },
+    {
+      "id": "demon_heure_figee",
+      "nom": "L'Heure figée",
+      "famille": "demon_sorts",
+      "tier": "d5",
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 59,
+      "def": 18,
+      "init": 7,
+      "atk": 14,
+      "dangerosite": 5,
+      "boss": true,
+      "role": "artilleur",
+      "taille": "grande",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Morsure d'ancrage",
+          "armeId": "morsure_ancrage_d5",
+          "bonusAttaque": 14,
+          "bonusDegats": 11,
+          "drainPP": 8,
+          "effetSpecial": "Morsure d'ancrage : draine aussi 8 PP à la cible touchée (8 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales."
+        },
+        {
+          "nom": "Éclat d'éternité",
+          "armeId": "eclat_d_eternite",
+          "bonusAttaque": 14,
+          "bonusDegats": 2,
+          "alimenteRemous": true,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Arrêt",
+          "description": "Une fois par combat, le temps cesse autour d'elle : zone de 9 m, jet de SAG DD 16, sinon Paralysée 1 tour.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "zone",
+            "portee": null,
+            "zone": 9,
+            "typeSort": "majeur",
+            "rang": 5,
+            "ecole": "transmutation",
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 16
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "paralysee",
+                "duree": "1"
+              }
+            ]
+          }
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Morsure d'ancrage",
+          "description": "Chaque Morsure réussie draine en plus 8 PP à la cible. Contre une cible sans PP, le drain devient 8 dégâts de PV — qui ne nourrissent pas la jauge de faim. Pour se nourrir, il doit venir au contact : s'interposer entre lui et les lanceurs l'affame, littéralement."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Écho dans l'eau",
+          "description": "Chaque Éclat et chaque sort qu'il lance ajoute 5 PP à la jauge de Remous du lieu — la moitié de ce qu'agiterait un lanceur."
+        },
+        {
+          "nom": "Grand démon",
+          "description": "Entité à part entière, jamais atteinte par escalade : c'est le MJ qui la place."
+        },
+        {
+          "nom": "Instant volé",
+          "description": "Deux fois par combat, à la fin du tour d'un PJ, elle joue un tour supplémentaire. Note MJ — pas d'automatisation."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Un grand démon du temps dérobé. Autour d'elle, les instants ne passent plus dans le bon ordre : on la frappe avant d'avoir levé le bras, on tombe avant d'avoir été touché.",
+      "emoji": "⏳"
+    },
+    {
+      "id": "demon_rejet",
+      "nom": "Rejet",
+      "famille": "demon_guerre",
+      "tier": "d1",
+      "faim": {
+        "type": "degats_infliges",
+        "seuil": 15
+      },
+      "paliersSuivants": [
+        "demon_ronce"
+      ],
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 23,
+      "def": 9,
+      "init": 1,
+      "atk": 3,
+      "dangerosite": 1,
+      "boss": false,
+      "role": "brute",
+      "taille": "moyenne",
+      "resistances": {
+        "physique": 1.5,
+        "magique": 0.5
+      },
+      "repousse": 2,
+      "attaques": [
+        {
+          "nom": "Griffes de rejet",
+          "armeId": "griffes_de_rejet",
+          "bonusAttaque": 3,
+          "bonusDegats": 1,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Chair inversée",
+          "description": "Moitié des dégâts magiques, +50 % des dégâts physiques. Le Grisfer frappe en physique contre lui, jamais comme de la magie."
+        },
+        {
+          "nom": "Repousse",
+          "description": "Au début de chacun de ses tours, il regagne 2 PV."
+        },
+        {
+          "nom": "Faim — PV infligés",
+          "description": "Monte d'un palier après avoir infligé 15 PV — l'équivalent de sa propre vie, soit environ 3 touches. Au seuil : Ronce."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Marque de Sylvath : une chair qui repousse avant d'avoir fini de saigner. Le Rejet n'a pas d'autre idée que de frapper, et de frapper encore.",
+      "emoji": "🌱"
+    },
+    {
+      "id": "demon_ronce",
+      "nom": "Ronce",
+      "famille": "demon_guerre",
+      "tier": "d2",
+      "faim": {
+        "type": "degats_infliges",
+        "seuil": 26
+      },
+      "paliersSuivants": [
+        "demon_ecorcheur"
+      ],
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 39,
+      "def": 11,
+      "init": 2,
+      "atk": 5,
+      "dangerosite": 2,
+      "boss": false,
+      "role": "brute",
+      "taille": "moyenne",
+      "resistances": {
+        "physique": 1.5,
+        "magique": 0.5
+      },
+      "repousse": 4,
+      "attaques": [
+        {
+          "nom": "Griffes-ronces",
+          "armeId": "griffes_ronces",
+          "bonusAttaque": 5,
+          "bonusDegats": 2,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Chair inversée",
+          "description": "Moitié des dégâts magiques, +50 % des dégâts physiques. Le Grisfer frappe en physique contre lui, jamais comme de la magie."
+        },
+        {
+          "nom": "Repousse",
+          "description": "Au début de chacun de ses tours, il regagne 4 PV."
+        },
+        {
+          "nom": "Faim — PV infligés",
+          "description": "Monte d'un palier après avoir infligé 26 PV — l'équivalent de sa propre vie, soit environ 3 touches. Au seuil : Écorcheur."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Des épines lui poussent là où on l'a blessé. Chaque coup reçu l'arme un peu plus.",
+      "emoji": "🌿"
+    },
+    {
+      "id": "demon_ecorcheur",
+      "nom": "Écorcheur",
+      "famille": "demon_guerre",
+      "tier": "d3",
+      "faim": {
+        "type": "degats_infliges",
+        "seuil": 40
+      },
+      "paliersSuivants": [
+        "demon_ecorce_fendue",
+        "demon_greffeur"
+      ],
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 60,
+      "def": 13,
+      "init": 3,
+      "atk": 7,
+      "dangerosite": 3,
+      "boss": false,
+      "role": "brute",
+      "taille": "grande",
+      "resistances": {
+        "physique": 1.5,
+        "magique": 0.5
+      },
+      "repousse": 6,
+      "berserk": {
+        "parTouche": 1
+      },
+      "attaques": [
+        {
+          "nom": "Griffes écorcheuses",
+          "armeId": "griffes_ecorcheuses",
+          "bonusAttaque": 7,
+          "bonusDegats": 5,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Chair inversée",
+          "description": "Moitié des dégâts magiques, +50 % des dégâts physiques. Le Grisfer frappe en physique contre lui, jamais comme de la magie."
+        },
+        {
+          "nom": "Repousse",
+          "description": "Au début de chacun de ses tours, il regagne 6 PV."
+        },
+        {
+          "nom": "Berserk",
+          "description": "Chaque touche ajoute +1 à ses dégâts, de façon cumulative. Quand il rate, il subit des dégâts égaux au bonus accumulé, puis le compteur retombe à 0. Le compteur survit à une montée de palier et n'a pas de plafond."
+        },
+        {
+          "nom": "Faim — PV infligés",
+          "description": "Monte d'un palier après avoir infligé 40 PV — l'équivalent de sa propre vie, soit environ 3 touches. Au seuil : le MJ choisit entre l'Écorce-fendue et le Greffeur."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "À ce palier, la croissance devient rage : il frappe plus fort à chaque touche, et ses propres coups perdus le déchirent.",
+      "emoji": "🪓"
+    },
+    {
+      "id": "demon_ecorce_fendue",
+      "nom": "L'Écorce-fendue",
+      "famille": "demon_guerre",
+      "tier": "d4",
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 93,
+      "def": 15,
+      "init": 4,
+      "atk": 10,
+      "dangerosite": 4,
+      "boss": false,
+      "role": "brute",
+      "taille": "grande",
+      "resistances": {
+        "physique": 1.5,
+        "magique": 0.5
+      },
+      "repousse": 8,
+      "berserk": {
+        "parTouche": 1
+      },
+      "attaques": [
+        {
+          "nom": "Frappe fendante",
+          "armeId": "frappe_fendante",
+          "bonusAttaque": 10,
+          "bonusDegats": 4,
+          "effetSpecial": "Deux touches (cf. arme) : chacune compte pour le berserk."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Chair inversée",
+          "description": "Moitié des dégâts magiques, +50 % des dégâts physiques. Le Grisfer frappe en physique contre lui, jamais comme de la magie."
+        },
+        {
+          "nom": "Repousse",
+          "description": "Au début de chacun de ses tours, il regagne 8 PV."
+        },
+        {
+          "nom": "Berserk",
+          "description": "Chaque touche ajoute +1 à ses dégâts, de façon cumulative. Quand il rate, il subit des dégâts égaux au bonus accumulé, puis le compteur retombe à 0. Le compteur survit à une montée de palier et n'a pas de plafond."
+        },
+        {
+          "nom": "Deux moitiés",
+          "description": "Ses deux touches comptent chacune pour le berserk : il cumule deux fois plus vite, et un raté lui coûte deux fois plus."
+        },
+        {
+          "nom": "Sommet de l'escalade",
+          "description": "Palier le plus haut qu'un démon atteint en se nourrissant : plus de jauge de faim."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Un tronc ouvert en deux par sa propre fureur, qui frappe des deux moitiés à la fois.",
+      "emoji": "🪵"
+    },
+    {
+      "id": "demon_greffeur",
+      "nom": "Le Greffeur",
+      "famille": "demon_guerre",
+      "tier": "d4",
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 93,
+      "def": 15,
+      "init": 4,
+      "atk": 10,
+      "dangerosite": 4,
+      "boss": false,
+      "role": "brute",
+      "taille": "grande",
+      "resistances": {
+        "physique": 1.5,
+        "magique": 0.5
+      },
+      "repousse": 8,
+      "berserk": {
+        "parTouche": 1
+      },
+      "attaques": [
+        {
+          "nom": "Greffe",
+          "armeId": "greffe",
+          "bonusAttaque": 10,
+          "bonusDegats": 7,
+          "effetSpecial": "Vol de sève : il regagne la moitié des dégâts infligés. Cf. capacitesSpeciales."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Chair inversée",
+          "description": "Moitié des dégâts magiques, +50 % des dégâts physiques. Le Grisfer frappe en physique contre lui, jamais comme de la magie."
+        },
+        {
+          "nom": "Repousse",
+          "description": "Au début de chacun de ses tours, il regagne 8 PV."
+        },
+        {
+          "nom": "Berserk",
+          "description": "Chaque touche ajoute +1 à ses dégâts, de façon cumulative. Quand il rate, il subit des dégâts égaux au bonus accumulé, puis le compteur retombe à 0. Le compteur survit à une montée de palier et n'a pas de plafond."
+        },
+        {
+          "nom": "Vol de sève",
+          "description": "Il regagne la moitié des dégâts qu'il inflige, arrondie à l'inférieur, en plus de sa Repousse. C'est le plus dur à user de la famille."
+        },
+        {
+          "nom": "Sommet de l'escalade",
+          "description": "Palier le plus haut qu'un démon atteint en se nourrissant : plus de jauge de faim."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Ce qu'il arrache à ses victimes repousse sur lui. On ne l'use pas : on le nourrit.",
+      "emoji": "🧬"
+    },
+    {
+      "id": "demon_mere_ronce",
+      "nom": "Mère-Ronce",
+      "famille": "demon_guerre",
+      "tier": "d5",
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 135,
+      "def": 17,
+      "init": 5,
+      "atk": 13,
+      "dangerosite": 5,
+      "boss": true,
+      "role": "brute",
+      "taille": "très grande",
+      "resistances": {
+        "physique": 1.5,
+        "magique": 0.5
+      },
+      "repousse": 10,
+      "berserk": {
+        "parTouche": 1
+      },
+      "attaques": [
+        {
+          "nom": "Étreinte de ronces",
+          "armeId": "etreinte_de_ronces",
+          "bonusAttaque": 13,
+          "bonusDegats": 13,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Champ de ronces",
+          "description": "Une fois par combat, le sol se hérisse autour d'elle : zone de 9 m, jet de DEX DD 16, sinon 2d6 dégâts et Entravée 2 tours.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "zone",
+            "portee": null,
+            "zone": 9,
+            "jetSauvegardeFixe": {
+              "carac": "DEX",
+              "dd": 16
+            },
+            "effets": [
+              {
+                "type": "degats",
+                "formule": "2d6"
+              },
+              {
+                "type": "etat",
+                "id": "entravee",
+                "duree": "2"
+              },
+              {
+                "type": "special",
+                "note": "La zone reste un terrain difficile jusqu'à la fin du combat."
+              }
+            ]
+          }
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Chair inversée",
+          "description": "Moitié des dégâts magiques, +50 % des dégâts physiques. Le Grisfer frappe en physique contre lui, jamais comme de la magie."
+        },
+        {
+          "nom": "Repousse",
+          "description": "Au début de chacun de ses tours, il regagne 10 PV."
+        },
+        {
+          "nom": "Berserk",
+          "description": "Chaque touche ajoute +1 à ses dégâts, de façon cumulative. Quand il rate, il subit des dégâts égaux au bonus accumulé, puis le compteur retombe à 0. Le compteur survit à une montée de palier et n'a pas de plafond."
+        },
+        {
+          "nom": "Grand démon",
+          "description": "Entité à part entière, jamais atteinte par escalade : c'est le MJ qui la place."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Un grand démon de Sylvath. Là où elle s'enracine, le sol se hérisse, et la bataille se livre dans son jardin.",
+      "emoji": "🥀"
+    },
+    {
+      "id": "demon_seve_rouge",
+      "nom": "La Sève-rouge",
+      "famille": "demon_guerre",
+      "tier": "d5",
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 135,
+      "def": 17,
+      "init": 5,
+      "atk": 13,
+      "dangerosite": 5,
+      "boss": true,
+      "role": "brute",
+      "taille": "grande",
+      "resistances": {
+        "physique": 1.5,
+        "magique": 0.5
+      },
+      "repousse": 10,
+      "berserk": {
+        "parTouche": 2
+      },
+      "attaques": [
+        {
+          "nom": "Rage de sève",
+          "armeId": "rage_de_seve",
+          "bonusAttaque": 13,
+          "bonusDegats": 5,
+          "effetSpecial": "Deux touches (cf. arme) : chacune compte pour le berserk, à +2."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Chair inversée",
+          "description": "Moitié des dégâts magiques, +50 % des dégâts physiques. Le Grisfer frappe en physique contre lui, jamais comme de la magie."
+        },
+        {
+          "nom": "Repousse",
+          "description": "Au début de chacun de ses tours, il regagne 10 PV."
+        },
+        {
+          "nom": "Berserk",
+          "description": "Chaque touche ajoute +2 à ses dégâts, de façon cumulative. Quand il rate, il subit des dégâts égaux au bonus accumulé, puis le compteur retombe à 0. Le compteur survit à une montée de palier et n'a pas de plafond."
+        },
+        {
+          "nom": "Dernier souffle",
+          "description": "À 0 PV, si son compteur de berserk est d'au moins 3 touches, il passe en Sursaut : il agit une dernière fois, puis tombe au début de son prochain tour."
+        },
+        {
+          "nom": "Grand démon",
+          "description": "Entité à part entière, jamais atteinte par escalade : c'est le MJ qui la place."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Un grand démon de Sylvath : la sève faite colère. Il ne tombe pas tant qu'il lui reste une raison de frapper.",
+      "emoji": "💢"
+    },
+    {
+      "id": "demon_leurre",
+      "nom": "Leurre",
+      "famille": "demon_tentation",
+      "tier": "d1",
+      "faim": {
+        "type": "etats_controle",
+        "seuil": 3
+      },
+      "paliersSuivants": [
+        "demon_mirage"
+      ],
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 10,
+      "def": 11,
+      "init": 3,
+      "atk": 2,
+      "dangerosite": 1,
+      "boss": false,
+      "role": "controleur",
+      "taille": "petite",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Frôlement",
+          "armeId": "frolement_d1",
+          "bonusAttaque": 2,
+          "bonusDegats": 1,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Attrait",
+          "description": "À chaque tour, une cible à 9 m : jet de SAG DD 12, sinon Fascinée 1 tour.",
+          "mecanique": {
+            "type": "activable",
+            "usage": {
+              "frequence": "libre"
+            },
+            "cible": "ennemi",
+            "portee": 9,
+            "zone": null,
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 12
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "fascinee",
+                "duree": "1"
+              }
+            ]
+          }
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Désir irradié",
+          "description": "Ne parle jamais. Il irradie un désir que chacun reconnaît comme le sien — ni offre, ni marché, ni dette."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Faim — états de contrôle",
+          "description": "Monte d'un palier après 3 états de contrôle réussis (Fascinée, Influencée, Charmée). Un état reposé sur une cible déjà sous son effet ne compte pas. Au seuil : Mirage."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Marque de Khoreth, jamais sa signature : le Leurre n'offre rien, il attire. Celui qui le regarde voit ce qu'il désire, et avance.",
+      "emoji": "🕯️"
+    },
+    {
+      "id": "demon_mirage",
+      "nom": "Mirage",
+      "famille": "demon_tentation",
+      "tier": "d2",
+      "faim": {
+        "type": "etats_controle",
+        "seuil": 3
+      },
+      "paliersSuivants": [
+        "demon_envouteur"
+      ],
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 17,
+      "def": 13,
+      "init": 4,
+      "atk": 4,
+      "dangerosite": 2,
+      "boss": false,
+      "role": "controleur",
+      "taille": "petite",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Frôlement",
+          "armeId": "frolement_d2",
+          "bonusAttaque": 4,
+          "bonusDegats": 2,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Attrait",
+          "description": "À chaque tour, une cible à 9 m : jet de SAG DD 13, sinon Fascinée 1 tour.",
+          "mecanique": {
+            "type": "activable",
+            "usage": {
+              "frequence": "libre"
+            },
+            "cible": "ennemi",
+            "portee": 9,
+            "zone": null,
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 13
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "fascinee",
+                "duree": "1"
+              }
+            ]
+          }
+        },
+        {
+          "nom": "Promesse",
+          "description": "Une fois par combat, une promesse sans un mot : cible à 18 m, jet de SAG DD 13, sinon Influencée 2 tours.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "ennemi",
+            "portee": 18,
+            "zone": null,
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 13
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "influencee",
+                "duree": "2"
+              }
+            ]
+          }
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Désir irradié",
+          "description": "Ne parle jamais. Il irradie un désir que chacun reconnaît comme le sien — ni offre, ni marché, ni dette."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Faim — états de contrôle",
+          "description": "Monte d'un palier après 3 états de contrôle réussis (Fascinée, Influencée, Charmée). Un état reposé sur une cible déjà sous son effet ne compte pas. Au seuil : Envoûteur."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Il promet sans un mot. On croit l'avoir compris, on croit l'avoir voulu.",
+      "emoji": "🌫️"
+    },
+    {
+      "id": "demon_envouteur",
+      "nom": "Envoûteur",
+      "famille": "demon_tentation",
+      "tier": "d3",
+      "faim": {
+        "type": "etats_controle",
+        "seuil": 3
+      },
+      "paliersSuivants": [
+        "demon_desiree",
+        "demon_brise_liens"
+      ],
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 26,
+      "def": 15,
+      "init": 5,
+      "atk": 6,
+      "dangerosite": 3,
+      "boss": false,
+      "role": "controleur",
+      "taille": "moyenne",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Frôlement",
+          "armeId": "frolement_d3",
+          "bonusAttaque": 6,
+          "bonusDegats": 3,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Attrait",
+          "description": "À chaque tour, une cible à 9 m : jet de SAG DD 14, sinon Fascinée 1 tour.",
+          "mecanique": {
+            "type": "activable",
+            "usage": {
+              "frequence": "libre"
+            },
+            "cible": "ennemi",
+            "portee": 9,
+            "zone": null,
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 14
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "fascinee",
+                "duree": "1"
+              }
+            ]
+          }
+        },
+        {
+          "nom": "Emprise",
+          "description": "Une fois par combat : cible à 9 m, jet de SAG DD 14, sinon Charmée 1 tour — elle se bat pour lui.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "ennemi",
+            "portee": 9,
+            "zone": null,
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 14
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "charmee",
+                "duree": "1"
+              }
+            ]
+          }
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Désir irradié",
+          "description": "Ne parle jamais. Il irradie un désir que chacun reconnaît comme le sien — ni offre, ni marché, ni dette."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Faim — états de contrôle",
+          "description": "Monte d'un palier après 3 états de contrôle réussis (Fascinée, Influencée, Charmée). Un état reposé sur une cible déjà sous son effet ne compte pas. Au seuil : le MJ choisit entre la Désirée et le Brise-Liens."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "À ce palier, l'attrait devient emprise : pour un instant, la victime se bat pour lui et croit l'avoir choisi.",
+      "emoji": "🎭"
+    },
+    {
+      "id": "demon_desiree",
+      "nom": "La Désirée",
+      "famille": "demon_tentation",
+      "tier": "d4",
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 40,
+      "def": 17,
+      "init": 6,
+      "atk": 9,
+      "dangerosite": 4,
+      "boss": false,
+      "role": "controleur",
+      "taille": "moyenne",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Baiser",
+          "armeId": "baiser_d4",
+          "bonusAttaque": 9,
+          "bonusDegats": 5,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Attrait",
+          "description": "À chaque tour, une cible à 9 m : jet de SAG DD 15, sinon Fascinée 1 tour.",
+          "mecanique": {
+            "type": "activable",
+            "usage": {
+              "frequence": "libre"
+            },
+            "cible": "ennemi",
+            "portee": 9,
+            "zone": null,
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 15
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "fascinee",
+                "duree": "1"
+              }
+            ]
+          }
+        },
+        {
+          "nom": "Étreinte promise",
+          "description": "Une fois par combat : zone de 6 m autour d'elle, jet de SAG DD 15, sinon Charmée 1 tour.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "zone",
+            "portee": null,
+            "zone": 6,
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 15
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "charmee",
+                "duree": "1"
+              }
+            ]
+          }
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Désir irradié",
+          "description": "Ne parle jamais. Il irradie un désir que chacun reconnaît comme le sien — ni offre, ni marché, ni dette."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Sommet de l'escalade",
+          "description": "Palier le plus haut qu'un démon atteint en se nourrissant : plus de jauge de faim."
+        },
+        {
+          "nom": "Bouclier de chair",
+          "description": "Les attaques contre elle ont désavantage tant qu'une créature charmée lui est adjacente."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Personne ne la frappe de bon cœur. Ceux qu'elle a pris s'interposent, et ceux qui restent hésitent.",
+      "emoji": "🌹"
+    },
+    {
+      "id": "demon_brise_liens",
+      "nom": "Le Brise-Liens",
+      "famille": "demon_tentation",
+      "tier": "d4",
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 40,
+      "def": 17,
+      "init": 6,
+      "atk": 9,
+      "dangerosite": 4,
+      "boss": false,
+      "role": "controleur",
+      "taille": "moyenne",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Morsure jalouse",
+          "armeId": "morsure_jalouse",
+          "bonusAttaque": 9,
+          "bonusDegats": 5,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Attrait",
+          "description": "À chaque tour, une cible à 9 m : jet de SAG DD 15, sinon Fascinée 1 tour.",
+          "mecanique": {
+            "type": "activable",
+            "usage": {
+              "frequence": "libre"
+            },
+            "cible": "ennemi",
+            "portee": 9,
+            "zone": null,
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 15
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "fascinee",
+                "duree": "1"
+              }
+            ]
+          }
+        },
+        {
+          "nom": "Discorde",
+          "description": "Deux fois par combat : cible à 18 m, jet de SAG DD 15, sinon Charmée 1 tour — elle attaque l'allié le plus proche.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "2x/combat"
+            },
+            "cible": "ennemi",
+            "portee": 18,
+            "zone": null,
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 15
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "charmee",
+                "duree": "1"
+              },
+              {
+                "type": "special",
+                "note": "La cible charmée attaque l'allié le plus proche à son prochain tour."
+              }
+            ]
+          }
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Désir irradié",
+          "description": "Ne parle jamais. Il irradie un désir que chacun reconnaît comme le sien — ni offre, ni marché, ni dette."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Sommet de l'escalade",
+          "description": "Palier le plus haut qu'un démon atteint en se nourrissant : plus de jauge de faim."
+        },
+        {
+          "nom": "Liens rompus",
+          "description": "Il regagne 1d6 PV chaque fois qu'une créature qu'il a charmée frappe un de ses alliés."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Il ne séduit pas pour garder, il séduit pour briser. Il se nourrit du coup qu'un compagnon porte à l'autre.",
+      "emoji": "⛓️"
+    },
+    {
+      "id": "demon_celle_qu_on_suit",
+      "nom": "Celle-qu'on-suit",
+      "famille": "demon_tentation",
+      "tier": "d5",
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 59,
+      "def": 19,
+      "init": 7,
+      "atk": 12,
+      "dangerosite": 5,
+      "boss": true,
+      "role": "controleur",
+      "taille": "grande",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Baiser",
+          "armeId": "baiser_d5",
+          "bonusAttaque": 12,
+          "bonusDegats": 7,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Attrait",
+          "description": "À chaque tour, tout ce qui se tient à 9 m d'elle doit réussir un jet de SAG DD 16, sinon Fascinée 1 tour.",
+          "mecanique": {
+            "type": "activable",
+            "usage": {
+              "frequence": "libre"
+            },
+            "cible": "zone",
+            "portee": null,
+            "zone": 9,
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 16
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "fascinee",
+                "duree": "1"
+              }
+            ]
+          }
+        },
+        {
+          "nom": "Cortège",
+          "description": "Une fois par combat : zone de 9 m, jet de SAG DD 16, sinon Charmée 2 tours.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "zone",
+            "portee": null,
+            "zone": 9,
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 16
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "charmee",
+                "duree": "2"
+              }
+            ]
+          }
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Désir irradié",
+          "description": "Ne parle jamais. Il irradie un désir que chacun reconnaît comme le sien — ni offre, ni marché, ni dette."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Grand démon",
+          "description": "Entité à part entière, jamais atteinte par escalade : c'est le MJ qui la place."
+        },
+        {
+          "nom": "Suite",
+          "description": "Une créature charmée à 3 m d'elle s'interpose et prend à sa place les attaques qui la visent."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Un grand démon de la séduction : une procession se forme derrière elle, et chacun croit y marcher de son plein gré.",
+      "emoji": "🎐"
+    },
+    {
+      "id": "demon_mille_visages",
+      "nom": "Mille-Visages",
+      "famille": "demon_tentation",
+      "tier": "d5",
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 59,
+      "def": 19,
+      "init": 7,
+      "atk": 12,
+      "dangerosite": 5,
+      "boss": true,
+      "role": "controleur",
+      "taille": "grande",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Frôlement",
+          "armeId": "frolement_d5",
+          "bonusAttaque": 12,
+          "bonusDegats": 8,
+          "effetSpecial": null
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Attrait",
+          "description": "À chaque tour, une cible à 9 m : jet de SAG DD 16, sinon Fascinée 1 tour.",
+          "mecanique": {
+            "type": "activable",
+            "usage": {
+              "frequence": "libre"
+            },
+            "cible": "ennemi",
+            "portee": 9,
+            "zone": null,
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 16
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "fascinee",
+                "duree": "1"
+              }
+            ]
+          }
+        },
+        {
+          "nom": "Visage désiré",
+          "description": "Une fois par combat : zone de 9 m, jet de SAG DD 16, sinon Influencée 3 tours.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "zone",
+            "portee": null,
+            "zone": 9,
+            "jetSauvegardeFixe": {
+              "carac": "SAG",
+              "dd": 16
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "influencee",
+                "duree": "3"
+              }
+            ]
+          }
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Désir irradié",
+          "description": "Ne parle jamais. Il irradie un désir que chacun reconnaît comme le sien — ni offre, ni marché, ni dette."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Grand démon",
+          "description": "Entité à part entière, jamais atteinte par escalade : c'est le MJ qui la place."
+        },
+        {
+          "nom": "Reflet",
+          "description": "Il regagne 5 PV chaque fois qu'une créature rate un jet de sauvegarde contre lui."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Un grand démon : chaque témoin voit en lui un visage aimé, perdu ou désiré. Chaque regard qui se trompe le nourrit.",
+      "emoji": "🪞"
+    },
+    {
+      "id": "demon_pustule",
+      "nom": "Pustule",
+      "famille": "demon_endurance",
+      "tier": "d1",
+      "faim": {
+        "type": "rounds_survecus",
+        "seuil": 3
+      },
+      "paliersSuivants": [
+        "demon_suintant"
+      ],
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 23,
+      "def": 12,
+      "init": 1,
+      "atk": 3,
+      "dangerosite": 1,
+      "boss": false,
+      "role": "usure",
+      "taille": "moyenne",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Toucher putride",
+          "armeId": "toucher_putride_d1",
+          "bonusAttaque": 3,
+          "bonusDegats": 1,
+          "etatSurTouche": {
+            "id": "maudite",
+            "duree": 3,
+            "formuleDot": "1d4"
+          },
+          "effetSpecial": "Putréfaction : pose l'état Maudite (1d4 par tour, 3 tours, non cumulable, rafraîchi à chaque touche). Cf. capacitesSpeciales."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Putréfaction",
+          "description": "Chaque touche pose l'état Maudite (1d4 dégâts par tour, 3 tours). L'état ne se cumule pas : une nouvelle touche le rafraîchit. Un soin magique y met fin."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Faim — rounds survécus",
+          "description": "Monte d'un palier après 3 rounds complets de combat où il reste debout. On le laisse vivre, il grandit. Au seuil : Suintant."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Marque de Nyaleth : ce qui touche se gâte. La Pustule n'est pas forte, elle est lente, et elle a tout le temps.",
+      "emoji": "🦠"
+    },
+    {
+      "id": "demon_suintant",
+      "nom": "Suintant",
+      "famille": "demon_endurance",
+      "tier": "d2",
+      "faim": {
+        "type": "rounds_survecus",
+        "seuil": 3
+      },
+      "paliersSuivants": [
+        "demon_pourrissant"
+      ],
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 39,
+      "def": 14,
+      "init": 2,
+      "atk": 5,
+      "dangerosite": 2,
+      "boss": false,
+      "role": "usure",
+      "taille": "moyenne",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Toucher putride",
+          "armeId": "toucher_putride_d2",
+          "bonusAttaque": 5,
+          "bonusDegats": 2,
+          "etatSurTouche": {
+            "id": "maudite",
+            "duree": 3,
+            "formuleDot": "1d6"
+          },
+          "effetSpecial": "Putréfaction : pose l'état Maudite (1d6 par tour, 3 tours, non cumulable, rafraîchi à chaque touche). Cf. capacitesSpeciales."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Putréfaction",
+          "description": "Chaque touche pose l'état Maudite (1d6 dégâts par tour, 3 tours). L'état ne se cumule pas : une nouvelle touche le rafraîchit. Un soin magique y met fin."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Faim — rounds survécus",
+          "description": "Monte d'un palier après 3 rounds complets de combat où il reste debout. On le laisse vivre, il grandit. Au seuil : Pourrissant."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Il ne se presse pas. Il suffit qu'il reste debout : la maladie fait le reste.",
+      "emoji": "🫠"
+    },
+    {
+      "id": "demon_pourrissant",
+      "nom": "Pourrissant",
+      "famille": "demon_endurance",
+      "tier": "d3",
+      "faim": {
+        "type": "rounds_survecus",
+        "seuil": 3
+      },
+      "paliersSuivants": [
+        "demon_ventre_mort",
+        "demon_semeur_de_peste"
+      ],
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 60,
+      "def": 16,
+      "init": 3,
+      "atk": 7,
+      "dangerosite": 3,
+      "boss": false,
+      "role": "usure",
+      "taille": "grande",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Toucher putride",
+          "armeId": "toucher_putride_d3",
+          "bonusAttaque": 7,
+          "bonusDegats": 3,
+          "etatSurTouche": {
+            "id": "maudite",
+            "duree": 3,
+            "formuleDot": "2d4"
+          },
+          "effetSpecial": "Putréfaction : pose l'état Maudite (2d4 par tour, 3 tours, non cumulable, rafraîchi à chaque touche). Cf. capacitesSpeciales."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Putréfaction",
+          "description": "Chaque touche pose l'état Maudite (2d4 dégâts par tour, 3 tours). L'état ne se cumule pas : une nouvelle touche le rafraîchit. Un soin magique y met fin."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Faim — rounds survécus",
+          "description": "Monte d'un palier après 3 rounds complets de combat où il reste debout. On le laisse vivre, il grandit. Au seuil : le MJ choisit entre le Ventre-Mort et le Semeur de peste."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Une masse qu'on frappe et qui ne cède pas. Chaque round passé à côté de lui en coûte un autre.",
+      "emoji": "🍂"
+    },
+    {
+      "id": "demon_ventre_mort",
+      "nom": "Le Ventre-Mort",
+      "famille": "demon_endurance",
+      "tier": "d4",
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 93,
+      "def": 18,
+      "init": 4,
+      "atk": 10,
+      "dangerosite": 4,
+      "boss": false,
+      "role": "usure",
+      "taille": "grande",
+      "armureId": "chair_putride",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Toucher putride",
+          "armeId": "toucher_putride_d4",
+          "bonusAttaque": 10,
+          "bonusDegats": 5,
+          "etatSurTouche": {
+            "id": "maudite",
+            "duree": 3,
+            "formuleDot": "2d6"
+          },
+          "effetSpecial": "Putréfaction : pose l'état Maudite (2d6 par tour, 3 tours, non cumulable, rafraîchi à chaque touche). Cf. capacitesSpeciales."
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Engloutir",
+          "description": "Une fois par combat, il avale une cible adjacente de taille moyenne ou moins : jet de FOR DD 15, sinon Immobilisée 2 tours.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "ennemi",
+            "portee": "adjacent",
+            "zone": null,
+            "jetSauvegardeFixe": {
+              "carac": "FOR",
+              "dd": 15
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "immobilisee",
+                "duree": "2"
+              },
+              {
+                "type": "special",
+                "note": "Taille moyenne ou moins. Avalée, la cible subit sa Putréfaction à chaque tour tant qu'elle est Immobilisée."
+              }
+            ]
+          }
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Putréfaction",
+          "description": "Chaque touche pose l'état Maudite (2d6 dégâts par tour, 3 tours). L'état ne se cumule pas : une nouvelle touche le rafraîchit. Un soin magique y met fin."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Sommet de l'escalade",
+          "description": "Palier le plus haut qu'un démon atteint en se nourrissant : plus de jauge de faim."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Une paroi de chair épaisse qui avale ce qu'elle peut. Ce qu'elle garde en elle pourrit avec elle.",
+      "emoji": "🧫"
+    },
+    {
+      "id": "demon_semeur_de_peste",
+      "nom": "Le Semeur de peste",
+      "famille": "demon_endurance",
+      "tier": "d4",
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 93,
+      "def": 18,
+      "init": 4,
+      "atk": 10,
+      "dangerosite": 4,
+      "boss": false,
+      "role": "usure",
+      "taille": "grande",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Toucher putride",
+          "armeId": "toucher_putride_d4",
+          "bonusAttaque": 10,
+          "bonusDegats": 5,
+          "etatSurTouche": {
+            "id": "maudite",
+            "duree": 3,
+            "formuleDot": "2d6"
+          },
+          "effetSpecial": "Putréfaction : pose l'état Maudite (2d6 par tour, 3 tours, non cumulable, rafraîchi à chaque touche). Cf. capacitesSpeciales."
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Miasme",
+          "description": "Une fois par combat : zone de 6 m autour de lui, jet de CON DD 15, sinon Maudite (2d6 par tour) pendant 3 tours.",
+          "mecanique": {
+            "type": "limitee",
+            "usage": {
+              "frequence": "1x/combat"
+            },
+            "cible": "zone",
+            "portee": null,
+            "zone": 6,
+            "jetSauvegardeFixe": {
+              "carac": "CON",
+              "dd": 15
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "maudite",
+                "duree": "3"
+              },
+              {
+                "type": "special",
+                "note": "Maudite à 2d6 dégâts par tour."
+              }
+            ]
+          }
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Putréfaction",
+          "description": "Chaque touche pose l'état Maudite (2d6 dégâts par tour, 3 tours). L'état ne se cumule pas : une nouvelle touche le rafraîchit. Un soin magique y met fin."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Sommet de l'escalade",
+          "description": "Palier le plus haut qu'un démon atteint en se nourrissant : plus de jauge de faim."
+        },
+        {
+          "nom": "Contagion",
+          "description": "Quand une créature Maudite tombe à 0 PV, l'état passe à une créature qui lui est adjacente."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Il ne frappe pas pour tuer : il frappe pour propager. Là où il passe, la maladie change d'hôte.",
+      "emoji": "🪰"
+    },
+    {
+      "id": "demon_charnier_marchant",
+      "nom": "Le Charnier-qui-marche",
+      "famille": "demon_endurance",
+      "tier": "d5",
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 135,
+      "def": 20,
+      "init": 5,
+      "atk": 13,
+      "dangerosite": 5,
+      "boss": true,
+      "role": "usure",
+      "taille": "très grande",
+      "armureId": "chair_du_charnier",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Toucher putride",
+          "armeId": "toucher_putride_d5",
+          "bonusAttaque": 13,
+          "bonusDegats": 7,
+          "etatSurTouche": {
+            "id": "maudite",
+            "duree": 3,
+            "formuleDot": "3d6"
+          },
+          "effetSpecial": "Putréfaction : pose l'état Maudite (3d6 par tour, 3 tours, non cumulable, rafraîchi à chaque touche). Cf. capacitesSpeciales."
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Putréfaction",
+          "description": "Chaque touche pose l'état Maudite (3d6 dégâts par tour, 3 tours). L'état ne se cumule pas : une nouvelle touche le rafraîchit. Un soin magique y met fin."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Grand démon",
+          "description": "Entité à part entière, jamais atteinte par escalade : c'est le MJ qui la place."
+        },
+        {
+          "nom": "Air vicié",
+          "description": "Toute créature qui commence son tour à 3 m ou moins de lui subit 1d6 dégâts."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Un grand démon de Nyaleth, bâti de toutes les âmes que le dieu libre a disputées aux bannis. L'air autour de lui suffit à ronger.",
+      "emoji": "🪨"
+    },
+    {
+      "id": "demon_la_lente",
+      "nom": "La Lente",
+      "famille": "demon_endurance",
+      "tier": "d5",
+      "race": [
+        "démon",
+        "corrompu"
+      ],
+      "pv": 135,
+      "def": 20,
+      "init": 5,
+      "atk": 13,
+      "dangerosite": 5,
+      "boss": true,
+      "role": "usure",
+      "taille": "très grande",
+      "resistances": {
+        "physique": 0.5
+      },
+      "attaques": [
+        {
+          "nom": "Toucher putride",
+          "armeId": "toucher_putride_d5",
+          "bonusAttaque": 13,
+          "bonusDegats": 7,
+          "etatSurTouche": {
+            "id": "maudite",
+            "duree": 5,
+            "formuleDot": "3d6"
+          },
+          "effetSpecial": "Putréfaction : pose l'état Maudite (3d6 par tour, 5 tours, non cumulable, rafraîchi à chaque touche). Cf. capacitesSpeciales."
+        }
+      ],
+      "capacitesActives": [
+        {
+          "nom": "Lenteur",
+          "description": "À chaque tour, tout ce qui se tient à 9 m d'elle : jet de CON DD 16, sinon Ralentie 1 tour.",
+          "mecanique": {
+            "type": "activable",
+            "usage": {
+              "frequence": "libre"
+            },
+            "cible": "zone",
+            "portee": null,
+            "zone": 9,
+            "jetSauvegardeFixe": {
+              "carac": "CON",
+              "dd": 16
+            },
+            "effets": [
+              {
+                "type": "etat",
+                "id": "ralentie",
+                "duree": "1"
+              }
+            ]
+          }
+        }
+      ],
+      "capacitesSpeciales": [
+        {
+          "nom": "Silence",
+          "description": "Ne parle jamais, quel que soit son palier : il irradie, il ne discourt pas."
+        },
+        {
+          "nom": "Traque du remueur",
+          "description": "Le démon se dirige vers le lanceur dont les Remous l'ont fait sortir et le prend pour cible prioritaire. Détournable pour un tour par des dégâts significatifs en un seul coup, une provocation, ou un blocage physique du passage entre lui et le remueur. Note MJ — pas de jet automatisé."
+        },
+        {
+          "nom": "Putréfaction",
+          "description": "Chaque touche pose l'état Maudite (3d6 dégâts par tour, 5 tours). L'état ne se cumule pas : une nouvelle touche le rafraîchit. Un soin magique y met fin."
+        },
+        {
+          "nom": "Chair d'ailleurs",
+          "description": "Moitié des dégâts physiques non magiques. Une arme de Grisfer compte comme magique face à cette résistance."
+        },
+        {
+          "nom": "Grand démon",
+          "description": "Entité à part entière, jamais atteinte par escalade : c'est le MJ qui la place."
+        },
+        {
+          "nom": "Ce qui ne guérit pas",
+          "description": "Les soins reçus par une créature Maudite sont réduits de moitié."
+        },
+        {
+          "nom": "Retour à la Mer",
+          "description": "À 0 PV, le démon n'est pas tué : il retourne à la Mer et s'y reforme. Rien ne le suit — un démon qui ressort plus tard est une nouvelle manifestation, de famille et de palier au choix du MJ. Un Bannissement réussi produit le même effet. Seule la Destruction définitive l'efface pour de bon."
+        },
+        {
+          "nom": "Immunité à la Déchirure",
+          "description": "Immunisé aux dégâts de la Déchirure (cf. Lore > Chroniques > Notes MJ, « La membrane et les Remous », paliers 2 à 4 : 1d6/2d6/3d6 par tour à tout ce qui se trouve dans le lieu). Ce démon est fait de cette eau — sans cette immunité, la Déchirure tuerait ses propres manifestations."
+        },
+        {
+          "nom": "Destruction définitive",
+          "description": "Ne peut être détruit définitivement que par un canal divin : un prêtre qui canalise son dieu (voie principale), une relique d'un dieu ancré (secours, consommée ou inutilisable ensuite), ou un lieu consacré où l'amener — en général en s'en servant comme appât pour le mage qu'il traque déjà. Filtrer draine le dieu qui l'accomplit."
+        }
+      ],
+      "lore": "Un grand démon de Nyaleth : rien ne va vite autour d'elle, ni les coups, ni la guérison, ni la mort.",
+      "emoji": "🐌"
     }
   ],
   "note_familles": "Familles avec tiers : basique (stats pures) / vétéran (Voie r.1-2) / élite (Voie r.3-4) / champion (multi-voies, boss). Les voies référencent le système COF homebrew (voieRef) avec effet inline pour lecture rapide. Familles démoniaques (demon_guerre / demon_sorts / demon_tentation / demon_endurance) : paliers génériques d1-d5 au lieu de cette ladder, cf. Lore > Notes MJ, « Les familles démoniaques ».",

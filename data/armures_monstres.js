@@ -294,6 +294,18 @@ const ARMURES_MONSTRES = [
     "nom": "Carapace de Faille",
     "reduction": 3,
     "naturelle": true
+  },
+  {
+    "id": "chair_putride",
+    "nom": "Chair putride",
+    "reduction": 3,
+    "naturelle": true
+  },
+  {
+    "id": "chair_du_charnier",
+    "nom": "Chair du charnier",
+    "reduction": 4,
+    "naturelle": true
   }
 ];
 
