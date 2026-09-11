@@ -5965,6 +5965,7 @@ const BESTIAIRE = [
     "resistances": {
       "physique": 0.5
     },
+    "soinParPPDraine": 1,
     "attaques": [
       {
         "nom": "Morsure d'ancrage",
@@ -6777,6 +6778,7 @@ const BESTIAIRE = [
     "berserk": {
       "parTouche": 1
     },
+    "soinSurDegats": 0.5,
     "attaques": [
       {
         "nom": "Greffe",

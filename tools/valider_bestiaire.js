@@ -259,7 +259,10 @@ const CHAMPS_MONSTRE_OPTIONNELS = ["famille", "tier", "voies", "faction", "roleN
   "armureId", "defMentale",
   // Familles démoniaques (cf. §17) : jauge de faim, paliers suivants,
   // résistances aux dégâts typés, repousse (PV par tour) et berserk (Guerre).
-  "faim", "paliersSuivants", "resistances", "repousse", "berserk"];
+  "faim", "paliersSuivants", "resistances", "repousse", "berserk",
+  // Soins liés aux dégâts (cf. js/demons.js) : Vol de sève (fraction des PV
+  // infligés) et Puits (PV par PP drainé).
+  "soinSurDegats", "soinParPPDraine"];
 const CHAMPS_MONSTRE_AUTORISES = new Set([...CHAMPS_MONSTRE_OBLIGATOIRES, ...CHAMPS_MONSTRE_OPTIONNELS]);
 const TAILLES_VALIDES = ["petite", "moyenne", "grande", "très grande"];
 
@@ -634,6 +637,15 @@ monstres.forEach((m, index) => {
   }
   if (m.berserk !== undefined && !(m.berserk && Number.isInteger(m.berserk.parTouche) && m.berserk.parTouche >= 1)) {
     signalerMonstre(cle, `berserk devrait être un objet { parTouche: entier ≥ 1 }.`);
+  }
+  if (m.soinSurDegats !== undefined && !(typeof m.soinSurDegats === "number" && m.soinSurDegats > 0 && m.soinSurDegats <= 1)) {
+    signalerMonstre(cle, `soinSurDegats devrait être une fraction entre 0 (exclu) et 1.`);
+  }
+  if (m.soinParPPDraine !== undefined && !(Number.isInteger(m.soinParPPDraine) && m.soinParPPDraine >= 1)) {
+    signalerMonstre(cle, `soinParPPDraine devrait être un entier ≥ 1.`);
+  }
+  if (m.soinParPPDraine !== undefined && !(m.attaques || []).some((a) => a.drainPP)) {
+    signalerMonstre(cle, `soinParPPDraine sans aucune attaque à drainPP — jamais déclenché.`);
   }
 });
 

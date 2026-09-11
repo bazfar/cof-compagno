@@ -1598,6 +1598,31 @@ const App = (() => {
   // le clic des capacités de monstre). Ne fait AUCUN toast lui-même : renvoie
   // { applique, message } pour que l'appelant compose un seul toast final
   // (cf. la bascule messagesToast déjà en place ailleurs dans ce fichier).
+  // Putréfaction (famille demon_endurance, attaques[].etatSurTouche) : pose
+  // l'état et sa formuleDot sur le PJ touché. Non cumulable : une nouvelle
+  // touche RAFRAÎCHIT l'entrée précédente de même origine. origine
+  // "putrefaction" : lue par js/capacites.js (un soin magique y met fin).
+  function _poserEtatSurTouche(pjId, attaque) {
+    const spec = attaque && attaque.etatSurTouche;
+    if (!spec || !ETATS[spec.id]) return [];
+    const persos = chargerPersos();
+    const p = persos[pjId];
+    if (!p) return [];
+    const avant = (p.etatsActifs || []).length;
+    p.etatsActifs = (p.etatsActifs || []).filter((e) => !(e.idEtat === spec.id && e.origine === "putrefaction"));
+    const rafraichi = p.etatsActifs.length !== avant;
+    if (rafraichi) sauverPersos(persos);
+    const entree = {
+      idEtat: spec.id,
+      dureeRestante: Object.assign(_resoudreDureeToursMonstre(String(spec.duree), null), { dureeAffichee: `${spec.duree} tours` }),
+      formuleDot: spec.formuleDot || null,
+      source: attaque.nom, origine: "putrefaction", poseLe: Date.now(),
+    };
+    const res = _appliquerEtatSurCibleRaw(`pj:${pjId}`, spec.id, entree);
+    if (!res.applique) return res.message ? [res.message] : [];
+    return [`${ETATS[spec.id].nom}${spec.formuleDot ? ` (${spec.formuleDot} par tour)` : ""} ${rafraichi ? "rafraîchie" : "posée"} sur ${p.nom}.`];
+  }
+
   function _appliquerEtatSurCibleRaw(cibleRaw, idEtat, entree) {
     if (!cibleRaw || !ETATS[idEtat]) return { applique: false, message: null };
     const sep = cibleRaw.indexOf(":");
@@ -11254,7 +11279,10 @@ const App = (() => {
       // "Curée" (cf. allieTombe) : bonus TEMPORAIRE (etatsActifs, cible
       // "degats") concaténé au MÊME endroit — m optionnel (absent au
       // catalogue statique, cf. l'appel bestiaire hors combat), 0 sans jeton.
-      const bonusDegats = (a.bonusDegats || 0) + _bonusEtatsMonstre(m, "degats");
+      // Berserk (famille demon_guerre, cf. js/demons.js) : bonus cumulé porté
+      // par le jeton, au même endroit que la Curée.
+      const bonusDegats = (a.bonusDegats || 0) + _bonusEtatsMonstre(m, "degats")
+        + (m && typeof Demons !== "undefined" ? Demons.bonusBerserk(m) : 0);
       const expr = bonusDegats ? `${arme.degats}${signe(bonusDegats)}` : arme.degats;
       // touches (§5.2) : une arme qui frappe N fois (ex. Double frappe) répète
       // le même terme N fois plutôt que d'écrire un multiplicateur littéral
@@ -12124,6 +12152,9 @@ const App = (() => {
     const suite = descripteur.suite || {};
     if (suite.type === "jetMonstreArme") {
       attaquesMonstresEnAttente[`${suite.monstreId}:${suite.idxAttaque}`] = resAtt;
+      // Berserk (famille demon_guerre) : un raté coûte au démon son bonus
+      // accumulé, puis le compteur retombe à 0 — journalisé par Demons.
+      if (resAtt.touche === false && typeof Demons !== "undefined") Demons.surRate(suite.monstreId);
       if (descripteur.pjId) {
         const nomCible = (chargerPersos()[descripteur.pjId] || {}).nom || "la cible";
         toast(resAtt.esquiveForcee ? `💨 ${nomCible} esquive totalement l'attaque !`
@@ -12222,6 +12253,13 @@ const App = (() => {
     const cap = prep.capacite;
     const mecanique = prep.mecanique;
     const libelle = `${m.nom} — ${cap.nom}`;
+    // Familles démoniaques (cf. js/demons.js) : un sort de la famille Sorts
+    // agite la Mer ; un état à sauvegarde d'un démon n'est posé (et ne
+    // nourrit la Tentation) que si le MJ confirme que la cible a raté son
+    // jet — jetSauvegardeFixe reste un jet côté cible, jamais roulé ici.
+    const estDemonLanceur = typeof Demons !== "undefined" && Demons.estDemon(m);
+    if (estDemonLanceur) Demons.surLancerCapacite(m, mecanique);
+    let sauvegardeRateeDemon = null;
     const cibleSoi = !!(mecanique && mecanique.cible === "soi") || !!redirigerVersLanceur;
 
     // messagesToast accumule tous les messages du clic (jet d'attaque +
@@ -12258,14 +12296,24 @@ const App = (() => {
             const p = persos[pjId];
             if (p) {
               const perso = Personnage.depuisJSON(p);
+              const jsf = estDemonLanceur && mecanique && mecanique.jetSauvegardeFixe;
+              if (jsf && sauvegardeRateeDemon === null) {
+                sauvegardeRateeDemon = window.confirm(`${p.nom} a-t-il raté son jet de ${jsf.carac} DD ${jsf.dd} contre « ${cap.nom} » ?`);
+              }
               if (perso.aImmuniteEtat(action.idEtat)) {
                 messagesToast.push(`${p.nom} est immunisé·e à « ${ETATS[action.idEtat].nom} » (Liberté d'action).`);
+              } else if (jsf && !sauvegardeRateeDemon) {
+                messagesToast.push(`${p.nom} résiste (${jsf.carac} DD ${jsf.dd}) — « ${ETATS[action.idEtat].nom} » non appliqué.`);
               } else {
+                const dejaSous = (p.etatsActifs || []).some((e) => e.idEtat === action.idEtat);
                 p.etatsActifs = p.etatsActifs || [];
                 p.etatsActifs.push(entree);
                 sauverPersos(persos);
                 if (ficheActiveId === pjId) afficherFiche(pjId);
                 if (ficheSidebarActiveId === pjId) rendreFicheSidebarBattlemap(pjId);
+                // Tentation : un état de contrôle nourrit la jauge — pas s'il
+                // est reposé sur une cible déjà sous son effet.
+                if (estDemonLanceur && !dejaSous) messagesToast.push(...Demons.surEtatControle(m, action.idEtat));
               }
             } else {
               // Cible 🎯 choisie mais introuvable dans les persos chargés
@@ -12453,6 +12501,7 @@ const App = (() => {
           ${cibleHtml}
           ${attaquesMonstreHtml(m)}
           ${capacitesMonstreHtml(m)}
+          ${typeof Demons !== "undefined" ? Demons.htmlJeton(m) : ""}
           <div class="pv-control">
             <button data-pv-moins="${m.id}">−</button>
             <input type="number" value="${pvActuel}" data-pv-input="${m.id}" />
@@ -12510,6 +12559,9 @@ const App = (() => {
           contact: EST_MELEE(r.categoriePortee),
           suite: { type: "jetMonstreArme", monstreId: m.id, idxAttaque: idx },
         });
+        // Éclat d'un démon Sorts (attaques[].alimenteRemous) : lancer le sort
+        // agite la Mer, qu'il touche ou non — cf. Demons.surLancerAttaque.
+        if (typeof Demons !== "undefined") Demons.surLancerAttaque(m, a);
       };
     });
     zone.querySelectorAll("[data-monstre-degats]").forEach((btn) => {
@@ -12534,12 +12586,25 @@ const App = (() => {
           // _gererDeclencheursSubitContact (après) — une fois les PV décomptés,
           // il serait trop tard pour réduire quoi que ce soit.
           const totalAjuste = _reduireDegatsSubisSiDisponible(pjId, total, typeDegatsNormalise);
+          const pvAvantDemon = (chargerPersos()[pjId] || {}).pvActuel;
           subirDegats(pjId, totalAjuste, typeDegatsNormalise, undefined, undefined, undefined, r.elementaire);
           // "quand le porteur est touché" (cf. Affixes phase 2 §C, épineuse/
           // renvoyeur) : seulement sur une attaque de CONTACT — categoriePortee
           // "contact" ou "allonge" (armes d'hast), cf. EST_MELEE en tête de
           // _resoudreAttaqueMonstre, comptent tous deux comme une attaque de contact.
           if (EST_MELEE(r.categoriePortee)) _gererDeclencheursSubitContact(pjId, m.id, typeDegatsNormalise);
+          // Familles démoniaques (cf. js/demons.js) : faim, berserk, vol de
+          // sève, drain de PP et Putréfaction — calculés sur les PV
+          // RÉELLEMENT perdus par la cible, après ses propres réductions.
+          if (typeof Demons !== "undefined" && Demons.estDemon(m)) {
+            const pjApres = chargerPersos()[pjId] || {};
+            const pvPerdus = (typeof pvAvantDemon === "number" && typeof pjApres.pvActuel === "number") ? Math.max(0, pvAvantDemon - pjApres.pvActuel) : 0;
+            const msgs = Demons.surTouche(m, a, pjId, pvPerdus);
+            if (a && a.etatSurTouche) msgs.push(..._poserEtatSurTouche(pjId, a));
+            if (msgs.length) toast([`${m.nom} inflige ${pvPerdus} PV à ${pjApres.nom || "la cible"}.`, ...msgs].join(" — "));
+            rendreTableCombat();
+            rendreTableCombat("battlemap-zone-table-combat");
+          }
         }
       };
     });
@@ -12553,6 +12618,23 @@ const App = (() => {
         if (!m) return;
         const indice = parseInt(btn.dataset.idxCapacite, 10);
         _declencherCapaciteMonstre(m, indice, ciblesMonstres[m.id] || null);
+      };
+    });
+    // Familles démoniaques (cf. js/demons.js) : correction de la jauge de
+    // faim par le MJ, et montée de palier validée (un bouton par profil).
+    zone.querySelectorAll("[data-demon-faim]").forEach((btn) => {
+      btn.onclick = () => {
+        Demons.ajusterFaim(btn.dataset.demonFaim, parseInt(btn.dataset.delta, 10) || 0);
+        rendreTableCombat();
+        rendreTableCombat("battlemap-zone-table-combat");
+      };
+    });
+    zone.querySelectorAll("[data-demon-monter]").forEach((btn) => {
+      btn.onclick = () => {
+        const msg = Demons.monter(btn.dataset.demonMonter, btn.dataset.vers);
+        toast(msg || "Montée impossible — profil introuvable.");
+        rendreTableCombat();
+        rendreTableCombat("battlemap-zone-table-combat");
       };
     });
     zone.querySelectorAll("[data-recharge-capacite]").forEach((btn) => {

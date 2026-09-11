@@ -371,6 +371,7 @@ const Combat = (() => {
     // aDejaAgi undefined/false).
     if (etat.ordre[etat.indexActuel]) etat.ordre[etat.indexActuel].aDejaAgi = true;
 
+    const roundAvant = etat.round;
     let index = etat.indexActuel;
     for (let i = 0; i < etat.ordre.length; i++) {
       index = (index + 1) % etat.ordre.length;
@@ -378,6 +379,9 @@ const Combat = (() => {
       if (!etat.ordre[index].koTourCourant) break;
     }
     etat.indexActuel = index;
+    // Familles démoniaques (cf. js/demons.js) : un round complet de plus
+    // pour chaque démon debout — faim de l'Endurance.
+    if (etat.round > roundAvant && typeof Demons !== "undefined") Demons.nouveauRound(etat.ordre);
 
     const actif = etat.ordre[etat.indexActuel];
     if (actif && actif.type === "pj") {
@@ -436,6 +440,9 @@ const Combat = (() => {
       const retires = Carte.decompterEtatsMonstre(actif.id);
       retires.forEach((libelle) => App.ajouterHisto(`${libelle} s'est dissipé sur ${actif.nom}`, 0, false, false, ""));
     }
+    // Repousse (famille demon_guerre, cf. js/demons.js) : au début de chacun
+    // de ses tours, jamais à 0 PV.
+    if (actif && actif.type === "monstre" && typeof Demons !== "undefined") Demons.debutTour(actif.id);
     // Compteurs d'usage "Nx/tour" des capacités actives de monstre (cf.
     // js/capacites_monstres.js — ex. Rempart vivant "2x/tour", Pas d'ombre
     // "1x/tour") — même pendant que la réinitialisation "tour" des PJ

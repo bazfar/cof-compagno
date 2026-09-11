@@ -1263,8 +1263,15 @@ const Capacites = (() => {
       const { total, detail } = resoudreExpression(effet.formule, { perso, rang, forcerMax: collierActif });
       App.ajouterHisto(`${libelle} — Soin`, total, false, false, detail);
       let res = null;
+      let notePutrefaction = "";
       if (cible && cible.genre === "perso" && persos[cible.id]) {
         res = appliquerSoinPersoLocal(persos[cible.id], total);
+        // Putréfaction (famille demon_endurance) : un soin magique y met fin
+        // (décision Thomas) — seules les entrées d'origine "putrefaction",
+        // jamais une Maudite venue d'une autre source.
+        const avantP = (persos[cible.id].etatsActifs || []).length;
+        persos[cible.id].etatsActifs = (persos[cible.id].etatsActifs || []).filter((e) => e.origine !== "putrefaction");
+        if (persos[cible.id].etatsActifs.length !== avantP) notePutrefaction = " La Putréfaction cesse.";
       }
       let noteDette = "";
       if (collierActif && persos[perso.id] && !persos[perso.id].detteSoigneurActive) {
@@ -1272,7 +1279,7 @@ const Capacites = (() => {
         noteDette = " ⚠ Dette du Soigneur activée sur le lanceur (prochain gain de PV du porteur réduit à 0).";
       }
       if (res) {
-        return `${total} PV (${detail}) → ${cible.nom} récupère ${res.gain} PV${res.reduit ? " (réduit de moitié — Corruption persistante)" : ""}.${noteDette}`;
+        return `${total} PV (${detail}) → ${cible.nom} récupère ${res.gain} PV${res.reduit ? " (réduit de moitié — Corruption persistante)" : ""}.${notePutrefaction}${noteDette}`;
       }
       return `${total} PV (${detail}) — aucune cible sélectionnée, à appliquer manuellement.${noteDette}`;
     }

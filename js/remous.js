@@ -188,7 +188,22 @@ const Remous = (() => {
     const coeff = coefficientRace(perso.race);
     const contribution = Math.floor(coutPPReel * coeff);
     if (!contribution) return null;
+    return _ajouterContribution(contribution);
+  }
 
+  // Démons de la famille Sorts (cf. js/demons.js) : chaque Éclat ou sort
+  // ajoute leur dangerosité à la jauge du lieu — la moitié de ce qu'agiterait
+  // un lanceur (décision 10b), déjà calculée par l'appelant, sans coefficient
+  // de race. Même franchissement de palier que ajouter().
+  function ajouterDemon(contribution, source) {
+    if (!(contribution > 0)) return null;
+    if (typeof App !== "undefined" && App.ajouterHisto) {
+      App.ajouterHisto("🌫 Remous — démon", contribution, false, false, `${source || "Démon"} : +${contribution} à la jauge du lieu.`);
+    }
+    return _ajouterContribution(contribution);
+  }
+
+  function _ajouterContribution(contribution) {
     const e = obtenirEtat();
     const seuils = _seuilsPour(e.membraneId);
     const avant = e.total;
@@ -217,7 +232,11 @@ const Remous = (() => {
       const info = PALIERS[palierFranchi];
       const gain = `sorts -${Math.abs(info.coutSortsDelta)} PP, +${info.degatsSortsDelta} dégâts${info.ppMaxDelta ? `, PP max +${info.ppMaxDelta}` : ""}`;
       const cout = info.degatsZoneParTour ? ` — ${info.degatsZoneParTour} dégâts/tour à tout le lieu.` : "";
-      _toast(`🌫 Palier ${palierFranchi} — ${info.nom} ! Gain : ${gain}.${cout} ${info.demon}`);
+      // Paliers 2 à 4 (« le démon monte d'un palier ») : même proposition de
+      // montée que la jauge de faim, cf. Demons.proposerMonteeRemous.
+      const montees = (palierFranchi >= 2 && typeof Demons !== "undefined" && Demons.proposerMonteeRemous)
+        ? Demons.proposerMonteeRemous(palierFranchi) : [];
+      _toast(`🌫 Palier ${palierFranchi} — ${info.nom} ! Gain : ${gain}.${cout} ${info.demon}${montees.length ? " " + montees.join(" ") : ""}`);
     }
 
     return palierFranchi;
@@ -292,7 +311,7 @@ const Remous = (() => {
 
   return {
     obtenirEtat, total, membrane, lieu, seuilsCourants, palierCourant,
-    definirMembrane, definirLieu, vider, ajusterManuel, ajouter,
+    definirMembrane, definirLieu, vider, ajusterManuel, ajouter, ajouterDemon,
     coefficientRace, rendreJauge,
   };
 })();

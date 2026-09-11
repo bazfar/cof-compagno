@@ -503,14 +503,23 @@ const Carte = (() => {
     if (typeof Combat !== "undefined" && Combat.renommerCombattant) Combat.renommerCombattant(id, nouveauNom);
   }
 
+  // Couleur et libellé de base d'un jeton monstre — partagés par
+  // ajouterMonstre et changerProfilMonstre (montée de palier d'un démon).
+  function _couleurMonstre(monstre) {
+    const couleurs = { 1: "#27ae60", 2: "#2980b9", 3: "#d35400", 4: "#c0392b", 5: "#7d1a24" };
+    return monstre.boss ? "#8e44ad" : (couleurs[monstre.dangerosite] || "#7f8c8d");
+  }
+  // Paliers démoniaques d1-d5 affichés "D1".."D5" sur le jeton (les autres
+  // tiers gardent leur id tel quel, comportement inchangé).
+  function _labelBaseMonstre(monstre) {
+    const tierAffiche = /^d[1-5]$/.test(monstre.tier || "") ? monstre.tier.toUpperCase() : monstre.tier;
+    return monstre.tier ? monstre.nom + " [" + tierAffiche + "]" : monstre.nom;
+  }
+
   function ajouterMonstre(monstre) {
     if (!monstre) return;
-    const couleurs = { 1: "#27ae60", 2: "#2980b9", 3: "#d35400", 4: "#c0392b", 5: "#7d1a24" };
-    const couleur = monstre.boss ? "#8e44ad" : (couleurs[monstre.dangerosite] || "#7f8c8d");
-    // Paliers démoniaques d1-d5 affichés "D1".."D5" sur le jeton (les autres
-    // tiers gardent leur id tel quel, comportement inchangé).
-    const tierAffiche = /^d[1-5]$/.test(monstre.tier || "") ? monstre.tier.toUpperCase() : monstre.tier;
-    const labelBase = monstre.tier ? monstre.nom + " [" + tierAffiche + "]" : monstre.nom;
+    const couleur = _couleurMonstre(monstre);
+    const labelBase = _labelBaseMonstre(monstre);
     const label = _labelMonstreDistinct(monstre.id, labelBase);
     // Stats de combat (table de combat MJ) : PV/DEF viennent du bestiaire,
     // repris tels quels. armure (réduction de dégâts, comme les PJ) est
@@ -654,6 +663,48 @@ const Carte = (() => {
     if (typeDegats === "magique") return magique;
     if (typeDegats === "grisfer") return physique < 1 ? magique : physique;
     return physique;
+  }
+
+  // Mise à jour de champs arbitraires d'un jeton monstre (jauge de faim,
+  // berserk, montée proposée — cf. js/demons.js) — même bascule
+  // battlemap/carte monde que appliquerDegatsCombat.
+  function majJetonCombat(id, patch) {
+    if (_combatEnBattlemap() && DD2VTT.tokensMonstres().some((t) => t.id === id)) {
+      DD2VTT.majToken(id, patch);
+      return;
+    }
+    const tok = etat.jetons.find((j) => j.id === id);
+    if (!tok) return;
+    Object.assign(tok, patch);
+    sauver(); rendreJetons();
+    _notifierChangementMonstres();
+  }
+
+  // Montée de palier d'un démon (cf. js/demons.js, décisions Thomas) : le
+  // jeton prend le profil complet du nouveau monstre SANS changer d'id —
+  // position, états actifs, berserk et place dans l'ordre d'initiative
+  // conservés (l'initiative n'est pas relancée). PV : nouveaux PV max −
+  // dégâts déjà subis, minimum 1. La jauge de faim repart à 0.
+  function changerProfilMonstre(id, nouveauMonstreId) {
+    const modele = typeof BESTIAIRE_INDEX !== "undefined" ? BESTIAIRE_INDEX[nouveauMonstreId] : null;
+    if (!modele) return null;
+    const tok = listeMonstresCombat().find((t) => t.id === id);
+    if (!tok) return null;
+    const subis = Math.max(0, (tok.pvMax || 0) - (tok.pvActuel ?? tok.pvMax ?? 0));
+    const pvMax = typeof modele.pv === "number" ? modele.pv : 1;
+    const modeleArmure = (modele.armureId && typeof ARMURES_MONSTRES_INDEX !== "undefined") ? ARMURES_MONSTRES_INDEX[modele.armureId] : null;
+    const nom = _labelMonstreDistinct(nouveauMonstreId, _labelBaseMonstre(modele));
+    const patch = {
+      monstreId: nouveauMonstreId, nom, couleur: _couleurMonstre(modele),
+      pvMax, pvActuel: Math.max(1, pvMax - subis),
+      def: typeof modele.def === "number" ? modele.def : null,
+      armure: modeleArmure ? modeleArmure.reduction : 0, armureId: modele.armureId || null,
+      dangerosite: modele.dangerosite || null, boss: !!modele.boss,
+      init: typeof modele.init === "number" ? modele.init : 0,
+      faim: 0, monteeProposee: false,
+    };
+    majJetonCombat(id, patch);
+    return { nom, pvMax, pvActuel: patch.pvActuel };
   }
 
   function definirPvCombat(id, val) {
@@ -3659,6 +3710,17 @@ const Carte = (() => {
       _onChangeMonstres && _onChangeMonstres();
     }
 
+    // Mise à jour de champs arbitraires (cf. Carte.majJetonCombat) — même
+    // schéma que changerCouleurToken : sauvegarde, rendu, notification.
+    function majToken(id, patch) {
+      const tok = tokensDD.find(t => t.id === id);
+      if (!tok) return;
+      Object.assign(tok, patch);
+      _sauverToken(tok);
+      rendreTokensDD(scenes[sceneActive]);
+      _onChangeMonstres && _onChangeMonstres();
+    }
+
     function definirPvToken(id, val) {
       const tok = tokensDD.find(t => t.id === id);
       if (!tok) return;
@@ -4266,7 +4328,7 @@ const Carte = (() => {
       modeWorldmap: activerModeWorldmap, modeBattlemap: activerModeBattlemap, estActive, ajouterTokenData,
       demarrerPoseGroupe,
       tokensMonstres, tokensPJ, distanceCases, jetonsSurLigne, jetonsEnZone, appliquerDegats: appliquerDegatsToken, definirPv: definirPvToken, ajusterPv: ajusterPvToken,
-      renommerToken, changerCouleurToken,
+      renommerToken, changerCouleurToken, majToken,
       ajouterEtat: ajouterEtatToken, retirerEtat: retirerEtatToken, decompterEtats: decompterEtatsToken,
       supprimerToken: supprimerTokenDD, onChange, actualiserTokens, reinitialiserExploration, revelerToutExploration,
       onMonstreDevientVisible, reinitialiserDetectionVisibilite, estMonstreVisible,
@@ -4353,7 +4415,7 @@ const Carte = (() => {
   return {
     onOpen, onClose, definirRole, definirMonPerso, ajouterMonstre,
     listeMonstresCombat, listeTokensJoueursCombat, appliquerDegatsCombat, definirPvCombat, ajusterPvCombat,
-    multiplicateurResistance,
+    multiplicateurResistance, majJetonCombat, changerProfilMonstre,
     ajouterEtatCombat, retirerEtatCombat, decompterEtatsMonstre, distanceCasesEntre,
     jetonsSurLigneCombat, jetonsEnZoneCombat,
     supprimerMonstreCombat, onMonstresChange, definirModeCarte,
