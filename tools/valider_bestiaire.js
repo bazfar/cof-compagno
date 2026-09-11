@@ -262,7 +262,20 @@ const CHAMPS_MONSTRE_OPTIONNELS = ["famille", "tier", "voies", "faction", "roleN
   "faim", "paliersSuivants", "resistances", "repousse", "berserk",
   // Soins liés aux dégâts (cf. js/demons.js) : Vol de sève (fraction des PV
   // infligés) et Puits (PV par PP drainé).
-  "soinSurDegats", "soinParPPDraine"];
+  "soinSurDegats", "soinParPPDraine",
+  // Passifs démoniaques automatisés (cf. js/demons.js, prompt 4b).
+  "passifs"];
+// Clés de `passifs` et contrôle de leur valeur.
+const PASSIFS_VALIDES = {
+  bouclierDeChair: (v) => v === true,
+  liensRompus: (v) => typeof v === "string" && /^\d+d\d+([+-]\d+)?$/.test(v),
+  suite: (v) => typeof v === "number" && v >= 1.5,
+  reflet: (v) => Number.isInteger(v) && v >= 1,
+  contagion: (v) => v === true,
+  airVicie: (v) => !!v && typeof v.rayon === "number" && v.rayon >= 1.5 && typeof v.formule === "string" && /^\d+d\d+([+-]\d+)?$/.test(v.formule),
+  soinsReduitsSurMaudite: (v) => typeof v === "number" && v > 0 && v < 1,
+  dernierSouffle: (v) => Number.isInteger(v) && v >= 1,
+};
 const CHAMPS_MONSTRE_AUTORISES = new Set([...CHAMPS_MONSTRE_OBLIGATOIRES, ...CHAMPS_MONSTRE_OPTIONNELS]);
 const TAILLES_VALIDES = ["petite", "moyenne", "grande", "très grande"];
 
@@ -647,6 +660,24 @@ monstres.forEach((m, index) => {
   if (m.soinParPPDraine !== undefined && !(m.attaques || []).some((a) => a.drainPP)) {
     signalerMonstre(cle, `soinParPPDraine sans aucune attaque à drainPP — jamais déclenché.`);
   }
+  if (m.passifs !== undefined) {
+    if (!m.passifs || typeof m.passifs !== "object") {
+      signalerMonstre(cle, `passifs devrait être un objet.`);
+    } else {
+      Object.entries(m.passifs).forEach(([k, v]) => {
+        if (!PASSIFS_VALIDES[k]) signalerMonstre(cle, `passifs : clé inconnue ${JSON.stringify(k)} (attendu : ${Object.keys(PASSIFS_VALIDES).join(" | ")}).`);
+        else if (!PASSIFS_VALIDES[k](v)) signalerMonstre(cle, `passifs.${k} : valeur invalide ${JSON.stringify(v)}.`);
+      });
+      if (m.passifs.dernierSouffle !== undefined && !m.berserk) signalerMonstre(cle, `passifs.dernierSouffle sans berserk — jamais déclenché.`);
+    }
+  }
+  (m.capacitesActives || []).forEach((ca, ci) => {
+    ((ca.mecanique && ca.mecanique.effets) || []).forEach((e, ei) => {
+      if (e.type !== "etat") return;
+      if (e.formuleDot !== undefined && !(typeof e.formuleDot === "string" && e.formuleDot)) signalerMonstre(cle, `capacitesActives[${ci}].effets[${ei}].formuleDot devrait être une formule non vide.`);
+      if (e.origine !== undefined && !(typeof e.origine === "string" && e.origine)) signalerMonstre(cle, `capacitesActives[${ci}].effets[${ei}].origine devrait être une chaîne non vide.`);
+    });
+  });
 });
 
 // 18. Familles démoniaques — chaînes de paliers, après la boucle : toutes les

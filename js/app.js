@@ -996,7 +996,10 @@ const App = (() => {
   // opts (optionnel) : { persoId, caracCode } transmis tel quel à lancerTest
   // (cf. sa doc) pour le Contrat Démoniaque/l'Anneau de Chance.
   function _resoudreAttaqueRapide(label, bonus, critMin, cibleId, opts) {
-    const jet = lancerTest(label, bonus, critMin, null, opts);
+    // Bouclier de chair (famille demon_tentation, cf. Demons.modeAttaqueContre) :
+    // désavantage contre la cible tant qu'une créature charmée lui est adjacente.
+    const modeDemon = (cibleId && typeof Demons !== "undefined") ? Demons.modeAttaqueContre(cibleId) : null;
+    const jet = lancerTest(label, bonus, critMin, modeDemon, opts);
     let defCible = null;
     if (cibleId && typeof Carte !== "undefined") {
       const monstre = (Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : []).find((t) => t.id === cibleId);
@@ -1080,6 +1083,16 @@ const App = (() => {
     if (!cibleId || typeof total !== "number" || typeof Carte === "undefined") return null;
     const monstre = (Carte.listeMonstresCombat ? Carte.listeMonstresCombat() : []).find((t) => t.id === cibleId);
     if (monstre) {
+      // Suite (famille demon_tentation, cf. Demons.intercepteurSuite) : un PJ
+      // qu'elle a charmé, à portée, prend les dégâts à sa place — automatique,
+      // sans confirmation (c'est le charme qui décide, pas le PJ).
+      const intercepteurSuite = typeof Demons !== "undefined" ? Demons.intercepteurSuite(cibleId, persoId) : null;
+      if (intercepteurSuite) {
+        const nomI = (chargerPersos()[intercepteurSuite] || {}).nom || "Un charmé";
+        subirDegats(intercepteurSuite, total, typeDegats === "magique" ? "magique" : "physique", null, null, ignoreReduction);
+        if (!silencieux) toast(`🎐 ${nomI} s'interpose et prend les coups destinés à ${monstre.nom}.`);
+        return null;
+      }
       const cibleEffective = _redirectionIntercepteMonstre(cibleId);
       // "ennemi tué" (cf. "drainante_os", armure_ossements, lot "armes/
       // accessoires D") : PV AVANT capturés sur la cible EFFECTIVE (après
@@ -1104,6 +1117,12 @@ const App = (() => {
     const pjTok = (Carte.listeTokensJoueursCombat ? Carte.listeTokensJoueursCombat() : []).find((t) => t.id === cibleId);
     if (pjTok && pjTok.ref && pjTok.ref.startsWith("pj-")) {
       subirDegats(pjTok.ref.slice(3), total, null, null, null, ignoreReduction);
+      // Liens rompus (famille demon_tentation) : l'attaquant, charmé par un
+      // Brise-Liens, vient de frapper un allié — le démon se soigne.
+      if (persoId && typeof Demons !== "undefined") {
+        const msgsLiens = Demons.surCoupEntreAllies(persoId);
+        if (msgsLiens.length && !silencieux) toast(msgsLiens.join(" — "));
+      }
     }
     return null;
   }
@@ -1171,7 +1190,10 @@ const App = (() => {
     if ((jeton.etatsActifs || []).some((e) => e.idEtat === "sursaut")) return;
     const def = BESTIAIRE_INDEX[jeton.monstreId];
     if (!def || !Array.isArray(def.capacitesSpeciales)) return;
-    const capa = def.capacitesSpeciales.find((c) => c.mecanique && c.mecanique.declencheur && c.mecanique.declencheur.evenement === "tombeA0");
+    // Dernier souffle (La Sève-rouge, cf. Demons.dernierSouffle) : même
+    // Sursaut, mais seulement si son berserk compte assez de touches.
+    const souffle = typeof Demons !== "undefined" ? Demons.dernierSouffle(jeton) : null;
+    const capa = souffle || def.capacitesSpeciales.find((c) => c.mecanique && c.mecanique.declencheur && c.mecanique.declencheur.evenement === "tombeA0");
     if (!capa) return;
     Carte.ajouterEtatCombat(monstreTombeId, {
       idEtat: "sursaut",
@@ -1602,7 +1624,8 @@ const App = (() => {
   // l'état et sa formuleDot sur le PJ touché. Non cumulable : une nouvelle
   // touche RAFRAÎCHIT l'entrée précédente de même origine. origine
   // "putrefaction" : lue par js/capacites.js (un soin magique y met fin).
-  function _poserEtatSurTouche(pjId, attaque) {
+  // sourceId : jeton du démon qui frappe (cf. Contagion).
+  function _poserEtatSurTouche(pjId, attaque, sourceId) {
     const spec = attaque && attaque.etatSurTouche;
     if (!spec || !ETATS[spec.id]) return [];
     const persos = chargerPersos();
@@ -1616,7 +1639,7 @@ const App = (() => {
       idEtat: spec.id,
       dureeRestante: Object.assign(_resoudreDureeToursMonstre(String(spec.duree), null), { dureeAffichee: `${spec.duree} tours` }),
       formuleDot: spec.formuleDot || null,
-      source: attaque.nom, origine: "putrefaction", poseLe: Date.now(),
+      source: attaque.nom, origine: "putrefaction", sourceId: sourceId || null, poseLe: Date.now(),
     };
     const res = _appliquerEtatSurCibleRaw(`pj:${pjId}`, spec.id, entree);
     if (!res.applique) return res.message ? [res.message] : [];
@@ -8598,6 +8621,10 @@ const App = (() => {
     const etaitMourant = (pvAvant || 0) <= 0;
     const estMourant = (p.pvActuel || 0) <= 0;
     if (etaitMourant === estMourant) return false;
+    // Contagion (Le Semeur de peste, cf. Demons.contagion) : DIFFÉRÉE — tous
+    // les appelants sauvegardent `persos` APRÈS cette fonction ; transmettre
+    // l'état maintenant à un autre PJ serait écrasé par cette sauvegarde.
+    if (estMourant && p.id && typeof Demons !== "undefined") setTimeout(() => Demons.contagion(p.id), 0);
     p.mortSucces = 0;
     p.mortEchecs = 0;
     p.etatMort = false;
@@ -12285,7 +12312,15 @@ const App = (() => {
           const suffixe = action.surReussite === "demi" ? " — moitié si sauvegarde réussie" : "";
           lancerFormule(action.formule, `${libelle} (${action.action === "degats" ? "dégâts" : "soin"})${suffixe}`, false, { estMonstre: true });
         } else if (action.action === "etat") {
-          const entree = { idEtat: action.idEtat, dureeRestante: _resoudreDureeToursMonstre(action.duree || "", null), source: cap.nom, poseLe: Date.now() };
+          // formuleDot/origine : cf. CapacitesMonstres.preparer. sourceId : le
+          // jeton qui a posé l'état — lu par les passifs démoniaques (Suite,
+          // Liens rompus, Contagion), inoffensif pour les autres monstres.
+          const entree = {
+            idEtat: action.idEtat, dureeRestante: _resoudreDureeToursMonstre(action.duree || "", null), source: cap.nom, poseLe: Date.now(),
+            ...(action.formuleDot ? { formuleDot: action.formuleDot } : {}),
+            ...(action.origine ? { origine: action.origine } : {}),
+            sourceId: m.id,
+          };
           if (cibleSoi) {
             const imm = CapacitesMonstres.immunite(m, action.idEtat);
             if (imm.bloquee) { messagesToast.push(`${m.nom} est immunisé à « ${ETATS[action.idEtat].nom} ».`); return; }
@@ -12299,6 +12334,8 @@ const App = (() => {
               const jsf = estDemonLanceur && mecanique && mecanique.jetSauvegardeFixe;
               if (jsf && sauvegardeRateeDemon === null) {
                 sauvegardeRateeDemon = window.confirm(`${p.nom} a-t-il raté son jet de ${jsf.carac} DD ${jsf.dd} contre « ${cap.nom} » ?`);
+                // Reflet (Mille-Visages) : une fois par jet raté confirmé.
+                if (sauvegardeRateeDemon) messagesToast.push(...Demons.surSauvegardeRatee(m));
               }
               if (perso.aImmuniteEtat(action.idEtat)) {
                 messagesToast.push(`${p.nom} est immunisé·e à « ${ETATS[action.idEtat].nom} » (Liberté d'action).`);
@@ -12600,7 +12637,7 @@ const App = (() => {
             const pjApres = chargerPersos()[pjId] || {};
             const pvPerdus = (typeof pvAvantDemon === "number" && typeof pjApres.pvActuel === "number") ? Math.max(0, pvAvantDemon - pjApres.pvActuel) : 0;
             const msgs = Demons.surTouche(m, a, pjId, pvPerdus);
-            if (a && a.etatSurTouche) msgs.push(..._poserEtatSurTouche(pjId, a));
+            if (a && a.etatSurTouche) msgs.push(..._poserEtatSurTouche(pjId, a, m.id));
             if (msgs.length) toast([`${m.nom} inflige ${pvPerdus} PV à ${pjApres.nom || "la cible"}.`, ...msgs].join(" — "));
             rendreTableCombat();
             rendreTableCombat("battlemap-zone-table-combat");

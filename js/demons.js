@@ -229,6 +229,182 @@ const Demons = (() => {
     _histo(`🌿 ${tok.nom} — Repousse`, gain, `Début de tour : +${gain} PV.`);
   }
 
+  // ── Passifs (prompt 4b) — champ `passifs` des fiches ──────
+  // Chaque passif est une clé du champ `passifs` (cf. tools/valider_bestiaire.js
+  // §17) : aucune détection par nom de capacité, le texte des capacitesSpeciales
+  // reste la description destinée au MJ.
+  function _passifs(tok) {
+    const m = modele(tok);
+    return (m && m.passifs) || {};
+  }
+  function _lancer(formule, libelle) {
+    const mt = /^(\d+)d(\d+)([+-]\d+)?$/.exec(String(formule || "").replace(/\s/g, ""));
+    if (!mt) return 0;
+    const des = [];
+    let total = Number(mt[3] || 0);
+    for (let i = 0; i < Number(mt[1]); i++) {
+      const d = (typeof App !== "undefined" && App.lancerDe) ? App.lancerDe(Number(mt[2])) : 1 + Math.floor(Math.random() * Number(mt[2]));
+      des.push(d);
+      total += d;
+    }
+    total = Math.max(0, total);
+    _histo(libelle, total, `${formule} [${des.join(", ")}]`);
+    return total;
+  }
+  function _jetonsPJ() {
+    return (typeof Carte !== "undefined" && Carte.listeTokensJoueursCombat) ? (Carte.listeTokensJoueursCombat() || []).filter((t) => t.ref && t.ref.startsWith("pj-")) : [];
+  }
+  function _jetonPJ(persoId) { return _jetonsPJ().find((t) => t.ref === `pj-${persoId}`) || null; }
+  function _distance(a, b) {
+    if (typeof Carte === "undefined" || !Carte.distanceCasesEntre) return null;
+    const d = Carte.distanceCasesEntre(a, b);
+    return typeof d === "number" ? d : null;
+  }
+  // Mètres → cases (1 case = 1,5 m, même conversion que le reste de l'app).
+  function _cases(metres) { return Math.floor(metres / 1.5); }
+  function _persos() { return (typeof App !== "undefined" && App.chargerPersos) ? App.chargerPersos() : {}; }
+  function _charmePar(p, sourceId) {
+    return (p.etatsActifs || []).some((e) => e.idEtat === "charmee" && (!sourceId || e.sourceId === sourceId));
+  }
+
+  // Bouclier de chair (La Désirée) : désavantage aux attaques contre elle tant
+  // qu'une créature charmée lui est adjacente. Renvoie le modeForce de lancerTest.
+  function modeAttaqueContre(cibleTokId) {
+    const tok = _jeton(cibleTokId);
+    if (!tok || !_passifs(tok).bouclierDeChair) return null;
+    const persos = _persos();
+    const adjacent = _jetonsPJ().some((t) => {
+      const p = persos[t.ref.slice(3)];
+      if (!p || !_charmePar(p)) return false;
+      const d = _distance(cibleTokId, t.id);
+      return d !== null && d <= 1;
+    });
+    return adjacent ? "desavantage" : null;
+  }
+
+  // Suite (Celle-qu'on-suit) : un PJ qu'elle a charmé, à portée, s'interpose
+  // et prend les dégâts à sa place. Renvoie l'id du PJ, ou null. L'attaquant
+  // ne s'intercepte jamais lui-même.
+  function intercepteurSuite(cibleTokId, attaquantPersoId) {
+    const tok = _jeton(cibleTokId);
+    const portee = _passifs(tok).suite;
+    if (!tok || !portee) return null;
+    const persos = _persos();
+    const candidats = _jetonsPJ().map((t) => {
+      const id = t.ref.slice(3);
+      const p = persos[id];
+      if (!p || id === attaquantPersoId || (p.pvActuel || 0) <= 0 || !_charmePar(p, cibleTokId)) return null;
+      const d = _distance(cibleTokId, t.id);
+      return (d !== null && d <= _cases(portee)) ? { id, d } : null;
+    }).filter(Boolean).sort((a, b) => a.d - b.d);
+    return candidats.length ? candidats[0].id : null;
+  }
+
+  // Liens rompus (Le Brise-Liens) : un PJ qu'il a charmé frappe un allié → il
+  // se soigne. Appelé quand un PJ inflige des dégâts à un autre PJ.
+  function surCoupEntreAllies(attaquantPersoId) {
+    const p = _persos()[attaquantPersoId];
+    if (!p) return [];
+    const msgs = [];
+    new Set((p.etatsActifs || []).filter((e) => e.idEtat === "charmee" && e.sourceId).map((e) => e.sourceId)).forEach((id) => {
+      const tok = _jeton(id);
+      const formule = _passifs(tok).liensRompus;
+      if (!tok || !formule || _pv(tok) <= 0) return;
+      const soin = _lancer(formule, `⛓️ ${tok.nom} — Liens rompus`);
+      _soignerJeton(id, soin);
+      if (soin > 0) msgs.push(`⛓️ ${tok.nom} regagne ${soin} PV (liens rompus).`);
+    });
+    return msgs;
+  }
+
+  // Reflet (Mille-Visages) : une cible rate son jet de sauvegarde contre lui.
+  function surSauvegardeRatee(tok) {
+    const n = _passifs(tok).reflet;
+    if (!tok || !n || _pv(tok) <= 0) return [];
+    _soignerJeton(tok.id, n);
+    _histo(`🪞 ${tok.nom} — Reflet`, n, `Une cible rate son jet contre lui : +${n} PV.`);
+    return [`🪞 ${tok.nom} regagne ${n} PV (reflet).`];
+  }
+
+  // Contagion (Le Semeur de peste) : un PJ Maudit par lui tombe à 0 PV → la
+  // maladie passe à la créature adjacente la plus proche (un PJ debout d'abord,
+  // sinon un monstre debout). Idempotent : sans entrée à transmettre, rien.
+  function contagion(persoId) {
+    const persos = _persos();
+    const p = persos[persoId];
+    if (!p || (p.pvActuel || 0) > 0) return [];
+    const entrees = (p.etatsActifs || []).filter((e) => e.idEtat === "maudite" && e.sourceId && _passifs(_jeton(e.sourceId)).contagion);
+    const monTok = _jetonPJ(persoId);
+    if (!entrees.length || !monTok) return [];
+    const immunise = (q) => typeof Personnage !== "undefined" && Personnage.depuisJSON(q).aImmuniteEtat("maudite");
+    let cands = _jetonsPJ().map((t) => {
+      const id = t.ref.slice(3);
+      const q = persos[id];
+      if (id === persoId || !q || (q.pvActuel || 0) <= 0 || immunise(q)) return null;
+      const d = _distance(monTok.id, t.id);
+      return (d !== null && d <= 1) ? { type: "pj", id, nom: q.nom, d } : null;
+    }).filter(Boolean);
+    if (!cands.length) {
+      cands = (Carte.listeMonstresCombat() || []).map((t) => {
+        if (_pv(t) <= 0 || entrees.some((e) => e.sourceId === t.id)) return null;
+        const d = _distance(monTok.id, t.id);
+        return (d !== null && d <= 1) ? { type: "monstre", id: t.id, nom: t.nom, d } : null;
+      }).filter(Boolean);
+    }
+    if (!cands.length) return [];
+    const c = cands.sort((a, b) => a.d - b.d)[0];
+    p.etatsActifs = p.etatsActifs.filter((e) => !entrees.includes(e));
+    if (c.type === "pj") {
+      persos[c.id].etatsActifs = (persos[c.id].etatsActifs || []).concat(entrees);
+      App.sauverPersos(persos);
+    } else {
+      App.sauverPersos(persos);
+      entrees.forEach((e) => Carte.ajouterEtatCombat(c.id, Object.assign({}, e)));
+    }
+    _histo("🪰 Contagion", 0, `La maladie quitte ${p.nom} et passe à ${c.nom}.`);
+    return [`🪰 Contagion : la maladie de ${p.nom} passe à ${c.nom}.`];
+  }
+
+  // Air vicié (Le Charnier-qui-marche) : toute créature qui commence son tour
+  // à portée subit les dégâts — sans armure ni résistance (c'est l'air).
+  function debutTourCreature(entree) {
+    if (!entree || typeof Carte === "undefined" || !Carte.listeMonstresCombat) return;
+    const monTok = entree.type === "pj" ? _jetonPJ(entree.id) : _jeton(entree.id);
+    if (!monTok) return;
+    (Carte.listeMonstresCombat() || []).forEach((src) => {
+      const av = _passifs(src).airVicie;
+      if (!av || src.id === monTok.id || _pv(src) <= 0) return;
+      const d = _distance(src.id, monTok.id);
+      if (d === null || d > _cases(av.rayon)) return;
+      const n = _lancer(av.formule, `☠ ${src.nom} — Air vicié sur ${entree.nom}`);
+      if (!n) return;
+      if (entree.type === "pj") { if (App.ajusterPv) App.ajusterPv(entree.id, -n); }
+      else Carte.ajusterPvCombat(monTok.id, -n);
+    });
+  }
+
+  // Ce qui ne guérit pas (La Lente) : facteur appliqué aux soins d'une créature
+  // Maudite tant qu'une Lente est debout dans le combat (1 = aucun effet).
+  function facteurSoin(p) {
+    if (!p || !(p.etatsActifs || []).some((e) => e.idEtat === "maudite")) return 1;
+    let f = 1;
+    ((typeof Carte !== "undefined" && Carte.listeMonstresCombat) ? Carte.listeMonstresCombat() : []).forEach((t) => {
+      const r = _passifs(t).soinsReduitsSurMaudite;
+      if (r && _pv(t) > 0) f = Math.min(f, r);
+    });
+    return f;
+  }
+
+  // Dernier souffle (La Sève-rouge) : à 0 PV, Sursaut si son berserk compte
+  // au moins N touches. Renvoie une pseudo-capacité pour _declencherTombeA0.
+  function dernierSouffle(tok) {
+    const m = modele(tok);
+    const n = _passifs(tok).dernierSouffle;
+    if (!m || !n || !m.berserk) return null;
+    const touches = Math.floor((Number(tok.berserk) || 0) / m.berserk.parTouche);
+    return touches >= n ? { nom: "Dernier souffle" } : null;
+  }
+
   // ── Rendu (table de combat MJ) ────────────────────────────
   const LIBELLES_FAIM = {
     degats_infliges: "PV infligés",
@@ -263,6 +439,8 @@ const Demons = (() => {
     ETATS_CONTROLE, modele, estDemon, faim, pret, nourrir, ajusterFaim, proposerMonteeRemous, monter,
     bonusBerserk, surRate, surTouche, drainer, surEtatControle, surLancerAttaque, surLancerCapacite,
     nouveauRound, debutTour, htmlJeton,
+    modeAttaqueContre, intercepteurSuite, surCoupEntreAllies, surSauvegardeRatee, contagion,
+    debutTourCreature, facteurSoin, dernierSouffle,
   };
 })();
 

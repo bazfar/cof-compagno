@@ -406,6 +406,9 @@ const Combat = (() => {
           Carte.decompterMursTemporaires(actif.id);
         }
         App.sauverPersos(persos);
+        // Contagion (Le Semeur de peste) : les dégâts de début de tour ne
+        // passent pas par _majEtatMourant (cf. Capacites.decompterEtatsDebutTour).
+        if ((p.pvActuel || 0) <= 0 && typeof Demons !== "undefined") Demons.contagion(actif.id);
         if (regenAppliquee > 0) App.ajouterHisto(
           `Tissée de sève — Régénération`, regenAppliquee, false, false,
           `${actif.nom} regagne ${regenAppliquee} PV.`
@@ -443,6 +446,9 @@ const Combat = (() => {
     // Repousse (famille demon_guerre, cf. js/demons.js) : au début de chacun
     // de ses tours, jamais à 0 PV.
     if (actif && actif.type === "monstre" && typeof Demons !== "undefined") Demons.debutTour(actif.id);
+    // Air vicié (Le Charnier-qui-marche) : toute créature, PJ ou monstre, qui
+    // commence son tour à portée.
+    if (actif && typeof Demons !== "undefined") Demons.debutTourCreature(actif);
     // Compteurs d'usage "Nx/tour" des capacités actives de monstre (cf.
     // js/capacites_monstres.js — ex. Rempart vivant "2x/tour", Pas d'ombre
     // "1x/tour") — même pendant que la réinitialisation "tour" des PJ

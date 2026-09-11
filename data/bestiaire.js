@@ -6967,6 +6967,9 @@ const BESTIAIRE = [
     "berserk": {
       "parTouche": 2
     },
+    "passifs": {
+      "dernierSouffle": 3
+    },
     "attaques": [
       {
         "nom": "Rage de sève",
@@ -7375,6 +7378,9 @@ const BESTIAIRE = [
     "resistances": {
       "physique": 0.5
     },
+    "passifs": {
+      "bouclierDeChair": true
+    },
     "attaques": [
       {
         "nom": "Baiser",
@@ -7490,6 +7496,9 @@ const BESTIAIRE = [
     "taille": "moyenne",
     "resistances": {
       "physique": 0.5
+    },
+    "passifs": {
+      "liensRompus": "1d6"
     },
     "attaques": [
       {
@@ -7611,6 +7620,9 @@ const BESTIAIRE = [
     "resistances": {
       "physique": 0.5
     },
+    "passifs": {
+      "suite": 3
+    },
     "attaques": [
       {
         "nom": "Baiser",
@@ -7726,6 +7738,9 @@ const BESTIAIRE = [
     "taille": "grande",
     "resistances": {
       "physique": 0.5
+    },
+    "passifs": {
+      "reflet": 5
     },
     "attaques": [
       {
@@ -8116,8 +8131,15 @@ const BESTIAIRE = [
               "duree": "2"
             },
             {
+              "type": "etat",
+              "id": "maudite",
+              "duree": "2",
+              "formuleDot": "2d6",
+              "origine": "putrefaction"
+            },
+            {
               "type": "special",
-              "note": "Taille moyenne ou moins. Avalée, la cible subit sa Putréfaction à chaque tour tant qu'elle est Immobilisée."
+              "note": "Taille moyenne ou moins. Avalée, la cible subit sa Putréfaction (2d6 par tour) tant qu'elle est Immobilisée."
             }
           ]
         }
@@ -8180,6 +8202,9 @@ const BESTIAIRE = [
     "resistances": {
       "physique": 0.5
     },
+    "passifs": {
+      "contagion": true
+    },
     "attaques": [
       {
         "nom": "Toucher putride",
@@ -8214,11 +8239,8 @@ const BESTIAIRE = [
             {
               "type": "etat",
               "id": "maudite",
-              "duree": "3"
-            },
-            {
-              "type": "special",
-              "note": "Maudite à 2d6 dégâts par tour."
+              "duree": "3",
+              "formuleDot": "2d6"
             }
           ]
         }
@@ -8285,6 +8307,12 @@ const BESTIAIRE = [
     "armureId": "chair_du_charnier",
     "resistances": {
       "physique": 0.5
+    },
+    "passifs": {
+      "airVicie": {
+        "rayon": 3,
+        "formule": "1d6"
+      }
     },
     "attaques": [
       {
@@ -8360,6 +8388,9 @@ const BESTIAIRE = [
     "taille": "très grande",
     "resistances": {
       "physique": 0.5
+    },
+    "passifs": {
+      "soinsReduitsSurMaudite": 0.5
     },
     "attaques": [
       {

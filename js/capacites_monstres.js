@@ -94,7 +94,9 @@ const CapacitesMonstres = (() => {
     (mecanique.effets || []).forEach((e) => {
       if (e.type === "degats") plan.push({ action: "degats", formule: e.formule, elementaire: e.elementaire || null, surReussite: e.surReussite || null });
       else if (e.type === "soin") plan.push({ action: "soin", formule: e.formule });
-      else if (e.type === "etat") plan.push({ action: "etat", idEtat: e.id, duree: e.duree || null });
+      // formuleDot/origine (optionnels, cf. Miasme et Engloutir) : dégâts par
+      // tour et provenance de l'état, recopiés tels quels sur l'entrée posée.
+      else if (e.type === "etat") plan.push({ action: "etat", idEtat: e.id, duree: e.duree || null, formuleDot: e.formuleDot || null, origine: e.origine || null });
       else if (e.type === "bonus") plan.push({ action: "bonus", cible: e.cible, valeur: e.valeur, duree: e.duree || null });
       else if (e.type === "retraitEtat") plan.push({ action: "retraitEtat" });
       else if (e.type === "special") plan.push({ action: "note", texte: e.note });

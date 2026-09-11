@@ -6970,6 +6970,9 @@
       "berserk": {
         "parTouche": 2
       },
+      "passifs": {
+        "dernierSouffle": 3
+      },
       "attaques": [
         {
           "nom": "Rage de sève",
@@ -7378,6 +7381,9 @@
       "resistances": {
         "physique": 0.5
       },
+      "passifs": {
+        "bouclierDeChair": true
+      },
       "attaques": [
         {
           "nom": "Baiser",
@@ -7493,6 +7499,9 @@
       "taille": "moyenne",
       "resistances": {
         "physique": 0.5
+      },
+      "passifs": {
+        "liensRompus": "1d6"
       },
       "attaques": [
         {
@@ -7614,6 +7623,9 @@
       "resistances": {
         "physique": 0.5
       },
+      "passifs": {
+        "suite": 3
+      },
       "attaques": [
         {
           "nom": "Baiser",
@@ -7729,6 +7741,9 @@
       "taille": "grande",
       "resistances": {
         "physique": 0.5
+      },
+      "passifs": {
+        "reflet": 5
       },
       "attaques": [
         {
@@ -8119,8 +8134,15 @@
                 "duree": "2"
               },
               {
+                "type": "etat",
+                "id": "maudite",
+                "duree": "2",
+                "formuleDot": "2d6",
+                "origine": "putrefaction"
+              },
+              {
                 "type": "special",
-                "note": "Taille moyenne ou moins. Avalée, la cible subit sa Putréfaction à chaque tour tant qu'elle est Immobilisée."
+                "note": "Taille moyenne ou moins. Avalée, la cible subit sa Putréfaction (2d6 par tour) tant qu'elle est Immobilisée."
               }
             ]
           }
@@ -8183,6 +8205,9 @@
       "resistances": {
         "physique": 0.5
       },
+      "passifs": {
+        "contagion": true
+      },
       "attaques": [
         {
           "nom": "Toucher putride",
@@ -8217,11 +8242,8 @@
               {
                 "type": "etat",
                 "id": "maudite",
-                "duree": "3"
-              },
-              {
-                "type": "special",
-                "note": "Maudite à 2d6 dégâts par tour."
+                "duree": "3",
+                "formuleDot": "2d6"
               }
             ]
           }
@@ -8288,6 +8310,12 @@
       "armureId": "chair_du_charnier",
       "resistances": {
         "physique": 0.5
+      },
+      "passifs": {
+        "airVicie": {
+          "rayon": 3,
+          "formule": "1d6"
+        }
       },
       "attaques": [
         {
@@ -8363,6 +8391,9 @@
       "taille": "très grande",
       "resistances": {
         "physique": 0.5
+      },
+      "passifs": {
+        "soinsReduitsSurMaudite": 0.5
       },
       "attaques": [
         {

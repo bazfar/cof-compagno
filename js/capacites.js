@@ -1265,13 +1265,19 @@ const Capacites = (() => {
       let res = null;
       let notePutrefaction = "";
       if (cible && cible.genre === "perso" && persos[cible.id]) {
-        res = appliquerSoinPersoLocal(persos[cible.id], total);
+        // Ce qui ne guérit pas (La Lente, cf. Demons.facteurSoin) : soin réduit
+        // sur une créature Maudite — calculé AVANT que la Putréfaction ne cesse
+        // ci-dessous : le soin qui la guérit est lui-même réduit.
+        const facteurLente = typeof Demons !== "undefined" && Demons.facteurSoin ? Demons.facteurSoin(persos[cible.id]) : 1;
+        const totalSoin = facteurLente < 1 ? Math.floor(total * facteurLente) : total;
+        if (facteurLente < 1) notePutrefaction = ` Soin réduit à ${totalSoin} (Ce qui ne guérit pas).`;
+        res = appliquerSoinPersoLocal(persos[cible.id], totalSoin);
         // Putréfaction (famille demon_endurance) : un soin magique y met fin
         // (décision Thomas) — seules les entrées d'origine "putrefaction",
         // jamais une Maudite venue d'une autre source.
         const avantP = (persos[cible.id].etatsActifs || []).length;
         persos[cible.id].etatsActifs = (persos[cible.id].etatsActifs || []).filter((e) => e.origine !== "putrefaction");
-        if (persos[cible.id].etatsActifs.length !== avantP) notePutrefaction = " La Putréfaction cesse.";
+        if (persos[cible.id].etatsActifs.length !== avantP) notePutrefaction += " La Putréfaction cesse.";
       }
       let noteDette = "";
       if (collierActif && persos[perso.id] && !persos[perso.id].detteSoigneurActive) {
