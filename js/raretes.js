@@ -1166,6 +1166,33 @@ const Raretes = (() => {
     if (meca.bonusAttaqueConditionnel) clone.bonusAttaqueConditionnel = meca.bonusAttaqueConditionnel;
   }
 
+  // Potions de soin — la rareté d'un consommable ne changeait RIEN : le
+  // switch d'appliquer() tombait dans `default: break`, et une potion
+  // « légendaire » n'était qu'une potion dorée. Barème dédié (décision de
+  // Thomas), volontairement distinct de `bonus` (0/1/2/3) : sur un dé unique,
+  // la progression linéaire ne récompense pas assez le dernier palier.
+  const BONUS_SOIN_PAR_RARETE = { commun: 0, peu_commun: 1, rare: 2, legendaire: 4 };
+
+  // Le soin d'une potion vit dans son TEXTE de description (« Régénère 1d4
+  // PV »), pas dans un champ : c'est ce texte que lisent formuleSoinItem et
+  // extraireDeCapacite (js/app.js) pour savoir quoi lancer. On réécrit donc
+  // la formule dans la description — sinon la fiche annoncerait 1d4 en
+  // soignant 1d4+2. Mêmes conditions que formuleSoinItem, pour que les deux
+  // ne puissent pas diverger : un consommable qui parle de PV ET porte une
+  // notation de dé. Un antidote, une corde ou une potion ratée (pas de « PV »
+  // dans son texte) ne sont pas concernés.
+  function _appliquerBonusSoinPotion(clone, item, rareteId) {
+    const bonus = BONUS_SOIN_PAR_RARETE[rareteId] || 0;
+    if (!bonus || !item.description || !/PV/i.test(item.description)) return;
+    const m = /(\d*)d(\d+)([+-]\d+)?/i.exec(item.description);
+    if (!m) return;
+    const modificateur = parseInt(m[3] || "0", 10) + bonus;
+    const formule = `${m[1] || "1"}d${m[2]}${modificateur > 0 ? "+" + modificateur : modificateur < 0 ? modificateur : ""}`;
+    clone.description = item.description.replace(m[0], formule);
+    clone.soinBonusRarete = bonus;
+    clone.effetRarete = `+${bonus} PV soignés (${clone.rareteNom.toLowerCase()})`;
+  }
+
   function _renforcerEffetAccessoire(effet, bonus) {
     if (!effet || !bonus) return effet;
     const mPlus = effet.match(/^\+(\d+)(.*)$/);
@@ -1236,8 +1263,13 @@ const Raretes = (() => {
       case "accessoire":
         clone.effet = _renforcerEffetAccessoire(item.effet, bonus);
         break;
+      case "consommable":
+        // Potion de soin : la rareté majore le soin (cf.
+        // BONUS_SOIN_PAR_RARETE). Les autres consommables ne bougent pas.
+        _appliquerBonusSoinPotion(clone, item, rarete.id);
+        break;
       default:
-        break; // consommable ou type inconnu
+        break; // type inconnu
     }
 
     // Texte rare/legendaire + mecanique (cf. "Mécaniser les affixes de
