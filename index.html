@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chroniques Oubliées Fantasy — Compagnon de jeu</title>
-  <link rel="stylesheet" href="css/style.css?v=107" />
+  <link rel="stylesheet" href="css/style.css?v=108" />
 </head>
 <body>
   <header>
@@ -773,8 +773,16 @@
       <div class="loot-modal-variante" id="modal-loot-variante" style="display:none;"></div>
       <div class="loot-modal-variante" id="modal-loot-affixe" style="display:none;"></div>
       <div class="loot-modal-destinataire" id="modal-loot-destinataire" style="display:none;">
-        <label for="select-don-destinataire">Donner à</label>
-        <select id="select-don-destinataire"></select>
+        <div class="loot-don-ligne">
+          <div class="loot-don-qui">
+            <label for="select-don-destinataire">Donner à</label>
+            <select id="select-don-destinataire"></select>
+          </div>
+          <div class="loot-don-combien">
+            <label for="input-don-quantite">Quantité</label>
+            <input type="number" id="input-don-quantite" min="1" max="99" step="1" value="1" />
+          </div>
+        </div>
       </div>
       <div class="loot-modal-actions">
         <button class="btn or" id="btn-lancer-vote">🎲 Lancer le vote</button>
@@ -975,7 +983,7 @@
   <script src="js/affixes.js?v=1"></script>
   <script src="js/enchantement.js?v=5"></script>
   <script src="js/alchimie.js?v=4"></script>
-  <script src="js/loot.js?v=17"></script>
+  <script src="js/loot.js?v=18"></script>
   <script src="js/marche.js?v=18"></script>
   <script src="js/forge.js?v=13"></script>
   <script src="js/metiers.js?v=1"></script>

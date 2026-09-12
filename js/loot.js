@@ -192,6 +192,17 @@ const Loot = (() => {
       : itemRarete;
   }
 
+  // Quantité saisie pour un don, bornée à [1, 99] (mêmes bornes que le champ).
+  // Une saisie vide, négative ou non numérique vaut 1 : le bouton ne doit
+  // jamais échouer silencieusement ni donner zéro objet.
+  const QUANTITE_DON_MAX = 99;
+  function _quantiteDon() {
+    const champ = document.getElementById("input-don-quantite");
+    const n = champ ? parseInt(champ.value, 10) : 1;
+    if (!Number.isFinite(n) || n < 1) return 1;
+    return Math.min(n, QUANTITE_DON_MAX);
+  }
+
   function ouvrirModalVote(item) { _ouvrirModal(item, "vote"); }
   // Donne l'item directement dans l'inventaire d'un personnage choisi, sans
   // passer par le vote besoin/greed — même sélection de rareté/variante.
@@ -229,6 +240,11 @@ const Loot = (() => {
         sel.innerHTML = ids.length
           ? ids.map(id => `<option value="${id}">${echapper(persos[id].nom)}</option>`).join("")
           : `<option value="">— Aucun personnage —</option>`;
+        // Quantité remise à 1 à chaque ouverture : le modal est réutilisé
+        // d'un item à l'autre, un « ×5 » oublié du don précédent passerait
+        // inaperçu. Absente du mode vote, où un vote porte sur UN objet.
+        const qte = document.getElementById("input-don-quantite");
+        if (qte) qte.value = "1";
       }
     }
 
@@ -259,11 +275,26 @@ const Loot = (() => {
         if (!dest) return;
         const itemFinal = _itemFinal();
         if (!Array.isArray(dest.inventaireListe)) dest.inventaireListe = [];
-        App.ajouterAInventaire(dest, Object.assign({}, itemFinal, { itemRef: itemFinal.id }));
+        const qte = _quantiteDon();
+        // Empilable (cf. TYPES_EMPILABLES) : une seule entrée quantite:N, que
+        // App.ajouterAInventaire fusionnera avec une pile existante. Non
+        // empilable (arme/armure/accessoire) : N entrées DISTINCTES, parce
+        // qu'une arme ne se compte pas, elle s'équipe — et chaque copie est
+        // un Object.assign neuf, jamais la même référence répétée : deux
+        // lignes d'inventaire pointant sur un même objet se propageraient
+        // leurs modifications l'une à l'autre (même piège que le doublement
+        // des bonus d'arme à deux mains, cf. _itemsEquipesUniques).
+        if (TYPES_EMPILABLES.includes(itemFinal.type)) {
+          App.ajouterAInventaire(dest, Object.assign({}, itemFinal, { itemRef: itemFinal.id, quantite: qte }));
+        } else {
+          for (let i = 0; i < qte; i++) {
+            App.ajouterAInventaire(dest, Object.assign({}, itemFinal, { itemRef: itemFinal.id }));
+          }
+        }
         sauverPersos(persosActuels);
         modal.style.display = "none";
         rendreCatalogue();
-        toast("« " + itemFinal.nom + " » (" + itemFinal.rareteNom + ") donné à " + dest.nom + " !");
+        toast("« " + itemFinal.nom + " » (" + itemFinal.rareteNom + ")" + (qte > 1 ? " ×" + qte : "") + " donné à " + dest.nom + " !");
       };
     }
 

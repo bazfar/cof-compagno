@@ -2141,6 +2141,13 @@ footer { text-align: center; color: #6a6278; font-size: 0.75rem; padding: 20px; 
 
 .loot-modal-destinataire { margin: 0 0 10px; }
 .loot-modal-destinataire label { margin-bottom: 4px; }
+/* Destinataire et quantité sur une seule ligne : la quantité n'a besoin que
+   de deux chiffres, une ligne pleine pour elle allongerait le modal pour
+   rien. Passe en colonne sous 380px, comme le reste des formulaires. */
+.loot-don-ligne { display: flex; gap: 8px; align-items: flex-end; }
+.loot-don-qui { flex: 1; min-width: 0; }
+.loot-don-combien { flex: 0 0 5.5em; }
+@media (max-width: 380px) { .loot-don-ligne { flex-direction: column; align-items: stretch; } .loot-don-combien { flex: none; } }
 
 /* Notification vote joueur */
 .loot-notif-card { border: 2px solid var(--or) !important; background: #fffcf2 !important; }
