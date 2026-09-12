@@ -1779,14 +1779,85 @@ const App = (() => {
     if (slots === 0) {
       return `Aucun emplacement de sort — ajoute ${NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire"} à ton inventaire pour en préparer.`;
     }
-    return `${perso.idsGrimoireInscrits().length}/${perso.plafondInscriptionGrimoire()} sorts inscrits (plafond de niveau) · ${perso.grimoireSlotsOccupes()}/${slots} préparés (emplacements de l'objet porté)`;
+    const tete = `${perso.idsGrimoireInscrits().length}/${perso.plafondInscriptionGrimoire()} sorts inscrits (plafond de niveau) · ${perso.grimoireSlotsOccupes()}/${slots} préparés (emplacements de l'objet porté)`;
+    // Répartition accessible / bloqué en une ligne : c'est la question que le
+    // joueur se pose vraiment (« lesquels puis-je lancer ? »), et elle
+    // demandait jusqu'ici de parcourir la liste badge par badge.
+    const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
+    const appris = p.grimoireSortsConnus || [];
+    const tous = appris.concat(perso.sortsGrimoireAccordes().filter((sid) => !appris.includes(sid)));
+    const compte = {};
+    tous.forEach((sid) => {
+      const s = catalogue.find((x) => x.id === sid);
+      if (!s) return;
+      const code = _statutSortGrimoire(p, perso, s).code;
+      compte[code] = (compte[code] || 0) + 1;
+    });
+    const LIBELLES = [["pret", "prêt(s) à lancer"], ["nonPrepare", "non préparé(s)"], ["sansPalier", "sans emplacement"],
+      ["niveau", "niveau insuffisant"], ["horsPlafond", "hors plafond d'inscription"]];
+    const parts = LIBELLES.filter(([c]) => compte[c]).map(([c, l]) => `${compte[c]} ${l}`);
+    return parts.length ? `${tete}<br>${parts.join(" · ")}` : tete;
   }
-  // Badge remplaçant le bouton « Lancer » d'un sort non lançable — cf.
-  // Personnage.raisonSortSansEmplacement pour la distinction des deux causes.
-  function _badgeSortInjouable(raison) {
-    return raison === "nonPrepare"
-      ? ` <span class="loot-badge" style="opacity:.6;" title="Inscrit mais non préparé — à cocher dans « Préparation » au prochain repos long">Non préparé</span>`
-      : ` <span class="loot-badge" style="opacity:.6;" title="Aucun emplacement compatible avec ce rang sur l'objet porté — il en faut un de meilleure rareté">Sans emplacement</span>`;
+  // Statut de lecture d'un sort du Grimoire — UN seul vocabulaire, partagé
+  // par la fiche et la mini-fiche battlemap, dans l'ORDRE où Capacites.lancer
+  // refuserait le sort : le badge annonce donc exactement le message que le
+  // joueur obtiendrait en cliquant. Jusqu'ici chaque vue avait sa formule et
+  // son libellé, et deux causes distinctes partageaient un badge unique qui
+  // n'en nommait qu'une.
+  function _statutSortGrimoire(p, perso, sort) {
+    if (!perso.idsGrimoireInscrits().includes(sort.id)) {
+      return { code: "horsPlafond", label: "Hors plafond", titre: `Au-delà du plafond d'inscription (${perso.plafondInscriptionGrimoire()} sorts au niveau ${p.niveau || 1}) — conservé, mais ni préparable ni lançable jusqu'au prochain niveau.` };
+    }
+    const raison = perso.raisonSortSansEmplacement ? perso.raisonSortSansEmplacement(sort.id) : null;
+    if (raison === "nonPrepare") {
+      return { code: "nonPrepare", label: "Non préparé", titre: "Inscrit mais non préparé — à cocher dans « Préparation » au prochain repos long." };
+    }
+    if (raison === "sansPalier") {
+      return { code: "sansPalier", label: "Sans emplacement", titre: "Aucun emplacement compatible avec ce rang sur l'objet de Grimoire porté — il en faut un de meilleure rareté." };
+    }
+    const niveauMin = (typeof NIVEAU_MIN_PAR_RANG !== "undefined" && NIVEAU_MIN_PAR_RANG[sort.rang]) || 1;
+    if ((p.niveau || 1) < niveauMin) {
+      return { code: "niveau", label: `Niveau ${niveauMin} requis`, titre: `Un sort de rang ${sort.rang} demande le niveau ${niveauMin} (actuellement ${p.niveau || 1}).` };
+    }
+    return { code: "pret", label: "Prêt", titre: "Préparé et lançable." };
+  }
+  // Coût affiché d'un sort — le coût RÉELLEMENT décompté (cf.
+  // Capacites.coutPPEffectif), pas mecanique.coutPP brut : la fiche
+  // annonçait « 2 PP » pour un sort d'école verrouillée qui en coûte 4.
+  function _coutSortTexte(perso, sort) {
+    const m = sort.mecanique;
+    if (m.coutPP === "tout") return "tous les PP";
+    if (m.coutPP) {
+      const reel = (typeof Capacites !== "undefined" && Capacites.coutPPEffectif)
+        ? Capacites.coutPPEffectif(perso, { origine: "grimoire", cle: sort.id, nomCap: sort.nom, idSort: sort.id }, m)
+        : m.coutPP;
+      return reel !== m.coutPP ? `${reel} PP (base ${m.coutPP})` : `${reel} PP`;
+    }
+    if (m.coutPointsBenediction) return `${m.coutPointsBenediction} Pt. Bénédiction`;
+    if (m.coutPointsConviction) return `${m.coutPointsConviction} Pt. Conviction`;
+    if (m.coutPointsBannissement) return `${m.coutPointsBannissement} Pt. Bannissement`;
+    if (m.coutPointsJugement) return `${m.coutPointsJugement} Pt. Jugement`;
+    return "gratuit";
+  }
+  // Une ligne de sort, identique sur la fiche et sur la battlemap.
+  // boutonRetrait : proposé seulement sur la fiche, et jamais pour un sort
+  // accordé par une Voie (il ne s'enlève pas, il se désapprend en changeant
+  // de voie).
+  function _ligneSortGrimoire(p, perso, sort, opts) {
+    const o = opts || {};
+    const statut = _statutSortGrimoire(p, perso, sort);
+    const source = { origine: "grimoire", cle: sort.id, nomCap: sort.nom };
+    const action = statut.code === "pret"
+      ? htmlLancerCapacite(source, sort.mecanique, p)
+      : ` <span class="loot-badge" style="opacity:.6;" title="${echapper(statut.titre)}">${echapper(statut.label)}</span>`;
+    const retrait = o.retrait
+      ? ` <button type="button" class="btn petit danger btn-retirer-sort-grimoire" data-perso="${o.persoId}" data-sort="${sort.id}" title="Effacer ce sort du Grimoire pour libérer une place d'inscription">Retirer</button>`
+      : "";
+    return `<div class="cap-fiche">
+      <div class="titre-cap">${echapper(sort.nom)}${action}${retrait}</div>
+      <div class="voie-source">Rang ${sort.rang} · ${echapper(_coutSortTexte(perso, sort))}${o.accorde ? " · accordé par la voie" : ""}</div>
+      <div class="effet-cap">${echapper(sort.effet)}</div>
+    </div>`;
   }
 
   // Sorts de Grimoire (appris + accordés par la voie) pour la mini-fiche
@@ -1808,25 +1879,9 @@ const App = (() => {
     const listeHtml = idsAffiches.map((sortId) => {
       const sort = catalogue.find((s) => s.id === sortId);
       if (!sort) return "";
-      const source = { origine: "grimoire", cle: sort.id, nomCap: sort.nom };
-      const coutTexte = sort.mecanique.coutPP ? `${sort.mecanique.coutPP} PP`
-        : sort.mecanique.coutPointsBenediction ? `${sort.mecanique.coutPointsBenediction} Pt. Bénédiction`
-        : sort.mecanique.coutPointsConviction ? `${sort.mecanique.coutPointsConviction} Pt. Conviction`
-        : sort.mecanique.coutPointsBannissement ? `${sort.mecanique.coutPointsBannissement} Pt. Bannissement`
-        : sort.mecanique.coutPointsJugement ? `${sort.mecanique.coutPointsJugement} Pt. Jugement`
-        : "gratuit";
-      const tagAccorde = !appris.includes(sortId) ? " · accordé par la voie" : "";
-      // Emplacement réellement disponible (cf. Personnage.sortGrimoireADesEmplacements) :
-      // un sort "connu" (appris ou accordé) sans palier compatible sur l'objet
-      // porté reste listé, mais son bouton Lancer est remplacé par un badge
-      // explicatif — se débloque automatiquement avec un meilleur objet.
-      const raison = perso.raisonSortSansEmplacement ? perso.raisonSortSansEmplacement(sortId) : null;
-      const boutonOuBadge = raison ? _badgeSortInjouable(raison) : htmlLancerCapacite(source, sort.mecanique, p);
-      return `<div class="cap-fiche">
-        <div class="titre-cap">${echapper(sort.nom)}${boutonOuBadge}</div>
-        <div class="voie-source">Rang ${sort.rang} · ${coutTexte}${tagAccorde}</div>
-        <div class="effet-cap">${echapper(sort.effet)}</div>
-      </div>`;
+      // Même rendu qu'en fiche (cf. _ligneSortGrimoire), sans bouton Retirer :
+      // on n'efface pas un sort du Grimoire en plein combat.
+      return _ligneSortGrimoire(p, perso, sort, { accorde: !appris.includes(sortId) });
     }).join("");
     return resume + listeHtml;
   }
@@ -7682,6 +7737,37 @@ const App = (() => {
     sauverPersos(persos);
     afficherFiche(persoId);
   }
+  // Bouton "Retirer" de la carte Grimoire : efface un sort APPRIS et libère
+  // sa place d'inscription. Sans lui, un grimoire arrivé à son plafond de
+  // niveau était figé jusqu'au niveau suivant, sans aucun moyen d'échanger un
+  // sort dont on ne se sert pas. Aucune contrepartie gagnée : retirer ne rend
+  // ni parchemin ni pièce, et après le rattrapage un nouveau sort demande
+  // toujours un parchemin — le bouton sert à corriger un choix, pas à en
+  // rejouer un gratuitement. Un sort ACCORDÉ par une Voie/un Cercle n'a pas
+  // ce bouton et la garde ci-dessous l'écarte de toute façon : il vient de la
+  // voie, pas d'une inscription.
+  function retirerSortDuGrimoire(persoId, sortId) {
+    const persos = chargerPersos();
+    const p = persos[persoId];
+    if (!p) return;
+    const connus = p.grimoireSortsConnus || [];
+    if (!connus.includes(sortId)) { toast("Ce sort n'a pas été appris — rien à retirer."); return; }
+    const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
+    const sort = catalogue.find((s) => s.id === sortId);
+    const nom = sort ? sort.nom : sortId;
+    if (!window.confirm(`Effacer « ${nom} » du Grimoire de ${p.nom} ?\n\nLa place d'inscription est libérée tout de suite. Le sort devra être réappris (rattrapage ou parchemin) pour revenir.`)) return;
+    p.grimoireSortsConnus = connus.filter((sid) => sid !== sortId);
+    // La sélection de préparés suit : y laisser un id qui n'est plus inscrit
+    // n'aurait aucun effet utile (cf. Personnage._idsGrimoirePourOccupation,
+    // qui le filtre) et brouillerait les cases à cocher.
+    if (Array.isArray(p.grimoireSortsPrepares)) {
+      p.grimoireSortsPrepares = p.grimoireSortsPrepares.filter((sid) => sid !== sortId);
+    }
+    sauverPersos(persos);
+    const persoApres = Personnage.depuisJSON(p);
+    toast(`🗑 « ${nom} » retiré du Grimoire (${persoApres.idsGrimoireInscrits().length}/${persoApres.plafondInscriptionGrimoire()} sorts inscrits).`);
+    afficherFiche(persoId);
+  }
 
   // Rattrapage pour les personnages créés AVANT l'introduction de l'objet de
   // Grimoire dans EQUIPEMENT_DEPART (cf. data/equipement_depart.js) : ceux-ci
@@ -8050,21 +8136,11 @@ const App = (() => {
                 return idsAffiches.map((sortId) => {
                   const sort = catalogue.find((s) => s.id === sortId);
                   if (!sort) return "";
-                  const source = { origine: "grimoire", cle: sort.id, nomCap: sort.nom };
-                  const coutTexte = sort.mecanique.coutPP ? `${sort.mecanique.coutPP} PP`
-                    : sort.mecanique.coutPointsBenediction ? `${sort.mecanique.coutPointsBenediction} Pt. Bénédiction`
-                    : sort.mecanique.coutPointsConviction ? `${sort.mecanique.coutPointsConviction} Pt. Conviction`
-                    : sort.mecanique.coutPointsBannissement ? `${sort.mecanique.coutPointsBannissement} Pt. Bannissement`
-                    : sort.mecanique.coutPointsJugement ? `${sort.mecanique.coutPointsJugement} Pt. Jugement`
-                    : "gratuit";
-                  const tagAccorde = !appris.includes(sortId) ? " · accordé par la voie" : "";
-                  const raison = perso.raisonSortSansEmplacement ? perso.raisonSortSansEmplacement(sortId) : null;
-                  const boutonOuBadge = raison ? _badgeSortInjouable(raison) : htmlLancerCapacite(source, sort.mecanique, p);
-                  return `<div class="cap-fiche">
-                    <div class="titre-cap">${echapper(sort.nom)}${boutonOuBadge}</div>
-                    <div class="voie-source">Rang ${sort.rang} · ${coutTexte}${tagAccorde}</div>
-                    <div class="effet-cap">${echapper(sort.effet)}</div>
-                  </div>`;
+                  // Retirer : réservé aux sorts APPRIS. Un sort accordé par une
+                  // Voie/un Cercle n'est pas effaçable — il vient de la voie,
+                  // pas d'une inscription (cf. sortsGrimoireAccordes).
+                  const accorde = !appris.includes(sortId);
+                  return _ligneSortGrimoire(p, perso, sort, { accorde, retrait: !accorde, persoId: id });
                 }).join("");
               })()}
             </div>
@@ -8569,6 +8645,10 @@ const App = (() => {
     // (pas de parchemin à consommer, cf. apprendreSortDirectementDuGrimoire).
     zone.querySelectorAll(".btn-apprendre-sort-direct").forEach((el) => {
       el.onclick = () => apprendreSortDirectementDuGrimoire(el.dataset.perso, el.dataset.sort);
+    });
+    // Retirer un sort inscrit (cf. retirerSortDuGrimoire).
+    zone.querySelectorAll(".btn-retirer-sort-grimoire").forEach((el) => {
+      el.onclick = () => retirerSortDuGrimoire(el.dataset.perso, el.dataset.sort);
     });
     // Inventaire — formulaire d'ajout, lié au catalogue loot (+ option "divers")
     // Recherches scopées à `zone` (jamais document.getElementById) : ce même

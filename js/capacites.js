@@ -1699,6 +1699,81 @@ const Capacites = (() => {
   // choix "soin_partage" — jusqu'à 3 cibles indépendantes, chacune avec son
   // propre jet de soin. Seul cas actuel hors du schéma standard "une seule
   // cible résolue par cibleId" (cf. son cas particulier plus bas).
+  // Rang d'un sort du catalogue SORTS_PAR_CLASSE — null pour une capacité de
+  // Voie (`source` ne porte pas le rang pour l'origine "grimoire", seul
+  // idSort l'est). Les cinq sorts accordés par un Cercle du Prêtre
+  // (voix_du_jugement, aura_divine, bannissement, bannissement_zone,
+  // bucher_purificateur) n'ont pas de typeSort:"majeur" : c'est ce
+  // discriminant-ci, et non ce champ, qui doit décider si un contrôle de
+  // sort s'applique — sinon ils échappent au palier de niveau minimum, alors
+  // qu'un prêtre de niveau 4 a exactement de quoi acheter les rangs 1 à 5
+  // d'une voie (2×niveau = 8 points) et donc décrocher un rang 5.
+  function rangSortCatalogue(perso, idSort) {
+    if (!idSort || typeof SORTS_PAR_CLASSE === "undefined" || !perso) return null;
+    const cat = SORTS_PAR_CLASSE[perso.classe];
+    const s = cat && cat.find((x) => x.id === idSort);
+    return s ? s.rang : null;
+  }
+
+  // Coût PP RÉELLEMENT payé pour lancer cette capacité, tous modificateurs
+  // appliqués. Extrait de lancer() et exporté pour que la fiche affiche le
+  // MÊME chiffre que celui qui sera décompté : elle montrait jusqu'ici
+  // mecanique.coutPP brut, soit « 2 PP » pour un sort d'école verrouillée
+  // qui en coûte 4. Toute divergence entre les deux serait un bug.
+  function coutPPEffectif(perso, source, mecanique) {
+    if (!mecanique) return 0;
+    let coutPPReel = mecanique.coutPP;
+    const rangSortGrimoire = rangSortCatalogue(perso, source.idSort);
+    // Déblocage d'école (cf. ECOLE_VERS_VOIE_DEBLOCAGE, data/donnees.js et
+    // Personnage.ecoleDebloquee) : ×2 générique si l'école du sort n'est
+    // pas débloquée pour ce personnage. Uniquement pour les sorts de
+    // Grimoire (typeSort:"majeur", categorie renseignée sur l'entrée
+    // SORTS_PAR_CLASSE) — jamais sur les capacités de Voie classiques, qui
+    // n'ont pas de champ `categorie` d'école. Les sorts ACCORDÉS par une
+    // Voie (sortsGrimoireAccordes(), jamais appris via slot) restent
+    // logiquement toujours dans une école déjà investie par construction
+    // (le rang qui les accorde EST souvent le rang de déblocage lui-même,
+    // cf. Imposition des mains/Flamme sacrée/Œil de l'inquisiteur) — pas de
+    // vérification spéciale nécessaire pour eux, le calcul générique
+    // donne déjà le bon résultat.
+    if (rangSortGrimoire !== null && typeof coutPPReel === "number") {
+      const catalogueEcole = SORTS_PAR_CLASSE[perso.classe];
+      const sortPourEcole = catalogueEcole && catalogueEcole.find((s) => s.id === source.idSort);
+      // ecoleSortDebloquee (pas ecoleDebloquee) : gère aussi les catégories
+      // composées (ex. "divination_transmutation", cf. 'detection_magie'),
+      // débloquées dès qu'AU MOINS une des écoles listées l'est.
+      if (sortPourEcole && sortPourEcole.categorie && perso.ecoleSortDebloquee && !perso.ecoleSortDebloquee(sortPourEcole.categorie)) {
+        coutPPReel *= 2;
+      }
+    }
+    const estSortFamilleIllusion = perso.classe === "enchanteur" && source.voie === "Voie de l'enchantement"
+      && (source.rang === 1 || source.rang === 2);
+    // Enchanteur — Voie du chaos, rang 1 "Éclat chaotique" (passive) : +2 PP
+    // malus PERMANENT sur tout sort de famille Illusion ('illusion' rang 1
+    // ET 'fascination_illusoire' rang 2, Voie de l'enchantement) — pas
+    // conditionné à l'utilisation d'Éclat chaotique elle-même, se cumule
+    // avec la réduction de Proficience (rang 4) ci-dessous si les deux voies
+    // sont acquises. Ne touche que le coût de LANCEMENT (mecanique.coutPP),
+    // jamais coutMaintienPP (Fascination), non mentionné par le texte source.
+    if (estSortFamilleIllusion && perso.rangMaxVoie("Voie du chaos") >= 1) {
+      coutPPReel += 2;
+    }
+    if (source.rang === 1 && estSortFamilleIllusion && perso.rangMaxVoie("Voie de l'enchantement") >= 4) {
+      coutPPReel = Math.max(1, coutPPReel - 1);
+    }
+    // Enchanteur — Voie du chaos, rang 5 "Ascension chaotique" : coutPP:
+    // "tout" (mot-clé, pas un nombre) — le PP est intégralement redéfini par
+    // l'effet 'etat' lui-même (drain implicite puis remplissage au nouveau
+    // max doublé, cf. resoudreEffet), donc coutPPReel = 0 ici plutôt qu'un
+    // montant à faire re-décompter par le bloc générique plus bas : celui-ci
+    // s'exécute APRÈS la boucle d'effets (donc après le remplissage) et
+    // soustrairait sinon l'ancien montant du nouveau pool déjà rempli.
+    if (mecanique.coutPP === "tout") {
+      coutPPReel = 0;
+    }
+    return coutPPReel;
+  }
+
   function lancer({ persoId, source, mecanique, cibleId, cibleIds, cerclesParCible, choixEffet, payerEnCS, payerSupplementCS }) {
     if (!mecanique || mecanique.type === "passive") {
       return { ok: false, messages: ["Cette capacité est passive : rien à lancer."] };
@@ -1745,54 +1820,10 @@ const Capacites = (() => {
     // castable (pas de dépendance au Grimoire, contrairement aux réductions
     // de famille du Magicien/des autres voies Enchanteur, non câblées faute
     // de Grimoire branché pour ces classes).
-    let coutPPReel = mecanique.coutPP;
-    // Déblocage d'école (cf. ECOLE_VERS_VOIE_DEBLOCAGE, data/donnees.js et
-    // Personnage.ecoleDebloquee) : ×2 générique si l'école du sort n'est
-    // pas débloquée pour ce personnage. Uniquement pour les sorts de
-    // Grimoire (typeSort:"majeur", categorie renseignée sur l'entrée
-    // SORTS_PAR_CLASSE) — jamais sur les capacités de Voie classiques, qui
-    // n'ont pas de champ `categorie` d'école. Les sorts ACCORDÉS par une
-    // Voie (sortsGrimoireAccordes(), jamais appris via slot) restent
-    // logiquement toujours dans une école déjà investie par construction
-    // (le rang qui les accorde EST souvent le rang de déblocage lui-même,
-    // cf. Imposition des mains/Flamme sacrée/Œil de l'inquisiteur) — pas de
-    // vérification spéciale nécessaire pour eux, le calcul générique
-    // donne déjà le bon résultat.
-    if (mecanique.typeSort === "majeur" && source.idSort && typeof SORTS_PAR_CLASSE !== "undefined") {
-      const catalogueEcole = SORTS_PAR_CLASSE[perso.classe];
-      const sortPourEcole = catalogueEcole && catalogueEcole.find((s) => s.id === source.idSort);
-      // ecoleSortDebloquee (pas ecoleDebloquee) : gère aussi les catégories
-      // composées (ex. "divination_transmutation", cf. 'detection_magie'),
-      // débloquées dès qu'AU MOINS une des écoles listées l'est.
-      if (sortPourEcole && sortPourEcole.categorie && perso.ecoleSortDebloquee && !perso.ecoleSortDebloquee(sortPourEcole.categorie)) {
-        coutPPReel *= 2;
-      }
-    }
-    const estSortFamilleIllusion = perso.classe === "enchanteur" && source.voie === "Voie de l'enchantement"
-      && (source.rang === 1 || source.rang === 2);
-    // Enchanteur — Voie du chaos, rang 1 "Éclat chaotique" (passive) : +2 PP
-    // malus PERMANENT sur tout sort de famille Illusion ('illusion' rang 1
-    // ET 'fascination_illusoire' rang 2, Voie de l'enchantement) — pas
-    // conditionné à l'utilisation d'Éclat chaotique elle-même, se cumule
-    // avec la réduction de Proficience (rang 4) ci-dessous si les deux voies
-    // sont acquises. Ne touche que le coût de LANCEMENT (mecanique.coutPP),
-    // jamais coutMaintienPP (Fascination), non mentionné par le texte source.
-    if (estSortFamilleIllusion && perso.rangMaxVoie("Voie du chaos") >= 1) {
-      coutPPReel += 2;
-    }
-    if (source.rang === 1 && estSortFamilleIllusion && perso.rangMaxVoie("Voie de l'enchantement") >= 4) {
-      coutPPReel = Math.max(1, coutPPReel - 1);
-    }
-    // Enchanteur — Voie du chaos, rang 5 "Ascension chaotique" : coutPP:
-    // "tout" (mot-clé, pas un nombre) — le PP est intégralement redéfini par
-    // l'effet 'etat' lui-même (drain implicite puis remplissage au nouveau
-    // max doublé, cf. resoudreEffet), donc coutPPReel = 0 ici plutôt qu'un
-    // montant à faire re-décompter par le bloc générique plus bas : celui-ci
-    // s'exécute APRÈS la boucle d'effets (donc après le remplissage) et
-    // soustrairait sinon l'ancien montant du nouveau pool déjà rempli.
-    if (mecanique.coutPP === "tout") {
-      coutPPReel = 0;
-    }
+    // Rang du sort de Grimoire lancé — sert de discriminant « c'est bien un
+    // sort du catalogue » aux contrôles ci-dessous.
+    const rangSortGrimoire = rangSortCatalogue(perso, source.idSort);
+    let coutPPReel = coutPPEffectif(perso, source, mecanique);
 
     // Gate d'accès Grimoire (cf. reference_sorts_connus.md) : un sort hors
     // Voies (SORTS_MAGICIEN ou équivalent) ne peut être lancé que s'il est
@@ -1809,8 +1840,17 @@ const Capacites = (() => {
     // reste "connu" mais injouable tant que l'objet porté (Commun/Peu
     // commun) n'a aucun emplacement 1-5 ; se débloque automatiquement avec
     // un objet Rare/Légendaire, sans rien apprendre à nouveau.
-    if (mecanique.origineGrimoire && perso.sortGrimoireADesEmplacements && !perso.sortGrimoireADesEmplacements(source.idSort)) {
-      return { ok: false, messages: [`Ce sort n'a plus d'emplacement compatible sur ton objet de Grimoire actuel (rang trop élevé pour sa rareté) — équipe un objet de meilleure rareté pour pouvoir le lancer.`] };
+    // Le refus nomme la VRAIE cause (cf. Personnage.raisonSortSansEmplacement) :
+    // il accusait la rareté de l'objet dans les deux cas, alors qu'un sort
+    // simplement non préparé se règle au prochain repos long, sans rien acheter.
+    if (mecanique.origineGrimoire && perso.raisonSortSansEmplacement) {
+      const raison = perso.raisonSortSansEmplacement(source.idSort);
+      if (raison === "nonPrepare") {
+        return { ok: false, messages: [`Ce sort est inscrit au Grimoire mais n'est pas préparé — coche-le dans « Préparation » au prochain repos long.`] };
+      }
+      if (raison === "sansPalier") {
+        return { ok: false, messages: [`Ce sort n'a aucun emplacement compatible avec son rang sur ton objet de Grimoire actuel — il en faut un de meilleure rareté.`] };
+      }
     }
 
     const cle = cleCapacite(source);
@@ -1851,15 +1891,10 @@ const Capacites = (() => {
     // capacité de Voie classique) — le rang du sort n'est pas porté par
     // `source` pour cette origine (seul idSort l'est), il faut le relire
     // dans SORTS_PAR_CLASSE[classe].
-    if (mecanique.typeSort === "majeur" && source.idSort && typeof SORTS_PAR_CLASSE !== "undefined") {
-      const catalogue = SORTS_PAR_CLASSE[perso.classe];
-      const sortLance = catalogue && catalogue.find((s) => s.id === source.idSort);
-      const rangSort = sortLance ? sortLance.rang : null;
-      if (rangSort) {
-        const niveauMin = (typeof NIVEAU_MIN_PAR_RANG !== "undefined" && NIVEAU_MIN_PAR_RANG[rangSort]) || 1;
-        if ((p.niveau || 1) < niveauMin) {
-          return { ok: false, messages: [`Ce sort (rang ${rangSort}) nécessite le niveau ${niveauMin} (actuellement niveau ${p.niveau || 1}).`] };
-        }
+    if (rangSortGrimoire !== null) {
+      const niveauMin = (typeof NIVEAU_MIN_PAR_RANG !== "undefined" && NIVEAU_MIN_PAR_RANG[rangSortGrimoire]) || 1;
+      if ((p.niveau || 1) < niveauMin) {
+        return { ok: false, messages: [`Ce sort (rang ${rangSortGrimoire}) nécessite le niveau ${niveauMin} (actuellement niveau ${p.niveau || 1}).`] };
       }
     }
 
@@ -1875,8 +1910,40 @@ const Capacites = (() => {
     // l'option (payerEnCS) à l'activation.
     const donCorrompu = perso.classe === "pretre" && perso.estChoisie("Voie du chaos", 2);
     const substitutionCS = !!(coutPPReel && donCorrompu && payerEnCS);
+    // Coût en CS = le RANG du sort. La dérivation coutPPReel/2 ne valait que
+    // sous l'ancienne grille linéaire (rang×2 PP) : depuis COUT_PP_PAR_RANG
+    // non linéaire (rang 4 → 16 PP, rang 5 → 25), elle réclamait 8 et 13 CS
+    // au lieu de 4 et 5 — de quoi rendre Don corrompu inutilisable au-delà du
+    // rang 3, à l'exact opposé de son propos. Le rapport coutPPReel/coût de
+    // base conserve les modificateurs éventuels (école verrouillée ×2).
+    const coutCS = (function () {
+      if (!substitutionCS) return 0;
+      const base = (typeof COUT_PP_PAR_RANG !== "undefined" && rangSortGrimoire) ? COUT_PP_PAR_RANG[rangSortGrimoire] : null;
+      if (!base) return Math.max(1, Math.round(coutPPReel / 2)); // capacité hors catalogue : repli
+      return Math.max(1, Math.round(rangSortGrimoire * (coutPPReel / base)));
+    })();
+    // Décompte du coût de lancement — CS si Don corrompu est actif, PP sinon.
+    // Factorisé parce que DEUX chemins à retour anticipé (zone automatisée et
+    // maxCibles, plus bas) décomptaient les PP en dur : le prêtre voyait ses
+    // CS exigés au garde-fou ci-dessous, puis ses PP prélevés quand même.
+    const payerCoutLancement = (avecHisto) => {
+      if (substitutionCS) {
+        p.corruptionCombat = Math.max(0, (p.corruptionCombat || 0) - coutCS);
+        messages.push(`Don corrompu : ${coutCS} CS payés à la place des PP (${p.corruptionCombat} CS restants).`);
+        return;
+      }
+      if (!coutPPReel) return;
+      p.ppActuel = Math.max(0, (p.ppActuel || 0) - coutPPReel);
+      // Remous (accord explicite de Thomas, 09/08/2026, cf.
+      // prompt_remous_ui.md §3) : alimente la jauge de Remous du lieu avec le
+      // coût PP réellement décompté. remousMultiplicateur (Magicien, sort
+      // Parole divine, rang 5) : quelques sorts puisent plus directement dans
+      // la Mer des âmes que leur coût PP ne le laisse paraître — absent = ×1.
+      if (typeof Remous !== "undefined") Remous.ajouter(p, coutPPReel * (mecanique.remousMultiplicateur || 1));
+      if (avecHisto) App.ajouterHisto(`${libelle} — PP`, p.ppActuel, false, false, `-${coutPPReel} PP (${p.nom}, ${p.ppActuel} restants)`, { sansOverlay: true });
+      messages.push(`PP -${coutPPReel} (${p.ppActuel} restants).`);
+    };
     if (substitutionCS) {
-      const coutCS = Math.max(1, Math.round(coutPPReel / 2));
       if ((p.corruptionCombat || 0) < coutCS) {
         return { ok: false, messages: [`Pas assez de jauge de combat (${coutCS} CS requis pour Don corrompu, ${p.corruptionCombat || 0} disponibles).`] };
       }
@@ -1970,17 +2037,7 @@ const Capacites = (() => {
         }
       });
       usage.appliquer && usage.appliquer();
-      if (coutPPReel) {
-        p.ppActuel = Math.max(0, (p.ppActuel || 0) - coutPPReel);
-        // Remous (accord explicite de Thomas, 09/08/2026, cf.
-        // prompt_remous_ui.md §3) : alimente la jauge de Remous du lieu
-        // avec le coût PP réellement décompté. remousMultiplicateur (Magicien,
-        // sort Parole divine, rang 5) : quelques sorts puisent plus
-        // directement dans la Mer des âmes que leur coût PP ne le laisse
-        // paraître — absent = ×1, comportement inchangé pour tous les autres.
-        if (typeof Remous !== "undefined") Remous.ajouter(p, coutPPReel * (mecanique.remousMultiplicateur || 1));
-        messages.push(`PP -${coutPPReel} (${p.ppActuel} restants).`);
-      }
+      payerCoutLancement(false);
       App.sauverPersos(persos);
       return { ok: true, messages: [`${libelle} : ${degatsBruts} dégâts de base (${detail}).`, ...messages] };
     }
@@ -2244,11 +2301,7 @@ const Capacites = (() => {
         });
       });
       usage.appliquer && usage.appliquer();
-      if (coutPPReel) {
-        p.ppActuel = Math.max(0, (p.ppActuel || 0) - coutPPReel);
-        if (typeof Remous !== "undefined") Remous.ajouter(p, coutPPReel * (mecanique.remousMultiplicateur || 1));
-        messages.push(`PP -${coutPPReel} (${p.ppActuel} restants).`);
-      }
+      payerCoutLancement(false);
       // Points de Cercle (Bénédiction/Conviction/Bannissement/Jugement) :
       // même patron que le décompte du chemin standard plus bas dans lancer()
       // (cf. RESSOURCES_CERCLE) — absent de cette branche jusqu'ici, ce qui
@@ -2801,23 +2854,9 @@ const Capacites = (() => {
       messages.push(`Réaction(s) -${mecanique.reactionCout} (${restantes}/${REACTIONS_MAX} restantes ce combat).`);
     }
     // Coût en Points de Pouvoir (cf. le garde-fou plus haut) : décompté une
-    // fois l'activation confirmée, même logique que reactionCout ci-dessus.
-    // Prêtre "Don corrompu" (substitutionCS, cf. garde-fou plus haut) :
-    // décompte des CS à la place, même coût dérivé (rang du sort = coutPPReel/2).
-    if (substitutionCS) {
-      const coutCS = Math.max(1, Math.round(coutPPReel / 2));
-      p.corruptionCombat = (p.corruptionCombat || 0) - coutCS;
-      messages.push(`Don corrompu : ${coutCS} CS payés à la place des PP (${p.corruptionCombat} CS restants).`);
-    } else if (coutPPReel) {
-      p.ppActuel = (p.ppActuel || 0) - coutPPReel;
-      // Remous (accord explicite de Thomas, 09/08/2026, cf.
-      // prompt_remous_ui.md §3) : alimente la jauge de Remous du lieu
-      // avec le coût PP réellement décompté. remousMultiplicateur : cf.
-      // l'autre site d'appel de Remous.ajouter plus haut dans lancer().
-      if (typeof Remous !== "undefined") Remous.ajouter(p, coutPPReel * (mecanique.remousMultiplicateur || 1));
-      App.ajouterHisto(`${libelle} — PP`, p.ppActuel, false, false, `-${coutPPReel} PP (${p.nom}, ${p.ppActuel} restants)`, { sansOverlay: true });
-      messages.push(`PP -${coutPPReel} (${p.ppActuel} restants).`);
-    }
+    // fois l'activation confirmée, même logique que reactionCout ci-dessus —
+    // ou en CS si "Don corrompu" est actif (cf. payerCoutLancement).
+    payerCoutLancement(true);
     // Points de Cercle (cf. le garde-fou plus haut, RESSOURCES_CERCLE) :
     // décompté une fois l'activation confirmée. Le Supplément corrompu
     // éventuel a déjà été appliqué au garde-fou (jauge CS + pool ramené à 0) —
@@ -2895,6 +2934,10 @@ const Capacites = (() => {
   }
 
   return {
+    // Exportés pour l'affichage : la fiche doit montrer le coût RÉEL, pas
+    // mecanique.coutPP brut (cf. coutPPEffectif).
+    coutPPEffectif,
+    rangSortCatalogue,
     natureDegatsArme,
     resoudreExpression,
     resoudreDureeInitiale,
