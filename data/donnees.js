@@ -3984,12 +3984,12 @@ const PNJ_CLES = [
   {
     id: "frederik-berlan",
     nom: "Frédérik Berlan",
-    titre: "Cordonnier à la Chaussure",
+    titre: "Cordonnier aux Tanneurs",
     faction: "Citoyens de Libris",
     resume:
-      "Mari d'Aude Berlan. Tient son échoppe dans la ruelle des cuirs, derrière l'ancienne halle de tanneur qu'occupe l'Atelier des Marges.",
+      "Mari d'Aude Berlan. Tient son échoppe aux Tanneurs, à quelques portes de l'ancienne halle qu'occupe l'Atelier des Marges.",
     description:
-      "La Chaussure est ce qui reste du quartier des cuirs : une ruelle d'échoppes de cordonniers, de selliers et de gainiers, installées là du temps où les tanneurs y travaillaient. L'Atelier des Marges occupe la halle ; Frédérik travaille à trois portes de l'école de sa femme, et les deux trouvent ça parfaitement normal.\n\nIl ne lance aucun sort, ne connaît rien aux Académies et n'a aucune opinion sur la théorie arcane. Il chausse la moitié du quartier, connaît tout le monde par les pieds, et entend au comptoir ce que personne ne dirait devant un mage ou devant la Garde.",
+      "Les Tanneurs sont ce qui reste du quartier des cuirs : les cuves ont fermé une à une, les cordonniers, les selliers et les gainiers sont restés. L'Atelier des Marges occupe l'ancienne halle ; Frédérik travaille à trois portes de l'école de sa femme, et les deux trouvent ça parfaitement normal.\n\nIl ne lance aucun sort, ne connaît rien aux Académies et n'a aucune opinion sur la théorie arcane. Il chausse la moitié du quartier, connaît tout le monde par les pieds, et entend au comptoir ce que personne ne dirait devant un mage ou devant la Garde.",
     accroches: [
       "Le meilleur poste d'écoute que le groupe ait sur ce quartier, et il ne se sait pas informateur : il raconte sa journée. Qui boite, qui commande des semelles de veille, qui n'est plus venu depuis un mois.",
       "Il connaissait Aubin et ne l'aimait qu'à moitié — un beau-frère qui disparaissait des saisons entières. Il est le seul à pouvoir dire d'Aude ce qu'elle ne dira jamais elle-même.",
