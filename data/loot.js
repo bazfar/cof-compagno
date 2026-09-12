@@ -1,4 +1,10 @@
-// Généré depuis data/loot.json — catalogue de loot MJ
+// Catalogue d'objets — SOURCE DE VÉRITÉ.
+//
+// Ce fichier est le seul des deux chargé par l'app (index.html →
+// LOOT_CATALOGUE) et le seul qui porte les commentaires de conception du
+// catalogue. data/loot.json en est DÉRIVÉ : après toute modification ici,
+// lancer `node tools/generer_loot_json.js`. Ne jamais éditer loot.json à la
+// main — tools/valider_loot.js refuse de tourner si les deux ont divergé.
 
 // Types dont les unités identiques s'empilent en une seule ligne d'inventaire
 // (cf. prompt_marche_ingredients.md, "le piège : l'empilement d'inventaire").
@@ -28,6 +34,12 @@ const TYPES_EMPILABLES = ["consommable", "ingredient", "recette"];
 // vivres hors système de l'étape 1. Le tableau exhaustif prime sur le
 // chiffre cité en introduction (même principe que "47 recettes" → 57 puis
 // 59) : les 81 vivres portent tous "familleVivre"/"origine", jamais 60.
+
+// Version du catalogue, reportée telle quelle dans data/loot.json par
+// tools/generer_loot_json.js. À incrémenter à chaque modification du
+// catalogue (correctif pour un ajout ou un retrait d'item, mineur pour un
+// changement de schéma).
+const LOOT_VERSION = "1.2.0";
 
 const LOOT_CATALOGUE = [
   { "id": "dague", "nom": "Dague", "type": "arme", "porte": false, "description": "Arme légère de contact ou de lancer. Discrète et rapide.", "degats": "1d4", "portee": "1 case", "porteeMinCases": 1, "porteeMaxCases": 1, "categoriePortee": "contact", "typedegats": "physique", "enchantement": 0, "deuxMains": false, "categorieArme": "courte", "maitrise": "simple", "prixPo": 8 },

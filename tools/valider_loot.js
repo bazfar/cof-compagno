@@ -354,11 +354,23 @@ function validerBonusAttaqueConditionnel(cle, prefix, bac) {
   if (!Number.isInteger(bac.valeur)) signalerAffixe(cle, `${prefix}.valeur devrait être un entier, reçu ${JSON.stringify(bac.valeur)}.`);
 }
 
-// data/loot.json : source de vérité éditée à la main (data/loot.js en est
-// une copie générée, chargée par l'app au runtime — cf. son propre
-// commentaire d'en-tête "Généré depuis data/loot.json"). On valide la
-// source, pas la copie.
+// data/loot.js est la SOURCE (le seul des deux chargé par l'app, et le seul
+// qui porte les commentaires de conception du catalogue) ; data/loot.json en
+// est dérivé par tools/generer_loot_json.js. On valide le JSON, qui est
+// octet pour octet dérivé du JS — mais on refuse d'abord de tourner si les
+// deux ont divergé, sans quoi on validerait un fichier que l'app ne charge
+// pas.
 const LOOT_PATH = path.join(RACINE, "data", "loot.json");
+const { rendre } = require("./generer_loot_json_lib.js");
+const ctxLoot = chargerGlobals(["data/loot.js"], ["LOOT_CATALOGUE", "LOOT_VERSION"]);
+if (!Array.isArray(ctxLoot.LOOT_CATALOGUE)) { console.error("❌ data/loot.js : LOOT_CATALOGUE introuvable ou n'est pas un tableau."); process.exit(1); }
+if (typeof ctxLoot.LOOT_VERSION !== "string") { console.error("❌ data/loot.js : LOOT_VERSION introuvable."); process.exit(1); }
+if (fs.readFileSync(LOOT_PATH, "utf8") !== rendre(ctxLoot.LOOT_CATALOGUE, ctxLoot.LOOT_VERSION)) {
+  console.error("❌ data/loot.json a divergé de data/loot.js.");
+  console.error("   Lancer : node tools/generer_loot_json.js");
+  console.error("   (data/loot.js est la source ; loot.json ne s'édite jamais à la main.)");
+  process.exit(1);
+}
 const lootRaw = JSON.parse(fs.readFileSync(LOOT_PATH, "utf8"));
 const items = lootRaw.items;
 if (!Array.isArray(items)) { console.error("❌ data/loot.json : champ `items` absent ou n'est pas un tableau."); process.exit(1); }
