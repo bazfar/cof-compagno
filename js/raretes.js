@@ -1172,6 +1172,14 @@ const Raretes = (() => {
   // Thomas), volontairement distinct de `bonus` (0/1/2/3) : sur un dé unique,
   // la progression linéaire ne récompense pas assez le dernier palier.
   const BONUS_SOIN_PAR_RARETE = { commun: 0, peu_commun: 1, rare: 2, legendaire: 4 };
+  // Surcoût en po du même exemplaire (décision de Thomas) : une potion qui
+  // soigne davantage se paie davantage. Montants FIXES, pas un pourcentage —
+  // le bonus de soin est lui aussi fixe, donc son prix ne doit pas dépendre
+  // du dé de base : +4 PV valent la même chose sur une petite potion que sur
+  // une grande. Appliqué au seul cas où la rareté change réellement quelque
+  // chose (cf. _appliquerBonusSoinPotion) : marquer une corde « légendaire »
+  // ne la renchérit pas, puisque ça ne lui fait rien gagner.
+  const SURCOUT_PO_PAR_RARETE = { commun: 0, peu_commun: 5, rare: 10, legendaire: 15 };
 
   // Le soin d'une potion vit dans son TEXTE de description (« Régénère 1d4
   // PV »), pas dans un champ : c'est ce texte que lisent formuleSoinItem et
@@ -1191,6 +1199,7 @@ const Raretes = (() => {
     clone.description = item.description.replace(m[0], formule);
     clone.soinBonusRarete = bonus;
     clone.effetRarete = `+${bonus} PV soignés (${clone.rareteNom.toLowerCase()})`;
+    clone.prixPo = (item.prixPo || 0) + (SURCOUT_PO_PAR_RARETE[rareteId] || 0);
   }
 
   function _renforcerEffetAccessoire(effet, bonus) {
