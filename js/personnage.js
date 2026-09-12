@@ -240,8 +240,13 @@ class Personnage extends Entite {
     this.grimoireSortsConnus = d.grimoireSortsConnus || [];
     // Grimoire v3 — sélection MANUELLE des sorts préparés (= réellement
     // lançables) parmi les sorts inscrits. Tableau vide/absent = repli sur
-    // le remplissage glouton historique (cf. grimoireOccupationParTier), ce
+    // le remplissage glouton historique (cf. _idsGrimoirePourOccupation), ce
     // qui laisse intactes toutes les fiches créées avant ce système.
+    // Un [] persisté ne peut PAS signifier « rien de préparé » : des fiches
+    // en production en portent un sans avoir jamais rien choisi (toJSON l'a
+    // écrit lui-même), et le lire ainsi les priverait de tous leurs sorts.
+    // La validation d'une sélection vide est donc refusée côté UI (cf.
+    // js/app.js, .btn-valider-preparation-grimoire) plutôt qu'interprétée.
     this.grimoireSortsPrepares = d.grimoireSortsPrepares || [];
     // Drapeau de rattrapage : tant qu'il est faux, le joueur peut inscrire
     // librement dans la limite du plafond (les sorts ont été distribués
@@ -791,9 +796,16 @@ class Personnage extends Entite {
   // Bénédiction [pretre] partagent ce même mécanisme, cf.
   // prompt_grimoire_v2_emplacements_typ_s.md. Tout futur objet du même
   // genre n'a qu'à porter ce champ, aucun code à toucher.
+  // Le MEILLEUR objet porté, pas le premier trouvé : un joueur qui garde son
+  // ancien Manuel Commun dans le sac en achetant un Rare doit gagner les
+  // emplacements du Rare. `find` prenait l'équipé d'abord puis l'ordre du
+  // sac — une Amulette Commune ÉQUIPÉE masquait donc une Légendaire au sac,
+  // et les paliers s'affichaient pleins alors qu'un meilleur objet était là.
   _objetGrimoirePorte() {
-    const candidats = this._itemsEquipesUniques().concat(this.inventaireListe || []);
-    return candidats.find((it) => it && Array.isArray(it.grimoireClasses) && it.grimoireClasses.includes(this.classe));
+    const candidats = this._itemsEquipesUniques().concat(this.inventaireListe || [])
+      .filter((it) => it && Array.isArray(it.grimoireClasses) && it.grimoireClasses.includes(this.classe));
+    if (!candidats.length) return undefined;
+    return candidats.reduce((meilleur, it) => ((it.bonusRarete || 0) > (meilleur.bonusRarete || 0) ? it : meilleur));
   }
   // Emplacements de sorts hors Voies, typés par plafond de rang logeable
   // (cf. GRIMOIRE_TIERS_PAR_RARETE ci-dessus) — 0 partout sans objet
@@ -803,7 +815,9 @@ class Personnage extends Entite {
     if (!objet) return { "12": 0, "13": 0, "14": 0, "15": 0 };
     return GRIMOIRE_TIERS_PAR_RARETE[objet.bonusRarete || 0];
   }
-  // Total agrégé, conservé pour l'affichage existant ("X/Y sorts connus").
+  // Total agrégé des emplacements PRÉPARÉS — dénominateur du « N préparés »
+  // de _resumeGrimoire (js/app.js). À ne pas confondre avec
+  // plafondInscriptionGrimoire, qui plafonne les sorts INSCRITS.
   slotsGrimoire() {
     const t = this.slotsGrimoireParTier();
     return t["12"] + t["13"] + t["14"] + t["15"];
@@ -858,6 +872,17 @@ class Personnage extends Entite {
     // les fiches antérieures à ce système.
     const choisis = (this.grimoireSortsPrepares || []).filter((id) => inscrits.includes(id));
     return choisis.length ? choisis : inscrits;
+  }
+  // Pourquoi CE sort n'est-il pas lançable ? null = il l'est.
+  // "nonPrepare" : inscrit, mais absent de la sélection préparée — se règle
+  // au prochain repos long, pas en changeant d'objet.
+  // "sansPalier"  : préparé, mais aucun emplacement compatible avec son rang
+  // sur l'objet porté — il faut un objet de meilleure rareté.
+  // Distinction nécessaire : le badge unique affichait « Nécessite un objet
+  // de meilleure rareté » dans les deux cas, ce qui est faux pour le premier.
+  raisonSortSansEmplacement(sortId) {
+    if (this.sortGrimoireADesEmplacements(sortId)) return null;
+    return this._idsGrimoirePourOccupation().includes(sortId) ? "sansPalier" : "nonPrepare";
   }
   // Recalcule l'occupation par palier À LA VOLÉE depuis grimoireSortsConnus
   // + sortsGrimoireAccordes (cf. _idsGrimoirePourOccupation ci-dessus) —
@@ -917,7 +942,7 @@ class Personnage extends Entite {
     return { ok: refuses.length === 0, refuses };
   }
   // Nombre total de sorts (appris + accordés) qui obtiennent effectivement
-  // un emplacement — numérateur de l'affichage "X/Y sorts connus" (cf.
+  // un emplacement — numérateur du « N préparés » (cf. _resumeGrimoire,
   // afficherFiche/htmlSortsGrimoireBattlemap) : un sort accordé de rang 5
   // sans emplacement 1-5 disponible n'est pas compté ici (cohérent avec
   // grimoireOccupationParTier), mais reste listé comme "connu" (juste

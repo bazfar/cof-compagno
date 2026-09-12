@@ -1761,6 +1761,34 @@ const App = (() => {
     return { visible: e.touche !== false, critique: e.touche === true && !!e.critique };
   }
 
+  // Grimoire v3 — DEUX plafonds distincts, à ne jamais confondre :
+  //  • les sorts INSCRITS, plafonnés par le NIVEAU (cf.
+  //    Personnage.plafondInscriptionGrimoire — 4 + 1 par niveau au-delà du 3),
+  //    ce qui gouverne le bouton « Apprendre » ;
+  //  • les sorts PRÉPARÉS, plafonnés par les emplacements typés de l'OBJET
+  //    porté (cf. slotsGrimoire, qui dépend de sa rareté), ce qui gouverne
+  //    le bouton « Lancer ».
+  // L'ancien résumé affichait le SECOND sous le libellé du premier
+  // (« X/Y sorts connus » = préparés/emplacements) : un grimoire pouvait
+  // annoncer « 4/6 » et deux paliers libres tout en refusant d'inscrire quoi
+  // que ce soit (plafond de niveau atteint), ou afficher tous ses paliers
+  // pleins alors qu'il restait des places d'inscription. Les deux compteurs
+  // sont désormais nommés et affichés côte à côte.
+  function _resumeGrimoire(p, perso) {
+    const slots = perso.slotsGrimoire();
+    if (slots === 0) {
+      return `Aucun emplacement de sort — ajoute ${NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire"} à ton inventaire pour en préparer.`;
+    }
+    return `${perso.idsGrimoireInscrits().length}/${perso.plafondInscriptionGrimoire()} sorts inscrits (plafond de niveau) · ${perso.grimoireSlotsOccupes()}/${slots} préparés (emplacements de l'objet porté)`;
+  }
+  // Badge remplaçant le bouton « Lancer » d'un sort non lançable — cf.
+  // Personnage.raisonSortSansEmplacement pour la distinction des deux causes.
+  function _badgeSortInjouable(raison) {
+    return raison === "nonPrepare"
+      ? ` <span class="loot-badge" style="opacity:.6;" title="Inscrit mais non préparé — à cocher dans « Préparation » au prochain repos long">Non préparé</span>`
+      : ` <span class="loot-badge" style="opacity:.6;" title="Aucun emplacement compatible avec ce rang sur l'objet porté — il en faut un de meilleure rareté">Sans emplacement</span>`;
+  }
+
   // Sorts de Grimoire (appris + accordés par la voie) pour la mini-fiche
   // battlemap d'un casteur (cf. estCasterGrimoire ci-dessous) — reprend
   // l'énumération de la carte "📖 Grimoire" de la fiche complète
@@ -1775,7 +1803,7 @@ const App = (() => {
     // sortGrimoireADesEmplacements ci-dessous qui, lui, respecte déjà la
     // sélection manuelle des préparés (cf. Personnage._idsGrimoirePourOccupation).
     const idsAffiches = perso.idsGrimoireInscrits();
-    const resume = `<div class="aide" style="margin-bottom:8px;">${perso.grimoireSlotsOccupes()}/${perso.slotsGrimoire()} sorts connus${perso.slotsGrimoire() === 0 ? ` — ajoute ${NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire"} à ton inventaire pour en apprendre.` : ""}</div>`;
+    const resume = `<div class="aide" style="margin-bottom:8px;">${_resumeGrimoire(p, perso)}</div>`;
     if (!idsAffiches.length) return resume + `<div class="vide">Aucun sort appris.</div>`;
     const listeHtml = idsAffiches.map((sortId) => {
       const sort = catalogue.find((s) => s.id === sortId);
@@ -1792,10 +1820,8 @@ const App = (() => {
       // un sort "connu" (appris ou accordé) sans palier compatible sur l'objet
       // porté reste listé, mais son bouton Lancer est remplacé par un badge
       // explicatif — se débloque automatiquement avec un meilleur objet.
-      const dispo = perso.sortGrimoireADesEmplacements ? perso.sortGrimoireADesEmplacements(sortId) : true;
-      const boutonOuBadge = dispo
-        ? htmlLancerCapacite(source, sort.mecanique, p)
-        : ` <span class="loot-badge" style="opacity:.6;" title="Nécessite un objet de meilleure rareté pour ce rang">Sans emplacement</span>`;
+      const raison = perso.raisonSortSansEmplacement ? perso.raisonSortSansEmplacement(sortId) : null;
+      const boutonOuBadge = raison ? _badgeSortInjouable(raison) : htmlLancerCapacite(source, sort.mecanique, p);
       return `<div class="cap-fiche">
         <div class="titre-cap">${echapper(sort.nom)}${boutonOuBadge}</div>
         <div class="voie-source">Rang ${sort.rang} · ${coutTexte}${tagAccorde}</div>
@@ -7400,7 +7426,7 @@ const App = (() => {
     // Personnage.plafondInscriptionGrimoire). Distinct du contrôle
     // d'emplacement ci-dessous, qui ne concerne que les sorts PRÉPARÉS.
     if (!perso.placeInscriptionLibre()) {
-      toast(`Grimoire plein : ${perso.plafondInscriptionGrimoire()} sorts inscriptibles au niveau ${p.niveau || 1} (sorts accordés compris). Prends un niveau pour gagner une place.`);
+      toast(`Plafond d’inscription atteint : ${perso.plafondInscriptionGrimoire()} sorts inscriptibles au niveau ${p.niveau || 1} (sorts accordés compris). Prends un niveau pour gagner une place.`);
       return null;
     }
     // Grimoire v3 : l'absence d'emplacement PRÉPARÉ compatible n'empêche
@@ -7408,9 +7434,14 @@ const App = (() => {
     // préparé pour l'instant. Le joueur arbitrera au prochain repos long.
     const tierLibre = perso.emplacementLibrePourRang(sort.rang);
     p.grimoireSortsConnus = connus.concat([sortId]);
-    const slots = perso.slotsGrimoire();
+    // Le décompte annoncé est celui des INSCRITS sur leur propre plafond —
+    // l'ancien message divisait le nombre de sorts connus par le nombre
+    // d'EMPLACEMENTS préparés, deux grandeurs sans rapport (cf.
+    // _resumeGrimoire), ce qui pouvait annoncer « 7/6 » ou « 4/6 » juste
+    // avant de refuser l'inscription suivante.
+    const inscritsApres = Personnage.depuisJSON(p).idsGrimoireInscrits().length;
     if (tierLibre) {
-      toast(`📖 « ${sort.nom} » ajouté au Grimoire, emplacement 1-${GRIMOIRE_PLAFOND_TIER[tierLibre]} (${p.grimoireSortsConnus.length}/${slots} au total).`);
+      toast(`📖 « ${sort.nom} » ajouté au Grimoire, emplacement 1-${GRIMOIRE_PLAFOND_TIER[tierLibre]} (${inscritsApres}/${perso.plafondInscriptionGrimoire()} sorts inscrits).`);
     } else {
       toast(`📖 « ${sort.nom} » inscrit au Grimoire, mais aucun emplacement compatible pour l'instant (rang ${sort.rang}) — à préparer au prochain repos long.`);
     }
@@ -7904,7 +7935,7 @@ const App = (() => {
                 </select>
                 — accorde 1 sort de rang 1 de la famille choisie (occupe un emplacement de Grimoire si un est disponible).
               </div>` : ""}
-              <div class="aide" style="margin-bottom:8px;">${perso.grimoireSlotsOccupes()}/${perso.slotsGrimoire()} sorts connus${perso.slotsGrimoire() === 0 ? ` — ajoute ${NOM_OBJET_GRIMOIRE_PAR_CLASSE[p.classe] || "un objet de Grimoire"} à ton inventaire pour en apprendre.` : ""}</div>
+              <div class="aide" style="margin-bottom:8px;">${_resumeGrimoire(p, perso)}</div>
               ${perso.slotsGrimoire() > 0 ? (function () {
                 const cap = perso.slotsGrimoireParTier();
                 const occ = perso.grimoireOccupationParTier();
@@ -7924,12 +7955,16 @@ const App = (() => {
                 const nomSort = (sid) => { const s = catalogue.find((x) => x.id === sid); return s ? s.nom : sid; };
                 const rangSort = (sid) => { const s = catalogue.find((x) => x.id === sid); return s ? s.rang : "?"; };
                 const prepDisponible = p.grimoirePreparationDisponible === true;
-                // Sélection actuelle : le choix persisté du joueur si présent,
-                // sinon repli sur le glouton réellement actif (même patron que
-                // _idsGrimoirePourOccupation côté personnage.js).
-                const selectionActuelle = (perso.grimoireSortsPrepares && perso.grimoireSortsPrepares.length)
-                  ? perso.grimoireSortsPrepares
-                  : inscrits.filter((sid) => perso.sortGrimoireADesEmplacements(sid));
+                // Sélection actuelle : les sorts qui occupent RÉELLEMENT un
+                // emplacement en ce moment. sortGrimoireADesEmplacements tient
+                // déjà compte du choix persisté ET du remplissage glouton de
+                // repli (cf. Personnage._idsGrimoirePourOccupation) : passer
+                // par lui évite de relire grimoireSortsPrepares brut, qui peut
+                // contenir des ids devenus obsolètes (baisse de niveau, sort
+                // retiré) et faisait alors cocher des cases ne correspondant à
+                // aucune occupation comptée. Un sort sans palier compatible
+                // n'est pas coché : le cocher ferait refuser la validation.
+                const selectionActuelle = inscrits.filter((sid) => perso.sortGrimoireADesEmplacements(sid));
                 const casesHtml = inscrits.length
                   ? inscrits.map((sid) => `<label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;margin:3px 0;">
                       <input type="checkbox" class="chk-prepare-grimoire" data-perso="${id}" data-sort="${sid}" ${selectionActuelle.includes(sid) ? "checked" : ""} ${prepDisponible ? "" : "disabled"} />
@@ -7982,7 +8017,7 @@ const App = (() => {
                       : niveauInsuffisant
                         ? `<span class="loot-badge" style="opacity:.6;" title="Nécessite le niveau ${niveauMin}">Trop haut niveau</span>`
                         : !placeInscriptible
-                          ? `<span class="loot-badge" style="opacity:.6;" title="Plafond d'inscription atteint (${perso.plafondInscriptionGrimoire()} au niveau ${p.niveau || 1})">Grimoire plein</span>`
+                          ? `<span class="loot-badge" style="opacity:.6;" title="Plafond d'inscription atteint (${perso.plafondInscriptionGrimoire()} au niveau ${p.niveau || 1}) — indépendant des emplacements préparés, qui peuvent rester libres">Plafond d'inscription atteint</span>`
                           : tierLibre
                             ? `<button type="button" class="btn petit or btn-apprendre-sort-direct" data-perso="${id}" data-sort="${sort.id}">Apprendre (1-${GRIMOIRE_PLAFOND_TIER[tierLibre]})</button>`
                             : `<button type="button" class="btn petit secondaire btn-apprendre-sort-direct" data-perso="${id}" data-sort="${sort.id}" title="Aucun emplacement préparé compatible — inscrit mais non lançable jusqu'au prochain repos long">Apprendre (non préparé)</button>`;
@@ -8023,10 +8058,8 @@ const App = (() => {
                     : sort.mecanique.coutPointsJugement ? `${sort.mecanique.coutPointsJugement} Pt. Jugement`
                     : "gratuit";
                   const tagAccorde = !appris.includes(sortId) ? " · accordé par la voie" : "";
-                  const dispo = perso.sortGrimoireADesEmplacements ? perso.sortGrimoireADesEmplacements(sortId) : true;
-                  const boutonOuBadge = dispo
-                    ? htmlLancerCapacite(source, sort.mecanique, p)
-                    : ` <span class="loot-badge" style="opacity:.6;" title="Nécessite un objet de meilleure rareté pour ce rang">Sans emplacement</span>`;
+                  const raison = perso.raisonSortSansEmplacement ? perso.raisonSortSansEmplacement(sortId) : null;
+                  const boutonOuBadge = raison ? _badgeSortInjouable(raison) : htmlLancerCapacite(source, sort.mecanique, p);
                   return `<div class="cap-fiche">
                     <div class="titre-cap">${echapper(sort.nom)}${boutonOuBadge}</div>
                     <div class="voie-source">Rang ${sort.rang} · ${coutTexte}${tagAccorde}</div>
@@ -8510,6 +8543,15 @@ const App = (() => {
         if (!p) return;
         const perso = Personnage.depuisJSON(p);
         const ids = Array.from(zone.querySelectorAll(`.chk-prepare-grimoire[data-perso="${persoId}"]:checked`)).map((c) => c.dataset.sort);
+        // Sélection vide refusée, jamais enregistrée : un [] persisté est
+        // indistinguable d'un « jamais préparé » (des fiches en portent un
+        // sans avoir rien choisi, cf. Personnage.grimoireSortsPrepares) et
+        // retomberait donc sur le remplissage glouton — le joueur croirait
+        // avoir tout dépréparé alors que rien n'aurait changé.
+        if (!ids.length) {
+          toast("Coche au moins un sort à préparer — une sélection vide ne peut pas être enregistrée.");
+          return;
+        }
         const { ok, refuses } = perso.validerPreparationGrimoire(ids);
         if (!ok) {
           const catalogue = (typeof SORTS_PAR_CLASSE !== "undefined") ? (SORTS_PAR_CLASSE[p.classe] || []) : [];
