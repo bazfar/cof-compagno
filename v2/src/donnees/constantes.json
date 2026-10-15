@@ -1,0 +1,400 @@
+{
+  "caracs": [
+    {
+      "code": "FOR",
+      "nom": "Force"
+    },
+    {
+      "code": "DEX",
+      "nom": "Dextérité"
+    },
+    {
+      "code": "CON",
+      "nom": "Constitution"
+    },
+    {
+      "code": "INT",
+      "nom": "Intelligence"
+    },
+    {
+      "code": "SAG",
+      "nom": "Sagesse"
+    },
+    {
+      "code": "CHA",
+      "nom": "Charisme"
+    }
+  ],
+  "sauvegardes": {
+    "Reflexes": "DEX",
+    "Vigueur": "CON",
+    "Volonte": "SAG"
+  },
+  "competencesParCarac": {
+    "FOR": [
+      "Athlétisme"
+    ],
+    "DEX": [
+      "Discrétion",
+      "Acrobaties",
+      "Escamotage"
+    ],
+    "CON": [],
+    "INT": [
+      "Connaissances (arcanes)",
+      "Connaissances (histoire)",
+      "Connaissances (nature)",
+      "Investigation",
+      "Artisanat"
+    ],
+    "SAG": [
+      "Perception",
+      "Discernement",
+      "Survie",
+      "Médecine",
+      "Dressage"
+    ],
+    "CHA": [
+      "Bluff",
+      "Intimidation",
+      "Représentation",
+      "Persuasion"
+    ]
+  },
+  "ordreClasses": [
+    "guerrier",
+    "chevalier",
+    "barde",
+    "chasseur",
+    "moine",
+    "druide",
+    "pretre",
+    "magicien",
+    "enchanteur",
+    "necromancien"
+  ],
+  "ordreRaces": [
+    "humain",
+    "elfe",
+    "nain",
+    "demi_elfe",
+    "demi_orc",
+    "demi_gobelin"
+  ],
+  "archetypeClasse": {
+    "guerrier": "martial",
+    "chevalier": "martial",
+    "chasseur": "martial",
+    "pretre": "hybride",
+    "druide": "hybride",
+    "barde": "hybride",
+    "moine": "hybride",
+    "magicien": "lanceur",
+    "necromancien": "lanceur",
+    "enchanteur": "lanceur"
+  },
+  "diviseurAttaque": {
+    "martial": 2,
+    "hybride": 2,
+    "lanceur": 3
+  },
+  "multiplicateurModPP": {
+    "hybride": 1,
+    "lanceur": 2
+  },
+  "familleClasse": {
+    "guerrier": "FOR",
+    "chevalier": "FOR",
+    "chasseur": "DEX",
+    "pretre": "SAG",
+    "druide": "SAG",
+    "moine": "SAG",
+    "magicien": "INT",
+    "necromancien": "INT",
+    "barde": "CHA",
+    "enchanteur": "CHA"
+  },
+  "caracMagie": {
+    "barde": "CHA",
+    "pretre": "SAG",
+    "necromancien": "INT",
+    "druide": "SAG",
+    "enchanteur": "CHA",
+    "moine": "SAG",
+    "magicien": "INT"
+  },
+  "bonusCaracsClasse": {
+    "guerrier": {
+      "plus2": "FOR",
+      "plus1": "CON"
+    },
+    "chevalier": {
+      "plus2": "FOR",
+      "plus1": "CHA"
+    },
+    "moine": {
+      "plus2": "SAG",
+      "plus1": "DEX"
+    },
+    "pretre": {
+      "plus2": "SAG",
+      "plus1": "CON"
+    },
+    "druide": {
+      "plus2": "SAG",
+      "plus1": "CON"
+    },
+    "magicien": {
+      "plus2": "INT",
+      "plus1": "CON"
+    },
+    "necromancien": {
+      "plus2": "INT",
+      "plus1": "SAG"
+    },
+    "barde": {
+      "plus2": "CHA",
+      "plus1": "DEX"
+    },
+    "enchanteur": {
+      "plus2": "CHA",
+      "plus1": "INT"
+    },
+    "chasseur": {
+      "plus2": "DEX",
+      "plus1": "CON"
+    }
+  },
+  "maitriseArmure": {
+    "guerrier": "lourde",
+    "chevalier": "lourde",
+    "chasseur": "moyenne",
+    "pretre": "moyenne",
+    "druide": "moyenne",
+    "barde": "moyenne",
+    "moine": "legere",
+    "magicien": "legere",
+    "necromancien": "legere",
+    "enchanteur": "legere"
+  },
+  "maitriseArme": {
+    "guerrier": "martiale",
+    "chevalier": "martiale",
+    "chasseur": "martiale",
+    "barde": "martiale",
+    "pretre": "simple",
+    "druide": "simple",
+    "moine": "simple",
+    "magicien": "simple",
+    "necromancien": "simple",
+    "enchanteur": "simple"
+  },
+  "rangCategorieArmure": {
+    "legere": 0,
+    "moyenne": 1,
+    "lourde": 2
+  },
+  "rangMaitriseArme": {
+    "simple": 0,
+    "martiale": 1
+  },
+  "classesEligiblesAttaqueOpportunite": [
+    "guerrier",
+    "chevalier",
+    "chasseur",
+    "pretre",
+    "druide",
+    "barde",
+    "moine"
+  ],
+  "coutPPParRang": {
+    "1": 2,
+    "2": 4,
+    "3": 6,
+    "4": 16,
+    "5": 25
+  },
+  "niveauMinParRang": {
+    "1": 1,
+    "2": 1,
+    "3": 4,
+    "4": 6,
+    "5": 8
+  },
+  "grimoireInscritsBase": 4,
+  "grimoireNiveauPivot": 3,
+  "cercleSortGratuit": {
+    "vie": "benediction",
+    "foi": "bouclier_de_la_foi",
+    "bannissement": "flamme_sacree",
+    "jugement": "oeil_inquisiteur"
+  },
+  "ecoleDeblocage": {
+    "evocation": [
+      "magicien.magie-elementaire.1"
+    ],
+    "abjuration": [
+      "magicien.magie-protectrice.1"
+    ],
+    "enchantement": [
+      "barde.spectacle.1",
+      "enchanteur.spectacle.1"
+    ],
+    "illusion": [
+      "enchanteur.enchantement.1"
+    ],
+    "transmutation": [
+      "enchanteur.transfiguration.1"
+    ],
+    "divination": [
+      "enchanteur.historien.1"
+    ],
+    "guerison": [
+      "pretre.guerison.1"
+    ],
+    "foi": [
+      "pretre.conversion.3"
+    ],
+    "bannissement": [
+      "pretre.exorcisme.1"
+    ],
+    "jugement": [
+      "pretre.inquisition.1"
+    ]
+  },
+  "sortsAccordes": [
+    {
+      "capacite": "pretre.guerison.1",
+      "sort": "imposition_des_mains"
+    },
+    {
+      "capacite": "pretre.guerison.4",
+      "sort": "soins_divins"
+    },
+    {
+      "capacite": "pretre.conversion.4",
+      "sort": "voix_du_jugement"
+    },
+    {
+      "capacite": "pretre.conversion.5",
+      "sort": "aura_divine"
+    },
+    {
+      "capacite": "pretre.exorcisme.1",
+      "sort": "flamme_sacree"
+    },
+    {
+      "capacite": "pretre.exorcisme.4",
+      "sort": "bannissement"
+    },
+    {
+      "capacite": "pretre.exorcisme.5",
+      "sort": "bannissement_zone"
+    },
+    {
+      "capacite": "pretre.inquisition.1",
+      "sort": "oeil_inquisiteur"
+    },
+    {
+      "capacite": "pretre.inquisition.5",
+      "sort": "bucher_purificateur"
+    },
+    {
+      "capacite": "enchanteur.enchantement.1",
+      "sort": "illusion"
+    },
+    {
+      "capacite": "enchanteur.enchantement.2",
+      "sort": "fascination_illusoire"
+    }
+  ],
+  "invocations": [
+    {
+      "id": "zombie_necromancien",
+      "capacite": "necromancien.outre-tombe.2",
+      "nom": "Zombie",
+      "classe": "necromancien",
+      "pvMax": 12,
+      "def": 10,
+      "armure": 0,
+      "init": 8,
+      "attaqueBonus": 3,
+      "degats": "1d6+1",
+      "description": "Init 8, DEF 10, PV 12, Att +3, DM 1d6+1. Se dégrade de 1 PV/minute (sauf rang 4 « Renfort macabre » qui l'arrête et ajoute +2 attaque/+5 PV).",
+      "rangRequis": 2
+    },
+    {
+      "id": "compagnon_druide",
+      "capacite": "druide.compagnons.3",
+      "nom": "Compagnon animal (oiseau de proie)",
+      "classe": "druide",
+      "pvMax": 10,
+      "def": 12,
+      "armure": 0,
+      "init": null,
+      "attaqueBonus": null,
+      "degats": "1d4",
+      "description": "Att = attaque magique du Druide, DM 1d4. Lien télépathique, perception partagée (+5 — non chiffré ici). PV non précisés par le texte officiel : 10 par défaut, ajustable à la table.",
+      "rangRequis": 3
+    },
+    {
+      "id": "creature_corrompue_druide",
+      "capacite": "druide.chaos.3",
+      "nom": "Créature corrompue (Invocation tainted)",
+      "classe": "druide",
+      "pvMax": null,
+      "def": 10,
+      "armure": 0,
+      "init": null,
+      "attaqueBonus": null,
+      "degats": "1d8",
+      "description": "PV = niveau × 2, Att = attaque du Druide − 2, DM 1d8. Ne dure que [1d4+1] tours — retire le jeton manuellement à expiration.",
+      "rangRequis": 3
+    },
+    {
+      "id": "barricade_guerrier",
+      "capacite": "guerrier.ingenieur.3",
+      "nom": "Barricade improvisée",
+      "classe": "guerrier",
+      "pvMax": null,
+      "pvMaxFormule": "10+niveau",
+      "def": 10,
+      "armure": 0,
+      "init": null,
+      "attaqueBonus": null,
+      "degats": null,
+      "sansAttaque": true,
+      "description": "10 PV + Niveau, DEF 10. N'attaque jamais — bloque une case du champ de bataille (Fortification de fortune, Voie de l'ingénieur rang 3). Le bonus +2 DEF aux alliés abrités est accordé séparément, pas par ce jeton.",
+      "rangRequis": 3
+    },
+    {
+      "id": "cauchemar_enchanteur",
+      "capacite": "enchanteur.chaos.5",
+      "nom": "Cauchemar incarné",
+      "classe": "enchanteur",
+      "pvMax": null,
+      "def": 10,
+      "armure": 0,
+      "init": null,
+      "attaqueBonus": null,
+      "degats": "1d6",
+      "description": "PV = niveau × 2 (par défaut, non chiffré par le texte source), Att = attaque magique de l'Enchanteur, DM 1d6 (assumé, à ajuster avec Thomas si besoin). Ne dure que [Mod. de CHA] tours — retire le jeton manuellement à expiration, comme Créature corrompue (Druide).",
+      "rangRequis": 5
+    },
+    {
+      "id": "illusion_liee_enchanteur",
+      "capacite": "enchanteur.enchantement.5",
+      "nom": "Illusion liée",
+      "classe": "enchanteur",
+      "pvMax": null,
+      "def": 12,
+      "armure": 0,
+      "init": null,
+      "attaqueBonus": null,
+      "degats": null,
+      "sansAttaque": true,
+      "description": "PV = floor(PV actuels du lanceur / 2) au moment de l'invocation (recalculé à chaque invocation). Ne combat pas et n'attaque pas — sert uniquement de vecteur au bonus +1d6 dégâts magiques (cf. Personnage.bonusDegatsMagiquesIllusionsLiees) tant qu'elle reste vivante. Invoquée deux fois au même lancer (2 instances liées) : confirme la modale d'invocation deux fois de suite.",
+      "rangRequis": 5
+    }
+  ]
+}

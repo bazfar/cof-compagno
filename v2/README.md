@@ -18,6 +18,7 @@ Cadrage complet : document « Cadrage cof-compagno 2.0 » du projet JDR.
 | `npm ci` | Installe les dépendances aux versions exactes du `package-lock.json` |
 | `npm run dev` | App en local, branchée sur la vraie base |
 | `npm run dev:emulateurs` | App en local sur des émulateurs : aucune donnée réelle touchée |
+| `npm run importer-v1` | Réimporte les règles depuis la v1 vers `src/donnees/` (voir `src/donnees/LISEZMOI.md`) |
 | `npm run verifier` | Typage, architecture, tests, build, règles Firestore — doit passer avant tout commit |
 | `npm run deployer` | Vérifie, puis déploie le site v2 et les règles Firestore |
 
@@ -27,6 +28,8 @@ Cadrage complet : document « Cadrage cof-compagno 2.0 » du projet JDR.
 - `src/lib/magasins/` : lectures en temps réel (états Svelte réactifs).
 - `src/lib/actions/` : seules fonctions qui écrivent dans Firestore.
 - `src/lib/schemas/` : forme des documents (Zod), source unique.
+- `src/lib/regles/` : accès typé aux règles du jeu (`src/donnees/*.json`, générés depuis la v1).
+- `outils/` : scripts lancés par Node (import des règles de la v1).
 - `src/lib/firebase/` : initialisation et outils Firebase.
 - `src/theme.css` : couleurs, polices, arrondis. Changer d'ambiance = changer ce fichier.
 

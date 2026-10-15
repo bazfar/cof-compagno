@@ -1,0 +1,2994 @@
+[
+  {
+    "id": "trait_de_feu",
+    "nom": "Trait de feu",
+    "rang": 1,
+    "categorie": "evocation",
+    "effet": "Attaque magique à distance : 1d10 dégâts de feu",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 15,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "INT",
+        "caracDefenseur": "DEF"
+      },
+      "effets": [
+        {
+          "type": "degats",
+          "formule": "1d10",
+          "typeDegats": "magique"
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "projectile_magique",
+    "nom": "Projectile magique",
+    "rang": 1,
+    "categorie": "evocation",
+    "effet": "Touche automatiquement (pas de jet d'attaque) : 3×(1d4+1) dégâts de force",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 20,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "degats",
+          "note": "touche automatique, pas de jetOppose — formule équivalente à 3×(1d4+1) : resoudreExpression() ne supporte pas la multiplication/parenthésage, seulement NdM/Mod.X/niveau/rang/constantes.",
+          "formule": "3d4+3",
+          "typeDegats": "magique"
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "bouclier_arcanique_mineur",
+    "nom": "Bouclier arcanique mineur",
+    "rang": 1,
+    "categorie": "abjuration",
+    "effet": "Réaction : +2 CA jusqu'au prochain tour du Magicien",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "soi",
+      "portee": null,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "bonus",
+          "cible": "DEF",
+          "valeur": 2,
+          "duree": "prochainTour"
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur",
+      "reactionCout": 1
+    }
+  },
+  {
+    "id": "detection_magie",
+    "nom": "Détection de la magie",
+    "rang": 1,
+    "categorie": "divination_transmutation",
+    "effet": "Révèle les auras magiques dans la zone (rituel)",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 10,
+      "zone": {
+        "taille": 3
+      },
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "special",
+          "note": "Information narrative — révèle présence/nature d'auras magiques, pas d'effet chiffré."
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur",
+      "rituel": true
+    }
+  },
+  {
+    "id": "sommeil",
+    "nom": "Sommeil",
+    "rang": 1,
+    "categorie": "enchantement",
+    "effet": "Jet opposé INT vs Volonté sur les cibles en zone : échec = endormi jusqu'à subir des dégâts ou 3 tours",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 12,
+      "zone": {
+        "taille": 1
+      },
+      "jetOppose": {
+        "caracAttaquant": "INT",
+        "caracDefenseur": "Volonte"
+      },
+      "effets": [
+        {
+          "type": "etat",
+          "id": "endormie",
+          "duree": {
+            "tours": 3,
+            "rompuSiDegats": true
+          }
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "eclair_localise",
+    "nom": "Éclair localisé",
+    "rang": 2,
+    "categorie": "evocation",
+    "effet": "Ligne : 2d8 dégâts électriques",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 15,
+      "zone": {
+        "forme": "ligne",
+        "longueur": 6
+      },
+      "jetOppose": {
+        "caracAttaquant": null,
+        "caracDefenseur": "Reflexes",
+        "modeSauvegarde": "moitie"
+      },
+      "effets": [
+        {
+          "type": "degats",
+          "formule": "2d8",
+          "typeDegats": "magique"
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "toile_araignee",
+    "nom": "Toile d'araignée",
+    "rang": 2,
+    "categorie": "enchantement",
+    "effet": "Zone 2 cases : jet Réflexes ou Entravé",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 10,
+      "zone": {
+        "taille": 2
+      },
+      "jetOppose": {
+        "caracAttaquant": null,
+        "caracDefenseur": "Reflexes"
+      },
+      "effets": [
+        {
+          "type": "etat",
+          "id": "entravee",
+          "duree": {
+            "tours": 2
+          }
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "peau_de_pierre",
+    "nom": "Peau de pierre",
+    "rang": 2,
+    "categorie": "abjuration",
+    "effet": "+2 réduction de dégâts pendant 3 tours",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "bonus",
+          "cible": "reduction_degats",
+          "valeur": 2,
+          "duree": "3"
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "invisibilite_mineure",
+    "nom": "Invisibilité mineure",
+    "rang": 2,
+    "categorie": "illusion",
+    "effet": "Invisible jusqu'à la prochaine action offensive",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "invisible",
+          "duree": {
+            "motCle": "jusquaActionOffensive"
+          }
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "image_miroir",
+    "nom": "Image miroir",
+    "rang": 2,
+    "categorie": "illusion",
+    "effet": "Crée 2 doubles illusoires : chaque attaque de monstre qui vous toucherait peut frapper un double à la place, qui disparaît",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "soi",
+      "portee": null,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "image_miroir",
+          "duree": "finCombat"
+        },
+        {
+          "type": "special",
+          "note": "Un sort ou un effet qui n'est pas une attaque de monstre (dégâts de zone, effet saisi manuellement par le MJ) ne consomme pas de double : à arbitrer à la table."
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "boule_de_feu",
+    "nom": "Boule de feu",
+    "rang": 3,
+    "categorie": "evocation",
+    "effet": "Zone 2 cases : 4d6 dégâts de feu, Réflexes pour moitié",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 15,
+      "zone": {
+        "taille": 2
+      },
+      "jetOppose": {
+        "caracAttaquant": null,
+        "caracDefenseur": "Reflexes",
+        "modeSauvegarde": "moitie"
+      },
+      "effets": [
+        {
+          "type": "degats",
+          "formule": "4d6",
+          "typeDegats": "magique"
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "ralentissement",
+    "nom": "Ralentissement",
+    "rang": 3,
+    "categorie": "enchantement",
+    "effet": "Zone : -2 attaque/DEF + moitié vitesse, jet Vigueur",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 12,
+      "zone": {
+        "taille": 2
+      },
+      "jetOppose": {
+        "caracAttaquant": null,
+        "caracDefenseur": "Vigueur"
+      },
+      "effets": [
+        {
+          "type": "etat",
+          "id": "ralentie",
+          "duree": {
+            "tours": 3
+          }
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "contresort",
+    "nom": "Contresort",
+    "rang": 3,
+    "categorie": "abjuration",
+    "effet": "Réaction : annule un sort ennemi en cours de résolution",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 15,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "special",
+          "note": "Résolu automatiquement par la fenêtre de réaction (test d'attaque magique vs difficulté du rang du sort adverse) — voir l'entrée d'historique correspondante."
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur",
+      "reactionCout": 1
+    }
+  },
+  {
+    "id": "vol",
+    "nom": "Vol",
+    "rang": 3,
+    "categorie": "divination_transmutation",
+    "effet": "La cible gagne la capacité de voler pendant plusieurs tours",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "vol",
+          "duree": {
+            "tours": 5
+          }
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "eclair_grand",
+    "nom": "Éclair",
+    "rang": 4,
+    "categorie": "evocation",
+    "effet": "Ligne longue : 6d6 dégâts électriques, Réflexes pour moitié",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 20,
+      "zone": {
+        "forme": "ligne",
+        "longueur": 10
+      },
+      "jetOppose": {
+        "caracAttaquant": null,
+        "caracDefenseur": "Reflexes",
+        "modeSauvegarde": "moitie"
+      },
+      "effets": [
+        {
+          "type": "degats",
+          "formule": "6d6",
+          "typeDegats": "magique"
+        }
+      ],
+      "coutPP": 16,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "cecite_surdite",
+    "nom": "Cécité/Surdité",
+    "rang": 4,
+    "categorie": "enchantement",
+    "effet": "Jet Vigueur : aveugle ou assourdit 3 tours",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": null,
+        "caracDefenseur": "Vigueur"
+      },
+      "effets": [
+        {
+          "type": "etat",
+          "id": "aveugle_ou_sourd",
+          "duree": {
+            "tours": 3
+          }
+        }
+      ],
+      "coutPP": 16,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "mur_de_force",
+    "nom": "Mur de force",
+    "rang": 4,
+    "categorie": "abjuration",
+    "effet": "Érige un mur infranchissable de la longueur tracée, pendant 3 tours (battlemap uniquement)",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "aucune",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "special",
+          "note": "Battlemap uniquement : sans scène active, le sort ne peut pas être tracé. Longueur libre, arbitrée par le MJ au moment du tracé. Le mur bloque la vue ET le passage, et disparaît après 3 tours du lanceur."
+        }
+      ],
+      "coutPP": 16,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "invisibilite_majeure",
+    "nom": "Invisibilité majeure",
+    "rang": 4,
+    "categorie": "illusion",
+    "effet": "Invisibilité complète prolongée, ne se rompt pas à la première action offensive",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "invisible_majeur",
+          "duree": {
+            "tours": 5
+          }
+        }
+      ],
+      "coutPP": 16,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "meteore_mineur",
+    "nom": "Météore mineur",
+    "rang": 5,
+    "categorie": "evocation",
+    "effet": "Zone large : 8d6 dégâts, Réflexes pour moitié",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "1x/scenario"
+      },
+      "cible": "zone",
+      "portee": 20,
+      "zone": {
+        "taille": 4
+      },
+      "jetOppose": {
+        "caracAttaquant": null,
+        "caracDefenseur": "Reflexes",
+        "modeSauvegarde": "moitie"
+      },
+      "effets": [
+        {
+          "type": "degats",
+          "formule": "8d6",
+          "typeDegats": "magique"
+        }
+      ],
+      "coutPP": 25,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "teleportation",
+    "nom": "Téléportation",
+    "rang": 5,
+    "categorie": "divination_transmutation",
+    "effet": "Déplace le groupe vers un lieu connu",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "1x/scenario"
+      },
+      "cible": "groupe",
+      "portee": null,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "special",
+          "note": "Résolution narrative par la table — déplacement de groupe vers un lieu connu du lanceur."
+        }
+      ],
+      "coutPP": 25,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "fleche_de_givre",
+    "nom": "Flèche de givre",
+    "rang": 2,
+    "categorie": "evocation",
+    "effet": "Attaque magique à distance : 2d6 dégâts de givre, cible Ralentie 1 tour (-2 CA)",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 15,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "INT",
+        "caracDefenseur": "DEF"
+      },
+      "effets": [
+        {
+          "type": "degats",
+          "formule": "2d6",
+          "typeDegats": "magique"
+        },
+        {
+          "type": "etat",
+          "id": "ralentie",
+          "duree": {
+            "tours": 1
+          }
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "orage_de_grele",
+    "nom": "Orage de grêle",
+    "rang": 4,
+    "categorie": "evocation",
+    "effet": "Zone 2 cases : 5d6 dégâts, Réflexes pour moitié",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 18,
+      "zone": {
+        "taille": 2
+      },
+      "jetOppose": {
+        "caracAttaquant": null,
+        "caracDefenseur": "Reflexes",
+        "modeSauvegarde": "moitie"
+      },
+      "effets": [
+        {
+          "type": "degats",
+          "formule": "5d6",
+          "typeDegats": "magique"
+        }
+      ],
+      "coutPP": 16,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "armure_de_mage",
+    "nom": "Armure de mage",
+    "rang": 1,
+    "categorie": "abjuration",
+    "effet": "+2 CA pendant 5 tours",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "soi",
+      "portee": null,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "bonus",
+          "cible": "DEF",
+          "valeur": 2,
+          "duree": "5"
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "dissipation_mineure",
+    "nom": "Dissipation mineure",
+    "rang": 2,
+    "categorie": "abjuration",
+    "effet": "Jet opposé INT contre une cible à portée : succès = annule un effet magique actif de votre choix",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "INT",
+        "caracDefenseur": "defMentale"
+      },
+      "effets": [
+        {
+          "type": "dissipation",
+          "choixApresCible": true,
+          "choixDynamique": "etatsDeLaCible",
+          "choix": {
+            "titre": "Dissipation mineure",
+            "consigne": "Quel effet dissiper ?",
+            "options": []
+          }
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "globe_de_protection",
+    "nom": "Globe de protection",
+    "rang": 3,
+    "categorie": "abjuration",
+    "effet": "Alliés à ≤2 cases du lanceur gagnent +1 CA pendant 3 tours",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": null,
+      "zone": {
+        "taille": 2
+      },
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "bonus",
+          "cible": "DEF",
+          "valeur": 1,
+          "duree": "3"
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "bastion_arcanique",
+    "nom": "Bastion arcanique",
+    "rang": 5,
+    "categorie": "abjuration",
+    "effet": "Immunité totale aux dégâts magiques pendant [2+Mod.INT] tours",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "1x/scenario"
+      },
+      "cible": "soi",
+      "portee": null,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "bastion_arcanique",
+          "duree": "2+Mod.INT"
+        }
+      ],
+      "coutPP": 25,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "deguisement_magique",
+    "nom": "Déguisement magique",
+    "rang": 1,
+    "categorie": "illusion",
+    "effet": "Prend l'apparence d'une personne visualisée durant l'heure précédente, pendant 10 + (Mod.CHA × 2) minutes",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "soi",
+      "portee": null,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "special",
+          "note": "Prend l'apparence d'une personne que le lanceur a visualisée durant l'heure précédente, pendant 10 + (Mod.CHA × 2) minutes — durée en minutes hors échelle de tours de combat, résolution manuelle par la table (pas de minuteur temps réel dans l'app), même limite que Détection de la magie/Téléportation."
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "lame_ombre",
+    "nom": "Lame d'ombre",
+    "rang": 3,
+    "categorie": "illusion",
+    "effet": "Manifeste une lame d'ombre : votre attaque de contact inflige 2d6 dégâts magiques au lieu de sa formule d'arme, pendant 3 tours",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "soi",
+      "portee": null,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "lame_ombre",
+          "duree": "3"
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "assassin_imaginaire",
+    "nom": "Assassin imaginaire",
+    "rang": 4,
+    "categorie": "illusion",
+    "effet": "Conjure dans l'esprit de la cible la présence d'un assassin : jet de sauvegarde Volonté (SAG) ou 3d8 dégâts",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "INT",
+        "caracDefenseur": "Volonte"
+      },
+      "effets": [
+        {
+          "type": "degats",
+          "formule": "3d8",
+          "typeDegats": "magique"
+        }
+      ],
+      "coutPP": 16,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "silence",
+    "nom": "Silence",
+    "rang": 3,
+    "categorie": "illusion",
+    "effet": "Jusqu'à 3 créatures à portée sont immunisées aux dégâts électriques pendant [1+Mod.CHA] tours ; les sorts à composante verbale y sont impossibles",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 6,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "silence_zone",
+          "duree": "1+Mod.CHA"
+        },
+        {
+          "type": "special",
+          "note": "Aucun sort à composante verbale ne peut être lancé par une créature affectée, et les créatures non ciblées présentes dans la zone décrite en fiction sont affectées de la même façon — arbitrage de la table dans les deux cas."
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur",
+      "maxCibles": 3
+    }
+  },
+  {
+    "id": "prison_mentale",
+    "nom": "Prison mentale",
+    "rang": 5,
+    "categorie": "illusion",
+    "effet": "Cible à 6 cases : sauvegarde Volonté DD 16 ou subit 4d8 dégâts et reste prisonnière de sa case ; si elle se déplace ou est déplacée, l'illusion se brise et elle subit 8d8 dégâts supplémentaires",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "1x/scenario"
+      },
+      "cible": "ennemi",
+      "portee": 6,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": null,
+        "caracDefenseur": "Volonte",
+        "difficulteFixe": 16
+      },
+      "effets": [
+        {
+          "type": "degats",
+          "formule": "4d8",
+          "typeDegats": "magique"
+        },
+        {
+          "type": "etat",
+          "id": "prisonniere_illusoire",
+          "duree": {
+            "tours": null,
+            "motCle": null,
+            "dureeAffichee": "jusqu'à un déplacement"
+          }
+        }
+      ],
+      "coutPP": 25,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "chatiment_calcinant",
+    "nom": "Châtiment calcinant",
+    "rang": 1,
+    "categorie": "evocation",
+    "effet": "Enchante votre arme ou une arme à portée (3 cases) — canalisation 1 PP/tour : la prochaine attaque touchée par cette arme inflige +1d6 dégâts de feu",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 3,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "chatiment_calcinant_actif",
+          "coutMaintienPP": 1,
+          "duree": "maintenue"
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "secousse",
+    "nom": "Secousse",
+    "rang": 1,
+    "categorie": "evocation",
+    "effet": "Le sol tremble sur une zone de 3 cases de diamètre : sauvegarde Réflexes DD 13 ou étourdie",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 8,
+      "zone": {
+        "taille": 3
+      },
+      "jetOppose": {
+        "caracAttaquant": null,
+        "caracDefenseur": "Reflexes",
+        "difficulteFixe": 13
+      },
+      "effets": [
+        {
+          "type": "etat",
+          "id": "etourdie",
+          "duree": {
+            "tours": 1
+          }
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "eclair_tracant",
+    "nom": "Éclair traçant",
+    "rang": 2,
+    "categorie": "evocation",
+    "effet": "Marque une cible à 5 cases : sauvegarde Réflexes DD 14 ou subit 1d8 dégâts électriques par tour pendant 3 tours",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": null,
+        "caracDefenseur": "Reflexes",
+        "difficulteFixe": 14
+      },
+      "effets": [
+        {
+          "type": "etat",
+          "id": "marque_eclair",
+          "formuleDot": "1d8",
+          "duree": {
+            "tours": 3
+          }
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "chatiment_ame",
+    "nom": "Châtiment de l'âme",
+    "rang": 4,
+    "categorie": "evocation",
+    "effet": "Marque une cible à 5 cases : la prochaine fois qu'elle est touchée par une attaque de contact, sauvegarde Vigueur DD 15 ou subit 3d8 dégâts magiques supplémentaires",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "marque_chatiment_ame",
+          "duree": {
+            "tours": 5
+          }
+        }
+      ],
+      "coutPP": 16,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "parole_divine",
+    "nom": "Parole divine",
+    "rang": 5,
+    "categorie": "evocation",
+    "effet": "Portée 6 cases, jusqu'à 8 cibles (compte 1,5× son coût pour la Rupture). Selon les PV actuels de chacune : 50 ou moins → étourdie 1 tour ; 40 ou moins → endormie 2 tours ; 30 ou moins → paralysée 3 tours ; 20 ou moins → tuée sur le coup. Aucun jet de sauvegarde",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "1x/scenario"
+      },
+      "cible": "ennemi",
+      "portee": 6,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "seuilsPv",
+          "paliers": [
+            {
+              "pvMax": 20,
+              "mort": true
+            },
+            {
+              "pvMax": 30,
+              "idEtat": "paralysee",
+              "duree": "3"
+            },
+            {
+              "pvMax": 40,
+              "idEtat": "endormie",
+              "duree": "2"
+            },
+            {
+              "pvMax": 50,
+              "idEtat": "etourdie",
+              "duree": "1"
+            }
+          ]
+        }
+      ],
+      "coutPP": 25,
+      "typeSort": "majeur",
+      "maxCibles": 8,
+      "remousMultiplicateur": 1.5
+    }
+  },
+  {
+    "id": "forteresse_esprit",
+    "nom": "Forteresse de l'esprit",
+    "rang": 2,
+    "categorie": "abjuration",
+    "effet": "Jusqu'à 3 alliés à portée gagnent +1 à leurs jets de sauvegarde de Volonté pendant 3 tours",
+    "listes": [
+      "arcanique",
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "bonus",
+          "cible": "Volonte",
+          "valeur": 1,
+          "duree": "3"
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur",
+      "maxCibles": 3
+    }
+  },
+  {
+    "id": "benediction_mineure",
+    "nom": "Bénédiction mineure",
+    "rang": 2,
+    "categorie": "abjuration",
+    "effet": "La cible à portée gagne un bonus de 1d4 sur son prochain jet de dé",
+    "listes": [
+      "arcanique",
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "bonus",
+          "cible": "prochainJet",
+          "formule": "1d4",
+          "duree": "finCombat"
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "sphere_vitriol",
+    "nom": "Sphère de vitriol",
+    "rang": 3,
+    "categorie": "abjuration",
+    "effet": "Sphère de 5 cases de diamètre, dure 1+Mod.INT tours : toute cible dans ou entrant dans la zone subit 3d4 dégâts d'acide immédiatement puis 2d4 par tour tant qu'elle y reste ; sauvegarde Réflexes DD 14 pour ne subir que la moitié",
+    "listes": [
+      "arcanique",
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 10,
+      "zone": {
+        "taille": 5
+      },
+      "jetOppose": {
+        "caracAttaquant": null,
+        "caracDefenseur": "Reflexes",
+        "difficulteFixe": 14,
+        "modeSauvegarde": "moitie"
+      },
+      "effets": [
+        {
+          "type": "degats",
+          "formule": "3d4",
+          "typeDegats": "magique"
+        },
+        {
+          "type": "special",
+          "note": "Dégâts initiaux (3d4, ou moitié sur sauvegarde réussie) déjà résolus ci-dessus pour la première cible touchée. La persistance (2d4/tour tant que dans la zone, et le déclenchement pour toute créature qui ENTRE dans la zone après la pose, pendant 1+Mod.INT tours) n'a pas d'équivalent dans le moteur (pas de zone de terrain persistante déclenchée par l'entrée d'un jeton) — application manuelle par la table pour chaque cible et chaque tour, comme Mur de force pour l'obstacle qu'il pose."
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "aide",
+    "nom": "Aide",
+    "rang": 2,
+    "categorie": "abjuration",
+    "effet": "Jusqu'à 3 alliés à portée gagnent 5 PV temporaires (se dissipent à la fin du combat)",
+    "listes": [
+      "arcanique",
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "pvTemp",
+          "formule": "5",
+          "duree": "finCombat"
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur",
+      "maxCibles": 3
+    }
+  },
+  {
+    "id": "illusion",
+    "nom": "Illusion",
+    "rang": 1,
+    "categorie": "illusion",
+    "effet": "Pose une illusion sur un allié : +1 CA pendant 3 tours (ou jusqu'à la fin du combat si plus court). À rang 3 de la Voie de l'enchantement (Image décalée), remplacé par : la prochaine attaque réussie contre le bénéficiaire rate automatiquement",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "bonus",
+          "cible": "DEF",
+          "valeur": 1,
+          "duree": "3"
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "fascination_illusoire",
+    "nom": "Fascination",
+    "rang": 2,
+    "categorie": "illusion",
+    "effet": "Attaque magique (INT, pas CHA) vs DEF + PV actuels/2 de la cible : Fascinée tant que maintenue (coût de maintien : 2 PP/tour)",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "INT",
+        "caracDefenseurCalcule": "DEF+PVactuels/2"
+      },
+      "effets": [
+        {
+          "type": "etat",
+          "id": "fascinee_illusoire",
+          "coutMaintienPP": 2,
+          "duree": "maintenue"
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "fascination",
+    "nom": "Fascination",
+    "rang": 1,
+    "categorie": "enchantement",
+    "effet": "Attaque magique vs DEF : Fascinée (immobile) tant que l'Enchanteur maintient (action L/tour). Brisée par toute attaque ou événement brutal",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 15,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "CHA",
+        "caracDefenseur": "DEF"
+      },
+      "effets": [
+        {
+          "type": "etat",
+          "id": "fascinee",
+          "duree": {
+            "motCle": "maintenue"
+          }
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "charme_mineur",
+    "nom": "Charme mineur",
+    "rang": 1,
+    "categorie": "enchantement",
+    "effet": "Jet opposé CHA vs Volonté : la cible vous considère comme un ami de confiance pendant [1+Mod.CHA] tours",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "CHA",
+        "caracDefenseur": "Volonte"
+      },
+      "effets": [
+        {
+          "type": "etat",
+          "id": "charmee",
+          "duree": {
+            "tours": "1+Mod.CHA"
+          }
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "manipulation_emotions",
+    "nom": "Manipulation des émotions",
+    "rang": 2,
+    "categorie": "enchantement",
+    "effet": "Insuffle peur ou confiance à une cible : -2 ou +2 à ses jets d'attaque jusqu'à son prochain tour, au choix du lanceur",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 12,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "CHA",
+        "caracDefenseur": "Volonte"
+      },
+      "effets": [
+        {
+          "type": "bonus",
+          "cible": "attaque",
+          "valeur": -2,
+          "duree": "prochainTour",
+          "choix": {
+            "titre": "Manipulation des émotions",
+            "consigne": "Quelle émotion insuffles-tu ?",
+            "options": [
+              {
+                "valeur": "peur",
+                "label": "Peur (-2 attaque)"
+              },
+              {
+                "valeur": "confiance",
+                "label": "Confiance (+2 attaque)"
+              }
+            ]
+          },
+          "valeurParChoix": {
+            "peur": -2,
+            "confiance": 2
+          }
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "sommeil_enchanteur",
+    "nom": "Sommeil",
+    "rang": 3,
+    "categorie": "enchantement",
+    "effet": "Attaque magique contre une cible avec moins de [Mod.CHA×5] PV actuels : endormie jusqu'à blessure ou réveil manuel",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 15,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "CHA",
+        "caracDefenseur": "DEF"
+      },
+      "effets": [
+        {
+          "type": "etat",
+          "id": "endormi",
+          "duree": {
+            "motCle": "jusquaBlessure"
+          }
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "suggestion",
+    "nom": "Suggestion",
+    "rang": 4,
+    "categorie": "enchantement",
+    "effet": "Attaque magique vs DEF : la cible exécute une action raisonnable dans l'heure, sans se souvenir d'avoir été influencée",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "CHA",
+        "caracDefenseur": "DEF"
+      },
+      "effets": [
+        {
+          "type": "special",
+          "note": "Résolution narrative par la table (action raisonnable, pas de moteur de comportement automatisé)."
+        }
+      ],
+      "coutPP": 16,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "alteration_mineure",
+    "nom": "Altération mineure",
+    "rang": 1,
+    "categorie": "transmutation",
+    "effet": "Change temporairement une propriété mineure d'un objet ou d'une créature (poids, texture, couleur) pendant [niveau] heures",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "aucune",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "special",
+          "note": "Effet narratif/cosmétique, pas de bonus chiffré."
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "vitesse_transmutee",
+    "nom": "Vitesse transmutée",
+    "rang": 2,
+    "categorie": "transmutation",
+    "effet": "La cible gagne +2 cases de déplacement pendant 3 tours",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "vitesse_transmutee",
+          "duree": "3"
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "arme_enchantee_grimoire",
+    "nom": "Arme enchantée",
+    "rang": 3,
+    "categorie": "transmutation",
+    "effet": "Une arme ou objet gagne +2 attaque et +1d6 DM magiques pendant [3+Mod.CHA] tours",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": "contact",
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "bonus",
+          "cible": "attaque",
+          "valeur": 2,
+          "duree": "3+Mod.CHA"
+        },
+        {
+          "type": "etat",
+          "id": "arme_enchantee",
+          "duree": {
+            "tours": "3+Mod.CHA"
+          }
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "metamorphose_bestiale",
+    "nom": "Métamorphose bestiale",
+    "rang": 4,
+    "categorie": "transmutation",
+    "effet": "Jet opposé CHA vs Volonté : transforme la cible en créature inoffensive pendant [1d4+Mod.CHA] tours",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "CHA",
+        "caracDefenseur": "Volonte"
+      },
+      "effets": [
+        {
+          "type": "etat",
+          "id": "metamorphosee",
+          "duree": {
+            "tours": "1d4+Mod.CHA"
+          }
+        }
+      ],
+      "coutPP": 16,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "clairvoyance_mineure",
+    "nom": "Clairvoyance mineure",
+    "rang": 1,
+    "categorie": "divination",
+    "effet": "Voit à travers un obstacle mince (porte, rideau, cloison) pendant 3 tours",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "special",
+          "note": "Effet de perception narratif, pas de bonus chiffré."
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "lecture_aura_grimoire",
+    "nom": "Lecture d'aura",
+    "rang": 2,
+    "categorie": "divination",
+    "effet": "Révèle la nature magique d'un objet ou créature (école de magie, niveau approximatif, malédictions actives)",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "aucune",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "special",
+          "note": "Information narrative, pas d'effet chiffré."
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "detection_pensees",
+    "nom": "Détection des pensées",
+    "rang": 3,
+    "categorie": "divination",
+    "effet": "Jet opposé CHA vs Volonté : perçoit les intentions superficielles d'une cible à portée",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "CHA",
+        "caracDefenseur": "Volonte"
+      },
+      "effets": [
+        {
+          "type": "special",
+          "note": "Information narrative en cas de succès, résolue par la table."
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "vision_du_passe_grimoire",
+    "nom": "Vision du passé",
+    "rang": 4,
+    "categorie": "divination",
+    "effet": "En touchant un objet ou lieu, perçoit les événements marquants qui s'y sont déroulés (jusqu'à [niveau×10] ans)",
+    "listes": [
+      "arcanique"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "aucune",
+      "portee": "contact",
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "special",
+          "note": "Rituel narratif (10 min), information résolue par la table."
+        }
+      ],
+      "coutPP": 16,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "imposition_des_mains",
+    "nom": "Imposition des mains",
+    "rang": 1,
+    "categorie": "guerison",
+    "effet": "1d6 PV — nécessite d'être au corps à corps avec la cible",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 1,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "soin",
+          "formule": "1d6"
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "benediction",
+    "nom": "Bénédiction",
+    "rang": 1,
+    "categorie": "guerison",
+    "effet": "Un allié gagne +1d4 à ses jets d'attaque et de Sauvegarde pendant 10 tours",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "bonus",
+          "cible": "attaque",
+          "valeur": "1d4",
+          "duree": "10",
+          "ciblesSupplementaires": [
+            "sauvegardes"
+          ]
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "premiers_secours",
+    "nom": "Premiers secours",
+    "rang": 1,
+    "categorie": "guerison",
+    "effet": "La cible Mourante réussit automatiquement son prochain jet de mort",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "premiers_secours",
+          "duree": "finCombat"
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "soins_moderes",
+    "nom": "Soins modérés",
+    "rang": 2,
+    "categorie": "guerison",
+    "effet": "2d8 + niveau PV par le toucher",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "soin",
+          "formule": "2d8+niveau"
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "restauration_mineure",
+    "nom": "Restauration mineure",
+    "rang": 2,
+    "categorie": "guerison",
+    "effet": "Retire un effet de paralysie, cécité ou faiblesse actif sur la cible",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "retraitEtat"
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "chaine_de_vie",
+    "nom": "Chaîne de vie",
+    "rang": 2,
+    "categorie": "guerison",
+    "effet": "Soigne jusqu'à 3 alliés à portée de 1d6 chacun",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 10,
+      "zone": {
+        "taille": 3,
+        "ciblesMax": 3
+      },
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "soin",
+          "cible": "multiple",
+          "formule": "1d6"
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "purification",
+    "nom": "Purification",
+    "rang": 3,
+    "categorie": "guerison",
+    "effet": "Neutralise un poison ou une maladie par le toucher (enlève un état néfaste actif)",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "retraitEtat"
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "cercle_de_guerison",
+    "nom": "Cercle de guérison",
+    "rang": 3,
+    "categorie": "guerison",
+    "effet": "Tous les alliés dans une zone de 3 cases sont soignés de 2d6",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 8,
+      "zone": {
+        "taille": 3
+      },
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "soin",
+          "cible": "zone",
+          "formule": "2d6"
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "protection_contre_la_mort",
+    "nom": "Protection contre la mort",
+    "rang": 3,
+    "categorie": "guerison",
+    "effet": "La prochaine fois que la cible tomberait à 0 PV ce combat, elle reste à 1 PV à la place",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "protection_mort",
+          "duree": {
+            "motCle": "finCombat"
+          }
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "soins_divins",
+    "nom": "Soins divins",
+    "rang": 4,
+    "categorie": "guerison",
+    "effet": "Au choix : 3 cibles différentes soignées de 1d8 chacune, OU 1 cible soignée de 2d10. Coûte 1 Point de Bénédiction",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "limitee",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "soin",
+          "formule": "2d10",
+          "choix": {
+            "titre": "Soins divins",
+            "consigne": "Choisis le mode de soin :",
+            "options": [
+              {
+                "valeur": "cible_unique",
+                "label": "1 cible (2d10)"
+              },
+              {
+                "valeur": "trois_cibles",
+                "label": "3 cibles (1d8 chacune)"
+              }
+            ]
+          }
+        },
+        {
+          "type": "special",
+          "note": "Reprend le patron de résolution à choix multiple déjà utilisé par l'ancienne Bénédiction (overlay de choix, cibleIds pour le mode 3 cibles) — mécanisme technique conservé, seul le coût (Points de Bénédiction au lieu d'usages/jour) et les formules changent."
+        }
+      ],
+      "typeSort": "majeur",
+      "coutPointsBenediction": 1
+    }
+  },
+  {
+    "id": "guerison_de_masse",
+    "nom": "Guérison de masse",
+    "rang": 4,
+    "categorie": "guerison",
+    "effet": "Tous les alliés dans une zone de 4 cases sont soignés de 3d8",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 10,
+      "zone": {
+        "taille": 4
+      },
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "soin",
+          "cible": "zone",
+          "formule": "3d8"
+        }
+      ],
+      "coutPP": 16,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "regeneration",
+    "nom": "Régénération",
+    "rang": 4,
+    "categorie": "guerison",
+    "effet": "La cible régénère 1d6 PV par tour pendant 5 tours ; un membre perdu repousse en 1 minute",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "soin",
+          "formule": "1d6",
+          "recurrence": {
+            "tours": 5,
+            "frequence": "debutTour"
+          }
+        },
+        {
+          "type": "special",
+          "note": "Repousse de membre : effet narratif, pas de mécanique chiffrée (pas de système de perte de membre modélisé dans l'app actuellement)."
+        }
+      ],
+      "coutPP": 16,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "resurrection",
+    "nom": "Résurrection",
+    "rang": 5,
+    "categorie": "guerison",
+    "effet": "Ramène un mort depuis moins de [Mod.SAG] heures, relique et lien personnel requis. Revient avec 1d6 PV",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "rituel",
+      "usage": {
+        "frequence": "1x/scenario"
+      },
+      "cible": "allie",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "soin",
+          "formule": "1d6"
+        },
+        {
+          "type": "special",
+          "note": "Ramène un mort depuis moins de Mod.SAG heures ; nécessite une relique et un lien personnel avec la cible ; rituel de 10 minutes — conditions non modélisées par le schéma standard, résolution manuelle par la table pour ces prérequis narratifs."
+        }
+      ],
+      "coutPP": 25,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "miracle",
+    "nom": "Miracle",
+    "rang": 5,
+    "categorie": "guerison",
+    "effet": "Effet puissant à négocier avec le MJ : soin de zone massif, résurrection sans condition, ou tout autre effet narratif exceptionnel",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "rituel",
+      "usage": {
+        "frequence": "1x/scenario"
+      },
+      "cible": "zone",
+      "portee": null,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "special",
+          "note": "Wildcard narratif — l'effet exact est arbitré à la table au moment de l'usage, pas de formule fixe. Cohérent avec l'esprit du sort Miracle en D&D (effet quasi-illimité mais rarissime)."
+        }
+      ],
+      "coutPP": 25,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "mot_de_commandement",
+    "nom": "Mot de commandement",
+    "rang": 1,
+    "categorie": "foi",
+    "effet": "Un mot simple forcé sur une cible (Fuis / Tombe / Arrête-toi). Jet de Sauvegarde Volonté",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "SAG",
+        "caracDefenseur": "Volonte"
+      },
+      "effets": [
+        {
+          "type": "etat",
+          "id": "renversee",
+          "duree": "1",
+          "choix": {
+            "titre": "Mot de commandement",
+            "consigne": "Quel mot prononces-tu ?",
+            "options": [
+              {
+                "valeur": "fuis",
+                "label": "Fuis (Repoussée)"
+              },
+              {
+                "valeur": "tombe",
+                "label": "Tombe (Renversée)"
+              },
+              {
+                "valeur": "arrete",
+                "label": "Arrête-toi (Étourdie)"
+              }
+            ]
+          },
+          "etatParChoix": {
+            "fuis": "repoussee",
+            "tombe": "renversee",
+            "arrete": "etourdie"
+          }
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "bouclier_de_la_foi",
+    "nom": "Bouclier de la foi",
+    "rang": 1,
+    "categorie": "foi",
+    "effet": "+2 CA à un allié pendant 3 tours",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "bonus",
+          "cible": "DEF",
+          "valeur": 2,
+          "duree": "3"
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "reprimande_divine",
+    "nom": "Réprimande divine",
+    "rang": 2,
+    "categorie": "foi",
+    "effet": "Attaque magique : 2d6 dégâts radiants, doublés si la cible est maléfique ou morte-vivante",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 15,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "SAG",
+        "caracDefenseur": "DEF"
+      },
+      "effets": [
+        {
+          "type": "degats",
+          "formule": "2d6",
+          "typeDegats": "magique",
+          "formuleAlternative": {
+            "condition": "race:mort_vivant|demon",
+            "formule": "4d6"
+          }
+        },
+        {
+          "type": "special",
+          "note": "Dégâts doublés (4d6 au lieu de 2d6) si la cible est de race 'mort_vivant' ou taguée maléfique — confirmé par Thomas : ce tag existe déjà sur le champ 'race' des monstres côté bestiaire, à lire directement plutôt qu'à vérifier son existence."
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "calme_les_esprits",
+    "nom": "Calme les esprits",
+    "rang": 2,
+    "categorie": "foi",
+    "effet": "Empêche une situation de dégénérer en violence : zone, jet de Sauvegarde Volonté ou ne peut pas attaquer ce tour",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 10,
+      "zone": {
+        "taille": 3
+      },
+      "jetOppose": {
+        "caracAttaquant": null,
+        "caracDefenseur": "Volonte"
+      },
+      "effets": [
+        {
+          "type": "etat",
+          "id": "apaise",
+          "duree": {
+            "tours": 1
+          }
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "arme_benie",
+    "nom": "Arme bénie",
+    "rang": 3,
+    "categorie": "foi",
+    "effet": "Une arme gagne +1 attaque et +2 dégâts contre les créatures maléfiques ou mortes-vivantes, pendant [3+Mod.SAG] tours",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "soi",
+      "portee": null,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "arme_benie",
+          "duree": {
+            "tours": "3+Mod.SAG"
+          }
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "voix_du_jugement",
+    "nom": "Voix du jugement",
+    "rang": 4,
+    "categorie": "foi",
+    "effet": "Déclare un ennemi 'hérétique' pendant 2 tours : tout dégât qu'il subit lui inflige +1d4 dégâts (+1d8 si mort-vivant). Coûte 1 Point de Conviction",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 15,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "heretique",
+          "duree": {
+            "tours": 2
+          }
+        },
+        {
+          "type": "special",
+          "note": "État temporaire standard 'heretique', même mécanisme que les autres malus/tags temporaires déjà en jeu (confirmé par Thomas) — pas de nouveau hook générique à inventer, réutiliser le système d'état existant. Le bonus de dégâts (+1d4, +1d8 si race mort_vivant) se vérifie au moment de la résolution des dégâts subis par une cible portant ce tag, quelle que soit la source d'attaque."
+        }
+      ],
+      "coutPointsConviction": 1
+    }
+  },
+  {
+    "id": "aura_divine",
+    "nom": "Aura divine",
+    "rang": 5,
+    "categorie": "foi",
+    "effet": "+2 CA à tous vos alliés et -2 CA à jusqu'à 3 ennemis à portée, pendant 3 tours. Coûte 2 Points de Conviction",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "bonus",
+          "cible": "DEF",
+          "valeur": 2,
+          "cibleGroupe": "tousLesPJ",
+          "duree": "3"
+        },
+        {
+          "type": "bonus",
+          "cible": "DEF",
+          "valeur": -2,
+          "duree": "3"
+        }
+      ],
+      "maxCibles": 3,
+      "coutPointsConviction": 2
+    }
+  },
+  {
+    "id": "flamme_sacree",
+    "nom": "Flamme sacrée",
+    "rang": 1,
+    "categorie": "bannissement",
+    "effet": "1d6 dégâts sacrés (1d12 si la cible est mort-vivante ou démon). Coûte 2 PP",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "SAG",
+        "caracDefenseur": "DEF"
+      },
+      "effets": [
+        {
+          "type": "degats",
+          "formule": "1d6",
+          "typeDegats": "magique",
+          "formuleAlternative": {
+            "condition": "race:mort_vivant|demon",
+            "formule": "1d12"
+          }
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "rite_de_bannissement",
+    "nom": "Rite de bannissement",
+    "rang": 2,
+    "categorie": "bannissement",
+    "effet": "Attaque magique : échec → Immobilisée [1+Mod.SAG] tours. Si invoquée et niveau inférieur : bannissement complet immédiat",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "SAG",
+        "caracDefenseur": "DEF"
+      },
+      "effets": [
+        {
+          "type": "etat",
+          "id": "immobilisee",
+          "duree": {
+            "tours": "1+Mod.SAG"
+          }
+        },
+        {
+          "type": "special",
+          "note": "Bannissement complet immédiat si la cible est une invocation de niveau inférieur au lanceur — condition non chiffrée par un mécanisme générique existant, à vérifier/résoudre manuellement."
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "purification_du_lieu",
+    "nom": "Purification du lieu",
+    "rang": 3,
+    "categorie": "bannissement",
+    "effet": "Purifie une zone de 5 cases de toute corruption mineure ambiante (rituel, 10 min)",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "rituel",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": null,
+      "zone": {
+        "taille": 5
+      },
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "special",
+          "note": "Effet narratif de nettoyage de zone — pas de mécanique chiffrée existante pour 'corruption ambiante'."
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "exorcisme",
+    "nom": "Exorcisme",
+    "rang": 4,
+    "categorie": "bannissement",
+    "effet": "Attaque magique opposée à l'entité possédant un hôte : réussite → entité expulsée, hôte survit",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 5,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "SAG",
+        "caracDefenseur": "Volonte"
+      },
+      "effets": [
+        {
+          "type": "special",
+          "note": "Nécessite une notion de 'possession' (entité liée à un hôte) — vérifier si un tel état existe déjà dans le système, sinon résolution entièrement narrative par la table."
+        }
+      ],
+      "coutPP": 16,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "bannissement",
+    "nom": "Bannissement",
+    "rang": 4,
+    "categorie": "bannissement",
+    "effet": "Tente de renvoyer une créature morte-vivante/démoniaque de dangerosité ≤5 vers son plan d'origine. Jet d20+Mod.CHA : DD 14 (dangerosité 1-2), DD 16 (dangerosité 3), DD 17 (dangerosité 4, interpolé), DD 18 (dangerosité 5). Coûte 1 Point de Bannissement",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "special",
+          "note": "Automatisé (js/capacites.js, cas spécial identifié par idSort 'bannissement') : jet 1d20+Mod.CHA (PAS Mod.SAG) contre un DD variable selon la dangerosité de la cible (table ci-dessus, DD dangerosité 4 = 17 interpolé, à confirmer par Thomas), réservé aux cibles race:'mort_vivant'/'demon' de dangerosité ≤5, message annonçant réussite/échec. Reste MANUEL : sur une réussite, rien ne retire le jeton monstre de la table de combat — le message dit 'renvoyé(e)' mais le MJ doit encore le supprimer lui-même de Carte."
+        }
+      ],
+      "coutPointsBannissement": 1
+    }
+  },
+  {
+    "id": "sceau_inviolable",
+    "nom": "Sceau inviolable",
+    "rang": 5,
+    "categorie": "bannissement",
+    "effet": "Empêche toute entité démoniaque/morte-vivante d'entrer/sortir d'une zone de 10 cases pendant [niveau] heures",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "1x/scenario"
+      },
+      "cible": "zone",
+      "portee": null,
+      "zone": {
+        "taille": 10
+      },
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "special",
+          "note": "Effet de zone narratif de longue durée — pas de moteur de blocage de mouvement conditionnel par race dans l'app, résolution manuelle par la table."
+        }
+      ],
+      "coutPP": 25,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "bannissement_zone",
+    "nom": "Bannissement de zone",
+    "rang": 5,
+    "categorie": "bannissement",
+    "effet": "Comme Bannissement, mais tente l'effet sur toutes les cibles éligibles d'une zone de 4 cases, avec Mod.SAG ajouté au jet en plus de Mod.CHA. Coûte 1 Point de Bannissement",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 10,
+      "zone": {
+        "taille": 4
+      },
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "special",
+          "note": "Automatisé (js/capacites.js, cas spécial identifié par idSort 'bannissement_zone', même bloc que 'bannissement') : jet 1d20+Mod.CHA+Mod.SAG (bonus cumulé, confirmé par Thomas — la version de zone est délibérément plus facile à réussir que la version cible unique) contre le même barème de DD que 'bannissement', appliqué à UNE cible (pas encore à toutes les cibles éligibles d'une zone : le cas spécial lit `cible`, une cible unique déjà résolue, pas de boucle sur une zone ici — le texte annonce une zone que le moteur ne mesure pas, même limite que les autres sorts 'maxCibles'/'zone' de ce chantier). Reste MANUEL comme 'bannissement' : le jeton monstre n'est jamais retiré de la table de combat sur une réussite."
+        }
+      ],
+      "cibleZoneHostile": true,
+      "coutPointsBannissement": 1
+    }
+  },
+  {
+    "id": "oeil_inquisiteur",
+    "nom": "Œil de l'inquisiteur",
+    "rang": 1,
+    "categorie": "jugement",
+    "effet": "Test de SAG vs DEF de la cible suspectée : réussite → Marquée pour la scène/le combat. Coûte 2 PP",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 15,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "SAG",
+        "caracDefenseur": "DEF"
+      },
+      "effets": [
+        {
+          "type": "etat",
+          "id": "marquee",
+          "duree": {
+            "motCle": "finScene"
+          }
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "confession_forcee",
+    "nom": "Confession forcée",
+    "rang": 3,
+    "categorie": "jugement",
+    "effet": "Attaque magique contre une cible Marquée : réponse honnête obligatoire + -2 CA jusqu'à la fin du combat",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "SAG",
+        "caracDefenseur": "DEF"
+      },
+      "effets": [
+        {
+          "type": "bonus",
+          "cible": "DEF",
+          "valeur": -2,
+          "differe": true,
+          "duree": "finCombat"
+        },
+        {
+          "type": "special",
+          "note": "Réponse honnête obligatoire — effet purement narratif, résolution manuelle par la table (pas de moteur de contrainte de dialogue dans l'app). Restriction 'cible déjà Marquée' non gatée automatiquement (cf. prompt, point à confirmer) : les tokens monstre ne suivent pas etatsActifs côté app (aucun suivi d'état automatique pour les monstres, même limite documentée ailleurs) — un gate bloquerait la plupart des usages légitimes en combat plutôt que d'aider, laissé au contrôle manuel de la table. differe:true : le malus DEF ne s'applique que sur un jet réussi (même bugfix que Toucher flétrissant du Nécromancien/Note discordante du Barde)."
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "bucher_purificateur",
+    "nom": "Bûcher purificateur",
+    "rang": 5,
+    "categorie": "jugement",
+    "effet": "Attaque contre une cible Marquée : 5d6 dégâts sacrés, doublés si la culpabilité est confirmée dans la fiction. Coûte 2 Points de Jugement",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "ennemi",
+      "portee": 10,
+      "zone": null,
+      "jetOppose": {
+        "caracAttaquant": "SAG",
+        "caracDefenseur": "DEF"
+      },
+      "effets": [
+        {
+          "type": "degats",
+          "formule": "5d6",
+          "typeDegats": "magique"
+        },
+        {
+          "type": "special",
+          "note": "Doublement des dégâts (10d6) si la culpabilité de la cible est confirmée dans la fiction — jugement narratif de la table, pas de condition mécanique automatisable. Remplace l'ancienne limite '1x/scénario' par un coût de 2 Points de Jugement (pool de 3 max au rang 5). Restriction 'cible déjà Marquée' : même remarque que Confession forcée, non gatée automatiquement."
+        }
+      ],
+      "coutPointsJugement": 2
+    }
+  },
+  {
+    "id": "chatiment_sacre",
+    "nom": "Châtiment",
+    "rang": 1,
+    "categorie": "jugement",
+    "effet": "Enchante votre arme ou une arme à portée (3 cases) — canalisation 1 PP/tour : la prochaine attaque touchée sur une cible Marquée inflige +1d8 dégâts sacrés",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "allie",
+      "portee": 3,
+      "zone": null,
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "chatiment_sacre_actif",
+          "coutMaintienPP": 1,
+          "duree": "maintenue"
+        }
+      ],
+      "coutPP": 2,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "aura_sacree",
+    "nom": "Aura sacrée",
+    "rang": 2,
+    "categorie": "jugement",
+    "effet": "Enchante les armes de vous et vos alliés dans un rayon de 3 cases — canalisation 1 PP/tour : leurs attaques touchées infligent +1d8 dégâts sacrés",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": null,
+      "zone": {
+        "taille": 3
+      },
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "aura_sacree_active",
+          "coutMaintienPP": 1,
+          "duree": "maintenue"
+        }
+      ],
+      "coutPP": 4,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "colonne_flamme_sacree",
+    "nom": "Colonne de flamme sacrée",
+    "rang": 4,
+    "categorie": "jugement",
+    "effet": "Zone de 5 cases de diamètre : sauvegarde Réflexes DD 15 ou subit 3d6 dégâts de feu et 3d6 dégâts sacrés",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": 10,
+      "zone": {
+        "taille": 5
+      },
+      "jetOppose": {
+        "caracAttaquant": null,
+        "caracDefenseur": "Reflexes",
+        "difficulteFixe": 15
+      },
+      "effets": [
+        {
+          "type": "degats",
+          "formule": "3d6",
+          "typeDegats": "magique"
+        },
+        {
+          "type": "degats",
+          "formule": "3d6",
+          "typeDegats": "magique"
+        }
+      ],
+      "coutPP": 16,
+      "typeSort": "majeur"
+    }
+  },
+  {
+    "id": "aura_vitalite",
+    "nom": "Aura de vitalité",
+    "rang": 3,
+    "categorie": "guerison",
+    "effet": "Soigne vous et vos alliés à portée (5 cases de diamètre) — canalisation 2 PP/tour : 1d8 PV par tour",
+    "listes": [
+      "pretre"
+    ],
+    "mecanique": {
+      "type": "activable",
+      "usage": {
+        "frequence": "libre"
+      },
+      "cible": "zone",
+      "portee": null,
+      "zone": {
+        "taille": 5
+      },
+      "jetOppose": null,
+      "effets": [
+        {
+          "type": "etat",
+          "id": "aura_vitalite_active",
+          "formuleSoin": "1d8",
+          "coutMaintienPP": 2,
+          "duree": "maintenue"
+        }
+      ],
+      "coutPP": 6,
+      "typeSort": "majeur"
+    }
+  }
+]

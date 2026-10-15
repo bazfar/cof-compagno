@@ -1,0 +1,174 @@
+{
+  "seuilsPaliers": {
+    "1": 1,
+    "2": 4,
+    "3": 7,
+    "4": 10
+  },
+  "paliers": [
+    {
+      "palier": 1,
+      "nom": "Marques latentes",
+      "plage": "CA 1-3",
+      "mutations": [
+        {
+          "d6": 1,
+          "nom": "Iris fracturés",
+          "effet": "-1 CHA, +1 Intimidation",
+          "caracDelta": {
+            "CHA": -1
+          },
+          "competenceDelta": {
+            "Intimidation": 1
+          }
+        },
+        {
+          "d6": 2,
+          "nom": "Voix dédoublée",
+          "effet": "+1 Intimidation, -1 Persuasion",
+          "competenceDelta": {
+            "Intimidation": 1,
+            "Persuasion": -1
+          }
+        },
+        {
+          "d6": 3,
+          "nom": "Veines sombres",
+          "effet": "+1 FOR, -1 CHA",
+          "caracDelta": {
+            "FOR": 1,
+            "CHA": -1
+          }
+        },
+        {
+          "d6": 4,
+          "nom": "Odeur de cendre",
+          "effet": "-1 Discrétion",
+          "competenceDelta": {
+            "Discrétion": -1
+          }
+        },
+        {
+          "d6": 5,
+          "nom": "Frissons chaotiques",
+          "effet": "En début de combat, jet de 1d10 : sur un 1, subit 1d4 dégâts"
+        },
+        {
+          "d6": 6,
+          "nom": "Reflet trouble",
+          "effet": "+1 Discrétion, -1 CHA en société",
+          "caracDelta": {
+            "CHA": -1
+          },
+          "competenceDelta": {
+            "Discrétion": 1
+          }
+        }
+      ]
+    },
+    {
+      "palier": 2,
+      "nom": "Mutation fonctionnelle",
+      "plage": "CA 4-6",
+      "mutations": [
+        {
+          "d6": 1,
+          "nom": "Peau de pierre",
+          "effet": "+2 DEF, -2 Persuasion/Représentation",
+          "competenceDelta": {
+            "Persuasion": -2,
+            "Représentation": -2
+          },
+          "defDelta": 2
+        },
+        {
+          "d6": 2,
+          "nom": "Griffes obsidiennes",
+          "effet": "1d6 dégâts à mains nues ; bloque l'escamotage ; -2 ATK si maniement d'arme"
+        },
+        {
+          "d6": 3,
+          "nom": "Membre fantôme",
+          "effet": "+1 action gratuite/combat (1x) ; jet de CON hors combat ou hallucination"
+        },
+        {
+          "d6": 4,
+          "nom": "Sang noir",
+          "effet": "+2 CON, mais soins reçus réduits de -3 sur la valeur ajoutée aux PV",
+          "caracDelta": {
+            "CON": 2
+          },
+          "soinsRecusDelta": -3
+        },
+        {
+          "d6": 5,
+          "nom": "Troisième œil (fermé)",
+          "effet": "+2 Initiative, -2 CHA si pas de casque équipé",
+          "initiativeDelta": 2
+        },
+        {
+          "d6": 6,
+          "nom": "Voix de l'abîme",
+          "effet": "+2 Intimidation, -3 Persuasion/Bluff",
+          "competenceDelta": {
+            "Intimidation": 2,
+            "Persuasion": -3,
+            "Bluff": -3
+          }
+        }
+      ]
+    },
+    {
+      "palier": 3,
+      "nom": "Mutation lourde",
+      "plage": "CA 7-9",
+      "mutations": [
+        {
+          "d6": 1,
+          "nom": "Carapace fissurée",
+          "effet": "+4 DEF, -2 DEX, -1 CHA",
+          "caracDelta": {
+            "DEX": -2,
+            "CHA": -1
+          },
+          "defDelta": 4
+        },
+        {
+          "d6": 2,
+          "nom": "Membre surnuméraire",
+          "effet": "+1 attaque gratuite/combat (1x)"
+        },
+        {
+          "d6": 3,
+          "nom": "Brûlure intérieure",
+          "effet": "Riposte automatique 1d4 dégâts chaotiques au contact ; perd 1d4 PV par tour de combat"
+        },
+        {
+          "d6": 4,
+          "nom": "Regard pétrifiant",
+          "effet": "1x/combat, -4 ATK pour toucher : pétrifie la cible 2 tours (aucune action, aucun déplacement) ; doit porter les yeux bandés en permanence, sous peine d'être poursuivi par la Garde ou l'Inquisition"
+        },
+        {
+          "d6": 5,
+          "nom": "Fragments instables",
+          "effet": "+1d10 dégâts par attaque ; à chaque attaque, test de Volonté (1d20 + Mod.CON + Mod.CHA/2) contre DD 13 — en cas d'échec, subit 1d10 dégâts en plus"
+        },
+        {
+          "d6": 6,
+          "nom": "Voix des autres",
+          "effet": "+4 Intimidation, -4 Persuasion/Bluff",
+          "competenceDelta": {
+            "Intimidation": 4,
+            "Persuasion": -4,
+            "Bluff": -4
+          }
+        }
+      ]
+    }
+  ],
+  "rupture": {
+    "nom": "Rupture",
+    "plage": "CA 10",
+    "texte": "À détailler séparément : explosion / bascule en monstre / rédemption forcée, au choix du joueur en accord avec le MJ."
+  }
+}
