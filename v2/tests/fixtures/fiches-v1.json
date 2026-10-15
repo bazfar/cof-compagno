@@ -1,0 +1,1751 @@
+{
+  "format": "cof-compagno/fiches-v1-anonymisees",
+  "exporteLe": "2026-10-15T11:29:00.413Z",
+  "nombre": 9,
+  "fiches": [
+    {
+      "etatMort": false,
+      "pvMax": 10,
+      "corruptionSeuilFranchi": false,
+      "amesStockees": 0,
+      "pvHistorique": [],
+      "corruptionCombat": 0,
+      "bonusCompetences": {},
+      "contratDemoniaqueUtilise": false,
+      "nom": "Fred",
+      "def": 12,
+      "niveau": 1,
+      "id": "fiche-01",
+      "caracsLibres": {
+        "SAG": 3,
+        "CHA": 0,
+        "INT": 0,
+        "CON": 3,
+        "DEX": 0,
+        "FOR": 0
+      },
+      "race": "humain",
+      "usagesCapacites": {},
+      "capacitesRaceChoix": {},
+      "pvNiveauActuel": 1,
+      "pvTemporaires": 0,
+      "caracs": {
+        "DEX": 10,
+        "FOR": 10,
+        "SAG": 15,
+        "CHA": 10,
+        "INT": 10,
+        "CON": 14
+      },
+      "genre": "homme",
+      "voiesHorsProfil": [],
+      "inventaireListe": [
+        {
+          "type": "consommable",
+          "description": "Appliquée sur une arme : inflige +1d4 dégâts aux créatures du Chaos pendant 1 combat.",
+          "porte": false,
+          "quantite": 1,
+          "id": "huile_sainte",
+          "nom": "Huile sainte"
+        },
+        {
+          "nom": "Potion de soin",
+          "id": "potion_soin",
+          "quantite": 1,
+          "type": "consommable",
+          "description": "Régénère 1d6 PV immédiatement. Goût amer de Sève.",
+          "porte": false
+        },
+        {
+          "type": "armure",
+          "id": "armure_cloute",
+          "porte": false,
+          "nom": "Cuir clouté",
+          "malusDEX": 0,
+          "description": "Cuir renforcé de clous métalliques. Bon compromis légèreté/protection.",
+          "valeurArmure": 3
+        },
+        {
+          "sansModificateurRegional": true,
+          "prixPo": 75,
+          "porte": false,
+          "type": "accessoire",
+          "slot": "collier",
+          "grimoireClasses": [
+            "pretre"
+          ],
+          "effet": "6 emplacements de sorts (4× rang 1-2, 1× rang 1-3, 1× rang 1-4) ; +3 par palier de rareté, répartis vers les rangs les plus élevés",
+          "nom": "Amulette de Bénédiction",
+          "id": "amulette_benediction",
+          "description": "Médaillon d'argent gravé d'un symbole sacré, porté contre la poitrine pour garder les prières à portée de main."
+        }
+      ],
+      "capacitesRace": [
+        1
+      ],
+      "capacites": [
+        {
+          "rang": 1,
+          "voie": "Voie de la guérison"
+        },
+        {
+          "rang": 2,
+          "voie": "Voie de la guérison"
+        }
+      ],
+      "dons": [],
+      "contratDemoniaquePenalite": null,
+      "pvActuel": 7,
+      "raceVariante": null,
+      "equipement": {
+        "torse": {
+          "valeurArmure": 4,
+          "prixPo": 75,
+          "varianteNom": null,
+          "rareteCouleur": "#9c9c9c",
+          "bonusRarete": 0,
+          "nom": "Cotte de mailles",
+          "id": "cotte_mailles",
+          "malusDEX": 1,
+          "description": "Anneaux entrelacés. Protection solide contre les lames.",
+          "porte": false,
+          "type": "armure",
+          "rarete": "commun",
+          "itemRef": "cotte_mailles",
+          "rareteNom": "Commun",
+          "effetRarete": null
+        },
+        "mains": null,
+        "jambe": null,
+        "main_gauche": {
+          "type": "bouclier",
+          "bonusDEF": 2,
+          "description": "Protection solide. Standard de l'infanterie des Royaumes Coalisés.",
+          "id": "bouclier_acier",
+          "nom": "Bouclier en acier",
+          "porte": false
+        },
+        "tete": null,
+        "main_droite": {
+          "type": "arme",
+          "porte": false,
+          "description": "Contondant, efficace contre les armures légères.",
+          "enchantement": 0,
+          "typedegats": "physique",
+          "nom": "Masse",
+          "degats": "1d6",
+          "id": "masse",
+          "portee": "contact",
+          "deuxMains": false,
+          "categorieArme": "courte"
+        },
+        "bague": {
+          "prixPo": 50,
+          "varianteNom": null,
+          "porte": false,
+          "type": "accessoire",
+          "nom": "Ceinture de force",
+          "bonusRarete": 0,
+          "bonusCarac": {
+            "CON": 1
+          },
+          "sansModificateurRegional": true,
+          "description": "Cuir clouté qui raffermit la constitution du porteur.",
+          "rareteNom": "Commun",
+          "effet": "+1 CON",
+          "rarete": "commun",
+          "itemRef": "ceinture_force",
+          "id": "ceinture_force",
+          "effetRarete": null,
+          "rareteCouleur": "#9c9c9c"
+        },
+        "collier": {
+          "description": "+1 en FOR. Fabriqué à Khazrak Dûm pour les guerriers d'élite.",
+          "porte": false,
+          "effetRarete": null,
+          "rareteNom": "Commun",
+          "prixPo": 50,
+          "itemRef": "anneau_force",
+          "sansModificateurRegional": true,
+          "rarete": "commun",
+          "id": "anneau_force",
+          "bonusCarac": {
+            "FOR": 1
+          },
+          "rareteCouleur": "#9c9c9c",
+          "varianteNom": null,
+          "type": "accessoire",
+          "bonusRarete": 0,
+          "nom": "Anneau de force",
+          "effet": "+1 FOR"
+        },
+        "avant_bras": {
+          "sansModificateurRegional": true,
+          "rareteNom": "Commun",
+          "bonusRarete": 0,
+          "nom": "Anneau de force",
+          "effet": "+1 FOR",
+          "itemRef": "anneau_force",
+          "varianteNom": null,
+          "type": "accessoire",
+          "rareteCouleur": "#9c9c9c",
+          "rarete": "commun",
+          "id": "anneau_force",
+          "effetRarete": null,
+          "prixPo": 50,
+          "bonusCarac": {
+            "FOR": 1
+          },
+          "description": "+1 en FOR. Fabriqué à Khazrak Dûm pour les guerriers d'élite.",
+          "porte": false
+        }
+      },
+      "mortEchecs": 0,
+      "donsChoix": {},
+      "etatsActifs": [],
+      "mortSucces": 0,
+      "anneauChanceCumuls": 0,
+      "classe": "pretre",
+      "detteSoigneurActive": false,
+      "corruptionMajeure": 0
+    },
+    {
+      "caracs": {
+        "SAG": 15,
+        "CHA": 10,
+        "INT": 10,
+        "CON": 14,
+        "DEX": 10,
+        "FOR": 10
+      },
+      "capacitesRaceChoix": {},
+      "pvMax": 29,
+      "inventaireListe": [
+        {
+          "description": "Appliquée sur une arme : inflige +1d4 dégâts aux créatures du Chaos pendant 1 combat.",
+          "nom": "Huile sainte",
+          "type": "consommable",
+          "id": "huile_sainte",
+          "porte": false,
+          "quantite": 1
+        },
+        {
+          "type": "consommable",
+          "id": "potion_soin",
+          "description": "Régénère 1d6 PV immédiatement. Goût amer de Sève.",
+          "porte": false,
+          "nom": "Potion de soin",
+          "quantite": 1
+        },
+        {
+          "type": "consommable",
+          "description": "Rituel d'urgence à usage unique : réanime un allié tombé au combat (état Mort) en le stabilisant à 1 point de vie.",
+          "id": "parchemin_resurrection",
+          "nom": "Parchemin de résurrection",
+          "quantite": 1,
+          "porte": false
+        },
+        {
+          "effet": "6 emplacements de sorts (4× rang 1-2, 1× rang 1-3, 1× rang 1-4) ; +3 par palier de rareté, répartis vers les rangs les plus élevés",
+          "nom": "Amulette de Bénédiction",
+          "description": "Médaillon d'argent gravé d'un symbole sacré, porté contre la poitrine pour garder les prières à portée de main.",
+          "prixPo": 75,
+          "type": "accessoire",
+          "porte": false,
+          "id": "amulette_benediction",
+          "grimoireClasses": [
+            "pretre"
+          ],
+          "sansModificateurRegional": true,
+          "slot": "collier"
+        }
+      ],
+      "donsChoix": {},
+      "niveau": 3,
+      "pvActuel": 22,
+      "piecesOr": 113,
+      "pvNiveauActuel": 3,
+      "piecesArgent": 0,
+      "genre": "homme",
+      "pvTemporaires": 0,
+      "capacites": [
+        {
+          "rang": 1,
+          "voie": "Voie de la guérison"
+        },
+        {
+          "rang": 2,
+          "voie": "Voie de la guérison"
+        },
+        {
+          "rang": 3,
+          "voie": "Voie de la guérison"
+        },
+        {
+          "rang": 4,
+          "voie": "Voie de la guérison"
+        }
+      ],
+      "dons": [],
+      "raceVariante": null,
+      "capacitesRace": [
+        1
+      ],
+      "id": "fiche-02",
+      "classe": "pretre",
+      "race": "nain",
+      "equipement": {
+        "torse": {
+          "type": "armure",
+          "valeurArmure": 3,
+          "id": "armure_cloute",
+          "porte": false,
+          "description": "Cuir renforcé de clous métalliques. Bon compromis légèreté/protection.",
+          "malusDEX": 0,
+          "nom": "Cuir clouté"
+        },
+        "mains": null,
+        "jambe": null,
+        "main_gauche": {
+          "porte": false,
+          "bonusDEF": 2,
+          "nom": "Bouclier en acier",
+          "id": "bouclier_acier",
+          "description": "Protection solide. Standard de l'infanterie des Royaumes Coalisés.",
+          "type": "bouclier"
+        },
+        "tete": null,
+        "main_droite": {
+          "portee": "contact",
+          "id": "masse",
+          "degats": "1d6",
+          "nom": "Masse",
+          "porte": false,
+          "enchantement": 0,
+          "categorieArme": "courte",
+          "description": "Contondant, efficace contre les armures légères.",
+          "type": "arme",
+          "typedegats": "physique",
+          "deuxMains": false
+        },
+        "bague": null,
+        "collier": null,
+        "avant_bras": null
+      },
+      "etatsActifs": [],
+      "voiesHorsProfil": [],
+      "pvHistorique": [
+        {
+          "modCON": 2,
+          "faces": 8,
+          "total": 8,
+          "niveau": 2,
+          "jet": 6
+        },
+        {
+          "jet": 1,
+          "modCON": 2,
+          "total": 3,
+          "faces": 8,
+          "niveau": 3
+        }
+      ],
+      "piecesBronze": 0,
+      "def": 12,
+      "caracsLibres": {
+        "DEX": 0,
+        "FOR": 0,
+        "CHA": 0,
+        "SAG": 3,
+        "INT": 0,
+        "CON": 3
+      },
+      "nom": "Hermione"
+    },
+    {
+      "caracs": {
+        "SAG": 10,
+        "CHA": 12,
+        "INT": 10,
+        "CON": 13,
+        "FOR": 14,
+        "DEX": 10
+      },
+      "pvActuel": 28,
+      "raceVariante": null,
+      "piecesOr": 48,
+      "niveau": 3,
+      "race": "demi_orc",
+      "piecesArgent": 0,
+      "capacitesRaceChoix": {},
+      "inventaireListe": [
+        {
+          "quantite": 1,
+          "description": "Régénère 1d6 PV immédiatement. Goût amer de Sève.",
+          "id": "potion_soin",
+          "type": "consommable",
+          "porte": false,
+          "nom": "Potion de soin",
+          "prixPo": 30
+        }
+      ],
+      "classe": "chevalier",
+      "capacites": [
+        {
+          "voie": "Voie du protecteur",
+          "rang": 1
+        },
+        {
+          "voie": "Voie du protecteur",
+          "rang": 2
+        },
+        {
+          "rang": 3,
+          "voie": "Voie du protecteur"
+        },
+        {
+          "rang": 1,
+          "voie": "Voie du paladin (justicier)"
+        },
+        {
+          "voie": "Voie du paladin (justicier)",
+          "rang": 2
+        }
+      ],
+      "voiesHorsProfil": [],
+      "dons": [],
+      "genre": "femme",
+      "pvNiveauActuel": 3,
+      "equipement": {
+        "tete": null,
+        "jambe": null,
+        "main_droite": {
+          "description": "Arme d'hast polyvalente, efficace contre les charges.",
+          "categoriePortee": "allonge",
+          "maitrise": "martiale",
+          "porteeMaxCases": 2,
+          "nom": "Lance",
+          "deuxMains": false,
+          "degats": "1d8",
+          "porteeMinCases": 1,
+          "portee": "1-2 cases",
+          "type": "arme",
+          "enchantement": 0,
+          "porte": false,
+          "categorieArme": "longue",
+          "typedegats": "physique",
+          "id": "lance",
+          "prixPo": 15
+        },
+        "torse": {
+          "categorie": "legere",
+          "reductionDegats": 1,
+          "id": "armure_cuir",
+          "valeurCA": 12,
+          "description": "Protection légère, n'entrave pas les mouvements.",
+          "malusDEX": 0,
+          "porte": false,
+          "type": "armure",
+          "prixPo": 10,
+          "nom": "Armure de cuir"
+        },
+        "mains": null,
+        "avant_bras": null,
+        "bague": null,
+        "main_gauche": {
+          "prixPo": 40,
+          "porte": false,
+          "description": "Protection solide. Standard de l'infanterie des Royaumes Coalisés.",
+          "nom": "Bouclier en acier",
+          "categorieBouclier": "moyen",
+          "id": "bouclier_acier",
+          "bonusDEF": 2,
+          "type": "bouclier"
+        },
+        "collier": null
+      },
+      "nom": "Hyrma",
+      "capacitesRace": [
+        1
+      ],
+      "caracsLibres": {
+        "FOR": 2,
+        "DEX": 0,
+        "CON": 3,
+        "INT": 0,
+        "SAG": 0,
+        "CHA": 1
+      },
+      "donsChoix": {},
+      "piecesBronze": 0,
+      "def": 14,
+      "pvHistorique": [
+        {
+          "niveau": 2,
+          "total": 8,
+          "jet": 7,
+          "faces": 10,
+          "modCON": 1
+        },
+        {
+          "jet": 6,
+          "modCON": 1,
+          "total": 7,
+          "faces": 10,
+          "niveau": 3
+        }
+      ],
+      "id": "fiche-03",
+      "pvMax": 28
+    },
+    {
+      "caracsLibres": {
+        "SAG": 0,
+        "CHA": 3,
+        "CON": 0,
+        "INT": 0,
+        "FOR": 0,
+        "DEX": 3
+      },
+      "inventaireListe": [
+        {
+          "porte": false,
+          "quantite": 1,
+          "id": "corde_enchantee",
+          "type": "consommable",
+          "nom": "Corde enchantée",
+          "description": "20m de corde qui se love et se déroule seule sur commande verbale."
+        },
+        {
+          "rareteNom": "Commun",
+          "quantite": 1,
+          "bonusRarete": 0,
+          "porte": false,
+          "varianteNom": null,
+          "itemRef": "potion_soin_sup",
+          "rarete": "commun",
+          "id": "potion_soin_sup",
+          "nom": "Potion de soin améliorée",
+          "prixPo": 45,
+          "rareteCouleur": "#9c9c9c",
+          "effetRarete": null,
+          "type": "consommable",
+          "description": "Régénère 1d8 PV immédiatement. Préparée par un Druide de rang 3+."
+        },
+        {
+          "deuxMains": false,
+          "varianteNom": null,
+          "itemRef": "dague",
+          "rareteNom": "Commun",
+          "rareteCouleur": "#9c9c9c",
+          "bonusDegatsTotal": 0,
+          "bonusRarete": 0,
+          "prixPo": 8,
+          "nom": "Dague",
+          "rarete": "commun",
+          "description": "Arme légère de contact ou de lancer. Discrète et rapide.",
+          "typedegats": "physique",
+          "porte": false,
+          "id": "dague",
+          "portee": "contact",
+          "effetRarete": null,
+          "categorieArme": "courte",
+          "degats": "1d4",
+          "enchantement": 0,
+          "type": "arme"
+        },
+        {
+          "malusDEX": 0,
+          "type": "armure",
+          "valeurArmure": 1,
+          "porte": false,
+          "description": "Cuir épais doublé, pensé pour les longues routes autant que le combat.",
+          "id": "manteau_voyageur",
+          "nom": "Manteau de voyageur renforcé"
+        }
+      ],
+      "dons": [],
+      "corruptionCombat": 0,
+      "piecesBronze": 0,
+      "pvMax": 20,
+      "contratDemoniaquePenalite": null,
+      "anneauChanceCumuls": 0,
+      "genre": "homme",
+      "donsChoix": {},
+      "caracs": {
+        "DEX": 14,
+        "FOR": 10,
+        "INT": 10,
+        "CON": 10,
+        "SAG": 10,
+        "CHA": 15
+      },
+      "piecesArgent": 0,
+      "raceVariante": null,
+      "mortSucces": 0,
+      "etatsActifs": [],
+      "race": "nain",
+      "id": "fiche-04",
+      "mortEchecs": 0,
+      "capacitesRaceChoix": {},
+      "voiesHorsProfil": [],
+      "mutations": [
+        {
+          "nom": "Iris fracturés",
+          "obtenueLe": 1785525686864,
+          "id": "mutms9bw5e828cd",
+          "d6": 1,
+          "effet": "-1 CHA, +1 Intimidation",
+          "palier": 1
+        }
+      ],
+      "bonusCompetences": {},
+      "piecesOr": 181,
+      "pvActuel": 20,
+      "contratDemoniaqueUtilise": false,
+      "detteSoigneurActive": false,
+      "capacites": [
+        {
+          "rang": 1,
+          "voie": "Voie du chant"
+        },
+        {
+          "voie": "Voie du chant",
+          "rang": 2
+        },
+        {
+          "voie": "Voie du chant",
+          "rang": 3
+        },
+        {
+          "voie": "Voie du chant",
+          "rang": 4
+        }
+      ],
+      "niveau": 3,
+      "amesStockees": 0,
+      "pvHistorique": [
+        {
+          "jet": 4,
+          "modCON": 0,
+          "faces": 6,
+          "niveau": 2,
+          "total": 4
+        },
+        {
+          "modCON": 0,
+          "faces": 6,
+          "total": 2,
+          "jet": 2,
+          "niveau": 3
+        }
+      ],
+      "pvNiveauActuel": 3,
+      "pvTemporaires": 0,
+      "corruptionMajeure": 1,
+      "capacitesRace": [
+        1
+      ],
+      "corruptionSeuilFranchi": false,
+      "etatMort": false,
+      "usagesCapacites": {},
+      "nom": "Kargash corde d'or",
+      "def": 12,
+      "classe": "barde",
+      "equipement": {
+        "collier": null,
+        "bague": null,
+        "main_gauche": null,
+        "main_droite": {
+          "deuxMains": false,
+          "portee": "contact",
+          "degats": "1d6",
+          "porte": false,
+          "description": "Lame fine et précise. Idéale pour les duellistes et roublards.",
+          "typedegats": "physique",
+          "nom": "Rapière",
+          "id": "rapiere",
+          "type": "arme",
+          "enchantement": 0
+        },
+        "tete": null,
+        "torse": {
+          "description": "Cuir renforcé de clous métalliques. Bon compromis légèreté/protection.",
+          "malusDEX": 0,
+          "itemRef": "armure_cloute",
+          "rarete": "commun",
+          "nom": "Cuir clouté",
+          "effetRarete": null,
+          "rareteNom": "Commun",
+          "rareteCouleur": "#9c9c9c",
+          "varianteNom": null,
+          "valeurArmure": 3,
+          "type": "armure",
+          "porte": false,
+          "bonusRarete": 0,
+          "id": "armure_cloute",
+          "prixPo": 25
+        },
+        "jambe": null,
+        "botte": null,
+        "avant_bras": null
+      }
+    },
+    {
+      "mutations": [
+        {
+          "palier": 1,
+          "effet": "+1 FOR, -1 CHA",
+          "d6": 3,
+          "obtenueLe": 1785539961915,
+          "nom": "Veines sombres",
+          "id": "mutms9ke43fjfgf"
+        }
+      ],
+      "pvMax": 28,
+      "niveau": 3,
+      "corruptionMajeure": 1,
+      "piecesArgent": 0,
+      "raceVariante": null,
+      "corruptionSeuilFranchi": false,
+      "dons": [],
+      "genre": "femme",
+      "donsChoix": {},
+      "equipement": {
+        "avant_bras": null,
+        "tete": {
+          "slot": "tete",
+          "bonusDEF": 1,
+          "effetRarete": null,
+          "rarete": "commun",
+          "type": "accessoire",
+          "rareteNom": "Commun",
+          "description": "Casque réglementaire de la Garde Citoyenne de Libris, renforcé sur la nuque et les tempes.",
+          "nom": "Heaume de la Garde Citoyenne",
+          "effet": "+1 DEF",
+          "itemRef": "heaume_garde_citoyenne",
+          "prixPo": 50,
+          "id": "heaume_garde_citoyenne",
+          "porte": false,
+          "bonusRarete": 0,
+          "varianteNom": null,
+          "sansModificateurRegional": true,
+          "rareteCouleur": "#9c9c9c"
+        },
+        "collier": {
+          "description": "+1 en FOR. Fabriqué à Khazrak Dûm pour les guerriers d'élite.",
+          "type": "accessoire",
+          "prixPo": 50,
+          "id": "anneau_force",
+          "nom": "Anneau de force",
+          "effetRarete": null,
+          "porte": false,
+          "sansModificateurRegional": true,
+          "effet": "+1 FOR",
+          "varianteNom": null,
+          "bonusCarac": {
+            "FOR": 1
+          },
+          "rareteCouleur": "#9c9c9c",
+          "itemRef": "anneau_force",
+          "bonusRarete": 0,
+          "rareteNom": "Commun",
+          "rarete": "commun"
+        },
+        "main_droite": {
+          "portee": "contact",
+          "deuxMains": false,
+          "typedegats": "physique",
+          "degats": "1d8",
+          "description": "Arme emblématique du guerrier. Bon équilibre dégâts/maniabilité.",
+          "id": "epee_longue",
+          "enchantement": 0,
+          "porte": false,
+          "type": "arme",
+          "categorieArme": "longue",
+          "nom": "Épée longue"
+        },
+        "bague": null,
+        "jambe": null,
+        "botte": null,
+        "main_gauche": {
+          "nom": "Bouclier en acier",
+          "id": "bouclier_acier",
+          "bonusDEF": 2,
+          "porte": false,
+          "type": "bouclier",
+          "description": "Protection solide. Standard de l'infanterie des Royaumes Coalisés."
+        },
+        "torse": {
+          "id": "armure_cuir",
+          "nom": "Armure de cuir",
+          "description": "Protection légère, n'entrave pas les mouvements.",
+          "type": "armure",
+          "porte": false,
+          "malusDEX": 0,
+          "valeurArmure": 2
+        },
+        "mains": null
+      },
+      "usagesCapacites": {},
+      "corruptionCombat": 0,
+      "detteSoigneurActive": false,
+      "race": "humain",
+      "caracsLibres": {
+        "INT": 0,
+        "CON": 3,
+        "SAG": 0,
+        "CHA": 0,
+        "DEX": 0,
+        "FOR": 3
+      },
+      "nom": "Karlach Grimhollow",
+      "piecesBronze": 0,
+      "def": 12,
+      "classe": "guerrier",
+      "capacitesRace": [
+        1
+      ],
+      "etatsActifs": [],
+      "id": "fiche-05",
+      "piecesOr": 159,
+      "pvActuel": 25,
+      "inventaireListe": [
+        {
+          "quantite": 1,
+          "description": "Régénère 1d8 PV immédiatement. Préparée par un Druide de rang 3+.",
+          "id": "potion_soin_sup",
+          "effetRarete": null,
+          "rareteNom": "Commun",
+          "rarete": "commun",
+          "rareteCouleur": "#9c9c9c",
+          "nom": "Potion de soin améliorée",
+          "itemRef": "potion_soin_sup",
+          "prixPo": 45,
+          "porte": false,
+          "varianteNom": null,
+          "bonusRarete": 0,
+          "type": "consommable"
+        },
+        {
+          "rareteCouleur": "#2f9e44",
+          "nom": "Épée de Cupidité",
+          "effet": "+1 dégât supplémentaire par tranche de 100 pièces d'or possédées par le porteur (arrondi à l'inférieur ; ex : 350 PO = +3 dégâts). En cas d'échec au jet d'attaque, le porteur perd 25 PO ; s'il n'a plus d'or du tout, il perd 1d4 PV à la place. En présence de pièces d'or visibles, test de Volonté diff. 12 + Corruption d'Âme actuelle du porteur : en cas d'échec, le porteur se rue vers l'or, quitte à bousculer ou attaquer un allié sur son passage (scène gérée narrativement par le MJ).",
+          "bonusRarete": 1,
+          "bonusDegatsTotal": 3,
+          "varianteNom": null,
+          "rareteNom": "Peu commun",
+          "enchantement": 2,
+          "typedegats": "physique",
+          "prixPo": 15,
+          "deuxMains": false,
+          "id": "epee_cupidite",
+          "itemRef": "epee_cupidite",
+          "rarete": "peu_commun",
+          "categorieArme": "longue",
+          "effetRarete": null,
+          "portee": "contact",
+          "porte": false,
+          "degats": "1d8",
+          "horsMarche": true,
+          "type": "arme",
+          "description": "Lame d'acier terne veinée de fils dorés, comme si de l'or fondu avait coulé dans le métal en forge. Elle pèse plus lourd dans la main d'un porteur qui a de l'or sur lui — et plus encore dans son esprit."
+        }
+      ],
+      "caracs": {
+        "FOR": 15,
+        "DEX": 10,
+        "CHA": 10,
+        "SAG": 10,
+        "CON": 14,
+        "INT": 10
+      },
+      "anneauChanceCumuls": 0,
+      "contratDemoniaquePenalite": null,
+      "etatMort": false,
+      "mortEchecs": 0,
+      "voiesHorsProfil": [],
+      "bonusCompetences": {},
+      "mortSucces": 0,
+      "capacitesRaceChoix": {},
+      "capacites": [
+        {
+          "rang": 1,
+          "voie": "Voie de l'élite",
+          "choix": "FOR"
+        },
+        {
+          "voie": "Voie de l'élite",
+          "rang": 2
+        },
+        {
+          "voie": "Voie de l'élite",
+          "rang": 3
+        },
+        {
+          "voie": "Voie de l'élite",
+          "rang": 4
+        }
+      ],
+      "contratDemoniaqueUtilise": false,
+      "amesStockees": 0,
+      "pvTemporaires": 0,
+      "pvHistorique": [
+        {
+          "niveau": 2,
+          "faces": 10,
+          "total": 3,
+          "modCON": 2,
+          "jet": 1
+        },
+        {
+          "modCON": 2,
+          "jet": 6,
+          "faces": 10,
+          "niveau": 3,
+          "total": 8
+        }
+      ],
+      "pvNiveauActuel": 3
+    },
+    {
+      "anneauChanceCumuls": 0,
+      "detteSoigneurActive": false,
+      "capacites": [
+        {
+          "voie": "Voie de la magie élémentaire",
+          "rang": 1
+        },
+        {
+          "voie": "Voie de la magie élémentaire",
+          "rang": 2
+        },
+        {
+          "rang": 3,
+          "voie": "Voie de la magie élémentaire"
+        },
+        {
+          "voie": "Voie de la magie élémentaire",
+          "rang": 4
+        },
+        {
+          "voie": "Voie de la magie universitaire",
+          "rang": 1
+        },
+        {
+          "voie": "Voie de la magie universitaire",
+          "rang": 2
+        }
+      ],
+      "cercleSpecialisation": null,
+      "bonusCompetences": {},
+      "piecesArgent": 7,
+      "def": 11,
+      "inventaireListe": [
+        {
+          "quantite": 1,
+          "porte": false,
+          "nom": "Parchemin de sort",
+          "type": "consommable",
+          "description": "Sort à usage unique. Le lanceur peut l'utiliser même sans classe magique (test INT diff. 14).",
+          "id": "parchemin_sort"
+        },
+        {
+          "id": "potion_soin_sup",
+          "quantite": 1,
+          "rareteNom": "Commun",
+          "bonusRarete": 0,
+          "type": "consommable",
+          "varianteNom": null,
+          "effetRarete": null,
+          "itemRef": "potion_soin_sup",
+          "nom": "Potion de soin améliorée",
+          "rarete": "commun",
+          "rareteCouleur": "#9c9c9c",
+          "description": "Régénère 1d8 PV immédiatement. Préparée par un Druide de rang 3+.",
+          "porte": false
+        },
+        {
+          "effetRarete": null,
+          "nom": "Potion de soin",
+          "type": "consommable",
+          "rarete": "commun",
+          "porte": false,
+          "description": "Régénère 1d6 PV immédiatement. Goût amer de Sève.",
+          "id": "potion_soin",
+          "bonusRarete": 0,
+          "rareteCouleur": "#9c9c9c",
+          "varianteNom": null,
+          "itemRef": "potion_soin",
+          "quantite": 1,
+          "rareteNom": "Commun"
+        },
+        {
+          "prixPo": 75,
+          "description": "Recueil de formules et de gestes arcaniques, relié pour un usage nomade en combat. Réservé aux Magiciens, Enchanteurs et Nécromanciens.",
+          "id": "manuel_incantation",
+          "porte": false,
+          "type": "accessoire",
+          "grimoireClasses": [
+            "magicien",
+            "enchanteur",
+            "necromancien"
+          ],
+          "effet": "6 emplacements de sorts (4× rang 1-2, 1× rang 1-3, 1× rang 1-4) ; +3 par palier de rareté, répartis vers les rangs les plus élevés",
+          "nom": "Manuel d'incantation",
+          "sansModificateurRegional": true
+        }
+      ],
+      "nom": "Kylhian Bondimir",
+      "raceVariante": null,
+      "niveau": 4,
+      "contratDemoniaquePenalite": null,
+      "classe": "magicien",
+      "mortEchecs": 0,
+      "etatsActifs": [],
+      "piecesBronze": 2,
+      "caracsLibres": {
+        "FOR": 0,
+        "DEX": 2,
+        "CON": 1,
+        "INT": 3,
+        "SAG": 0,
+        "CHA": 0
+      },
+      "capacitesRaceChoix": {},
+      "mortSucces": 0,
+      "id": "fiche-06",
+      "voiesHorsProfil": [],
+      "caracs": {
+        "FOR": 10,
+        "DEX": 12,
+        "INT": 15,
+        "CON": 12,
+        "CHA": 10,
+        "SAG": 10
+      },
+      "pvTemporaires": 0,
+      "corruptionCombat": 0,
+      "race": "humain",
+      "pvMax": 11,
+      "grimoirePreparationDisponible": false,
+      "corruptionMajeure": 0,
+      "genre": "homme",
+      "grimoireSortsConnus": [
+        "trait_de_feu",
+        "eclair_localise",
+        "projectile_magique",
+        "armure_de_mage",
+        "boule_de_feu",
+        "contresort"
+      ],
+      "pvActuel": 11,
+      "corruptionSeuilFranchi": false,
+      "donsChoix": {},
+      "piecesOr": 17,
+      "pointsBenediction": 0,
+      "pvNiveauActuel": 2,
+      "pointsJugement": 0,
+      "amesStockees": 0,
+      "equipement": {
+        "tete": null,
+        "collier": {
+          "description": "Recueil de formules arcaniques annoté par plusieurs générations de mages.",
+          "porte": false,
+          "nom": "Grimoire ancien",
+          "bonusCarac": {
+            "INT": 1
+          },
+          "sansModificateurRegional": true,
+          "quantite": 1,
+          "type": "accessoire",
+          "effet": "+1 INT",
+          "prixPo": 50,
+          "id": "grimoire_ancien"
+        },
+        "avant_bras": null,
+        "main_droite": {
+          "degats": "1d4",
+          "typedegats": "physique",
+          "enchantement": 0,
+          "porte": false,
+          "portee": "contact",
+          "description": "Ouvrage arcanique relié de cuir et de fermoirs de métal. Renforce les incantations du porteur, et peut au besoin servir à frapper l'adversaire.",
+          "degatsAuMoinsRare": "1d6",
+          "type": "arme",
+          "bonusAttaqueMagique": 1,
+          "id": "grimoire",
+          "nom": "Grimoire",
+          "deuxMains": false
+        },
+        "bague": null,
+        "jambe": {
+          "id": "airus_forcus",
+          "slot": "jambe",
+          "rareteCouleur": "#9c9c9c",
+          "origine": "liberra",
+          "description": "La paire que Frédérik Berlan sort de l'arrière-boutique quand un client a quelque chose à obtenir de quelqu'un. Cuir noirci au brou, coutures invisibles, une tige qui allonge la jambe sans qu'on sache dire par quel moyen. Le nom est de lui : il l'a trouvé grandiose, personne n'a jamais osé lui dire que ça ne voulait rien dire, et les Tanneurs les appellent comme ça depuis quinze ans.",
+          "type": "accessoire",
+          "rareteNom": "Commun",
+          "nom": "Airus Forcus",
+          "effetRarete": null,
+          "bonusCarac": {
+            "CHA": 1
+          },
+          "prixPo": 90,
+          "porte": false,
+          "varianteNom": null,
+          "rarete": "commun",
+          "effet": "+1 CHA, +1 Persuasion",
+          "bonusCompetences": {
+            "Persuasion": 1
+          },
+          "itemRef": "airus_forcus",
+          "bonusRarete": 0,
+          "sansModificateurRegional": true
+        },
+        "main_gauche": {
+          "type": "arme",
+          "enchantement": 0,
+          "id": "grimoire",
+          "rareteCouleur": "#2f9e44",
+          "description": "Ouvrage arcanique relié de cuir et de fermoirs de métal. Renforce les incantations du porteur, et peut au besoin servir à frapper l'adversaire.",
+          "degatsAuMoinsRare": "1d6",
+          "rareteNom": "Peu commun",
+          "itemRef": "grimoire",
+          "deuxMains": false,
+          "nom": "Grimoire",
+          "effetRarete": null,
+          "varianteNom": null,
+          "degats": "1d4",
+          "porte": false,
+          "portee": "contact",
+          "typedegats": "physique",
+          "rarete": "peu_commun",
+          "bonusDegatsTotal": 1,
+          "bonusRarete": 1,
+          "bonusAttaqueMagique": 1
+        },
+        "torse": {
+          "valeurArmure": 1,
+          "type": "armure",
+          "description": "Tissu léger imprégné de Sève. Protège sans entraver la magie.",
+          "id": "robe_mage",
+          "nom": "Robe de mage tissée de Sève",
+          "porte": false,
+          "malusDEX": 0
+        },
+        "mains": null
+      },
+      "pvHistorique": [
+        {
+          "faces": 4,
+          "modCON": 1,
+          "jet": 3,
+          "total": 4,
+          "niveau": 2
+        }
+      ],
+      "grimoireSortsPrepares": [],
+      "pointsBannissement": 0,
+      "usagesCapacites": {},
+      "dons": [
+        "alerte"
+      ],
+      "capacitesRace": [
+        1
+      ],
+      "grimoireRattrapageFait": false,
+      "pointsConviction": 0,
+      "etatMort": false,
+      "contratDemoniaqueUtilise": false
+    },
+    {
+      "pvHistorique": [
+        {
+          "modCON": 0,
+          "faces": 4,
+          "niveau": 2,
+          "total": 2,
+          "jet": 2
+        },
+        {
+          "modCON": 0,
+          "faces": 4,
+          "niveau": 3,
+          "total": 4,
+          "jet": 4
+        },
+        {
+          "modCON": 0,
+          "jet": 4,
+          "faces": 4,
+          "total": 4,
+          "niveau": 4
+        }
+      ],
+      "race": "humain",
+      "amesStockees": 0,
+      "id": "fiche-07",
+      "detteSoigneurActive": false,
+      "pvTemporaires": 0,
+      "nom": "Magnus Bane",
+      "corruptionMajeure": 0,
+      "etatsActifs": [],
+      "voiesHorsProfil": [],
+      "equipement": {
+        "torse": {
+          "id": "robe_mage",
+          "malusDEX": 0,
+          "type": "armure",
+          "nom": "Robe de mage tissée de Sève",
+          "porte": false,
+          "description": "Tissu léger imprégné de Sève. Protège sans entraver la magie.",
+          "valeurArmure": 1
+        },
+        "mains": null,
+        "jambe": null,
+        "avant_bras": null,
+        "main_droite": null,
+        "main_gauche": {
+          "description": "Ouvrage arcanique relié de cuir et de fermoirs de métal. Renforce les incantations du porteur, et peut au besoin servir à frapper l'adversaire.",
+          "categorieArme": "courte",
+          "degatsAuMoinsRare": "1d6",
+          "itemRef": "grimoire",
+          "typedegats": "physique",
+          "degats": "1d4",
+          "portee": "contact",
+          "effetRarete": null,
+          "rareteNom": "Peu commun",
+          "deuxMains": false,
+          "bonusDegatsTotal": 1,
+          "enchantement": 0,
+          "rarete": "peu_commun",
+          "type": "arme",
+          "prixPo": 8,
+          "rareteCouleur": "#2f9e44",
+          "varianteNom": null,
+          "id": "grimoire",
+          "bonusRarete": 1,
+          "porte": false,
+          "bonusAttaqueMagique": 1,
+          "nom": "Grimoire"
+        },
+        "tete": null,
+        "bague": null,
+        "collier": null
+      },
+      "anneauChanceCumuls": 0,
+      "def": 10,
+      "bonusCompetences": {},
+      "inventaireListe": [
+        {
+          "quantite": 2,
+          "description": "Sort à usage unique. Le lanceur peut l'utiliser même sans classe magique (test INT diff. 14).",
+          "id": "parchemin_sort",
+          "type": "consommable",
+          "nom": "Parchemin de sort",
+          "porte": false
+        },
+        {
+          "porte": false,
+          "quantite": 2,
+          "nom": "Potion de soin",
+          "description": "Régénère 1d6 PV immédiatement. Goût amer de Sève.",
+          "type": "consommable",
+          "id": "potion_soin"
+        },
+        {
+          "deuxMains": false,
+          "nom": "Dague",
+          "typedegats": "physique",
+          "description": "Arme légère de contact ou de lancer. Discrète et rapide.",
+          "type": "arme",
+          "porte": false,
+          "enchantement": 0,
+          "degats": "1d4",
+          "portee": "contact",
+          "id": "dague"
+        },
+        {
+          "rarete": "commun",
+          "description": "Régénère 1d8 PV immédiatement. Préparée par un Druide de rang 3+.",
+          "itemRef": "potion_soin_sup",
+          "porte": false,
+          "type": "consommable",
+          "rareteCouleur": "#9c9c9c",
+          "quantite": 1,
+          "effetRarete": null,
+          "nom": "Potion de soin améliorée",
+          "varianteNom": null,
+          "id": "potion_soin_sup",
+          "bonusRarete": 0,
+          "prixPo": 45,
+          "rareteNom": "Commun"
+        },
+        {
+          "portee": "contact",
+          "degats": "1d4",
+          "description": "Arme légère de contact ou de lancer. Discrète et rapide.",
+          "porte": false,
+          "categorieArme": "courte",
+          "nom": "Dague",
+          "id": "dague",
+          "type": "arme",
+          "enchantement": 0,
+          "typedegats": "physique",
+          "deuxMains": false
+        },
+        {
+          "degats": "1d6",
+          "portee": "contact",
+          "typedegats": "physique",
+          "type": "arme",
+          "description": "Lame polyvalente, idéale pour les combattants agiles.",
+          "rareteNom": "Commun",
+          "itemRef": "epee_courte",
+          "rarete": "commun",
+          "deuxMains": false,
+          "rareteCouleur": "#9c9c9c",
+          "effetRarete": null,
+          "prixPo": 8,
+          "varianteNom": null,
+          "porte": false,
+          "enchantement": 0,
+          "id": "epee_courte",
+          "nom": "Épée courte",
+          "categorieArme": "courte",
+          "bonusDegatsTotal": 0,
+          "bonusRarete": 0
+        },
+        {
+          "id": "manuel_incantation",
+          "sansModificateurRegional": true,
+          "description": "Recueil de formules et de gestes arcaniques, relié pour un usage nomade en combat. Réservé aux Magiciens, Enchanteurs et Nécromanciens.",
+          "effet": "6 emplacements de sorts (4× rang 1-2, 1× rang 1-3, 1× rang 1-4) ; +3 par palier de rareté, répartis vers les rangs les plus élevés",
+          "type": "accessoire",
+          "grimoireClasses": [
+            "magicien",
+            "enchanteur",
+            "necromancien"
+          ],
+          "nom": "Manuel d'incantation",
+          "prixPo": 75,
+          "porte": false
+        }
+      ],
+      "corruptionSeuilFranchi": false,
+      "dons": [],
+      "caracs": {
+        "DEX": 10,
+        "FOR": 10,
+        "SAG": 10,
+        "CHA": 15,
+        "CON": 10,
+        "INT": 14
+      },
+      "donsChoix": {},
+      "capacitesRace": [
+        1
+      ],
+      "capacitesRaceChoix": {},
+      "mortSucces": 0,
+      "etatMort": false,
+      "piecesBronze": 0,
+      "caracsLibres": {
+        "INT": 3,
+        "CON": 0,
+        "SAG": 0,
+        "CHA": 3,
+        "FOR": 0,
+        "DEX": 0
+      },
+      "genre": "homme",
+      "pvMax": 10,
+      "classe": "enchanteur",
+      "mortEchecs": 0,
+      "contratDemoniaquePenalite": null,
+      "usagesCapacites": {},
+      "corruptionCombat": 0,
+      "capacites": [
+        {
+          "rang": 1,
+          "voie": "Voie de l'enchantement"
+        },
+        {
+          "rang": 2,
+          "voie": "Voie de l'enchantement"
+        },
+        {
+          "rang": 1,
+          "voie": "Voie du spectacle"
+        },
+        {
+          "voie": "Voie du chaos",
+          "rang": 1
+        },
+        {
+          "rang": 1,
+          "voie": "Voie de l'historien"
+        },
+        {
+          "rang": 2,
+          "voie": "Voie du spectacle"
+        },
+        {
+          "voie": "Voie de l'enchantement",
+          "rang": 3
+        }
+      ],
+      "niveau": 4,
+      "piecesArgent": 6,
+      "pvActuel": 10,
+      "piecesOr": 261,
+      "raceVariante": null,
+      "illusionsActives": 0,
+      "contratDemoniaqueUtilise": false,
+      "pvNiveauActuel": 4
+    },
+    {
+      "pvMax": 11,
+      "pvTemporaires": 0,
+      "caracs": {
+        "SAG": 10,
+        "CHA": 13,
+        "CON": 11,
+        "INT": 15,
+        "FOR": 10,
+        "DEX": 10
+      },
+      "ppActuel": 8,
+      "pvActuel": 9,
+      "piecesOr": 165,
+      "etatsActifs": [],
+      "caracsLibres": {
+        "SAG": 0,
+        "CHA": 3,
+        "CON": 0,
+        "INT": 3,
+        "FOR": 0,
+        "DEX": 0
+      },
+      "race": "demi_elfe",
+      "grimoireSortsConnus": [
+        "secousse",
+        "eclair_localise",
+        "aide",
+        "projectile_magique"
+      ],
+      "piecesBronze": 0,
+      "capacitesRaceChoix": {},
+      "niveau": 3,
+      "corruptionCombat": 0,
+      "inventaireListe": [
+        {
+          "id": "parchemin_sort",
+          "porte": false,
+          "type": "consommable",
+          "quantite": 1,
+          "nom": "Parchemin de sort",
+          "description": "Sort à usage unique. Le lanceur peut l'utiliser même sans classe magique (test INT diff. 14)."
+        },
+        {
+          "id": "potion_soin",
+          "quantite": 1,
+          "type": "consommable",
+          "porte": false,
+          "nom": "Potion de soin",
+          "description": "Régénère 1d6 PV immédiatement. Goût amer de Sève."
+        },
+        {
+          "varianteNom": null,
+          "rareteCouleur": "#9c9c9c",
+          "bonusRarete": 0,
+          "id": "herbes_medicinales",
+          "porte": false,
+          "rareteNom": "Commun",
+          "nom": "Herbes médicinales",
+          "description": "Plantes séchées aux vertus apaisantes, utilisées pour préparer soins et remèdes de fortune.",
+          "rarete": "commun",
+          "type": "consommable",
+          "itemRef": "herbes_medicinales",
+          "quantite": 1,
+          "effetRarete": null
+        },
+        {
+          "porte": false,
+          "nom": "Manuel d'incantation",
+          "sansModificateurRegional": true,
+          "type": "accessoire",
+          "prixPo": 75,
+          "effet": "6 emplacements de sorts (4× rang 1-2, 1× rang 1-3, 1× rang 1-4) ; +3 par palier de rareté, répartis vers les rangs les plus élevés",
+          "description": "Recueil de formules et de gestes arcaniques, relié pour un usage nomade en combat. Réservé aux Magiciens, Enchanteurs et Nécromanciens.",
+          "grimoireClasses": [
+            "magicien",
+            "enchanteur",
+            "necromancien"
+          ],
+          "id": "manuel_incantation"
+        }
+      ],
+      "pvHistorique": [
+        {
+          "jet": 4,
+          "niveau": 2,
+          "total": 4,
+          "faces": 4,
+          "modCON": 0
+        },
+        {
+          "modCON": 0,
+          "total": 1,
+          "faces": 4,
+          "jet": 1,
+          "niveau": 3
+        }
+      ],
+      "equipement": {
+        "torse": {
+          "porte": false,
+          "nom": "Robe de mage tissée de Sève",
+          "type": "armure",
+          "id": "robe_mage",
+          "valeurArmure": 1,
+          "description": "Tissu léger imprégné de Sève. Protège sans entraver la magie.",
+          "malusDEX": 0
+        },
+        "mains": null,
+        "avant_bras": null,
+        "main_droite": {
+          "id": "grimoire",
+          "porte": false,
+          "nom": "Grimoire",
+          "type": "arme",
+          "degats": "1d4",
+          "portee": "contact",
+          "bonusAttaqueMagique": 1,
+          "description": "Ouvrage arcanique relié de cuir et de fermoirs de métal. Renforce les incantations du porteur, et peut au besoin servir à frapper l'adversaire.",
+          "degatsAuMoinsRare": "1d6",
+          "typedegats": "physique",
+          "enchantement": 0,
+          "deuxMains": false
+        },
+        "collier": null,
+        "jambe": null,
+        "main_gauche": {
+          "materiauRang": 1,
+          "description": "Ouvrage arcanique relié de cuir et de fermoirs de métal. Renforce les incantations du porteur, et peut au besoin servir à frapper l'adversaire.",
+          "rarete": "commun",
+          "bonusDegatsTotal": 0,
+          "porte": false,
+          "materiau": "feu",
+          "degats": "1d4",
+          "enchantement": 0,
+          "deuxMains": false,
+          "type": "arme",
+          "typedegats": "physique",
+          "bonusAttaqueMagique": 1,
+          "rareteCouleur": "#9c9c9c",
+          "id": "grimoire",
+          "degatsAuMoinsRare": "1d6",
+          "itemRef": "grimoire",
+          "effetRarete": null,
+          "rareteNom": "Commun",
+          "portee": "contact",
+          "materiauEffet": "+1d4 dégâts de feu",
+          "degatsFeu": "1d4",
+          "varianteNom": null,
+          "materiauNom": "enflammée",
+          "bonusRarete": 0,
+          "nom": "Grimoire enflammée"
+        },
+        "bague": null,
+        "tete": null
+      },
+      "genre": "homme",
+      "voiesHorsProfil": [],
+      "corruptionSeuilFranchi": false,
+      "donsChoix": {},
+      "classe": "magicien",
+      "id": "fiche-08",
+      "dons": [],
+      "usagesCapacites": {},
+      "pvNiveauActuel": 3,
+      "piecesArgent": 4,
+      "raceVariante": null,
+      "capacites": [
+        {
+          "voie": "Voie de la magie protectrice",
+          "rang": 1
+        },
+        {
+          "rang": 2,
+          "voie": "Voie de la magie protectrice"
+        },
+        {
+          "rang": 1,
+          "voie": "Voie de la magie élémentaire"
+        },
+        {
+          "rang": 2,
+          "voie": "Voie de la magie élémentaire"
+        }
+      ],
+      "corruptionMajeure": 0,
+      "def": 10,
+      "capacitesRace": [
+        1
+      ],
+      "nom": "Shyrion"
+    },
+    {
+      "capacitesRaceChoix": {},
+      "capacites": [
+        {
+          "voie": "Voie du soldat",
+          "rang": 1
+        },
+        {
+          "voie": "Voie de l'élite",
+          "choix": "FOR",
+          "rang": 1
+        },
+        {
+          "voie": "Voie du soldat",
+          "rang": 2
+        }
+      ],
+      "pvMax": 27,
+      "corruptionCombat": 0,
+      "donsChoix": {},
+      "pvNiveauActuel": 2,
+      "inventaireListe": [
+        {
+          "enchantement": 0,
+          "id": "epee_longue",
+          "nom": "Épée longue",
+          "deuxMains": false,
+          "description": "Arme emblématique du guerrier. Bon équilibre dégâts/maniabilité.",
+          "portee": "contact",
+          "type": "arme",
+          "typedegats": "physique",
+          "porte": false,
+          "degats": "1d8"
+        },
+        {
+          "porte": false,
+          "malusDEX": 0,
+          "description": "Protection légère, n'entrave pas les mouvements.",
+          "nom": "Armure de cuir",
+          "valeurArmure": 2,
+          "id": "armure_cuir",
+          "type": "armure"
+        }
+      ],
+      "pvHistorique": [
+        {
+          "modCON": 2,
+          "faces": 10,
+          "total": 9,
+          "niveau": 2,
+          "jet": 7
+        }
+      ],
+      "genre": "homme",
+      "piecesBronze": 0,
+      "corruptionMajeure": 0,
+      "caracsLibres": {
+        "CON": 3,
+        "INT": 0,
+        "SAG": 0,
+        "CHA": 0,
+        "FOR": 3,
+        "DEX": 0
+      },
+      "race": "nain",
+      "nom": "Vhorgar",
+      "def": 12,
+      "etatsActifs": [],
+      "classe": "guerrier",
+      "usagesCapacites": {
+        "classe:guerrier:Voie du soldat:1": {
+          "periode": "tour",
+          "utilisations": 0
+        }
+      },
+      "piecesOr": 148,
+      "capacitesRace": [
+        1,
+        2
+      ],
+      "voiesHorsProfil": [],
+      "pvActuel": 27,
+      "niveau": 2,
+      "id": "fiche-09",
+      "dons": [],
+      "piecesArgent": 0,
+      "caracs": {
+        "CHA": 10,
+        "SAG": 10,
+        "CON": 14,
+        "INT": 10,
+        "DEX": 10,
+        "FOR": 15
+      },
+      "equipement": {
+        "torse": {
+          "valeurArmure": 4,
+          "varianteNom": null,
+          "rareteCouleur": "#2f9e44",
+          "bonusRarete": 1,
+          "id": "armure_cloute",
+          "malusDEX": 0,
+          "porte": false,
+          "rareteNom": "Peu commun",
+          "nom": "Cuir clouté",
+          "description": "Cuir renforcé de clous métalliques. Bon compromis légèreté/protection.",
+          "rarete": "peu_commun",
+          "type": "armure",
+          "itemRef": "armure_cloute",
+          "effetRarete": null
+        },
+        "main_droite": {
+          "bonusRarete": 1,
+          "portee": "contact",
+          "enchantement": 0,
+          "itemRef": "hache_guerre",
+          "degats": "1d8",
+          "rareteNom": "Peu commun",
+          "deuxMains": false,
+          "rarete": "peu_commun",
+          "nom": "Hache de guerre",
+          "varianteNom": null,
+          "rareteCouleur": "#2f9e44",
+          "effetRarete": null,
+          "id": "hache_guerre",
+          "bonusDegatsTotal": 1,
+          "porte": false,
+          "type": "arme",
+          "typedegats": "physique",
+          "description": "Lame large dévastatrice. Difficile à manier mais redoutable."
+        },
+        "botte": null,
+        "jambe": null,
+        "collier": null,
+        "bague": null,
+        "avant_bras": null,
+        "tete": null,
+        "main_gauche": {
+          "porte": false,
+          "nom": "Bouclier en acier",
+          "id": "bouclier_acier",
+          "bonusDEF": 2,
+          "type": "bouclier",
+          "description": "Protection solide. Standard de l'infanterie des Royaumes Coalisés."
+        }
+      },
+      "corruptionSeuilFranchi": false,
+      "raceVariante": null
+    }
+  ]
+}

@@ -244,10 +244,19 @@ function ecartsAvecV1(ficheV1: Brut): string[] {
 
 const NOMBRE_FICHES = 600;
 
+/** Vraies fiches de la table, exportées et anonymisées par exporter_fiches_v1.js (lot L1.4). */
+const FICHES_REELLES: Brut[] = JSON.parse(
+  readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../fixtures/fiches-v1.json'), 'utf8'),
+).fiches;
+
 describe('équivalence des calculs avec la v1', () => {
   it(`${NOMBRE_FICHES} fiches générées : toutes les statistiques identiques`, () => {
     const ecarts = Array.from({ length: NOMBRE_FICHES }, (_, n) => ecartsAvecV1(ficheSynthetique(n))).flat();
     expect(ecarts.slice(0, 20)).toEqual([]);
+  });
+
+  it.each(FICHES_REELLES.map((f) => [f.nom, f] as const))('fiche réelle « %s » : toutes les statistiques identiques', (_nom, fiche) => {
+    expect(ecartsAvecV1(fiche)).toEqual([]);
   });
 
   it('le générateur couvre bien les cas qui comptent', () => {
