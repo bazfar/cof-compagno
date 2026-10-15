@@ -104,10 +104,31 @@ describe('gestes', () => {
 
   it('un PJ glissé contre une porte fermée reste devant ; un monstre passe', () => {
     const devant = { cx: 27, cy: 5 }, derriere = { cx: 27, cy: 6 };
-    expect(pasDeGlisser(tavern, pj('a', 27, 5), devant, derriere)).toEqual(devant);
-    expect(pasDeGlisser(tavern, { id: 'm', genre: 'monstre', cx: 27, cy: 5 }, devant, derriere)).toEqual(derriere);
+    expect(pasDeGlisser(tavern, [], pj('a', 27, 5), devant, derriere)).toEqual({ case: devant, arret: 'porte' });
+    expect(pasDeGlisser(tavern, [], { id: 'm', genre: 'monstre', cx: 27, cy: 5 }, devant, derriere)).toEqual({ case: derriere, arret: null });
     const ouverte = sceneCalcul(geoTavern, { portesOuvertes: { p0: true } });
-    expect(pasDeGlisser(ouverte, pj('a', 27, 5), devant, derriere)).toEqual(derriere);
+    expect(pasDeGlisser(ouverte, [], pj('a', 27, 5), devant, derriere)).toEqual({ case: derriere, arret: null });
+  });
+
+  it('un PJ glissé contre un mur plein : arrêt « mur »', () => {
+    // Mur ouest de la taverne, en x = 5, de y = 1 à y = 10.
+    expect(pasDeGlisser(tavern, [], pj('a', 4, 5), { cx: 4, cy: 5 }, { cx: 5, cy: 5 }).arret).toBe('mur');
+  });
+
+  it("un PJ ne s'arrête pas sur une créature vivante, mais la traverse (décision du 15/10)", () => {
+    const vide = sceneCalcul({ id: 'vide', nom: 'Vide', colonnes: 10, lignes: 10, pxParCaseSource: 100, murs: [], obstacles: [], portes: [] });
+    const a = pj('a', 1, 1);
+    const gobelin: JetonCarte = { id: 'g', genre: 'monstre', cx: 2, cy: 1 };
+    const jetons = [a, gobelin];
+    // Le pointeur arrive sur le gobelin : le PJ reste sur sa case.
+    expect(pasDeGlisser(vide, jetons, a, { cx: 1, cy: 1 }, { cx: 2, cy: 1 })).toEqual({ case: { cx: 1, cy: 1 }, arret: 'occupant' });
+    // Le pointeur passe au-delà : le PJ saute par-dessus.
+    expect(pasDeGlisser(vide, jetons, a, { cx: 1, cy: 1 }, { cx: 3, cy: 1 })).toEqual({ case: { cx: 3, cy: 1 }, arret: null });
+    // Un corps ne gêne pas ; un allié PJ, si.
+    expect(pasDeGlisser(vide, [a, { ...gobelin, mort: true }], a, { cx: 1, cy: 1 }, { cx: 2, cy: 1 }).arret).toBeNull();
+    expect(pasDeGlisser(vide, [a, pj('b', 2, 1)], a, { cx: 1, cy: 1 }, { cx: 2, cy: 1 }).arret).toBe('occupant');
+    // Le MJ pose un monstre où il veut, même sur un autre.
+    expect(pasDeGlisser(vide, jetons, { id: 'm2', genre: 'monstre', cx: 5, cy: 5 }, { cx: 5, cy: 5 }, { cx: 2, cy: 1 }).arret).toBeNull();
   });
 
   it('initiales', () => {

@@ -188,7 +188,7 @@
     if (glisser) {
       const visee = ecranVersCase(vue, ex, ey, geometrie);
       const jeton = jetons.find((j) => j.id === glisser!.id);
-      if (visee && jeton) glisser = { ...glisser, case: pasDeGlisser(scene, jeton, glisser.case, visee) };
+      if (visee && jeton) glisser = { ...glisser, case: pasDeGlisser(scene, jetons, jeton, glisser.case, visee).case };
       return;
     }
     if (deplacementVue) {

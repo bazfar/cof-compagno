@@ -1,4 +1,4 @@
-import { deplacementBloque } from './deplacement.ts';
+import { caseOccupee, obstacleDeplacement, type Obstacle } from './deplacement.ts';
 import { distancePointSegment, type Case, type JetonCarte, type Point, type Porte, type SceneCalcul } from './geometrie.ts';
 
 /*
@@ -57,12 +57,31 @@ export function peutDeplacer(role: Role, jeton: JetonCarte, miens: ReadonlySet<s
  * Pas d'un glisser (v1 : surDragDD) : le jeton suit le pointeur case par
  * case. Un PJ ne passe pas d'un mur ou d'une porte fermée : il reste sur sa
  * dernière case libre et repart dès que le pointeur repasse par un chemin
- * dégagé (la porte ouverte, par exemple). Les autres jetons vont partout.
+ * dégagé (la porte ouverte, par exemple). Les autres jetons vont partout :
+ * le MJ place ses monstres où il veut.
+ *
+ * Écart volontaire avec la v1 (décision du 15/10) : un PJ ne s'arrête pas
+ * non plus sur la case d'une créature vivante. Il peut la traverser (le
+ * pointeur passe au-delà, le pas suivant part de sa dernière case libre),
+ * pas y rester. Un corps (monstre mort) ne gêne pas.
+ *
+ * `arret` dit ce qui a retenu le jeton à ce pas ; il servira aux dégâts de
+ * collision des poussées (L6).
  */
-export function pasDeGlisser(scene: SceneCalcul, jeton: JetonCarte, actuelle: Case, visee: Case): Case {
-  if (visee.cx === actuelle.cx && visee.cy === actuelle.cy) return actuelle;
-  if (jeton.genre === 'pj' && deplacementBloque(scene, actuelle, visee)) return actuelle;
-  return visee;
+export function pasDeGlisser(
+  scene: SceneCalcul,
+  jetons: readonly JetonCarte[],
+  jeton: JetonCarte,
+  actuelle: Case,
+  visee: Case,
+): { case: Case; arret: Obstacle | null } {
+  if (visee.cx === actuelle.cx && visee.cy === actuelle.cy) return { case: actuelle, arret: null };
+  if (jeton.genre !== 'pj') return { case: visee, arret: null };
+  const obstacle = obstacleDeplacement(scene, actuelle, visee);
+  if (obstacle) return { case: actuelle, arret: obstacle };
+  const autres = jetons.filter((j) => j.id !== jeton.id);
+  if (caseOccupee(autres, visee.cx, visee.cy)) return { case: actuelle, arret: 'occupant' };
+  return { case: visee, arret: null };
 }
 
 /** Initiales d'un nom, pour le jeton (v1 : initiales). */

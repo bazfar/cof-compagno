@@ -1,4 +1,4 @@
-import { collection, onSnapshot, type Firestore } from 'firebase/firestore';
+import { collection, doc, onSnapshot, type Firestore } from 'firebase/firestore';
 import type { z } from 'zod';
 
 export type AvecId<T> = T & { id: string };
@@ -42,6 +42,41 @@ export function suivreCollection<T>(
         }
       });
       etat.elements = valides;
+      etat.pret = true;
+      etat.erreur = null;
+    },
+    (erreur) => {
+      etat.erreur = erreur.message;
+    },
+  );
+
+  return { etat, arreter };
+}
+
+export interface DocumentSuivi<T> {
+  /** `donnees` : null tant que le document n'existe pas (ou s'il est invalide). */
+  readonly etat: { donnees: T | null; pret: boolean; erreur: string | null };
+  arreter: () => void;
+}
+
+/** Même chose pour un document seul (ex. l'état partagé d'une scène). */
+export function suivreDocument<T>(db: Firestore, chemin: string, schema: z.ZodType<T>): DocumentSuivi<T> {
+  const etat = $state<DocumentSuivi<T>['etat']>({ donnees: null, pret: false, erreur: null });
+
+  const arreter = onSnapshot(
+    doc(db, chemin),
+    (instantane) => {
+      if (!instantane.exists()) {
+        etat.donnees = null;
+      } else {
+        const resultat = schema.safeParse(instantane.data());
+        if (resultat.success) {
+          etat.donnees = resultat.data;
+        } else {
+          console.error(`Document invalide ignoré : ${chemin}`, resultat.error.issues);
+          etat.donnees = null;
+        }
+      }
       etat.pret = true;
       etat.erreur = null;
     },

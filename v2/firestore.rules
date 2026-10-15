@@ -35,6 +35,28 @@ service cloud.firestore {
     function nomValide(nom) {
       return nom is string && nom.size() >= 1 && nom.size() <= 40;
     }
+    function coordValide(c) {
+      return c is int && c >= 0 && c <= 499;
+    }
+    // Aligné sur schemaJeton (src/lib/schemas/carte.ts).
+    function jetonValide(d) {
+      return d.keys().hasAll(['genre', 'nom', 'couleur', 'cx', 'cy', 'proprietaire', 'creeLe'])
+        && d.keys().hasOnly(['genre', 'nom', 'couleur', 'cx', 'cy', 'mort', 'proprietaire', 'creeLe'])
+        && d.genre in ['pj', 'monstre', 'invocation', 'libre']
+        && nomValide(d.nom)
+        && d.couleur is string && d.couleur.matches('^#[0-9a-fA-F]{6}$')
+        && coordValide(d.cx) && coordValide(d.cy)
+        && (!('mort' in d) || d.mort is bool)
+        && (d.proprietaire == null || d.proprietaire is string)
+        && d.creeLe is int;
+    }
+    // Aligné sur schemaEtatScene (src/lib/schemas/carte.ts).
+    function etatSceneValide(d) {
+      return d.keys().hasOnly(['portesOuvertes', 'exploration', 'explorationRaz'])
+        && (!('portesOuvertes' in d) || d.portesOuvertes is map)
+        && (!('exploration' in d) || (d.exploration is string && d.exploration.size() <= 20000))
+        && (!('explorationRaz' in d) || d.explorationRaz is int);
+    }
 
     match /tables/{table} {
       allow read: if estMembre(table);
@@ -70,8 +92,49 @@ service cloud.firestore {
         allow delete: if estMj(table);
       }
 
-      // Toute autre collection (persos, scènes, combat…) est refusée par
-      // défaut : chaque lot ouvre la sienne avec ses propres tests.
+      // ---- Battlemap (lot L5.3) ----
+      // Les règles vérifient les DROITS ; les règles de jeu (murs, portes
+      // fermées, case occupée) sont appliquées par l'app avant d'écrire,
+      // comme en v1 : Firestore ne connaît pas la géométrie des scènes.
+      // `sceneActive` (scène montrée) est un champ du document de table,
+      // écrit par le MJ (règle de /tables/{table} ci-dessus).
+      match /scenes/{scene} {
+        allow read: if estMembre(table);
+        // MJ : portes, exploration et sa remise à zéro.
+        allow create, update: if estMj(table) && etatSceneValide(request.resource.data);
+        // Joueur : seulement les portes (n'importe laquelle, décision 3b).
+        allow create: if estJoueur(table)
+          && request.resource.data.keys().hasOnly(['portesOuvertes'])
+          && request.resource.data.portesOuvertes is map;
+        allow update: if estJoueur(table)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['portesOuvertes'])
+          && request.resource.data.portesOuvertes is map;
+        allow delete: if estMj(table);
+
+        // Un document par jeton. Le MJ pose, bouge, tue et retire tout. Un
+        // joueur pose son PJ (identifiant pj-<son uid>), ne bouge que ses
+        // jetons (cx et cy seulement) et peut les retirer.
+        match /jetons/{jeton} {
+          allow read: if estMembre(table);
+          allow create: if jetonValide(request.resource.data)
+            && (estMj(table)
+              || (estJoueur(table)
+                && jeton == 'pj-' + request.auth.uid
+                && request.resource.data.genre == 'pj'
+                && request.resource.data.proprietaire == request.auth.uid
+                && !('mort' in request.resource.data)));
+          allow update: if jetonValide(request.resource.data)
+            && (estMj(table)
+              || (estJoueur(table)
+                && resource.data.proprietaire == request.auth.uid
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cx', 'cy'])));
+          allow delete: if estMj(table)
+            || (estJoueur(table) && resource.data.proprietaire == request.auth.uid);
+        }
+      }
+
+      // Toute autre collection (persos, combat…) est refusée par défaut :
+      // chaque lot ouvre la sienne avec ses propres tests.
     }
   }
 }

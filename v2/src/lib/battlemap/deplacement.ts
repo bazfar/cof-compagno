@@ -7,9 +7,10 @@ import { borner, centre, distanceCases, distancePointSegment, intersectionSegmen
  * ajouterTokensLot (partie géométrique), et la détection de l'attaque
  * d'opportunité de finDragDD.
  *
- * Seule règle nouvelle (décision du 15/10) : un monstre mort ne tient plus
- * sa case. On peut poser un jeton dessus, et il ne provoque plus
- * d'attaque d'opportunité.
+ * Règles nouvelles (décisions du 15/10) : un monstre mort ne tient plus
+ * sa case (on peut poser un jeton dessus, il ne provoque plus d'attaque
+ * d'opportunité) ; un PJ ne s'arrête pas sur la case d'une créature
+ * vivante (interactions.pasDeGlisser, lot L5.3).
  */
 
 /**
@@ -28,26 +29,38 @@ function porteProche(scene: SceneCalcul, pt: Point, tolerance: number): Porte | 
   return meilleure;
 }
 
+/** Ce qui arrête un jeton : sert aussi aux dégâts de collision des poussées (L6). */
+export type Obstacle = 'mur' | 'porte' | 'occupant';
+
 /**
- * Un PJ qui va de la case `de` à la case `vers` (ligne droite entre les
- * centres) est-il arrêté ? Oui s'il traverse un mur sans porte ouverte à
- * moins d'une case, ou une porte fermée. Les obstacles (arbres, rochers)
- * ne bloquent pas le passage. Les monstres ne sont jamais arrêtés : le MJ
- * les place où il veut (v1).
+ * Ce qui arrête un PJ qui va de la case `de` à la case `vers` (ligne droite
+ * entre les centres), ou null si le passage est libre. Arrêt s'il traverse
+ * un mur sans porte ouverte à moins d'une case (« mur », ou « porte » si une
+ * porte fermée est là), ou une porte fermée. Les obstacles (arbres,
+ * rochers) ne bloquent pas le passage (v1 : _deplacementBloque).
  */
-export function deplacementBloque(scene: SceneCalcul, de: Case, vers: Case): boolean {
+export function obstacleDeplacement(scene: SceneCalcul, de: Case, vers: Case): Exclude<Obstacle, 'occupant'> | null {
   const p0 = centre(de), p1 = centre(vers);
   for (const [a, b] of scene.murs) {
     const pt = intersectionSegments(p0, p1, a, b);
     if (!pt) continue;
     const porte = porteProche(scene, pt, 1);
     if (porte && porte.ouverte) continue; // porte ouverte juste là : on passe
-    return true; // mur plein, ou porte fermée à proximité
+    return porte ? 'porte' : 'mur'; // porte fermée à proximité, ou mur plein
   }
   for (const p of scene.portes) {
-    if (!p.ouverte && intersectionSegments(p0, p1, p.a, p.b)) return true;
+    if (!p.ouverte && intersectionSegments(p0, p1, p.a, p.b)) return 'porte';
   }
-  return false;
+  return null;
+}
+
+/**
+ * Un PJ qui va de `de` à `vers` est-il arrêté par un mur ou une porte
+ * fermée ? Les monstres ne sont jamais arrêtés : le MJ les place où il
+ * veut (v1).
+ */
+export function deplacementBloque(scene: SceneCalcul, de: Case, vers: Case): boolean {
+  return obstacleDeplacement(scene, de, vers) !== null;
 }
 
 /** La case est-elle tenue par un jeton ? Un monstre mort ne tient plus sa case. */
