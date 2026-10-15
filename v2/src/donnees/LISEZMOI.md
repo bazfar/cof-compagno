@@ -16,6 +16,7 @@ Ne les modifie pas à la main : la vérification (`npm run verifier`)
 | `objets.json` | `data/loot.js` (et non `data/loot.json`, qui en est généré) |
 | `equipement-depart.json` | `data/equipement_depart.js` |
 | `identifiants.json` | aucune : table figée, maintenue par l'import (voir plus bas) |
+| `scenes/*.json` | `assets/battlemaps/*.dd2vtt` du catalogue `CARTES_BATTLEMAP` (`data/donnees.js`), par `npm run preparer-scenes` |
 
 ## Changer une règle (jusqu'à la bascule)
 

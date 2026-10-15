@@ -1,10 +1,10 @@
 <mxfile host="Electron">
   <diagram name="Architecture 2.0 - modules du socle" id="v2-modules">
-    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1760" pageHeight="1300" math="0" shadow="0">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1760" pageHeight="1760" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="titre" parent="1" style="text;html=1;align=left;fontSize=16;fontStyle=1;" value="Architecture 2.0 — socle (L0) et règles (L1) : les écrans lisent, seules les actions écrivent" vertex="1">
+        <mxCell id="titre" parent="1" style="text;html=1;align=left;fontSize=16;fontStyle=1;" value="Architecture 2.0 — socle (L0), règles (L1), battlemap (L5) : les écrans lisent, seules les actions écrivent" vertex="1">
           <mxGeometry height="28" width="1500" x="40" y="10" as="geometry" />
         </mxCell>
         <mxCell id="legende" parent="1" style="text;html=1;align=left;fontSize=11;fontStyle=2;" value="Violet = interface  |  Rose = état réactif partagé  |  Orange = actions (seules écritures)  |  Vert = schémas et modèles  |  Gris = Firebase  |  Bleu = garde-fous        (pointillé = dépendance réelle ; croix rouge = interdit par .dependency-cruiser.cjs)" vertex="1">
@@ -59,16 +59,16 @@
           <mxGeometry height="70" width="300" x="1020" y="650" as="geometry" />
         </mxCell>
         <mxCell id="regles" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f5f5f5;strokeColor=#666666;" value="&lt;b&gt;firestore.rules  (un seul jeu pour tout le projet)&lt;/b&gt;&lt;hr&gt;sessions/** : ouvert, v1 inchangée&lt;br&gt;tables/{t} : lecture membres, écriture MJ&lt;br&gt;secret/** : illisible&lt;br&gt;mjs/{uid} : soi-même + bon code, non modifiable&lt;br&gt;joueurs/{uid} : soi-même, champs bornés&lt;br&gt;tout le reste : refusé" vertex="1">
-          <mxGeometry height="166" width="330" x="1380" y="430" as="geometry" />
+          <mxGeometry height="166" width="330" x="1380" y="452" as="geometry" />
         </mxCell>
         <mxCell id="depcruise" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;.dependency-cruiser.cjs&lt;/b&gt;&lt;hr&gt;pas-de-cycle : aucune dépendance circulaire&lt;br&gt;ecrans-sans-firestore : écrans et composants&lt;br&gt;  n'importent jamais firebase/client ni le SDK" vertex="1">
           <mxGeometry height="86" width="330" x="1380" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="tests" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/&lt;/b&gt;&lt;hr&gt;unitaires/table.test.ts (3)&lt;br&gt;unitaires/schemas-acces.test.ts (5)&lt;br&gt;unitaires/donnees-regles.test.ts (15)&lt;br&gt;unitaires/donnees-bestiaire-objets.test.ts (14)&lt;br&gt;unitaires/conversion-v1.test.ts (7)&lt;br&gt;unitaires/equivalence-v1.test.ts (600 fiches&lt;br&gt;  générées + 9 fiches réelles)&lt;br&gt;regles/firestore.test.ts (15, émulateur)" vertex="1">
-          <mxGeometry height="182" width="330" x="1380" y="220" as="geometry" />
+        <mxCell id="tests" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/&lt;/b&gt;&lt;hr&gt;unitaires/table.test.ts (3)&lt;br&gt;unitaires/schemas-acces.test.ts (5)&lt;br&gt;unitaires/donnees-regles.test.ts (15)&lt;br&gt;unitaires/donnees-bestiaire-objets.test.ts (14)&lt;br&gt;unitaires/conversion-v1.test.ts (7)&lt;br&gt;unitaires/battlemap.test.ts (16)&lt;br&gt;unitaires/battlemap-equivalence-v1.test.ts (68)&lt;br&gt;unitaires/equivalence-v1.test.ts (600 fiches&lt;br&gt;  générées + 9 fiches réelles)&lt;br&gt;regles/firestore.test.ts (15, émulateur)" vertex="1">
+          <mxGeometry height="230" width="330" x="1380" y="220" as="geometry" />
         </mxCell>
-        <mxCell id="npm" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;npm run verifier&lt;/b&gt;&lt;hr&gt;donnees:verifier : src/donnees à jour avec la v1&lt;br&gt;check : svelte-check + tsc (strict)&lt;br&gt;cycles : dependency-cruiser&lt;br&gt;test : vitest&lt;br&gt;build : vite&lt;br&gt;test:regles : émulateur Firestore&lt;br&gt;deployer = verifier puis hosting:v2 + règles&lt;br&gt;CI : .github/workflows/v2-verifier.yml" vertex="1">
-          <mxGeometry height="182" width="330" x="1380" y="640" as="geometry" />
+        <mxCell id="npm" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;npm run verifier&lt;/b&gt;&lt;hr&gt;donnees:verifier : src/donnees à jour avec la v1&lt;br&gt;scenes:verifier : scènes à jour avec les .dd2vtt&lt;br&gt;check : svelte-check + tsc (strict)&lt;br&gt;cycles : dependency-cruiser&lt;br&gt;test : vitest&lt;br&gt;build : vite&lt;br&gt;test:regles : émulateur Firestore&lt;br&gt;deployer = verifier puis hosting:v2 + règles&lt;br&gt;CI : .github/workflows/v2-verifier.yml" vertex="1">
+          <mxGeometry height="214" width="330" x="1380" y="640" as="geometry" />
         </mxCell>
         <mxCell id="titre-l1" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Règles du jeu (lot L1) — la v1 reste la source jusqu'à la bascule ; la 2.0 importe ses données" vertex="1">
           <mxGeometry height="24" width="1200" x="40" y="850" as="geometry" />
@@ -99,6 +99,75 @@
         </mxCell>
         <mxCell id="formule" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/regles/formule.ts&lt;/b&gt;&lt;hr&gt;formules @player-… des objets,&lt;br&gt;reprises de js/formule.js" vertex="1">
           <mxGeometry height="70" width="290" x="1420" y="1110" as="geometry" />
+        </mxCell>
+        <mxCell id="titre-l5" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Battlemap (lot L5.1) — calculs purs en cases, sans écran ni réseau ; la carte ne porte plus l'état de combat des monstres" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="1290" as="geometry" />
+        </mxCell>
+        <mxCell id="dd2vtt" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f5f5f5;strokeColor=#666666;" value="&lt;b&gt;v1 : assets/battlemaps/*.dd2vtt&lt;/b&gt;&lt;hr&gt;catalogue CARTES_BATTLEMAP (data/donnees.js)&lt;br&gt;5 à 37 Mo chacun (image en base64)" vertex="1">
+          <mxGeometry height="86" width="280" x="40" y="1330" as="geometry" />
+        </mxCell>
+        <mxCell id="preparer" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;outils/preparer-scenes.ts&lt;/b&gt;&lt;hr&gt;npm run preparer-scenes : géométrie seule&lt;br&gt;--verifier : échoue si un .dd2vtt a changé&lt;br&gt;l'image : lot L5.2" vertex="1">
+          <mxGeometry height="86" width="300" x="370" y="1330" as="geometry" />
+        </mxCell>
+        <mxCell id="scenesjson" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;src/donnees/scenes/*.json  (générés)&lt;/b&gt;&lt;hr&gt;catalogue.json + une géométrie par scène&lt;br&gt;murs, obstacles, portes, en cases&lt;br&gt;quelques Ko, chargée à l'ouverture" vertex="1">
+          <mxGeometry height="102" width="280" x="720" y="1330" as="geometry" />
+        </mxCell>
+        <mxCell id="schemaScene" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/scene.ts  (Zod)&lt;/b&gt;&lt;hr&gt;schemaGeometrieScene, schemaPorte,&lt;br&gt;schemaCatalogueScenes ; unité : la case" vertex="1">
+          <mxGeometry height="70" width="290" x="1050" y="1330" as="geometry" />
+        </mxCell>
+        <mxCell id="bmScenes" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/battlemap/scenes.ts&lt;/b&gt;&lt;hr&gt;catalogueScenes&lt;br&gt;+ chargerGeometrie(id) (à la demande)" vertex="1">
+          <mxGeometry height="70" width="320" x="1390" y="1330" as="geometry" />
+        </mxCell>
+        <mxCell id="bmGeo" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/battlemap/geometrie.ts&lt;/b&gt;&lt;hr&gt;JetonCarte (genre, mort?), SceneCalcul&lt;br&gt;+ sceneCalcul(géométrie, état) : portes,&lt;br&gt;  murs / obstacles / portes du MJ&lt;br&gt;intersections, distance de Chebyshev" vertex="1">
+          <mxGeometry height="102" width="300" x="40" y="1490" as="geometry" />
+        </mxCell>
+        <mxCell id="bmVis" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/battlemap/visibilite.ts&lt;/b&gt;&lt;hr&gt;polygoneVisibilite (port de la v1)&lt;br&gt;segmentsBloquants, visionsDesPJ (8 + 4 cases)&lt;br&gt;jetonsVisiblesDesPJ, monstresQuiApparaissent" vertex="1">
+          <mxGeometry height="118" width="300" x="380" y="1490" as="geometry" />
+        </mxCell>
+        <mxCell id="bmDep" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/battlemap/deplacement.ts&lt;/b&gt;&lt;hr&gt;deplacementBloque (murs, portes fermées)&lt;br&gt;caseOccupee : un mort libère sa case&lt;br&gt;placerLot, resoudreCase, placementParDefaut&lt;br&gt;contactsPerdus (attaque d'opportunité)" vertex="1">
+          <mxGeometry height="118" width="300" x="720" y="1490" as="geometry" />
+        </mxCell>
+        <mxCell id="bmCib" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/battlemap/ciblage.ts&lt;/b&gt;&lt;hr&gt;ligneCases, jetonsSurLigne (Bresenham)&lt;br&gt;jetonsEnZone, distanceJetons&lt;br&gt;un monstre mort ne se cible plus" vertex="1">
+          <mxGeometry height="86" width="290" x="1060" y="1490" as="geometry" />
+        </mxCell>
+        <mxCell id="bmExp" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/battlemap/exploration.ts&lt;/b&gt;&lt;hr&gt;GrilleExploration : brouillard partagé&lt;br&gt;2 × 2 sous-cases par case, fusion par OU&lt;br&gt;versTexte / depuisTexte pour Firestore" vertex="1">
+          <mxGeometry height="86" width="320" x="1390" y="1490" as="geometry" />
+        </mxCell>
+        <mxCell id="bmEquiv" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/unitaires/battlemap-equivalence-v1.test.ts&lt;/b&gt;&lt;hr&gt;extrait les vraies fonctions de js/carte.js&lt;br&gt;(tests/outils/carte-v1.ts), compare sur&lt;br&gt;les 4 scènes × 4 tirages au hasard" vertex="1">
+          <mxGeometry height="102" width="330" x="370" y="1650" as="geometry" />
+        </mxCell>
+        <mxCell id="l5a" parent="1" source="preparer" target="dd2vtt" style="endArrow=open;dashed=1;html=1;" value="lit" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l5b" parent="1" source="preparer" target="scenesjson" style="endArrow=open;dashed=1;html=1;" value="écrit" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l5c" parent="1" source="preparer" target="schemaScene" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l5d" parent="1" source="bmScenes" target="scenesjson" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l5e" parent="1" source="bmScenes" target="schemaScene" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l5f" parent="1" source="bmVis" target="bmGeo" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l5g" parent="1" source="bmDep" target="bmGeo" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l5h" parent="1" source="bmCib" target="bmVis" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l5i" parent="1" source="bmExp" target="bmVis" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l5j" parent="1" source="bmEquiv" target="bmDep" style="endArrow=open;dashed=1;html=1;" value="compare" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l5k" parent="1" source="bmEquiv" target="dd2vtt" style="endArrow=open;dashed=1;html=1;" value="lit" edge="1">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="l1f" parent="1" source="calculs" target="reglesDonnees" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
@@ -252,11 +321,11 @@
         <mxCell id="loot" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontColor=#666666;" value="&lt;b&gt;loot/{id}  (L3)&lt;/b&gt;&lt;hr&gt;objets proposés, votes" vertex="1">
           <mxGeometry height="54" width="280" x="620" y="440" as="geometry" />
         </mxCell>
-        <mxCell id="scenes" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontColor=#666666;" value="&lt;b&gt;scenes/{id}  (L5)&lt;/b&gt;&lt;hr&gt;grille, murs, portes, obstacles, image" vertex="1">
-          <mxGeometry height="70" width="260" x="40" y="560" as="geometry" />
+        <mxCell id="scenes" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontColor=#666666;" value="&lt;b&gt;scenes/{id}  (L5.3)&lt;/b&gt;&lt;hr&gt;état de la scène : portes, murs et&lt;br&gt;obstacles du MJ, exploration partagée&lt;br&gt;(la géométrie est dans src/donnees/scenes)" vertex="1">
+          <mxGeometry height="118" width="260" x="40" y="560" as="geometry" />
         </mxCell>
-        <mxCell id="jetons" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontColor=#666666;" value="&lt;b&gt;scenes/{id}/jetons/{id}  (L5)&lt;/b&gt;&lt;hr&gt;un document par jeton" vertex="1">
-          <mxGeometry height="54" width="260" x="40" y="670" as="geometry" />
+        <mxCell id="jetons" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontColor=#666666;" value="&lt;b&gt;scenes/{id}/jetons/{id}  (L5.3)&lt;/b&gt;&lt;hr&gt;un document par jeton : position,&lt;br&gt;genre, mort ; PV : au combat (L6)" vertex="1">
+          <mxGeometry height="70" width="260" x="40" y="690" as="geometry" />
         </mxCell>
         <mxCell id="combat" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontColor=#666666;" value="&lt;b&gt;combat/courant  (L6)&lt;/b&gt;&lt;hr&gt;initiative, round, combattant actif,&lt;br&gt;réaction ouverte — écrit par champ" vertex="1">
           <mxGeometry height="70" width="260" x="330" y="560" as="geometry" />

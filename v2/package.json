@@ -17,7 +17,9 @@
     "test:regles": "firebase emulators:exec --only firestore --project demo-cof-compagno \"vitest run --config vitest.regles.config.ts\"",
     "importer-v1": "node outils/importer-v1.ts",
     "donnees:verifier": "node outils/importer-v1.ts --verifier",
-    "verifier": "npm run donnees:verifier && npm run check && npm run cycles && npm run test && npm run build && npm run test:regles",
+    "preparer-scenes": "node outils/preparer-scenes.ts",
+    "scenes:verifier": "node outils/preparer-scenes.ts --verifier",
+    "verifier": "npm run donnees:verifier && npm run scenes:verifier && npm run check && npm run cycles && npm run test && npm run build && npm run test:regles",
     "deployer": "npm run verifier && firebase deploy --only hosting:v2,firestore:rules"
   },
   "dependencies": {
