@@ -28,7 +28,7 @@ Cadrage complet : document « Cadrage cof-compagno 2.0 » du projet JDR.
 - `src/lib/magasins/` : lectures en temps réel (états Svelte réactifs).
 - `src/lib/actions/` : seules fonctions qui écrivent dans Firestore.
 - `src/lib/schemas/` : forme des documents (Zod), source unique.
-- `src/lib/regles/` : accès typé aux règles du jeu (`src/donnees/*.json`, générés depuis la v1).
+- `src/lib/regles/` : règles du jeu. Accès typé aux données (`donnees.ts`, depuis `src/donnees/*.json` générés de la v1) et calculs d'un personnage (`calculs.ts`, port fidèle de `js/personnage.js`, vérifié contre la v1 par `tests/unitaires/equivalence-v1.test.ts`).
 - `outils/` : scripts lancés par Node (import des règles de la v1).
 - `src/lib/firebase/` : initialisation et outils Firebase.
 - `src/theme.css` : couleurs, polices, arrondis. Changer d'ambiance = changer ce fichier.

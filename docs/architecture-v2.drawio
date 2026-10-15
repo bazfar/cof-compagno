@@ -1,6 +1,6 @@
 <mxfile host="Electron">
   <diagram name="Architecture 2.0 - modules du socle" id="v2-modules">
-    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1760" pageHeight="1120" math="0" shadow="0">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1760" pageHeight="1300" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -64,8 +64,8 @@
         <mxCell id="depcruise" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;.dependency-cruiser.cjs&lt;/b&gt;&lt;hr&gt;pas-de-cycle : aucune dépendance circulaire&lt;br&gt;ecrans-sans-firestore : écrans et composants&lt;br&gt;  n'importent jamais firebase/client ni le SDK" vertex="1">
           <mxGeometry height="86" width="330" x="1380" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="tests" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/&lt;/b&gt;&lt;hr&gt;unitaires/table.test.ts (3)&lt;br&gt;unitaires/schemas-acces.test.ts (5)&lt;br&gt;unitaires/donnees-regles.test.ts (15)&lt;br&gt;unitaires/donnees-bestiaire-objets.test.ts (14)&lt;br&gt;regles/firestore.test.ts (15, émulateur)" vertex="1">
-          <mxGeometry height="134" width="330" x="1380" y="220" as="geometry" />
+        <mxCell id="tests" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/&lt;/b&gt;&lt;hr&gt;unitaires/table.test.ts (3)&lt;br&gt;unitaires/schemas-acces.test.ts (5)&lt;br&gt;unitaires/donnees-regles.test.ts (15)&lt;br&gt;unitaires/donnees-bestiaire-objets.test.ts (14)&lt;br&gt;unitaires/conversion-v1.test.ts (7)&lt;br&gt;unitaires/equivalence-v1.test.ts (2 × 600 fiches)&lt;br&gt;regles/firestore.test.ts (15, émulateur)" vertex="1">
+          <mxGeometry height="182" width="330" x="1380" y="220" as="geometry" />
         </mxCell>
         <mxCell id="npm" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;npm run verifier&lt;/b&gt;&lt;hr&gt;donnees:verifier : src/donnees à jour avec la v1&lt;br&gt;check : svelte-check + tsc (strict)&lt;br&gt;cycles : dependency-cruiser&lt;br&gt;test : vitest&lt;br&gt;build : vite&lt;br&gt;test:regles : émulateur Firestore&lt;br&gt;deployer = verifier puis hosting:v2 + règles&lt;br&gt;CI : .github/workflows/v2-verifier.yml" vertex="1">
           <mxGeometry height="182" width="330" x="1380" y="640" as="geometry" />
@@ -87,6 +87,36 @@
         </mxCell>
         <mxCell id="reglesDonnees" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/regles/donnees.ts&lt;/b&gt;&lt;hr&gt;classes, races, sorts, monstres, objets… typés&lt;br&gt;index : classeParId, voieParId,&lt;br&gt;capaciteParId, sortParId, etatParId,&lt;br&gt;monstreParId, objetParId…" vertex="1">
           <mxGeometry height="118" width="320" x="1390" y="890" as="geometry" />
+        </mxCell>
+        <mxCell id="equiv" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/unitaires/equivalence-v1.test.ts&lt;/b&gt;&lt;hr&gt;exécute le vrai code v1 (vm) et le port&lt;br&gt;600 fiches générées, chaque statistique&lt;br&gt;comparée ; vraies fiches en L1.4" vertex="1">
+          <mxGeometry height="86" width="300" x="370" y="1110" as="geometry" />
+        </mxCell>
+        <mxCell id="calculs" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/regles/calculs.ts  (port de personnage.js)&lt;/b&gt;&lt;hr&gt;CalculsPersonnage : mod, calculerCA,&lt;br&gt;calculerInitiative, pvCalcule, calculerPPMax,&lt;br&gt;bonusAttaque, modSauvegarde, Grimoire…&lt;br&gt;statistiquesFiche(fiche, contexte)&lt;br&gt;voies par identifiant, homonymes compris&lt;br&gt;types : fiche-calcul.ts" vertex="1">
+          <mxGeometry height="150" width="330" x="720" y="1110" as="geometry" />
+        </mxCell>
+        <mxCell id="conversion" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/regles/conversion-v1.ts&lt;/b&gt;&lt;hr&gt;fiche v1 (voies par nom) → fiche 2.0&lt;br&gt;erreur si une voie est introuvable&lt;br&gt;resservira à la migration (L7)" vertex="1">
+          <mxGeometry height="86" width="290" x="1090" y="1110" as="geometry" />
+        </mxCell>
+        <mxCell id="formule" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/regles/formule.ts&lt;/b&gt;&lt;hr&gt;formules @player-… des objets,&lt;br&gt;reprises de js/formule.js" vertex="1">
+          <mxGeometry height="70" width="290" x="1420" y="1110" as="geometry" />
+        </mxCell>
+        <mxCell id="l1f" parent="1" source="calculs" target="reglesDonnees" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l1g" parent="1" source="calculs" target="formule" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l1h" parent="1" source="conversion" target="reglesDonnees" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l1i" parent="1" source="equiv" target="calculs" style="endArrow=open;dashed=1;html=1;" value="compare" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l1j" parent="1" source="equiv" target="v1data" style="endArrow=open;dashed=1;html=1;" value="exécute" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l1k" parent="1" source="equiv" target="conversion" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="l1a" parent="1" source="importeur" target="v1data" style="endArrow=open;dashed=1;html=1;" value="lit" edge="1">
           <mxGeometry relative="1" as="geometry" />
