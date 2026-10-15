@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "lejdr-b38ef"
+  },
+  "targets": {
+    "lejdr-b38ef": {
+      "hosting": {
+        "v2": ["lejdr-v2"]
+      }
+    }
+  }
+}

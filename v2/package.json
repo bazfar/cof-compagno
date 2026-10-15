@@ -8,12 +8,14 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:emulateurs": "firebase emulators:exec --only auth,firestore --ui \"vite --mode emulateurs\"",
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json --fail-on-warnings && tsc -p tsconfig.tests.json && tsc -p tsconfig.node.json",
     "cycles": "depcruise src --config .dependency-cruiser.cjs",
     "test": "vitest run",
-    "verifier": "npm run check && npm run cycles && npm run test && npm run build"
+    "test:regles": "firebase emulators:exec --only firestore --project demo-cof-compagno \"vitest run --config vitest.regles.config.ts\"",
+    "verifier": "npm run check && npm run cycles && npm run test && npm run build && npm run test:regles"
   },
   "dependencies": {
     "firebase": "13.0.0",

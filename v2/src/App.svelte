@@ -1,25 +1,36 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import Accueil from './ecrans/Accueil.svelte';
+  import EcranJoueur from './ecrans/EcranJoueur.svelte';
+  import PosteMj from './ecrans/PosteMj.svelte';
+  import { demarrerSession } from './lib/actions/acces';
+  import { session } from './lib/session.svelte';
   import { tableDepuisUrl } from './lib/table';
 
-  const table = tableDepuisUrl(window.location.href);
+  onMount(() => {
+    void demarrerSession(tableDepuisUrl(window.location.href));
+  });
 </script>
 
-<main>
-  <section class="carte">
-    <h1>cof-compagno 2.0</h1>
-    <p>Socle en place. Table : <strong>{table}</strong>.</p>
-    <p>La connexion à Firebase arrive avec le prompt suivant du lot L0.</p>
-  </section>
-</main>
+{#if session.etape === 'chargement'}
+  <p class="centre">Connexion à la table…</p>
+{:else if session.etape === 'accueil'}
+  <Accueil />
+{:else if session.etape === 'joueur'}
+  <EcranJoueur />
+{:else if session.etape === 'mj'}
+  <PosteMj />
+{:else}
+  <p class="centre erreur" role="alert">Impossible de rejoindre la table : {session.erreur}</p>
+{/if}
 
 <style>
-  main {
-    max-width: 640px;
-    margin: 96px auto;
-    padding: 0 16px;
+  .centre {
+    max-width: 480px;
+    margin: 120px auto;
+    text-align: center;
   }
-  h1 {
-    font-size: 30px;
-    margin-bottom: 8px;
+  .erreur {
+    color: var(--couleur-danger);
   }
 </style>

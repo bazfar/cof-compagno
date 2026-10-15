@@ -1,0 +1,77 @@
+rules_version = '2';
+
+// ============================================================
+// Règles Firestore — cof-compagno (v1 + 2.0)
+//
+// IMPORTANT : un projet Firebase n'a qu'UN jeu de règles pour toute la
+// base. Ce fichier est désormais le seul à déployer (depuis v2/). Il
+// garde la règle de la v1 à l'identique tant que la v1 tourne : sans
+// elle, déployer la 2.0 couperait la table en pleine campagne.
+// Le test « la v1 reste ouverte » de tests/regles le vérifie.
+// ============================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- v1 (sessions/table-arbre-monde) : inchangé, à retirer à la bascule ----
+    match /sessions/{sessionId}/{document=**} {
+      allow read, write: if true;
+    }
+
+    // ---- 2.0 ----
+    function connecte() {
+      return request.auth != null;
+    }
+    function estMj(table) {
+      return connecte()
+        && exists(/databases/$(database)/documents/tables/$(table)/mjs/$(request.auth.uid));
+    }
+    function estJoueur(table) {
+      return connecte()
+        && exists(/databases/$(database)/documents/tables/$(table)/joueurs/$(request.auth.uid));
+    }
+    function estMembre(table) {
+      return estMj(table) || estJoueur(table);
+    }
+    function nomValide(nom) {
+      return nom is string && nom.size() >= 1 && nom.size() <= 40;
+    }
+
+    match /tables/{table} {
+      allow read: if estMembre(table);
+      allow write: if estMj(table);
+
+      // Code MJ : posé à la main dans la console Firebase, jamais lisible
+      // ni modifiable par un client. Seules les règles le consultent.
+      match /secret/{document} {
+        allow read, write: if false;
+      }
+
+      // Devenir MJ : uniquement pour soi, avec le bon code.
+      match /mjs/{uid} {
+        allow read: if connecte() && (request.auth.uid == uid || estMj(table));
+        allow create: if connecte()
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['nom', 'code', 'rejointLe'])
+          && nomValide(request.resource.data.nom)
+          && request.resource.data.rejointLe is int
+          && request.resource.data.code
+             == get(/databases/$(database)/documents/tables/$(table)/secret/codeMj).data.code;
+        allow update, delete: if false;
+      }
+
+      // Devenir joueur : uniquement pour soi. Le MJ peut retirer un joueur.
+      match /joueurs/{uid} {
+        allow read: if connecte() && (request.auth.uid == uid || estMembre(table));
+        allow create, update: if connecte()
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['nom', 'couleur', 'persoActif', 'rejointLe'])
+          && nomValide(request.resource.data.nom)
+          && request.resource.data.rejointLe is int;
+        allow delete: if estMj(table);
+      }
+
+      // Toute autre collection (persos, scènes, combat…) est refusée par
+      // défaut : chaque lot ouvre la sienne avec ses propres tests.
+    }
+  }
+}
