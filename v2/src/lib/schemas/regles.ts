@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CARACS, schemaCarac, schemaId } from './commun.ts';
 
 /*
  * Schémas des données de règles (src/donnees/*.json), importées de la v1
@@ -11,15 +12,11 @@ import { z } from 'zod';
  * - TOLÉRANT (`z.unknown()`) sur les sous-structures complexes des
  *   mécaniques (choix, paliers, durées objet…) : elles seront redéfinies
  *   par le moteur d'effets, avec la refonte de la magie et des classes.
- * Ce fichier ne doit importer que `zod` : outils/importer-v1.ts l'exécute
- * directement avec Node.
+ * Ce fichier n'importe que `zod` et ./commun.ts (avec l'extension) :
+ * outils/importer-v1.ts l'exécute directement avec Node.
  */
 
-// ---------- Identifiants ----------
-/** Identifiant stable : minuscules, chiffres, tirets, points et soulignés. */
-export const schemaId = z.string().regex(/^[a-z0-9_.-]+$/);
-export const CARACS = ['FOR', 'DEX', 'CON', 'INT', 'SAG', 'CHA'] as const;
-export const schemaCarac = z.enum(CARACS);
+export { CARACS, schemaCarac, schemaId };
 
 // ---------- Mécaniques (capacités, sorts, voies raciales) ----------
 export const schemaFrequence = z.enum([

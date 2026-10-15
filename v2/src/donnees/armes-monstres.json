@@ -1,0 +1,1258 @@
+[
+  {
+    "id": "dague_rouillee",
+    "nom": "Dague rouillée",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "fronde",
+    "nom": "Fronde",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "moyenne (18m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "couperet",
+    "nom": "Couperet",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "javelot",
+    "nom": "Javelot",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "courte (6m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "sabre_recupere",
+    "nom": "Sabre récupéré",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "filet_de_chasse",
+    "nom": "Filet de chasse",
+    "type": "arme",
+    "degats": "0",
+    "portee": "courte (6m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "baton_noueux",
+    "nom": "Bâton noueux",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "crachat_de_seve_noire",
+    "nom": "Crachat de Sève noire",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "courte (6m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "morsure",
+    "nom": "Morsure",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "plaquage",
+    "nom": "Plaquage",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "charge",
+    "nom": "Charge",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "defenses",
+    "nom": "Défenses",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "toucher_glacial",
+    "nom": "Toucher glacial",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "froid"
+  },
+  {
+    "id": "hurlement_du_vide",
+    "nom": "Hurlement du vide",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "courte (6m)",
+    "typedegats": "magique",
+    "elementaire": "mental"
+  },
+  {
+    "id": "fouet_de_racine",
+    "nom": "Fouet de racine",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "courte (6m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "emprise",
+    "nom": "Emprise",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "hache_de_guerre",
+    "nom": "Hache de guerre",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "lancer_de_hache",
+    "nom": "Lancer de hache",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "courte (6m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "liane_de_corruption",
+    "nom": "Liane de corruption",
+    "type": "arme",
+    "degats": "1d10",
+    "portee": "courte (6m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "explosion_de_spores",
+    "nom": "Explosion de spores",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "courte (6m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "epee_longue_solaire",
+    "nom": "Épée longue solaire",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "bouclier_frappe",
+    "nom": "Bouclier-frappe",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "poing_de_granit",
+    "nom": "Poing de granit",
+    "type": "arme",
+    "degats": "2d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "pietinement",
+    "nom": "Piétinement",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "lame_d_ombre",
+    "nom": "Lame d'ombre",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "fleche_de_seve_noire",
+    "nom": "Flèche de Sève noire",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "longue (36m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "morsure_empoisonnee",
+    "nom": "Morsure empoisonnée",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "morsure_dechirante",
+    "nom": "Morsure déchirante",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "plaquage_brutal",
+    "nom": "Plaquage brutal",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "griffes",
+    "nom": "Griffes",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "griffes_lacerantes",
+    "nom": "Griffes lacérantes",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "etreinte",
+    "nom": "Étreinte",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "griffes_de_guerre",
+    "nom": "Griffes de guerre",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "etreinte_ecrasante",
+    "nom": "Étreinte écrasante",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "charge_belier",
+    "nom": "Charge bélier",
+    "type": "arme",
+    "degats": "2d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "griffes_devastatrices",
+    "nom": "Griffes dévastatrices",
+    "type": "arme",
+    "degats": "2d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "morsure_broyante",
+    "nom": "Morsure broyante",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "devastation",
+    "nom": "Dévastation",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact (zone adjacente)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "hache",
+    "nom": "Hache",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "hache_de_guerre_lourde",
+    "nom": "Hache de guerre",
+    "type": "arme",
+    "degats": "1d10",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "hache_double",
+    "nom": "Hache double",
+    "type": "arme",
+    "degats": "1d12",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "double_frappe_hache_double",
+    "nom": "Double frappe",
+    "type": "arme",
+    "degats": "1d12",
+    "portee": "contact",
+    "typedegats": "physique",
+    "touches": 2
+  },
+  {
+    "id": "masse_de_guerre_runique",
+    "nom": "Masse de guerre runique",
+    "type": "arme",
+    "degats": "2d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "double_frappe_lourde",
+    "nom": "Double frappe",
+    "type": "arme",
+    "degats": "2d8",
+    "portee": "contact",
+    "typedegats": "physique",
+    "touches": 2
+  },
+  {
+    "id": "epee_courte",
+    "nom": "Épée courte",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "arc_court",
+    "nom": "Arc court",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "moyenne (18m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "epee_batarde",
+    "nom": "Épée bâtarde",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "dague_dans_le_dos",
+    "nom": "Dague dans le dos",
+    "type": "arme",
+    "degats": "1d4+1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "sabre_de_capitaine",
+    "nom": "Sabre de capitaine",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "pistolet_d_arcon",
+    "nom": "Pistolet d'arçon",
+    "type": "arme",
+    "degats": "1d10",
+    "portee": "courte (6m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "attaque_sournoise",
+    "nom": "Attaque sournoise",
+    "type": "arme",
+    "degats": "1d8+2+2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "epee_longue_enchantee_1",
+    "nom": "Épée longue enchantée +1",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "double_frappe",
+    "nom": "Double frappe",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique",
+    "touches": 2
+  },
+  {
+    "id": "riposte",
+    "nom": "Riposte",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "pistolets_jumeles",
+    "nom": "Pistolets jumelés",
+    "type": "arme",
+    "degats": "1d10",
+    "portee": "courte (6m)",
+    "typedegats": "physique",
+    "touches": 2
+  },
+  {
+    "id": "arbalete_legere",
+    "nom": "Arbalète légère",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "moyenne (18m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "epee_longue",
+    "nom": "Épée longue",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "epee_longue_de_maitre",
+    "nom": "Épée longue de maître",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "bouclier_heraldique",
+    "nom": "Bouclier héraldique",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "epee_de_la_couronne_enchantee_2",
+    "nom": "Épée de la Couronne (enchantée +2)",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "lance",
+    "nom": "Lance",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact +1 case (3m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "dague_de_ceinture",
+    "nom": "Dague de ceinture",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "lance_de_guerre",
+    "nom": "Lance de guerre",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact +1 case (3m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "frappe_de_hampe",
+    "nom": "Frappe de hampe",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "lance_longue_renforcee",
+    "nom": "Lance longue renforcée",
+    "type": "arme",
+    "degats": "1d10",
+    "portee": "contact +1 case (3m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "frappe_de_hampe_lourde",
+    "nom": "Frappe de hampe lourde",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "lance_de_primus_enchantee_1",
+    "nom": "Lance de primus (enchantée +1)",
+    "type": "arme",
+    "degats": "1d10",
+    "portee": "contact +1 case (3m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "balayage_de_hampe",
+    "nom": "Balayage de hampe",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact (arc frontal)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "pique_improvisee",
+    "nom": "Pique improvisée",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact +1 case (3m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "couteau",
+    "nom": "Couteau",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "lance_de_chasse",
+    "nom": "Lance de chasse",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact +1 case (3m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "lance_jetee",
+    "nom": "Lance jetée",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "courte (6m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "couteau_de_chasse",
+    "nom": "Couteau de chasse",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "fauchard_de_bande",
+    "nom": "Fauchard de bande",
+    "type": "arme",
+    "degats": "1d10",
+    "portee": "contact +1 case (3m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "balayage_bas",
+    "nom": "Balayage bas",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "hallebarde_de_guerre",
+    "nom": "Hallebarde de guerre",
+    "type": "arme",
+    "degats": "1d12",
+    "portee": "contact +1 case (3m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "double_frappe_hallebarde",
+    "nom": "Double frappe",
+    "type": "arme",
+    "degats": "1d12",
+    "portee": "contact +1 case (3m)",
+    "typedegats": "physique",
+    "touches": 2
+  },
+  {
+    "id": "riposte_hallebarde",
+    "nom": "Riposte",
+    "type": "arme",
+    "degats": "1d12",
+    "portee": "contact +1 case (3m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "epee_de_jugement",
+    "nom": "Épée de jugement",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "epee_de_jugement_benie",
+    "nom": "Épée de jugement (bénie)",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "jugement",
+    "nom": "Jugement",
+    "type": "arme",
+    "degats": "2d8",
+    "portee": "courte (6m)",
+    "typedegats": "magique",
+    "elementaire": "sacre"
+  },
+  {
+    "id": "epee_du_concile_enchantee_2",
+    "nom": "Épée du Concile (enchantée +2)",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "bucher_purificateur",
+    "nom": "Bûcher purificateur",
+    "type": "arme",
+    "degats": "3d6",
+    "portee": "moyenne (18m)",
+    "typedegats": "magique",
+    "elementaire": "feu"
+  },
+  {
+    "id": "baton_beni",
+    "nom": "Bâton béni",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "baton_beni_renforce",
+    "nom": "Bâton béni (renforcé)",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "epee_du_serment",
+    "nom": "Épée du serment",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "bouclier_du_pont",
+    "nom": "Bouclier du Pont",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "epee_du_serment_heritage_de_l_ordre",
+    "nom": "Épée du Serment (héritage de l'Ordre)",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "hache_a_deux_mains_trop_grande_pour_lui",
+    "nom": "Hache à deux mains (trop grande pour lui)",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "hache_a_deux_mains",
+    "nom": "Hache à deux mains",
+    "type": "arme",
+    "degats": "1d10",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "squelette_lame_ebrechee",
+    "nom": "Lame ébréchée",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "squelette_estoc_rouille",
+    "nom": "Estoc rouillé",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "ossuaire_fauchage",
+    "nom": "Fauchage d'os",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "ossuaire_esquilles",
+    "nom": "Projection d'esquilles",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "courte (6m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "connetable_lame",
+    "nom": "Lame du serment brisé",
+    "type": "arme",
+    "degats": "1d10",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "charogne_morsure",
+    "nom": "Morsure putride",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "charogne_griffures",
+    "nom": "Griffures frénétiques",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "colosse_poigne",
+    "nom": "Poigne broyeuse",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "goule_griffes",
+    "nom": "Griffes voraces",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "goule_morsure",
+    "nom": "Morsure paralysante",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "faucheur_faux",
+    "nom": "Faux spectrale",
+    "type": "arme",
+    "degats": "1d10",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "coeurpourri_etreinte",
+    "nom": "Étreinte racinaire",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "coeurpourri_epines",
+    "nom": "Volée d'épines osseuses",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "courte (6m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "vestige_toucher",
+    "nom": "Toucher de dissolution",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "seigneur_lame",
+    "nom": "Lame de la Gangrène",
+    "type": "arme",
+    "degats": "2d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "serpe_lourde",
+    "nom": "Serpe de jardinier lourde",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "etreinte_du_charnier",
+    "nom": "Étreinte du charnier",
+    "type": "arme",
+    "degats": "1d10",
+    "portee": "contact",
+    "typedegats": "physique",
+    "touches": 2
+  },
+  {
+    "id": "flammes_dirigees",
+    "nom": "Flammes dirigées",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "moyenne (18m)",
+    "typedegats": "magique",
+    "elementaire": "feu"
+  },
+  {
+    "id": "etincelle_sacree",
+    "nom": "Étincelle sacrée",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "courte (6m)",
+    "typedegats": "magique",
+    "elementaire": "feu"
+  },
+  {
+    "id": "poigne_du_besoin",
+    "nom": "Poigne du besoin",
+    "type": "arme",
+    "degats": "3d6",
+    "portee": "courte (6m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "main_de_khoreth",
+    "nom": "Main de Khoreth",
+    "type": "arme",
+    "degats": "4d6",
+    "portee": "courte (6m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "morsure_silencieuse",
+    "nom": "Morsure silencieuse",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "morsure_de_charogne",
+    "nom": "Morsure de charogne",
+    "type": "arme",
+    "degats": "2d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "boutoir_du_verrat",
+    "nom": "Boutoir",
+    "type": "arme",
+    "degats": "2d10",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "gueule_aspirante",
+    "nom": "Gueule aspirante",
+    "type": "arme",
+    "degats": "2d12",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "fil_tranchant",
+    "nom": "Fil tranchant",
+    "type": "arme",
+    "degats": "2d4",
+    "portee": "courte (6m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "morsure_de_verre",
+    "nom": "Morsure de verre",
+    "type": "arme",
+    "degats": "2d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "ramure_blanche",
+    "nom": "Ramure",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "grouillement_de_scarabees",
+    "nom": "Grouillement",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "morsure_annelee",
+    "nom": "Morsure annelée",
+    "type": "arme",
+    "degats": "2d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "broiement_de_la_mere",
+    "nom": "Broiement",
+    "type": "arme",
+    "degats": "4d10",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "morsure_ancrage_d1",
+    "nom": "Morsure d'ancrage",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "morsure_ancrage_d2",
+    "nom": "Morsure d'ancrage",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "morsure_ancrage_d3",
+    "nom": "Morsure d'ancrage",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "morsure_ancrage_d4",
+    "nom": "Morsure d'ancrage",
+    "type": "arme",
+    "degats": "3d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "morsure_ancrage_d5",
+    "nom": "Morsure d'ancrage",
+    "type": "arme",
+    "degats": "4d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "eclat_d1",
+    "nom": "Éclat",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "moyenne (18m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "eclat_d2",
+    "nom": "Éclat",
+    "type": "arme",
+    "degats": "2d4",
+    "portee": "moyenne (18m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "eclat_d3",
+    "nom": "Éclat",
+    "type": "arme",
+    "degats": "2d8",
+    "portee": "moyenne (18m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "eclat_d4",
+    "nom": "Éclat",
+    "type": "arme",
+    "degats": "3d8",
+    "portee": "moyenne (18m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "lance_d_aube",
+    "nom": "Lance d'aube",
+    "type": "arme",
+    "degats": "4d8",
+    "portee": "longue (36m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "poigne_du_besoin_convive",
+    "nom": "Poigne du besoin",
+    "type": "arme",
+    "degats": "5d6",
+    "portee": "courte (6m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "eclat_d_eternite",
+    "nom": "Éclat d'éternité",
+    "type": "arme",
+    "degats": "5d8",
+    "portee": "longue (36m)",
+    "typedegats": "magique",
+    "elementaire": "chaos"
+  },
+  {
+    "id": "griffes_de_rejet",
+    "nom": "Griffes de rejet",
+    "type": "arme",
+    "degats": "1d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "griffes_ronces",
+    "nom": "Griffes-ronces",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "griffes_ecorcheuses",
+    "nom": "Griffes écorcheuses",
+    "type": "arme",
+    "degats": "2d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "frappe_fendante",
+    "nom": "Frappe fendante",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique",
+    "touches": 2
+  },
+  {
+    "id": "greffe",
+    "nom": "Greffe",
+    "type": "arme",
+    "degats": "3d8",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "etreinte_de_ronces",
+    "nom": "Étreinte de ronces",
+    "type": "arme",
+    "degats": "4d8",
+    "portee": "contact +1 case (3m)",
+    "typedegats": "physique"
+  },
+  {
+    "id": "rage_de_seve",
+    "nom": "Rage de sève",
+    "type": "arme",
+    "degats": "3d6",
+    "portee": "contact",
+    "typedegats": "physique",
+    "touches": 2
+  },
+  {
+    "id": "frolement_d1",
+    "nom": "Frôlement",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "mental"
+  },
+  {
+    "id": "frolement_d2",
+    "nom": "Frôlement",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "mental"
+  },
+  {
+    "id": "frolement_d3",
+    "nom": "Frôlement",
+    "type": "arme",
+    "degats": "2d4",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "mental"
+  },
+  {
+    "id": "frolement_d5",
+    "nom": "Frôlement",
+    "type": "arme",
+    "degats": "4d4",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "mental"
+  },
+  {
+    "id": "baiser_d4",
+    "nom": "Baiser",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "mental"
+  },
+  {
+    "id": "baiser_d5",
+    "nom": "Baiser",
+    "type": "arme",
+    "degats": "3d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "mental"
+  },
+  {
+    "id": "morsure_jalouse",
+    "nom": "Morsure jalouse",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "magique",
+    "elementaire": "mental"
+  },
+  {
+    "id": "toucher_putride_d1",
+    "nom": "Toucher putride",
+    "type": "arme",
+    "degats": "1d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "toucher_putride_d2",
+    "nom": "Toucher putride",
+    "type": "arme",
+    "degats": "1d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "toucher_putride_d3",
+    "nom": "Toucher putride",
+    "type": "arme",
+    "degats": "2d4",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "toucher_putride_d4",
+    "nom": "Toucher putride",
+    "type": "arme",
+    "degats": "2d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  },
+  {
+    "id": "toucher_putride_d5",
+    "nom": "Toucher putride",
+    "type": "arme",
+    "degats": "3d6",
+    "portee": "contact",
+    "typedegats": "physique"
+  }
+]

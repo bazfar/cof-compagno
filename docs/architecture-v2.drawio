@@ -1,6 +1,6 @@
 <mxfile host="Electron">
   <diagram name="Architecture 2.0 - modules du socle" id="v2-modules">
-    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1760" pageHeight="1060" math="0" shadow="0">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1760" pageHeight="1120" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -64,8 +64,8 @@
         <mxCell id="depcruise" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;.dependency-cruiser.cjs&lt;/b&gt;&lt;hr&gt;pas-de-cycle : aucune dépendance circulaire&lt;br&gt;ecrans-sans-firestore : écrans et composants&lt;br&gt;  n'importent jamais firebase/client ni le SDK" vertex="1">
           <mxGeometry height="86" width="330" x="1380" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="tests" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/&lt;/b&gt;&lt;hr&gt;unitaires/table.test.ts (3)&lt;br&gt;unitaires/schemas-acces.test.ts (5)&lt;br&gt;unitaires/donnees-regles.test.ts (15)&lt;br&gt;regles/firestore.test.ts (15, émulateur)" vertex="1">
-          <mxGeometry height="102" width="330" x="1380" y="220" as="geometry" />
+        <mxCell id="tests" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/&lt;/b&gt;&lt;hr&gt;unitaires/table.test.ts (3)&lt;br&gt;unitaires/schemas-acces.test.ts (5)&lt;br&gt;unitaires/donnees-regles.test.ts (15)&lt;br&gt;unitaires/donnees-bestiaire-objets.test.ts (14)&lt;br&gt;regles/firestore.test.ts (15, émulateur)" vertex="1">
+          <mxGeometry height="134" width="330" x="1380" y="220" as="geometry" />
         </mxCell>
         <mxCell id="npm" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;npm run verifier&lt;/b&gt;&lt;hr&gt;donnees:verifier : src/donnees à jour avec la v1&lt;br&gt;check : svelte-check + tsc (strict)&lt;br&gt;cycles : dependency-cruiser&lt;br&gt;test : vitest&lt;br&gt;build : vite&lt;br&gt;test:regles : émulateur Firestore&lt;br&gt;deployer = verifier puis hosting:v2 + règles&lt;br&gt;CI : .github/workflows/v2-verifier.yml" vertex="1">
           <mxGeometry height="182" width="330" x="1380" y="640" as="geometry" />
@@ -73,20 +73,20 @@
         <mxCell id="titre-l1" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Règles du jeu (lot L1) — la v1 reste la source jusqu'à la bascule ; la 2.0 importe ses données" vertex="1">
           <mxGeometry height="24" width="1200" x="40" y="850" as="geometry" />
         </mxCell>
-        <mxCell id="v1data" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f5f5f5;strokeColor=#666666;" value="&lt;b&gt;v1 : data/donnees.js, dons.js, mutations.js, js/etats.js&lt;/b&gt;&lt;hr&gt;source des règles jusqu'à la bascule&lt;br&gt;lue dans un contexte isolé (vm)" vertex="1">
-          <mxGeometry height="86" width="280" x="40" y="890" as="geometry" />
+        <mxCell id="v1data" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f5f5f5;strokeColor=#666666;" value="&lt;b&gt;v1 : data/ et js/etats.js&lt;/b&gt;&lt;hr&gt;donnees.js, dons.js, mutations.js, etats.js&lt;br&gt;bestiaire.json, armes/armures_monstres.js&lt;br&gt;equilibrage.js, loot.js, equipement_depart.js&lt;br&gt;source des règles jusqu'à la bascule&lt;br&gt;lue dans un contexte isolé (vm)" vertex="1">
+          <mxGeometry height="166" width="280" x="40" y="890" as="geometry" />
         </mxCell>
         <mxCell id="importeur" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;outils/importer-v1.ts&lt;/b&gt;&lt;hr&gt;npm run importer-v1 : régénère src/donnees&lt;br&gt;--verifier : échoue si la v1 a changé&lt;br&gt;identifiants de voie figés ;&lt;br&gt;voie renommée → arrêt + marche à suivre" vertex="1">
           <mxGeometry height="102" width="300" x="370" y="890" as="geometry" />
         </mxCell>
-        <mxCell id="json" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;src/donnees/*.json  (générés)&lt;/b&gt;&lt;hr&gt;classes (10 × 5 voies), races (6)&lt;br&gt;sorts (90), etats (69), dons (21)&lt;br&gt;mutations, constantes&lt;br&gt;identifiants.json : table figée des voies" vertex="1">
-          <mxGeometry height="118" width="280" x="720" y="890" as="geometry" />
+        <mxCell id="json" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;src/donnees/*.json  (générés)&lt;/b&gt;&lt;hr&gt;classes (10 × 5 voies), races (6)&lt;br&gt;sorts (90), etats (69), dons (21)&lt;br&gt;mutations, constantes&lt;br&gt;bestiaire (122), armes (152) et&lt;br&gt;armures (50) de monstres, equilibrage&lt;br&gt;objets (414), equipement-depart&lt;br&gt;identifiants.json : table figée des voies" vertex="1">
+          <mxGeometry height="166" width="280" x="720" y="890" as="geometry" />
         </mxCell>
-        <mxCell id="schemasRegles" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/regles.ts  (Zod)&lt;/b&gt;&lt;hr&gt;strict : champs, types d'effets, cibles&lt;br&gt;tolérant : sous-structures (refonte)&lt;br&gt;ne dépend que de zod (exécuté par Node)" vertex="1">
-          <mxGeometry height="86" width="290" x="1050" y="890" as="geometry" />
+        <mxCell id="schemasRegles" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/  (Zod)&lt;/b&gt;&lt;hr&gt;regles.ts, bestiaire.ts, objets.ts&lt;br&gt;commun.ts : id, carac, formule de dés&lt;br&gt;strict : noms de champs, valeurs&lt;br&gt;tolérant : sous-structures (refonte)&lt;br&gt;exécutés aussi par Node (imports .ts)" vertex="1">
+          <mxGeometry height="118" width="290" x="1050" y="890" as="geometry" />
         </mxCell>
-        <mxCell id="reglesDonnees" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/regles/donnees.ts&lt;/b&gt;&lt;hr&gt;classes, races, sorts… typés&lt;br&gt;index : classeParId, voieParId,&lt;br&gt;capaciteParId, sortParId, etatParId…" vertex="1">
-          <mxGeometry height="86" width="320" x="1390" y="890" as="geometry" />
+        <mxCell id="reglesDonnees" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/regles/donnees.ts&lt;/b&gt;&lt;hr&gt;classes, races, sorts, monstres, objets… typés&lt;br&gt;index : classeParId, voieParId,&lt;br&gt;capaciteParId, sortParId, etatParId,&lt;br&gt;monstreParId, objetParId…" vertex="1">
+          <mxGeometry height="118" width="320" x="1390" y="890" as="geometry" />
         </mxCell>
         <mxCell id="l1a" parent="1" source="importeur" target="v1data" style="endArrow=open;dashed=1;html=1;" value="lit" edge="1">
           <mxGeometry relative="1" as="geometry" />

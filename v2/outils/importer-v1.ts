@@ -35,13 +35,28 @@ import {
   schemaRace,
   schemaSort,
 } from '../src/lib/schemas/regles.ts';
+import { schemaArmeMonstre, schemaArmureMonstre, schemaBestiaire, schemaEquilibrage } from '../src/lib/schemas/bestiaire.ts';
+import { schemaCatalogueObjets, schemaEquipementDepart } from '../src/lib/schemas/objets.ts';
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const RACINE_V1 = resolve(ICI, '../..');
 const DOSSIER_DONNEES = resolve(ICI, '../src/donnees');
 const MODE_VERIFIER = process.argv.includes('--verifier');
 
-const FICHIERS_V1 = ['js/etats.js', 'data/donnees.js', 'data/dons.js', 'data/mutations.js'];
+const FICHIERS_V1 = [
+  'js/etats.js',
+  'data/donnees.js',
+  'data/dons.js',
+  'data/mutations.js',
+  // L1.2 : bestiaire et objets. data/bestiaire.json est lu à part (c'est
+  // lui la source en v1 ; data/bestiaire.js en est généré). Pour le loot,
+  // c'est l'inverse : data/loot.js est la source, data/loot.json en est généré.
+  'data/armes_monstres.js',
+  'data/armures_monstres.js',
+  'data/equilibrage.js',
+  'data/loot.js',
+  'data/equipement_depart.js',
+];
 
 type Brut = any;
 
@@ -288,6 +303,38 @@ function importer() {
     'constantes',
   );
 
+  // ---------- Bestiaire, armes et armures de monstres, équilibrage (L1.2) ----------
+  const bestiaireV1 = JSON.parse(readFileSync(join(RACINE_V1, 'data/bestiaire.json'), 'utf8'));
+  const bestiaire = valider(
+    schemaBestiaire,
+    {
+      version: bestiaireV1.version,
+      notes: { generale: bestiaireV1.note, familles: bestiaireV1.note_familles, race: bestiaireV1.note_race },
+      monstres: bestiaireV1.monstres,
+    },
+    'bestiaire',
+  );
+  const armesMonstres = (v1.ARMES_MONSTRES as Brut[]).map((a) => valider(schemaArmeMonstre, a, `armes-monstres.${a.id}`));
+  const armuresMonstres = (v1.ARMURES_MONSTRES as Brut[]).map((a) => valider(schemaArmureMonstre, a, `armures-monstres.${a.id}`));
+  const equilibrage = valider(
+    schemaEquilibrage,
+    {
+      socleDangerosite: v1.SOCLE_DANGEROSITE,
+      roles: v1.ROLES_MONSTRE,
+      pmDangerosite: v1.PM_DANGEROSITE,
+      coeffBoss: v1.COEFF_BOSS,
+    },
+    'equilibrage',
+  );
+
+  // ---------- Objets et équipement de départ (L1.2) ----------
+  const objets = valider(
+    schemaCatalogueObjets,
+    { version: v1.LOOT_VERSION, typesEmpilables: v1.TYPES_EMPILABLES, objets: v1.LOOT_CATALOGUE },
+    'objets',
+  );
+  const equipementDepart = valider(schemaEquipementDepart, v1.EQUIPEMENT_DEPART, 'equipement-depart');
+
   return {
     fichiers: {
       'classes.json': classes,
@@ -297,6 +344,12 @@ function importer() {
       'dons.json': dons,
       'mutations.json': mutations,
       'constantes.json': constantes,
+      'bestiaire.json': bestiaire,
+      'armes-monstres.json': armesMonstres,
+      'armures-monstres.json': armuresMonstres,
+      'equilibrage.json': equilibrage,
+      'objets.json': objets,
+      'equipement-depart.json': equipementDepart,
       'identifiants.json': identifiants,
     } as Record<string, unknown>,
     nouvelles,

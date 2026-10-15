@@ -1,8 +1,14 @@
+import armesMonstresJson from '../../donnees/armes-monstres.json';
+import armuresMonstresJson from '../../donnees/armures-monstres.json';
+import bestiaireJson from '../../donnees/bestiaire.json';
 import classesJson from '../../donnees/classes.json';
 import constantesJson from '../../donnees/constantes.json';
 import donsJson from '../../donnees/dons.json';
+import equilibrageJson from '../../donnees/equilibrage.json';
+import equipementDepartJson from '../../donnees/equipement-depart.json';
 import etatsJson from '../../donnees/etats.json';
 import mutationsJson from '../../donnees/mutations.json';
+import objetsJson from '../../donnees/objets.json';
 import racesJson from '../../donnees/races.json';
 import sortsJson from '../../donnees/sorts.json';
 import type { z } from 'zod';
@@ -17,6 +23,8 @@ import type {
   schemaEtat,
   schemaMutations,
 } from '../schemas/regles';
+import type { ArmeMonstre, ArmureMonstre, Equilibrage, Monstre } from '../schemas/bestiaire';
+import type { EquipementDepart, Objet, schemaCatalogueObjets } from '../schemas/objets';
 
 /*
  * Accès typé aux données de règles (src/donnees/*.json, générées par
@@ -32,6 +40,14 @@ export const etats = etatsJson as z.infer<typeof schemaEtat>[];
 export const dons = donsJson as z.infer<typeof schemaDon>[];
 export const mutations = mutationsJson as z.infer<typeof schemaMutations>;
 export const constantes = constantesJson as Constantes;
+
+export const monstres = bestiaireJson.monstres as Monstre[];
+export const armesMonstres = armesMonstresJson as ArmeMonstre[];
+export const armuresMonstres = armuresMonstresJson as ArmureMonstre[];
+export const equilibrage = equilibrageJson as Equilibrage;
+export const catalogueObjets = objetsJson as z.infer<typeof schemaCatalogueObjets>;
+export const objets: Objet[] = catalogueObjets.objets;
+export const equipementDepart = equipementDepartJson as EquipementDepart;
 
 /** Voie enrichie de la classe (ou race) qui la porte. */
 export type VoieSituee = Voie & { classe: string };
@@ -54,6 +70,10 @@ export const voieParId = indexer<VoieSituee>(
   classes.flatMap((k) => k.voies.map((v) => ({ ...v, classe: k.id }))),
   'Voie',
 );
+export const monstreParId = indexer(monstres, 'Monstre');
+export const armeMonstreParId = indexer(armesMonstres, 'Arme de monstre');
+export const armureMonstreParId = indexer(armuresMonstres, 'Armure de monstre');
+export const objetParId = indexer(objets, 'Objet');
 export const capaciteParId = indexer<Capacite>(
   [...classes.flatMap((k) => k.voies.flatMap((v) => v.rangs)), ...races.flatMap((r) => r.voie.rangs)],
   'Capacité',

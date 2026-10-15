@@ -1,0 +1,112 @@
+{
+  "socleDangerosite": {
+    "1": {
+      "pv": 15,
+      "def": 11,
+      "atk": 3,
+      "init": 2,
+      "dpt": 4
+    },
+    "2": {
+      "pv": 26,
+      "def": 13,
+      "atk": 5,
+      "init": 3,
+      "dpt": 7
+    },
+    "3": {
+      "pv": 40,
+      "def": 15,
+      "atk": 7,
+      "init": 4,
+      "dpt": 11
+    },
+    "4": {
+      "pv": 62,
+      "def": 17,
+      "atk": 10,
+      "init": 5,
+      "dpt": 17
+    },
+    "5": {
+      "pv": 90,
+      "def": 19,
+      "atk": 13,
+      "init": 6,
+      "dpt": 25
+    }
+  },
+  "roles": {
+    "brute": {
+      "nom": "Brute",
+      "pv": 1.5,
+      "def": -2,
+      "atk": 0,
+      "init": -1,
+      "dpt": 1.25,
+      "coeffPm": 1
+    },
+    "soldat": {
+      "nom": "Soldat",
+      "pv": 1,
+      "def": 2,
+      "atk": 0,
+      "init": 0,
+      "dpt": 1,
+      "coeffPm": 1
+    },
+    "escarmoucheur": {
+      "nom": "Escarmoucheur",
+      "pv": 0.85,
+      "def": 0,
+      "atk": 0,
+      "init": 1,
+      "dpt": 1,
+      "coeffPm": 1
+    },
+    "artilleur": {
+      "nom": "Artilleur",
+      "pv": 0.65,
+      "def": -1,
+      "atk": 1,
+      "init": 1,
+      "dpt": 1,
+      "coeffPm": 0.7
+    },
+    "controleur": {
+      "nom": "Contrôleur",
+      "pv": 0.65,
+      "def": 0,
+      "atk": -1,
+      "init": 1,
+      "dpt": 0.7,
+      "coeffPm": 0.65
+    },
+    "soigneur": {
+      "nom": "Soigneur",
+      "pv": 0.7,
+      "def": 1,
+      "atk": -1,
+      "init": 0,
+      "dpt": 0.7,
+      "coeffPm": 0.65
+    },
+    "usure": {
+      "nom": "Usure",
+      "pv": 1.5,
+      "def": 1,
+      "atk": 0,
+      "init": -1,
+      "dpt": 0.7,
+      "coeffPm": 1
+    }
+  },
+  "pmDangerosite": {
+    "1": 10,
+    "2": 20,
+    "3": 40,
+    "4": 80,
+    "5": 160
+  },
+  "coeffBoss": 1.3
+}

@@ -12,6 +12,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
     "moduleDetection": "force"
   },
   "include": ["src/**/*.ts", "src/**/*.svelte"]

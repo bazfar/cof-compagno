@@ -4,9 +4,22 @@ Ces JSON sont **générés depuis la v1** par `outils/importer-v1.ts`.
 Ne les modifie pas à la main : la vérification (`npm run verifier`)
 échouerait, et le prochain import écraserait la modification.
 
+## Sources dans la v1
+
+| Fichier 2.0 | Source v1 |
+| --- | --- |
+| `classes.json`, `races.json`, `sorts.json`, `constantes.json` | `data/donnees.js` |
+| `etats.json` | `js/etats.js` |
+| `dons.json`, `mutations.json` | `data/dons.js`, `data/mutations.js` |
+| `bestiaire.json` | `data/bestiaire.json` (et non `data/bestiaire.js`, qui en est généré) |
+| `armes-monstres.json`, `armures-monstres.json`, `equilibrage.json` | `data/armes_monstres.js`, `data/armures_monstres.js`, `data/equilibrage.js` |
+| `objets.json` | `data/loot.js` (et non `data/loot.json`, qui en est généré) |
+| `equipement-depart.json` | `data/equipement_depart.js` |
+| `identifiants.json` | aucune : table figée, maintenue par l'import (voir plus bas) |
+
 ## Changer une règle (jusqu'à la bascule)
 
-1. Modifie la règle dans la v1 (`data/donnees.js`, `data/dons.js`…), sur `thomas/contributions`.
+1. Modifie la règle dans la v1 (`data/donnees.js`, `data/loot.js`…), sur `thomas/contributions`.
 2. Sur la branche `v2` : `git merge thomas/contributions`.
 3. Depuis `v2/` : `npm run importer-v1`, puis commite les JSON modifiés.
 
