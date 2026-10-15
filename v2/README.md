@@ -19,7 +19,7 @@ Cadrage complet : document « Cadrage cof-compagno 2.0 » du projet JDR.
 | `npm run dev` | App en local, branchée sur la vraie base |
 | `npm run dev:emulateurs` | App en local sur des émulateurs : aucune donnée réelle touchée |
 | `npm run importer-v1` | Réimporte les règles depuis la v1 vers `src/donnees/` (voir `src/donnees/LISEZMOI.md`) |
-| `npm run preparer-scenes` | Extrait la géométrie des scènes `.dd2vtt` du catalogue v1 vers `src/donnees/scenes/` |
+| `npm run preparer-scenes` | Extrait des scènes `.dd2vtt` du catalogue v1 la géométrie (`src/donnees/scenes/`) et l'image en WebP (`public/scenes/`) |
 | `npm run verifier` | Typage, architecture, tests, build, règles Firestore — doit passer avant tout commit |
 | `npm run deployer` | Vérifie, puis déploie le site v2 et les règles Firestore |
 
@@ -30,7 +30,7 @@ Cadrage complet : document « Cadrage cof-compagno 2.0 » du projet JDR.
 - `src/lib/actions/` : seules fonctions qui écrivent dans Firestore.
 - `src/lib/schemas/` : forme des documents (Zod), source unique.
 - `src/lib/regles/` : règles du jeu. Accès typé aux données (`donnees.ts`, depuis `src/donnees/*.json` générés de la v1) et calculs d'un personnage (`calculs.ts`, port fidèle de `js/personnage.js`, vérifié contre la v1 par `tests/unitaires/equivalence-v1.test.ts`).
-- `src/lib/battlemap/` : calculs de la battlemap, en cases, sans écran ni réseau : géométrie d'une scène, ligne de vue, déplacement et placement, ciblage, exploration partagée. Port fidèle de `js/carte.js`, vérifié contre la v1 par `tests/unitaires/battlemap-equivalence-v1.test.ts`.
+- `src/lib/battlemap/` : calculs de la battlemap, en cases, sans écran ni réseau : géométrie d'une scène, ligne de vue, déplacement et placement, ciblage, exploration partagée. Port fidèle de `js/carte.js`, vérifié contre la v1 par `tests/unitaires/battlemap-equivalence-v1.test.ts`. S'y ajoutent le cadrage à l'écran (`vue.ts`), les gestes (`interactions.ts`) et le dessin en Canvas 2D (`rendu.ts`), qu'affiche `src/composants/Battlemap.svelte`.
 - `outils/` : scripts lancés par Node (import des règles de la v1, préparation des scènes).
 - `src/lib/firebase/` : initialisation et outils Firebase.
 - `src/theme.css` : couleurs, polices, arrondis. Changer d'ambiance = changer ce fichier.

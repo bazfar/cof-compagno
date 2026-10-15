@@ -1,14 +1,21 @@
 /**
  * Prépare les scènes de battlemap du catalogue v1 pour la 2.0.
  *
- *   npm run preparer-scenes             régénère src/donnees/scenes/
- *   npm run preparer-scenes -- --verifier   ne touche à rien, échoue si la
- *                                        géométrie ne correspond plus aux .dd2vtt
+ *   npm run preparer-scenes             régénère src/donnees/scenes/ et public/scenes/
+ *   npm run preparer-scenes -- --verifier   ne touche à rien, échoue si une
+ *                                        scène ne correspond plus à son .dd2vtt
  *
  * Pourquoi (cadrage, battlemap) : un .dd2vtt pèse de 5 à 37 Mo parce qu'il
- * embarque l'image en base64, et la v1 le fait télécharger en entier à
- * chaque joueur. Ce script en tire la géométrie seule (quelques Ko de
- * JSON, en cases) ; l'image sera extraite et compressée à part (L5.2).
+ * embarque l'image en base64 (jusqu'à 10 240 × 6 400 pixels), et la v1 le
+ * fait télécharger en entier à chaque joueur. Ce script en tire :
+ *   - la géométrie seule (quelques Ko de JSON, en cases) : src/donnees/scenes/ ;
+ *   - l'image, réduite à 128 pixels par case au plus et compressée en WebP
+ *     (1 à 2 Mo) : public/scenes/<id>-<empreinte>.webp (lot L5.2).
+ *
+ * L'empreinte dépend de l'image d'origine et des réglages de compression.
+ * Le mode --verifier ne recompresse rien (ce serait long) : il recalcule
+ * l'empreinte et vérifie que le fichier existe. Une image déjà produite
+ * n'est jamais refaite : relancer le script est rapide.
  *
  * Source : le catalogue `CARTES_BATTLEMAP` de data/donnees.js (v1), qui
  * reste la référence jusqu'à la bascule. Ajouter une scène = l'ajouter
@@ -16,16 +23,22 @@
  *
  * Exécuté directement par Node 24 (types effacés à la volée).
  */
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createContext, runInContext } from 'node:vm';
-import { schemaCatalogueScenes, schemaGeometrieScene, type GeometrieScene, type Point } from '../src/lib/schemas/scene.ts';
+import { schemaCatalogueScenes, schemaGeometrieScene, type CatalogueScenes, type GeometrieScene, type Point } from '../src/lib/schemas/scene.ts';
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const RACINE_V1 = resolve(ICI, '../..');
 const DOSSIER = resolve(ICI, '../src/donnees/scenes');
+const DOSSIER_IMAGES = resolve(ICI, '../public/scenes');
 const MODE_VERIFIER = process.argv.includes('--verifier');
+
+/** Réglages de l'image servie. Les changer change l'empreinte, donc refait les images. */
+const PX_PAR_CASE_MAX = 128;
+const QUALITE_WEBP = 80;
 
 type Brut = any;
 
@@ -79,23 +92,48 @@ export function geometrieDepuisDd2vtt(dd: Brut, id: string, nom: string): Geomet
   });
 }
 
-function preparer(): Record<string, unknown> {
-  const fichiers: Record<string, unknown> = {};
-  const catalogue = catalogueV1().map(({ key, label, file }) => {
-    const chemin = join(RACINE_V1, file);
-    if (!existsSync(chemin)) echouer(`Scène « ${key} » : fichier ${file} introuvable.`);
-    const geo = geometrieDepuisDd2vtt(JSON.parse(readFileSync(chemin, 'utf8')), key, label);
-    fichiers[`${key}.json`] = geo;
-    return { id: key, nom: label, colonnes: geo.colonnes, lignes: geo.lignes };
-  });
-  fichiers['catalogue.json'] = schemaCatalogueScenes.parse(catalogue);
-  return fichiers;
+interface ImageAPreparer {
+  fichier: string;
+  base64: string;
+  largeur: number;
+  hauteur: number;
 }
 
-function principal(): number {
-  let fichiers: Record<string, unknown>;
+function preparer(): { fichiers: Record<string, unknown>; images: ImageAPreparer[] } {
+  const fichiers: Record<string, unknown> = {};
+  const images: ImageAPreparer[] = [];
+  const catalogue: CatalogueScenes = catalogueV1().map(({ key, label, file }) => {
+    const chemin = join(RACINE_V1, file);
+    if (!existsSync(chemin)) echouer(`Scène « ${key} » : fichier ${file} introuvable.`);
+    const dd = JSON.parse(readFileSync(chemin, 'utf8'));
+    const geo = geometrieDepuisDd2vtt(dd, key, label);
+    if (typeof dd.image !== 'string' || !dd.image) echouer(`Scène « ${key} » : le .dd2vtt ne contient pas d'image.`);
+    const base64 = (dd.image as string).replace(/^data:[^,]*,/, '');
+    const pxParCase = Math.min(PX_PAR_CASE_MAX, geo.pxParCaseSource);
+    const empreinte = createHash('sha256').update(`${pxParCase}|${QUALITE_WEBP}|`).update(base64).digest('hex').slice(0, 10);
+    const fichier = `${key}-${empreinte}.webp`;
+    images.push({ fichier, base64, largeur: geo.colonnes * pxParCase, hauteur: geo.lignes * pxParCase });
+    fichiers[`${key}.json`] = geo;
+    return { id: key, nom: label, colonnes: geo.colonnes, lignes: geo.lignes, image: `scenes/${fichier}`, pxParCase };
+  });
+  fichiers['catalogue.json'] = schemaCatalogueScenes.parse(catalogue);
+  return { fichiers, images };
+}
+
+/** Réduit et compresse une image (sharp n'est chargé que si une image manque). */
+async function compresser(img: ImageAPreparer): Promise<void> {
+  const { default: sharp } = await import('sharp');
+  // Les plus grandes images font 65 mégapixels : au-delà de la limite par défaut de sharp.
+  await sharp(Buffer.from(img.base64, 'base64'), { limitInputPixels: false })
+    .resize(img.largeur, img.hauteur, { fit: 'fill' })
+    .webp({ quality: QUALITE_WEBP })
+    .toFile(join(DOSSIER_IMAGES, img.fichier));
+}
+
+async function principal(): Promise<number> {
+  let resultat: ReturnType<typeof preparer>;
   try {
-    fichiers = preparer();
+    resultat = preparer();
   } catch (e) {
     if (e instanceof ErreurPreparation) {
       console.error(`✘ Préparation des scènes impossible.\n${e.message}`);
@@ -103,9 +141,14 @@ function principal(): number {
     }
     throw e;
   }
-  if (!MODE_VERIFIER) mkdirSync(DOSSIER, { recursive: true });
-  const presents = existsSync(DOSSIER) ? readdirSync(DOSSIER).filter((f) => f.endsWith('.json')) : [];
-  const orphelins = presents.filter((f) => !(f in fichiers));
+  const { fichiers, images } = resultat;
+  if (!MODE_VERIFIER) {
+    mkdirSync(DOSSIER, { recursive: true });
+    mkdirSync(DOSSIER_IMAGES, { recursive: true });
+  }
+  const lister = (dossier: string, extension: string) => (existsSync(dossier) ? readdirSync(dossier).filter((f) => f.endsWith(extension)) : []);
+  const orphelins = lister(DOSSIER, '.json').filter((f) => !(f in fichiers));
+  const imagesOrphelines = lister(DOSSIER_IMAGES, '.webp').filter((f) => !images.some((i) => i.fichier === f));
   const differents: string[] = [];
   for (const [nom, contenu] of Object.entries(fichiers)) {
     const texte = JSON.stringify(contenu) + '\n';
@@ -114,20 +157,30 @@ function principal(): number {
     differents.push(nom);
     if (!MODE_VERIFIER) writeFileSync(chemin, texte);
   }
+  const imagesManquantes = images.filter((i) => !existsSync(join(DOSSIER_IMAGES, i.fichier)));
+
   if (MODE_VERIFIER) {
-    if (differents.length || orphelins.length) {
-      console.error(
-        `✘ src/donnees/scenes ne correspond plus au catalogue v1 : ${[...differents, ...orphelins].join(', ')}.\n  Lance « npm run preparer-scenes » puis commite le résultat.`,
-      );
+    const ecarts = [...differents, ...orphelins, ...imagesManquantes.map((i) => i.fichier), ...imagesOrphelines];
+    if (ecarts.length) {
+      console.error(`✘ Les scènes ne correspondent plus au catalogue v1 : ${ecarts.join(', ')}.\n  Lance « npm run preparer-scenes » puis commite le résultat.`);
       return 1;
     }
-    console.log(`✔ src/donnees/scenes est à jour (${Object.keys(fichiers).length - 1} scènes).`);
+    console.log(`✔ Scènes à jour (${images.length} scènes, géométrie et images).`);
     return 0;
   }
+  for (const img of imagesManquantes) {
+    process.stdout.write(`  … image ${img.fichier} (${img.largeur} × ${img.hauteur})\n`);
+    await compresser(img);
+  }
   for (const f of orphelins) rmSync(join(DOSSIER, f));
-  const changes = [...differents, ...orphelins.map((f) => `${f} (retiré)`)];
-  console.log(changes.length ? `✔ Mis à jour : ${changes.join(', ')}` : '✔ Rien à changer : src/donnees/scenes est déjà à jour.');
+  for (const f of imagesOrphelines) rmSync(join(DOSSIER_IMAGES, f));
+  const changes = [
+    ...differents,
+    ...imagesManquantes.map((i) => i.fichier),
+    ...[...orphelins, ...imagesOrphelines].map((f) => `${f} (retiré)`),
+  ];
+  console.log(changes.length ? `✔ Mis à jour : ${changes.join(', ')}` : '✔ Rien à changer : les scènes sont déjà à jour.');
   return 0;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) process.exitCode = principal();
+if (process.argv[1] === fileURLToPath(import.meta.url)) process.exitCode = await principal();

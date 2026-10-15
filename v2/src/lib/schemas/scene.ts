@@ -11,7 +11,8 @@ import { schemaId } from './commun.ts';
  * cases : l'image pourra être recompressée ou redimensionnée sans toucher
  * à la géométrie.
  *
- * L'image n'est pas ici : elle arrive avec le rendu (L5.2).
+ * L'image n'est pas dans la géométrie : outils/preparer-scenes.ts l'extrait
+ * à part, en WebP, dans public/scenes/ (L5.2), et le catalogue la référence.
  */
 
 /** Point en cases : [x, y]. */
@@ -48,7 +49,20 @@ export const schemaGeometrieScene = z.object({
 });
 
 export const schemaCatalogueScenes = z.array(
-  z.object({ id: schemaId, nom: z.string().min(1), colonnes: z.number().int().positive(), lignes: z.number().int().positive() }),
+  z.object({
+    id: schemaId,
+    nom: z.string().min(1),
+    colonnes: z.number().int().positive(),
+    lignes: z.number().int().positive(),
+    /**
+     * Image de la scène (L5.2), servie depuis public/ : `scenes/<id>-<empreinte>.webp`.
+     * L'empreinte change avec l'image d'origine ou les réglages de compression :
+     * le navigateur peut garder le fichier en cache pour toujours.
+     */
+    image: z.string().regex(/^scenes\/[a-z0-9_.-]+-[0-9a-f]{10}\.webp$/),
+    /** Pixels par case de l'image servie (128 au plus). */
+    pxParCase: z.number().int().positive(),
+  }),
 );
 
 export type Point = z.infer<typeof schemaPoint>;
