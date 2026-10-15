@@ -2548,6 +2548,10 @@ class Personnage extends Entite {
       pointsConviction: this.pointsConviction,
       pointsBannissement: this.pointsBannissement,
       pointsJugement: this.pointsJugement,
+      // Réserve de PP courante : lue par le constructeur (et écrêtée au
+      // maximum), elle doit repartir telle quelle — sans cette ligne, la
+      // fusion côté app.js garderait la valeur non écrêtée d'origine.
+      ppActuel: this.ppActuel,
     };
     // Firestore refuse un champ explicitement à `undefined` dans .set() et
     // lève une exception SYNCHRONE — via DepotDistant.remplacerTout (qui

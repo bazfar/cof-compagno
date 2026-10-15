@@ -7007,6 +7007,19 @@ const App = (() => {
     perso.pvActuel = Math.max(0, Math.min(perso.pvMax, (perso.pvActuel || 0) + delta));
   }
 
+  // Aller-retour Personnage → fiche stockée, SANS perte de champ.
+  // Pourquoi : versJSON() est une liste blanche, et sauverPersos supprime
+  // côté serveur tout champ absent de l'objet sauvé. Chaque champ oublié
+  // dans versJSON était donc effacé au premier geste d'inventaire (déjà
+  // arrivé deux fois : Grimoire/Cercles, puis ppActuel et l'XP de métiers).
+  // On part de la fiche d'origine et on n'écrase que ce que Personnage
+  // connaît : un champ que la classe ignore survit tel quel.
+  // Décision verrouillée (15/10/2026) : ne PAS revenir à une affectation
+  // directe `persos[id] = perso.versJSON()`.
+  function _fusionnerPerso(ficheOrigine, perso) {
+    return Object.assign({}, ficheOrigine, perso.versJSON());
+  }
+
   // Équipe l'item d'index `idx` de l'inventaire. slotPref force un
   // emplacement précis (choisi via le sélecteur du bloc Équipement) ; sans
   // préférence, on prend le premier emplacement libre compatible (ou, à
@@ -7031,7 +7044,7 @@ const App = (() => {
     perso.inventaireListe.splice(idx, 1);
     if (ancien) ajouterAInventaire(perso, ancien);
     _ajusterPvMaxEquipement(perso, (item.bonusPvMax || 0) - ((ancien && ancien.bonusPvMax) || 0));
-    persos[persoId] = perso.versJSON();
+    persos[persoId] = _fusionnerPerso(p, perso);
     sauverPersos(persos);
     afficherFiche(persoId);
     // Bâton (cf. reference_sorts_connus.md §4) : "prérequis" cosmétique, pas
@@ -7053,7 +7066,7 @@ const App = (() => {
     if (!item) return;
     ajouterAInventaire(perso, item);
     _ajusterPvMaxEquipement(perso, -((item.bonusPvMax) || 0));
-    persos[persoId] = perso.versJSON();
+    persos[persoId] = _fusionnerPerso(p, perso);
     sauverPersos(persos);
     afficherFiche(persoId);
     toast(`« ${item.nom} » retiré, renvoyé dans l'inventaire.`);
@@ -7065,7 +7078,7 @@ const App = (() => {
     if (!p) return;
     const perso = Personnage.depuisJSON(p);
     ajouterAInventaire(perso, item);
-    persos[persoId] = perso.versJSON();
+    persos[persoId] = _fusionnerPerso(p, perso);
     sauverPersos(persos);
     afficherFiche(persoId);
     toast(`« ${item.nom} » ajouté à l'inventaire.`);
@@ -7096,7 +7109,7 @@ const App = (() => {
     if (!item) return;
     if (!confirm(`Jeter « ${item.nom} » ?`)) return;
     perso.inventaireListe.splice(idx, 1);
-    persos[persoId] = perso.versJSON();
+    persos[persoId] = _fusionnerPerso(p, perso);
     sauverPersos(persos);
     afficherFiche(persoId);
   }
