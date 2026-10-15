@@ -1,0 +1,95 @@
+/* ============================================================
+   Thème cof-compagno 2.0
+   Toute couleur, police et arrondi de l'app passe par ces variables.
+   Changer d'ambiance = changer ce bloc, sans toucher aux composants.
+   Valeurs reprises de la v1 (css/style.css), thème parchemin et violet.
+   ============================================================ */
+:root {
+  --couleur-fond: #efe4c9;
+  --couleur-surface: #f3ead3;
+  --couleur-surface-claire: #fbf6ea;
+  --couleur-bordure: #d9c9a3;
+  --couleur-bordure-douce: #e0d2b2;
+
+  --couleur-encre: #2b2436;
+  --couleur-encre-douce: #5b4f63;
+
+  --couleur-accent: #3d2a52;
+  --couleur-accent-clair: #5a3d78;
+  --couleur-accent-pale: #ece2f4;
+  --couleur-sur-accent: #f3ead3;
+
+  --couleur-or: #b8924a;
+  --couleur-or-texte: #6b4f1f;
+
+  --couleur-danger: #8a2f3b;
+  --couleur-danger-pale: #f7e3e0;
+  --couleur-succes: #3a7d44;
+  --couleur-succes-pale: #e3eedf;
+
+  --police-titre: Caladea, Georgia, serif;
+  --police-texte: 'Source Sans 3', 'Segoe UI', sans-serif;
+
+  --rayon: 10px;
+  --rayon-carte: 12px;
+  --rayon-pastille: 999px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--couleur-fond);
+  color: var(--couleur-encre);
+  font-family: var(--police-texte);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--police-titre);
+  color: var(--couleur-accent);
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--rayon);
+  border: 0;
+  background: var(--couleur-accent-clair);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+input {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: var(--rayon);
+  border: 1px solid var(--couleur-bordure);
+  background: var(--couleur-surface-claire);
+}
+
+.carte {
+  background: var(--couleur-surface);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-carte);
+  padding: 20px;
+}
