@@ -1,0 +1,37 @@
+name: v2 — vérification
+
+# Pourquoi : la chaîne `npm run verifier` (typage, architecture, tests,
+# build, règles Firestore) tourne à chaque push sur la branche v2. Un
+# commit qui casse quelque chose est signalé sur GitHub avant tout
+# déploiement, même si personne n'a lancé la vérification en local.
+on:
+  push:
+    branches: [v2]
+    paths: ['v2/**', '.github/workflows/v2-verifier.yml']
+  pull_request:
+    branches: [v2]
+    paths: ['v2/**', '.github/workflows/v2-verifier.yml']
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: v2
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: v2/.nvmrc
+          cache: npm
+          cache-dependency-path: v2/package-lock.json
+
+      # L'émulateur Firestore (tests des règles) est une application Java.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: npm ci
+      - run: npm run verifier

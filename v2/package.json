@@ -15,7 +15,8 @@
     "cycles": "depcruise src --config .dependency-cruiser.cjs",
     "test": "vitest run",
     "test:regles": "firebase emulators:exec --only firestore --project demo-cof-compagno \"vitest run --config vitest.regles.config.ts\"",
-    "verifier": "npm run check && npm run cycles && npm run test && npm run build && npm run test:regles"
+    "verifier": "npm run check && npm run cycles && npm run test && npm run build && npm run test:regles",
+    "deployer": "npm run verifier && firebase deploy --only hosting:v2,firestore:rules"
   },
   "dependencies": {
     "firebase": "13.0.0",
