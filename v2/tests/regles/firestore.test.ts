@@ -135,6 +135,6 @@ describe('document de table', () => {
 describe('collections non ouvertes', () => {
   it('tout le reste est refusé, même au MJ', async () => {
     await bobEstMj();
-    await assertFails(pourBob().doc(`${TABLE}/persos/p1`).set({ nom: 'Shyrion' }));
+    await assertFails(pourBob().doc(`${TABLE}/combat/courant`).set({ round: 1 }));
   });
 });

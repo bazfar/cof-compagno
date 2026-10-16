@@ -29,7 +29,7 @@ Cadrage complet : document « Cadrage cof-compagno 2.0 » du projet JDR.
 - `src/lib/magasins/` : lectures en temps réel (états Svelte réactifs).
 - `src/lib/actions/` : seules fonctions qui écrivent dans Firestore.
 - `src/lib/schemas/` : forme des documents (Zod), source unique.
-- `src/lib/regles/` : règles du jeu. Accès typé aux données (`donnees.ts`, depuis `src/donnees/*.json` générés de la v1) et calculs d'un personnage (`calculs.ts`, port fidèle de `js/personnage.js`, vérifié contre la v1 par `tests/unitaires/equivalence-v1.test.ts`).
+- `src/lib/regles/` : règles du jeu. Accès typé aux données (`donnees.ts`, depuis `src/donnees/*.json` générés de la v1) et calculs d'un personnage (`calculs.ts`, port fidèle de `js/personnage.js`, vérifié contre la v1 par `tests/unitaires/equivalence-v1.test.ts`). `fiche-document.ts` passe d'une fiche v1 au document Firestore de la 2.0 (`schemas/fiche.ts`, schéma unique et strict) et du document aux calculs ; `tests/unitaires/fiche.test.ts` l'éprouve sur les 9 fiches réelles.
 - `src/lib/battlemap/` : calculs de la battlemap, en cases, sans écran ni réseau : géométrie d'une scène, ligne de vue, déplacement et placement, ciblage, exploration partagée. Port fidèle de `js/carte.js`, vérifié contre la v1 par `tests/unitaires/battlemap-equivalence-v1.test.ts`. `tests/unitaires/battlemap-bugs-v1.test.ts` tient la liste des bugs connus de la carte v1 : chacun y est vérifié, ou noté « à faire » avec le lot qui le couvrira. S'y ajoutent le cadrage à l'écran (`vue.ts`), les gestes (`interactions.ts`) et le dessin en Canvas 2D (`rendu.ts`), qu'affiche `src/composants/Battlemap.svelte`. `src/composants/CarteTable.svelte` branche la carte sur Firestore (`lib/actions/carte.ts`, `lib/magasins/carte.svelte.ts`) pour le MJ et les joueurs.
 - `tests/` : `unitaires/` (fonctions pures, sous Node, sans DOM), `composants/` (composants Svelte montés dans un DOM simulé, jsdom, avec de faux magasins Firestore : pour les bugs qui ne vivent que dans l'enchaînement des états d'un écran), `regles/` (règles Firestore, émulateur). `npm test` lance les deux premiers. **Tout composant qui a cassé en séance reçoit un test de composant** avant d'être corrigé.
 - `outils/` : scripts lancés par Node (import des règles de la v1, préparation des scènes).
@@ -53,6 +53,8 @@ déployées depuis la racine du dépôt comme avant.
 
 Le code MJ d'une table se pose à la main dans la console Firebase :
 document `tables/<table>/secret/codeMj`, champ `code` (texte).
+
+Fiches (lot L2.1) : `tables/<table>/persos/<id>`, une fiche par personnage ; un joueur peut en avoir plusieurs et joue celui de `joueurs/<uid>.persoActif`. Il crée et modifie les siens, sans pouvoir les donner ni se donner des crans de progression ou de Vécu (champs `progression`, `vecu`, `usages`, réservés vides jusqu'aux rencontres de la 2.1) ; le MJ fait tout. Hors création, les écritures se font champ par champ (`lib/actions/persos.ts`).
 
 Battlemap (lot L5.3) : `tables/<table>` porte `sceneActive` (la scène
 montrée, écrite par le MJ) ; `tables/<table>/scenes/<scène>` l'état
