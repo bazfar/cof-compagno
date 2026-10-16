@@ -17,7 +17,7 @@
   } from '../lib/actions/carte';
   import { placementParDefaut } from '../lib/battlemap/deplacement';
   import { dessinProche, etatDepuisDessins, type DessinCarte, type TypeDessin } from '../lib/battlemap/dessins';
-  import { explorationLocalePerimee, GrilleExploration, type RepereExploration } from '../lib/battlemap/exploration';
+  import { explorationAffichee, explorationLocalePerimee, GrilleExploration, type RepereExploration } from '../lib/battlemap/exploration';
   import { sceneCalcul, type Case, type Point } from '../lib/battlemap/geometrie';
   import type { Role } from '../lib/battlemap/interactions';
   import type { JetonAffiche } from '../lib/battlemap/rendu';
@@ -153,23 +153,12 @@
     }
   });
 
+  // Fusion sans risque : voir explorationAffichee (bug du changement de
+  // scène d'une autre taille, 8f2e7ff ; testé par tests/composants).
   const exploration = $derived.by(() => {
     void revisionLocale;
     const g = geometrie;
-    if (!g || !locale) return null;
-    const texte = etatScene?.exploration;
-    let enBase: GrilleExploration;
-    try {
-      enBase = texte ? GrilleExploration.depuisTexte(g.colonnes, g.lignes, texte) : new GrilleExploration(g.colonnes, g.lignes);
-    } catch {
-      enBase = new GrilleExploration(g.colonnes, g.lignes); // exploration d'une autre taille : ignorée
-    }
-    // `geometrie` passe à la nouvelle scène avant que l'effet ci-dessus ait
-    // remis `locale` à sa taille : sans cette garde, `fusionner` lève et la
-    // carte ne se remonte plus (changement vers une scène d'une autre
-    // taille). L'effet suit et rend une locale vide à la bonne taille.
-    if (locale.largeur !== enBase.largeur || locale.hauteur !== enBase.hauteur) return enBase;
-    return enBase.fusionner(locale);
+    return g ? explorationAffichee(g.colonnes, g.lignes, etatScene?.exploration, locale) : null;
   });
 
   let attenteEnregistrement: ReturnType<typeof setTimeout> | undefined;

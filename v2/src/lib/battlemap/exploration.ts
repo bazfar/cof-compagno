@@ -125,3 +125,29 @@ export interface RepereExploration {
 export function explorationLocalePerimee(avant: RepereExploration | null, scene: string, raz: number): boolean {
   return avant === null || avant.scene !== scene || avant.raz !== raz;
 }
+
+/**
+ * Exploration à afficher : ce qui est enregistré (texte base64 de
+ * Firestore) plus ce que ce client a vu (`locale`).
+ *
+ * Ne lève jamais (bug du 16/10, 8f2e7ff) : au changement vers une scène
+ * d'une autre taille, la géométrie passe à la nouvelle scène un instant
+ * avant que l'exploration locale soit remise à sa taille. Une exploration,
+ * enregistrée ou locale, qui n'a pas la taille de la scène est ignorée au
+ * lieu de faire échouer la fusion, qui emportait toute la carte.
+ */
+export function explorationAffichee(
+  colonnes: number,
+  lignes: number,
+  texteEnregistre: string | undefined,
+  locale: GrilleExploration | null,
+): GrilleExploration {
+  let enBase: GrilleExploration;
+  try {
+    enBase = texteEnregistre ? GrilleExploration.depuisTexte(colonnes, lignes, texteEnregistre) : new GrilleExploration(colonnes, lignes);
+  } catch {
+    enBase = new GrilleExploration(colonnes, lignes);
+  }
+  if (!locale || locale.largeur !== enBase.largeur || locale.hauteur !== enBase.hauteur) return enBase;
+  return enBase.fusionner(locale);
+}

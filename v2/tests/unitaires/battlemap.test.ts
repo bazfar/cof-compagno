@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { jetonsEnZone, jetonsSurLigne } from '../../src/lib/battlemap/ciblage';
 import { caseOccupee, contactsPerdus, deplacementBloque, placerLot } from '../../src/lib/battlemap/deplacement';
-import { GrilleExploration, SOUS_CASES } from '../../src/lib/battlemap/exploration';
+import { explorationAffichee, GrilleExploration, SOUS_CASES } from '../../src/lib/battlemap/exploration';
 import { sceneCalcul, type JetonCarte } from '../../src/lib/battlemap/geometrie';
 import { catalogueScenes, chargerGeometrie } from '../../src/lib/battlemap/scenes';
 import { jetonsVisiblesDesPJ, monstresQuiApparaissent, visionsDesPJ } from '../../src/lib/battlemap/visibilite';
@@ -127,6 +127,27 @@ describe('exploration partagée (décision 2a du 15/10)', () => {
     expect(texte.length).toBeLessThan(3000);
     expect(GrilleExploration.depuisTexte(80, 50, texte).bits).toEqual(g.bits);
     expect(() => GrilleExploration.depuisTexte(40, 25, texte)).toThrow('attendus');
+  });
+
+  it("changement vers une scène d'une autre taille : la fusion ne lève jamais (bug 2.0 du 16/10, 8f2e7ff)", () => {
+    // Taverne 35 × 20 → Ambush 40 × 25 : un instant, l'exploration locale a encore l'ancienne taille.
+    const localeTaverne = new GrilleExploration(35, 20);
+    localeTaverne.marquerVisions(visionsDesPJ(vide, [pj('a', 2, 2)]));
+    const ambush = explorationAffichee(40, 25, undefined, localeTaverne);
+    expect([ambush.largeur, ambush.hauteur]).toEqual([40 * SOUS_CASES, 25 * SOUS_CASES]);
+    expect(ambush.estExploree(2 * SOUS_CASES, 2 * SOUS_CASES)).toBe(false); // rien de la taverne
+    // Et l'inverse, avec une exploration enregistrée de la mauvaise taille.
+    const texteAmbush = GrilleExploration.pleine(40, 25).versTexte();
+    const taverne = explorationAffichee(35, 20, texteAmbush, new GrilleExploration(40, 25));
+    expect([taverne.largeur, taverne.hauteur]).toEqual([35 * SOUS_CASES, 20 * SOUS_CASES]);
+  });
+
+  it('même taille : enregistré et local se fusionnent', () => {
+    const locale = new GrilleExploration(20, 20);
+    locale.marquerVisions(visionsDesPJ(vide, [pj('a', 2, 2)]));
+    const texte = GrilleExploration.pleine(1, 1).versTexte(); // mauvaise taille : ignoré
+    expect(explorationAffichee(20, 20, texte, locale).estExploree(2 * SOUS_CASES, 2 * SOUS_CASES)).toBe(true);
+    expect(explorationAffichee(20, 20, undefined, null).estExploree(0, 0)).toBe(false);
   });
 
   it('« tout révéler » du MJ', () => {
