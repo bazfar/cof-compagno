@@ -78,7 +78,7 @@
 </section>
 {#if ficheOuverte}
   {#key ficheOuverte.id}
-    <FicheVivante fiche={ficheOuverte} modifiable={true} />
+    <FicheVivante fiche={ficheOuverte} modifiable={true} mj={true} />
   {/key}
 {/if}
 

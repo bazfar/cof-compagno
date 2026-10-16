@@ -1,6 +1,6 @@
 <mxfile host="Electron">
   <diagram name="Architecture 2.0 - modules du socle" id="v2-modules">
-    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1760" pageHeight="2800" math="0" shadow="0">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1760" pageHeight="2950" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -64,8 +64,8 @@
         <mxCell id="depcruise" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;.dependency-cruiser.cjs&lt;/b&gt;&lt;hr&gt;pas-de-cycle : aucune dépendance circulaire&lt;br&gt;ecrans-sans-firestore : écrans et composants&lt;br&gt;  n'importent jamais firebase/client ni le SDK" vertex="1">
           <mxGeometry height="86" width="330" x="1380" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="tests" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/  (unitaires 550 + 4 à faire ; composants 28 ; règles 50)&lt;/b&gt;&lt;hr&gt;unitaires/ : table, schemas-acces, schemas-carte,&lt;br&gt;  donnees-regles, donnees-bestiaire-objets,&lt;br&gt;  conversion-v1, battlemap, battlemap-vue,&lt;br&gt;  battlemap-dessins, battlemap-import,&lt;br&gt;  fiche, creation, import-v1, vue-fiche…&lt;br&gt;equivalence-v1 : 600 fiches + 9 réelles&lt;br&gt;battlemap-equivalence-v1 : js/carte.js&lt;br&gt;battlemap-bugs-v1 : 10 bugs v1 (4 en L6)&lt;br&gt;composants/ : CarteTable, creation, fiche…&lt;br&gt;regles/ : firestore, carte, persos, imports" vertex="1">
-          <mxGeometry height="230" width="330" x="1380" y="220" as="geometry" />
+        <mxCell id="tests" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/  (unitaires 568 + 4 à faire ; composants 34 ; règles 50)&lt;/b&gt;&lt;hr&gt;unitaires/ : table, schemas-acces, schemas-carte,&lt;br&gt;  donnees-regles, donnees-bestiaire-objets,&lt;br&gt;  conversion-v1, battlemap, battlemap-vue,&lt;br&gt;  battlemap-dessins, battlemap-import,&lt;br&gt;  fiche, creation, import-v1, vue-fiche,&lt;br&gt;  equipement, jetons-pj…&lt;br&gt;equivalence-v1 : 600 fiches + 9 réelles&lt;br&gt;battlemap-equivalence-v1 : js/carte.js&lt;br&gt;battlemap-bugs-v1 : 10 bugs v1 (4 en L6)&lt;br&gt;composants/ : CarteTable, creation, fiche…&lt;br&gt;regles/ : firestore, carte, persos, imports" vertex="1">
+          <mxGeometry height="246" width="330" x="1380" y="220" as="geometry" />
         </mxCell>
         <mxCell id="npm" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;npm run verifier&lt;/b&gt;&lt;hr&gt;donnees:verifier : src/donnees à jour avec la v1&lt;br&gt;scenes:verifier : géométrie et images à jour&lt;br&gt;check : svelte-check + tsc (strict)&lt;br&gt;cycles : dependency-cruiser&lt;br&gt;test : vitest, unitaires + composants&lt;br&gt;build : vite&lt;br&gt;test:regles : émulateur Firestore&lt;br&gt;deployer = verifier puis hosting:v2 + règles&lt;br&gt;CI : .github/workflows/v2-verifier.yml" vertex="1">
           <mxGeometry height="198" width="330" x="1380" y="664" as="geometry" />
@@ -250,7 +250,7 @@
         <mxCell id="l5k" parent="1" source="bmEquiv" target="dd2vtt" style="endArrow=open;dashed=1;html=1;" value="lit" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="titre-l2" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Fiche joueur (lots L2.1 à L2.3) — un seul schéma de fiche, éprouvé sur les 9 fiches réelles ; création, reprise v1, fiche vivante, jetons reliés" vertex="1">
+        <mxCell id="titre-l2" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Fiche joueur (lots L2.1 à L2.4) — un seul schéma de fiche, éprouvé sur les 9 fiches réelles ; création, reprise v1, fiche vivante, équipement, jetons reliés" vertex="1">
           <mxGeometry height="24" width="1400" x="40" y="2110" as="geometry" />
         </mxCell>
         <mxCell id="fSchema" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/fiche.ts  (Zod strict)&lt;/b&gt;&lt;hr&gt;schemaFiche : champs de la fiche de calcul&lt;br&gt;+ identité, proprietaireUid, schemaVersion&lt;br&gt;inventaire en dictionnaire, modules&lt;br&gt;progression, vecu, usages (réservés vides)" vertex="1">
@@ -304,11 +304,20 @@
         <mxCell id="fVue" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/fiche/vue-fiche.ts  (L2.3)&lt;/b&gt;&lt;hr&gt;fiche → ce que l'écran affiche :&lt;br&gt;stats (une seule CA), caracs, compétences,&lt;br&gt;voies, race, dons, mutations, Cercle" vertex="1">
           <mxGeometry height="86" width="300" x="380" y="2620" as="geometry" />
         </mxCell>
-        <mxCell id="fVivante" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/FicheVivante.svelte&lt;/b&gt;&lt;hr&gt;5 onglets ; PV, PP, bourse, notes&lt;br&gt;écrits champ par champ ; saisie jamais&lt;br&gt;écrasée ; Portrait (document à part)" vertex="1">
+        <mxCell id="fVivante" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/FicheVivante.svelte&lt;/b&gt;&lt;hr&gt;6 onglets ; PV, PP, sac, bourse, notes&lt;br&gt;écrits champ par champ ; saisie jamais&lt;br&gt;écrasée ; Portrait (document à part)" vertex="1">
           <mxGeometry height="86" width="300" x="720" y="2620" as="geometry" />
         </mxCell>
         <mxCell id="fGroupe" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/GroupeMj.svelte&lt;/b&gt;&lt;hr&gt;MJ : tous les PJ, PV/CA/PP,&lt;br&gt;PV sur place, fiche en un clic" vertex="1">
           <mxGeometry height="70" width="290" x="1060" y="2620" as="geometry" />
+        </mxCell>
+        <mxCell id="fEquip" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/regles/equipement.ts  (L2.4)&lt;/b&gt;&lt;hr&gt;équiper, retirer, jeter, utiliser, ajouter (MJ) :&lt;br&gt;règles v1, refus expliqués ; rend un&lt;br&gt;changement des seuls champs touchés" vertex="1">
+          <mxGeometry height="102" width="300" x="380" y="2760" as="geometry" />
+        </mxCell>
+        <mxCell id="l2x" parent="1" source="fVivante" target="fEquip" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l2y" parent="1" source="fEquip" target="calculs" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="fJetons" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/battlemap/jetons-pj.ts  (L2.3)&lt;/b&gt;&lt;hr&gt;jeton pj-&lt;id du personnage&gt; :&lt;br&gt;nom, PV, portrait lus dans la fiche ;&lt;br&gt;MJ pose le perso joué de chacun" vertex="1">
           <mxGeometry height="86" width="300" x="40" y="2620" as="geometry" />

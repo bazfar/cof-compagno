@@ -18,6 +18,7 @@ vi.mock('firebase/firestore', () => ({
   setDoc: async (r: { chemin: string }, donnees: unknown) => { appels.push({ fn: 'setDoc', chemin: r.chemin, donnees }); },
   updateDoc: async (r: { chemin: string }, donnees: unknown) => { appels.push({ fn: 'updateDoc', chemin: r.chemin, donnees }); },
   deleteDoc: async (r: { chemin: string }) => { appels.push({ fn: 'deleteDoc', chemin: r.chemin, donnees: undefined }); },
+  deleteField: () => '<supprimer>',
 }));
 
 const { session } = await import('../../src/lib/session.svelte');
@@ -82,6 +83,35 @@ describe('fiche vivante (L2.3)', () => {
     expect(appels[1]).toEqual({ fn: 'deleteDoc', chemin: 'tables/t1/persos/p-1/images/portrait', donnees: undefined });
     await expect(actions.enregistrerPortrait('p-1', 'https://exemple.fr/image.png')).rejects.toThrow();
     expect(appels).toHaveLength(2);
+  });
+});
+
+describe('équipement et sac (L2.4)', () => {
+  it('un seul updateDoc : les emplacements et clés touchés, la clé vidée par deleteField, les PV ; jamais le sac entier', async () => {
+    await actions.appliquerChangement('p-1', {
+      equipement: { main_droite: { id: 'dague', nom: 'Dague' } },
+      inventaire: { dague: null, epee_longue: { id: 'epee_longue', nom: 'Épée longue' } },
+      pvMax: 30,
+      pvActuel: 22,
+    });
+    expect(appels).toEqual([{
+      fn: 'updateDoc',
+      chemin: 'tables/t1/persos/p-1',
+      donnees: {
+        'equipement.main_droite': { id: 'dague', nom: 'Dague' },
+        'inventaire.dague': '<supprimer>',
+        'inventaire.epee_longue': { id: 'epee_longue', nom: 'Épée longue' },
+        pvMax: 30,
+        pvActuel: 22,
+      },
+    }]);
+  });
+
+  it('un emplacement vidé est écrit à null ; un changement vide n’écrit rien', async () => {
+    await actions.appliquerChangement('p-1', { equipement: { main_droite: null, main_gauche: null }, inventaire: {} });
+    await actions.appliquerChangement('p-1', { equipement: {}, inventaire: {} });
+    expect(appels).toHaveLength(1);
+    expect(appels[0]?.donnees).toEqual({ 'equipement.main_droite': null, 'equipement.main_gauche': null });
   });
 });
 

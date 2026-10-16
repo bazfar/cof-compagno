@@ -1,4 +1,5 @@
-import { deleteDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, deleteField, doc, setDoc, updateDoc } from 'firebase/firestore';
+import type { Changement } from '../regles/equipement';
 import { versFirestore } from '../regles/fiche-document';
 import { db } from '../firebase/client';
 import { LIMITE_NOTES, schemaFiche, type Fiche } from '../schemas/fiche';
@@ -74,6 +75,21 @@ export async function enregistrerPortrait(id: string, image: string): Promise<vo
 
 export async function retirerPortrait(id: string): Promise<void> {
   await deleteDoc(doc(db, `${cheminPerso(id)}/images/portrait`));
+}
+
+/**
+ * Équipement et sac (L2.4) : écrit un Changement de regles/equipement.ts en
+ * une seule mise à jour, champ par champ — les emplacements touchés, les
+ * clés du sac touchées (retirées par deleteField), et les PV s'ils changent.
+ * Jamais le sac entier (bug v1).
+ */
+export async function appliquerChangement(id: string, ch: Changement): Promise<void> {
+  const champs: Record<string, unknown> = {};
+  for (const [slot, objet] of Object.entries(ch.equipement)) champs[`equipement.${slot}`] = objet === undefined ? null : versFirestore(objet);
+  for (const [cle, objet] of Object.entries(ch.inventaire)) champs[`inventaire.${cle}`] = objet ? versFirestore(objet) : deleteField();
+  if (ch.pvMax !== undefined) champs.pvMax = ch.pvMax;
+  if (ch.pvActuel !== undefined) champs.pvActuel = ch.pvActuel;
+  if (Object.keys(champs).length) await updateDoc(doc(db, cheminPerso(id)), champs);
 }
 
 /**

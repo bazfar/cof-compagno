@@ -90,8 +90,12 @@ export function caracsLibresV1(v1: FicheV1): Partial<Record<Carac, number>> {
   return libres;
 }
 
-/** Champs propres à un exemplaire, gardés au rafraîchissement : rareté, enchantement, matériau, quantité. */
-const CHAMP_EXEMPLAIRE = /^(rarete|bonusRarete|effetRarete|varianteNom|materiau|degats[A-Z]|bonusDegatsTotal|enchantement|affixes?|quantite|itemRef)/;
+/**
+ * Champs propres à un exemplaire, gardés au rafraîchissement : rareté,
+ * enchantement, matériau, quantité, et le bonus de soin d'une potion rare
+ * (soinBonusRarete, L2.4 : la description, elle, revient à celle du catalogue).
+ */
+const CHAMP_EXEMPLAIRE = /^(rarete|bonusRarete|effetRarete|varianteNom|materiau|degats[A-Z]|bonusDegatsTotal|enchantement|affixes?|quantite|itemRef|soinBonusRarete)/;
 
 /**
  * Objet v1 → objet du catalogue actuel, avec ce qui appartient à

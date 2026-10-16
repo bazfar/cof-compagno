@@ -19,6 +19,7 @@ const actions = vi.hoisted(() => ({
   modifierNotes: vi.fn(async (_id: string, _n: string) => {}),
   enregistrerPortrait: vi.fn(async (_id: string, _i: string) => {}),
   retirerPortrait: vi.fn(async (_id: string) => {}),
+  appliquerChangement: vi.fn(async (_id: string, _ch: unknown) => {}),
 }));
 vi.mock('../../src/lib/actions/persos', () => ({ ...actions, messageErreurPerso: (e: unknown) => String(e) }));
 vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPersos);
@@ -30,6 +31,7 @@ const { ficheDepuisV1 } = await import('../../src/lib/regles/fiche-document');
 const { vueFiche } = await import('../../src/lib/fiche/vue-fiche');
 const { default: FicheVivante } = await import('../../src/composants/FicheVivante.svelte');
 const { default: GroupeMj } = await import('../../src/composants/GroupeMj.svelte');
+const E = await import('../../src/lib/regles/equipement');
 
 const FICHES = JSON.parse(readFileSync('tests/fixtures/fiches-v1.json', 'utf8')).fiches;
 const reelle = (nom: string, id: string, uid = 'alice') => ({ ...ficheDepuisV1(FICHES.find((f: { nom: string }) => f.nom.startsWith(nom)), uid, 1).fiche, id });
@@ -128,5 +130,64 @@ describe('groupe (vue du MJ)', () => {
     expect(actions.modifierPV).toHaveBeenCalledWith('p-v', (vhorgar.pvActuel ?? vhorgar.pvMax) + 1, vhorgar.pvMax);
     await fireEvent.click(within(lignes[0]!).getByRole('button', { name: 'Fiche' }));
     await waitFor(() => expect(screen.getByRole('region', { name: `Fiche de ${vhorgar.nom}` })).toBeTruthy());
+  });
+});
+
+describe('onglet Équipement (L2.4)', () => {
+  const ouvrir = async (fiche: ReturnType<typeof reelle>, mj = false) => {
+    render(FicheVivante, { props: { fiche, modifiable: true, mj } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Équipement' }));
+  };
+
+  it('retirer l’épée de Karlach : un seul changement, l’emplacement vidé et l’épée au sac', async () => {
+    const k = reelle('Karlach', 'p-c');
+    await ouvrir(k);
+    await fireEvent.click(screen.getByRole('button', { name: 'Retirer Épée longue' }));
+    expect(actions.appliquerChangement).toHaveBeenCalledTimes(1);
+    const [id, ch] = actions.appliquerChangement.mock.calls[0]! as [string, { equipement: object; inventaire: Record<string, { id: string } | null> }];
+    expect(id).toBe('p-c');
+    expect(ch.equipement).toEqual({ main_droite: null });
+    expect(Object.values(ch.inventaire).map((o) => o?.id)).toEqual(['epee_longue']);
+  });
+
+  it('un refus des règles s’affiche, et rien n’est écrit', async () => {
+    const base = reelle('Karlach', 'p-c');
+    const k = { ...E.appliquer(base, E.ajouterDuCatalogue(base, 'arc_long')), id: 'p-c' };
+    await ouvrir(k);
+    await fireEvent.click(screen.getByRole('button', { name: 'Équiper Arc long' }));
+    expect(screen.getByRole('status').textContent).toContain('Libère tes deux mains');
+    expect(actions.appliquerChangement).not.toHaveBeenCalled();
+  });
+
+  it('utiliser la potion de soin supérieure : PV rendus et le jet affiché', async () => {
+    const k = { ...reelle('Karlach', 'p-c'), pvActuel: 5 };
+    await ouvrir(k);
+    await fireEvent.click(screen.getByRole('button', { name: 'Utiliser Potion de soin améliorée' }));
+    const ch = actions.appliquerChangement.mock.calls[0]![1] as { pvActuel: number };
+    expect(ch.pvActuel).toBeGreaterThan(5);
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/1d8 → \d+ = \d+, \d+ PV rendus\./));
+  });
+
+  it('ajouter un objet : le MJ seul (décision 1a)', async () => {
+    await ouvrir(reelle('Karlach', 'p-c'));
+    expect(screen.queryByLabelText('Objet du catalogue')).toBeNull();
+  });
+
+  it('le MJ ajoute deux potions de soin au sac', async () => {
+    await ouvrir(reelle('Karlach', 'p-c'), true);
+    await fireEvent.change(screen.getByLabelText('Objet du catalogue'), { target: { value: 'potion_soin' } });
+    await fireEvent.input(screen.getByLabelText('Quantité'), { target: { value: '2' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
+    const ch = actions.appliquerChangement.mock.calls[0]![1] as { inventaire: Record<string, { id: string; quantite: number }> };
+    expect(Object.values(ch.inventaire)).toEqual([expect.objectContaining({ id: 'potion_soin', quantite: 2 })]);
+  });
+
+  it('pile : « Jeter 1 » retire une unité', async () => {
+    const base = reelle('Karlach', 'p-c');
+    const k = { ...E.appliquer(base, E.ajouterDuCatalogue(base, 'potion_soin', 3)), id: 'p-c' };
+    await ouvrir(k);
+    await fireEvent.click(screen.getByRole('button', { name: 'Jeter un Potion de soin' }));
+    const ch = actions.appliquerChangement.mock.calls[0]![1] as { inventaire: Record<string, { quantite: number }> };
+    expect(Object.values(ch.inventaire)[0]?.quantite).toBe(2);
   });
 });
