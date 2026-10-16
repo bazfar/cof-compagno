@@ -1,5 +1,6 @@
 <script lang="ts">
   import BarreHaut from '../composants/BarreHaut.svelte';
+  import JournalDes from '../composants/JournalDes.svelte';
   import ListeJoueurs from '../composants/ListeJoueurs.svelte';
 
   // La battlemap (lot L5.3) est chargée à part : son code et les scènes ne
@@ -34,6 +35,7 @@
   {:catch e}
     <p role="alert">Dépôt des fiches v1 indisponible : {String(e)}</p>
   {/await}
+  <JournalDes />
   <ListeJoueurs />
 </main>
 

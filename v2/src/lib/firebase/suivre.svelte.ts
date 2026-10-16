@@ -1,4 +1,4 @@
-import { collection, doc, onSnapshot, query, where, type Firestore } from 'firebase/firestore';
+import { collection, doc, limit, onSnapshot, orderBy, query, where, type Firestore, type QueryConstraint } from 'firebase/firestore';
 import type { z } from 'zod';
 
 export type AvecId<T> = T & { id: string };
@@ -26,16 +26,24 @@ export interface CollectionSuivie<T> {
  * valeur. Indispensable quand les règles Firestore ne laissent lire que
  * ses propres documents : une lecture de toute la collection serait
  * refusée en bloc.
+ *
+ * `tri` (lot L2.5) : les `limite` derniers documents selon un champ (le
+ * journal de dés ne charge que ses derniers jets, pas tout l'historique).
  */
 export function suivreCollection<T>(
   db: Firestore,
   chemin: string,
   schema: z.ZodType<T>,
   filtre?: { champ: string; egal: string },
+  tri?: { champ: string; sens: 'asc' | 'desc'; limite: number },
 ): CollectionSuivie<T> {
   const etat = $state<CollectionSuivie<T>['etat']>({ elements: [], pret: false, erreur: null });
 
-  const source = filtre ? query(collection(db, chemin), where(filtre.champ, '==', filtre.egal)) : collection(db, chemin);
+  const contraintes: QueryConstraint[] = [
+    ...(filtre ? [where(filtre.champ, '==', filtre.egal)] : []),
+    ...(tri ? [orderBy(tri.champ, tri.sens), limit(tri.limite)] : []),
+  ];
+  const source = contraintes.length ? query(collection(db, chemin), ...contraintes) : collection(db, chemin);
   const arreter = onSnapshot(
     source,
     (instantane) => {

@@ -93,6 +93,28 @@ service cloud.firestore {
         && d.v1Json is string && d.v1Json.size() <= 900000
         && (!('reprisPar' in d) || d.reprisPar is string);
     }
+    // Aligné sur schemaJalon (src/lib/schemas/jalon.ts).
+    function jalonValide(d) {
+      return d.keys().hasOnly(['barre', 'delta', 'libelle', 'parUid', 'creeLe'])
+        && d.keys().hasAll(['barre', 'delta', 'libelle', 'parUid', 'creeLe'])
+        && d.barre == 'niveau'
+        && (d.delta == 1 || d.delta == -1)
+        && d.libelle is string && d.libelle.size() <= 80
+        && d.parUid == request.auth.uid
+        && d.creeLe is int;
+    }
+    // Aligné sur schemaJetJournal (src/lib/schemas/journal.ts).
+    function jetValide(d) {
+      return d.keys().hasOnly(['auteurUid', 'auteurNom', 'perso', 'libelle', 'formule', 'des', 'bonus', 'total', 'creeLe'])
+        && d.keys().hasAll(['auteurUid', 'auteurNom', 'libelle', 'formule', 'des', 'bonus', 'total', 'creeLe'])
+        && d.auteurUid == request.auth.uid
+        && nomValide(d.auteurNom)
+        && (!('perso' in d) || nomValide(d.perso))
+        && d.libelle is string && d.libelle.size() >= 1 && d.libelle.size() <= 80
+        && d.formule is string && d.formule.size() >= 1 && d.formule.size() <= 40
+        && d.des is list && d.des.size() >= 1 && d.des.size() <= 100
+        && d.bonus is int && d.total is int && d.creeLe is int;
+    }
     // Personnage joué d'un joueur (joueurs/{uid}.persoActif), '' s'il n'en a pas.
     function persoJoueDe(table, uid) {
       return get(/databases/$(database)/documents/tables/$(table)/joueurs/$(uid)).data.get('persoActif', '');
@@ -245,7 +267,8 @@ service cloud.firestore {
       // sans pouvoir les donner à un autre ni se donner des crans de
       // progression ou de Vécu (le MJ les donne ; le joueur choisit ses
       // nœuds). Le MJ fait tout ; lui seul supprime. Les documents de crans
-      // (persos/{id}/jalons) arrivent en L2.5 : d'ici là, refusés.
+      // (persos/{id}/jalons, L2.5) : le MJ seul les crée, personne ne les
+      // modifie ni ne les supprime.
       // Fiches v1 déposées par le MJ pour un joueur (lot L2.2c, décision 6a).
       // Le joueur ne lit que les siennes et ne fait qu'une chose : noter,
       // une seule fois, le personnage qui en est né (reprisPar).
@@ -287,6 +310,23 @@ service cloud.firestore {
             && (estMj(table) || proprietaireDuPerso(table, perso));
           allow delete: if estMj(table) || proprietaireDuPerso(table, perso);
         }
+
+        // Crans de progression (L2.5) : un document par cran, en ajout seul,
+        // écrit par le MJ dans la même transaction que progression.crans.
+        match /jalons/{jalon} {
+          allow read: if estMembre(table);
+          allow create: if estMj(table) && jalonValide(request.resource.data);
+          allow update, delete: if false;
+        }
+      }
+
+      // Journal de dés commun (L2.5, décision 4a) : toute la table lit tous
+      // les jets ; chacun n'ajoute que les siens ; personne ne modifie ni ne
+      // supprime un jet.
+      match /journal/{jet} {
+        allow read: if estMembre(table);
+        allow create: if estMembre(table) && jetValide(request.resource.data);
+        allow update, delete: if false;
       }
 
       // Toute autre collection (combat…) est refusée par défaut :

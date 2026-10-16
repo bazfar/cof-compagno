@@ -1,5 +1,6 @@
 <script lang="ts">
   import BarreHaut from '../composants/BarreHaut.svelte';
+  import JournalDes from '../composants/JournalDes.svelte';
   import ListeJoueurs from '../composants/ListeJoueurs.svelte';
   import { session } from '../lib/session.svelte';
 
@@ -27,6 +28,7 @@
   {:catch e}
     <p role="alert">Battlemap indisponible : {String(e)}</p>
   {/await}
+  <JournalDes />
   <ListeJoueurs />
 </main>
 

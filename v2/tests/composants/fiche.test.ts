@@ -22,6 +22,17 @@ const actions = vi.hoisted(() => ({
   appliquerChangement: vi.fn(async (_id: string, _ch: unknown) => {}),
 }));
 vi.mock('../../src/lib/actions/persos', () => ({ ...actions, messageErreurPerso: (e: unknown) => String(e) }));
+// Journal de dés et crans (L2.5) : on vérifie ce qui est noté, sans Firestore.
+const journal = vi.hoisted(() => ({
+  noterJet: vi.fn(async (_l: string, _f: string, _j: unknown, _p?: string) => {}),
+  lancerEtNoter: vi.fn(async (_l: string, _f: string, _p?: string) => ({ des: [14], faces: 20, bonus: 0, total: 14 }) as { des: number[]; faces: number; bonus: number; total: number } | null),
+}));
+vi.mock('../../src/lib/actions/journal', () => ({ ...journal, messageErreurJournal: (e: unknown) => String(e) }));
+const crans = vi.hoisted(() => {
+  class RefusCran extends Error {}
+  return { RefusCran, donnerCran: vi.fn(async (_id: string, _d: 1 | -1, _l: string) => 0) };
+});
+vi.mock('../../src/lib/actions/progression', () => crans);
 vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPersos);
 vi.mock('../../src/lib/magasins/presents.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPresents);
 
@@ -40,6 +51,9 @@ beforeEach(() => {
   session.table = 't1';
   session.uid = 'alice';
   Object.values(actions).forEach((f) => f.mockClear());
+  Object.values(journal).forEach((f) => f.mockClear());
+  crans.donnerCran.mockReset();
+  crans.donnerCran.mockResolvedValue(0);
   for (const k of Object.keys(portraits)) delete portraits[k];
   persos.elements = [];
   joueurs.elements = [];
@@ -165,7 +179,25 @@ describe('onglet Équipement (L2.4)', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Utiliser Potion de soin améliorée' }));
     const ch = actions.appliquerChangement.mock.calls[0]![1] as { pvActuel: number };
     expect(ch.pvActuel).toBeGreaterThan(5);
-    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/1d8 → \d+ = \d+, \d+ PV rendus\./));
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/^Potion de soin améliorée : 1d8 → \d+, \d+ PV rendus\.$/));
+    // Le jet part au journal commun, au nom du personnage (L2.5).
+    expect(journal.noterJet).toHaveBeenCalledWith('Potion de soin améliorée', '1d8', expect.objectContaining({ des: [expect.any(Number)] }), k.nom);
+  });
+
+  it('potion : si le journal refuse, les PV sont rendus et le message le dit', async () => {
+    journal.noterJet.mockRejectedValueOnce(new Error('hors ligne'));
+    await ouvrir({ ...reelle('Karlach', 'p-c'), pvActuel: 5 });
+    await fireEvent.click(screen.getByRole('button', { name: 'Utiliser Potion de soin améliorée' }));
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/PV rendus\. \(Jet non noté au journal : Error: hors ligne\)$/));
+    expect(actions.appliquerChangement).toHaveBeenCalledTimes(1);
+  });
+
+  it('potion : si la fiche n’est pas écrite, aucun jet n’est noté', async () => {
+    actions.appliquerChangement.mockRejectedValueOnce(new Error('refusé'));
+    await ouvrir({ ...reelle('Karlach', 'p-c'), pvActuel: 5 });
+    await fireEvent.click(screen.getByRole('button', { name: 'Utiliser Potion de soin améliorée' }));
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Error: refusé'));
+    expect(journal.noterJet).not.toHaveBeenCalled();
   });
 
   it('ajouter un objet : le MJ seul (décision 1a)', async () => {
@@ -189,5 +221,78 @@ describe('onglet Équipement (L2.4)', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Jeter un Potion de soin' }));
     const ch = actions.appliquerChangement.mock.calls[0]![1] as { inventaire: Record<string, { quantite: number }> };
     expect(Object.values(ch.inventaire)[0]?.quantite).toBe(2);
+  });
+});
+
+describe('jets depuis la fiche et crans (L2.5)', () => {
+  it('cliquer une valeur lance d20 + modificateur, au nom du personnage, et affiche le résultat', async () => {
+    const k = reelle('Kylhian', 'p-k');
+    const vue = vueFiche(k);
+    render(FicheVivante, { props: { fiche: k, modifiable: true } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Caractéristiques' }));
+    const force = vue.caracs.find((c) => c.nom === 'Force')!;
+    await fireEvent.click(screen.getByRole('button', { name: 'Lancer un test de Force' }));
+    const formule = force.mod === 0 ? '1d20' : `1d20${force.mod > 0 ? '+' : ''}${force.mod}`;
+    expect(journal.lancerEtNoter).toHaveBeenCalledWith('Test de Force', formule, k.nom);
+    await waitFor(() => expect(screen.getByRole('status').textContent).toContain(`Test de Force : ${formule} → `));
+  });
+
+  it('lecture seule : aucune valeur à lancer, ni au combat ni dans les caractéristiques', async () => {
+    render(FicheVivante, { props: { fiche: reelle('Kylhian', 'p-k'), modifiable: false } });
+    expect(screen.queryByRole('button', { name: /^Lancer/ })).toBeNull();
+    await fireEvent.click(screen.getByRole('button', { name: 'Caractéristiques' }));
+    expect(screen.queryByRole('button', { name: /^Lancer/ })).toBeNull();
+  });
+
+  it('au combat : attaques et sauvegardes se lancent', async () => {
+    const k = reelle('Kylhian', 'p-k');
+    render(FicheVivante, { props: { fiche: k, modifiable: true } });
+    const [n, v] = Object.entries(vueFiche(k).stats.sauvegardes)[0]!;
+    await fireEvent.click(screen.getByRole('button', { name: `Lancer ${n}` }));
+    expect(journal.lancerEtNoter).toHaveBeenCalledWith(`Sauvegarde : ${n}`, v === 0 ? '1d20' : `1d20${v > 0 ? '+' : ''}${v}`, k.nom);
+    await fireEvent.click(screen.getAllByRole('button', { name: /^Lancer l'attaque/ })[0]!);
+    expect(journal.lancerEtNoter).toHaveBeenLastCalledWith(expect.stringMatching(/^Attaque /), expect.stringMatching(/^1d20/), k.nom);
+  });
+
+  it('barre de progression : crans donnés sur crans requis, et l’annonce quand elle est pleine', async () => {
+    const k = reelle('Kylhian', 'p-k');
+    const { cransRequis } = await import('../../src/lib/regles/progression');
+    const requis = cransRequis(k.niveau)!;
+    const { unmount } = render(FicheVivante, { props: { fiche: { ...k, progression: { crans: 1 } }, modifiable: true } });
+    expect(screen.getByTestId('crans').textContent).toBe(`1 / ${requis} crans vers le niveau ${k.niveau + 1}`);
+    expect(screen.queryByText(/Barre pleine/)).toBeNull();
+    unmount();
+    render(FicheVivante, { props: { fiche: { ...k, progression: { crans: requis } }, modifiable: true } });
+    expect(screen.getByText(/Barre pleine/)).toBeTruthy();
+  });
+
+  it('MJ : + et − par PJ avec le motif ; « +1 cran aux PJ joués » ne touche que les joués', async () => {
+    session.uid = 'mj';
+    joueurs.elements = [{ id: 'carol', nom: 'Carol', rejointLe: 1, persoActif: 'p-v' }];
+    const karlach = reelle('Karlach', 'p-c');
+    const vhorgar = reelle('Vhorgar', 'p-v', 'carol');
+    persos.elements = [vhorgar, karlach];
+    render(GroupeMj);
+    await fireEvent.input(screen.getByLabelText('Motif du cran'), { target: { value: 'Le pont tenu' } });
+    await fireEvent.click(screen.getByRole('button', { name: `Donner un cran à ${karlach.nom}` }));
+    expect(crans.donnerCran).toHaveBeenLastCalledWith('p-c', 1, 'Le pont tenu');
+    await fireEvent.click(screen.getByRole('button', { name: `Retirer un cran à ${karlach.nom}` }));
+    expect(crans.donnerCran).toHaveBeenLastCalledWith('p-c', -1, 'Le pont tenu');
+    crans.donnerCran.mockClear();
+    await fireEvent.click(screen.getByRole('button', { name: '+1 cran aux PJ joués' }));
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Un cran donné à 1 PJ joué.'));
+    expect(crans.donnerCran.mock.calls).toEqual([['p-v', 1, 'Le pont tenu']]);
+    expect(screen.getByTestId(`crans-${karlach.id}`).textContent).toMatch(/^\d+ \/ \d+$/);
+  });
+
+  it('MJ : un refus (aucun cran à retirer) s’affiche', async () => {
+    session.uid = 'mj';
+    const karlach = reelle('Karlach', 'p-c');
+    persos.elements = [karlach];
+    crans.donnerCran.mockRejectedValueOnce(new crans.RefusCran('Aucun cran à retirer : un niveau acquis ne se perd pas.'));
+    render(GroupeMj);
+    expect((screen.getByRole('button', { name: '+1 cran aux PJ joués' }) as HTMLButtonElement).disabled).toBe(true);
+    await fireEvent.click(screen.getByRole('button', { name: `Retirer un cran à ${karlach.nom}` }));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('Aucun cran à retirer : un niveau acquis ne se perd pas.'));
   });
 });

@@ -58,3 +58,11 @@ export const magasinsPersos = {
     arreter: () => {},
   }),
 };
+
+/** Journal de dés (L2.5) : le test y pose des jets. */
+export const jets = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+
+export const magasinsJournal = {
+  JETS_MONTRES: 40,
+  suivreJournal: () => ({ etat: jets, arreter: () => {} }),
+};

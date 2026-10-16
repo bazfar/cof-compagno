@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { messageErreurPerso, modifierPV } from '../lib/actions/persos';
+  import { donnerCran, RefusCran } from '../lib/actions/progression';
+  import { barreNiveau } from '../lib/regles/progression';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
   import { vueFiche } from '../lib/fiche/vue-fiche';
@@ -13,6 +15,11 @@
    * personnages de la table d'un coup d'œil (PV, CA, PP), PV modifiables
    * sur place, et la fiche complète de n'importe lequel en un clic. Le
    * personnage joué de chaque joueur est marqué.
+   *
+   * Crans de progression (L2.5) : le MJ en donne (ou en retire un, sans
+   * jamais faire perdre un niveau), à un PJ ou à tous les PJ joués, avec un
+   * motif facultatif. Chaque cran est une transaction (document du cran et
+   * compte de la fiche ensemble).
    */
 
   const persos = suivrePersos(session.table);
@@ -33,6 +40,34 @@
   let ouvert = $state<string | null>(null);
   const ficheOuverte = $derived(persos.etat.elements.find((p) => p.id === ouvert) ?? null);
   let message = $state('');
+  let info = $state('');
+
+  let motif = $state('');
+  /** Rend le refus ou l'erreur, ou null si le cran est écrit. */
+  async function unCran(id: string, delta: 1 | -1): Promise<string | null> {
+    try {
+      await donnerCran(id, delta, motif);
+      return null;
+    } catch (e) {
+      return e instanceof RefusCran ? e.message : messageErreurPerso(e);
+    }
+  }
+  async function cran(id: string, delta: 1 | -1) {
+    info = '';
+    message = (await unCran(id, delta)) ?? '';
+  }
+  async function cranATous() {
+    info = '';
+    const cibles = lignes.filter((l) => joues.has(l.fiche.id)).map((l) => l.fiche);
+    const echecs: string[] = [];
+    for (const f of cibles) {
+      const refus = await unCran(f.id, 1);
+      if (refus) echecs.push(`${f.nom} : ${refus}`);
+    }
+    const reussis = cibles.length - echecs.length;
+    info = `Un cran donné à ${reussis} PJ joué${reussis > 1 ? 's' : ''}.`;
+    message = echecs.join(' ');
+  }
 
   async function pv(id: string, valeur: number, max: number) {
     message = '';
@@ -46,6 +81,10 @@
 
 <section class="carte" aria-label="Groupe">
   <h2>Groupe</h2>
+  <div class="ligne">
+    <input aria-label="Motif du cran" placeholder="Motif du cran (facultatif)" maxlength="80" bind:value={motif} />
+    <button onclick={cranATous} disabled={!lignes.some((l) => joues.has(l.fiche.id))}>+1 cran aux PJ joués</button>
+  </div>
   {#if persos.etat.erreur}
     <p class="erreur" role="alert">{persos.etat.erreur}</p>
   {:else if !persos.etat.pret}
@@ -54,7 +93,7 @@
     <p>Aucun personnage à cette table pour l'instant.</p>
   {:else}
     <table>
-      <thead><tr><th></th><th>Personnage</th><th>Joueur</th><th>PV</th><th>CA</th><th>PP</th><th></th></tr></thead>
+      <thead><tr><th></th><th>Personnage</th><th>Joueur</th><th>PV</th><th>CA</th><th>PP</th><th>Progression</th><th></th></tr></thead>
       <tbody>
         {#each lignes as { fiche, vue } (fiche.id)}
           <tr class:joue={joues.has(fiche.id)}>
@@ -68,12 +107,22 @@
             </td>
             <td>{vue.stats.ca}</td>
             <td>{vue.pp ? `${vue.pp.actuel} / ${vue.pp.max}` : '—'}</td>
+            <td class="pv">
+              {#if barreNiveau(fiche).requis === null}
+                <span class="aide">plafond</span>
+              {:else}
+                <button class="petit" aria-label={`Retirer un cran à ${fiche.nom}`} onclick={() => cran(fiche.id, -1)}>−</button>
+                <span data-testid={`crans-${fiche.id}`} class:pleine={barreNiveau(fiche).pleine}>{barreNiveau(fiche).crans} / {barreNiveau(fiche).requis}</span>
+                <button class="petit" aria-label={`Donner un cran à ${fiche.nom}`} onclick={() => cran(fiche.id, 1)}>+</button>
+              {/if}
+            </td>
             <td><button class="discret petit" onclick={() => (ouvert = ouvert === fiche.id ? null : fiche.id)}>{ouvert === fiche.id ? 'Fermer' : 'Fiche'}</button></td>
           </tr>
         {/each}
       </tbody>
     </table>
   {/if}
+  {#if info}<p class="aide" role="status">{info}</p>{/if}
   {#if message}<p class="erreur" role="alert">{message}</p>{/if}
 </section>
 {#if ficheOuverte}
@@ -126,5 +175,15 @@
   }
   .erreur {
     color: var(--couleur-danger);
+  }
+  .ligne {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .pleine {
+    color: var(--couleur-succes);
+    font-weight: 700;
   }
 </style>

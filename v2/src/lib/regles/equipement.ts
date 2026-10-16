@@ -1,5 +1,6 @@
 import type { Fiche, ObjetFiche } from '../schemas/fiche.ts';
 import { CalculsPersonnage } from './calculs.ts';
+import { lancerFormule, type Jet } from './des.ts';
 import { catalogueObjets, objetParId } from './donnees.ts';
 import { ficheCalculDepuisFiche } from './fiche-document.ts';
 import { SLOTS_EQUIPEMENT, type Slot } from './fiche-calcul.ts';
@@ -125,15 +126,6 @@ function ajusterPV(f: Fiche, ch: Changement, delta: number): void {
 }
 const bonusPvMax = (o: ObjetFiche | null | undefined) => (o && typeof o.bonusPvMax === 'number' ? o.bonusPvMax : 0);
 
-/** Lance un dé « XdY(+Z) » ; `alea` rend un nombre dans [0, 1[. */
-export function lancerFormule(formule: string, alea: () => number = Math.random): { des: number[]; bonus: number; total: number } | null {
-  const m = /^(\d*)d(\d+)([+-]\d+)?$/i.exec(formule.replace(/\s/g, ''));
-  if (!m) return null;
-  const nb = Number(m[1] || 1), faces = Number(m[2]), bonus = Number(m[3] || 0);
-  const des = Array.from({ length: nb }, () => 1 + Math.floor(alea() * faces));
-  return { des, bonus, total: des.reduce((t, d) => t + d, bonus) };
-}
-
 /**
  * Équiper l'objet rangé sous `cle`. Emplacement choisi : celui demandé s'il
  * convient, sinon le premier libre, sinon le premier possible (son occupant
@@ -215,7 +207,7 @@ export function formuleSoin(o: ObjetFiche): string | null {
 export interface Utilisation {
   changement: Changement;
   formule: string;
-  jet: { des: number[]; bonus: number; total: number };
+  jet: Jet;
   /** PV réellement rendus (bornés au maximum). */
   soin: number;
 }

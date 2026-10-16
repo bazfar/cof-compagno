@@ -1,10 +1,13 @@
 <script lang="ts">
+  import { lancerEtNoter, noterJet } from '../lib/actions/journal';
   import { appliquerChangement, enregistrerPortrait, messageErreurPerso, modifierNotes, modifierPieces, modifierPP, modifierPV, retirerPortrait } from '../lib/actions/persos';
   import { lireImage } from '../lib/battlemap/compression';
   import type { AvecId } from '../lib/firebase/suivre.svelte';
   import { comprimerPortrait } from '../lib/fiche/portrait';
   import { vueFiche } from '../lib/fiche/vue-fiche';
+  import { formuleTest, texteJet } from '../lib/regles/des';
   import * as E from '../lib/regles/equipement';
+  import { barreNiveau } from '../lib/regles/progression';
   import { SLOTS_EQUIPEMENT, type Slot } from '../lib/regles/fiche-calcul';
   import { LIMITE_NOTES, type Fiche } from '../lib/schemas/fiche';
   import Portrait from './Portrait.svelte';
@@ -25,6 +28,11 @@
    * Onglet Équipement (L2.4) : chaque geste passe par regles/equipement.ts
    * (pur, testé) et s'écrit en une seule mise à jour des seuls champs
    * touchés. `mj` : le MJ seul ajoute des objets (décision 1a du 16/10).
+   *
+   * Jets (L2.5) : caractéristiques, compétences, sauvegardes et attaques se
+   * lancent d'un clic (d20 + modificateur), et vont au journal de dés commun
+   * avec les potions. La barre de progression montre les crans donnés par
+   * le MJ.
    */
 
   let { fiche, modifiable, mj = false }: { fiche: AvecId<Fiche>; modifiable: boolean; mj?: boolean } = $props();
@@ -102,18 +110,40 @@
       else throw e;
     }
   }
-  function utiliser(cle: string) {
+  /** Potion : la fiche d'abord ; le jet n'est noté au journal que si elle a été écrite. */
+  async function utiliser(cle: string) {
     message = '';
+    let u: ReturnType<typeof E.utiliser>;
     try {
-      const u = E.utiliser(fiche, cle);
-      ecrire(appliquerChangement(fiche.id, u.changement)).then(() => {
-        if (!message) message = `${fiche.inventaire[cle]?.nom ?? 'Potion'} : ${u.formule} → ${u.jet.des.join(' + ')}${u.jet.bonus ? ` + ${u.jet.bonus}` : ''} = ${u.jet.total}, ${u.soin} PV rendus.`;
-      });
+      u = E.utiliser(fiche, cle);
     } catch (e) {
-      if (e instanceof E.RefusEquipement) message = e.message;
-      else throw e;
+      if (e instanceof E.RefusEquipement) return void (message = e.message);
+      throw e;
+    }
+    const nom = fiche.inventaire[cle]?.nom ?? 'Potion';
+    await ecrire(appliquerChangement(fiche.id, u.changement));
+    if (message) return;
+    message = `${nom} : ${texteJet(u.formule, u.jet)}, ${u.soin} PV rendus.`;
+    try {
+      await noterJet(nom, u.formule, u.jet, fiche.nom);
+    } catch (e) {
+      message += ` (Jet non noté au journal : ${messageErreurPerso(e)})`;
     }
   }
+  /** Test d20 + modificateur, noté au journal commun (L2.5). */
+  async function tester(libelle: string, mod: number | null) {
+    if (mod === null) return;
+    message = '';
+    const formule = formuleTest(mod);
+    try {
+      const jet = await lancerEtNoter(libelle, formule, fiche.nom);
+      if (jet) message = `${libelle} : ${texteJet(formule, jet)}`;
+    } catch (e) {
+      message = messageErreurPerso(e);
+    }
+  }
+  const barre = $derived(barreNiveau(fiche));
+
   function jeterTout(cle: string) {
     const o = fiche.inventaire[cle];
     if (o && confirm(`Jeter toute la pile de « ${o.nom} » ?`)) geste(() => E.jeter(fiche, cle, 'tout'));
@@ -149,6 +179,16 @@
   {#if message}<p class="message" role="status">{message}</p>{/if}
 
   {#if onglet === 'Combat'}
+    <div class="progression" aria-label="Progression">
+      {#if barre.requis === null}
+        <span class="aide">Niveau maximal atteint.</span>
+      {:else}
+        <span class="etiquette">Progression</span>
+        <div class="barre crans" aria-hidden="true"><span style:width="{Math.round(barre.part * 100)}%"></span></div>
+        <span data-testid="crans">{barre.crans} / {barre.requis} crans vers le niveau {fiche.niveau + 1}</span>
+        {#if barre.pleine}<strong class="pleine">Barre pleine : la montée de niveau est prête.</strong>{/if}
+      {/if}
+    </div>
     <div class="ressources">
       <div class="ressource">
         <span class="etiquette">PV</span>
@@ -203,11 +243,13 @@
     <dl class="stats">
       <div><dt>CA</dt><dd data-testid="ca">{vue.stats.ca}</dd></div>
       <div><dt>Initiative</dt><dd>{vue.stats.initiative}</dd></div>
-      <div><dt>Contact</dt><dd>{signe(vue.stats.attaque.contact)}</dd></div>
-      <div><dt>Distance</dt><dd>{signe(vue.stats.attaque.distance)}</dd></div>
-      {#if vue.stats.attaque.magique !== null}<div><dt>Magique</dt><dd>{signe(vue.stats.attaque.magique)}</dd></div>{/if}
+      {#each [['Contact', vue.stats.attaque.contact], ['Distance', vue.stats.attaque.distance], ['Magique', vue.stats.attaque.magique]] as [nom, v] (nom)}
+        {#if v !== null}
+          <div><dt>{nom}</dt><dd>{#if modifiable}<button class="jet" aria-label={`Lancer l'attaque ${String(nom).toLowerCase()}`} onclick={() => tester(`Attaque ${String(nom).toLowerCase()}`, v as number)}>{signe(v as number)}</button>{:else}{signe(v as number)}{/if}</dd></div>
+        {/if}
+      {/each}
       {#if vue.stats.reductionDegats}<div><dt>Réduction</dt><dd>{vue.stats.reductionDegats}</dd></div>{/if}
-      {#each Object.entries(vue.stats.sauvegardes) as [n, v] (n)}<div><dt>{n}</dt><dd>{signe(v)}</dd></div>{/each}
+      {#each Object.entries(vue.stats.sauvegardes) as [n, v] (n)}<div><dt>{n}</dt><dd>{#if modifiable}<button class="jet" aria-label={`Lancer ${n}`} onclick={() => tester(`Sauvegarde : ${n}`, v)}>{signe(v)}</button>{:else}{signe(v)}{/if}</dd></div>{/each}
     </dl>
     {#if vue.pointsCercle.length}
       <p>Points de Cercle : {vue.pointsCercle.map((c) => `${c.nom} ${c.actuel}/${c.max}`).join(' · ')}</p>
@@ -287,10 +329,19 @@
       {#each vue.caracs as c (c.code)}
         <div class="carac">
           <span class="code">{c.code}</span>
-          <strong>{signe(c.mod)}</strong>
+          {#if modifiable}
+            <button class="jet" aria-label={`Lancer un test de ${c.nom}`} onclick={() => tester(`Test de ${c.nom}`, c.mod)}>{signe(c.mod)}</button>
+          {:else}
+            <strong>{signe(c.mod)}</strong>
+          {/if}
           <span class="aide">valeur {c.valeur}</span>
           <ul>
-            {#each vue.competences.filter((k) => k.carac === c.code) as k (k.nom)}<li>{k.nom} <strong>{signe(k.mod)}</strong></li>{/each}
+            {#each vue.competences.filter((k) => k.carac === c.code) as k (k.nom)}
+              <li>
+                {k.nom}
+                {#if modifiable}<button class="jet petit-jet" aria-label={`Lancer ${k.nom}`} onclick={() => tester(k.nom, k.mod)}>{signe(k.mod)}</button>{:else}<strong>{signe(k.mod)}</strong>{/if}
+              </li>
+            {/each}
           </ul>
         </div>
       {/each}
@@ -538,6 +589,34 @@
   .message {
     color: var(--couleur-or-texte);
     margin: 0;
+  }
+  .progression {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+  }
+  .barre.crans {
+    flex: 1 1 200px;
+    background: var(--couleur-accent-pale);
+  }
+  .barre.crans span {
+    background: var(--couleur-or);
+  }
+  .pleine {
+    color: var(--couleur-succes);
+  }
+  .jet {
+    min-height: 0;
+    padding: 2px 10px;
+    font-size: inherit;
+    background: var(--couleur-accent-pale);
+    color: var(--couleur-accent);
+    border: 1px solid var(--couleur-bordure);
+  }
+  .petit-jet {
+    font-size: 13px;
+    padding: 0 8px;
   }
   .alertes {
     margin: 0;
