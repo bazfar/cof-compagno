@@ -36,6 +36,14 @@ import type { CapaciteChoisie, Carac, FicheCalcul } from './fiche-calcul.ts';
  * sauvegarde l'acceptait ; le brouillon n'était jamais remis à zéro (écran,
  * L2.2b).
  *
+ * Reprise d'une fiche v1 (L2.2c, décisions 5b et 6a) : le brouillon porte
+ * alors `reprise`. Identité, classe, race, niveau, caractéristiques et jets
+ * de PV sont repris tels quels et verrouillés ; voies, capacités raciales,
+ * hors profil et dons se rechoisissent (anciens choix affichés à côté) ;
+ * équipement, inventaire, bourse, sorts connus, corruption, âmes, PP, Points
+ * de Cercle et modules sont reportés sur la fiche. Les PV max se
+ * recalculent avec les nouveaux choix (cadrage : PV périmés recalculés).
+ *
  * Le brouillon est un objet simple et immuable : chaque fonction qui le
  * modifie en rend un nouveau, ou une erreur expliquée.
  */
@@ -65,6 +73,47 @@ export interface Brouillon {
   cercleSpecialisation: string | null;
   /** Équipement mis à la main en plus du kit (v1 : le kit l'écrasait). */
   equipementManuel: Partial<Record<string, ObjetFiche | null>>;
+  /** Fiche v1 en cours de reprise (L2.2c), sinon null. */
+  reprise: RepriseV1 | null;
+}
+
+/** Choix v1 à refaire, affichés à côté de l'assistant (voies par NOM, comme en v1). */
+export interface AnciensChoix {
+  capacites: { voie: string; rang: number; choix?: string }[];
+  capacitesRace: number[];
+  capacitesRaceChoix: Record<string, string>;
+  voiesHorsProfil: { classe: string; voie: string; cout?: number }[];
+  dons: string[];
+  donsChoix: Record<string, unknown>;
+  bonusCompetences: Record<string, number>;
+}
+
+/** Ce qu'une fiche v1 reporte tel quel sur la fiche 2.0. */
+export interface ReportV1 {
+  /** Nombre de jets de PV repris de la v1 (les premiers de `jetsPV`), qu'on ne relance pas. */
+  jetsRepris: number;
+  pvActuel: number | null;
+  ppActuel: number | null;
+  pointsCercle: Record<string, number>;
+  equipement: Record<string, ObjetFiche | null>;
+  inventaire: ObjetFiche[];
+  piecesOr: number;
+  piecesArgent: number;
+  piecesBronze: number;
+  corruptionMajeure: number;
+  mutations: { palier: number; d6: number }[] | null;
+  contratDemoniaquePenalite: Record<string, unknown> | null;
+  amesStockees: number;
+  sortsConnus: string[];
+  sortsPrepares: string[];
+  modules: Record<string, unknown>;
+}
+
+export interface RepriseV1 {
+  /** Document tables/{t}/importsV1/{id} d'où vient la fiche. */
+  idImport: string;
+  anciens: AnciensChoix;
+  report: ReportV1;
 }
 
 export const NIVEAU_MAX = 20;
@@ -91,7 +140,13 @@ export function brouillonVide(): Brouillon {
     sorts: [],
     cercleSpecialisation: null,
     equipementManuel: {},
+    reprise: null,
   };
+}
+
+/** Refuse un geste sur ce que la reprise d'une fiche v1 verrouille. */
+function verrouReprise(b: Brouillon, quoi: string) {
+  if (b.reprise) throw new RefusCreation(`Fiche reprise de la v1 : ${quoi} repris(e) tel(le) quel(le).`);
 }
 
 /** Refus d'un geste, avec la phrase montrée au joueur. */
@@ -106,6 +161,7 @@ export class RefusCreation extends Error {}
 export function choisirClasse(b: Brouillon, classe: string): Brouillon {
   if (!classeParId.has(classe)) throw new RefusCreation(`Classe inconnue : ${classe}`);
   if (b.classe === classe) return b;
+  verrouReprise(b, 'la classe est');
   return { ...b, classe, capacites: [], voiesHorsProfil: [], sorts: [], cercleSpecialisation: null, jetsPV: [] };
 }
 
@@ -113,6 +169,7 @@ export function choisirClasse(b: Brouillon, classe: string): Brouillon {
 export function choisirRace(b: Brouillon, race: string): Brouillon {
   if (!raceParId.has(race)) throw new RefusCreation(`Race inconnue : ${race}`);
   if (b.race === race) return b;
+  verrouReprise(b, 'la race est');
   return sansOffertPerdu({ ...b, race, raceVariante: null, capacitesRaceChoix: {} });
 }
 
@@ -123,6 +180,7 @@ export function choisirRace(b: Brouillon, race: string): Brouillon {
  */
 export function changerNiveau(b: Brouillon, niveau: number): Brouillon {
   const n = Math.max(1, Math.min(NIVEAU_MAX, Math.round(niveau)));
+  if (n !== b.niveau) verrouReprise(b, 'le niveau est');
   const rangMax = rangRaceMax(n);
   const choix = Object.fromEntries(Object.entries(b.capacitesRaceChoix).filter(([r]) => Number(r) <= rangMax));
   const dons = b.dons.slice(0, CalculsPersonnage.donsRequisPourNiveau(n));
@@ -161,6 +219,7 @@ export function pointsCaracsRestants(b: Brouillon): number {
 }
 
 export function ajusterCarac(b: Brouillon, c: Carac, delta: 1 | -1): Brouillon {
+  verrouReprise(b, 'les caractéristiques sont');
   const actuel = b.caracsLibres[c] ?? 0;
   const suivant = actuel + delta;
   if (suivant < 0) throw new RefusCreation('Aucun point libre à retirer sur cette caractéristique.');
@@ -412,9 +471,12 @@ export function kitDepart(classe: string | null): { equipement: Record<string, O
   return { equipement, inventaire };
 }
 
-/** L'équipement mis à la main remplace le kit sur son emplacement (v1 : le kit l'écrasait). */
+/**
+ * L'équipement mis à la main remplace le kit sur son emplacement (v1 : le
+ * kit l'écrasait). Une fiche reprise garde le sien, sans kit.
+ */
 function equipementDuBrouillon(b: Brouillon) {
-  const kit = kitDepart(b.classe);
+  const kit = b.reprise ? { equipement: b.reprise.report.equipement, inventaire: b.reprise.report.inventaire } : kitDepart(b.classe);
   return { equipement: { ...kit.equipement, ...b.equipementManuel }, inventaire: kit.inventaire };
 }
 
@@ -435,10 +497,24 @@ function ficheCalculSansPV(b: Brouillon): FicheCalcul {
     bonusCompetences: {},
     equipement,
     inventaireListe: inventaire,
-    grimoireSortsConnus: b.sorts,
-    grimoireSortsPrepares: [],
+    grimoireSortsConnus: sortsConnus(b),
+    grimoireSortsPrepares: b.reprise?.report.sortsPrepares ?? [],
     cercleSpecialisation: b.cercleSpecialisation,
+    // Une fiche reprise garde ce qui modifie ses statistiques (mutations, contrat…).
+    ...(b.reprise
+      ? {
+          mutations: (b.reprise.report.mutations ?? undefined) as FicheCalcul['mutations'],
+          corruptionMajeure: b.reprise.report.corruptionMajeure,
+          contratDemoniaquePenalite: b.reprise.report.contratDemoniaquePenalite as FicheCalcul['contratDemoniaquePenalite'],
+          amesStockees: b.reprise.report.amesStockees,
+        }
+      : {}),
   };
+}
+
+/** Sorts connus de la fiche : ceux repris de la v1, puis ceux appris dans l'assistant. */
+function sortsConnus(b: Brouillon): string[] {
+  return [...(b.reprise?.report.sortsConnus ?? []), ...b.sorts];
 }
 
 // --------------------------------------------------------------- Points de vie
@@ -476,8 +552,9 @@ export function lancerJetPV(b: Brouillon, alea: () => number = Math.random): Bro
   return { ...b, jetsPV: [...b.jetsPV, jet] };
 }
 
+/** Efface les jets pour les relancer ; ceux repris de la v1 restent. */
 export function effacerJetsPV(b: Brouillon): Brouillon {
-  return { ...b, jetsPV: [] };
+  return { ...b, jetsPV: b.jetsPV.slice(0, b.reprise?.report.jetsRepris ?? 0) };
 }
 
 /** Fiche de calcul complète du brouillon (pour les statistiques affichées pendant la création). */
@@ -503,11 +580,18 @@ export function sortsAccordes(b: Brouillon): string[] {
   return c.sortsGrimoireAccordes();
 }
 
-/** Combien de sorts le joueur peut encore apprendre : plafond d'inscription moins les accordés et les appris. */
+/**
+ * Combien de sorts le joueur peut encore apprendre : plafond d'inscription
+ * moins les accordés, les repris de la v1 et les appris. Une fiche reprise
+ * peut déjà dépasser le plafond (la v1 le permet : sorts « hors plafond ») :
+ * elle les garde, mais n'en apprend pas de nouveau.
+ */
 export function sortsAChoisir(b: Brouillon): number {
   if (!aUnGrimoire(b.classe)) return 0;
   const plafond = new CalculsPersonnage({ niveau: b.niveau }).plafondInscriptionGrimoire();
-  return plafond - sortsAccordes(b).length - b.sorts.length;
+  const accordes = sortsAccordes(b);
+  const repris = (b.reprise?.report.sortsConnus ?? []).filter((s) => !accordes.includes(s));
+  return plafond - accordes.length - repris.length - b.sorts.length;
 }
 
 /**
@@ -519,7 +603,7 @@ export function sortsAChoisir(b: Brouillon): number {
 export function sortsProposes(b: Brouillon): string[] {
   const liste = b.classe ? LISTE_SORTS[b.classe] : undefined;
   if (!liste) return [];
-  const exclus = new Set([...sortsAccordes(b), ...b.sorts]);
+  const exclus = new Set([...sortsAccordes(b), ...sortsConnus(b)]);
   return sorts
     .filter((s) => s.listes.includes(liste) && !exclus.has(s.id) && b.niveau >= (constantes.niveauMinParRang[String(s.rang)] ?? 99))
     .map((s) => s.id);
@@ -562,7 +646,7 @@ export function erreursCreation(b: Brouillon): string[] {
   if (pts.restants < 0) e.push(`Trop de points de capacité dépensés (${pts.depenses}/${pts.total}).`);
   if (b.jetsPV.length < b.niveau - 1) e.push(`Lance les PV des niveaux 2 à ${b.niveau}.`);
   if (b.dons.length < donsRequis(b)) e.push(`Choisis ${donsRequis(b) - b.dons.length} don(s).`);
-  if (aUnGrimoire(b.classe) && sortsAChoisir(b) < 0) e.push('Trop de sorts appris pour ce niveau.');
+  if (aUnGrimoire(b.classe) && b.sorts.length > 0 && sortsAChoisir(b) < 0) e.push('Trop de sorts appris pour ce niveau.');
   if (!b.nom.trim()) e.push('Donne un nom au personnage.');
   else if (b.nom.trim().length > 40) e.push('Le nom fait au plus 40 caractères.');
   return e;
@@ -591,6 +675,11 @@ export function ficheDepuisBrouillon(b: Brouillon, proprietaireUid: string, cree
   if (erreurs.length) throw new RefusCreation(erreurs.join(' '));
   const calc = ficheCalculDuBrouillon(b);
   const ppMax = new CalculsPersonnage(calc).calculerPPMax();
+  const pvMax = calc.pvMax ?? 1;
+  const r = b.reprise?.report;
+  // Reprise v1 : PV et PP actuels reportés, sans dépasser les nouveaux maximums.
+  const pvActuel = r && r.pvActuel !== null ? Math.max(0, Math.min(r.pvActuel, pvMax)) : pvMax;
+  const ppActuel = ppMax === null ? null : r && r.ppActuel !== null ? Math.max(0, Math.min(r.ppActuel, ppMax)) : ppMax;
   const brute = {
     schemaVersion: VERSION_FICHE,
     proprietaireUid,
@@ -609,27 +698,28 @@ export function ficheDepuisBrouillon(b: Brouillon, proprietaireUid: string, cree
     dons: b.dons,
     donsChoix: b.donsChoix,
     bonusCompetences: {},
-    pvMax: calc.pvMax ?? 1,
-    pvActuel: calc.pvMax ?? 1,
+    pvMax,
+    pvActuel,
     pvHistorique: calc.pvHistorique ?? [],
-    ...(ppMax === null ? {} : { ppActuel: ppMax }),
+    ...(ppActuel === null ? {} : { ppActuel }),
+    ...(r && Object.keys(r.pointsCercle).length ? { pointsCercle: r.pointsCercle } : {}),
     equipement: calc.equipement ?? {},
     inventaire: inventaireEnDictionnaire(calc.inventaireListe ?? []),
-    piecesOr: 0,
-    piecesArgent: 0,
-    piecesBronze: 0,
+    piecesOr: r?.piecesOr ?? 0,
+    piecesArgent: r?.piecesArgent ?? 0,
+    piecesBronze: r?.piecesBronze ?? 0,
     etatsActifs: [],
-    mutations: null,
+    mutations: r?.mutations ?? null,
     corruptionCombat: 0,
-    corruptionMajeure: 0,
-    contratDemoniaquePenalite: null,
-    amesStockees: 0,
+    corruptionMajeure: r?.corruptionMajeure ?? 0,
+    contratDemoniaquePenalite: r?.contratDemoniaquePenalite ?? null,
+    amesStockees: r?.amesStockees ?? 0,
     // Seuls les sorts appris sont stockés : les accordés se recalculent (v1 idem).
-    grimoireSortsConnus: b.sorts,
-    grimoireSortsPrepares: [],
+    grimoireSortsConnus: sortsConnus(b),
+    grimoireSortsPrepares: r?.sortsPrepares ?? [],
     cercleSpecialisation: b.cercleSpecialisation,
     ...progressionVierge(),
-    modules: {},
+    modules: r?.modules ?? {},
   };
   return schemaFiche.parse(versFirestore(brute, b.nom || 'fiche'));
 }

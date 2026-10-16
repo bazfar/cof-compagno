@@ -5,6 +5,8 @@
   // La battlemap (lot L5.3) est chargée à part : son code et les scènes ne
   // retardent pas l'ouverture du poste.
   const carte = import('../composants/CarteTable.svelte');
+  // Dépôt des fiches v1 (L2.2c) : chargé à part, il embarque les données de règles.
+  const importV1 = import('../composants/ImportFichesV1.svelte');
 </script>
 
 <BarreHaut etiquette="Poste MJ" />
@@ -20,6 +22,11 @@
     <h2>Poste MJ</h2>
     <p>Séances, groupe, combat, bestiaire et loot arrivent avec les lots L3 à L6. Les joueurs qui rejoignent la table apparaissent ici sans rafraîchir.</p>
   </section>
+  {#await importV1 then module}
+    <module.default />
+  {:catch e}
+    <p role="alert">Dépôt des fiches v1 indisponible : {String(e)}</p>
+  {/await}
   <ListeJoueurs />
 </main>
 

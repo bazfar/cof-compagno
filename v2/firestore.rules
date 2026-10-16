@@ -82,6 +82,16 @@ service cloud.firestore {
         && d.usages is map
         && d.creeLe is int;
     }
+    // Aligné sur schemaImportV1 (src/lib/schemas/import-v1.ts).
+    function importValide(d) {
+      return d.keys().hasOnly(['proprietaireUid', 'nom', 'importeLe', 'v1Json', 'reprisPar'])
+        && d.keys().hasAll(['proprietaireUid', 'nom', 'importeLe', 'v1Json'])
+        && d.proprietaireUid is string
+        && nomValide(d.nom)
+        && d.importeLe is int
+        && d.v1Json is string && d.v1Json.size() <= 900000
+        && (!('reprisPar' in d) || d.reprisPar is string);
+    }
     // Un joueur crée son personnage sans crans ni Vécu (seul le MJ en donne).
     function progressionVierge(d) {
       return d.progression.crans == 0 && d.vecu.crans == 0 && d.vecu.paliers == 0 && d.vecu.points == 0;
@@ -216,6 +226,22 @@ service cloud.firestore {
       // progression ou de Vécu (le MJ les donne ; le joueur choisit ses
       // nœuds). Le MJ fait tout ; lui seul supprime. Les documents de crans
       // (persos/{id}/jalons) arrivent en L2.5 : d'ici là, refusés.
+      // Fiches v1 déposées par le MJ pour un joueur (lot L2.2c, décision 6a).
+      // Le joueur ne lit que les siennes et ne fait qu'une chose : noter,
+      // une seule fois, le personnage qui en est né (reprisPar).
+      match /importsV1/{imp} {
+        allow read: if estMj(table)
+          || (estJoueur(table) && resource.data.proprietaireUid == request.auth.uid);
+        allow create: if estMj(table) && importValide(request.resource.data);
+        allow delete: if estMj(table);
+        allow update: if importValide(request.resource.data)
+          && (estMj(table)
+            || (estJoueur(table)
+              && resource.data.proprietaireUid == request.auth.uid
+              && !('reprisPar' in resource.data)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reprisPar'])));
+      }
+
       match /persos/{perso} {
         allow read: if estMembre(table);
         allow create: if ficheValide(request.resource.data)

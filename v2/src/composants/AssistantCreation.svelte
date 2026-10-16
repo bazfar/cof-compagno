@@ -1,8 +1,10 @@
 <script lang="ts">
+  import { marquerImportRepris } from '../lib/actions/imports';
   import { creerPerso, messageErreurPerso, nouvelIdPerso } from '../lib/actions/persos';
   import { garderBrouillon, lireBrouillon, oublierBrouillon } from '../lib/creation/brouillon-local';
   import { statistiquesFiche } from '../lib/regles/calculs';
   import * as R from '../lib/regles/creation';
+  import { anciensChoixLisibles, reprendreAnciensChoix } from '../lib/regles/import-v1';
   import { classeParId, constantes, donParId, dons, raceParId, sortParId, voieParId } from '../lib/regles/donnees';
   import type { Carac } from '../lib/regles/fiche-calcul';
   import { session } from '../lib/session.svelte';
@@ -16,14 +18,26 @@
    *
    * Le brouillon est gardé dans le navigateur à chaque geste et effacé à la
    * création (bug v1 : il ne l'était jamais).
+   *
+   * `depart` (L2.2c) : brouillon de reprise d'une fiche v1. Classe, race,
+   * niveau et caractéristiques y sont verrouillés (les règles refusent d'y
+   * toucher) ; les anciens choix s'affichent à côté, et « Reprendre mes
+   * anciens choix » les rejoue à travers les règles actuelles.
    */
 
-  let { surCree, surAnnuler }: { surCree: (id: string) => void; surAnnuler: () => void } = $props();
+  let {
+    surCree,
+    surAnnuler,
+    depart = null,
+  }: { surCree: (id: string) => void; surAnnuler: () => void; depart?: R.Brouillon | null } = $props();
 
   const ETAPES = ['Identité', 'Caractéristiques', 'Voies', 'PV et dons', 'Magie', 'Récapitulatif'] as const;
   type Etape = (typeof ETAPES)[number];
 
-  let b = $state<R.Brouillon>(lireBrouillon(session.table, session.uid));
+  // svelte-ignore state_referenced_locally -- `depart` ne sert qu'à l'ouverture
+  const idReprise = depart?.reprise?.idImport;
+  // svelte-ignore state_referenced_locally
+  let b = $state<R.Brouillon>(lireBrouillon(session.table, session.uid, idReprise) ?? depart ?? R.brouillonVide());
   let etape = $state<Etape>('Identité');
   let refus = $state('');
   let enCours = $state(false);
@@ -52,6 +66,15 @@
   const race = $derived(b.race ? raceParId.get(b.race) : undefined);
   const rangsRace = $derived(R.capacitesRaceDuBrouillon(b));
   const polyvalence = $derived(R.polyvalenceAcquise(b) && !R.rangOffert(b));
+  const anciens = $derived(b.reprise ? anciensChoixLisibles(b.reprise.anciens) : null);
+  let nonRepris = $state<string[] | null>(null);
+
+  function reprendre() {
+    const r = reprendreAnciensChoix($state.snapshot(b) as R.Brouillon);
+    b = r.brouillon;
+    nonRepris = r.nonRepris;
+    refus = '';
+  }
 
   const nomVoie = (id: string) => voieParId.get(id)?.nom ?? id;
   const nomDon = (id: string) => donParId.get(id)?.nom ?? id;
@@ -72,9 +95,10 @@
   }
 
   function recommencer() {
-    if (!confirm('Effacer cette création et repartir de zéro ?')) return;
-    oublierBrouillon(session.table, session.uid);
-    b = R.brouillonVide();
+    if (!confirm(depart ? 'Annuler tes choix et repartir de la fiche v1 ?' : 'Effacer cette création et repartir de zéro ?')) return;
+    oublierBrouillon(session.table, session.uid, idReprise);
+    b = depart ? structuredClone($state.snapshot(depart) as R.Brouillon) : R.brouillonVide();
+    nonRepris = null;
     etape = 'Identité';
     refus = '';
   }
@@ -86,7 +110,8 @@
       const fiche = R.ficheDepuisBrouillon($state.snapshot(b) as R.Brouillon, session.uid, Date.now());
       const id = nouvelIdPerso();
       await creerPerso(id, fiche);
-      oublierBrouillon(session.table, session.uid);
+      if (idReprise) await marquerImportRepris(idReprise, id);
+      oublierBrouillon(session.table, session.uid, idReprise);
       b = R.brouillonVide();
       etape = 'Identité';
       surCree(id);
@@ -103,14 +128,14 @@
     Caractéristiques: R.pointsCaracsRestants(b) !== 0,
     Voies: pts.restants < 0,
     'PV et dons': b.jetsPV.length < b.niveau - 1 || b.dons.length < R.donsRequis(b),
-    Magie: magie && R.sortsAChoisir(b) < 0,
+    Magie: magie && b.sorts.length > 0 && R.sortsAChoisir(b) < 0,
     Récapitulatif: erreurs.length > 0,
   } satisfies Record<Etape, boolean>);
 </script>
 
 <section class="carte assistant" aria-label="Création de personnage">
   <div class="tete">
-    <h2>Nouveau personnage</h2>
+    <h2>{b.reprise ? `Reprise de « ${b.nom} » (v1)` : 'Nouveau personnage'}</h2>
     <span class="espace"></span>
     <button class="discret" onclick={recommencer}>Recommencer</button>
     <button class="discret" onclick={surAnnuler}>Fermer</button>
@@ -126,7 +151,28 @@
 
   {#if refus}<p class="refus" role="alert">{refus}</p>{/if}
 
+  {#if anciens && (etape === 'Voies' || etape === 'PV et dons' || etape === 'Identité')}
+    <aside class="anciens" aria-label="Anciens choix (v1)">
+      <h3>Tes choix en v1</h3>
+      <p class="aide">À rechoisir avec les règles actuelles. La voie raciale suit maintenant son propre calendrier (gratuite, un rang tous les 2 niveaux).</p>
+      {#if anciens.voies.length}<p><strong>Voies :</strong> {anciens.voies.join(' ; ')}</p>{/if}
+      {#if anciens.race.length}<p><strong>Voie raciale :</strong> {anciens.race.join(' ; ')}</p>{/if}
+      <p><strong>Dons :</strong> {anciens.dons.length ? anciens.dons.join(' ; ') : 'aucun'}</p>
+      {#if etape === 'Voies'}
+        <button onclick={reprendre}>Reprendre mes anciens choix</button>
+      {/if}
+      {#if nonRepris}
+        {#if nonRepris.length}
+          <ul class="erreurs" aria-label="Non repris">{#each nonRepris as n (n)}<li>{n}</li>{/each}</ul>
+        {:else}
+          <p class="offert" role="status">Tous tes anciens choix ont été repris.</p>
+        {/if}
+      {/if}
+    </aside>
+  {/if}
+
   {#if etape === 'Identité'}
+    {#if b.reprise}<p class="aide">Fiche reprise de la v1 : classe, race, niveau, caractéristiques et jets de PV sont repris tels quels.</p>{/if}
     <div class="grille2">
       <label>Nom <input aria-label="Nom" value={b.nom} maxlength="40" oninput={(ev) => geste((x) => ({ ...x, nom: ev.currentTarget.value }))} /></label>
       <label>
@@ -350,7 +396,7 @@
         {#each Object.entries(stats.sauvegardes) as [n, v] (n)}<dt>{n}</dt><dd>{signe(v)}</dd>{/each}
       </dl>
       <div>
-        <h3>Équipement de départ</h3>
+        <h3>{b.reprise ? 'Équipement repris de la v1' : 'Équipement de départ'}</h3>
         <ul class="liste">
           {#each Object.entries(calc.equipement ?? {}).filter(([, o]) => o) as [slot, o] (slot)}<li>{o?.nom} <span class="aide">({slot.replace('_', ' ')})</span></li>{/each}
           {#each calc.inventaireListe ?? [] as o, i (i)}<li>{o.nom} <span class="aide">(sac)</span></li>{/each}
@@ -481,6 +527,18 @@
   .petit {
     min-height: 32px;
     padding: 0 10px;
+  }
+  .anciens {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 16px;
+    border-radius: var(--rayon);
+    border: 1px dashed var(--couleur-or);
+    background: var(--couleur-surface-claire);
+  }
+  .anciens p {
+    margin: 0;
   }
   .refus,
   .erreurs li {

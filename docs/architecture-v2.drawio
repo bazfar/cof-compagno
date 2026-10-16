@@ -1,6 +1,6 @@
 <mxfile host="Electron">
   <diagram name="Architecture 2.0 - modules du socle" id="v2-modules">
-    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1760" pageHeight="2500" math="0" shadow="0">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1760" pageHeight="2650" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -64,7 +64,7 @@
         <mxCell id="depcruise" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;.dependency-cruiser.cjs&lt;/b&gt;&lt;hr&gt;pas-de-cycle : aucune dépendance circulaire&lt;br&gt;ecrans-sans-firestore : écrans et composants&lt;br&gt;  n'importent jamais firebase/client ni le SDK" vertex="1">
           <mxGeometry height="86" width="330" x="1380" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="tests" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/  (unitaires 459 + 4 à faire ; composants 11 ; règles 44)&lt;/b&gt;&lt;hr&gt;unitaires/ : table, schemas-acces, schemas-carte,&lt;br&gt;  donnees-regles, donnees-bestiaire-objets,&lt;br&gt;  conversion-v1, battlemap, battlemap-vue,&lt;br&gt;  battlemap-dessins, battlemap-import,&lt;br&gt;  fiche, fiche-ecritures, creation&lt;br&gt;equivalence-v1 : 600 fiches + 9 réelles&lt;br&gt;battlemap-equivalence-v1 : js/carte.js&lt;br&gt;battlemap-bugs-v1 : 10 bugs v1 (4 en L6)&lt;br&gt;composants/ : CarteTable, creation (jsdom)&lt;br&gt;regles/ : firestore, carte, persos (émulateur)" vertex="1">
+        <mxCell id="tests" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/  (unitaires 509 + 4 à faire ; composants 17 ; règles 48)&lt;/b&gt;&lt;hr&gt;unitaires/ : table, schemas-acces, schemas-carte,&lt;br&gt;  donnees-regles, donnees-bestiaire-objets,&lt;br&gt;  conversion-v1, battlemap, battlemap-vue,&lt;br&gt;  battlemap-dessins, battlemap-import,&lt;br&gt;  fiche, fiche-ecritures, creation, import-v1…&lt;br&gt;equivalence-v1 : 600 fiches + 9 réelles&lt;br&gt;battlemap-equivalence-v1 : js/carte.js&lt;br&gt;battlemap-bugs-v1 : 10 bugs v1 (4 en L6)&lt;br&gt;composants/ : CarteTable, creation, import-v1&lt;br&gt;regles/ : firestore, carte, persos, imports" vertex="1">
           <mxGeometry height="230" width="330" x="1380" y="220" as="geometry" />
         </mxCell>
         <mxCell id="npm" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;npm run verifier&lt;/b&gt;&lt;hr&gt;donnees:verifier : src/donnees à jour avec la v1&lt;br&gt;scenes:verifier : géométrie et images à jour&lt;br&gt;check : svelte-check + tsc (strict)&lt;br&gt;cycles : dependency-cruiser&lt;br&gt;test : vitest, unitaires + composants&lt;br&gt;build : vite&lt;br&gt;test:regles : émulateur Firestore&lt;br&gt;deployer = verifier puis hosting:v2 + règles&lt;br&gt;CI : .github/workflows/v2-verifier.yml" vertex="1">
@@ -250,7 +250,7 @@
         <mxCell id="l5k" parent="1" source="bmEquiv" target="dd2vtt" style="endArrow=open;dashed=1;html=1;" value="lit" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="titre-l2" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Fiche joueur (lots L2.1 à L2.2b) — un seul schéma de fiche, éprouvé sur les 9 fiches réelles ; écritures champ par champ ; assistant de création" vertex="1">
+        <mxCell id="titre-l2" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Fiche joueur (lots L2.1 à L2.2c) — un seul schéma de fiche, éprouvé sur les 9 fiches réelles ; assistant de création ; reprise des fiches v1" vertex="1">
           <mxGeometry height="24" width="1400" x="40" y="2110" as="geometry" />
         </mxCell>
         <mxCell id="fSchema" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/fiche.ts  (Zod strict)&lt;/b&gt;&lt;hr&gt;schemaFiche : champs de la fiche de calcul&lt;br&gt;+ identité, proprietaireUid, schemaVersion&lt;br&gt;inventaire en dictionnaire, modules&lt;br&gt;progression, vecu, usages (réservés vides)" vertex="1">
@@ -293,6 +293,24 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="l2m" parent="1" source="joueur" target="fMes" style="endArrow=open;dashed=1;html=1;" value="import() à la demande" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fImport" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/regles/import-v1.ts  (L2.2c)&lt;/b&gt;&lt;hr&gt;export v1 → brouillon de reprise :&lt;br&gt;identité, caracs, jets repris et verrouillés ;&lt;br&gt;voies et dons à rechoisir ; objets&lt;br&gt;rafraîchis depuis le catalogue" vertex="1">
+          <mxGeometry height="118" width="300" x="380" y="2470" as="geometry" />
+        </mxCell>
+        <mxCell id="fImportUi" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/ImportFichesV1.svelte&lt;/b&gt;&lt;hr&gt;MJ : dépose les exports v1 et&lt;br&gt;attribue chaque fiche à un joueur&lt;br&gt;(poste MJ, chargé à la demande)" vertex="1">
+          <mxGeometry height="86" width="300" x="720" y="2470" as="geometry" />
+        </mxCell>
+        <mxCell id="l2n" parent="1" source="fImport" target="fCreation" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l2o" parent="1" source="fImportUi" target="fImport" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l2p" parent="1" source="fMes" target="fImport" style="endArrow=open;dashed=1;html=1;" value="Reprendre" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l2q" parent="1" source="mj" target="fImportUi" style="endArrow=open;dashed=1;html=1;" value="import() à la demande" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="l2f" parent="1" source="fCreation" target="fDoc" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
@@ -447,7 +465,7 @@
         <mxCell id="legende2" parent="1" style="text;html=1;align=left;fontSize=11;fontStyle=2;" value="Plein = en place (L0, L5.3)  |  Pointillé = prévu par le cadrage, refusé par les règles tant que son lot ne l'ouvre pas  |  Gris = v1        (losange = contient)" vertex="1">
           <mxGeometry height="20" width="1400" x="40" y="42" as="geometry" />
         </mxCell>
-        <mxCell id="v1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f5f5f5;strokeColor=#666666;" value="&lt;b&gt;v1 : projet lejdr-b38ef, à part&lt;/b&gt;&lt;hr&gt;sessions/table-arbre-monde/** :&lt;br&gt;cof_persos, cof_joueurs, cof_livres…&lt;br&gt;ses propres règles (racine du dépôt)&lt;br&gt;fiches reprises par export JSON (L7)" vertex="1">
+        <mxCell id="v1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f5f5f5;strokeColor=#666666;" value="&lt;b&gt;v1 : projet lejdr-b38ef, à part&lt;/b&gt;&lt;hr&gt;sessions/table-arbre-monde/** :&lt;br&gt;cof_persos, cof_joueurs, cof_livres…&lt;br&gt;ses propres règles (racine du dépôt)&lt;br&gt;fiches reprises par export JSON (L2.2c)" vertex="1">
           <mxGeometry height="102" width="320" x="40" y="90" as="geometry" />
         </mxCell>
         <mxCell id="tbl" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;tables/{table}&lt;/b&gt;&lt;hr&gt;ex. arbre-monde, test (?table=test)&lt;br&gt;{ sceneActive } : scène montrée (L5.3)&lt;br&gt;lecture : membres | écriture : MJ" vertex="1">
@@ -489,6 +507,9 @@
         <mxCell id="journal" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontColor=#666666;" value="&lt;b&gt;journal/{id}  (L2)&lt;/b&gt;&lt;hr&gt;jets de dés, événements, ajout seul" vertex="1">
           <mxGeometry height="54" width="280" x="620" y="560" as="geometry" />
         </mxCell>
+        <mxCell id="importsV1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;importsV1/{id}  (L2.2c)&lt;/b&gt;&lt;hr&gt;{ proprietaireUid, nom, importeLe,&lt;br&gt;  v1Json, reprisPar? } ; MJ : dépose, retire&lt;br&gt;joueur : lit les siennes (requête filtrée),&lt;br&gt;écrit reprisPar une seule fois" vertex="1">
+          <mxGeometry height="134" width="300" x="940" y="260" as="geometry" />
+        </mxCell>
         <mxCell id="c1" parent="1" source="tbl" target="secret" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -526,6 +547,12 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="c11" parent="1" source="mjs" target="secret" style="endArrow=open;dashed=1;html=1;" value="les règles comparent le code" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c14" parent="1" source="tbl" target="importsV1" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c15" parent="1" source="importsV1" target="v1" style="endArrow=open;dashed=1;html=1;dashed=1;" value="fiche exportée de la v1" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>

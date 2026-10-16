@@ -56,6 +56,8 @@ document `tables/<table>/secret/codeMj`, champ `code` (texte).
 
 Fiches (lot L2.1) : `tables/<table>/persos/<id>`, une fiche par personnage ; un joueur peut en avoir plusieurs et joue celui de `joueurs/<uid>.persoActif`. Il crée et modifie les siens, sans pouvoir les donner ni se donner des crans de progression ou de Vécu (champs `progression`, `vecu`, `usages`, réservés vides jusqu'aux rencontres de la 2.1) ; le MJ fait tout. Hors création, les écritures se font champ par champ (`lib/actions/persos.ts`). L'écran joueur liste ses personnages (`composants/MesPersonnages.svelte`, chargé à la demande avec les données de règles) ; le premier créé devient le personnage joué.
 
+Fiches v1 (lot L2.2c) : `tables/<table>/importsV1/<id>`. Le MJ dépose les exports v1 (`composants/ImportFichesV1.svelte`) et attribue chacune à un joueur ; la fiche v1 y est gardée en texte JSON, telle qu'exportée. Le joueur ne lit que les siennes (requête filtrée sur `proprietaireUid`) et la reprend dans l'assistant (`lib/regles/import-v1.ts`) : il rechoisit voies, capacités raciales, hors profil et dons, tout le reste est reporté, les objets rafraîchis depuis le catalogue ; il ne peut ensuite écrire que `reprisPar`, une seule fois.
+
 Battlemap (lot L5.3) : `tables/<table>` porte `sceneActive` (la scène
 montrée, écrite par le MJ) ; `tables/<table>/scenes/<scène>` l'état
 partagé (portes, exploration) et `…/jetons/<jeton>` un document par

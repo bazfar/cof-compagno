@@ -1,9 +1,12 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { choisirPersoActif, messageErreurPerso } from '../lib/actions/persos';
+  import { suivreMesImports } from '../lib/magasins/imports.svelte';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
+  import type { Brouillon } from '../lib/regles/creation';
   import { classeParId, raceParId } from '../lib/regles/donnees';
+  import { brouillonDepuisV1, ErreurImportV1 } from '../lib/regles/import-v1';
   import { session } from '../lib/session.svelte';
   import AssistantCreation from './AssistantCreation.svelte';
 
@@ -12,14 +15,21 @@
    * plusieurs (décision 2a) et en joue un : `joueurs/{uid}.persoActif`. Le
    * premier personnage créé devient le personnage joué.
    * La fiche vivante arrive en L2.3.
+   *
+   * Fiches v1 à reprendre (L2.2c) : celles que le MJ a attribuées au joueur
+   * et qu'il n'a pas encore reprises. « Reprendre » ouvre l'assistant sur
+   * la fiche v1.
    */
 
   const persos = suivrePersos(session.table);
   const joueurs = suivreJoueurs(session.table);
+  const imports = suivreMesImports(session.table, session.uid);
   onDestroy(() => {
     persos.arreter();
     joueurs.arreter();
+    imports.arreter();
   });
+  const aReprendre = $derived(imports.etat.elements.filter((i) => !i.reprisPar).sort((a, b) => a.importeLe - b.importeLe));
 
   const miens = $derived(
     persos.etat.elements.filter((p) => p.proprietaireUid === session.uid).sort((a, b) => a.creeLe - b.creeLe),
@@ -27,7 +37,23 @@
   const actif = $derived(joueurs.etat.elements.find((j) => j.id === session.uid)?.persoActif ?? null);
 
   let enCreation = $state(false);
+  let depart = $state<Brouillon | null>(null);
   let message = $state('');
+
+  function creer() {
+    depart = null;
+    enCreation = true;
+  }
+
+  function reprendre(id: string, v1Json: string) {
+    message = '';
+    try {
+      depart = brouillonDepuisV1(JSON.parse(v1Json), id);
+      enCreation = true;
+    } catch (e) {
+      message = e instanceof ErreurImportV1 || e instanceof SyntaxError ? `Fiche v1 illisible : ${e.message}` : String(e);
+    }
+  }
 
   async function jouer(id: string) {
     message = '';
@@ -45,13 +71,13 @@
 </script>
 
 {#if enCreation}
-  <AssistantCreation surCree={cree} surAnnuler={() => (enCreation = false)} />
+  <AssistantCreation {depart} surCree={cree} surAnnuler={() => (enCreation = false)} />
 {:else}
   <section class="carte" aria-label="Mes personnages">
     <div class="tete">
       <h2>Mes personnages</h2>
       <span class="espace"></span>
-      <button onclick={() => (enCreation = true)}>Créer un personnage</button>
+      <button onclick={creer}>Créer un personnage</button>
     </div>
     {#if persos.etat.erreur}
       <p class="erreur" role="alert">{persos.etat.erreur}</p>
@@ -75,6 +101,19 @@
         {/each}
       </ul>
     {/if}
+    {#if aReprendre.length}
+      <h3>Fiches de la v1 à reprendre</h3>
+      <ul aria-label="Fiches de la v1 à reprendre">
+        {#each aReprendre as i (i.id)}
+          <li>
+            <strong>{i.nom}</strong>
+            <span class="aide">déposée par le MJ : tu rechoisis voies et dons, le reste est repris</span>
+            <span class="espace"></span>
+            <button onclick={() => reprendre(i.id, i.v1Json)}>Reprendre</button>
+          </li>
+        {/each}
+      </ul>
+    {/if}
     {#if message}<p class="erreur" role="alert">{message}</p>{/if}
   </section>
 {/if}
@@ -89,6 +128,14 @@
   }
   h2 {
     font-size: 20px;
+  }
+  h3 {
+    font-size: 17px;
+    margin-top: 16px;
+  }
+  .aide {
+    font-size: 13px;
+    color: var(--couleur-encre-douce);
   }
   .espace {
     flex: 1 1 auto;

@@ -58,6 +58,19 @@ const CHAMPS_V1_REPRIS = [
   ...Object.keys(POINTS_CERCLE_V1),
 ] as const;
 
+/** Ce que la 2.0 ne lit pas encore d'une fiche v1, gardé tel quel (décision 5a). */
+export function modulesV1(v1: FicheV1): Record<string, unknown> {
+  const connus = new Set<string>([...CHAMPS_V1_REPRIS, ...CHAMPS_V1_ABANDONNES, ...CHAMPS_V1_REMPLACES, ...CHAMPS_V1_IMAGES]);
+  return Object.fromEntries(Object.entries(v1).filter(([k, v]) => !connus.has(k) && v !== undefined));
+}
+
+/** Points de Cercle du Prêtre, des quatre champs v1 au dictionnaire 2.0. */
+export function pointsCercleV1(v1: FicheV1): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(POINTS_CERCLE_V1).filter(([v1Cle]) => typeof v1[v1Cle] === 'number').map(([v1Cle, cle]) => [cle, v1[v1Cle] as number]),
+  );
+}
+
 /**
  * Clés de l'inventaire : l'identifiant du catalogue, suffixé « ~2 », « ~3 »…
  * pour les doublons (deux potions de soin distinctes). Stables pour un même
@@ -99,11 +112,8 @@ export function versFirestore<T>(valeur: T, chemin = 'fiche'): T {
  */
 export function ficheDepuisV1(v1: FicheV1, proprietaireUid: string, creeLe: number): { fiche: Fiche; portrait: string | null } {
   const calc = ficheV1VersCalcul(v1);
-  const connus = new Set<string>([...CHAMPS_V1_REPRIS, ...CHAMPS_V1_ABANDONNES, ...CHAMPS_V1_REMPLACES, ...CHAMPS_V1_IMAGES]);
-  const modules = Object.fromEntries(Object.entries(v1).filter(([k, v]) => !connus.has(k) && v !== undefined));
-  const pointsCercle = Object.fromEntries(
-    Object.entries(POINTS_CERCLE_V1).filter(([v1Cle]) => typeof v1[v1Cle] === 'number').map(([v1Cle, cle]) => [cle, v1[v1Cle] as number]),
-  );
+  const modules = modulesV1(v1);
+  const pointsCercle = pointsCercleV1(v1);
 
   const brute = {
     schemaVersion: VERSION_FICHE,

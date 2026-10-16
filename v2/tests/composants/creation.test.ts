@@ -24,9 +24,16 @@ vi.mock('../../src/lib/actions/persos', () => ({
   messageErreurPerso: (e: unknown) => String(e),
 }));
 vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPersos);
+vi.mock('../../src/lib/magasins/imports.svelte', async () => (await import('./faux-magasins.svelte')).magasinsImports);
+const actionsImports = vi.hoisted(() => ({
+  deposerImportV1: vi.fn(async (_id: string, _d: unknown) => {}),
+  marquerImportRepris: vi.fn(async (_id: string, _perso: string) => {}),
+  supprimerImportV1: vi.fn(async (_id: string) => {}),
+}));
+vi.mock('../../src/lib/actions/imports', () => ({ ...actionsImports, nouvelIdImport: () => 'v1-nouveau' }));
 vi.mock('../../src/lib/magasins/presents.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPresents);
 
-const { joueurs, persos } = await import('./faux-magasins.svelte');
+const { imports, joueurs, persos } = await import('./faux-magasins.svelte');
 const { session } = await import('../../src/lib/session.svelte');
 const { default: AssistantCreation } = await import('../../src/composants/AssistantCreation.svelte');
 const { default: MesPersonnages } = await import('../../src/composants/MesPersonnages.svelte');
@@ -56,6 +63,9 @@ beforeEach(() => {
   actions.choisirPersoActif.mockClear();
   joueurs.elements = [{ id: 'alice', nom: 'Alice', rejointLe: 1 }];
   persos.elements = [];
+  imports.elements = [];
+  actionsImports.deposerImportV1.mockClear();
+  actionsImports.marquerImportRepris.mockClear();
 });
 
 describe('assistant de création', () => {

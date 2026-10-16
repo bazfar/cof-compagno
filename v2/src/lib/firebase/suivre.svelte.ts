@@ -1,4 +1,4 @@
-import { collection, doc, onSnapshot, type Firestore } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, where, type Firestore } from 'firebase/firestore';
 import type { z } from 'zod';
 
 export type AvecId<T> = T & { id: string };
@@ -21,16 +21,23 @@ export interface CollectionSuivie<T> {
  * Pourquoi pas de liste d'écrans à rafraîchir : `etat` est un état Svelte.
  * Les écrans qui le lisent se mettent à jour d'eux-mêmes, y compris pour une
  * modification faite par un autre client (le MJ qui donne un objet…).
+ *
+ * `filtre` (lot L2.2c) : ne suivre que les documents dont un champ vaut une
+ * valeur. Indispensable quand les règles Firestore ne laissent lire que
+ * ses propres documents : une lecture de toute la collection serait
+ * refusée en bloc.
  */
 export function suivreCollection<T>(
   db: Firestore,
   chemin: string,
   schema: z.ZodType<T>,
+  filtre?: { champ: string; egal: string },
 ): CollectionSuivie<T> {
   const etat = $state<CollectionSuivie<T>['etat']>({ elements: [], pret: false, erreur: null });
 
+  const source = filtre ? query(collection(db, chemin), where(filtre.champ, '==', filtre.egal)) : collection(db, chemin);
   const arreter = onSnapshot(
-    collection(db, chemin),
+    source,
     (instantane) => {
       const valides: AvecId<T>[] = [];
       instantane.forEach((document) => {

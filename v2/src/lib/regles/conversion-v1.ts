@@ -23,7 +23,7 @@ function idVoie(classe: string, nom: string): string | undefined {
 }
 
 /** Reprend la migration « botte » → « jambe » du constructeur Personnage v1. */
-function migrerEquipement(v1: FicheV1): { equipement: Record<string, ObjetPorte | null> | undefined; inventaire: ObjetPorte[] | undefined } {
+export function migrerEquipement(v1: FicheV1): { equipement: Record<string, ObjetPorte | null> | undefined; inventaire: ObjetPorte[] | undefined } {
   const equipement = v1.equipement ? { ...v1.equipement } : undefined;
   let inventaire: ObjetPorte[] | undefined = v1.inventaireListe;
   if (equipement && 'botte' in equipement) {

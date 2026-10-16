@@ -32,6 +32,13 @@ export const magasinsPresents = {
   suivreJoueurs: () => ({ etat: joueurs, arreter: () => {} }),
 };
 
+export const imports = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+
+export const magasinsImports = {
+  suivreImports: () => ({ etat: imports, arreter: () => {} }),
+  suivreMesImports: () => ({ etat: imports, arreter: () => {} }),
+};
+
 export const magasinsPersos = {
   suivrePersos: () => ({ etat: persos, arreter: () => {} }),
 };
