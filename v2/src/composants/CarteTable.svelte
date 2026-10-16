@@ -24,12 +24,14 @@
   import { adresseImage, catalogueScenes, chargerGeometrie } from '../lib/battlemap/scenes';
   import type { VisionJeton } from '../lib/battlemap/visibilite';
   import type { CollectionSuivie, DocumentSuivi } from '../lib/firebase/suivre.svelte';
-  import { suivreDessins, suivreEtatScene, suivreJetons, suivreTable } from '../lib/magasins/carte.svelte';
+  import { estSceneImportee, geometrieImportee } from '../lib/battlemap/import-image';
+  import { suivreDessins, suivreEtatScene, suivreImageScene, suivreJetons, suivreScenesImportees, suivreTable } from '../lib/magasins/carte.svelte';
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
-  import type { Dessin, EtatSceneDoc, Jeton } from '../lib/schemas/carte';
+  import type { Dessin, EtatSceneDoc, ImageScene, Jeton } from '../lib/schemas/carte';
   import type { GeometrieScene } from '../lib/schemas/scene';
   import { session } from '../lib/session.svelte';
   import Battlemap from './Battlemap.svelte';
+  import ImportScene from './ImportScene.svelte';
 
   /*
    * La battlemap de la table (lot L5.3) : la scène que le MJ montre, ses
@@ -50,28 +52,50 @@
 
   const table = suivreTable(session.table);
   const joueurs = suivreJoueurs(session.table); // MJ : PJ à poser
+  const importees = suivreScenesImportees(session.table); // descriptions seules (L5.5)
   onDestroy(() => {
     table.arreter();
     joueurs.arreter();
+    importees.arreter();
   });
 
   const idScene = $derived(table.etat.donnees?.sceneActive ?? null);
 
-  let geometrie = $state<GeometrieScene | null>(null);
-  let erreurChargement = $state('');
+  // Scène du catalogue (fichier livré avec l'app) ou importée par le MJ
+  // (description et image dans Firestore, L5.5).
+  const importee = $derived(idScene !== null && estSceneImportee(idScene));
+  let geometrieCatalogue = $state<GeometrieScene | null>(null);
+  let imageSuivie = $state<DocumentSuivi<ImageScene> | null>(null);
+  const descriptionImportee = $derived(importee ? (importees.etat.elements.find((s) => s.id === idScene) ?? null) : null);
+  const geometrie: GeometrieScene | null = $derived(
+    importee
+      ? descriptionImportee && idScene
+        ? geometrieImportee(idScene, descriptionImportee.nom, descriptionImportee, descriptionImportee.pxParCase)
+        : null
+      : geometrieCatalogue,
+  );
+  const image = $derived(idScene === null ? '' : importee ? (imageSuivie?.etat.donnees?.image ?? '') : adresseImage(idScene));
+  let erreurCatalogue = $state('');
+  const erreurChargement = $derived(
+    erreurCatalogue || (importee && importees.etat.pret && !descriptionImportee ? "Cette scène importée n'existe plus : choisis-en une autre." : ''),
+  );
   let jetonsSuivis = $state<CollectionSuivie<Jeton> | null>(null);
   let etatSuivi = $state<DocumentSuivi<EtatSceneDoc> | null>(null);
   let dessinsSuivis = $state<CollectionSuivie<Dessin> | null>(null);
 
   $effect(() => {
     const id = idScene;
-    geometrie = null;
-    erreurChargement = '';
+    geometrieCatalogue = null;
+    erreurCatalogue = '';
     if (!id) return;
     let actif = true;
-    chargerGeometrie(id)
-      .then((g) => { if (actif) geometrie = g; })
-      .catch((e: unknown) => { if (actif) erreurChargement = String(e); });
+    const img = estSceneImportee(id) ? suivreImageScene(session.table, id) : null;
+    imageSuivie = img;
+    if (!img) {
+      chargerGeometrie(id)
+        .then((g) => { if (actif) geometrieCatalogue = g; })
+        .catch((e: unknown) => { if (actif) erreurCatalogue = String(e); });
+    }
     const j = suivreJetons(session.table, id);
     const e = suivreEtatScene(session.table, id);
     const d = suivreDessins(session.table, id);
@@ -80,6 +104,8 @@
     dessinsSuivis = d;
     return () => {
       actif = false;
+      img?.arreter();
+      imageSuivie = null;
       j.arreter();
       e.arreter();
       d.arreter();
@@ -221,6 +247,7 @@
   let afficherMurs = $state(true);
   let afficherGrille = $state(false);
   let apercuJoueur = $state(false); // MJ : voir la carte comme un joueur
+  let importOuvert = $state(false); // MJ : panneau d'import d'image (L5.5)
 
   // ---------- Outils de dessin du MJ (L5.4) ----------
   type ChoixOutil = 'aucun' | TypeDessin | 'force';
@@ -257,11 +284,21 @@
       <label>Scène montrée
         <select value={idScene ?? ''} onchange={(e) => agir(montrerScene(e.currentTarget.value || null))}>
           <option value="">Aucune</option>
-          {#each catalogueScenes as s (s.id)}
-            <option value={s.id}>{s.nom} ({s.colonnes} × {s.lignes})</option>
-          {/each}
+          <optgroup label="Catalogue">
+            {#each catalogueScenes as s (s.id)}
+              <option value={s.id}>{s.nom} ({s.colonnes} × {s.lignes})</option>
+            {/each}
+          </optgroup>
+          {#if importees.etat.elements.length}
+            <optgroup label="Importées">
+              {#each importees.etat.elements as s (s.id)}
+                <option value={s.id}>{s.nom} ({s.colonnes} × {s.lignes})</option>
+              {/each}
+            </optgroup>
+          {/if}
         </select>
       </label>
+      <button onclick={() => (importOuvert = !importOuvert)}>{importOuvert ? "Fermer l'import" : 'Importer une image…'}</button>
       {#if idScene}
         <button onclick={poserPJDesJoueurs} disabled={joueursSansJeton.length === 0}>+ PJ des joueurs ({joueursSansJeton.length})</button>
         <input class="nom" bind:value={nomMonstre} maxlength="40" aria-label="Nom du monstre" />
@@ -276,6 +313,16 @@
         <label><input type="checkbox" bind:checked={apercuJoueur} /> Vue joueur</label>
       {/if}
     </div>
+    {#if importOuvert}
+      <ImportScene
+        scenes={importees.etat.elements}
+        sceneMontree={idScene}
+        surImportee={(id) => {
+          importOuvert = false;
+          agir(montrerScene(id));
+        }}
+      />
+    {/if}
     {#if idScene}
       <div class="outils">
         <label>Outil
@@ -319,7 +366,7 @@
     {:else if geometrie}
       <Battlemap
         {geometrie}
-        image={adresseImage(geometrie.id)}
+        {image}
         etat={etatDepuisDessins(dessins, etatScene?.portesOuvertes ?? {})}
         {jetons}
         role={roleAffiche}

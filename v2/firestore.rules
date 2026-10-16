@@ -1,23 +1,16 @@
 rules_version = '2';
 
 // ============================================================
-// Règles Firestore — cof-compagno (v1 + 2.0)
+// Règles Firestore — cof-compagno 2.0 (projet Firebase lejdr-v2)
 //
-// IMPORTANT : un projet Firebase n'a qu'UN jeu de règles pour toute la
-// base. Ce fichier est désormais le seul à déployer (depuis v2/). Il
-// garde la règle de la v1 à l'identique tant que la v1 tourne : sans
-// elle, déployer la 2.0 couperait la table en pleine campagne.
-// Le test « la v1 reste ouverte » de tests/regles le vérifie.
+// La 2.0 a son propre projet Firebase depuis le 16/10/2026 : la v1 garde
+// le sien (lejdr-b38ef) et ses règles, déployées depuis la racine du
+// dépôt. Ce fichier ne couvre donc que la 2.0 ; tout ce qui n'est pas
+// ouvert ici est refusé (test « tout le reste est refusé »).
 // ============================================================
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ---- v1 (sessions/table-arbre-monde) : inchangé, à retirer à la bascule ----
-    match /sessions/{sessionId}/{document=**} {
-      allow read, write: if true;
-    }
-
-    // ---- 2.0 ----
     function connecte() {
       return request.auth != null;
     }
@@ -153,6 +146,32 @@ service cloud.firestore {
                 && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cx', 'cy'])));
           allow delete: if estMj(table)
             || (estJoueur(table) && resource.data.proprietaire == request.auth.uid);
+        }
+      }
+
+      // Scènes importées par le MJ depuis une image (lot L5.5) : la
+      // description d'un côté (légère, listée par tous), l'image de l'autre
+      // (téléchargée seulement à l'ouverture de la scène).
+      match /scenesImportees/{scene} {
+        allow read: if estMembre(table);
+        allow create, update: if estMj(table)
+          && request.resource.data.keys().hasOnly(['nom', 'colonnes', 'lignes', 'pxParCase', 'creeLe'])
+          && request.resource.data.keys().hasAll(['nom', 'colonnes', 'lignes', 'pxParCase', 'creeLe'])
+          && nomValide(request.resource.data.nom)
+          && request.resource.data.colonnes is int && request.resource.data.colonnes >= 1 && request.resource.data.colonnes <= 150
+          && request.resource.data.lignes is int && request.resource.data.lignes >= 1 && request.resource.data.lignes <= 150
+          && request.resource.data.pxParCase is int && request.resource.data.pxParCase >= 1 && request.resource.data.pxParCase <= 512
+          && request.resource.data.creeLe is int;
+        allow delete: if estMj(table);
+
+        match /image/{document} {
+          allow read: if estMembre(table);
+          allow create, update: if estMj(table)
+            && request.resource.data.keys().hasOnly(['image'])
+            && request.resource.data.image is string
+            && request.resource.data.image.matches('^data:image/.*')
+            && request.resource.data.image.size() <= 750000;
+          allow delete: if estMj(table);
         }
       }
 

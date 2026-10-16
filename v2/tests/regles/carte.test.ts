@@ -193,3 +193,43 @@ describe('dessins du MJ (L5.4)', () => {
     await assertSucceeds(alice().doc(SCENE).set({ portesOuvertes: { 'd-porte': true } }, { merge: true }));
   });
 });
+
+describe('scènes importées (L5.5)', () => {
+  const IMP = `${TABLE}/scenesImportees/imp-crypte-1`;
+  const description = (extra: Record<string, unknown> = {}) => ({ nom: 'Crypte', colonnes: 40, lignes: 25, pxParCase: 70, creeLe: 1, ...extra });
+  const image = 'data:image/webp;base64,' + 'A'.repeat(1000);
+
+  it('le MJ importe, la table lit description et image', async () => {
+    await assertSucceeds(bob().doc(IMP).set(description()));
+    await assertSucceeds(bob().doc(`${IMP}/image/donnees`).set({ image }));
+    await assertSucceeds(alice().doc(IMP).get());
+    await assertSucceeds(alice().doc(`${IMP}/image/donnees`).get());
+    await assertSucceeds(alice().collection(`${TABLE}/scenesImportees`).get());
+    await assertFails(intrus().doc(`${IMP}/image/donnees`).get());
+  });
+
+  it("un joueur n'importe ni ne supprime rien", async () => {
+    await assertFails(alice().doc(IMP).set(description()));
+    await assertFails(alice().doc(`${IMP}/image/donnees`).set({ image }));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(IMP).set(description());
+    });
+    await assertFails(alice().doc(IMP).delete());
+  });
+
+  it('forme refusée : grille trop grande, champ inconnu, image trop lourde ou pas une image', async () => {
+    await assertFails(bob().doc(IMP).set(description({ colonnes: 151 })));
+    await assertFails(bob().doc(IMP).set(description({ image })));
+    await assertFails(bob().doc(`${IMP}/image/donnees`).set({ image: 'data:image/webp;base64,' + 'A'.repeat(750000) }));
+    await assertFails(bob().doc(`${IMP}/image/donnees`).set({ image: 'https://exemple.fr/carte.png' }));
+  });
+
+  it('le MJ supprime description et image', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(IMP).set(description());
+      await ctx.firestore().doc(`${IMP}/image/donnees`).set({ image });
+    });
+    await assertSucceeds(bob().doc(`${IMP}/image/donnees`).delete());
+    await assertSucceeds(bob().doc(IMP).delete());
+  });
+});

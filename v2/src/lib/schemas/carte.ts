@@ -90,3 +90,26 @@ export const schemaDessin = z.object({
   creeLe: z.number().int().nonnegative(),
 });
 export type Dessin = z.infer<typeof schemaDessin>;
+
+/**
+ * tables/{table}/scenesImportees/{id} — scène importée par le MJ depuis
+ * une image (lot L5.5). Description seule, légère : tous les clients la
+ * lisent pour lister et ouvrir les scènes. L'image est dans un document à
+ * part (ci-dessous), que seuls ceux qui ouvrent la scène téléchargent.
+ * Identifiant : « imp-… » (import-image.idSceneImportee).
+ */
+export const schemaSceneImportee = z.object({
+  nom: schemaNom,
+  colonnes: z.number().int().min(1).max(150),
+  lignes: z.number().int().min(1).max(150),
+  /** Pixels par case de l'image stockée. */
+  pxParCase: z.number().int().min(1).max(512),
+  creeLe: z.number().int().nonnegative(),
+});
+export type SceneImportee = z.infer<typeof schemaSceneImportee>;
+
+/** tables/{table}/scenesImportees/{id}/image/donnees — l'image compressée (data URL, 700 000 caractères au plus). */
+export const schemaImageScene = z.object({
+  image: z.string().startsWith('data:image/').max(750000),
+});
+export type ImageScene = z.infer<typeof schemaImageScene>;

@@ -1,10 +1,11 @@
 /**
- * Configuration publique du projet Firebase (la même que la v1,
- * js/firebase-config.js). Ces valeurs ne sont pas secrètes : la sécurité
- * repose sur la connexion et sur firestore.rules, pas sur leur discrétion.
+ * Configuration publique du projet Firebase de la 2.0 (lejdr-v2, séparé de
+ * celui de la v1 depuis le 16/10/2026). Ces valeurs ne sont pas secrètes :
+ * la sécurité repose sur la connexion et sur firestore.rules, pas sur leur
+ * discrétion.
  */
 export const firebaseConfig = {
-    apiKey: 'AIzaSyCpaJ-tj4WL8F-7CXHDUPqpkympRDgiHao',
+  apiKey: 'AIzaSyCpaJ-tj4WL8F-7CXHDUPqpkympRDgiHao',
   authDomain: 'lejdr-v2.firebaseapp.com',
   projectId: 'lejdr-v2',
   storageBucket: 'lejdr-v2.firebasestorage.app',

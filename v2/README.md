@@ -45,9 +45,10 @@ dans le même commit que le code qu'il décrit.
 
 ## Règles Firestore
 
-`firestore.rules` est le **seul** fichier de règles du projet : il couvre
-la v1 (`sessions/**`, inchangé) et la 2.0 (`tables/**`). Ne plus jamais
-déployer de règles depuis la racine du dépôt.
+La 2.0 a son propre projet Firebase, `lejdr-v2` (`.firebaserc`), avec sa
+base et ses règles : `firestore.rules` ne couvre que la 2.0
+(`tables/**`). La v1 garde le projet `lejdr-b38ef` et ses règles,
+déployées depuis la racine du dépôt comme avant.
 
 Le code MJ d'une table se pose à la main dans la console Firebase :
 document `tables/<table>/secret/codeMj`, champ `code` (texte).
@@ -56,7 +57,9 @@ Battlemap (lot L5.3) : `tables/<table>` porte `sceneActive` (la scène
 montrée, écrite par le MJ) ; `tables/<table>/scenes/<scène>` l'état
 partagé (portes, exploration) et `…/jetons/<jeton>` un document par
 jeton. `…/dessins/<dessin>` : un document par mur, obstacle, porte ou mur
-de force tracé par le MJ (lot L5.4). Les règles vérifient les droits ; les
+de force tracé par le MJ (lot L5.4). `tables/<table>/scenesImportees/<id>`
+décrit une scène importée par le MJ depuis une image (lot L5.5), et
+`…/image/donnees` contient l'image compressée. Les règles vérifient les droits ; les
 règles de jeu (murs, portes, case occupée) sont appliquées par l'app avant
 d'écrire.
 

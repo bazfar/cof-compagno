@@ -1,9 +1,9 @@
-import { deleteDoc, deleteField, doc, increment, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, deleteField, doc, increment, runTransaction, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { GrilleExploration } from '../battlemap/exploration';
 import type { Case, Point } from '../battlemap/geometrie';
 import type { TypeDessin } from '../battlemap/dessins';
 import { db } from '../firebase/client';
-import { schemaDessin, schemaEtatScene, schemaJeton, type Jeton } from '../schemas/carte';
+import { schemaDessin, schemaEtatScene, schemaImageScene, schemaJeton, schemaSceneImportee, type Jeton } from '../schemas/carte';
 import { session } from '../session.svelte';
 
 /*
@@ -111,6 +111,36 @@ export async function tracerDessin(
 /** MJ : efface un dessin, chez tout le monde. */
 export async function effacerDessin(scene: string, id: string): Promise<void> {
   await deleteDoc(doc(db, `${cheminScene(scene)}/dessins/${id}`));
+}
+
+/**
+ * MJ : enregistre une scène importée depuis une image (lot L5.5). La
+ * description et l'image partent ensemble (un seul lot d'écriture) : une
+ * scène n'existe jamais sans son image.
+ */
+export async function importerScene(
+  id: string,
+  description: { nom: string; colonnes: number; lignes: number; pxParCase: number },
+  image: string,
+): Promise<void> {
+  const chemin = `tables/${session.table}/scenesImportees/${id}`;
+  const lot = writeBatch(db);
+  lot.set(doc(db, chemin), schemaSceneImportee.parse({ ...description, creeLe: Date.now() }));
+  lot.set(doc(db, `${chemin}/image/donnees`), schemaImageScene.parse({ image }));
+  await lot.commit();
+}
+
+/**
+ * MJ : supprime une scène importée (description et image). Ses jetons et
+ * dessins restent en base, invisibles, comme ceux d'une scène du catalogue
+ * qu'on ne montre plus.
+ */
+export async function supprimerSceneImportee(id: string): Promise<void> {
+  const chemin = `tables/${session.table}/scenesImportees/${id}`;
+  const lot = writeBatch(db);
+  lot.delete(doc(db, `${chemin}/image/donnees`));
+  lot.delete(doc(db, chemin));
+  await lot.commit();
 }
 
 /** Message lisible pour une écriture refusée. */

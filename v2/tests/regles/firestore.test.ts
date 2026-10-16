@@ -44,11 +44,11 @@ async function bobEstMj(): Promise<void> {
   await pourBob().doc(`${TABLE}/mjs/bob`).set({ nom: 'Bob', code: 'dragon', rejointLe: 1 });
 }
 
-describe('v1 : sessions/** reste ouvert tant que la v1 tourne', () => {
-  it('lecture et écriture sans connexion', async () => {
-    const db = pourAnonyme();
-    await assertSucceeds(db.doc('sessions/table-arbre-monde/cof_persos/x').set({ nom: 'X' }));
-    await assertSucceeds(db.doc('sessions/table-arbre-monde/cof_persos/x').get());
+describe('projet séparé de la v1 (lejdr-v2)', () => {
+  it("les chemins de la v1 n'existent pas ici : fermés, même au MJ", async () => {
+    await bobEstMj();
+    await assertFails(pourAnonyme().doc('sessions/table-arbre-monde/cof_persos/x').set({ nom: 'X' }));
+    await assertFails(pourBob().doc('sessions/table-arbre-monde/cof_persos/x').get());
   });
 });
 
