@@ -55,8 +55,10 @@ document `tables/<table>/secret/codeMj`, champ `code` (texte).
 Battlemap (lot L5.3) : `tables/<table>` porte `sceneActive` (la scène
 montrée, écrite par le MJ) ; `tables/<table>/scenes/<scène>` l'état
 partagé (portes, exploration) et `…/jetons/<jeton>` un document par
-jeton. Les règles vérifient les droits ; les règles de jeu (murs, portes,
-case occupée) sont appliquées par l'app avant d'écrire.
+jeton. `…/dessins/<dessin>` : un document par mur, obstacle, porte ou mur
+de force tracé par le MJ (lot L5.4). Les règles vérifient les droits ; les
+règles de jeu (murs, portes, case occupée) sont appliquées par l'app avant
+d'écrire.
 
 Pour essayer à plusieurs sans toucher à la vraie base : `npm run
 dev:emulateurs`, puis dans l'interface de l'émulateur

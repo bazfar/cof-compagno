@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { schemaEtatScene, schemaJeton } from '../../src/lib/schemas/carte';
+import { schemaDessin, schemaEtatScene, schemaJeton } from '../../src/lib/schemas/carte';
 
 /*
  * Les champs des documents de la battlemap (lot L5.3) sont définis deux
@@ -24,6 +24,9 @@ describe('schémas de la battlemap alignés sur firestore.rules', () => {
   });
   it('état de scène', () => {
     expect(champsAutorises('etatSceneValide')).toEqual(Object.keys(schemaEtatScene.shape).sort());
+  });
+  it('dessin du MJ', () => {
+    expect(champsAutorises('dessinValide')).toEqual(Object.keys(schemaDessin.shape).sort());
   });
   it('un jeton valide passe, un jeton avec des PV non', () => {
     const jeton = { genre: 'monstre', nom: 'Gobelin', couleur: '#c0392b', cx: 3, cy: 4, proprietaire: null, creeLe: 1 };

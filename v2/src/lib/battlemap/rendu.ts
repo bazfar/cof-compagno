@@ -47,12 +47,17 @@ export interface Dessin {
   survol: Case | null;
   /** Jeton en cours de glisser et sa case provisoire. */
   glisser: { id: string; case: Case } | null;
+  /** Murs de force, dessinés à part avec leurs tours restants (L5.4). */
+  mursDeForce: readonly { a: Point; b: Point; tours: number }[];
+  /** Tracé en cours d'un outil du MJ (L5.4). */
+  trace: { a: Point; b: Point; type: 'mur' | 'obstacle' | 'porte'; force: boolean } | null;
 }
 
 const COULEURS = {
   fond: '#1b1622',
   mur: 'rgba(220, 80, 0, 0.9)', // v1 : rendreMurs
   obstacle: 'rgba(80, 170, 230, 0.85)', // bloque la vue seulement : couleur à part
+  murDeForce: 'rgba(190, 120, 255, 0.95)',
   porteFermee: '#ffcc00', // v1 : rendrePortails
   porteOuverte: '#44ff88',
   grille: 'rgba(255, 255, 255, 0.18)',
@@ -220,6 +225,21 @@ export function dessiner(ctx: CanvasRenderingContext2D, d: Dessin): void {
   }
   ctx.setLineDash([]);
 
+  // Murs de force : par-dessus le mur ordinaire, avec le nombre de tours.
+  for (const m of d.mursDeForce) {
+    ctx.strokeStyle = COULEURS.murDeForce;
+    ctx.lineWidth = trait(5);
+    ctx.beginPath();
+    ctx.moveTo(m.a[0], m.a[1]);
+    ctx.lineTo(m.b[0], m.b[1]);
+    ctx.stroke();
+    ctx.fillStyle = COULEURS.murDeForce;
+    ctx.font = `700 ${trait(13)}px 'Source Sans 3', 'Segoe UI', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(`${m.tours} t.`, (m.a[0] + m.b[0]) / 2, (m.a[1] + m.b[1]) / 2 - trait(4));
+  }
+
   if (d.masqueExploration) {
     dessinerBrouillard(ctx, d, d.masqueExploration);
     enCases(ctx, d);
@@ -233,6 +253,18 @@ export function dessiner(ctx: CanvasRenderingContext2D, d: Dessin): void {
   for (const j of d.jetons) {
     const pos = d.glisser?.id === j.id ? d.glisser.case : j;
     dessinerJeton(ctx, j, pos.cx, pos.cy, d.selection === j.id, vue.echelle);
+  }
+
+  if (d.trace) {
+    const t = d.trace;
+    ctx.strokeStyle = t.force ? COULEURS.murDeForce : t.type === 'mur' ? COULEURS.mur : t.type === 'obstacle' ? COULEURS.obstacle : COULEURS.porteFermee;
+    ctx.lineWidth = trait(4);
+    ctx.setLineDash([trait(8), trait(5)]);
+    ctx.beginPath();
+    ctx.moveTo(t.a[0], t.a[1]);
+    ctx.lineTo(t.b[0], t.b[1]);
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 }

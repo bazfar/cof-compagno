@@ -63,3 +63,30 @@ export const schemaTable = z.looseObject({
   sceneActive: z.string().nullable().optional(),
 });
 export type TableDoc = z.infer<typeof schemaTable>;
+
+/** Coordonnée d'un point de dessin, en cases (pas forcément entière). */
+const schemaCoordPoint = z.number().min(0).max(500);
+
+/**
+ * tables/{table}/scenes/{scene}/dessins/{dessin} — un document par mur,
+ * obstacle ou porte tracé par le MJ (lot L5.4). Un document chacun : un
+ * dessin effacé l'est chez tout le monde (bug v1 du mur supprimé d'un seul
+ * côté). Points à plat (ax, ay, bx, by) : Firestore refuse les tableaux de
+ * tableaux.
+ *   ouverte : porte seulement, état d'origine (l'état courant est dans
+ *             portesOuvertes, comme pour les portes du .dd2vtt) ;
+ *   tours   : mur de force seulement, tours restants (décompte en L6) ;
+ *   lanceur : mur de force, qui l'a lancé (relié aux fiches en L2/L6).
+ */
+export const schemaDessin = z.object({
+  type: z.enum(['mur', 'obstacle', 'porte']),
+  ax: schemaCoordPoint,
+  ay: schemaCoordPoint,
+  bx: schemaCoordPoint,
+  by: schemaCoordPoint,
+  ouverte: z.boolean().optional(),
+  tours: z.number().int().min(1).max(100).optional(),
+  lanceur: z.string().nullable().optional(),
+  creeLe: z.number().int().nonnegative(),
+});
+export type Dessin = z.infer<typeof schemaDessin>;

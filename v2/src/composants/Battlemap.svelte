@@ -1,7 +1,8 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { GrilleExploration } from '../lib/battlemap/exploration';
-  import { sceneCalcul, type Case, type EtatScene, type SceneCalcul } from '../lib/battlemap/geometrie';
+  import { aimanter, bornerPoint, estUnTrace, type TypeDessin } from '../lib/battlemap/dessins';
+  import { sceneCalcul, type Case, type EtatScene, type Point, type SceneCalcul } from '../lib/battlemap/geometrie';
   import { jetonsADessiner, jetonSousPointeur, pasDeGlisser, peutDeplacer, porteSousPointeur, type Role } from '../lib/battlemap/interactions';
   import { dessiner, peindreExploration, type JetonAffiche } from '../lib/battlemap/rendu';
   import { jetonsVisiblesDesPJ, segmentsBloquants, visionsDesPJ, type VisionJeton } from '../lib/battlemap/visibilite';
@@ -18,6 +19,10 @@
    * la vue ; glisser un jeton (si on en a le droit) = le déplacer case par
    * case ; clic sur une porte = l'ouvrir ou la fermer ; clic sur un jeton =
    * le sélectionner ; double-clic = recadrer toute la scène.
+   *
+   * Avec un outil de dessin du MJ (L5.4) : cliquer-glisser trace, un
+   * simple clic efface l'élément du même outil le plus proche (comme en v1).
+   * La molette zoome toujours ; pour déplacer la vue, on repose l'outil.
    */
 
   let {
@@ -36,6 +41,10 @@
     surPorte,
     surSelection,
     surVisions,
+    outil = null,
+    mursDeForce = [],
+    surTrace,
+    surGomme,
   }: {
     geometrie: GeometrieScene;
     /** Adresse de l'image de la scène. */
@@ -57,6 +66,11 @@
     surSelection?: (id: string | null) => void;
     /** Appelé quand la vision des PJ change (pour marquer l'exploration). */
     surVisions?: (visions: VisionJeton[]) => void;
+    /** Outil de dessin actif (MJ, L5.4) ; null = gestes ordinaires. */
+    outil?: { type: TypeDessin; force: boolean; aimant: boolean } | null;
+    mursDeForce?: readonly { a: Point; b: Point; tours: number }[];
+    surTrace?: (type: TypeDessin, a: Point, b: Point, force: boolean) => void;
+    surGomme?: (type: TypeDessin, pt: Point, force: boolean) => void;
   } = $props();
 
   let canvas = $state<HTMLCanvasElement | undefined>();
@@ -66,6 +80,8 @@
   let imageChargee = $state<HTMLImageElement | null>(null);
   let survol = $state<Case | null>(null);
   let glisser = $state<{ id: string; depart: Case; case: Case } | null>(null);
+  // `clic` : point exact du clic (non aimanté), pour la gomme.
+  let trace = $state<{ a: Point; b: Point; clic: Point } | null>(null);
 
   const scene: SceneCalcul = $derived(sceneCalcul(geometrie, etat));
 
@@ -140,6 +156,8 @@
       tampon,
       afficherMurs, afficherGrille, selection, survol,
       glisser: glisser ? { id: glisser.id, case: glisser.case } : null,
+      mursDeForce,
+      trace: trace && outil ? { a: trace.a, b: trace.b, type: outil.type, force: outil.force } : null,
     };
     const c = canvas;
     cancelAnimationFrame(demande);
@@ -160,9 +178,21 @@
     return [ev.clientX - r.left, ev.clientY - r.top];
   }
 
+  /** Point de la scène sous le pointeur, aimanté si demandé. */
+  function pointOutil(ex: number, ey: number): Point {
+    const brut = bornerPoint(ecranVersScene(vue!, ex, ey), geometrie.colonnes, geometrie.lignes);
+    return outil?.aimant ? aimanter(brut) : brut;
+  }
+
   function surAppui(ev: PointerEvent) {
     if (!vue || ev.button !== 0) return;
     const [ex, ey] = position(ev);
+    if (outil) {
+      const p = pointOutil(ex, ey);
+      trace = { a: p, b: p, clic: ecranVersScene(vue, ex, ey) };
+      canvas!.setPointerCapture(ev.pointerId);
+      return;
+    }
     const pt = ecranVersScene(vue, ex, ey);
     const jeton = jetonSousPointeur(dessines, pt);
     if (jeton) {
@@ -185,6 +215,10 @@
   function surMouvement(ev: PointerEvent) {
     if (!vue) return;
     const [ex, ey] = position(ev);
+    if (trace) {
+      trace = { ...trace, b: pointOutil(ex, ey) };
+      return;
+    }
     if (glisser) {
       const visee = ecranVersCase(vue, ex, ey, geometrie);
       const jeton = jetons.find((j) => j.id === glisser!.id);
@@ -204,6 +238,14 @@
   }
 
   function surRelache() {
+    if (trace && outil) {
+      const { a, b, clic } = trace;
+      trace = null;
+      if (estUnTrace(a, b)) surTrace?.(outil.type, a, b, outil.force);
+      else surGomme?.(outil.type, clic, outil.force);
+      return;
+    }
+    trace = null;
     if (glisser) {
       const { id, depart, case: arrivee } = glisser;
       glisser = null;

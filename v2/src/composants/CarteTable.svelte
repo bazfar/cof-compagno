@@ -3,6 +3,7 @@
   import {
     basculerPorte,
     deplacerJeton,
+    effacerDessin,
     enregistrerExploration,
     idJetonPJ,
     marquerMort,
@@ -12,18 +13,20 @@
     reinitialiserExploration,
     retirerJeton,
     toutReveler,
+    tracerDessin,
   } from '../lib/actions/carte';
   import { placementParDefaut } from '../lib/battlemap/deplacement';
+  import { dessinProche, etatDepuisDessins, type DessinCarte, type TypeDessin } from '../lib/battlemap/dessins';
   import { GrilleExploration } from '../lib/battlemap/exploration';
-  import { sceneCalcul, type Case } from '../lib/battlemap/geometrie';
+  import { sceneCalcul, type Case, type Point } from '../lib/battlemap/geometrie';
   import type { Role } from '../lib/battlemap/interactions';
   import type { JetonAffiche } from '../lib/battlemap/rendu';
   import { adresseImage, catalogueScenes, chargerGeometrie } from '../lib/battlemap/scenes';
   import type { VisionJeton } from '../lib/battlemap/visibilite';
   import type { CollectionSuivie, DocumentSuivi } from '../lib/firebase/suivre.svelte';
-  import { suivreEtatScene, suivreJetons, suivreTable } from '../lib/magasins/carte.svelte';
+  import { suivreDessins, suivreEtatScene, suivreJetons, suivreTable } from '../lib/magasins/carte.svelte';
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
-  import type { EtatSceneDoc, Jeton } from '../lib/schemas/carte';
+  import type { Dessin, EtatSceneDoc, Jeton } from '../lib/schemas/carte';
   import type { GeometrieScene } from '../lib/schemas/scene';
   import { session } from '../lib/session.svelte';
   import Battlemap from './Battlemap.svelte';
@@ -58,6 +61,7 @@
   let erreurChargement = $state('');
   let jetonsSuivis = $state<CollectionSuivie<Jeton> | null>(null);
   let etatSuivi = $state<DocumentSuivi<EtatSceneDoc> | null>(null);
+  let dessinsSuivis = $state<CollectionSuivie<Dessin> | null>(null);
 
   $effect(() => {
     const id = idScene;
@@ -70,16 +74,28 @@
       .catch((e: unknown) => { if (actif) erreurChargement = String(e); });
     const j = suivreJetons(session.table, id);
     const e = suivreEtatScene(session.table, id);
+    const d = suivreDessins(session.table, id);
     jetonsSuivis = j;
     etatSuivi = e;
+    dessinsSuivis = d;
     return () => {
       actif = false;
       j.arreter();
       e.arreter();
+      d.arreter();
       jetonsSuivis = null;
       etatSuivi = null;
+      dessinsSuivis = null;
     };
   });
+
+  // ---------- Dessins du MJ (L5.4) ----------
+  const dessins: DessinCarte[] = $derived(
+    (dessinsSuivis?.etat.elements ?? []).map((d) => ({
+      id: d.id, type: d.type, a: [d.ax, d.ay] as Point, b: [d.bx, d.by] as Point, ouverte: d.ouverte, tours: d.tours ?? null,
+    })),
+  );
+  const mursDeForce = $derived(dessins.filter((d) => d.type === 'mur' && d.tours).map((d) => ({ a: d.a, b: d.b, tours: d.tours as number })));
 
   // ---------- Jetons ----------
   const jetons: JetonAffiche[] = $derived(
@@ -155,7 +171,7 @@
 
   function surPorte(idPorte: string) {
     if (!idScene || !geometrie) return;
-    const origine = geometrie.portes.find((p) => p.id === idPorte)?.ouverte ?? false;
+    const origine = (geometrie.portes.find((p) => p.id === idPorte) ?? dessins.find((d) => d.id === idPorte))?.ouverte ?? false;
     const actuelle = etatScene?.portesOuvertes?.[idPorte] ?? origine;
     agir(basculerPorte(idScene, idPorte, !actuelle));
   }
@@ -205,6 +221,33 @@
   let afficherMurs = $state(true);
   let afficherGrille = $state(false);
   let apercuJoueur = $state(false); // MJ : voir la carte comme un joueur
+
+  // ---------- Outils de dessin du MJ (L5.4) ----------
+  type ChoixOutil = 'aucun' | TypeDessin | 'force';
+  let choixOutil = $state<ChoixOutil>('aucun');
+  let toursForce = $state(3);
+  let aimant = $state(true);
+  const outil = $derived(
+    role === 'mj' && !apercuJoueur && choixOutil !== 'aucun'
+      ? { type: (choixOutil === 'force' ? 'mur' : choixOutil) as TypeDessin, force: choixOutil === 'force', aimant }
+      : null,
+  );
+  const NOMS: Record<TypeDessin, string> = { mur: 'mur', obstacle: 'obstacle', porte: 'porte' };
+
+  function surTrace(type: TypeDessin, a: Point, b: Point, force: boolean) {
+    if (!idScene) return;
+    agir(tracerDessin(idScene, type, a, b, force ? { tours: Math.max(1, Math.min(100, Math.round(toursForce))) } : {}));
+  }
+
+  function surGomme(type: TypeDessin, pt: Point, force: boolean) {
+    if (!idScene) return;
+    const cible = dessinProche(dessins, type, pt, force);
+    if (!cible) {
+      message = force ? 'Aucun mur de force à cet endroit.' : `Aucun ${NOMS[type]} dessiné à cet endroit.`;
+      return;
+    }
+    agir(effacerDessin(idScene, cible.id));
+  }
   const roleAffiche: Role = $derived(role === 'mj' && !apercuJoueur ? 'mj' : 'joueur');
 </script>
 
@@ -231,10 +274,31 @@
         <button onclick={() => idScene && agir(reinitialiserExploration(idScene))}>Réinitialiser l'exploration</button>
         <button onclick={() => idScene && geometrie && agir(toutReveler(idScene, geometrie.colonnes, geometrie.lignes))}>Tout révéler</button>
         <label><input type="checkbox" bind:checked={apercuJoueur} /> Vue joueur</label>
-        <label><input type="checkbox" bind:checked={afficherMurs} /> Murs</label>
-        <label><input type="checkbox" bind:checked={afficherGrille} /> Grille</label>
       {/if}
     </div>
+    {#if idScene}
+      <div class="outils">
+        <label>Outil
+          <select bind:value={choixOutil} disabled={apercuJoueur}>
+            <option value="aucun">Déplacer (aucun outil)</option>
+            <option value="mur">Mur</option>
+            <option value="obstacle">Obstacle (bloque la vue)</option>
+            <option value="porte">Porte ou fenêtre</option>
+            <option value="force">Mur de force</option>
+          </select>
+        </label>
+        {#if choixOutil === 'force'}
+          <label>Tours <input class="tours" type="number" min="1" max="100" bind:value={toursForce} /></label>
+        {/if}
+        {#if choixOutil !== 'aucun'}
+          <label><input type="checkbox" bind:checked={aimant} /> Aimanter aux demi-cases</label>
+          <span class="aide">Cliquer-glisser : tracer · clic : effacer le plus proche</span>
+        {/if}
+        <span class="separateur"></span>
+        <label><input type="checkbox" bind:checked={afficherMurs} /> Murs</label>
+        <label><input type="checkbox" bind:checked={afficherGrille} /> Grille</label>
+      </div>
+    {/if}
   {:else if idScene && geometrie && !monJetonPose}
     <div class="outils">
       <button onclick={poserMonJeton}>Poser mon jeton</button>
@@ -256,7 +320,7 @@
       <Battlemap
         {geometrie}
         image={adresseImage(geometrie.id)}
-        etat={{ portesOuvertes: etatScene?.portesOuvertes ?? {} }}
+        etat={etatDepuisDessins(dessins, etatScene?.portesOuvertes ?? {})}
         {jetons}
         role={roleAffiche}
         {miens}
@@ -269,6 +333,10 @@
         {surPorte}
         surSelection={(id) => (selection = id)}
         {surVisions}
+        {outil}
+        {mursDeForce}
+        {surTrace}
+        {surGomme}
       />
     {:else}
       <p class="vide">Chargement de la scène…</p>
@@ -297,6 +365,13 @@
   }
   .nom {
     width: 140px;
+  }
+  .tours {
+    width: 64px;
+  }
+  .aide {
+    font-size: 13px;
+    color: var(--couleur-encre-douce);
   }
   .separateur {
     flex: 1 1 auto;

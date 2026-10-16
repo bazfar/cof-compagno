@@ -157,3 +157,39 @@ describe('état de la scène', () => {
     await assertFails(intrus().doc(SCENE).set({ portesOuvertes: { p0: true } }, { merge: true }));
   });
 });
+
+describe('dessins du MJ (L5.4)', () => {
+  const mur = (extra: Record<string, unknown> = {}) => ({ type: 'mur', ax: 6, ay: 0, bx: 6, by: 20.5, creeLe: 1, ...extra });
+
+  it('le MJ trace et efface murs, obstacles, portes et mur de force', async () => {
+    await assertSucceeds(bob().doc(`${SCENE}/dessins/d1`).set(mur()));
+    await assertSucceeds(bob().doc(`${SCENE}/dessins/d2`).set(mur({ type: 'obstacle' })));
+    await assertSucceeds(bob().doc(`${SCENE}/dessins/d3`).set(mur({ type: 'porte', ouverte: false })));
+    await assertSucceeds(bob().doc(`${SCENE}/dessins/d4`).set(mur({ tours: 3, lanceur: null })));
+    await assertSucceeds(bob().doc(`${SCENE}/dessins/d1`).delete());
+  });
+
+  it('un joueur voit les dessins mais ne trace ni n\'efface rien', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(`${SCENE}/dessins/d1`).set(mur());
+    });
+    await assertSucceeds(alice().collection(`${SCENE}/dessins`).get());
+    await assertFails(alice().doc(`${SCENE}/dessins/d2`).set(mur()));
+    await assertFails(alice().doc(`${SCENE}/dessins/d1`).delete());
+    await assertFails(intrus().collection(`${SCENE}/dessins`).get());
+  });
+
+  it('forme refusée : type, coordonnée, tours, champ inconnu', async () => {
+    await assertFails(bob().doc(`${SCENE}/dessins/d1`).set(mur({ type: 'fosse' })));
+    await assertFails(bob().doc(`${SCENE}/dessins/d1`).set(mur({ ax: -1 })));
+    await assertFails(bob().doc(`${SCENE}/dessins/d1`).set(mur({ tours: 0 })));
+    await assertFails(bob().doc(`${SCENE}/dessins/d1`).set(mur({ couleur: '#ffffff' })));
+  });
+
+  it('un joueur ouvre une porte dessinée comme une porte du .dd2vtt', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(`${SCENE}/dessins/d-porte`).set(mur({ type: 'porte', ouverte: false }));
+    });
+    await assertSucceeds(alice().doc(SCENE).set({ portesOuvertes: { 'd-porte': true } }, { merge: true }));
+  });
+});

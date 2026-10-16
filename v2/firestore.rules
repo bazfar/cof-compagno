@@ -50,6 +50,20 @@ service cloud.firestore {
         && (d.proprietaire == null || d.proprietaire is string)
         && d.creeLe is int;
     }
+    function pointValide(c) {
+      return c is number && c >= 0 && c <= 500;
+    }
+    // Aligné sur schemaDessin (src/lib/schemas/carte.ts).
+    function dessinValide(d) {
+      return d.keys().hasAll(['type', 'ax', 'ay', 'bx', 'by', 'creeLe'])
+        && d.keys().hasOnly(['type', 'ax', 'ay', 'bx', 'by', 'ouverte', 'tours', 'lanceur', 'creeLe'])
+        && d.type in ['mur', 'obstacle', 'porte']
+        && pointValide(d.ax) && pointValide(d.ay) && pointValide(d.bx) && pointValide(d.by)
+        && (!('ouverte' in d) || d.ouverte is bool)
+        && (!('tours' in d) || (d.tours is int && d.tours >= 1 && d.tours <= 100))
+        && (!('lanceur' in d) || d.lanceur == null || d.lanceur is string)
+        && d.creeLe is int;
+    }
     // Aligné sur schemaEtatScene (src/lib/schemas/carte.ts).
     function etatSceneValide(d) {
       return d.keys().hasOnly(['portesOuvertes', 'exploration', 'explorationRaz'])
@@ -110,6 +124,15 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['portesOuvertes'])
           && request.resource.data.portesOuvertes is map;
         allow delete: if estMj(table);
+
+        // Dessins du MJ (lot L5.4) : murs, obstacles, portes, mur de force.
+        // Le MJ seul les trace et les efface ; une porte dessinée s'ouvre
+        // comme les autres, par portesOuvertes (ci-dessus).
+        match /dessins/{dessin} {
+          allow read: if estMembre(table);
+          allow create, update: if estMj(table) && dessinValide(request.resource.data);
+          allow delete: if estMj(table);
+        }
 
         // Un document par jeton. Le MJ pose, bouge, tue et retire tout. Un
         // joueur pose son PJ (identifiant pj-<son uid>), ne bouge que ses

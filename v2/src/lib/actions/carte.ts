@@ -1,8 +1,9 @@
 import { deleteDoc, deleteField, doc, increment, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
 import { GrilleExploration } from '../battlemap/exploration';
-import type { Case } from '../battlemap/geometrie';
+import type { Case, Point } from '../battlemap/geometrie';
+import type { TypeDessin } from '../battlemap/dessins';
 import { db } from '../firebase/client';
-import { schemaEtatScene, schemaJeton, type Jeton } from '../schemas/carte';
+import { schemaDessin, schemaEtatScene, schemaJeton, type Jeton } from '../schemas/carte';
 import { session } from '../session.svelte';
 
 /*
@@ -83,6 +84,33 @@ export async function reinitialiserExploration(scene: string): Promise<void> {
 /** MJ : « Tout révéler » — toute la scène est explorée. */
 export async function toutReveler(scene: string, colonnes: number, lignes: number): Promise<void> {
   await setDoc(doc(db, cheminScene(scene)), { exploration: GrilleExploration.pleine(colonnes, lignes).versTexte() }, { merge: true });
+}
+
+/**
+ * MJ : trace un mur, un obstacle ou une porte (lot L5.4). `tours` fait d'un
+ * mur un mur de force. Un document par dessin, identifiant unique.
+ */
+export async function tracerDessin(
+  scene: string,
+  type: TypeDessin,
+  a: Point,
+  b: Point,
+  options: { tours?: number; lanceur?: string | null } = {},
+): Promise<void> {
+  const id = `d-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  const dessin = schemaDessin.parse({
+    type,
+    ax: a[0], ay: a[1], bx: b[0], by: b[1],
+    ...(type === 'porte' ? { ouverte: false } : {}),
+    ...(type === 'mur' && options.tours ? { tours: options.tours, lanceur: options.lanceur ?? null } : {}),
+    creeLe: Date.now(),
+  });
+  await setDoc(doc(db, `${cheminScene(scene)}/dessins/${id}`), dessin);
+}
+
+/** MJ : efface un dessin, chez tout le monde. */
+export async function effacerDessin(scene: string, id: string): Promise<void> {
+  await deleteDoc(doc(db, `${cheminScene(scene)}/dessins/${id}`));
 }
 
 /** Message lisible pour une écriture refusée. */
