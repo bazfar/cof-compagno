@@ -65,6 +65,8 @@ export interface CapaciteChoisie {
   id: string;
   /** Option retenue à l'acquisition (carac de Spécimen d'élite, « def » ou « reduction » en Voie du chaos…). */
   choix?: string;
+  /** Rang offert (Polyvalence de l'Humain, règle 2.0 du 16/10) : ne coûte aucun point de voie. Jamais présent en v1. */
+  offert?: true;
 }
 
 export interface MutationAcquise {

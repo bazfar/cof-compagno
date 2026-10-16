@@ -55,7 +55,8 @@ export const schemaFiche = z.strictObject({
 
   // ---- Règles (mêmes champs que regles/fiche-calcul.ts) ----
   caracs: z.partialRecord(z.enum(CARACS), entier),
-  capacites: z.array(z.object({ id: z.string(), choix: z.string().optional() })),
+  /** `offert` : rang gratuit (Polyvalence de l'Humain, décision du 16/10), hors budget de points. */
+  capacites: z.array(z.object({ id: z.string(), choix: z.string().optional(), offert: z.literal(true).optional() })),
   capacitesRace: z.array(entier),
   capacitesRaceChoix: z.record(z.string(), z.string()),
   voiesHorsProfil: z.array(z.object({ voie: z.string(), cout: z.number().optional() })),

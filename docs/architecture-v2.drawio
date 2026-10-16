@@ -19,7 +19,7 @@
         <mxCell id="accueil" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;ecrans/Accueil.svelte&lt;/b&gt;&lt;hr&gt;formulaire : nom, rôle, code MJ&lt;br&gt;→ rejoindreCommeJoueur / rejoindreCommeMj" vertex="1">
           <mxGeometry height="86" width="260" x="40" y="334" as="geometry" />
         </mxCell>
-        <mxCell id="joueur" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;ecrans/EcranJoueur.svelte&lt;/b&gt;&lt;hr&gt;accueil joueur (fiche : lot L2)&lt;br&gt;BarreHaut + ListeJoueurs" vertex="1">
+        <mxCell id="joueur" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;ecrans/EcranJoueur.svelte&lt;/b&gt;&lt;hr&gt;MesPersonnages (L2.2b, à la demande)&lt;br&gt;carte, ListeJoueurs" vertex="1">
           <mxGeometry height="70" width="260" x="40" y="440" as="geometry" />
         </mxCell>
         <mxCell id="mj" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;ecrans/PosteMj.svelte&lt;/b&gt;&lt;hr&gt;poste MJ (séances, combat… : lots L3-L6)&lt;br&gt;BarreHaut + ListeJoueurs" vertex="1">
@@ -64,8 +64,8 @@
         <mxCell id="depcruise" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;.dependency-cruiser.cjs&lt;/b&gt;&lt;hr&gt;pas-de-cycle : aucune dépendance circulaire&lt;br&gt;ecrans-sans-firestore : écrans et composants&lt;br&gt;  n'importent jamais firebase/client ni le SDK" vertex="1">
           <mxGeometry height="86" width="330" x="1380" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="tests" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/  (unitaires 454 + 4 à faire ; composants 3 ; règles 44)&lt;/b&gt;&lt;hr&gt;unitaires/ : table, schemas-acces, schemas-carte,&lt;br&gt;  donnees-regles, donnees-bestiaire-objets,&lt;br&gt;  conversion-v1, battlemap, battlemap-vue,&lt;br&gt;  battlemap-dessins, battlemap-import,&lt;br&gt;  fiche, fiche-ecritures, creation&lt;br&gt;equivalence-v1 : 600 fiches + 9 réelles&lt;br&gt;battlemap-equivalence-v1 : js/carte.js&lt;br&gt;battlemap-bugs-v1 : 10 bugs v1 (4 en L6)&lt;br&gt;composants/ : CarteTable (jsdom, faux magasins)&lt;br&gt;regles/ : firestore, carte, persos (émulateur)" vertex="1">
-          <mxGeometry height="246" width="330" x="1380" y="220" as="geometry" />
+        <mxCell id="tests" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/  (unitaires 459 + 4 à faire ; composants 11 ; règles 44)&lt;/b&gt;&lt;hr&gt;unitaires/ : table, schemas-acces, schemas-carte,&lt;br&gt;  donnees-regles, donnees-bestiaire-objets,&lt;br&gt;  conversion-v1, battlemap, battlemap-vue,&lt;br&gt;  battlemap-dessins, battlemap-import,&lt;br&gt;  fiche, fiche-ecritures, creation&lt;br&gt;equivalence-v1 : 600 fiches + 9 réelles&lt;br&gt;battlemap-equivalence-v1 : js/carte.js&lt;br&gt;battlemap-bugs-v1 : 10 bugs v1 (4 en L6)&lt;br&gt;composants/ : CarteTable, creation (jsdom)&lt;br&gt;regles/ : firestore, carte, persos (émulateur)" vertex="1">
+          <mxGeometry height="230" width="330" x="1380" y="220" as="geometry" />
         </mxCell>
         <mxCell id="npm" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;npm run verifier&lt;/b&gt;&lt;hr&gt;donnees:verifier : src/donnees à jour avec la v1&lt;br&gt;scenes:verifier : géométrie et images à jour&lt;br&gt;check : svelte-check + tsc (strict)&lt;br&gt;cycles : dependency-cruiser&lt;br&gt;test : vitest, unitaires + composants&lt;br&gt;build : vite&lt;br&gt;test:regles : émulateur Firestore&lt;br&gt;deployer = verifier puis hosting:v2 + règles&lt;br&gt;CI : .github/workflows/v2-verifier.yml" vertex="1">
           <mxGeometry height="198" width="330" x="1380" y="664" as="geometry" />
@@ -250,7 +250,7 @@
         <mxCell id="l5k" parent="1" source="bmEquiv" target="dd2vtt" style="endArrow=open;dashed=1;html=1;" value="lit" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="titre-l2" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Fiche joueur (lots L2.1, L2.2a) — un seul schéma de fiche, éprouvé sur les 9 fiches réelles ; écritures champ par champ ; règles de création" vertex="1">
+        <mxCell id="titre-l2" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Fiche joueur (lots L2.1 à L2.2b) — un seul schéma de fiche, éprouvé sur les 9 fiches réelles ; écritures champ par champ ; assistant de création" vertex="1">
           <mxGeometry height="24" width="1400" x="40" y="2110" as="geometry" />
         </mxCell>
         <mxCell id="fSchema" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/fiche.ts  (Zod strict)&lt;/b&gt;&lt;hr&gt;schemaFiche : champs de la fiche de calcul&lt;br&gt;+ identité, proprietaireUid, schemaVersion&lt;br&gt;inventaire en dictionnaire, modules&lt;br&gt;progression, vecu, usages (réservés vides)" vertex="1">
@@ -273,6 +273,27 @@
         </mxCell>
         <mxCell id="fCreaTests" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/unitaires/creation.test.ts&lt;/b&gt;&lt;hr&gt;chaque règle et chaque bug v1 corrigé&lt;br&gt;10 classes × 6 races × niveaux 1, 5, 9 :&lt;br&gt;fiche valide, statistiques identiques" vertex="1">
           <mxGeometry height="86" width="300" x="40" y="2310" as="geometry" />
+        </mxCell>
+        <mxCell id="fAssistant" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/AssistantCreation.svelte  (L2.2b)&lt;/b&gt;&lt;hr&gt;6 étapes libres ; chaque geste appelle&lt;br&gt;creation.ts, un refus s'affiche tel quel&lt;br&gt;brouillon gardé dans le navigateur,&lt;br&gt;effacé à la création ; Polyvalence" vertex="1">
+          <mxGeometry height="118" width="300" x="720" y="2310" as="geometry" />
+        </mxCell>
+        <mxCell id="fMes" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/MesPersonnages.svelte&lt;/b&gt;&lt;hr&gt;les personnages du joueur, le joué&lt;br&gt;(persoActif) ; ouvre l'assistant ;&lt;br&gt;le premier créé devient le joué" vertex="1">
+          <mxGeometry height="86" width="290" x="1060" y="2310" as="geometry" />
+        </mxCell>
+        <mxCell id="l2i" parent="1" source="fAssistant" target="fCreation" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l2j" parent="1" source="fAssistant" target="fActions" style="endArrow=open;dashed=1;html=1;" value="creerPerso" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l2k" parent="1" source="fMes" target="fAssistant" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l2l" parent="1" source="fMes" target="fMagasin" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l2m" parent="1" source="joueur" target="fMes" style="endArrow=open;dashed=1;html=1;" value="import() à la demande" edge="1">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="l2f" parent="1" source="fCreation" target="fDoc" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />

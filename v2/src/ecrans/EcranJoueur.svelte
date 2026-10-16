@@ -5,14 +5,21 @@
 
   // La battlemap (lot L5.3) est chargée à part, comme côté MJ.
   const carte = import('../composants/CarteTable.svelte');
+  // Les personnages aussi (L2.2b) : ils embarquent les données de règles
+  // (classes, voies, sorts, objets), trop lourdes pour l'écran d'accueil.
+  const personnages = import('../composants/MesPersonnages.svelte');
 </script>
 
 <BarreHaut etiquette="Joueur" />
 <main>
-  <section class="carte">
-    <h1>Bienvenue, {session.nom}</h1>
-    <p>Ta fiche arrive avec le lot L2. La carte ci-dessous est celle que le MJ montre à la table.</p>
-  </section>
+  <h1>Bienvenue, {session.nom}</h1>
+  {#await personnages}
+    <p>Chargement de tes personnages…</p>
+  {:then module}
+    <module.default />
+  {:catch e}
+    <p role="alert">Personnages indisponibles : {String(e)}</p>
+  {/await}
   {#await carte}
     <p>Chargement de la battlemap…</p>
   {:then module}

@@ -20,6 +20,10 @@ import type { CapaciteChoisie, Carac, FicheCalcul } from './fiche-calcul.ts';
  *       3 au 5, 4 au 7, 5 au 9). Seuls les choix qu'ils demandent
  *       (Ambition, Sang Mêlé, Sang de Guerre, nation elfique) restent au
  *       joueur. C'est un CHANGEMENT de règle par rapport à la v1.
+ *   Polyvalence (Humain, rang 3, décidé le 16/10, L2.2b) : un rang GRATUIT
+ *       dans une voie de classe, au choix du joueur, dans l'ordre des
+ *       rangs, quel que soit son coût (v1 : aucun effet). Il est marqué
+ *       `offert` sur la fiche.
  *
  * Les calculs eux-mêmes (modificateurs, PV, CA…) restent ceux du port v1
  * (calculs.ts), qu'on ne touche pas ici.
@@ -109,7 +113,7 @@ export function choisirClasse(b: Brouillon, classe: string): Brouillon {
 export function choisirRace(b: Brouillon, race: string): Brouillon {
   if (!raceParId.has(race)) throw new RefusCreation(`Race inconnue : ${race}`);
   if (b.race === race) return b;
-  return { ...b, race, raceVariante: null, capacitesRaceChoix: {} };
+  return sansOffertPerdu({ ...b, race, raceVariante: null, capacitesRaceChoix: {} });
 }
 
 /**
@@ -123,7 +127,17 @@ export function changerNiveau(b: Brouillon, niveau: number): Brouillon {
   const choix = Object.fromEntries(Object.entries(b.capacitesRaceChoix).filter(([r]) => Number(r) <= rangMax));
   const dons = b.dons.slice(0, CalculsPersonnage.donsRequisPourNiveau(n));
   const donsChoix = Object.fromEntries(Object.entries(b.donsChoix).filter(([d]) => dons.includes(d)));
-  return { ...b, niveau: n, jetsPV: b.jetsPV.slice(0, n - 1), capacitesRaceChoix: choix, dons, donsChoix };
+  return sansOffertPerdu({ ...b, niveau: n, jetsPV: b.jetsPV.slice(0, n - 1), capacitesRaceChoix: choix, dons, donsChoix });
+}
+
+/**
+ * Quand Polyvalence n'est plus acquise (niveau baissé, autre race), le rang
+ * offert redevient un rang payé : il garde sa place dans l'ordre de sa
+ * voie, et la validation signale s'il dépasse le budget.
+ */
+function sansOffertPerdu(b: Brouillon): Brouillon {
+  if (polyvalenceAcquise(b) || !b.capacites.some((c) => c.offert)) return b;
+  return { ...b, capacites: b.capacites.map(({ offert: _o, ...c }) => c) };
 }
 
 // ----------------------------------------------------- Caractéristiques
@@ -196,6 +210,16 @@ export function varianteRequise(b: Brouillon): boolean {
   return !!race && race.variantes.length > 0 && rangRaceMax(b.niveau) >= 3;
 }
 
+/** Polyvalence (Humain, rang 3) : un rang offert dans une voie de classe. */
+export function polyvalenceAcquise(b: Brouillon): boolean {
+  return b.race === 'humain' && rangRaceMax(b.niveau) >= 3;
+}
+
+/** Le rang offert déjà choisi, s'il y en a un. */
+export function rangOffert(b: Brouillon): CapaciteChoisie | null {
+  return b.capacites.find((c) => c.offert) ?? null;
+}
+
 export function choisirVariante(b: Brouillon, code: string | null): Brouillon {
   const race = b.race ? raceParId.get(b.race) : undefined;
   if (code !== null && !race?.variantes.some((v) => v.code === code)) throw new RefusCreation('Nation inconnue pour cette race.');
@@ -226,7 +250,7 @@ export interface PointsVoie {
  */
 export function pointsVoie(b: Brouillon): PointsVoie {
   const total = 2 * b.niveau;
-  const depenses = b.capacites.reduce((t, c) => t + CalculsPersonnage.coutRangVoie(decouperCapacite(c.id).rang), 0)
+  const depenses = b.capacites.reduce((t, c) => t + (c.offert ? 0 : CalculsPersonnage.coutRangVoie(decouperCapacite(c.id).rang)), 0)
     + b.voiesHorsProfil.reduce((t, h) => t + h.cout, 0);
   return { total, depenses, restants: total - depenses };
 }
@@ -244,16 +268,27 @@ export function rangMaxDansVoie(b: Brouillon, idVoie: string): number {
   }, 0);
 }
 
-/** Acheter le rang suivant d'une voie (ordre obligatoire, v1). */
-export function prendreRang(b: Brouillon, idVoie: string, rang: number, choix?: string): Brouillon {
+/**
+ * Acheter le rang suivant d'une voie (ordre obligatoire, v1). Avec
+ * `offert`, c'est le rang gratuit de Polyvalence : voie de classe
+ * seulement, un seul par personnage.
+ */
+export function prendreRang(b: Brouillon, idVoie: string, rang: number, choix?: string, offert = false): Brouillon {
   if (!voiesOuvertes(b).includes(idVoie)) throw new RefusCreation('Cette voie n’est pas ouverte à ce personnage.');
   if (rang !== rangMaxDansVoie(b, idVoie) + 1 || rang > 5) throw new RefusCreation('Les rangs s’acquièrent dans l’ordre.');
-  if (pointsVoie(b).restants < CalculsPersonnage.coutRangVoie(rang)) throw new RefusCreation('Pas assez de points de capacité.');
+  if (offert) {
+    if (!polyvalenceAcquise(b)) throw new RefusCreation('Seul un Humain doté de Polyvalence reçoit un rang offert.');
+    if (rangOffert(b)) throw new RefusCreation('Le rang offert par Polyvalence est déjà choisi.');
+    if (!classeParId.get(b.classe ?? '')?.voies.some((v) => v.id === idVoie)) throw new RefusCreation('Polyvalence offre un rang dans une voie de ta classe.');
+  } else if (pointsVoie(b).restants < CalculsPersonnage.coutRangVoie(rang)) {
+    throw new RefusCreation('Pas assez de points de capacité.');
+  }
   const id = `${idVoie}.${rang}`;
   const options = CHOIX_CAPACITES[id];
   if (options && (choix === undefined || !options.includes(choix))) throw new RefusCreation('Cette capacité demande un choix.');
   if (!options && choix !== undefined) throw new RefusCreation('Cette capacité ne demande aucun choix.');
-  return { ...b, capacites: [...b.capacites, choix === undefined ? { id } : { id, choix }] };
+  const capacite: CapaciteChoisie = { id, ...(choix === undefined ? {} : { choix }), ...(offert ? { offert: true as const } : {}) };
+  return { ...b, capacites: [...b.capacites, capacite] };
 }
 
 /** Retirer le rang le plus haut d'une voie (v1 : refusé s'il existe un rang supérieur). */
@@ -540,6 +575,7 @@ export function avertissementsCreation(b: Brouillon): string[] {
   if (pts.restants > 0) a.push(`${pts.restants} point(s) de capacité non dépensé(s).`);
   if (aUnGrimoire(b.classe) && sortsAChoisir(b) > 0) a.push(`${sortsAChoisir(b)} sort(s) encore à apprendre.`);
   if (b.classe === 'pretre' && !b.cercleSpecialisation) a.push('Aucun Cercle choisi.');
+  if (polyvalenceAcquise(b) && !rangOffert(b)) a.push('Polyvalence : le rang offert reste à choisir.');
   if (b.capacites.some((c) => voieParId.get(decouperCapacite(c.id).voie)?.speciale)) a.push('Voie du chaos : à valider avec le MJ.');
   return a;
 }

@@ -26,8 +26,11 @@ import {
   kitDepart,
   lancerJetPV,
   pointsVoie,
+  polyvalenceAcquise,
   prendreDon,
   prendreRang,
+  rangMaxDansVoie,
+  rangOffert,
   rangRaceMax,
   RefusCreation,
   retirerDon,
@@ -145,6 +148,52 @@ describe('voies : 2 points par niveau, rangs 1-2 à 1 point, 3-5 à 2 points, da
     const n1 = changerNiveau(b, 1);
     expect(pointsVoie(n1).restants).toBe(-2);
     expect(erreursCreation(n1).some((e) => e.startsWith('Trop de points de capacité'))).toBe(true);
+  });
+});
+
+describe('Polyvalence (Humain, rang 3 au niveau 5) : un rang offert dans une voie de classe', () => {
+  const humain = (niveau: number) => avec((x) => choisirClasse(x, 'guerrier'), (x) => choisirRace(x, 'humain'), (x) => changerNiveau(x, niveau));
+
+  it('acquise au niveau 5, pas avant ; seulement pour l’Humain', () => {
+    expect(polyvalenceAcquise(humain(4))).toBe(false);
+    expect(polyvalenceAcquise(humain(5))).toBe(true);
+    expect(polyvalenceAcquise(changerNiveau(guerrierNain(), 5))).toBe(false);
+    expect(() => prendreRang(humain(4), 'guerrier.soldat', 1, undefined, true)).toThrow('Polyvalence');
+  });
+
+  it('le rang offert ne coûte rien, même un rang 3 ; un seul ; signalé tant qu’il manque', () => {
+    let b = humain(5);
+    expect(avertissementsCreation(b)).toContain('Polyvalence : le rang offert reste à choisir.');
+    b = prendreRang(prendreRang(b, 'guerrier.soldat', 1), 'guerrier.soldat', 2);
+    b = prendreRang(b, 'guerrier.soldat', 3, undefined, true);
+    expect(pointsVoie(b)).toEqual({ total: 10, depenses: 2, restants: 8 });
+    expect(rangOffert(b)).toEqual({ id: 'guerrier.soldat.3', offert: true });
+    expect(() => prendreRang(b, 'guerrier.peuple', 1, undefined, true)).toThrow('déjà choisi');
+    expect(avertissementsCreation(b)).not.toContain('Polyvalence : le rang offert reste à choisir.');
+  });
+
+  it('jamais hors profil ; les capacités à choix gardent leur choix', () => {
+    const b = debloquerHorsProfil(humain(5), 'chevalier.noble');
+    expect(() => prendreRang(b, 'chevalier.noble', 1, undefined, true)).toThrow('voie de ta classe');
+    expect(prendreRang(b, 'guerrier.elite', 1, 'DEX', true).capacites.at(-1)).toEqual({ id: 'guerrier.elite.1', choix: 'DEX', offert: true });
+  });
+
+  it('niveau redescendu sous 5 : le rang offert redevient payé, et le budget est vérifié', () => {
+    const b = prendreRang(humain(5), 'guerrier.soldat', 1, undefined, true);
+    const n4 = changerNiveau(b, 4);
+    expect(n4.capacites).toEqual([{ id: 'guerrier.soldat.1' }]);
+    expect(pointsVoie(n4).depenses).toBe(1);
+  });
+
+  it('la fiche garde la marque « offert » et ses points restants sont les mêmes que pendant la création', () => {
+    let b = avec((x) => ({ ...x, nom: 'Aldric' }), (x) => choisirClasse(x, 'guerrier'), (x) => choisirRace(x, 'humain'), sixPoints('FOR', 'CON'));
+    b = changerNiveau(b, 5);
+    b = [1, 2, 3, 4].reduce((y) => lancerJetPV(y, des(0.5)), b);
+    b = prendreDon(b, 'robuste');
+    b = prendreRang(b, 'guerrier.elite', 1, 'FOR', true);
+    const fiche = ficheDepuisBrouillon(b, 'u', 1);
+    expect(fiche.capacites).toEqual([{ id: 'guerrier.elite.1', choix: 'FOR', offert: true }]);
+    expect(statistiquesFiche(ficheCalculDepuisFiche(fiche)).pointsVoie).toEqual({ total: 10, depenses: 0, restants: 10 });
   });
 });
 
@@ -375,6 +424,10 @@ describe('toutes les classes × toutes les races, aux niveaux 1, 5 et 9', () => 
           break;
         }
       }
+    }
+    if (polyvalenceAcquise(b)) {
+      const voie = voiesOuvertes(b).find((v) => !v.endsWith('.chaos') && !CHOIX_CAPACITES[`${v}.${rangMaxDansVoie(b, v) + 1}`] && rangMaxDansVoie(b, v) < 5)!;
+      b = prendreRang(b, voie, rangMaxDansVoie(b, voie) + 1, undefined, true);
     }
     while (sortsAChoisir(b) > 0 && sortsProposes(b).length) b = apprendreSort(b, sortsProposes(b)[0]!);
     return b;

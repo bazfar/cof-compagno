@@ -18,6 +18,14 @@ import { session } from '../session.svelte';
 
 const cheminPerso = (id: string) => `tables/${session.table}/persos/${id}`;
 
+/** Message lisible pour une écriture de fiche refusée. */
+export function messageErreurPerso(erreur: unknown): string {
+  if (typeof erreur === 'object' && erreur !== null && 'code' in erreur && erreur.code === 'permission-denied') {
+    return "Action refusée : tu n'as pas le droit de faire ça.";
+  }
+  return erreur instanceof Error ? erreur.message : String(erreur);
+}
+
 /** Identifiant d'un nouveau personnage. */
 export function nouvelIdPerso(): string {
   return `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;

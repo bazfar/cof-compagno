@@ -767,7 +767,10 @@ export class CalculsPersonnage {
   static coutRangVoie(rang: number): number { return rang >= 3 ? 2 : 1; }
   pointsVoieTotal(): number { return 2 * (this.niveau || 1); }
   pointsVoieDepenses(): number {
-    const coutRangs = this.capacites.reduce((t, c) => t + CalculsPersonnage.coutRangVoie(decouperCapacite(c.id).rang), 0);
+    // Seul écart avec la v1, voulu : un rang offert (Polyvalence, règle 2.0
+    // décidée le 16/10) ne coûte rien. Les fiches v1 n'en ont jamais, le
+    // test d'équivalence n'est donc pas concerné.
+    const coutRangs = this.capacites.reduce((t, c) => t + (c.offert ? 0 : CalculsPersonnage.coutRangVoie(decouperCapacite(c.id).rang)), 0);
     const coutDeblocages = (this.f.voiesHorsProfil ?? []).reduce((t, hp) => t + (hp.cout || 0), 0);
     return coutRangs + coutDeblocages;
   }
