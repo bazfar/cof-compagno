@@ -109,3 +109,19 @@ export class GrilleExploration {
     return new GrilleExploration(colonnes, lignes, bits);
   }
 }
+
+/** Ce qu'un client a vu localement : pour quelle scène, depuis quelle remise à zéro. */
+export interface RepereExploration {
+  scene: string;
+  raz: number;
+}
+
+/**
+ * Faut-il repartir d'une exploration locale vide ? Oui au changement de
+ * scène, même si la nouvelle a les mêmes dimensions (bug v1 : deux scènes
+ * de même taille gardaient le brouillard de la précédente), et quand le MJ
+ * a remis l'exploration à zéro (le compteur explorationRaz a changé).
+ */
+export function explorationLocalePerimee(avant: RepereExploration | null, scene: string, raz: number): boolean {
+  return avant === null || avant.scene !== scene || avant.raz !== raz;
+}

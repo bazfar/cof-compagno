@@ -74,3 +74,21 @@ export function essaiSuivant(e: EssaiCompression): EssaiCompression | null {
   const px = Math.floor(e.pxParCase * 0.8);
   return px >= 16 ? { pxParCase: px, qualite: e.qualite } : null;
 }
+
+/**
+ * D'où vient la scène montrée, et peut-on l'afficher ? (bug v1 : un joueur
+ * recevait le changement de scène avant la scène importée elle-même, deux
+ * canaux temps réel indépendants, et restait sur l'ancienne.) Ici, une
+ * scène importée dont la description n'est pas encore arrivée est « en
+ * attente » : elle s'affiche dès qu'elle arrive. « introuvable » seulement
+ * une fois la liste des scènes importées chargée.
+ */
+export function sourceScene(
+  id: string,
+  importeesChargees: boolean,
+  idsImportees: readonly string[],
+): 'catalogue' | 'importee' | 'en-attente' | 'introuvable' {
+  if (!estSceneImportee(id)) return 'catalogue';
+  if (idsImportees.includes(id)) return 'importee';
+  return importeesChargees ? 'introuvable' : 'en-attente';
+}

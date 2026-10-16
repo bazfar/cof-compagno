@@ -17,14 +17,14 @@
   } from '../lib/actions/carte';
   import { placementParDefaut } from '../lib/battlemap/deplacement';
   import { dessinProche, etatDepuisDessins, type DessinCarte, type TypeDessin } from '../lib/battlemap/dessins';
-  import { GrilleExploration } from '../lib/battlemap/exploration';
+  import { explorationLocalePerimee, GrilleExploration, type RepereExploration } from '../lib/battlemap/exploration';
   import { sceneCalcul, type Case, type Point } from '../lib/battlemap/geometrie';
   import type { Role } from '../lib/battlemap/interactions';
   import type { JetonAffiche } from '../lib/battlemap/rendu';
   import { adresseImage, catalogueScenes, chargerGeometrie } from '../lib/battlemap/scenes';
   import type { VisionJeton } from '../lib/battlemap/visibilite';
   import type { CollectionSuivie, DocumentSuivi } from '../lib/firebase/suivre.svelte';
-  import { estSceneImportee, geometrieImportee } from '../lib/battlemap/import-image';
+  import { estSceneImportee, geometrieImportee, sourceScene } from '../lib/battlemap/import-image';
   import { suivreDessins, suivreEtatScene, suivreImageScene, suivreJetons, suivreScenesImportees, suivreTable } from '../lib/magasins/carte.svelte';
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
   import type { Dessin, EtatSceneDoc, ImageScene, Jeton } from '../lib/schemas/carte';
@@ -77,7 +77,10 @@
   const image = $derived(idScene === null ? '' : importee ? (imageSuivie?.etat.donnees?.image ?? '') : adresseImage(idScene));
   let erreurCatalogue = $state('');
   const erreurChargement = $derived(
-    erreurCatalogue || (importee && importees.etat.pret && !descriptionImportee ? "Cette scène importée n'existe plus : choisis-en une autre." : ''),
+    erreurCatalogue ||
+      (idScene && sourceScene(idScene, importees.etat.pret, importees.etat.elements.map((s) => s.id)) === 'introuvable'
+        ? "Cette scène importée n'existe plus : choisis-en une autre."
+        : ''),
   );
   let jetonsSuivis = $state<CollectionSuivie<Jeton> | null>(null);
   let etatSuivi = $state<DocumentSuivi<EtatSceneDoc> | null>(null);
@@ -136,17 +139,15 @@
   const etatScene = $derived(etatSuivi?.etat.donnees ?? null);
   let locale: GrilleExploration | null = null; // ce que ce client a vu (non réactif)
   let revisionLocale = $state(0);
-  let razVue: number | null = null;
-  let sceneLocale: string | null = null;
+  let repere: RepereExploration | null = null;
 
   // Nouvelle scène, ou remise à zéro par le MJ : on oublie l'exploration locale.
   $effect(() => {
     const g = geometrie;
     const raz = etatScene?.explorationRaz ?? 0;
     if (!g) return;
-    if (sceneLocale !== g.id || razVue !== raz) {
-      sceneLocale = g.id;
-      razVue = raz;
+    if (explorationLocalePerimee(repere, g.id, raz)) {
+      repere = { scene: g.id, raz };
       locale = new GrilleExploration(g.colonnes, g.lignes);
       revisionLocale++;
     }
