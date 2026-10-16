@@ -4,12 +4,12 @@
  * repose sur la connexion et sur firestore.rules, pas sur leur discrétion.
  */
 export const firebaseConfig = {
-  apiKey: 'AIzaSyBaSGv2u_h5rMEUrq1e65kMYmVvjkgtyTA',
-  authDomain: 'lejdr-b38ef.firebaseapp.com',
-  projectId: 'lejdr-b38ef',
-  storageBucket: 'lejdr-b38ef.firebasestorage.app',
-  messagingSenderId: '205930200251',
-  appId: '1:205930200251:web:5fefaa6ad92993dde97d9e',
+    apiKey: 'AIzaSyCpaJ-tj4WL8F-7CXHDUPqpkympRDgiHao',
+  authDomain: 'lejdr-v2.firebaseapp.com',
+  projectId: 'lejdr-v2',
+  storageBucket: 'lejdr-v2.firebasestorage.app',
+  messagingSenderId: '565261317471',
+  appId: '1:565261317471:web:cef07fcbeded20aafef2ea',
 };
 
 /** `npm run dev:emulateurs` lance Vite en mode « emulateurs » : aucune donnée réelle touchée. */
