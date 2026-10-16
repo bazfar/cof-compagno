@@ -58,10 +58,14 @@ Fiches (lot L2.1) : `tables/<table>/persos/<id>`, une fiche par personnage ; un 
 
 Fiches v1 (lot L2.2c) : `tables/<table>/importsV1/<id>`. Le MJ dépose les exports v1 (`composants/ImportFichesV1.svelte`) et attribue chacune à un joueur ; la fiche v1 y est gardée en texte JSON, telle qu'exportée. Le joueur ne lit que les siennes (requête filtrée sur `proprietaireUid`) et la reprend dans l'assistant (`lib/regles/import-v1.ts`) : il rechoisit voies, capacités raciales, hors profil et dons, tout le reste est reporté, les objets rafraîchis depuis le catalogue ; il ne peut ensuite écrire que `reprisPar`, une seule fois.
 
+Fiche vivante (lot L2.3) : `composants/FicheVivante.svelte` affiche ce que calcule `lib/fiche/vue-fiche.ts` (pur, testé sur les 9 fiches réelles) ; un champ en cours de saisie n'est jamais écrasé par une mise à jour. Le MJ voit tout le groupe (`composants/GroupeMj.svelte`). Notes libres dans le champ `notes` de la fiche ; portrait dans son propre document, `persos/<id>/images/portrait` (data URL compressée, 256 px), écrit par le propriétaire ou le MJ.
+
 Battlemap (lot L5.3) : `tables/<table>` porte `sceneActive` (la scène
 montrée, écrite par le MJ) ; `tables/<table>/scenes/<scène>` l'état
 partagé (portes, exploration) et `…/jetons/<jeton>` un document par
-jeton. `…/dessins/<dessin>` : un document par mur, obstacle, porte ou mur
+jeton ; le jeton d'un PJ s'appelle `pj-<id du personnage>` (lot L2.3) et
+un joueur ne pose que celui de son personnage joué ; nom, PV et portrait
+sont relus dans la fiche. `…/dessins/<dessin>` : un document par mur, obstacle, porte ou mur
 de force tracé par le MJ (lot L5.4). `tables/<table>/scenesImportees/<id>`
 décrit une scène importée par le MJ depuis une image (lot L5.5), et
 `…/image/donnees` contient l'image compressée. Les règles vérifient les droits ; les

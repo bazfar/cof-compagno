@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const actions = vi.hoisted(() => ({
   creerPerso: vi.fn(async (_id: string, _fiche: unknown) => {}),
   choisirPersoActif: vi.fn(async (_id: string) => {}),
+  enregistrerPortrait: vi.fn(async (_id: string, _image: string) => {}),
   deposerImportV1: vi.fn(async (_id: string, _d: unknown) => {}),
   marquerImportRepris: vi.fn(async (_id: string, _perso: string) => {}),
   supprimerImportV1: vi.fn(async (_id: string) => {}),
@@ -18,6 +19,7 @@ const actions = vi.hoisted(() => ({
 vi.mock('../../src/lib/actions/persos', () => ({
   creerPerso: actions.creerPerso,
   choisirPersoActif: actions.choisirPersoActif,
+  enregistrerPortrait: actions.enregistrerPortrait,
   nouvelIdPerso: () => 'p-nouveau',
   messageErreurPerso: (e: unknown) => String(e),
 }));
@@ -38,6 +40,7 @@ const { default: ImportFichesV1 } = await import('../../src/composants/ImportFic
 
 const FIXTURE = readFileSync('tests/fixtures/fiches-v1.json', 'utf8');
 const KARGASH = JSON.parse(FIXTURE).fiches.find((f: { nom: string }) => f.nom.startsWith('Kargash'));
+const PORTRAIT = 'data:image/jpeg;base64,AAAA';
 const bouton = (nom: string | RegExp) => screen.getByRole('button', { name: nom });
 
 beforeEach(() => {
@@ -87,7 +90,8 @@ describe('joueur : reprise d’une fiche v1', () => {
   beforeEach(() => {
     session.uid = 'alice';
     session.nom = 'Alice';
-    imports.elements = [{ id: 'i1', proprietaireUid: 'alice', nom: KARGASH.nom, importeLe: 1, v1Json: JSON.stringify(KARGASH) }];
+    // Portrait v1 (L2.3) : repris dans son propre document à la création.
+    imports.elements = [{ id: 'i1', proprietaireUid: 'alice', nom: KARGASH.nom, importeLe: 1, v1Json: JSON.stringify({ ...KARGASH, portrait: PORTRAIT }) }];
   });
 
   it('Reprendre → anciens choix repris par les règles → fiche créée avec les valeurs v1, fiche marquée reprise', async () => {
@@ -109,6 +113,7 @@ describe('joueur : reprise d’une fiche v1', () => {
     await fireEvent.click(bouton(/^Récapitulatif/));
     await fireEvent.click(bouton('Créer le personnage'));
     await waitFor(() => expect(actions.marquerImportRepris).toHaveBeenCalledWith('i1', 'p-nouveau'));
+    expect(actions.enregistrerPortrait).toHaveBeenCalledWith('p-nouveau', PORTRAIT);
     const fiche = actions.creerPerso.mock.calls[0]![1] as Record<string, unknown>;
     expect(fiche).toMatchObject({
       nom: KARGASH.nom, classe: 'barde', race: 'nain', niveau: 3, piecesOr: KARGASH.piecesOr,

@@ -45,6 +45,8 @@ const schemaReprise = z.strictObject({
     sortsConnus: z.array(z.string()),
     sortsPrepares: z.array(z.string()),
     modules: z.record(z.string(), z.unknown()),
+    notes: z.string(),
+    portrait: z.string().nullable(),
   }),
 });
 

@@ -5,7 +5,6 @@
     deplacerJeton,
     effacerDessin,
     enregistrerExploration,
-    idJetonPJ,
     marquerMort,
     messageErreurCarte,
     montrerScene,
@@ -16,6 +15,7 @@
     tracerDessin,
   } from '../lib/actions/carte';
   import { placementParDefaut } from '../lib/battlemap/deplacement';
+  import { enrichirJetons, idJetonPerso, persoDuJeton, pjAPoser, type InfoPersoJeton } from '../lib/battlemap/jetons-pj';
   import { dessinProche, etatDepuisDessins, type DessinCarte, type TypeDessin } from '../lib/battlemap/dessins';
   import { explorationAffichee, explorationLocalePerimee, GrilleExploration, type RepereExploration } from '../lib/battlemap/exploration';
   import { sceneCalcul, type Case, type Point } from '../lib/battlemap/geometrie';
@@ -27,6 +27,8 @@
   import { estSceneImportee, geometrieImportee, sourceScene } from '../lib/battlemap/import-image';
   import { suivreDessins, suivreEtatScene, suivreImageScene, suivreJetons, suivreScenesImportees, suivreTable } from '../lib/magasins/carte.svelte';
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
+  import { suivrePersos } from '../lib/magasins/persos.svelte';
+  import { suivrePortraitsJetons } from '../lib/magasins/portraits-jetons.svelte';
   import type { Dessin, EtatSceneDoc, ImageScene, Jeton } from '../lib/schemas/carte';
   import type { GeometrieScene } from '../lib/schemas/scene';
   import { session } from '../lib/session.svelte';
@@ -53,10 +55,14 @@
   const table = suivreTable(session.table);
   const joueurs = suivreJoueurs(session.table); // MJ : PJ à poser
   const importees = suivreScenesImportees(session.table); // descriptions seules (L5.5)
+  const persos = suivrePersos(session.table); // nom, PV des jetons de PJ (L2.3)
+  const portraitsJetons = suivrePortraitsJetons(session.table);
   onDestroy(() => {
     table.arreter();
     joueurs.arreter();
     importees.arreter();
+    persos.arreter();
+    portraitsJetons.arreter();
   });
 
   const idScene = $derived(table.etat.donnees?.sceneActive ?? null);
@@ -127,8 +133,22 @@
   const mursDeForce = $derived(dessins.filter((d) => d.type === 'mur' && d.tours).map((d) => ({ a: d.a, b: d.b, tours: d.tours as number })));
 
   // ---------- Jetons ----------
+  // Jetons de PJ reliés à leur fiche (L2.3) : nom, PV et portrait relus en direct.
+  const fiches = $derived(new Map(persos.etat.elements.map((p) => [p.id, p])));
+  const idsPersosPoses = $derived(
+    (jetonsSuivis?.etat.elements ?? []).map((j) => persoDuJeton(j.id)).filter((id): id is string => !!id && fiches.has(id)),
+  );
+  $effect(() => portraitsJetons.suivre(idsPersosPoses));
+  const infosPersos = $derived(
+    new Map<string, InfoPersoJeton>(
+      persos.etat.elements.map((p) => [p.id, { nom: p.nom, pv: { actuel: p.pvActuel ?? p.pvMax, max: p.pvMax }, portrait: portraitsJetons.images[p.id] ?? null }]),
+    ),
+  );
   const jetons: JetonAffiche[] = $derived(
-    (jetonsSuivis?.etat.elements ?? []).map((j) => ({ id: j.id, genre: j.genre, nom: j.nom, couleur: j.couleur, cx: j.cx, cy: j.cy, mort: j.mort })),
+    enrichirJetons(
+      (jetonsSuivis?.etat.elements ?? []).map((j) => ({ id: j.id, genre: j.genre, nom: j.nom, couleur: j.couleur, cx: j.cx, cy: j.cy, mort: j.mort })),
+      infosPersos,
+    ),
   );
   const proprietaires = $derived(new Map((jetonsSuivis?.etat.elements ?? []).map((j) => [j.id, j.proprietaire])));
   const miens = $derived(new Set(jetons.filter((j) => proprietaires.get(j.id) === session.uid).map((j) => j.id)));
@@ -197,26 +217,29 @@
     agir(basculerPorte(idScene, idPorte, !actuelle));
   }
 
-  const monJetonPose = $derived(jetons.some((j) => j.id === idJetonPJ(session.uid)));
+  // Personnage joué (L2.3) : c'est son jeton que le joueur pose.
+  const moi = $derived(joueurs.etat.elements.find((j) => j.id === session.uid) ?? null);
+  const monPerso = $derived(moi?.persoActif ? (fiches.get(moi.persoActif) ?? null) : null);
+  const monJetonPose = $derived(!!monPerso && jetons.some((j) => j.id === idJetonPerso(monPerso.id)));
 
   function poserMonJeton() {
-    if (!idScene || !geometrie) return;
+    if (!idScene || !geometrie || !monPerso) return;
     const pos = placementParDefaut(sceneCalcul(geometrie), jetons, true);
-    const couleur = COULEURS_PJ[jetons.filter((j) => j.genre === 'pj').length % COULEURS_PJ.length] as string;
-    agir(poserJeton(idScene, idJetonPJ(session.uid), { genre: 'pj', nom: session.nom, couleur, ...pos, proprietaire: session.uid }));
+    const couleur = moi?.couleur ?? (COULEURS_PJ[jetons.filter((j) => j.genre === 'pj').length % COULEURS_PJ.length] as string);
+    agir(poserJeton(idScene, idJetonPerso(monPerso.id), { genre: 'pj', nom: monPerso.nom, couleur, ...pos, proprietaire: session.uid }));
   }
 
-  // MJ : poser les PJ des joueurs qui n'en ont pas encore sur la scène.
-  const joueursSansJeton = $derived(joueurs.etat.elements.filter((j) => !jetons.some((t) => t.id === idJetonPJ(j.id))));
+  // MJ : poser le personnage joué de chaque joueur qui n'a pas encore son jeton.
+  const joueursSansJeton = $derived(pjAPoser(joueurs.etat.elements, fiches, jetons));
   function poserPJDesJoueurs() {
     if (!idScene || !geometrie) return;
     const scene = sceneCalcul(geometrie);
     const places = [...jetons];
-    for (const [i, joueur] of joueursSansJeton.entries()) {
+    for (const [i, { joueur, idPerso, nom }] of joueursSansJeton.entries()) {
       const pos = placementParDefaut(scene, places, true);
       const couleur = joueur.couleur ?? (COULEURS_PJ[(places.filter((j) => j.genre === 'pj').length + i) % COULEURS_PJ.length] as string);
-      places.push({ id: idJetonPJ(joueur.id), genre: 'pj', nom: joueur.nom, couleur, ...pos });
-      agir(poserJeton(idScene, idJetonPJ(joueur.id), { genre: 'pj', nom: joueur.nom, couleur, ...pos, proprietaire: joueur.id }));
+      places.push({ id: idJetonPerso(idPerso), genre: 'pj', nom, couleur, ...pos });
+      agir(poserJeton(idScene, idJetonPerso(idPerso), { genre: 'pj', nom, couleur, ...pos, proprietaire: joueur.id }));
     }
   }
 
@@ -343,7 +366,11 @@
     {/if}
   {:else if idScene && geometrie && !monJetonPose}
     <div class="outils">
-      <button onclick={poserMonJeton}>Poser mon jeton</button>
+      {#if monPerso}
+        <button onclick={poserMonJeton}>Poser le jeton de {monPerso.nom}</button>
+      {:else}
+        <span class="aide">Choisis ton personnage joué pour poser ton jeton.</span>
+      {/if}
     </div>
   {/if}
 

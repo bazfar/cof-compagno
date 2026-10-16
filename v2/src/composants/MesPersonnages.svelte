@@ -9,6 +9,8 @@
   import { brouillonDepuisV1, ErreurImportV1 } from '../lib/regles/import-v1';
   import { session } from '../lib/session.svelte';
   import AssistantCreation from './AssistantCreation.svelte';
+  import FicheVivante from './FicheVivante.svelte';
+  import Portrait from './Portrait.svelte';
 
   /*
    * Les personnages du joueur connecté (lot L2.2b). Un joueur peut en avoir
@@ -19,6 +21,9 @@
    * Fiches v1 à reprendre (L2.2c) : celles que le MJ a attribuées au joueur
    * et qu'il n'a pas encore reprises. « Reprendre » ouvre l'assistant sur
    * la fiche v1.
+   *
+   * Fiche vivante (L2.3) : celle du personnage choisi dans la liste, par
+   * défaut le personnage joué.
    */
 
   const persos = suivrePersos(session.table);
@@ -36,6 +41,8 @@
   );
   const actif = $derived(joueurs.etat.elements.find((j) => j.id === session.uid)?.persoActif ?? null);
 
+  let choisi = $state<string | null>(null);
+  const ouverte = $derived(miens.find((p) => p.id === (choisi ?? actif)) ?? miens[0] ?? null);
   let enCreation = $state(false);
   let depart = $state<Brouillon | null>(null);
   let message = $state('');
@@ -89,7 +96,8 @@
       <ul>
         {#each miens as p (p.id)}
           <li class:actif={p.id === actif}>
-            <strong>{p.nom}</strong>
+            <Portrait idPerso={p.id} nom={p.nom} taille={36} />
+            <button class="lien" aria-label={`Ouvrir la fiche de ${p.nom}`} aria-pressed={ouverte?.id === p.id} onclick={() => (choisi = p.id)}><strong>{p.nom}</strong></button>
             <span>{raceParId.get(p.race ?? '')?.nom ?? '—'} · {classeParId.get(p.classe ?? '')?.nom ?? '—'} · niveau {p.niveau}</span>
             <span class="espace"></span>
             {#if p.id === actif}
@@ -116,6 +124,11 @@
     {/if}
     {#if message}<p class="erreur" role="alert">{message}</p>{/if}
   </section>
+  {#if ouverte}
+    {#key ouverte.id}
+      <FicheVivante fiche={ouverte} modifiable={true} />
+    {/key}
+  {/if}
 {/if}
 
 <style>
@@ -139,6 +152,16 @@
   }
   .espace {
     flex: 1 1 auto;
+  }
+  .lien {
+    min-height: 0;
+    padding: 0;
+    background: none;
+    color: var(--couleur-encre);
+    font-weight: 400;
+  }
+  .lien[aria-pressed='true'] {
+    text-decoration: underline;
   }
   ul {
     list-style: none;

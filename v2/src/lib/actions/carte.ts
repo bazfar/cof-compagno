@@ -21,9 +21,6 @@ import { session } from '../session.svelte';
 const cheminScene = (scene: string) => `tables/${session.table}/scenes/${scene}`;
 const cheminJeton = (scene: string, id: string) => `${cheminScene(scene)}/jetons/${id}`;
 
-/** Identifiant du jeton de PJ d'un joueur : un seul par joueur et par scène. */
-export const idJetonPJ = (uid: string) => `pj-${uid}`;
-
 /** MJ : scène montrée à toute la table (null = aucune). */
 export async function montrerScene(scene: string | null): Promise<void> {
   await setDoc(doc(db, 'tables', session.table), { sceneActive: scene }, { merge: true });

@@ -17,12 +17,14 @@ vi.mock('firebase/firestore', () => ({
   doc: (_db: unknown, ...p: string[]) => ({ chemin: p.join('/') }),
   setDoc: async (r: { chemin: string }, donnees: unknown) => { appels.push({ fn: 'setDoc', chemin: r.chemin, donnees }); },
   updateDoc: async (r: { chemin: string }, donnees: unknown) => { appels.push({ fn: 'updateDoc', chemin: r.chemin, donnees }); },
+  deleteDoc: async (r: { chemin: string }) => { appels.push({ fn: 'deleteDoc', chemin: r.chemin, donnees: undefined }); },
 }));
 
 const { session } = await import('../../src/lib/session.svelte');
 const actions = await import('../../src/lib/actions/persos');
 const { ficheDepuisV1 } = await import('../../src/lib/regles/fiche-document');
 const { schemaFiche } = await import('../../src/lib/schemas/fiche');
+const { LIMITE_PORTRAIT, schemaPortrait } = await import('../../src/lib/schemas/portrait');
 
 const FICHE_V1 = JSON.parse(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../fixtures/fiches-v1.json'), 'utf8')).fiches[0];
 const regles = readFileSync('firestore.rules', 'utf8');
@@ -63,11 +65,38 @@ describe('écritures champ par champ', () => {
   });
 });
 
+describe('fiche vivante (L2.3)', () => {
+  it('PP bornés, notes tronquées : un seul champ chacun', async () => {
+    await actions.modifierPP('p-1', 30, 12);
+    await actions.modifierNotes('p-1', 'x'.repeat(10_050));
+    expect(appels[0]).toEqual({ fn: 'updateDoc', chemin: 'tables/t1/persos/p-1', donnees: { ppActuel: 12 } });
+    expect(appels[1]?.chemin).toBe('tables/t1/persos/p-1');
+    expect(Object.keys(appels[1]?.donnees as object)).toEqual(['notes']);
+    expect((appels[1]?.donnees as { notes: string }).notes).toHaveLength(10_000);
+  });
+
+  it('le portrait va dans son propre document, jamais dans la fiche ; une image invalide est refusée', async () => {
+    await actions.enregistrerPortrait('p-1', 'data:image/jpeg;base64,AAAA');
+    await actions.retirerPortrait('p-1');
+    expect(appels[0]).toMatchObject({ fn: 'setDoc', chemin: 'tables/t1/persos/p-1/images/portrait', donnees: { image: 'data:image/jpeg;base64,AAAA' } });
+    expect(appels[1]).toEqual({ fn: 'deleteDoc', chemin: 'tables/t1/persos/p-1/images/portrait', donnees: undefined });
+    await expect(actions.enregistrerPortrait('p-1', 'https://exemple.fr/image.png')).rejects.toThrow();
+    expect(appels).toHaveLength(2);
+  });
+});
+
 describe('schéma de fiche aligné sur firestore.rules', () => {
   it('mêmes champs autorisés des deux côtés', () => {
     const corps = regles.slice(regles.indexOf('function ficheValide('));
     const liste = /hasOnly\(\[([^\]]*)\]\)/.exec(corps)?.[1] ?? '';
     const champsRegles = liste.split(',').map((c) => c.trim().replace(/'/g, '')).filter(Boolean).sort();
     expect(champsRegles).toEqual(Object.keys(schemaFiche.shape).sort());
+  });
+
+  it('portrait : mêmes champs et même limite que portraitValide', () => {
+    const corps = regles.slice(regles.indexOf('function portraitValide('));
+    const liste = /hasOnly\(\[([^\]]*)\]\)/.exec(corps)?.[1] ?? '';
+    expect(liste.split(',').map((c) => c.trim().replace(/'/g, '')).sort()).toEqual(Object.keys(schemaPortrait.shape).sort());
+    expect(corps).toContain(`d.image.size() <= ${LIMITE_PORTRAIT}`);
   });
 });

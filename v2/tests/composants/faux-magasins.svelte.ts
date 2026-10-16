@@ -15,10 +15,13 @@ function documentVide() {
   return { etat, arreter: () => {} };
 }
 
+/** Jetons de la scène montrée (L2.3 : jetons de PJ reliés aux fiches). */
+export const jetonsScene = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+
 export const magasinsCarte = {
   suivreTable: () => ({ etat: table, arreter: () => {} }),
   suivreEtatScene: documentVide,
-  suivreJetons: collectionVide,
+  suivreJetons: () => ({ etat: jetonsScene, arreter: () => {} }),
   suivreDessins: collectionVide,
   suivreScenesImportees: collectionVide,
   suivreImageScene: documentVide,
@@ -39,6 +42,19 @@ export const magasinsImports = {
   suivreMesImports: () => ({ etat: imports, arreter: () => {} }),
 };
 
+/** Portraits par personnage (L2.3) : le test y pose une image. */
+export const portraits = $state<Record<string, { image: string; majLe: number }>>({});
+
 export const magasinsPersos = {
   suivrePersos: () => ({ etat: persos, arreter: () => {} }),
+  suivrePortrait: (_table: string, id: string) => ({
+    etat: {
+      get donnees() {
+        return portraits[id] ?? null;
+      },
+      pret: true,
+      erreur: null,
+    },
+    arreter: () => {},
+  }),
 };

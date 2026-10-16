@@ -104,3 +104,28 @@ describe('fiches de personnage (L2.1)', () => {
     await assertFails(bob().doc(`${TABLE}/persos/p1`).set(fiche('alice', { jalons: { acquis: 1, requis: 3 } })));
   });
 });
+
+describe('fiche vivante (L2.3)', () => {
+  const image = 'data:image/jpeg;base64,AAAA';
+
+  it('notes : son propriétaire et le MJ les écrivent, au plus 10 000 caractères', async () => {
+    await poser('p1', fiche('alice'));
+    await assertSucceeds(alice().doc(`${TABLE}/persos/p1`).update({ notes: 'Doit 3 po au tavernier.' }));
+    await assertSucceeds(bob().doc(`${TABLE}/persos/p1`).update({ notes: 'Vu par le MJ.' }));
+    await assertFails(pour('carol').doc(`${TABLE}/persos/p1`).update({ notes: 'intrus' }));
+    await assertFails(alice().doc(`${TABLE}/persos/p1`).update({ notes: 'x'.repeat(10001) }));
+  });
+
+  it('portrait : document à part, changé par le propriétaire du personnage ou le MJ, lu par toute la table', async () => {
+    await poser('p1', fiche('alice'));
+    const chemin = `${TABLE}/persos/p1/images/portrait`;
+    await assertSucceeds(alice().doc(chemin).set({ image, majLe: 1 }));
+    await assertFails(pour('carol').doc(chemin).set({ image, majLe: 2 }));
+    await assertSucceeds(pour('carol').doc(chemin).get());
+    await assertSucceeds(bob().doc(chemin).set({ image, majLe: 3 }));
+    await assertFails(alice().doc(chemin).set({ image: 'https://exemple.fr/x.png', majLe: 4 }));
+    await assertFails(alice().doc(`${TABLE}/persos/p1/images/illustration`).set({ image, majLe: 5 }));
+    await assertFails(pour('carol').doc(chemin).delete());
+    await assertSucceeds(alice().doc(chemin).delete());
+  });
+});

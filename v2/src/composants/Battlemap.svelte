@@ -151,6 +151,7 @@
       largeur, hauteur, densite, vue, scene,
       image: imageChargee,
       jetons: dessines,
+      pvChiffres: role === 'mj',
       visions,
       masqueExploration: masquePret,
       tampon,

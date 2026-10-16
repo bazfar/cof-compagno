@@ -18,10 +18,11 @@ const schemaCoord = z.number().int().min(0).max(499);
  * pour que deux clients qui bougent deux jetons n'écrivent jamais le même
  * document (bug d'écrasement de la v1).
  *
- * Le jeton du PJ d'un joueur a pour identifiant `pj-<uid du joueur>` : un
- * seul par joueur et par scène, garanti par l'identifiant lui-même (v1 :
- * règle de doublon « Ce personnage est déjà sur la carte »). Il sera relié
- * à la fiche du personnage avec le lot L2.
+ * Le jeton d'un PJ a pour identifiant `pj-<id du personnage>` (L2.3 ;
+ * L5.3 : `pj-<uid>`) : un seul par personnage et par scène, garanti par
+ * l'identifiant lui-même (v1 : « Ce personnage est déjà sur la carte »).
+ * Son nom, ses PV et son portrait sont relus dans la fiche
+ * (battlemap/jetons-pj.ts).
  *
  * Les PV et états des monstres ne sont PAS ici (décision du 15/10) : ils
  * vivront dans le combat (L6). `mort` est le seul état que la carte lit.

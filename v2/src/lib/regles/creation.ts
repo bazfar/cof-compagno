@@ -107,6 +107,10 @@ export interface ReportV1 {
   sortsConnus: string[];
   sortsPrepares: string[];
   modules: Record<string, unknown>;
+  /** Notes libres v1 (L2.3). */
+  notes: string;
+  /** Portrait v1 (data URL), écrit dans son propre document à la création (L2.3). */
+  portrait: string | null;
 }
 
 export interface RepriseV1 {
@@ -719,6 +723,7 @@ export function ficheDepuisBrouillon(b: Brouillon, proprietaireUid: string, cree
     grimoireSortsPrepares: r?.sortsPrepares ?? [],
     cercleSpecialisation: b.cercleSpecialisation,
     ...progressionVierge(),
+    ...(r?.notes ? { notes: r.notes } : {}),
     modules: r?.modules ?? {},
   };
   return schemaFiche.parse(versFirestore(brute, b.nom || 'fiche'));

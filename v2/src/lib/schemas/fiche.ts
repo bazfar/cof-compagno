@@ -25,10 +25,14 @@ import { CARACS } from './commun.ts';
  *     rencontres et le Vécu (cadrage, décidé le 16/10) : aucune migration
  *     de fiche ne sera nécessaire quand ils arriveront en 2.1.
  *
- * Le portrait n'est pas ici : il aura son propre document (décision 6a, L2.3).
+ * Le portrait n'est pas ici : il a son propre document,
+ * persos/{id}/images/portrait (décision 6a, L2.3 ; schemas/portrait.ts).
  */
 
 export const VERSION_FICHE = 1;
+
+/** Notes libres : au plus 10 000 caractères (marge large sous le 1 Mo d'un document). */
+export const LIMITE_NOTES = 10_000;
 
 /** Objet porté ou transporté : celui du catalogue, enrichi à l'obtention (rareté, affixes…). */
 export const schemaObjetFiche = z.looseObject({
@@ -107,6 +111,9 @@ export const schemaFiche = z.strictObject({
   }),
   /** Dernière utilisation de chaque nœud limité (rencontre, séance ou repos), par identifiant de nœud. */
   usages: z.record(z.string(), z.looseObject({})),
+
+  // ---- Notes libres du joueur (L2.3, décision 5a du 16/10 : v1 « notes ») ----
+  notes: z.string().max(LIMITE_NOTES).optional(),
 
   // ---- Modules pas encore migrés (décision 5a) ----
   modules: z.record(z.string(), z.unknown()),

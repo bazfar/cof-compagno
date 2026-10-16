@@ -64,16 +64,31 @@ describe('scène montrée', () => {
 });
 
 describe('jetons', () => {
-  it('un joueur pose son propre PJ, avec le bon identifiant', async () => {
-    await assertSucceeds(alice().doc(`${SCENE}/jetons/pj-alice`).set(jetonPJ('alice')));
+  // L2.3 : le jeton d'un PJ est relié au personnage, pj-<id du personnage>.
+  // Alice joue p1 ; p2 est aussi à elle mais pas joué ; p3 est à Carol.
+  async function personnages() {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await db.doc(`${TABLE}/joueurs/alice`).set({ nom: 'Alice', rejointLe: 1, persoActif: 'p1' });
+      await db.doc(`${TABLE}/persos/p1`).set({ proprietaireUid: 'alice', nom: 'Shyrion' });
+      await db.doc(`${TABLE}/persos/p2`).set({ proprietaireUid: 'alice', nom: 'Fred' });
+      await db.doc(`${TABLE}/persos/p3`).set({ proprietaireUid: 'carol', nom: 'Hyrma' });
+    });
+  }
+
+  it('un joueur pose le jeton de son personnage joué (pj-<id du personnage>)', async () => {
+    await personnages();
+    await assertSucceeds(alice().doc(`${SCENE}/jetons/pj-p1`).set(jetonPJ('alice')));
   });
 
-  it("un joueur ne pose ni le PJ d'un autre, ni un monstre, ni un PJ sous un autre identifiant", async () => {
-    await assertFails(alice().doc(`${SCENE}/jetons/pj-carol`).set(jetonPJ('carol')));
-    await assertFails(alice().doc(`${SCENE}/jetons/pj-alice`).set(jetonPJ('carol')));
-    await assertFails(alice().doc(`${SCENE}/jetons/pj-alice`).set(monstre({ proprietaire: 'alice' })));
-    await assertFails(alice().doc(`${SCENE}/jetons/x`).set(jetonPJ('alice')));
-    await assertFails(alice().doc(`${SCENE}/jetons/pj-alice`).set(jetonPJ('alice', { mort: false })));
+  it("un joueur ne pose ni un autre de ses personnages, ni celui d'un autre, ni un monstre, ni l'ancien jeton pj-<uid>", async () => {
+    await personnages();
+    await assertFails(alice().doc(`${SCENE}/jetons/pj-p2`).set(jetonPJ('alice')));
+    await assertFails(alice().doc(`${SCENE}/jetons/pj-p3`).set(jetonPJ('alice')));
+    await assertFails(alice().doc(`${SCENE}/jetons/pj-alice`).set(jetonPJ('alice')));
+    await assertFails(alice().doc(`${SCENE}/jetons/pj-p1`).set(jetonPJ('carol')));
+    await assertFails(alice().doc(`${SCENE}/jetons/pj-p1`).set(monstre({ proprietaire: 'alice' })));
+    await assertFails(alice().doc(`${SCENE}/jetons/pj-p1`).set(jetonPJ('alice', { mort: false })));
   });
 
   it('le MJ pose tout, y compris le PJ d\'un joueur', async () => {

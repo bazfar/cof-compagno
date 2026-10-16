@@ -24,6 +24,10 @@ import type { Vue } from './vue.ts';
 export interface JetonAffiche extends JetonCarte {
   nom: string;
   couleur: string;
+  /** PJ relié à sa fiche (L2.3) : barre de PV sous le jeton. */
+  pv?: { actuel: number; max: number };
+  /** Portrait du personnage (L2.3), à la place des initiales. */
+  portrait?: CanvasImageSource | null;
 }
 
 export interface Dessin {
@@ -36,6 +40,8 @@ export interface Dessin {
   scene: SceneCalcul;
   image: CanvasImageSource | null;
   jetons: readonly JetonAffiche[];
+  /** MJ : les PV chiffrés sous la barre (L2.3) ; les joueurs ne voient que la barre. */
+  pvChiffres?: boolean;
   visions: readonly VisionJeton[];
   /** Masque d'exploration déjà peint (peindreExploration), ou null sans brouillard. */
   masqueExploration: HTMLCanvasElement | OffscreenCanvas | null;
@@ -145,7 +151,12 @@ function dessinerBrouillard(ctx: Contexte, d: Dessin, masque: HTMLCanvasElement 
   ctx.drawImage(t, 0, 0);
 }
 
-function dessinerJeton(ctx: Contexte, j: JetonAffiche, cx: number, cy: number, selectionne: boolean, echelle: number) {
+/** Part de PV restante, bornée à [0, 1] (barre sous le jeton). */
+export function partPV(pv: { actuel: number; max: number }): number {
+  return pv.max > 0 ? Math.max(0, Math.min(1, pv.actuel / pv.max)) : 0;
+}
+
+function dessinerJeton(ctx: Contexte, j: JetonAffiche, cx: number, cy: number, selectionne: boolean, echelle: number, pvChiffres: boolean) {
   const x = cx + 0.5, y = cy + 0.5;
   ctx.globalAlpha = j.mort ? 0.6 : 1;
   ctx.beginPath();
@@ -164,6 +175,13 @@ function dessinerJeton(ctx: Contexte, j: JetonAffiche, cx: number, cy: number, s
     ctx.strokeStyle = '#2b2436';
     ctx.lineWidth = Math.max(2 / echelle, 0.06);
     ctx.stroke();
+  } else if (j.portrait) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, RAYON_JETON - 0.03, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(j.portrait, x - RAYON_JETON, y - RAYON_JETON, RAYON_JETON * 2, RAYON_JETON * 2);
+    ctx.restore();
   } else {
     ctx.fillStyle = '#fff';
     ctx.font = `600 ${0.34}px 'Source Sans 3', 'Segoe UI', sans-serif`;
@@ -172,6 +190,25 @@ function dessinerJeton(ctx: Contexte, j: JetonAffiche, cx: number, cy: number, s
     ctx.fillText(initiales(j.nom), x, y + 0.02);
   }
   ctx.globalAlpha = 1;
+  if (j.pv && !j.mort) {
+    const part = partPV(j.pv);
+    const l = RAYON_JETON * 1.6, h = 0.09, bx = x - l / 2, by = y + RAYON_JETON + 0.03;
+    ctx.fillStyle = 'rgba(43, 36, 54, 0.75)';
+    ctx.fillRect(bx, by, l, h);
+    ctx.fillStyle = part > 0.5 ? '#3a7d44' : part > 0.25 ? '#b8924a' : '#8a2f3b';
+    ctx.fillRect(bx, by, l * part, h);
+    if (pvChiffres) {
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = 'rgba(43, 36, 54, 0.9)';
+      ctx.lineWidth = 0.05;
+      ctx.font = `700 ${0.2}px 'Source Sans 3', 'Segoe UI', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const texte = `${j.pv.actuel}/${j.pv.max}`;
+      ctx.strokeText(texte, x, by + h + 0.01);
+      ctx.fillText(texte, x, by + h + 0.01);
+    }
+  }
   if (selectionne) {
     ctx.beginPath();
     ctx.arc(x, y, RAYON_JETON + 0.08, 0, Math.PI * 2);
@@ -252,7 +289,7 @@ export function dessiner(ctx: CanvasRenderingContext2D, d: Dessin): void {
 
   for (const j of d.jetons) {
     const pos = d.glisser?.id === j.id ? d.glisser.case : j;
-    dessinerJeton(ctx, j, pos.cx, pos.cy, d.selection === j.id, vue.echelle);
+    dessinerJeton(ctx, j, pos.cx, pos.cy, d.selection === j.id, vue.echelle, !!d.pvChiffres);
   }
 
   if (d.trace) {

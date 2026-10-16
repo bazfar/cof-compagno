@@ -1,6 +1,6 @@
 <script lang="ts">
   import { marquerImportRepris } from '../lib/actions/imports';
-  import { creerPerso, messageErreurPerso, nouvelIdPerso } from '../lib/actions/persos';
+  import { creerPerso, enregistrerPortrait, messageErreurPerso, nouvelIdPerso } from '../lib/actions/persos';
   import { garderBrouillon, lireBrouillon, oublierBrouillon } from '../lib/creation/brouillon-local';
   import { statistiquesFiche } from '../lib/regles/calculs';
   import * as R from '../lib/regles/creation';
@@ -110,6 +110,9 @@
       const fiche = R.ficheDepuisBrouillon($state.snapshot(b) as R.Brouillon, session.uid, Date.now());
       const id = nouvelIdPerso();
       await creerPerso(id, fiche);
+      // Portrait v1 repris (L2.3) : dans son propre document, après la fiche.
+      const portrait = b.reprise?.report.portrait;
+      if (portrait) await enregistrerPortrait(id, portrait);
       if (idReprise) await marquerImportRepris(idReprise, id);
       oublierBrouillon(session.table, session.uid, idReprise);
       b = R.brouillonVide();

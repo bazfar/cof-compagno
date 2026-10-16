@@ -1,4 +1,5 @@
-import type { ObjetFiche } from '../schemas/fiche.ts';
+import { LIMITE_NOTES, type ObjetFiche } from '../schemas/fiche.ts';
+import { LIMITE_PORTRAIT, PREFIXE_PORTRAIT } from '../schemas/portrait.ts';
 import { CARACS } from '../schemas/commun.ts';
 import { migrerEquipement } from './conversion-v1.ts';
 import {
@@ -104,6 +105,12 @@ export function rafraichirObjet(o: ObjetFiche): ObjetFiche {
   return { ...(structuredClone(modele) as ObjetFiche), ...structuredClone(exemplaire) };
 }
 
+/** Portrait v1 repris s'il est une image dans la limite du document portrait (L2.3), sinon aucun. */
+export function portraitV1(v1: FicheV1): string | null {
+  const p = v1.portrait;
+  return typeof p === 'string' && PREFIXE_PORTRAIT.test(p) && p.length <= LIMITE_PORTRAIT ? p : null;
+}
+
 /** Choix v1 à refaire, tels que la v1 les stockait. */
 export function anciensChoixV1(v1: FicheV1): AnciensChoix {
   return {
@@ -168,6 +175,8 @@ export function brouillonDepuisV1(v1: FicheV1, idImport: string): Brouillon {
         sortsConnus: [...(v1.grimoireSortsConnus ?? [])],
         sortsPrepares: [...(v1.grimoireSortsPrepares ?? [])],
         modules: JSON.parse(JSON.stringify(modulesV1(v1))),
+        notes: typeof v1.notes === 'string' ? v1.notes.slice(0, LIMITE_NOTES) : '',
+        portrait: portraitV1(v1),
       },
     },
   };

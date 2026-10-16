@@ -3,6 +3,7 @@
   import { visionsDesPJ, type VisionJeton } from '../../src/lib/battlemap/visibilite';
   import type { GrilleExploration } from '../../src/lib/battlemap/exploration';
   import type { GeometrieScene } from '../../src/lib/schemas/scene';
+  import type { JetonAffiche } from '../../src/lib/battlemap/rendu';
 
   /*
    * Remplace Battlemap.svelte dans les tests de composants (pas de canvas
@@ -13,8 +14,9 @@
   let {
     geometrie,
     exploration,
+    jetons = [],
     surVisions,
-  }: { geometrie: GeometrieScene; exploration: GrilleExploration | null; surVisions?: (v: VisionJeton[]) => void } = $props();
+  }: { geometrie: GeometrieScene; exploration: GrilleExploration | null; jetons?: readonly JetonAffiche[]; surVisions?: (v: VisionJeton[]) => void } = $props();
 
   function voir() {
     surVisions?.(visionsDesPJ(sceneCalcul(geometrie), [{ id: 'a', genre: 'pj', cx: 2, cy: 2 }]));
@@ -26,5 +28,6 @@
   data-scene={geometrie.id}
   data-exploration={exploration ? `${exploration.largeur}x${exploration.hauteur}` : 'aucune'}
   data-vu={exploration ? String(exploration.estExploree(4, 4)) : 'aucune'}
+  data-jetons={jetons.map((j) => `${j.id}=${j.nom}${j.pv ? ` ${j.pv.actuel}/${j.pv.max}` : ''}`).join('|')}
 ></div>
 <button onclick={voir}>voir</button>

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
+import { readFileSync } from 'node:fs';
 import { flushSync } from 'svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -37,6 +38,7 @@ const { imports, joueurs, persos } = await import('./faux-magasins.svelte');
 const { session } = await import('../../src/lib/session.svelte');
 const { default: AssistantCreation } = await import('../../src/composants/AssistantCreation.svelte');
 const { default: MesPersonnages } = await import('../../src/composants/MesPersonnages.svelte');
+const { ficheDepuisV1 } = await import('../../src/lib/regles/fiche-document');
 
 const bouton = (nom: string | RegExp) => screen.getByRole('button', { name: nom });
 const etape = (nom: string) => fireEvent.click(bouton(new RegExp(`^${nom}`)));
@@ -158,15 +160,16 @@ describe('assistant de création', () => {
 });
 
 describe('mes personnages', () => {
+  const KARGASH = JSON.parse(readFileSync('tests/fixtures/fiches-v1.json', 'utf8')).fiches.find((f: { nom: string }) => f.nom.startsWith('Kargash'));
   const fiche = (id: string, proprietaireUid: string, nom: string, creeLe: number) => ({
-    id, proprietaireUid, nom, creeLe, niveau: 3, classe: 'barde', race: 'nain',
+    ...ficheDepuisV1(KARGASH, proprietaireUid, creeLe).fiche, id, nom,
   });
 
   it('seulement les personnages du joueur ; « Jouer ce personnage » change le personnage joué', async () => {
     persos.elements = [fiche('p1', 'alice', 'Kargash', 1), fiche('p2', 'carol', 'Autre', 2), fiche('p3', 'alice', 'Second', 3)];
     joueurs.elements = [{ id: 'alice', nom: 'Alice', rejointLe: 1, persoActif: 'p1' }];
     render(MesPersonnages);
-    const items = within(screen.getByRole('list')).getAllByRole('listitem');
+    const items = within(screen.getByRole('region', { name: 'Mes personnages' })).getAllByRole('listitem');
     expect(items.map((li) => li.querySelector('strong')?.textContent)).toEqual(['Kargash', 'Second']);
     expect(within(items[0]!).getByText('joué')).toBeTruthy();
     await fireEvent.click(within(items[1]!).getByRole('button', { name: 'Jouer ce personnage' }));

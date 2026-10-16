@@ -1,4 +1,4 @@
-import { progressionVierge, schemaFiche, VERSION_FICHE, type Fiche, type ObjetFiche } from '../schemas/fiche.ts';
+import { LIMITE_NOTES, progressionVierge, schemaFiche, VERSION_FICHE, type Fiche, type ObjetFiche } from '../schemas/fiche.ts';
 import { ficheV1VersCalcul } from './conversion-v1.ts';
 import type { FicheCalcul } from './fiche-calcul.ts';
 
@@ -44,7 +44,12 @@ const POINTS_CERCLE_V1: Record<string, string> = {
   pointsJugement: 'jugement',
 };
 
-/** Portrait et illustration : un document à part (décision 6a, L2.3), pas dans la fiche. */
+/**
+ * Portrait et illustration : pas dans la fiche. Le portrait a son propre
+ * document (décision 6a, L2.3) ; l'illustration grand format n'est pas
+ * reprise (décision 3a du 16/10 : portrait seul). Les deux restent dans le
+ * document importsV1 de la fiche déposée.
+ */
 const CHAMPS_V1_IMAGES = ['portrait', 'illustration'] as const;
 
 /** Champs v1 repris par un champ de la fiche 2.0. */
@@ -54,7 +59,7 @@ const CHAMPS_V1_REPRIS = [
   'pvMax', 'pvActuel', 'pvHistorique', 'ppActuel',
   'equipement', 'piecesOr', 'piecesArgent', 'piecesBronze',
   'mutations', 'corruptionMajeure', 'contratDemoniaquePenalite', 'amesStockees',
-  'grimoireSortsConnus', 'grimoireSortsPrepares', 'cercleSpecialisation',
+  'grimoireSortsConnus', 'grimoireSortsPrepares', 'cercleSpecialisation', 'notes',
   ...Object.keys(POINTS_CERCLE_V1),
 ] as const;
 
@@ -153,6 +158,7 @@ export function ficheDepuisV1(v1: FicheV1, proprietaireUid: string, creeLe: numb
     grimoireSortsConnus: v1.grimoireSortsConnus ?? [],
     grimoireSortsPrepares: v1.grimoireSortsPrepares ?? [],
     cercleSpecialisation: v1.cercleSpecialisation ?? null,
+    ...(typeof v1.notes === 'string' && v1.notes ? { notes: v1.notes.slice(0, LIMITE_NOTES) } : {}),
     // Rien à reprendre : la v1 n'a ni crans ni Vécu.
     ...progressionVierge(),
     modules,

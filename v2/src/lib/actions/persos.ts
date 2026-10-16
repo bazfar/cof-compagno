@@ -1,7 +1,8 @@
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { versFirestore } from '../regles/fiche-document';
 import { db } from '../firebase/client';
-import { schemaFiche, type Fiche } from '../schemas/fiche';
+import { LIMITE_NOTES, schemaFiche, type Fiche } from '../schemas/fiche';
+import { schemaPortrait } from '../schemas/portrait';
 import { session } from '../session.svelte';
 
 /*
@@ -54,6 +55,25 @@ export async function modifierPieces(id: string, pieces: { piecesOr: number; pie
     piecesArgent: positif(pieces.piecesArgent),
     piecesBronze: positif(pieces.piecesBronze),
   });
+}
+
+/** Points de pouvoir actuels (bornés à 0 et au maximum calculé). */
+export async function modifierPP(id: string, ppActuel: number, ppMax: number): Promise<void> {
+  await updateDoc(doc(db, cheminPerso(id)), { ppActuel: Math.max(0, Math.min(ppMax, Math.round(ppActuel))) });
+}
+
+/** Notes libres (L2.3) : seul le champ `notes`, tronqué à la limite du schéma. */
+export async function modifierNotes(id: string, notes: string): Promise<void> {
+  await updateDoc(doc(db, cheminPerso(id)), { notes: notes.slice(0, LIMITE_NOTES) });
+}
+
+/** Portrait (L2.3) : son propre document, jamais la fiche. */
+export async function enregistrerPortrait(id: string, image: string): Promise<void> {
+  await setDoc(doc(db, `${cheminPerso(id)}/images/portrait`), schemaPortrait.parse({ image, majLe: Date.now() }));
+}
+
+export async function retirerPortrait(id: string): Promise<void> {
+  await deleteDoc(doc(db, `${cheminPerso(id)}/images/portrait`));
 }
 
 /**
