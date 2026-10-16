@@ -163,6 +163,11 @@
     } catch {
       enBase = new GrilleExploration(g.colonnes, g.lignes); // exploration d'une autre taille : ignorée
     }
+    // `geometrie` passe à la nouvelle scène avant que l'effet ci-dessus ait
+    // remis `locale` à sa taille : sans cette garde, `fusionner` lève et la
+    // carte ne se remonte plus (changement vers une scène d'une autre
+    // taille). L'effet suit et rend une locale vide à la bonne taille.
+    if (locale.largeur !== enBase.largeur || locale.hauteur !== enBase.hauteur) return enBase;
     return enBase.fusionner(locale);
   });
 
