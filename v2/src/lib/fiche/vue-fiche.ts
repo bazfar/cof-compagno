@@ -65,10 +65,11 @@ export interface VueFiche {
  * la refonte sort des classes vers l'arbre du Vécu (2.1). D'ici là, la
  * fiche les range sous « Hors combat » ; les données v1 n'ont aucune
  * marque pour le dire, d'où cette liste, seule source de ce classement.
+ * L'Alcoolisme n'y est pas : c'est une voie de combat du Barde (Thomas,
+ * 18/10).
  */
 export const VOIES_HORS_COMBAT: ReadonlySet<string> = new Set([
   'guerrier.ingenieur',
-  'barde.alcoolisme',
   'barde.spectacle',
   'enchanteur.historien',
   'enchanteur.spectacle',
