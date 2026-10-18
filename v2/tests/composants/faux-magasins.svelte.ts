@@ -66,3 +66,12 @@ export const magasinsJournal = {
   JETS_MONTRES: 40,
   suivreJournal: () => ({ etat: jets, arreter: () => {} }),
 };
+
+/** Lore partagé (L2.7) : fiches complètes (MJ) et version joueurs. */
+export const loreMj = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+export const loreJoueur = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+
+export const magasinsLore = {
+  suivreLoreMj: () => ({ etat: loreMj, arreter: () => {} }),
+  suivreLoreJoueur: () => ({ etat: loreJoueur, arreter: () => {} }),
+};

@@ -156,6 +156,34 @@ service cloud.firestore {
     function vecuChoisiParJoueur(apres, avant) {
       return apres.crans == avant.crans && apres.paliers == avant.paliers && apres.points <= avant.points;
     }
+    // ---- Lore partagé (L2.7a) ----
+    // Aligné sur schemaFicheLoreMj / schemaFicheLoreJoueurs
+    // (src/lib/schemas/lore.ts). Les règles ne savent pas parcourir une
+    // liste : elles vérifient les clés, les types et les tailles ; le
+    // contenu des passages est validé par l'app (Zod) avant d'écrire.
+    function ficheLoreCommune(d) {
+      return d.titre is string && d.titre.size() >= 1 && d.titre.size() <= 120
+        && (!('sousTitre' in d) || (d.sousTitre is string && d.sousTitre.size() <= 200))
+        && d.categorie is string && d.categorie.size() >= 1 && d.categorie.size() <= 60
+        && d.ordre is int
+        && d.etiquettes is list && d.etiquettes.size() <= 10
+        && d.passages is list && d.passages.size() <= 120
+        && d.majLe is int && d.reveleLe is int;
+    }
+    function ficheLoreMjValide(d) {
+      return d.keys().hasAll(['titre', 'categorie', 'ordre', 'etiquettes', 'visibilite', 'lecteurs', 'passages', 'majLe', 'reveleLe'])
+        && d.keys().hasOnly(['titre', 'sousTitre', 'categorie', 'ordre', 'etiquettes', 'visibilite', 'lecteurs', 'passages', 'majLe', 'reveleLe', 'source'])
+        && ficheLoreCommune(d)
+        && d.visibilite in ['mj', 'certains', 'tous']
+        && d.lecteurs is list && d.lecteurs.size() <= 50
+        && (!('source' in d) || (d.source is string && d.source.size() <= 120));
+    }
+    function ficheLoreJoueursValide(d) {
+      return d.keys().hasAll(['titre', 'categorie', 'ordre', 'etiquettes', 'lecteurs', 'passages', 'majLe', 'reveleLe'])
+        && d.keys().hasOnly(['titre', 'sousTitre', 'categorie', 'ordre', 'etiquettes', 'lecteurs', 'passages', 'majLe', 'reveleLe'])
+        && ficheLoreCommune(d)
+        && d.lecteurs is list && d.lecteurs.size() >= 1 && d.lecteurs.size() <= 50;
+    }
     // Aligné sur schemaEtatScene (src/lib/schemas/carte.ts).
     function etatSceneValide(d) {
       return d.keys().hasOnly(['portesOuvertes', 'exploration', 'explorationRaz'])
@@ -345,6 +373,24 @@ service cloud.firestore {
         allow read: if estMembre(table);
         allow create: if estMembre(table) && jetValide(request.resource.data);
         allow update, delete: if false;
+      }
+
+      // Lore partagé (L2.7a, décisions du 18/10/2026). La fiche complète,
+      // passages scellés compris, n'est lisible que du MJ (loreMj). Les
+      // joueurs lisent la version dérivée (lore), seulement si leur uid ou
+      // « * » (tous) est dans `lecteurs` ; un texte scellé n'y est jamais
+      // écrit. Requêtes joueur : lecteurs array-contains uid, puis
+      // lecteurs array-contains '*' (chacune est prouvée par la règle).
+      match /loreMj/{fiche} {
+        allow read, delete: if estMj(table);
+        allow create, update: if estMj(table) && ficheLoreMjValide(request.resource.data);
+      }
+      match /lore/{fiche} {
+        allow read: if estMj(table)
+          || (estJoueur(table)
+            && (request.auth.uid in resource.data.lecteurs || '*' in resource.data.lecteurs));
+        allow create, update: if estMj(table) && ficheLoreJoueursValide(request.resource.data);
+        allow delete: if estMj(table);
       }
 
       // Toute autre collection (combat…) est refusée par défaut :

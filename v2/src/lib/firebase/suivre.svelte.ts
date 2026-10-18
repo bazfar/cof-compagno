@@ -29,18 +29,21 @@ export interface CollectionSuivie<T> {
  *
  * `tri` (lot L2.5) : les `limite` derniers documents selon un champ (le
  * journal de dés ne charge que ses derniers jets, pas tout l'historique).
+ *
+ * `filtre.contient` (lot L2.7a) : les documents dont un champ liste contient
+ * une valeur (lore : `lecteurs` contient l'uid du joueur, ou « * »).
  */
 export function suivreCollection<T>(
   db: Firestore,
   chemin: string,
   schema: z.ZodType<T>,
-  filtre?: { champ: string; egal: string },
+  filtre?: { champ: string; egal: string } | { champ: string; contient: string },
   tri?: { champ: string; sens: 'asc' | 'desc'; limite: number },
 ): CollectionSuivie<T> {
   const etat = $state<CollectionSuivie<T>['etat']>({ elements: [], pret: false, erreur: null });
 
   const contraintes: QueryConstraint[] = [
-    ...(filtre ? [where(filtre.champ, '==', filtre.egal)] : []),
+    ...(filtre ? [where(filtre.champ, 'egal' in filtre ? '==' : 'array-contains', 'egal' in filtre ? filtre.egal : filtre.contient)] : []),
     ...(tri ? [orderBy(tri.champ, tri.sens), limit(tri.limite)] : []),
   ];
   const source = contraintes.length ? query(collection(db, chemin), ...contraintes) : collection(db, chemin);

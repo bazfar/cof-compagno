@@ -7,7 +7,7 @@
    * dans la barre du haut :
    * - Séance : la carte au centre, le groupe en cartes compactes à droite
    *   (la fiche complète s'ouvre en panneau latéral), le journal en bas ;
-   * - Données : fiches v1 aujourd'hui ; bestiaire et objets en L3.
+   * - Données : fiches v1 et lore de la v1 (L2.7a) ; bestiaire et objets en L3.
    * Prépa combat (L3), Lore (L2.7) et Prépa social (2.1) s'ajouteront à
    * SECTIONS avec leur lot, pas avant : pas d'onglet vide.
    *
@@ -29,6 +29,8 @@
   const importV1 = import('../composants/ImportFichesV1.svelte');
   // Groupe et fiches (L2.3) : chargés à part, comme le dépôt des fiches v1.
   const groupe = import('../composants/GroupeMj.svelte');
+  // Import du lore v1 (L2.7a) : chargé à part, avec le schéma du lore.
+  const importLore = import('../composants/ImportLoreV1.svelte');
 </script>
 
 <BarreHaut etiquette="Poste MJ" sections={SECTIONS} active={section} surSection={(id) => (section = id)} />
@@ -62,6 +64,11 @@
         <module.default />
       {:catch e}
         <p role="alert">Dépôt des fiches v1 indisponible : {String(e)}</p>
+      {/await}
+      {#await importLore then module}
+        <module.default />
+      {:catch e}
+        <p role="alert">Import du lore indisponible : {String(e)}</p>
       {/await}
     </div>
   </div>

@@ -550,7 +550,49 @@
         <mxCell id="e26" parent="1" source="mj" target="client" style="endArrow=cross;endFill=0;dashed=1;html=1;strokeColor=#b85450;fontColor=#b85450;" value="interdit" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-      </root>
+              <mxCell id="titre-l27" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Lore partagé (L2.7) — la fiche complète reste chez le MJ ; les joueurs lisent une version sans passage scellé, filtrée par les règles" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="3180" as="geometry" />
+        </mxCell>
+        <mxCell id="lSchema" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/lore.ts  (L2.7a)&lt;/b&gt;&lt;hr&gt;FicheLoreMj (passages, scellés, visibilité)&lt;br&gt;FicheLoreJoueurs (lecteurs : * ou uid)&lt;br&gt;ExportLore (fichier lore-v1.json)" vertex="1">
+          <mxGeometry height="86" width="300" x="40" y="3220" as="geometry" />
+        </mxCell>
+        <mxCell id="lFiche" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/lore/fiche.ts, import-v1.ts&lt;/b&gt;&lt;hr&gt;versionJoueurs : sans scellé, null = personne&lt;br&gt;revele : datation de la marque « nouveau »&lt;br&gt;convertirLoreV1 + garde-fou de canon" vertex="1">
+          <mxGeometry height="86" width="300" x="380" y="3220" as="geometry" />
+        </mxCell>
+        <mxCell id="lImport" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/ImportLoreV1.svelte&lt;/b&gt;&lt;hr&gt;MJ › Données : dépose lore-v1.json ;&lt;br&gt;une fiche déjà présente est gardée&lt;br&gt;(chargé à la demande)" vertex="1">
+          <mxGeometry height="86" width="300" x="720" y="3220" as="geometry" />
+        </mxCell>
+        <mxCell id="lAct" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;lib/actions/lore.ts&lt;/b&gt;&lt;hr&gt;enregistrer, supprimer, importer :&lt;br&gt;BATCH loreMj + lore ensemble ;&lt;br&gt;version joueurs toujours recalculée" vertex="1">
+          <mxGeometry height="86" width="290" x="1060" y="3220" as="geometry" />
+        </mxCell>
+        <mxCell id="lMag" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f8cecc;strokeColor=#b85450;" value="&lt;b&gt;lib/magasins/lore.svelte.ts&lt;/b&gt;&lt;hr&gt;MJ : loreMj ; joueur : deux requêtes&lt;br&gt;lecteurs contient uid / contient *" vertex="1">
+          <mxGeometry height="70" width="320" x="1390" y="3220" as="geometry" />
+        </mxCell>
+        <mxCell id="lOutil" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;outils/exporter-lore-v1.ts&lt;/b&gt;&lt;hr&gt;npm run lore:exporter : data/donnees.js&lt;br&gt;→ v2/lore-v1.json (ignoré par git) ;&lt;br&gt;échoue si un nom secret serait lisible" vertex="1">
+          <mxGeometry height="86" width="300" x="40" y="3330" as="geometry" />
+        </mxCell>
+        <mxCell id="l27a" parent="1" source="mj" target="lImport" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l27b" parent="1" source="lImport" target="lAct" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l27c" parent="1" source="lImport" target="lMag" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l27d" parent="1" source="lAct" target="lFiche" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l27e" parent="1" source="lFiche" target="lSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l27f" parent="1" source="lOutil" target="lFiche" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l27g" parent="1" source="lMag" target="lSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+</root>
     </mxGraphModel>
   </diagram>
   <diagram name="Architecture 2.0 - donnees Firestore" id="v2-donnees">
@@ -660,7 +702,22 @@
         <mxCell id="c15" parent="1" source="importsV1" target="v1" style="endArrow=open;dashed=1;html=1;dashed=1;" value="fiche exportée de la v1" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-      </root>
+              <mxCell id="loreMj" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;loreMj/{id}  (L2.7a)&lt;/b&gt;&lt;hr&gt;fiche complète : titre, catégorie, passages&lt;br&gt;(scellés compris), visibilité, lecteurs&lt;br&gt;MJ seul : lit et écrit" vertex="1">
+          <mxGeometry height="86" width="300" x="40" y="920" as="geometry" />
+        </mxCell>
+        <mxCell id="loreJ" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lore/{id}  (L2.7a)&lt;/b&gt;&lt;hr&gt;version joueurs, écrite par le MJ seul&lt;br&gt;avec loreMj (même batch) ; lisible si&lt;br&gt;uid ou * dans lecteurs ; absente si personne" vertex="1">
+          <mxGeometry height="86" width="300" x="380" y="920" as="geometry" />
+        </mxCell>
+        <mxCell id="c27a" parent="1" source="tbl" target="loreMj" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c27b" parent="1" source="tbl" target="loreJ" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c27c" parent="1" source="loreMj" target="loreJ" style="endArrow=open;dashed=1;html=1;" value="versionJoueurs" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+</root>
     </mxGraphModel>
   </diagram>
 </mxfile>

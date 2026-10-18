@@ -3,3 +3,5 @@ dist/
 .firebase/
 *.log
 .env.local
+# Export du lore v1 (lot L2.7a) : contient les secrets du MJ.
+lore-v1.json

@@ -19,6 +19,7 @@
     "donnees:verifier": "node outils/importer-v1.ts --verifier",
     "preparer-scenes": "node outils/preparer-scenes.ts",
     "scenes:verifier": "node outils/preparer-scenes.ts --verifier",
+    "lore:exporter": "node outils/exporter-lore-v1.ts",
     "verifier": "npm run donnees:verifier && npm run scenes:verifier && npm run check && npm run cycles && npm run test && npm run build && npm run test:regles",
     "deployer": "npm run verifier && firebase deploy --only hosting:v2,firestore:rules"
   },
