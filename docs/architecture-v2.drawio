@@ -649,6 +649,45 @@
         <mxCell id="l31e" parent="1" source="fGroupe" target="sMag" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="titre-l32" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Bestiaire du MJ (L3.2) — en base, lisible du MJ seul ; importé par fichier, jamais livré avec l'app" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="3580" as="geometry" />
+        </mxCell>
+        <mxCell id="bSchema" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/bestiaire.ts  (L3.2)&lt;/b&gt;&lt;hr&gt;MonstreEnBase : monstre sans id,&lt;br&gt;origine v1 ou mj, majLe ; ExportBestiaire" vertex="1">
+          <mxGeometry height="70" width="300" x="40" y="3620" as="geometry" />
+        </mxCell>
+        <mxCell id="bLib" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/bestiaire/bestiaire.ts&lt;/b&gt;&lt;hr&gt;aller-retour document, filtres,&lt;br&gt;lignes d'attaque et d'armure, id du MJ" vertex="1">
+          <mxGeometry height="70" width="300" x="380" y="3620" as="geometry" />
+        </mxCell>
+        <mxCell id="bUi" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/BestiaireMj.svelte, ImportBestiaireV1&lt;/b&gt;&lt;hr&gt;Données › Bestiaire : recherche, fiche,&lt;br&gt;surcharges, duplication ; Imports : fichier" vertex="1">
+          <mxGeometry height="70" width="300" x="720" y="3620" as="geometry" />
+        </mxCell>
+        <mxCell id="bAct" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;lib/actions/bestiaire.ts&lt;/b&gt;&lt;hr&gt;importer (garde l'existant), enregistrer,&lt;br&gt;supprimer ; tout passe par schemaMonstre" vertex="1">
+          <mxGeometry height="70" width="290" x="1060" y="3620" as="geometry" />
+        </mxCell>
+        <mxCell id="bMag" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f8cecc;strokeColor=#b85450;" value="&lt;b&gt;lib/magasins/bestiaire.svelte.ts&lt;/b&gt;&lt;hr&gt;monstres + armes, armures, équilibrage" vertex="1">
+          <mxGeometry height="54" width="320" x="1390" y="3620" as="geometry" />
+        </mxCell>
+        <mxCell id="bOutil" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;outils/exporter-bestiaire.ts&lt;/b&gt;&lt;hr&gt;npm run bestiaire:exporter : src/donnees&lt;br&gt;→ bestiaire-v1.json (ignoré par git)" vertex="1">
+          <mxGeometry height="70" width="300" x="40" y="3710" as="geometry" />
+        </mxCell>
+        <mxCell id="l32a" parent="1" source="mj" target="bUi" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l32b" parent="1" source="bUi" target="bAct" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l32c" parent="1" source="bUi" target="bMag" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l32d" parent="1" source="bUi" target="bLib" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l32e" parent="1" source="bAct" target="bSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l32f" parent="1" source="bOutil" target="bSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
 </root>
     </mxGraphModel>
   </diagram>
@@ -772,6 +811,18 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="c27c" parent="1" source="loreMj" target="loreJ" style="endArrow=open;dashed=1;html=1;" value="versionJoueurs" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bestiaireDoc" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;bestiaire/{id}  (L3.2)&lt;/b&gt;&lt;hr&gt;monstre (sans id), origine, majLe&lt;br&gt;MJ seul : lit, écrit, supprime" vertex="1">
+          <mxGeometry height="70" width="300" x="720" y="920" as="geometry" />
+        </mxCell>
+        <mxCell id="bestiaireDonnees" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;bestiaireDonnees/{armes|armures|equilibrage}&lt;/b&gt;&lt;hr&gt;listes de référence, MJ seul" vertex="1">
+          <mxGeometry height="54" width="300" x="1060" y="920" as="geometry" />
+        </mxCell>
+        <mxCell id="c32a" parent="1" source="tbl" target="bestiaireDoc" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c32b" parent="1" source="tbl" target="bestiaireDonnees" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 </root>

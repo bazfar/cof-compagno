@@ -8,7 +8,8 @@
    * - Séance : la carte au centre ; à droite la séance (ouvrir, présents,
    *   clore : L3.1) et le groupe en cartes compactes (la fiche complète
    *   s'ouvre en panneau latéral) ; le journal en bas ;
-   * - Données : fiches v1 et lore de la v1 (L2.7a) ; bestiaire et objets en L3 ;
+   * - Données, en trois onglets : Bestiaire (L3.2, chargé à la première
+   *   visite), Fiches v1, Imports (lore et bestiaire de la v1) ; objets en L3 ;
    * - Lore (L2.7b) : fiches, partage, sceaux et édition, chargé à la
    *   première visite seulement.
    * Prépa combat (L3) et Prépa social (2.1) s'ajouteront à SECTIONS avec
@@ -43,6 +44,22 @@
   const seance = import('../composants/SeanceMj.svelte');
   // Import du lore v1 (L2.7a) : chargé à part, avec le schéma du lore.
   const importLore = import('../composants/ImportLoreV1.svelte');
+  // Import du bestiaire (L3.2), avec son schéma.
+  const importBestiaire = import('../composants/ImportBestiaireV1.svelte');
+
+  // Données : onglets (L3.2). Le bestiaire n'est chargé (et lu en base)
+  // qu'à la première visite de son onglet, puis gardé monté.
+  const ONGLETS_DONNEES = [
+    { id: 'bestiaire', libelle: 'Bestiaire' },
+    { id: 'fiches', libelle: 'Fiches v1' },
+    { id: 'imports', libelle: 'Imports' },
+  ];
+  let ongletDonnees = $state('bestiaire');
+  let bestiaireOuvert = $state(false);
+  $effect(() => {
+    if (section === 'donnees' && ongletDonnees === 'bestiaire') bestiaireOuvert = true;
+  });
+  const bestiaire = $derived(bestiaireOuvert ? import('../composants/BestiaireMj.svelte') : null);
 </script>
 
 <BarreHaut etiquette="Poste MJ" sections={SECTIONS} active={section} surSection={(id) => (section = id)} />
@@ -76,17 +93,44 @@
     </div>
   </div>
   <div hidden={section !== 'donnees'}>
-    <div class="donnees">
-      {#await importV1 then module}
-        <module.default />
-      {:catch e}
-        <p role="alert">Dépôt des fiches v1 indisponible : {String(e)}</p>
-      {/await}
-      {#await importLore then module}
-        <module.default />
-      {:catch e}
-        <p role="alert">Import du lore indisponible : {String(e)}</p>
-      {/await}
+    <div class="onglets-donnees" role="tablist" aria-label="Données">
+      {#each ONGLETS_DONNEES as o (o.id)}
+        <button role="tab" aria-selected={ongletDonnees === o.id} onclick={() => (ongletDonnees = o.id)}>{o.libelle}</button>
+      {/each}
+    </div>
+    <div hidden={ongletDonnees !== 'bestiaire'}>
+      {#if bestiaire}
+        {#await bestiaire}
+          <p>Chargement du bestiaire…</p>
+        {:then module}
+          <module.default />
+        {:catch e}
+          <p role="alert">Bestiaire indisponible : {String(e)}</p>
+        {/await}
+      {/if}
+    </div>
+    <div hidden={ongletDonnees !== 'fiches'}>
+      <div class="donnees">
+        {#await importV1 then module}
+          <module.default />
+        {:catch e}
+          <p role="alert">Dépôt des fiches v1 indisponible : {String(e)}</p>
+        {/await}
+      </div>
+    </div>
+    <div hidden={ongletDonnees !== 'imports'}>
+      <div class="donnees">
+        {#await importLore then module}
+          <module.default />
+        {:catch e}
+          <p role="alert">Import du lore indisponible : {String(e)}</p>
+        {/await}
+        {#await importBestiaire then module}
+          <module.default />
+        {:catch e}
+          <p role="alert">Import du bestiaire indisponible : {String(e)}</p>
+        {/await}
+      </div>
     </div>
   </div>
   <div hidden={section !== 'lore'}>
@@ -125,6 +169,25 @@
   }
   .bas {
     grid-column: 1 / -1;
+  }
+  .onglets-donnees {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--couleur-bordure);
+  }
+  .onglets-donnees button {
+    min-height: 40px;
+    margin-bottom: -2px;
+    border-radius: var(--rayon) var(--rayon) 0 0;
+    background: transparent;
+    color: var(--couleur-encre-douce);
+    border-bottom: 2px solid transparent;
+  }
+  .onglets-donnees button[aria-selected='true'] {
+    background: var(--couleur-surface-claire);
+    color: var(--couleur-accent);
+    border-bottom-color: var(--couleur-accent);
   }
   .donnees {
     max-width: 1100px;

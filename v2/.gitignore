@@ -5,3 +5,5 @@ dist/
 .env.local
 # Export du lore v1 (lot L2.7a) : contient les secrets du MJ.
 lore-v1.json
+# Export du bestiaire (lot L3.2) : contient les secrets du MJ.
+bestiaire-v1.json

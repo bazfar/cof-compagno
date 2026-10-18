@@ -113,6 +113,22 @@ service cloud.firestore {
         && (d.closeLe == null || d.closeLe is int)
         && d.presents is list && d.presents.size() <= 50;
     }
+    // Aligné sur schemaMonstreEnBase (src/lib/schemas/bestiaire.ts), lot
+    // L3.2. Les règles vérifient les champs de premier niveau ; le contenu
+    // (attaques, capacités, champs des démons) est validé par l'app (Zod).
+    function monstreValide(d) {
+      return d.keys().hasAll(['nom', 'race', 'pv', 'def', 'init', 'atk', 'dangerosite', 'boss', 'role', 'taille', 'attaques', 'capacitesSpeciales', 'lore', 'emoji', 'origine', 'majLe'])
+        && !('id' in d)
+        && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 80
+        && d.race is list && d.race.size() >= 1
+        && d.pv is int && d.pv >= 1
+        && d.def is int && d.init is int && d.atk is int
+        && d.dangerosite is int && d.dangerosite >= 1 && d.dangerosite <= 5
+        && d.boss is bool
+        && d.attaques is list && d.capacitesSpeciales is list
+        && d.origine in ['v1', 'mj']
+        && d.majLe is int;
+    }
     // Aligné sur schemaJetJournal (src/lib/schemas/journal.ts).
     function jetValide(d) {
       return d.keys().hasOnly(['auteurUid', 'auteurNom', 'perso', 'libelle', 'formule', 'des', 'bonus', 'total', 'creeLe'])
@@ -393,6 +409,18 @@ service cloud.firestore {
         allow read: if estMembre(table);
         allow create, update: if estMj(table) && seanceValide(request.resource.data);
         allow delete: if estMj(table);
+      }
+
+      // Bestiaire du MJ (L3.2, décision du 18/10/2026) : lisible du MJ seul,
+      // comme le lore complet. Jamais livré avec l'app (correctif du
+      // 18/10) : les joueurs ne peuvent ni le lire ni l'écrire.
+      match /bestiaire/{monstre} {
+        allow read, delete: if estMj(table);
+        allow create, update: if estMj(table) && monstreValide(request.resource.data);
+      }
+      match /bestiaireDonnees/{donnees} {
+        allow read: if estMj(table);
+        allow write: if estMj(table) && donnees in ['armes', 'armures', 'equilibrage'];
       }
 
       // Lore partagé (L2.7a, décisions du 18/10/2026). La fiche complète,

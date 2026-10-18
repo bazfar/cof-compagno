@@ -86,3 +86,16 @@ export const seances = $state({ elements: [] as Record<string, unknown>[], pret:
 export const magasinsSeances = {
   suivreSeances: () => ({ etat: seances, arreter: () => {} }),
 };
+
+/** Bestiaire du MJ (L3.2) : monstres en base et listes de référence. */
+export const bestiaire = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+export const armesBestiaire = $state({ donnees: null as { liste: Record<string, unknown>[] } | null, pret: true, erreur: null as string | null });
+export const armuresBestiaire = $state({ donnees: null as { liste: Record<string, unknown>[] } | null, pret: true, erreur: null as string | null });
+export const equilibrageBestiaire = $state({ donnees: null as Record<string, unknown> | null, pret: true, erreur: null as string | null });
+
+export const magasinsBestiaire = {
+  suivreBestiaire: () => ({ etat: bestiaire, arreter: () => {} }),
+  suivreArmesMonstres: () => ({ etat: armesBestiaire, arreter: () => {} }),
+  suivreArmuresMonstres: () => ({ etat: armuresBestiaire, arreter: () => {} }),
+  suivreEquilibrage: () => ({ etat: equilibrageBestiaire, arreter: () => {} }),
+};

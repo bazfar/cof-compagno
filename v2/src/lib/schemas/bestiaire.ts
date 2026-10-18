@@ -127,6 +127,21 @@ export const schemaMonstre = z
   .strict();
 export type Monstre = z.infer<typeof schemaMonstre>;
 
+/*
+ * Bestiaire en base (lot L3.2, décision du 18/10/2026 : Firestore, lisible
+ * du MJ seul). tables/{table}/bestiaire/{id} : un monstre, sans son id
+ * (c'est celui du document), avec son origine et sa date de modification.
+ * tables/{table}/bestiaireDonnees/{armes|armures|equilibrage} : les listes
+ * de référence. Rien de tout cela n'est livré avec l'app.
+ */
+export const ORIGINES_MONSTRE = ['v1', 'mj'] as const;
+export const schemaMonstreEnBase = schemaMonstre.omit({ id: true }).extend({
+  /** v1 : importé de la v1 (éventuellement modifié) ; mj : créé par le MJ. */
+  origine: z.enum(ORIGINES_MONSTRE),
+  majLe: z.number().int().nonnegative(),
+});
+export type MonstreEnBase = z.infer<typeof schemaMonstreEnBase>;
+
 export const schemaBestiaire = z
   .object({
     version: z.string(),
@@ -163,3 +178,18 @@ export const schemaEquilibrage = z
   })
   .strict();
 export type Equilibrage = z.infer<typeof schemaEquilibrage>;
+
+/** bestiaireDonnees/armes et /armures : la liste entière dans un document. */
+export const schemaListeArmes = z.strictObject({ liste: z.array(schemaArmeMonstre) });
+export const schemaListeArmures = z.strictObject({ liste: z.array(schemaArmureMonstre) });
+
+/** Fichier produit par `npm run bestiaire:exporter`, déposé par le MJ (lot L3.2). */
+export const schemaExportBestiaire = z.strictObject({
+  format: z.literal('cof-compagno/bestiaire-v1'),
+  exporteLe: z.number().int().nonnegative(),
+  monstres: z.array(schemaMonstre),
+  armes: z.array(schemaArmeMonstre),
+  armures: z.array(schemaArmureMonstre),
+  equilibrage: schemaEquilibrage,
+});
+export type ExportBestiaire = z.infer<typeof schemaExportBestiaire>;

@@ -21,6 +21,7 @@
     "scenes:verifier": "node outils/preparer-scenes.ts --verifier",
     "lore:exporter": "node outils/exporter-lore-v1.ts",
     "secrets:verifier": "node outils/verifier-secrets.ts",
+    "bestiaire:exporter": "node outils/exporter-bestiaire.ts",
     "verifier": "npm run donnees:verifier && npm run scenes:verifier && npm run check && npm run cycles && npm run test && npm run build && npm run secrets:verifier && npm run test:regles",
     "deployer": "npm run verifier && firebase deploy --only hosting:v2,firestore:rules"
   },
