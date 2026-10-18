@@ -164,6 +164,10 @@
     cancelAnimationFrame(demande);
     demande = requestAnimationFrame(() => {
       const l = Math.round(largeur * densite), h = Math.round(hauteur * densite);
+      // Section masquée (L2.6) : la zone fait 0 px. Un canvas de 0 × 0 ferait
+      // lever drawImage sur le tampon du brouillard. Rien à dessiner tant
+      // qu'on ne voit rien ; le retour à l'écran relance cet effet.
+      if (l <= 0 || h <= 0) return;
       if (c.width !== l || c.height !== h) { c.width = l; c.height = h; }
       const ctx = c.getContext('2d');
       if (ctx) dessiner(ctx, etatDessin);
