@@ -1,3 +1,4 @@
+import { NOMS_JAMAIS_REVELES } from '../canon.ts';
 import { schemaFicheLoreMj, type FicheLoreMj, type PassageMj } from '../schemas/lore.ts';
 
 /*
@@ -164,12 +165,10 @@ export function convertirLoreV1(v1: LoreV1, date: number): FicheImportee[] {
 }
 
 /*
- * Garde-fou de canon : des noms que les joueurs ne doivent jamais lire
- * (contrainte de campagne : le Roi des Mendiants n'est jamais nommé ni
- * soupçonné). L'export échoue si l'un d'eux paraît dans un texte que la
- * fiche montrerait aux joueurs.
+ * Garde-fou de canon (lib/canon.ts) : l'export échoue si l'un de ces noms
+ * paraît dans un texte que la fiche montrerait aux joueurs.
  */
-export const NOMS_JAMAIS_REVELES = ['Roi des Mendiants'] as const;
+export { NOMS_JAMAIS_REVELES };
 
 /** Les fuites trouvées : « fiche › passage : nom ». Vide si aucune. */
 export function fuitesDeCanon(fiches: FicheImportee[], interdits: readonly string[] = NOMS_JAMAIS_REVELES): string[] {

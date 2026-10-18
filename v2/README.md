@@ -21,7 +21,7 @@ Cadrage complet : document « Cadrage cof-compagno 2.0 » du projet JDR.
 | `npm run importer-v1` | Réimporte les règles depuis la v1 vers `src/donnees/` (voir `src/donnees/LISEZMOI.md`) |
 | `npm run preparer-scenes` | Extrait des scènes `.dd2vtt` du catalogue v1 la géométrie (`src/donnees/scenes/`) et l'image en WebP (`public/scenes/`) |
 | `npm run lore:exporter` | Exporte le lore de la v1 vers `lore-v1.json` (secret, ignoré par git), à déposer dans Poste MJ › Données (L2.7a) |
-| `npm run verifier` | Typage, architecture, tests, build, règles Firestore — doit passer avant tout commit |
+| `npm run verifier` | Typage, architecture, tests, build, noms secrets absents du build, règles Firestore — doit passer avant tout commit |
 | `npm run deployer` | Vérifie, puis déploie le site v2 et les règles Firestore |
 
 ## Architecture
@@ -39,6 +39,16 @@ Cadrage complet : document « Cadrage cof-compagno 2.0 » du projet JDR.
 
 `.dependency-cruiser.cjs` fait échouer `npm run verifier` en cas de
 dépendance circulaire ou d'écran qui importe Firebase.
+
+Secrets du MJ (correctif du 18/10/2026) : tout ce que l'app importe est
+livré aux joueurs, chargé à la demande ou non. Le bestiaire, les armes et
+armures de monstres et l'équilibrage (`lib/regles/donnees-bestiaire.ts`),
+la conversion du lore v1 et la liste des noms secrets (`lib/canon.ts`) ne
+sont importés que par `outils/` et `tests/` : la règle
+`secrets-hors-de-l-app` de `.dependency-cruiser.cjs` le vérifie, et
+`npm run secrets:verifier` (dans `npm run verifier`, après le build)
+échoue si un nom de `NOMS_JAMAIS_REVELES` paraît dans `dist/`. Le
+bestiaire du MJ (L3) passera par Firestore, lisible du MJ seul.
 
 Le diagramme `docs/architecture-v2.drawio` (à la racine du dépôt, à côté
 de celui de la v1) montre les modules, leurs dépendances réelles et

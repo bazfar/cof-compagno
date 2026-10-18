@@ -5,20 +5,8 @@ import bestiaireJson from '../../src/donnees/bestiaire.json';
 import equilibrageJson from '../../src/donnees/equilibrage.json';
 import equipementDepartJson from '../../src/donnees/equipement-depart.json';
 import objetsJson from '../../src/donnees/objets.json';
-import {
-  armeMonstreParId,
-  armesMonstres,
-  armureMonstreParId,
-  armuresMonstres,
-  classeParId,
-  equilibrage,
-  equipementDepart,
-  etatParId,
-  monstres,
-  objetParId,
-  objets,
-  sortParId,
-} from '../../src/lib/regles/donnees';
+import { classeParId, equipementDepart, etatParId, objetParId, objets, sortParId } from '../../src/lib/regles/donnees';
+import { armeMonstreParId, armesMonstres, armureMonstreParId, armuresMonstres, equilibrage, monstres } from '../../src/lib/regles/donnees-bestiaire';
 import {
   schemaArmeMonstre,
   schemaArmureMonstre,
