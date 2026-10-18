@@ -688,6 +688,42 @@
         <mxCell id="l32f" parent="1" source="bOutil" target="bSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="titre-l33" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Dons d'objets entre joueurs (L3.3) — proposé puis accepté ; l'objet voyage dans le don, jamais à deux endroits" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="3820" as="geometry" />
+        </mxCell>
+        <mxCell id="dSchema" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/don.ts  (L3.3)&lt;/b&gt;&lt;hr&gt;Don : donneur, receveur, objet mis de côté,&lt;br&gt;statut propose → accepte | refuse → repris | annule" vertex="1">
+          <mxGeometry height="70" width="300" x="40" y="3860" as="geometry" />
+        </mxCell>
+        <mxCell id="dLib" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/dons/dons.ts + regles/equipement.ts&lt;/b&gt;&lt;hr&gt;destinataires, dons en attente ;&lt;br&gt;retirerPourDon, recevoirObjet (pile ou clé neuve)" vertex="1">
+          <mxGeometry height="70" width="300" x="380" y="3860" as="geometry" />
+        </mxCell>
+        <mxCell id="dUi" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/DonsJoueur.svelte, FicheVivante&lt;/b&gt;&lt;hr&gt;sac : « Donner… » ; panneau : accepter,&lt;br&gt;refuser, annuler, reprendre" vertex="1">
+          <mxGeometry height="70" width="300" x="720" y="3860" as="geometry" />
+        </mxCell>
+        <mxCell id="dAct" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;lib/actions/dons.ts&lt;/b&gt;&lt;hr&gt;chaque geste : TRANSACTION qui relit le don&lt;br&gt;et la fiche (ni perte ni doublon)" vertex="1">
+          <mxGeometry height="70" width="290" x="1060" y="3860" as="geometry" />
+        </mxCell>
+        <mxCell id="dMag" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f8cecc;strokeColor=#b85450;" value="&lt;b&gt;lib/magasins/dons.svelte.ts&lt;/b&gt;&lt;hr&gt;deux requêtes : deUid == moi, aUid == moi" vertex="1">
+          <mxGeometry height="54" width="320" x="1390" y="3860" as="geometry" />
+        </mxCell>
+        <mxCell id="l33a" parent="1" source="joueur" target="dUi" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l33b" parent="1" source="dUi" target="dAct" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l33c" parent="1" source="dUi" target="dMag" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l33d" parent="1" source="dUi" target="dLib" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l33e" parent="1" source="dAct" target="dLib" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l33f" parent="1" source="dAct" target="dSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
 </root>
     </mxGraphModel>
   </diagram>
@@ -823,6 +859,12 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="c32b" parent="1" source="tbl" target="bestiaireDonnees" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="donsDoc" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;dons/{id}  (L3.3)&lt;/b&gt;&lt;hr&gt;{ deUid, dePerso, aUid, aPerso, objet, statut }&lt;br&gt;lu du donneur, du receveur et du MJ ;&lt;br&gt;seul le statut change ensuite" vertex="1">
+          <mxGeometry height="70" width="300" x="1400" y="920" as="geometry" />
+        </mxCell>
+        <mxCell id="c33a" parent="1" source="tbl" target="donsDoc" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 </root>

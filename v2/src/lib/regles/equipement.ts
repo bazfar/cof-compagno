@@ -243,6 +243,33 @@ export function ajouterDuCatalogue(f: Fiche, idObjet: string, combien = 1): Chan
   return ch;
 }
 
+/**
+ * Don entre joueurs (lot L3.3) : sortir `combien` unités de l'objet rangé
+ * sous `cle` pour les confier à un don. Seul un objet du sac se donne (un
+ * objet équipé se retire d'abord). Rend le changement de la fiche du
+ * donneur et l'objet donné (avec sa quantité).
+ */
+export function retirerPourDon(f: Fiche, cle: string, combien = 1): { changement: Changement; objet: ObjetFiche } {
+  const objet = f.inventaire[cle];
+  if (!objet) throw new RefusEquipement('Cet objet n’est plus dans le sac.');
+  const dispo = quantite(objet);
+  const n = Math.round(combien);
+  if (!Number.isFinite(n) || n < 1 || n > dispo) throw new RefusEquipement(`Tu n’en as que ${dispo}.`);
+  const reste = dispo - n;
+  const donne: ObjetFiche = dispo > 1 || typeof objet.quantite === 'number' ? { ...structuredClone(objet), quantite: n } : structuredClone(objet);
+  return {
+    changement: { equipement: {}, inventaire: { [cle]: reste > 0 ? { ...objet, quantite: reste } : null } },
+    objet: donne,
+  };
+}
+
+/** Ranger un objet reçu (don, loot) dans le sac : il rejoint sa pile s'il est empilable. */
+export function recevoirObjet(f: Fiche, objet: ObjetFiche): Changement {
+  const ch: Changement = { equipement: {}, inventaire: {} };
+  ranger(f, [structuredClone(objet)], ch);
+  return ch;
+}
+
 /** Applique un Changement à une fiche (pour l'affichage et les tests ; Firestore fait de même champ par champ). */
 export function appliquer(f: Fiche, ch: Changement): Fiche {
   const inventaire = { ...f.inventaire };

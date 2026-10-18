@@ -84,12 +84,18 @@ export async function retirerPortrait(id: string): Promise<void> {
  * Jamais le sac entier (bug v1).
  */
 export async function appliquerChangement(id: string, ch: Changement): Promise<void> {
+  const champs = champsDuChangement(ch);
+  if (Object.keys(champs).length) await updateDoc(doc(db, cheminPerso(id)), champs);
+}
+
+/** Les seuls champs touchés par un Changement, prêts pour updateDoc ou une transaction (L3.3). */
+export function champsDuChangement(ch: Changement): Record<string, unknown> {
   const champs: Record<string, unknown> = {};
   for (const [slot, objet] of Object.entries(ch.equipement)) champs[`equipement.${slot}`] = objet === undefined ? null : versFirestore(objet);
   for (const [cle, objet] of Object.entries(ch.inventaire)) champs[`inventaire.${cle}`] = objet ? versFirestore(objet) : deleteField();
   if (ch.pvMax !== undefined) champs.pvMax = ch.pvMax;
   if (ch.pvActuel !== undefined) champs.pvActuel = ch.pvActuel;
-  if (Object.keys(champs).length) await updateDoc(doc(db, cheminPerso(id)), champs);
+  return champs;
 }
 
 /**

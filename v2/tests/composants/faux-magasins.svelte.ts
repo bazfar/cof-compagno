@@ -99,3 +99,10 @@ export const magasinsBestiaire = {
   suivreArmuresMonstres: () => ({ etat: armuresBestiaire, arreter: () => {} }),
   suivreEquilibrage: () => ({ etat: equilibrageBestiaire, arreter: () => {} }),
 };
+
+/** Dons d'objets du joueur (L3.3). */
+export const dons = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+
+export const magasinsDons = {
+  suivreMesDons: () => ({ etat: dons, arreter: () => {} }),
+};

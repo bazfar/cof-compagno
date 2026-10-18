@@ -1,8 +1,10 @@
 <script lang="ts">
+  import { proposerDon, RefusDon } from '../lib/actions/dons';
   import { lancerEtNoter, noterJet } from '../lib/actions/journal';
   import { appliquerChangement, enregistrerPortrait, messageErreurPerso, modifierNotes, modifierPieces, modifierPP, modifierPV, retirerPortrait } from '../lib/actions/persos';
   import { lireImage } from '../lib/battlemap/compression';
   import type { AvecId } from '../lib/firebase/suivre.svelte';
+  import type { Destinataire } from '../lib/dons/dons';
   import { comprimerPortrait } from '../lib/fiche/portrait';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import { formuleTest, texteJet } from '../lib/regles/des';
@@ -46,9 +48,18 @@
    * Capacités sépare l'usage en combat et hors combat. Le changement de
    * portrait passe dans « Suivi et notes » pour garder l'en-tête court.
    * Ce découpage est voulu : ne pas revenir à six onglets.
+   *
+   * Dons (L3.3) : `destinataires` (les personnages joués des autres
+   * joueurs, fournis par MesPersonnages) ajoute « Donner… » sous chaque
+   * objet du sac. Absent dans la vue du MJ, qui ajoute du catalogue.
    */
 
-  let { fiche, modifiable, mj = false }: { fiche: AvecId<Fiche>; modifiable: boolean; mj?: boolean } = $props();
+  let {
+    fiche,
+    modifiable,
+    mj = false,
+    destinataires = [],
+  }: { fiche: AvecId<Fiche>; modifiable: boolean; mj?: boolean; destinataires?: Destinataire[] } = $props();
 
   const ONGLETS = ['Combat', 'Capacités', 'Équipement', 'Suivi et notes'] as const;
   let onglet = $state<(typeof ONGLETS)[number]>('Combat');
@@ -166,6 +177,28 @@
     if (o && confirm(`Jeter toute la pile de « ${o.nom} » ?`)) geste(() => E.jeter(fiche, cle, 'tout'));
   }
   const qte = (o: Record<string, unknown>) => (typeof o.quantite === 'number' ? o.quantite : 1);
+
+  // ---- Dons (L3.3) : l'objet est mis de côté dès la proposition ----
+  let don = $state<{ cle: string; a: string; combien: number } | null>(null);
+  function ouvrirDon(cle: string) {
+    message = '';
+    don = { cle, a: destinataires.length === 1 ? (destinataires[0]?.perso ?? '') : '', combien: 1 };
+  }
+  async function proposer() {
+    if (!don) return;
+    const d = don;
+    const a = destinataires.find((x) => x.perso === d.a);
+    const nom = fiche.inventaire[d.cle]?.nom ?? 'Objet';
+    if (!a) return void (message = 'Choisis à qui donner.');
+    message = '';
+    try {
+      await proposerDon(fiche.id, d.cle, Number(d.combien) || 1, a);
+      don = null;
+      message = `${nom} proposé à ${a.nom} : en attente de sa réponse.`;
+    } catch (e) {
+      message = e instanceof RefusDon || e instanceof E.RefusEquipement ? e.message : messageErreurPerso(e);
+    }
+  }
   const estMainGaucheDeuxMains = (s: Slot) => s === 'main_gauche' && !!fiche.equipement.main_gauche?.deuxMains;
 
   const PIECES = [['or', 'Or'], ['argent', 'Argent'], ['bronze', 'Bronze']] as const;
@@ -387,7 +420,23 @@
               {/if}
               <button class="discret petit" aria-label={`Jeter un ${o.nom}`} onclick={() => geste(() => E.jeter(fiche, cle, 'un'))}>{qte(o) > 1 ? 'Jeter 1' : 'Jeter'}</button>
               {#if qte(o) > 1}<button class="discret petit" aria-label={`Jeter toute la pile de ${o.nom}`} onclick={() => jeterTout(cle)}>Jeter tout</button>{/if}
+              {#if destinataires.length && don?.cle !== cle}
+                <button class="discret petit" aria-label={`Donner ${o.nom}`} onclick={() => ouvrirDon(cle)}>Donner…</button>
+              {/if}
             </span>
+            {#if don && don.cle === cle}
+              <span class="ligne don" role="group" aria-label={`Donner ${o.nom}`}>
+                <select aria-label="Donner à" bind:value={don.a}>
+                  <option value="">À qui ?</option>
+                  {#each destinataires as d (d.perso)}<option value={d.perso}>{d.nom} ({d.joueur})</option>{/each}
+                </select>
+                {#if qte(o) > 1}
+                  <input aria-label="Combien" class="quantite" type="number" min="1" max={qte(o)} bind:value={don.combien} />
+                {/if}
+                <button class="petit" disabled={!don.a} onclick={proposer}>Proposer</button>
+                <button class="discret petit" onclick={() => (don = null)}>Annuler</button>
+              </span>
+            {/if}
           {/if}
         </li>
       {/each}
@@ -770,8 +819,14 @@
   .emplacement .effet {
     flex-basis: auto;
   }
-  .actions-objet {
+  .actions-objet,
+  .don {
     flex-basis: 100%;
+  }
+  .don {
+    padding: 6px 8px;
+    border-radius: var(--rayon);
+    background: var(--couleur-accent-pale);
   }
   .quantite {
     width: 80px;

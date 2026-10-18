@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { choisirPersoActif, messageErreurPerso } from '../lib/actions/persos';
+  import { destinataires } from '../lib/dons/dons';
   import { suivreMesImports } from '../lib/magasins/imports.svelte';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
@@ -9,6 +10,7 @@
   import { brouillonDepuisV1, ErreurImportV1 } from '../lib/regles/import-v1';
   import { session } from '../lib/session.svelte';
   import AssistantCreation from './AssistantCreation.svelte';
+  import DonsJoueur from './DonsJoueur.svelte';
   import FicheVivante from './FicheVivante.svelte';
   import Portrait from './Portrait.svelte';
 
@@ -24,6 +26,9 @@
    *
    * Fiche vivante (L2.3) : celle du personnage choisi dans la liste, par
    * défaut le personnage joué.
+   *
+   * Dons (L3.3) : le panneau des dons en attente passe au-dessus de la
+   * fiche ; on peut donner aux personnages joués des autres joueurs.
    */
 
   const persos = suivrePersos(session.table);
@@ -40,6 +45,7 @@
     persos.etat.elements.filter((p) => p.proprietaireUid === session.uid).sort((a, b) => a.creeLe - b.creeLe),
   );
   const actif = $derived(joueurs.etat.elements.find((j) => j.id === session.uid)?.persoActif ?? null);
+  const aQuiDonner = $derived(destinataires(joueurs.etat.elements, persos.etat.elements, session.uid));
 
   let choisi = $state<string | null>(null);
   const ouverte = $derived(miens.find((p) => p.id === (choisi ?? actif)) ?? miens[0] ?? null);
@@ -124,9 +130,10 @@
     {/if}
     {#if message}<p class="erreur" role="alert">{message}</p>{/if}
   </section>
+  <DonsJoueur />
   {#if ouverte}
     {#key ouverte.id}
-      <FicheVivante fiche={ouverte} modifiable={true} />
+      <FicheVivante fiche={ouverte} modifiable={true} destinataires={aQuiDonner} />
     {/key}
   {/if}
 {/if}

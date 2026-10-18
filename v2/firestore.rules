@@ -104,6 +104,31 @@ service cloud.firestore {
         && (!('seance' in d) || (d.seance is string && d.seance.size() >= 1 && d.seance.size() <= 100))
         && d.creeLe is int;
     }
+    // Aligné sur schemaDon (src/lib/schemas/don.ts), lot L3.3.
+    function donValide(d) {
+      return d.keys().hasOnly(['deUid', 'dePerso', 'deNom', 'aUid', 'aPerso', 'aNom', 'objet', 'statut', 'creeLe', 'resoluLe'])
+        && d.keys().hasAll(['deUid', 'dePerso', 'deNom', 'aUid', 'aPerso', 'aNom', 'objet', 'statut', 'creeLe', 'resoluLe'])
+        && d.deUid is string && d.deUid.size() >= 1
+        && d.dePerso is string && d.dePerso.size() >= 1
+        && d.deNom is string && d.deNom.size() >= 1 && d.deNom.size() <= 80
+        && d.aUid is string && d.aUid.size() >= 1
+        && d.aPerso is string && d.aPerso.size() >= 1
+        && d.aNom is string && d.aNom.size() >= 1 && d.aNom.size() <= 80
+        && d.objet is map
+        && d.statut in ['propose', 'accepte', 'refuse', 'repris', 'annule']
+        && d.creeLe is int
+        && (d.resoluLe == null || d.resoluLe is int);
+    }
+    // Un don ne change que de statut (et de date de règlement), selon qui agit :
+    // le receveur accepte ou refuse une proposition ; le donneur l'annule, ou
+    // reprend un objet refusé.
+    function transitionDon(apres, avant) {
+      return apres.diff(avant).affectedKeys().hasOnly(['statut', 'resoluLe'])
+        && apres.resoluLe is int
+        && ((request.auth.uid == avant.aUid && avant.statut == 'propose' && apres.statut in ['accepte', 'refuse'])
+          || (request.auth.uid == avant.deUid && avant.statut == 'propose' && apres.statut == 'annule')
+          || (request.auth.uid == avant.deUid && avant.statut == 'refuse' && apres.statut == 'repris'));
+    }
     // Aligné sur schemaSeance (src/lib/schemas/seance.ts), lot L3.1.
     function seanceValide(d) {
       return d.keys().hasOnly(['numero', 'ouverteLe', 'closeLe', 'presents'])
@@ -408,6 +433,33 @@ service cloud.firestore {
       match /seances/{seance} {
         allow read: if estMembre(table);
         allow create, update: if estMj(table) && seanceValide(request.resource.data);
+        allow delete: if estMj(table);
+      }
+
+      // Dons d'objets entre joueurs (L3.3, décision du 18/10/2026 : proposé
+      // puis accepté). Lus du MJ, du donneur et du receveur seulement
+      // (requêtes joueur : deUid == uid, puis aUid == uid). Le donneur crée
+      // la proposition depuis l'un de ses personnages vers le personnage d'un
+      // autre joueur ; seul le statut change ensuite (transitionDon). L'objet
+      // voyage dans le don : il quitte un sac et entre dans l'autre dans la
+      // même transaction que le changement de statut (lib/actions/dons.ts).
+      // Que l'objet sorte bien du sac du donneur reste une règle de l'app :
+      // sans Cloud Functions (plan Spark), les règles ne savent pas comparer
+      // deux documents objet par objet.
+      match /dons/{don} {
+        allow read: if estMj(table)
+          || (estJoueur(table) && (resource.data.deUid == request.auth.uid || resource.data.aUid == request.auth.uid));
+        allow create: if estJoueur(table)
+          && donValide(request.resource.data)
+          && request.resource.data.deUid == request.auth.uid
+          && request.resource.data.aUid != request.auth.uid
+          && request.resource.data.statut == 'propose'
+          && request.resource.data.resoluLe == null
+          && proprietaireDuPerso(table, request.resource.data.dePerso)
+          && get(/databases/$(database)/documents/tables/$(table)/persos/$(request.resource.data.aPerso)).data.proprietaireUid == request.resource.data.aUid;
+        allow update: if estJoueur(table)
+          && donValide(request.resource.data)
+          && transitionDon(request.resource.data, resource.data);
         allow delete: if estMj(table);
       }
 
