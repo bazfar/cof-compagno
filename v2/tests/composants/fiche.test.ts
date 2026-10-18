@@ -33,6 +33,9 @@ const crans = vi.hoisted(() => {
   return { RefusCran, donnerCran: vi.fn(async (_id: string, _d: 1 | -1, _l: string) => 0) };
 });
 vi.mock('../../src/lib/actions/progression', () => crans);
+// Montée de niveau (L2.5b) : on vérifie ce qui part à l'écriture.
+const montee = vi.hoisted(() => ({ monterNiveau: vi.fn(async (_id: string, _m: unknown) => ({ fiche: { niveau: 4 }, pvGagnes: 7 }) as unknown) }));
+vi.mock('../../src/lib/actions/montee', () => montee);
 vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPersos);
 vi.mock('../../src/lib/magasins/presents.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPresents);
 
@@ -52,6 +55,7 @@ beforeEach(() => {
   session.uid = 'alice';
   Object.values(actions).forEach((f) => f.mockClear());
   Object.values(journal).forEach((f) => f.mockClear());
+  montee.monterNiveau.mockClear();
   crans.donnerCran.mockReset();
   crans.donnerCran.mockResolvedValue(0);
   for (const k of Object.keys(portraits)) delete portraits[k];
@@ -294,5 +298,72 @@ describe('jets depuis la fiche et crans (L2.5)', () => {
     expect((screen.getByRole('button', { name: '+1 cran aux PJ joués' }) as HTMLButtonElement).disabled).toBe(true);
     await fireEvent.click(screen.getByRole('button', { name: `Retirer un cran à ${karlach.nom}` }));
     await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('Aucun cran à retirer : un niveau acquis ne se perd pas.'));
+  });
+});
+
+describe('montée de niveau guidée (L2.5b)', () => {
+  /** Karlach (guerrier humain niveau 3), barre pleine. */
+  const prete = () => ({ ...reelle('Karlach', 'p-c'), progression: { crans: 3 } });
+  const ouvrir = async () => {
+    const k = prete();
+    // Comme dans l'app : la fiche vient d'un magasin réactif (un proxy Svelte, que structuredClone refuse).
+    persos.elements = [k];
+    render(FicheVivante, { props: { fiche: persos.elements[0] as typeof k, modifiable: true } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Passer au niveau 4' }));
+    return { k, zone: within(screen.getByRole('region', { name: 'Montée de niveau' })) };
+  };
+
+  it('barre pleine : le bouton n’apparaît qu’à qui peut modifier la fiche', () => {
+    render(FicheVivante, { props: { fiche: prete(), modifiable: false } });
+    expect(screen.queryByRole('button', { name: 'Passer au niveau 4' })).toBeNull();
+  });
+
+  it('ce qui manque est listé, et la validation attend ; le dé de vie part au journal', async () => {
+    const { k, zone } = await ouvrir();
+    const manque = within(zone.getByRole('list', { name: 'À compléter' }));
+    expect(manque.getByText('Lance le dé de vie du niveau 4.')).toBeTruthy();
+    expect(manque.getByText('Choisis 1 don(s).')).toBeTruthy();
+    expect((zone.getByRole('button', { name: 'Passer au niveau 4' }) as HTMLButtonElement).disabled).toBe(true);
+    await fireEvent.click(zone.getByRole('button', { name: 'Lancer le dé de vie (d10)' }));
+    await waitFor(() => expect(journal.noterJet).toHaveBeenCalledWith('PV du niveau 4', '1d10', expect.objectContaining({ faces: 10 }), k.nom));
+    expect(zone.getByTestId('jet-pv').textContent).toMatch(/^Dé de vie : \d+ — PV max \d+ → \d+$/);
+    expect(zone.queryByRole('button', { name: /^Lancer le dé de vie/ })).toBeNull();
+  });
+
+  it('un rang acquis ne se retire pas ; un rang pris à l’instant, si', async () => {
+    const { k, zone } = await ouvrir();
+    expect(zone.queryAllByRole('button', { name: /^Retirer / })).toEqual([]);
+    const prendre = zone.getAllByRole('button', { name: /^Prendre [a-z]/ }).find((b) => !/\.chaos\./.test(b.getAttribute('aria-label')!))!;
+    const id = prendre.getAttribute('aria-label')!.replace('Prendre ', '');
+    await fireEvent.click(prendre);
+    expect(zone.getByRole('button', { name: `Retirer ${id}` })).toBeTruthy();
+    expect(k.capacites.some((c) => c.id === id)).toBe(false);
+  });
+
+  it('complète : la montée part à l’écriture avec le jet et le don, puis le message', async () => {
+    const { zone } = await ouvrir();
+    await fireEvent.click(zone.getByRole('button', { name: 'Lancer le dé de vie (d10)' }));
+    await fireEvent.change(zone.getByLabelText('Don'), { target: { value: 'alerte' } });
+    await fireEvent.click(zone.getByRole('button', { name: 'Prendre' }));
+    await fireEvent.click(zone.getByRole('button', { name: 'Passer au niveau 4' }));
+    await waitFor(() => expect(montee.monterNiveau).toHaveBeenCalledTimes(1));
+    const [id, m] = montee.monterNiveau.mock.calls[0]! as [string, { jetPV: number; b: { dons: string[]; niveau: number } }];
+    expect(id).toBe('p-c');
+    expect(m.jetPV).toBeGreaterThan(0);
+    expect(m.b.dons).toContain('alerte');
+    expect(m.b.niveau).toBe(4);
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/passe au niveau 4 \(\+7 PV max\)\.$/));
+    expect(screen.queryByRole('region', { name: 'Montée de niveau' })).toBeNull();
+  });
+
+  it('un refus à l’écriture s’affiche dans la montée, qui reste ouverte', async () => {
+    const { RefusMontee } = await import('../../src/lib/regles/montee');
+    montee.monterNiveau.mockRejectedValueOnce(new RefusMontee('La fiche a changé pendant la montée de niveau : recommence-la.'));
+    const { zone } = await ouvrir();
+    await fireEvent.click(zone.getByRole('button', { name: 'Lancer le dé de vie (d10)' }));
+    await fireEvent.change(zone.getByLabelText('Don'), { target: { value: 'alerte' } });
+    await fireEvent.click(zone.getByRole('button', { name: 'Prendre' }));
+    await fireEvent.click(zone.getByRole('button', { name: 'Passer au niveau 4' }));
+    await waitFor(() => expect(zone.getByRole('alert').textContent).toBe('La fiche a changé pendant la montée de niveau : recommence-la.'));
   });
 });

@@ -135,6 +135,22 @@ service cloud.firestore {
     function progressionVierge(d) {
       return d.progression.crans == 0 && d.vecu.crans == 0 && d.vecu.paliers == 0 && d.vecu.points == 0;
     }
+    // Crans à réunir pour passer du niveau n au suivant. Aligné sur
+    // cransRequis (src/lib/regles/progression.ts) : 3 pour les niveaux 2 à
+    // 4, 4 pour 5 à 7, 5 pour 8 à 10, 6 pour 11 et 12.
+    function cransRequis(n) {
+      return n + 1 <= 4 ? 3 : (n + 1 <= 7 ? 4 : (n + 1 <= 10 ? 5 : 6));
+    }
+    // Montée de niveau par son joueur (L2.5b) : un seul niveau, jusqu'au 12,
+    // et les crans requis dépensés d'un coup. Hors montée, le joueur ne
+    // touche ni à son niveau ni à ses crans.
+    function monteeValide(apres, avant) {
+      return apres.niveau == avant.niveau + 1
+        && apres.niveau <= 12
+        && apres.progression.keys().hasOnly(['crans'])
+        && apres.progression.crans == avant.progression.crans - cransRequis(avant.niveau)
+        && apres.progression.crans >= 0;
+    }
     // Vécu modifié par son joueur : il choisit ses nœuds et dépense ses
     // points, sans toucher aux crans ni aux paliers, que donne le MJ.
     function vecuChoisiParJoueur(apres, avant) {
@@ -296,7 +312,9 @@ service cloud.firestore {
           && (estMj(table)
             || (estJoueur(table)
               && resource.data.proprietaireUid == request.auth.uid
-              && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['proprietaireUid', 'schemaVersion', 'creeLe', 'progression'])
+              && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['proprietaireUid', 'schemaVersion', 'creeLe'])
+              && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['niveau', 'progression'])
+                || monteeValide(request.resource.data, resource.data))
               && vecuChoisiParJoueur(request.resource.data.vecu, resource.data.vecu)));
         allow delete: if estMj(table);
 

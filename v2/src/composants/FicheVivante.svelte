@@ -10,6 +10,7 @@
   import { barreNiveau } from '../lib/regles/progression';
   import { SLOTS_EQUIPEMENT, type Slot } from '../lib/regles/fiche-calcul';
   import { LIMITE_NOTES, type Fiche } from '../lib/schemas/fiche';
+  import MonteeNiveau from './MonteeNiveau.svelte';
   import Portrait from './Portrait.svelte';
 
   /*
@@ -33,6 +34,9 @@
    * lancent d'un clic (d20 + modificateur), et vont au journal de dés commun
    * avec les potions. La barre de progression montre les crans donnés par
    * le MJ.
+   *
+   * Montée de niveau (L2.5b) : barre pleine, « Passer au niveau N » ouvre
+   * l'assistant (MonteeNiveau), pour le propriétaire comme pour le MJ.
    */
 
   let { fiche, modifiable, mj = false }: { fiche: AvecId<Fiche>; modifiable: boolean; mj?: boolean } = $props();
@@ -40,6 +44,7 @@
   const ONGLETS = ['Combat', 'Équipement', 'Caractéristiques', 'Capacités', 'Suivi', 'Notes'] as const;
   let onglet = $state<(typeof ONGLETS)[number]>('Combat');
   let message = $state('');
+  let montee = $state(false);
 
   const vue = $derived(vueFiche(fiche));
   const signe = (n: number | null) => (n === null ? '—' : n >= 0 ? `+${n}` : String(n));
@@ -186,9 +191,15 @@
         <span class="etiquette">Progression</span>
         <div class="barre crans" aria-hidden="true"><span style:width="{Math.round(barre.part * 100)}%"></span></div>
         <span data-testid="crans">{barre.crans} / {barre.requis} crans vers le niveau {fiche.niveau + 1}</span>
-        {#if barre.pleine}<strong class="pleine">Barre pleine : la montée de niveau est prête.</strong>{/if}
+        {#if barre.pleine}
+          <strong class="pleine">Barre pleine : la montée de niveau est prête.</strong>
+          {#if modifiable && !montee}<button onclick={() => { message = ''; montee = true; }}>Passer au niveau {fiche.niveau + 1}</button>{/if}
+        {/if}
       {/if}
     </div>
+    {#if montee}
+      <MonteeNiveau {fiche} surFin={(m) => { montee = false; message = m; }} />
+    {/if}
     <div class="ressources">
       <div class="ressource">
         <span class="etiquette">PV</span>

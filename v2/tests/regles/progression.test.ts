@@ -38,12 +38,13 @@ afterAll(async () => {
 });
 
 /** Fiche minimale valide (mêmes champs que dans persos.test.ts). */
-function fiche(proprietaireUid: string) {
+function fiche(proprietaireUid: string, extra: Record<string, unknown> = {}) {
   return {
     schemaVersion: 1, proprietaireUid, creeLe: 1, nom: 'Shyrion', niveau: 3, classe: 'magicien', race: 'elfe',
     caracs: { FOR: 10 }, capacites: [], pvMax: 14, pvActuel: 14, equipement: {}, inventaire: {},
     piecesOr: 5, piecesArgent: 0, piecesBronze: 0, modules: {},
     progression: { crans: 2 }, vecu: { crans: 0, paliers: 0, points: 0, noeuds: [], noeudOffert: null }, usages: {},
+    ...extra,
   };
 }
 
@@ -80,6 +81,34 @@ describe('crans de progression (L2.5)', () => {
     await assertFails(pour('bob').doc(`${chemin}/j1`).set(cran('bob', { barre: 'vecu' })));
     await assertFails(pour('bob').doc(`${chemin}/j1`).set(cran('bob', { delta: 2 })));
     await assertFails(pour('bob').doc(`${chemin}/j1`).set(cran('alice')));
+  });
+});
+
+describe('montée de niveau par la joueuse (L2.5b)', () => {
+  const poser = (extra: Record<string, unknown>) =>
+    env.withSecurityRulesDisabled(async (ctx) => { await ctx.firestore().doc(`${TABLE}/persos/p1`).set(fiche('alice', extra)); });
+  const p1 = (uid: string) => pour(uid).doc(`${TABLE}/persos/p1`);
+
+  it('un niveau, crans requis dépensés (3 pour passer du 3 au 4), le surplus gardé : permis', async () => {
+    await poser({ progression: { crans: 4 } });
+    await assertSucceeds(p1('alice').update({ niveau: 4, 'progression.crans': 1, pvMax: 21, dons: ['robuste'] }));
+  });
+
+  it('refusé : niveau sans crans, deux niveaux, crans insuffisants, crans seuls, ou la fiche d’un autre', async () => {
+    await poser({ progression: { crans: 4 } });
+    await assertFails(p1('alice').update({ niveau: 4 }));
+    await assertFails(p1('alice').update({ niveau: 5, 'progression.crans': 1 }));
+    await assertFails(p1('alice').update({ niveau: 4, 'progression.crans': 2 }));
+    await assertFails(p1('alice').update({ 'progression.crans': 1 }));
+    await assertFails(p1('carol').update({ niveau: 4, 'progression.crans': 1 }));
+    await poser({ progression: { crans: 2 } });
+    await assertFails(p1('alice').update({ niveau: 4, 'progression.crans': -1 }));
+  });
+
+  it('plafond : pas de montée au-delà du niveau 12 ; le MJ, lui, fait tout', async () => {
+    await poser({ niveau: 12, progression: { crans: 6 } });
+    await assertFails(p1('alice').update({ niveau: 13, 'progression.crans': 0 }));
+    await assertSucceeds(p1('bob').update({ niveau: 13 }));
   });
 });
 

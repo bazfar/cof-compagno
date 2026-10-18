@@ -1,6 +1,6 @@
 <mxfile host="Electron">
   <diagram name="Architecture 2.0 - modules du socle" id="v2-modules">
-    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1760" pageHeight="3060" math="0" shadow="0">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1760" pageHeight="3180" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -64,7 +64,7 @@
         <mxCell id="depcruise" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;.dependency-cruiser.cjs&lt;/b&gt;&lt;hr&gt;pas-de-cycle : aucune dépendance circulaire&lt;br&gt;ecrans-sans-firestore : écrans et composants&lt;br&gt;  n'importent jamais firebase/client ni le SDK" vertex="1">
           <mxGeometry height="86" width="330" x="1380" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="tests" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/  (unitaires 580 + 4 à faire ; composants 44 ; règles 56)&lt;/b&gt;&lt;hr&gt;unitaires/ : table, schemas-acces, schemas-carte,&lt;br&gt;  donnees-regles, donnees-bestiaire-objets,&lt;br&gt;  conversion-v1, battlemap, battlemap-vue,&lt;br&gt;  battlemap-dessins, battlemap-import,&lt;br&gt;  fiche, creation, import-v1, vue-fiche,&lt;br&gt;  equipement, jetons-pj, des-progression…&lt;br&gt;equivalence-v1 : 600 fiches + 9 réelles&lt;br&gt;battlemap-equivalence-v1 : js/carte.js&lt;br&gt;battlemap-bugs-v1 : 10 bugs v1 (4 en L6)&lt;br&gt;composants/ : CarteTable, fiche, journal…&lt;br&gt;regles/ : firestore, carte, persos, imports…" vertex="1">
+        <mxCell id="tests" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;tests/  (unitaires 964 + 4 à faire ; composants 49 ; règles 59)&lt;/b&gt;&lt;hr&gt;unitaires/ : table, schemas-acces, schemas-carte,&lt;br&gt;  donnees-regles, donnees-bestiaire-objets,&lt;br&gt;  conversion-v1, battlemap, battlemap-vue,&lt;br&gt;  battlemap-dessins, battlemap-import,&lt;br&gt;  fiche, creation, import-v1, vue-fiche,&lt;br&gt;  equipement, jetons-pj, montee…&lt;br&gt;equivalence-v1 : 600 fiches + 9 réelles&lt;br&gt;battlemap-equivalence-v1 : js/carte.js&lt;br&gt;battlemap-bugs-v1 : 10 bugs v1 (4 en L6)&lt;br&gt;composants/ : CarteTable, fiche, journal…&lt;br&gt;regles/ : firestore, carte, persos, imports…" vertex="1">
           <mxGeometry height="246" width="330" x="1380" y="220" as="geometry" />
         </mxCell>
         <mxCell id="npm" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;npm run verifier&lt;/b&gt;&lt;hr&gt;donnees:verifier : src/donnees à jour avec la v1&lt;br&gt;scenes:verifier : géométrie et images à jour&lt;br&gt;check : svelte-check + tsc (strict)&lt;br&gt;cycles : dependency-cruiser&lt;br&gt;test : vitest, unitaires + composants&lt;br&gt;build : vite&lt;br&gt;test:regles : émulateur Firestore&lt;br&gt;deployer = verifier puis hosting:v2 + règles&lt;br&gt;CI : .github/workflows/v2-verifier.yml" vertex="1">
@@ -250,7 +250,7 @@
         <mxCell id="l5k" parent="1" source="bmEquiv" target="dd2vtt" style="endArrow=open;dashed=1;html=1;" value="lit" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="titre-l2" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Fiche joueur (lots L2.1 à L2.5) — un seul schéma de fiche, éprouvé sur les 9 fiches réelles ; création, reprise v1, fiche vivante, équipement, jetons reliés, crans et journal de dés" vertex="1">
+        <mxCell id="titre-l2" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Fiche joueur (lots L2.1 à L2.5) — un seul schéma de fiche, éprouvé sur les 9 fiches réelles ; création, reprise v1, fiche vivante, équipement, jetons reliés, crans, journal de dés, montée de niveau" vertex="1">
           <mxGeometry height="24" width="1400" x="40" y="2110" as="geometry" />
         </mxCell>
         <mxCell id="fSchema" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/fiche.ts  (Zod strict)&lt;/b&gt;&lt;hr&gt;schemaFiche : champs de la fiche de calcul&lt;br&gt;+ identité, proprietaireUid, schemaVersion&lt;br&gt;inventaire en dictionnaire, modules&lt;br&gt;progression.crans (L2.5) ; vecu, usages vides" vertex="1">
@@ -304,7 +304,7 @@
         <mxCell id="fVue" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/fiche/vue-fiche.ts  (L2.3)&lt;/b&gt;&lt;hr&gt;fiche → ce que l'écran affiche :&lt;br&gt;stats (une seule CA), caracs, compétences,&lt;br&gt;voies, race, dons, mutations, Cercle" vertex="1">
           <mxGeometry height="86" width="300" x="380" y="2620" as="geometry" />
         </mxCell>
-        <mxCell id="fVivante" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/FicheVivante.svelte&lt;/b&gt;&lt;hr&gt;6 onglets ; PV, PP, sac, bourse, notes&lt;br&gt;écrits champ par champ ; saisie jamais&lt;br&gt;écrasée ; Portrait (document à part) ;&lt;br&gt;valeurs cliquables : d20 + mod (L2.5) ;&lt;br&gt;barre de crans" vertex="1">
+        <mxCell id="fVivante" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/FicheVivante.svelte&lt;/b&gt;&lt;hr&gt;6 onglets ; PV, PP, sac, bourse, notes&lt;br&gt;écrits champ par champ ; saisie jamais&lt;br&gt;écrasée ; Portrait (document à part) ;&lt;br&gt;valeurs cliquables : d20 + mod (L2.5) ;&lt;br&gt;barre de crans, montée de niveau" vertex="1">
           <mxGeometry height="118" width="300" x="720" y="2620" as="geometry" />
         </mxCell>
         <mxCell id="fGroupe" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/GroupeMj.svelte&lt;/b&gt;&lt;hr&gt;MJ : tous les PJ, PV/CA/PP,&lt;br&gt;PV sur place, fiche en un clic ;&lt;br&gt;crans : +1/−1 par PJ, +1 aux joués" vertex="1">
@@ -333,6 +333,30 @@
         </mxCell>
         <mxCell id="fMagJ" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f8cecc;strokeColor=#b85450;" value="&lt;b&gt;lib/magasins/journal.svelte.ts&lt;/b&gt;&lt;hr&gt;suivreJournal : orderBy creeLe,&lt;br&gt;limit 40, schéma validé" vertex="1">
           <mxGeometry height="70" width="320" x="1390" y="2900" as="geometry" />
+        </mxCell>
+        <mxCell id="fMontee" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/regles/montee.ts  (L2.5b)&lt;/b&gt;&lt;hr&gt;montée guidée : règles de creation.ts&lt;br&gt;sur la fiche au niveau suivant ;&lt;br&gt;acquis verrouillé ; gain de PV/PP" vertex="1">
+          <mxGeometry height="86" width="300" x="40" y="3040" as="geometry" />
+        </mxCell>
+        <mxCell id="fMonteeUi" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/MonteeNiveau.svelte&lt;/b&gt;&lt;hr&gt;dé de vie (au journal), voies, dons,&lt;br&gt;rangs raciaux, sorts ; refus affichés" vertex="1">
+          <mxGeometry height="70" width="300" x="720" y="3040" as="geometry" />
+        </mxCell>
+        <mxCell id="fActM" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;lib/actions/montee.ts&lt;/b&gt;&lt;hr&gt;monterNiveau : TRANSACTION, relit&lt;br&gt;la fiche et y rejoue la montée" vertex="1">
+          <mxGeometry height="70" width="290" x="1060" y="3040" as="geometry" />
+        </mxCell>
+        <mxCell id="l25i" parent="1" source="fMontee" target="fCreation" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l25j" parent="1" source="fMonteeUi" target="fMontee" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l25k" parent="1" source="fMonteeUi" target="fActM" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l25l" parent="1" source="fActM" target="fMontee" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l25m" parent="1" source="fVivante" target="fMonteeUi" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="l25a" parent="1" source="fEquip" target="fDes" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
@@ -558,7 +582,7 @@
         <mxCell id="joueursd" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;joueurs/{uid}&lt;/b&gt;&lt;hr&gt;{ nom, couleur?, persoActif?, rejointLe }&lt;br&gt;écriture : soi-même | retrait : MJ&lt;br&gt;lu en direct par ListeJoueurs" vertex="1">
           <mxGeometry height="102" width="280" x="620" y="260" as="geometry" />
         </mxCell>
-        <mxCell id="persos" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;persos/{id}  (L2.1)&lt;/b&gt;&lt;hr&gt;schemaFiche v1 ; inventaire en dictionnaire&lt;br&gt;joueur : ses persos, sans crans | MJ : tout&lt;br&gt;/images/portrait (L2.3)" vertex="1">
+        <mxCell id="persos" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;persos/{id}  (L2.1)&lt;/b&gt;&lt;hr&gt;schemaFiche v1 ; inventaire en dictionnaire&lt;br&gt;joueur : ses persos, niveau par montée&lt;br&gt;/images/portrait (L2.3)" vertex="1">
           <mxGeometry height="118" width="260" x="40" y="440" as="geometry" />
         </mxCell>
         <mxCell id="seances" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontColor=#666666;" value="&lt;b&gt;seances/{id}  (L3)&lt;/b&gt;&lt;hr&gt;séance courante, présents" vertex="1">
