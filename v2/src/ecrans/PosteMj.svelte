@@ -1,7 +1,26 @@
 <script lang="ts">
   import BarreHaut from '../composants/BarreHaut.svelte';
   import JournalDes from '../composants/JournalDes.svelte';
-  import ListeJoueurs from '../composants/ListeJoueurs.svelte';
+
+  /*
+   * Poste MJ (mise en page L2.6, maquette validée le 18/10), en sections
+   * dans la barre du haut :
+   * - Séance : la carte au centre, le groupe en cartes compactes à droite
+   *   (la fiche complète s'ouvre en panneau latéral), le journal en bas ;
+   * - Données : fiches v1 aujourd'hui ; bestiaire et objets en L3.
+   * Prépa combat (L3), Lore (L2.7) et Prépa social (2.1) s'ajouteront à
+   * SECTIONS avec leur lot, pas avant : pas d'onglet vide.
+   *
+   * Changer de section masque les autres sans les démonter : la carte garde
+   * ses abonnements, et le client du MJ continue d'enregistrer
+   * l'exploration (il en est le seul écrivain, voir CarteTable).
+   */
+
+  const SECTIONS = [
+    { id: 'seance', libelle: 'Séance' },
+    { id: 'donnees', libelle: 'Données' },
+  ];
+  let section = $state('seance');
 
   // La battlemap (lot L5.3) est chargée à part : son code et les scènes ne
   // retardent pas l'ouverture du poste.
@@ -12,40 +31,70 @@
   const groupe = import('../composants/GroupeMj.svelte');
 </script>
 
-<BarreHaut etiquette="Poste MJ" />
+<BarreHaut etiquette="Poste MJ" sections={SECTIONS} active={section} surSection={(id) => (section = id)} />
 <main>
-  {#await carte}
-    <p>Chargement de la battlemap…</p>
-  {:then module}
-    <module.default role="mj" />
-  {:catch e}
-    <p role="alert">Battlemap indisponible : {String(e)}</p>
-  {/await}
-  <section class="carte">
-    <h2>Poste MJ</h2>
-    <p>Séances, groupe, combat, bestiaire et loot arrivent avec les lots L3 à L6. Les joueurs qui rejoignent la table apparaissent ici sans rafraîchir.</p>
-  </section>
-  {#await groupe then module}
-    <module.default />
-  {:catch e}
-    <p role="alert">Groupe indisponible : {String(e)}</p>
-  {/await}
-  {#await importV1 then module}
-    <module.default />
-  {:catch e}
-    <p role="alert">Dépôt des fiches v1 indisponible : {String(e)}</p>
-  {/await}
-  <JournalDes />
-  <ListeJoueurs />
+  <div hidden={section !== 'seance'}>
+    <div class="seance">
+      <div class="centre">
+        {#await carte}
+          <p>Chargement de la battlemap…</p>
+        {:then module}
+          <module.default role="mj" />
+        {:catch e}
+          <p role="alert">Battlemap indisponible : {String(e)}</p>
+        {/await}
+      </div>
+      <aside class="cote" aria-label="Groupe et progression">
+        {#await groupe then module}
+          <module.default />
+        {:catch e}
+          <p role="alert">Groupe indisponible : {String(e)}</p>
+        {/await}
+      </aside>
+      <div class="bas">
+        <JournalDes compact />
+      </div>
+    </div>
+  </div>
+  <div hidden={section !== 'donnees'}>
+    <div class="donnees">
+      {#await importV1 then module}
+        <module.default />
+      {:catch e}
+        <p role="alert">Dépôt des fiches v1 indisponible : {String(e)}</p>
+      {/await}
+    </div>
+  </div>
 </main>
 
 <style>
   main {
-    max-width: 1400px;
+    max-width: 1800px;
     margin: 0 auto;
-    padding: 24px 32px;
+    padding: 20px 32px;
+  }
+  .seance {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 20px;
+    align-items: start;
+  }
+  .centre,
+  .cote {
+    min-width: 0;
+  }
+  .bas {
+    grid-column: 1 / -1;
+  }
+  .donnees {
+    max-width: 1100px;
     display: flex;
     flex-direction: column;
     gap: 20px;
+  }
+  @media (max-width: 1100px) {
+    .seance {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 </style>

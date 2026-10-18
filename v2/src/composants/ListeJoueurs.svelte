@@ -3,62 +3,81 @@
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
   import { session } from '../lib/session.svelte';
 
+  /*
+   * Joueurs inscrits à la table, en direct. Depuis L2.6, une rangée de
+   * pastilles dans la barre du haut (le nom au survol et pour les lecteurs
+   * d'écran) au lieu d'un bloc en bas de page. Ce sont les inscrits, pas les
+   * connectés : l'app ne suit pas encore la présence (séances, L3).
+   */
+
   const joueurs = suivreJoueurs(session.table);
   onDestroy(joueurs.arreter);
 
   const triees = $derived([...joueurs.etat.elements].sort((a, b) => a.nom.localeCompare(b.nom, 'fr')));
+  const initiales = (nom: string) =>
+    nom
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((m) => m[0]?.toUpperCase())
+      .join('');
 </script>
 
-<section class="carte" aria-label="Joueurs de la table">
-  <h2>Joueurs de la table</h2>
-  {#if joueurs.etat.erreur}
-    <p class="erreur" role="alert">{joueurs.etat.erreur}</p>
-  {:else if !joueurs.etat.pret}
-    <p>Chargement…</p>
-  {:else if triees.length === 0}
-    <p>Aucun joueur n'a encore rejoint la table.</p>
+{#if joueurs.etat.erreur}
+  <span class="erreur" role="alert">Joueurs indisponibles : {joueurs.etat.erreur}</span>
+{:else if joueurs.etat.pret}
+  {#if triees.length === 0}
+    <span class="vide">Aucun joueur n'a encore rejoint la table.</span>
   {:else}
-    <ul>
+    <ul aria-label="Joueurs de la table">
       {#each triees as joueur (joueur.id)}
-        <li>
-          <strong>{joueur.nom}</strong>
-          {#if joueur.id === session.uid}<span class="moi">toi</span>{/if}
+        <li class:moi={joueur.id === session.uid} title={joueur.id === session.uid ? `${joueur.nom} (toi)` : joueur.nom} style:border-color={joueur.couleur}>
+          <span aria-hidden="true">{initiales(joueur.nom)}</span>
+          <span class="lecteur">{joueur.nom}{#if joueur.id === session.uid} (toi){/if}</span>
         </li>
       {/each}
     </ul>
   {/if}
-</section>
+{/if}
 
 <style>
-  h2 {
-    font-size: 20px;
-    margin-bottom: 12px;
-  }
   ul {
     list-style: none;
     margin: 0;
     padding: 0;
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 6px;
   }
   li {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    padding: 8px 12px;
-    border-radius: var(--rayon);
-    background: var(--couleur-surface-claire);
-    border: 1px solid var(--couleur-bordure-douce);
-  }
-  .moi {
-    font-size: 12px;
-    padding: 2px 8px;
-    border-radius: var(--rayon-pastille);
-    background: var(--couleur-accent-pale);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--couleur-surface);
     color: var(--couleur-accent);
+    border: 2px solid var(--couleur-or);
+  }
+  li.moi {
+    box-shadow: 0 0 0 2px var(--couleur-sur-accent);
+  }
+  .lecteur {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .vide {
+    font-size: 13px;
+    opacity: 0.8;
   }
   .erreur {
-    color: var(--couleur-danger);
+    font-size: 13px;
+    color: var(--couleur-danger-pale);
   }
 </style>

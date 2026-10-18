@@ -52,4 +52,23 @@ describe('journal de dés', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Lancer' }));
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Formule illisible : « 2d »'));
   });
+
+  it('L2.6 : version compacte, les 8 derniers jets puis la liste entière à la demande', async () => {
+    jets.elements = Array.from({ length: 12 }, (_, i) => ({ id: `j${i}`, auteurUid: 'bob', auteurNom: 'Bob', libelle: `Jet ${i}`, formule: '1d6', des: [3], bonus: 0, total: 3, creeLe: 100 - i }));
+    render(JournalDes, { props: { compact: true } });
+    const liste = () => within(screen.getByRole('list', { name: 'Derniers jets' })).getAllByRole('listitem');
+    expect(liste()).toHaveLength(8);
+    expect(liste()[0]!.textContent).toContain('Jet 0');
+    await fireEvent.click(screen.getByRole('button', { name: 'Voir les 12 derniers' }));
+    expect(liste()).toHaveLength(12);
+    await fireEvent.click(screen.getByRole('button', { name: 'Réduire' }));
+    expect(liste()).toHaveLength(8);
+  });
+
+  it('version complète (par défaut) : tous les jets suivis, sans bouton', () => {
+    jets.elements = Array.from({ length: 12 }, (_, i) => ({ id: `j${i}`, auteurUid: 'bob', auteurNom: 'Bob', libelle: `Jet ${i}`, formule: '1d6', des: [3], bonus: 0, total: 3, creeLe: 100 - i }));
+    render(JournalDes);
+    expect(within(screen.getByRole('list', { name: 'Derniers jets' })).getAllByRole('listitem')).toHaveLength(12);
+    expect(screen.queryByRole('button', { name: /^Voir les/ })).toBeNull();
+  });
 });

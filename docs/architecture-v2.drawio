@@ -19,16 +19,16 @@
         <mxCell id="accueil" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;ecrans/Accueil.svelte&lt;/b&gt;&lt;hr&gt;formulaire : nom, rôle, code MJ&lt;br&gt;→ rejoindreCommeJoueur / rejoindreCommeMj" vertex="1">
           <mxGeometry height="86" width="260" x="40" y="334" as="geometry" />
         </mxCell>
-        <mxCell id="joueur" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;ecrans/EcranJoueur.svelte&lt;/b&gt;&lt;hr&gt;MesPersonnages + fiche vivante&lt;br&gt;(à la demande), carte, journal de dés" vertex="1">
+        <mxCell id="joueur" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;ecrans/EcranJoueur.svelte&lt;/b&gt;&lt;hr&gt;deux colonnes (L2.6) : personnages et&lt;br&gt;fiche vivante (à la demande) | carte&lt;br&gt;réduite et journal compact" vertex="1">
           <mxGeometry height="86" width="260" x="40" y="440" as="geometry" />
         </mxCell>
-        <mxCell id="mj" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;ecrans/PosteMj.svelte&lt;/b&gt;&lt;hr&gt;carte, groupe, fiches v1 (à la demande),&lt;br&gt;journal de dés ; combat… : L3-L6" vertex="1">
+        <mxCell id="mj" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;ecrans/PosteMj.svelte&lt;/b&gt;&lt;hr&gt;sections (L2.6) : Séance = carte, groupe,&lt;br&gt;journal ; Données = fiches v1 (à la demande)&lt;br&gt;; prépa combat, lore… : L2.7-L3" vertex="1">
           <mxGeometry height="86" width="260" x="40" y="530" as="geometry" />
         </mxCell>
-        <mxCell id="barre" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/BarreHaut.svelte&lt;/b&gt;&lt;hr&gt;logo, rôle, nom, table" vertex="1">
+        <mxCell id="barre" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/BarreHaut.svelte&lt;/b&gt;&lt;hr&gt;logo, rôle, sections de l'écran,&lt;br&gt;joueurs de la table, nom, table" vertex="1">
           <mxGeometry height="54" width="260" x="40" y="636" as="geometry" />
         </mxCell>
-        <mxCell id="liste" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/ListeJoueurs.svelte&lt;/b&gt;&lt;hr&gt;joueurs de la table, en direct&lt;br&gt;s'abonne à l'ouverture, se désabonne à la fermeture" vertex="1">
+        <mxCell id="liste" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/ListeJoueurs.svelte&lt;/b&gt;&lt;hr&gt;pastilles des joueurs inscrits (L2.6),&lt;br&gt;en direct, dans la barre du haut" vertex="1">
           <mxGeometry height="86" width="260" x="40" y="710" as="geometry" />
         </mxCell>
         <mxCell id="session" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f8cecc;strokeColor=#b85450;" value="&lt;b&gt;lib/session.svelte.ts&lt;/b&gt;&lt;hr&gt;session = $state({&lt;br&gt;  etape, table, uid, nom, erreur })&lt;br&gt;modifiée uniquement par actions/acces" vertex="1">
@@ -301,13 +301,13 @@
         <mxCell id="fImportUi" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/ImportFichesV1.svelte&lt;/b&gt;&lt;hr&gt;MJ : dépose les exports v1 et&lt;br&gt;attribue chaque fiche à un joueur&lt;br&gt;(poste MJ, chargé à la demande)" vertex="1">
           <mxGeometry height="86" width="300" x="720" y="2470" as="geometry" />
         </mxCell>
-        <mxCell id="fVue" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/fiche/vue-fiche.ts  (L2.3)&lt;/b&gt;&lt;hr&gt;fiche → ce que l'écran affiche :&lt;br&gt;stats (une seule CA), caracs, compétences,&lt;br&gt;voies, race, dons, mutations, Cercle" vertex="1">
+        <mxCell id="fVue" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/fiche/vue-fiche.ts  (L2.3)&lt;/b&gt;&lt;hr&gt;fiche → ce que l'écran affiche :&lt;br&gt;stats (une seule CA), caracs, compétences,&lt;br&gt;voies (hors combat : L2.6), race, dons,&lt;br&gt;mutations, Cercle" vertex="1">
           <mxGeometry height="86" width="300" x="380" y="2620" as="geometry" />
         </mxCell>
-        <mxCell id="fVivante" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/FicheVivante.svelte&lt;/b&gt;&lt;hr&gt;6 onglets ; PV, PP, sac, bourse, notes&lt;br&gt;écrits champ par champ ; saisie jamais&lt;br&gt;écrasée ; Portrait (document à part) ;&lt;br&gt;valeurs cliquables : d20 + mod (L2.5) ;&lt;br&gt;barre de crans, montée de niveau" vertex="1">
+        <mxCell id="fVivante" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/FicheVivante.svelte&lt;/b&gt;&lt;hr&gt;en-tête collant (crans, PV, PP) et&lt;br&gt;4 onglets (L2.6) ; écrits champ par champ ;&lt;br&gt;saisie jamais écrasée ; Portrait à part ;&lt;br&gt;valeurs cliquables : d20 + mod (L2.5) ;&lt;br&gt;montée de niveau" vertex="1">
           <mxGeometry height="118" width="300" x="720" y="2620" as="geometry" />
         </mxCell>
-        <mxCell id="fGroupe" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/GroupeMj.svelte&lt;/b&gt;&lt;hr&gt;MJ : tous les PJ, PV/CA/PP,&lt;br&gt;PV sur place, fiche en un clic ;&lt;br&gt;crans : +1/−1 par PJ, +1 aux joués" vertex="1">
+        <mxCell id="fGroupe" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/GroupeMj.svelte&lt;/b&gt;&lt;hr&gt;MJ : un PJ par carte compacte,&lt;br&gt;PV/CA/PP, PV sur place ; fiche en&lt;br&gt;panneau latéral (L2.6) ;&lt;br&gt;crans : +1/−1 par PJ, +1 aux joués" vertex="1">
           <mxGeometry height="86" width="290" x="1060" y="2620" as="geometry" />
         </mxCell>
         <mxCell id="fEquip" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/regles/equipement.ts  (L2.4)&lt;/b&gt;&lt;hr&gt;équiper, retirer, jeter, utiliser, ajouter (MJ) :&lt;br&gt;règles v1, refus expliqués ; rend un&lt;br&gt;changement des seuls champs touchés" vertex="1">
@@ -325,7 +325,7 @@
         <mxCell id="fProg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/regles/progression.ts  (L2.5)&lt;/b&gt;&lt;hr&gt;crans requis : 3 / 4 / 5 / 6,&lt;br&gt;plafond niveau 12 ; jamais sous 0 ;&lt;br&gt;barreNiveau(fiche)" vertex="1">
           <mxGeometry height="86" width="300" x="40" y="2900" as="geometry" />
         </mxCell>
-        <mxCell id="fJournalUi" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/JournalDes.svelte  (L2.5)&lt;/b&gt;&lt;hr&gt;40 derniers jets de toute la table,&lt;br&gt;en direct ; lanceur libre et dés rapides" vertex="1">
+        <mxCell id="fJournalUi" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/JournalDes.svelte  (L2.5)&lt;/b&gt;&lt;hr&gt;40 derniers jets de toute la table,&lt;br&gt;en direct ; lanceur libre et dés rapides ;&lt;br&gt;version compacte (L2.6)" vertex="1">
           <mxGeometry height="70" width="300" x="720" y="2900" as="geometry" />
         </mxCell>
         <mxCell id="fActJ" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;lib/actions/journal.ts, progression.ts&lt;/b&gt;&lt;hr&gt;noterJet, lancerEtNoter : ajout seul&lt;br&gt;donnerCran : TRANSACTION, document&lt;br&gt;du cran + progression.crans ensemble" vertex="1">
@@ -505,13 +505,10 @@
         <mxCell id="e27" parent="1" source="joueur" target="session" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e11" parent="1" source="joueur" target="liste" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+        <mxCell id="e11" parent="1" source="barre" target="liste" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e12" parent="1" source="mj" target="barre" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e13" parent="1" source="mj" target="liste" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e14" parent="1" source="barre" target="session" style="endArrow=open;dashed=1;html=1;" value="" edge="1">

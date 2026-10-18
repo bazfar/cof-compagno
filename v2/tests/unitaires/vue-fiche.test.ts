@@ -71,6 +71,17 @@ describe('cas particuliers de la table', () => {
   });
 });
 
+describe('voies hors combat (L2.6)', () => {
+  it('chaque voie de la liste existe dans les données, et seule elle est marquée', async () => {
+    const { VOIES_HORS_COMBAT } = await import('../../src/lib/fiche/vue-fiche');
+    const { voieParId } = await import('../../src/lib/regles/donnees');
+    for (const id of VOIES_HORS_COMBAT) expect(voieParId.get(id), id).toBeTruthy();
+    for (const v1 of FICHES) {
+      for (const v of vueFiche(ficheDepuisV1(v1, 'u', 1).fiche).voies) expect(v.horsCombat).toBe(VOIES_HORS_COMBAT.has(v.id));
+    }
+  });
+});
+
 describe('notes et portrait repris de la v1 (L2.3)', () => {
   it('les notes v1 passent dans la fiche, plus dans « modules »', () => {
     const { fiche: f } = ficheDepuisV1({ ...FICHES[0], notes: 'Doit 3 po au tavernier.' }, 'u', 1);

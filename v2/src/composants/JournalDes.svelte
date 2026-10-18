@@ -10,7 +10,15 @@
    * jets de toute la table, en direct, et un lanceur libre. Les jets lancés
    * depuis la fiche (tests, potions, PV de montée de niveau) y arrivent
    * aussi.
+   *
+   * Version compacte (L2.6) : toujours visible à côté de la carte, elle ne
+   * montre que les derniers jets ; « Voir les N derniers » déplie la liste
+   * entière (les 40 que suit le magasin), sur place.
    */
+
+  let { compact = false }: { compact?: boolean } = $props();
+  const LIGNES_COMPACT = 8;
+  let deplie = $state(false);
 
   const journal = suivreJournal(session.table);
   onDestroy(journal.arreter);
@@ -30,10 +38,11 @@
     }
   }
 
+  const montres = $derived(compact && !deplie ? journal.etat.elements.slice(0, LIGNES_COMPACT) : journal.etat.elements);
   const heure = (t: number) => new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 </script>
 
-<section class="carte journal" aria-label="Journal de dés">
+<section class="carte journal" class:compact aria-label="Journal de dés">
   <h2>Journal de dés</h2>
   <div class="ligne">
     <input aria-label="Formule" class="formule" bind:value={formule} onkeydown={(ev) => ev.key === 'Enter' && lancer()} />
@@ -49,8 +58,8 @@
   {:else if journal.etat.elements.length === 0}
     <p class="aide">Aucun jet pour l'instant.</p>
   {:else}
-    <ol aria-label="Derniers jets">
-      {#each journal.etat.elements as j (j.id)}
+    <ol aria-label="Derniers jets" class:tout={deplie}>
+      {#each montres as j (j.id)}
         <li class:moi={j.auteurUid === session.uid}>
           <span class="aide">{heure(j.creeLe)}</span>
           <strong>{j.perso ?? j.auteurNom}</strong>
@@ -59,6 +68,9 @@
         </li>
       {/each}
     </ol>
+    {#if compact && journal.etat.elements.length > LIGNES_COMPACT}
+      <button class="discret petit" aria-expanded={deplie} onclick={() => (deplie = !deplie)}>{deplie ? 'Réduire' : `Voir les ${journal.etat.elements.length} derniers`}</button>
+    {/if}
   {/if}
 </section>
 
@@ -110,6 +122,16 @@
   }
   li.moi {
     border-color: var(--couleur-accent-clair);
+  }
+  .compact ol:not(.tout) {
+    max-height: none;
+  }
+  .compact li {
+    padding: 4px 8px;
+    font-size: 14px;
+  }
+  .compact .formule {
+    width: 90px;
   }
   .resultat {
     margin-left: auto;

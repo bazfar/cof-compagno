@@ -10,6 +10,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * qui effaçait la saisie en cours (PV, notes, bourse). Ici, la fiche change
  * dans « Firestore » pendant qu'on tape : ce qu'on tape reste, et n'est
  * écrit qu'à la validation.
+ *
+ * Mise en page (L2.6) : quatre onglets (rôle « tab »), caractéristiques dans
+ * Combat, notes dans « Suivi et notes », capacités en combat / hors combat ;
+ * la fiche du groupe s'ouvre dans un panneau latéral.
  */
 
 const actions = vi.hoisted(() => ({
@@ -93,7 +97,7 @@ describe('fiche vivante', () => {
   it('notes : écrites à la sortie du champ, seulement si elles ont changé', async () => {
     const f = reelle('Karlach', 'p-c');
     render(FicheVivante, { props: { fiche: f, modifiable: true } });
-    await fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    await fireEvent.click(screen.getByRole('tab', { name: 'Suivi et notes' }));
     const notes = screen.getByLabelText('Notes') as HTMLTextAreaElement;
     await fireEvent.focus(notes);
     await fireEvent.blur(notes);
@@ -106,10 +110,36 @@ describe('fiche vivante', () => {
 
   it('onglets : capacités avec leurs noms, choix et mutation', async () => {
     render(FicheVivante, { props: { fiche: reelle('Karlach', 'p-c'), modifiable: false } });
-    await fireEvent.click(screen.getByRole('button', { name: 'Capacités' }));
+    await fireEvent.click(screen.getByRole('tab', { name: 'Capacités' }));
     expect(screen.getByText(/Spécimen d'élite/)).toBeTruthy();
-    await fireEvent.click(screen.getByRole('button', { name: 'Suivi' }));
+    await fireEvent.click(screen.getByRole('tab', { name: 'Suivi et notes' }));
     expect(screen.getByText('Veines sombres')).toBeTruthy();
+  });
+
+  it('L2.6 : quatre onglets, dans cet ordre, et les caractéristiques dans Combat', () => {
+    render(FicheVivante, { props: { fiche: reelle('Kylhian', 'p-k'), modifiable: true } });
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Combat', 'Capacités', 'Équipement', 'Suivi et notes']);
+    expect(screen.getByRole('tab', { name: 'Combat' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Lancer un test de Force' })).toBeTruthy();
+  });
+
+  it('L2.6 : capacités en combat et hors combat (Magnus : Historien et Spectacle à part)', async () => {
+    const m = reelle('Magnus', 'p-m');
+    const hors = vueFiche(m).voies.filter((v) => v.horsCombat);
+    expect(hors.length).toBeGreaterThan(0);
+    render(FicheVivante, { props: { fiche: m, modifiable: false } });
+    await fireEvent.click(screen.getByRole('tab', { name: 'Capacités' }));
+    for (const v of hors) expect(screen.queryByRole('heading', { name: v.nom })).toBeNull();
+    await fireEvent.click(screen.getByRole('button', { name: 'Hors combat' }));
+    for (const v of hors) expect(screen.getByRole('heading', { name: v.nom })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Dons' })).toBeNull();
+  });
+
+  it('L2.6 : sans voie hors combat, la section le dit', async () => {
+    render(FicheVivante, { props: { fiche: reelle('Kylhian', 'p-k'), modifiable: false } });
+    await fireEvent.click(screen.getByRole('tab', { name: 'Capacités' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Hors combat' }));
+    expect(screen.getByText(/Aucune capacité hors combat pour l'instant/)).toBeTruthy();
   });
 
   it('lecture seule : ni bouton −/+, ni champ modifiable, ni portrait à changer', async () => {
@@ -141,20 +171,42 @@ describe('groupe (vue du MJ)', () => {
     const vhorgar = reelle('Vhorgar', 'p-v', 'carol');
     persos.elements = [vhorgar, karlach];
     render(GroupeMj);
-    const lignes = within(screen.getByRole('table')).getAllByRole('row').slice(1);
+    const lignes = within(screen.getByRole('list', { name: 'Personnages de la table' })).getAllByRole('listitem');
     expect(lignes.map((l) => l.querySelector('strong')?.textContent)).toEqual([vhorgar.nom, karlach.nom]);
     expect(within(lignes[0]!).getByText('joué')).toBeTruthy();
     await fireEvent.click(screen.getByRole('button', { name: `Ajouter un PV à ${vhorgar.nom}` }));
     expect(actions.modifierPV).toHaveBeenCalledWith('p-v', (vhorgar.pvActuel ?? vhorgar.pvMax) + 1, vhorgar.pvMax);
-    await fireEvent.click(within(lignes[0]!).getByRole('button', { name: 'Fiche' }));
-    await waitFor(() => expect(screen.getByRole('region', { name: `Fiche de ${vhorgar.nom}` })).toBeTruthy());
+    await fireEvent.click(within(lignes[0]!).getByRole('button', { name: `Ouvrir la fiche de ${vhorgar.nom}` }));
+    const panneau = await screen.findByRole('dialog', { name: 'Fiche complète' });
+    expect(within(panneau).getByRole('region', { name: `Fiche de ${vhorgar.nom}` })).toBeTruthy();
+  });
+
+  it('L2.6 : le panneau de la fiche se ferme à Échap, sauf pendant une saisie', async () => {
+    session.uid = 'mj';
+    const karlach = reelle('Karlach', 'p-c');
+    persos.elements = [karlach];
+    render(GroupeMj);
+    await fireEvent.click(screen.getByRole('button', { name: `Ouvrir la fiche de ${karlach.nom}` }));
+    const panneau = await screen.findByRole('dialog', { name: 'Fiche complète' });
+    // Échap dans le champ des PV : la saisie n'est pas perdue, le panneau reste.
+    const champ = within(panneau).getByLabelText('PV actuels');
+    await fireEvent.focus(champ);
+    await fireEvent.input(champ, { target: { value: '3' } });
+    await fireEvent.keyDown(champ, { key: 'Escape' });
+    expect(screen.getByRole('dialog', { name: 'Fiche complète' })).toBeTruthy();
+    expect((champ as HTMLInputElement).value).toBe('3');
+    await fireEvent.blur(champ);
+    expect(actions.modifierPV).toHaveBeenCalledWith('p-c', 3, karlach.pvMax);
+    // Hors saisie, Échap ferme.
+    await fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Fiche complète' })).toBeNull();
   });
 });
 
 describe('onglet Équipement (L2.4)', () => {
   const ouvrir = async (fiche: ReturnType<typeof reelle>, mj = false) => {
     render(FicheVivante, { props: { fiche, modifiable: true, mj } });
-    await fireEvent.click(screen.getByRole('button', { name: 'Équipement' }));
+    await fireEvent.click(screen.getByRole('tab', { name: 'Équipement' }));
   };
 
   it('retirer l’épée de Karlach : un seul changement, l’emplacement vidé et l’épée au sac', async () => {
@@ -233,7 +285,6 @@ describe('jets depuis la fiche et crans (L2.5)', () => {
     const k = reelle('Kylhian', 'p-k');
     const vue = vueFiche(k);
     render(FicheVivante, { props: { fiche: k, modifiable: true } });
-    await fireEvent.click(screen.getByRole('button', { name: 'Caractéristiques' }));
     const force = vue.caracs.find((c) => c.nom === 'Force')!;
     await fireEvent.click(screen.getByRole('button', { name: 'Lancer un test de Force' }));
     const formule = force.mod === 0 ? '1d20' : `1d20${force.mod > 0 ? '+' : ''}${force.mod}`;
@@ -241,10 +292,8 @@ describe('jets depuis la fiche et crans (L2.5)', () => {
     await waitFor(() => expect(screen.getByRole('status').textContent).toContain(`Test de Force : ${formule} → `));
   });
 
-  it('lecture seule : aucune valeur à lancer, ni au combat ni dans les caractéristiques', async () => {
+  it('lecture seule : aucune valeur à lancer (caractéristiques, attaques, sauvegardes)', () => {
     render(FicheVivante, { props: { fiche: reelle('Kylhian', 'p-k'), modifiable: false } });
-    expect(screen.queryByRole('button', { name: /^Lancer/ })).toBeNull();
-    await fireEvent.click(screen.getByRole('button', { name: 'Caractéristiques' }));
     expect(screen.queryByRole('button', { name: /^Lancer/ })).toBeNull();
   });
 

@@ -47,7 +47,9 @@
    * ce qui est enregistré et de ce que ce client a vu.
    */
 
-  let { role }: { role: Role } = $props();
+  // Hauteur de la zone de carte (L2.6) : grande au poste MJ, réduite dans la
+  // colonne de droite du joueur hors combat, où la fiche prime.
+  let { role, hauteur = '72vh' }: { role: Role; hauteur?: string } = $props();
 
   const COULEURS_PJ = ['#2980b9', '#27ae60', '#8e44ad', '#d35400', '#16a085', '#b8924a'];
   const COULEUR_MONSTRE = '#c0392b';
@@ -378,7 +380,7 @@
     <p class="erreur" role="alert">{message}</p>
   {/if}
 
-  <div class="zone">
+  <div class="zone" style:height={hauteur}>
     {#if table.etat.erreur}
       <p class="vide erreur" role="alert">{table.etat.erreur}</p>
     {:else if !idScene}
@@ -446,8 +448,7 @@
     flex: 1 1 auto;
   }
   .zone {
-    height: 72vh;
-    min-height: 360px;
+    min-height: 240px;
   }
   .vide {
     height: 100%;

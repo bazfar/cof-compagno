@@ -37,6 +37,8 @@ export interface VoieAffichee {
   nom: string;
   horsProfil: boolean;
   chaos: boolean;
+  /** Voie hors combat (L2.6) : rangée à part dans l'onglet Capacités. */
+  horsCombat: boolean;
   rangs: RangAffiche[];
 }
 
@@ -57,6 +59,20 @@ export interface VueFiche {
   corruptionMajeure: number;
   amesStockees: number;
 }
+
+/*
+ * Voies hors combat (lot L2.6, à confirmer par Thomas) : les voies v1 que
+ * la refonte sort des classes vers l'arbre du Vécu (2.1). D'ici là, la
+ * fiche les range sous « Hors combat » ; les données v1 n'ont aucune
+ * marque pour le dire, d'où cette liste, seule source de ce classement.
+ */
+export const VOIES_HORS_COMBAT: ReadonlySet<string> = new Set([
+  'guerrier.ingenieur',
+  'barde.alcoolisme',
+  'barde.spectacle',
+  'enchanteur.historien',
+  'enchanteur.spectacle',
+]);
 
 const CERCLES: { cle: string; nom: string; max: keyof StatistiquesFiche['pointsCercleMax'] }[] = [
   { cle: 'benediction', nom: 'Bénédiction', max: 'benediction' },
@@ -88,7 +104,7 @@ export function vueFiche(f: Fiche): VueFiche {
           return { rang: r, nom: def?.nom ?? cap.id, effet: def?.effet ?? '', ...(cap.choix ? { choix: cap.choix } : {}), ...(cap.offert ? { offert: true } : {}) };
         })
         .sort((a, b) => a.rang - b.rang);
-      return { id, nom: voie?.nom ?? id, horsProfil: !classe?.voies.some((v) => v.id === id), chaos: !!voie?.speciale, rangs };
+      return { id, nom: voie?.nom ?? id, horsProfil: !classe?.voies.some((v) => v.id === id), chaos: !!voie?.speciale, horsCombat: VOIES_HORS_COMBAT.has(id), rangs };
     })
     .filter((v) => v.rangs.length > 0);
 
