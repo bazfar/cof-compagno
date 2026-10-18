@@ -550,7 +550,7 @@
         <mxCell id="e26" parent="1" source="mj" target="client" style="endArrow=cross;endFill=0;dashed=1;html=1;strokeColor=#b85450;fontColor=#b85450;" value="interdit" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-              <mxCell id="titre-l27" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Lore partagé (L2.7) — la fiche complète reste chez le MJ ; les joueurs lisent une version sans passage scellé, filtrée par les règles" vertex="1">
+              <mxCell id="titre-l27" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Lore partagé (L2.7a fondations, L2.7b écrans) — la fiche complète reste chez le MJ ; les joueurs lisent une version sans passage scellé, filtrée par les règles" vertex="1">
           <mxGeometry height="24" width="1400" x="40" y="3180" as="geometry" />
         </mxCell>
         <mxCell id="lSchema" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/lore.ts  (L2.7a)&lt;/b&gt;&lt;hr&gt;FicheLoreMj (passages, scellés, visibilité)&lt;br&gt;FicheLoreJoueurs (lecteurs : * ou uid)&lt;br&gt;ExportLore (fichier lore-v1.json)" vertex="1">
@@ -590,6 +590,33 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="l27g" parent="1" source="lMag" target="lSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lJoueur" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/LoreJoueur.svelte  (L2.7b)&lt;/b&gt;&lt;hr&gt;joueur : fiches partagées par catégorie,&lt;br&gt;recherche, marque « nouveau » comptée&lt;br&gt;dans la barre du haut" vertex="1">
+          <mxGeometry height="86" width="300" x="720" y="3330" as="geometry" />
+        </mxCell>
+        <mxCell id="lMjUi" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/LoreMj.svelte  (L2.7b)&lt;/b&gt;&lt;hr&gt;MJ : partage et sceaux d'un clic,&lt;br&gt;édition sur brouillon, création, suppression&lt;br&gt;(chargé à la première visite)" vertex="1">
+          <mxGeometry height="86" width="290" x="1060" y="3330" as="geometry" />
+        </mxCell>
+        <mxCell id="lVus" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/lore/vus.ts  (L2.7b)&lt;/b&gt;&lt;hr&gt;déjà vu, gardé dans le navigateur ;&lt;br&gt;rien de nouveau au premier passage" vertex="1">
+          <mxGeometry height="70" width="300" x="380" y="3330" as="geometry" />
+        </mxCell>
+        <mxCell id="l27h" parent="1" source="joueur" target="lJoueur" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l27i" parent="1" source="mj" target="lMjUi" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l27j" parent="1" source="lJoueur" target="lMag" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l27k" parent="1" source="lJoueur" target="lVus" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l27l" parent="1" source="lMjUi" target="lAct" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l27m" parent="1" source="lMjUi" target="lMag" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 </root>

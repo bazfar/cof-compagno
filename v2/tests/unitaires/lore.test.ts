@@ -159,3 +159,21 @@ describe('conversion du lore v1 (data/donnees.js)', () => {
     for (const { fiche: f } of fiches) expect(JSON.stringify(f).length).toBeLessThan(200_000);
   });
 });
+
+describe('marque « nouveau » (L2.7b)', async () => {
+  const { nouveautes, toutVu, normaliser } = await import('../../src/lib/lore/vus');
+  const fiches = [
+    { id: 'a', reveleLe: 10 },
+    { id: 'b', reveleLe: 20 },
+  ];
+  it('premier passage : rien de nouveau ; ensuite, ce qui est révélé après ce qu’on a vu', () => {
+    expect(nouveautes(fiches, null).size).toBe(0);
+    const vus = toutVu(fiches, null);
+    expect(nouveautes(fiches, vus).size).toBe(0);
+    expect([...nouveautes([...fiches, { id: 'c', reveleLe: 5 }], vus)]).toEqual(['c']);
+    expect([...nouveautes([{ id: 'a', reveleLe: 30 }, fiches[1]!], vus)]).toEqual(['a']);
+  });
+  it('recherche sans majuscules ni accents', () => {
+    expect(normaliser('Écorce de l’Arbre')).toBe('ecorce de l’arbre');
+  });
+});

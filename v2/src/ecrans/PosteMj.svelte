@@ -7,9 +7,11 @@
    * dans la barre du haut :
    * - Séance : la carte au centre, le groupe en cartes compactes à droite
    *   (la fiche complète s'ouvre en panneau latéral), le journal en bas ;
-   * - Données : fiches v1 et lore de la v1 (L2.7a) ; bestiaire et objets en L3.
-   * Prépa combat (L3), Lore (L2.7) et Prépa social (2.1) s'ajouteront à
-   * SECTIONS avec leur lot, pas avant : pas d'onglet vide.
+   * - Données : fiches v1 et lore de la v1 (L2.7a) ; bestiaire et objets en L3 ;
+   * - Lore (L2.7b) : fiches, partage, sceaux et édition, chargé à la
+   *   première visite seulement.
+   * Prépa combat (L3) et Prépa social (2.1) s'ajouteront à SECTIONS avec
+   * leur lot, pas avant : pas d'onglet vide.
    *
    * Changer de section masque les autres sans les démonter : la carte garde
    * ses abonnements, et le client du MJ continue d'enregistrer
@@ -19,8 +21,15 @@
   const SECTIONS = [
     { id: 'seance', libelle: 'Séance' },
     { id: 'donnees', libelle: 'Données' },
+    { id: 'lore', libelle: 'Lore' },
   ];
   let section = $state('seance');
+  // Le lore n'est chargé qu'à la première visite, puis gardé monté.
+  let loreOuvert = $state(false);
+  $effect(() => {
+    if (section === 'lore') loreOuvert = true;
+  });
+  const lore = $derived(loreOuvert ? import('../composants/LoreMj.svelte') : null);
 
   // La battlemap (lot L5.3) est chargée à part : son code et les scènes ne
   // retardent pas l'ouverture du poste.
@@ -71,6 +80,17 @@
         <p role="alert">Import du lore indisponible : {String(e)}</p>
       {/await}
     </div>
+  </div>
+  <div hidden={section !== 'lore'}>
+    {#if lore}
+      {#await lore}
+        <p>Chargement du lore…</p>
+      {:then module}
+        <module.default />
+      {:catch e}
+        <p role="alert">Lore indisponible : {String(e)}</p>
+      {/await}
+    {/if}
   </div>
 </main>
 

@@ -4,12 +4,13 @@
 
   /*
    * Barre du haut. Depuis L2.6, elle porte aussi les sections de l'écran
-   * (poste MJ : Séance, Données ; Prépa combat en L3, Lore en L2.7, Prépa
-   * social en 2.1) et les joueurs de la table, qui ne prennent plus un
-   * bloc en bas de page.
+   * (poste MJ : Séance, Données, Lore ; Prépa combat en L3, Prépa social en
+   * 2.1 ; joueur : Personnage, Lore) et les joueurs de la table, qui ne
+   * prennent plus un bloc en bas de page. `badge` (L2.7b) : un compte à
+   * côté d'une section (fiches de lore nouvelles).
    */
 
-  type Section = { id: string; libelle: string };
+  type Section = { id: string; libelle: string; badge?: number };
   let {
     etiquette,
     sections = [],
@@ -24,7 +25,9 @@
   {#if sections.length > 1}
     <nav aria-label="Sections">
       {#each sections as s (s.id)}
-        <button aria-current={active === s.id ? 'page' : undefined} onclick={() => surSection(s.id)}>{s.libelle}</button>
+        <button aria-current={active === s.id ? 'page' : undefined} onclick={() => surSection(s.id)}>
+          {s.libelle}{#if s.badge}<span class="badge" aria-label={`${s.badge} nouveau${s.badge > 1 ? 'x' : ''}`}>{s.badge}</span>{/if}
+        </button>
       {/each}
     </nav>
   {/if}
@@ -70,6 +73,15 @@
     background: var(--couleur-accent-clair);
     font-weight: 600;
     opacity: 1;
+  }
+  .badge {
+    margin-left: 6px;
+    padding: 0 7px;
+    border-radius: var(--rayon-pastille);
+    background: var(--couleur-or);
+    color: var(--couleur-encre);
+    font-size: 12px;
+    font-weight: 700;
   }
   .espace {
     flex: 1 1 auto;

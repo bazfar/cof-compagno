@@ -8,9 +8,14 @@
    * À droite, une carte réduite et le journal de dés compact, toujours
    * visibles. Les joueurs de la table sont dans la barre du haut.
    *
+   * Section Lore (L2.7b) : le lore que le MJ a partagé, avec le nombre de
+   * fiches nouvelles dans la barre du haut. Changer de section masque
+   * l'autre sans la démonter : une saisie en cours dans la fiche n'est
+   * jamais perdue, et la marque « nouveau » se met à jour même section
+   * Personnage ouverte.
+   *
    * En combat (L6), la fiche se repliera et la barre d'actions de la v1
-   * prendra place sous la carte, agrandie. Le Lore partagé (L2.7) ajoutera
-   * une section à la barre du haut.
+   * prendra place sous la carte, agrandie.
    */
 
   // La battlemap (lot L5.3) est chargée à part, comme côté MJ.
@@ -18,29 +23,49 @@
   // Les personnages aussi (L2.2b) : ils embarquent les données de règles
   // (classes, voies, sorts, objets), trop lourdes pour l'écran d'accueil.
   const personnages = import('../composants/MesPersonnages.svelte');
+  // Le lore (L2.7b), chargé à part lui aussi.
+  const lore = import('../composants/LoreJoueur.svelte');
+
+  let section = $state('perso');
+  let nouvelles = $state(0);
+  const sections = $derived([
+    { id: 'perso', libelle: 'Personnage' },
+    { id: 'lore', libelle: 'Lore', badge: nouvelles },
+  ]);
 </script>
 
-<BarreHaut etiquette="Joueur" />
+<BarreHaut etiquette="Joueur" {sections} active={section} surSection={(id) => (section = id)} />
 <main>
-  <div class="fiche">
-    {#await personnages}
-      <p>Chargement de tes personnages…</p>
-    {:then module}
-      <module.default />
+  <div hidden={section !== 'perso'}>
+    <div class="personnage">
+      <div class="fiche">
+        {#await personnages}
+          <p>Chargement de tes personnages…</p>
+        {:then module}
+          <module.default />
+        {:catch e}
+          <p role="alert">Personnages indisponibles : {String(e)}</p>
+        {/await}
+      </div>
+      <aside class="table" aria-label="Table">
+        {#await carte}
+          <p>Chargement de la battlemap…</p>
+        {:then module}
+          <module.default role="joueur" hauteur="340px" />
+        {:catch e}
+          <p role="alert">Battlemap indisponible : {String(e)}</p>
+        {/await}
+        <JournalDes compact />
+      </aside>
+    </div>
+  </div>
+  <div hidden={section !== 'lore'}>
+    {#await lore then module}
+      <module.default surNouveautes={(n: number) => (nouvelles = n)} />
     {:catch e}
-      <p role="alert">Personnages indisponibles : {String(e)}</p>
+      <p role="alert">Lore indisponible : {String(e)}</p>
     {/await}
   </div>
-  <aside class="table" aria-label="Table">
-    {#await carte}
-      <p>Chargement de la battlemap…</p>
-    {:then module}
-      <module.default role="joueur" hauteur="340px" />
-    {:catch e}
-      <p role="alert">Battlemap indisponible : {String(e)}</p>
-    {/await}
-    <JournalDes compact />
-  </aside>
 </main>
 
 <style>
@@ -48,6 +73,8 @@
     max-width: 1680px;
     margin: 0 auto;
     padding: 20px 32px;
+  }
+  .personnage {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 420px;
     gap: 20px;
@@ -62,7 +89,7 @@
   }
   /* PC seulement (décision du 18/10) : en dessous, tout passe sur une colonne, sans autre effort. */
   @media (max-width: 1100px) {
-    main {
+    .personnage {
       grid-template-columns: minmax(0, 1fr);
     }
   }
