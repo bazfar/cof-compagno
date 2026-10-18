@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { schemaNom } from './acces.ts';
+import { schemaSeanceOuverte } from './seance.ts';
 
 /*
  * Documents Firestore de la battlemap (lot L5.3). Seule définition de leur
@@ -62,6 +63,8 @@ export type EtatSceneDoc = z.infer<typeof schemaEtatScene>;
  */
 export const schemaTable = z.looseObject({
   sceneActive: z.string().nullable().optional(),
+  /** Séance en cours (lot L3.1) : null ou absent quand aucune n'est ouverte. */
+  seanceOuverte: schemaSeanceOuverte.nullable().optional(),
 });
 export type TableDoc = z.infer<typeof schemaTable>;
 

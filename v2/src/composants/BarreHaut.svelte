@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
+  import { suivreTable } from '../lib/magasins/carte.svelte';
   import { session } from '../lib/session.svelte';
   import ListeJoueurs from './ListeJoueurs.svelte';
 
@@ -8,6 +10,8 @@
    * 2.1 ; joueur : Personnage, Lore) et les joueurs de la table, qui ne
    * prennent plus un bloc en bas de page. `badge` (L2.7b) : un compte à
    * côté d'une section (fiches de lore nouvelles).
+   *
+   * Séance (L3.1) : « Séance N » quand le MJ en a ouvert une, des deux côtés.
    */
 
   type Section = { id: string; libelle: string; badge?: number };
@@ -17,6 +21,10 @@
     active = '',
     surSection = () => {},
   }: { etiquette: string; sections?: Section[]; active?: string; surSection?: (id: string) => void } = $props();
+
+  const table = suivreTable(session.table);
+  onDestroy(table.arreter);
+  const seance = $derived(table.etat.donnees?.seanceOuverte ?? null);
 </script>
 
 <header>
@@ -32,6 +40,7 @@
     </nav>
   {/if}
   <span class="espace"></span>
+  {#if seance}<span class="seance" role="status">Séance {seance.numero}</span>{/if}
   <ListeJoueurs />
   <span class="qui">{session.nom} · table {session.table}</span>
 </header>
@@ -82,6 +91,14 @@
     color: var(--couleur-encre);
     font-size: 12px;
     font-weight: 700;
+  }
+  .seance {
+    padding: 3px 12px;
+    border-radius: var(--rayon-pastille);
+    border: 1px solid var(--couleur-or);
+    color: var(--couleur-sur-accent);
+    font-size: 13px;
+    font-weight: 600;
   }
   .espace {
     flex: 1 1 auto;

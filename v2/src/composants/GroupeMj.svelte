@@ -3,7 +3,9 @@
   import { messageErreurPerso, modifierPV } from '../lib/actions/persos';
   import { donnerCran, RefusCran } from '../lib/actions/progression';
   import { barreNiveau } from '../lib/regles/progression';
+  import { suivreTable } from '../lib/magasins/carte.svelte';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
+  import { suivreSeances } from '../lib/magasins/seances.svelte';
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import { session } from '../lib/session.svelte';
@@ -27,14 +29,27 @@
    * de s'empiler sous le tableau. Échap ou « Fermer » le referme ; Échap
    * est ignoré pendant une saisie, pour ne jamais perdre ce qu'on tape
    * (le champ n'est écrit qu'à sa sortie).
+   *
+   * Séances (L3.1) : « +1 cran aux présents » donne un cran au personnage
+   * joué de chaque présent coché par le MJ (cadrage : crans de niveau aux
+   * présents seulement), et seulement pendant une séance ouverte. Chaque
+   * cran, même donné à la main, porte alors la séance.
    */
 
   const persos = suivrePersos(session.table);
   const joueurs = suivreJoueurs(session.table);
+  const table = suivreTable(session.table);
+  const seances = suivreSeances(session.table);
   onDestroy(() => {
     persos.arreter();
     joueurs.arreter();
+    table.arreter();
+    seances.arreter();
   });
+  const seanceOuverte = $derived(table.etat.donnees?.seanceOuverte ?? null);
+  const presents = $derived(new Set(seances.etat.elements.find((s) => s.id === seanceOuverte?.id)?.presents ?? []));
+  /** Personnages joués par les présents de la séance ouverte. */
+  const desPresents = $derived(new Set(joueurs.etat.elements.filter((j) => presents.has(j.id)).map((j) => j.persoActif).filter(Boolean)));
 
   const nomJoueur = (uid: string) => joueurs.etat.elements.find((j) => j.id === uid)?.nom ?? '—';
   const joues = $derived(new Set(joueurs.etat.elements.map((j) => j.persoActif).filter(Boolean)));
@@ -72,7 +87,7 @@
   /** Rend le refus ou l'erreur, ou null si le cran est écrit. */
   async function unCran(id: string, delta: 1 | -1): Promise<string | null> {
     try {
-      await donnerCran(id, delta, motif);
+      await donnerCran(id, delta, motif, seanceOuverte?.id);
       return null;
     } catch (e) {
       return e instanceof RefusCran ? e.message : messageErreurPerso(e);
@@ -84,14 +99,14 @@
   }
   async function cranATous() {
     info = '';
-    const cibles = lignes.filter((l) => joues.has(l.fiche.id)).map((l) => l.fiche);
+    const cibles = lignes.filter((l) => desPresents.has(l.fiche.id)).map((l) => l.fiche);
     const echecs: string[] = [];
     for (const f of cibles) {
       const refus = await unCran(f.id, 1);
       if (refus) echecs.push(`${f.nom} : ${refus}`);
     }
     const reussis = cibles.length - echecs.length;
-    info = `Un cran donné à ${reussis} PJ joué${reussis > 1 ? 's' : ''}.`;
+    info = `Un cran donné à ${reussis} PJ présent${reussis > 1 ? 's' : ''}.`;
     message = echecs.join(' ');
   }
 
@@ -111,8 +126,9 @@
   <h2>Groupe</h2>
   <div class="ligne">
     <input aria-label="Motif du cran" placeholder="Motif du cran (facultatif)" maxlength="80" bind:value={motif} />
-    <button class="petit" onclick={cranATous} disabled={!lignes.some((l) => joues.has(l.fiche.id))}>+1 cran aux PJ joués</button>
+    <button class="petit" onclick={cranATous} disabled={!lignes.some((l) => desPresents.has(l.fiche.id))}>+1 cran aux présents</button>
   </div>
+  {#if !seanceOuverte}<p class="aide">Ouvre une séance pour donner un cran aux présents.</p>{/if}
   {#if persos.etat.erreur}
     <p class="erreur" role="alert">{persos.etat.erreur}</p>
   {:else if !persos.etat.pret}
@@ -128,7 +144,7 @@
             <Portrait idPerso={fiche.id} nom={fiche.nom} taille={36} />
             <span class="nom">
               <strong>{fiche.nom}</strong>
-              <span class="aide">{nomJoueur(fiche.proprietaireUid)}{#if joues.has(fiche.id)} <span class="badge">joué</span>{/if}</span>
+              <span class="aide">{nomJoueur(fiche.proprietaireUid)}{#if joues.has(fiche.id)} <span class="badge">joué</span>{/if}{#if desPresents.has(fiche.id)} <span class="badge present">présent</span>{/if}</span>
             </span>
           </button>
           <div class="ligne-pv">
@@ -300,6 +316,12 @@
   }
   .erreur {
     color: var(--couleur-danger);
+  }
+  .badge.present {
+    background: var(--couleur-succes);
+  }
+  .groupe > .aide {
+    margin: 0;
   }
   .pleine {
     color: var(--couleur-succes);

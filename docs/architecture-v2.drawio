@@ -619,6 +619,36 @@
         <mxCell id="l27m" parent="1" source="lMjUi" target="lMag" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="titre-l31" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Poste MJ (L3.1 séances) — les crans de niveau vont aux présents que coche le MJ" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="3440" as="geometry" />
+        </mxCell>
+        <mxCell id="sUi" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/SeanceMj.svelte  (L3.1)&lt;/b&gt;&lt;hr&gt;ouvrir (numéro, présents précochés),&lt;br&gt;cocher les présents, clore" vertex="1">
+          <mxGeometry height="70" width="300" x="720" y="3480" as="geometry" />
+        </mxCell>
+        <mxCell id="sAct" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;lib/actions/seances.ts&lt;/b&gt;&lt;hr&gt;ouvrir, clore : TRANSACTION qui relit la table&lt;br&gt;(jamais deux séances ouvertes)" vertex="1">
+          <mxGeometry height="70" width="290" x="1060" y="3480" as="geometry" />
+        </mxCell>
+        <mxCell id="sMag" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f8cecc;strokeColor=#b85450;" value="&lt;b&gt;lib/magasins/seances.svelte.ts&lt;/b&gt;&lt;hr&gt;20 dernières séances par numéro" vertex="1">
+          <mxGeometry height="54" width="320" x="1390" y="3480" as="geometry" />
+        </mxCell>
+        <mxCell id="sSchema" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/seance.ts  (L3.1)&lt;/b&gt;&lt;hr&gt;Seance ; SeanceOuverte (dans la table)&lt;br&gt;jalon.seance : la séance du cran" vertex="1">
+          <mxGeometry height="70" width="300" x="40" y="3480" as="geometry" />
+        </mxCell>
+        <mxCell id="l31a" parent="1" source="mj" target="sUi" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l31b" parent="1" source="sUi" target="sAct" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l31c" parent="1" source="sUi" target="sMag" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l31d" parent="1" source="sAct" target="sSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l31e" parent="1" source="fGroupe" target="sMag" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
 </root>
     </mxGraphModel>
   </diagram>
@@ -651,7 +681,7 @@
         <mxCell id="persos" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;persos/{id}  (L2.1)&lt;/b&gt;&lt;hr&gt;schemaFiche v1 ; inventaire en dictionnaire&lt;br&gt;joueur : ses persos, niveau par montée&lt;br&gt;/images/portrait (L2.3)" vertex="1">
           <mxGeometry height="118" width="260" x="40" y="440" as="geometry" />
         </mxCell>
-        <mxCell id="seances" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontColor=#666666;" value="&lt;b&gt;seances/{id}  (L3)&lt;/b&gt;&lt;hr&gt;séance courante, présents" vertex="1">
+        <mxCell id="seances" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;seances/{id}  (L3.1)&lt;/b&gt;&lt;hr&gt;{ numero, ouverteLe, closeLe, presents[] }&lt;br&gt;toute la table lit, le MJ seul écrit ;&lt;br&gt;séance ouverte aussi dans tables/{t}.seanceOuverte" vertex="1">
           <mxGeometry height="54" width="260" x="330" y="440" as="geometry" />
         </mxCell>
         <mxCell id="loot" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontColor=#666666;" value="&lt;b&gt;loot/{id}  (L3)&lt;/b&gt;&lt;hr&gt;objets proposés, votes" vertex="1">

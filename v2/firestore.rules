@@ -95,13 +95,23 @@ service cloud.firestore {
     }
     // Aligné sur schemaJalon (src/lib/schemas/jalon.ts).
     function jalonValide(d) {
-      return d.keys().hasOnly(['barre', 'delta', 'libelle', 'parUid', 'creeLe'])
+      return d.keys().hasOnly(['barre', 'delta', 'libelle', 'parUid', 'seance', 'creeLe'])
         && d.keys().hasAll(['barre', 'delta', 'libelle', 'parUid', 'creeLe'])
         && d.barre == 'niveau'
         && (d.delta == 1 || d.delta == -1)
         && d.libelle is string && d.libelle.size() <= 80
         && d.parUid == request.auth.uid
+        && (!('seance' in d) || (d.seance is string && d.seance.size() >= 1 && d.seance.size() <= 100))
         && d.creeLe is int;
+    }
+    // Aligné sur schemaSeance (src/lib/schemas/seance.ts), lot L3.1.
+    function seanceValide(d) {
+      return d.keys().hasOnly(['numero', 'ouverteLe', 'closeLe', 'presents'])
+        && d.keys().hasAll(['numero', 'ouverteLe', 'closeLe', 'presents'])
+        && d.numero is int && d.numero >= 1 && d.numero <= 9999
+        && d.ouverteLe is int
+        && (d.closeLe == null || d.closeLe is int)
+        && d.presents is list && d.presents.size() <= 50;
     }
     // Aligné sur schemaJetJournal (src/lib/schemas/journal.ts).
     function jetValide(d) {
@@ -373,6 +383,16 @@ service cloud.firestore {
         allow read: if estMembre(table);
         allow create: if estMembre(table) && jetValide(request.resource.data);
         allow update, delete: if false;
+      }
+
+      // Séances (L3.1, décisions du 18/10/2026) : toute la table les lit ;
+      // le MJ seul les ouvre, coche les présents et les clôt. La séance
+      // ouverte est aussi notée dans le document de la table
+      // (seanceOuverte), écrit par le MJ (règle de /tables/{table}).
+      match /seances/{seance} {
+        allow read: if estMembre(table);
+        allow create, update: if estMj(table) && seanceValide(request.resource.data);
+        allow delete: if estMj(table);
       }
 
       // Lore partagé (L2.7a, décisions du 18/10/2026). La fiche complète,

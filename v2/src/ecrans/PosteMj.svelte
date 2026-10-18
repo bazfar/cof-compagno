@@ -5,8 +5,9 @@
   /*
    * Poste MJ (mise en page L2.6, maquette validée le 18/10), en sections
    * dans la barre du haut :
-   * - Séance : la carte au centre, le groupe en cartes compactes à droite
-   *   (la fiche complète s'ouvre en panneau latéral), le journal en bas ;
+   * - Séance : la carte au centre ; à droite la séance (ouvrir, présents,
+   *   clore : L3.1) et le groupe en cartes compactes (la fiche complète
+   *   s'ouvre en panneau latéral) ; le journal en bas ;
    * - Données : fiches v1 et lore de la v1 (L2.7a) ; bestiaire et objets en L3 ;
    * - Lore (L2.7b) : fiches, partage, sceaux et édition, chargé à la
    *   première visite seulement.
@@ -38,6 +39,8 @@
   const importV1 = import('../composants/ImportFichesV1.svelte');
   // Groupe et fiches (L2.3) : chargés à part, comme le dépôt des fiches v1.
   const groupe = import('../composants/GroupeMj.svelte');
+  // Séance et présents (L3.1), chargés à part comme le groupe.
+  const seance = import('../composants/SeanceMj.svelte');
   // Import du lore v1 (L2.7a) : chargé à part, avec le schéma du lore.
   const importLore = import('../composants/ImportLoreV1.svelte');
 </script>
@@ -56,6 +59,11 @@
         {/await}
       </div>
       <aside class="cote" aria-label="Groupe et progression">
+        {#await seance then module}
+          <module.default />
+        {:catch e}
+          <p role="alert">Séance indisponible : {String(e)}</p>
+        {/await}
         {#await groupe then module}
           <module.default />
         {:catch e}
@@ -109,6 +117,11 @@
   .centre,
   .cote {
     min-width: 0;
+  }
+  .cote {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
   .bas {
     grid-column: 1 / -1;

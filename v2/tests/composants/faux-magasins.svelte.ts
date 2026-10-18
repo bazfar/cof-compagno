@@ -4,7 +4,11 @@
  */
 
 /** Document de la table : le test y change la scène montrée. */
-export const table = $state({ donnees: { sceneActive: null as string | null }, pret: true, erreur: null as string | null });
+export const table = $state({
+  donnees: { sceneActive: null } as { sceneActive: string | null; seanceOuverte?: { id: string; numero: number } | null },
+  pret: true,
+  erreur: null as string | null,
+});
 
 function collectionVide() {
   const etat = $state({ elements: [] as never[], pret: true, erreur: null as string | null });
@@ -74,4 +78,11 @@ export const loreJoueur = $state({ elements: [] as Record<string, unknown>[], pr
 export const magasinsLore = {
   suivreLoreMj: () => ({ etat: loreMj, arreter: () => {} }),
   suivreLoreJoueur: () => ({ etat: loreJoueur, arreter: () => {} }),
+};
+
+/** Séances (L3.1) : le test y pose les séances ; la séance ouverte se règle dans `table`. */
+export const seances = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+
+export const magasinsSeances = {
+  suivreSeances: () => ({ etat: seances, arreter: () => {} }),
 };
