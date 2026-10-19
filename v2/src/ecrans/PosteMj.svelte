@@ -8,8 +8,9 @@
    * - Séance : la carte au centre ; à droite la séance (ouvrir, présents,
    *   clore : L3.1) et le groupe en cartes compactes (la fiche complète
    *   s'ouvre en panneau latéral) ; le journal en bas ;
-   * - Données, en trois onglets : Bestiaire (L3.2, chargé à la première
-   *   visite), Fiches v1, Imports (lore et bestiaire de la v1) ; objets en L3 ;
+   * - Données, en quatre onglets : Bestiaire (L3.2, chargé à la première
+   *   visite), Fiches v1, Imports (lore et bestiaire de la v1), Joueurs
+   *   (correctif du 19/10 : code perso, doublons à retirer) ; objets en L3 ;
    * - Lore (L2.7b) : fiches, partage, sceaux et édition, chargé à la
    *   première visite seulement.
    * Prépa combat (L3) et Prépa social (2.1) s'ajouteront à SECTIONS avec
@@ -46,6 +47,8 @@
   const importLore = import('../composants/ImportLoreV1.svelte');
   // Import du bestiaire (L3.2), avec son schéma.
   const importBestiaire = import('../composants/ImportBestiaireV1.svelte');
+  // Joueurs de la table (correctif du 19/10), chargés à part comme le groupe.
+  const joueursMj = import('../composants/JoueursMj.svelte');
 
   // Données : onglets (L3.2). Le bestiaire n'est chargé (et lu en base)
   // qu'à la première visite de son onglet, puis gardé monté.
@@ -53,6 +56,7 @@
     { id: 'bestiaire', libelle: 'Bestiaire' },
     { id: 'fiches', libelle: 'Fiches v1' },
     { id: 'imports', libelle: 'Imports' },
+    { id: 'joueurs', libelle: 'Joueurs' },
   ];
   let ongletDonnees = $state('bestiaire');
   let bestiaireOuvert = $state(false);
@@ -129,6 +133,15 @@
           <module.default />
         {:catch e}
           <p role="alert">Import du bestiaire indisponible : {String(e)}</p>
+        {/await}
+      </div>
+    </div>
+    <div hidden={ongletDonnees !== 'joueurs'}>
+      <div class="donnees">
+        {#await joueursMj then module}
+          <module.default />
+        {:catch e}
+          <p role="alert">Joueurs indisponibles : {String(e)}</p>
         {/await}
       </div>
     </div>

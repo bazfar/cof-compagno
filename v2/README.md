@@ -66,6 +66,8 @@ déployées depuis la racine du dépôt comme avant.
 Le code MJ d'une table se pose à la main dans la console Firebase :
 document `tables/<table>/secret/codeMj`, champ `code` (texte).
 
+Retrouver son joueur (correctif du 19/10/2026, décision de Thomas : pseudo + code perso). Avant, le joueur était lié au navigateur (connexion anonyme) : un autre navigateur, une fenêtre privée ou un autre PC créaient un second joueur du même nom. Désormais un joueur choisit un code perso à sa première venue ; son pseudo et ce code forment un compte Firebase « Adresse e-mail/Mot de passe » propre à la table (`lib/acces/pseudo.ts` : adresse fabriquée `<pseudo>@<table>.joueurs.cof-compagno.invalid`, jamais écrite à personne). Le compte anonyme du navigateur reçoit l'adresse (`linkWithCredential`) : son uid ne change pas. « Je suis déjà venu » redonne le même uid sur n'importe quel appareil, donc le même joueur et les mêmes personnages, sans rien migrer ; un pseudo déjà pris est refusé (casse et accents ignorés). Un joueur inscrit avant le correctif choisit son code depuis son écran (`ProtegerJoueur`), sans perdre ses personnages. Côté MJ, Données › Joueurs (`JoueursMj`) montre qui a un code (`joueurs/<uid>.protege`, pour l'affichage seulement) et marque les doublons, que le MJ retire (les personnages restent). **À activer une fois** : console Firebase › Authentication › Méthodes de connexion › « Adresse e-mail/Mot de passe ». Le MJ garde son code MJ.
+
 Fiches (lot L2.1) : `tables/<table>/persos/<id>`, une fiche par personnage ; un joueur peut en avoir plusieurs et joue celui de `joueurs/<uid>.persoActif`. Il crée et modifie les siens, sans pouvoir les donner ni se donner des crans de progression ou de Vécu (champs `progression`, `vecu`, `usages` ; `vecu` et `usages` restent vides jusqu'aux rencontres de la 2.1) ; le MJ fait tout. Hors création, les écritures se font champ par champ (`lib/actions/persos.ts`). L'écran joueur liste ses personnages (`composants/MesPersonnages.svelte`, chargé à la demande avec les données de règles) ; le premier créé devient le personnage joué.
 
 Fiches v1 (lot L2.2c) : `tables/<table>/importsV1/<id>`. Le MJ dépose les exports v1 (`composants/ImportFichesV1.svelte`) et attribue chacune à un joueur ; la fiche v1 y est gardée en texte JSON, telle qu'exportée. Le joueur ne lit que les siennes (requête filtrée sur `proprietaireUid`) et la reprend dans l'assistant (`lib/regles/import-v1.ts`) : il rechoisit voies, capacités raciales, hors profil et dons, tout le reste est reporté, les objets rafraîchis depuis le catalogue ; il ne peut ensuite écrire que `reprisPar`, une seule fois.
@@ -102,4 +104,5 @@ Pour essayer à plusieurs sans toucher à la vraie base : `npm run
 dev:emulateurs`, puis dans l'interface de l'émulateur
 (http://127.0.0.1:4000/firestore) crée le document
 `tables/arbre-monde/secret/codeMj` avec un champ `code`. Ouvre l'app dans
-une fenêtre normale (MJ) et une fenêtre privée (joueur).
+une fenêtre normale (MJ) et une fenêtre privée (joueur). L'émulateur
+accepte les comptes pseudo + code sans réglage.

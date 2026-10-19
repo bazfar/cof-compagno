@@ -10,4 +10,6 @@ export const session = $state({
   uid: '',
   nom: '',
   erreur: '',
+  /** Le joueur a un code perso : il se retrouve sur un autre appareil (correctif du 19/10). */
+  protege: false,
 });

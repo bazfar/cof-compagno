@@ -1,6 +1,7 @@
 <script lang="ts">
   import BarreHaut from '../composants/BarreHaut.svelte';
   import JournalDes from '../composants/JournalDes.svelte';
+  import ProtegerJoueur from '../composants/ProtegerJoueur.svelte';
 
   /*
    * Écran joueur (mise en page L2.6, maquette validée le 18/10) : deux
@@ -13,6 +14,10 @@
    * l'autre sans la démonter : une saisie en cours dans la fiche n'est
    * jamais perdue, et la marque « nouveau » se met à jour même section
    * Personnage ouverte.
+   *
+   * Code perso (correctif du 19/10) : un joueur inscrit avant le correctif
+   * est invité, en tête de colonne, à choisir un code pour se retrouver sur
+   * un autre appareil.
    *
    * En combat (L6), la fiche se repliera et la barre d'actions de la v1
    * prendra place sous la carte, agrandie.
@@ -39,6 +44,7 @@
   <div hidden={section !== 'perso'}>
     <div class="personnage">
       <div class="fiche">
+        <ProtegerJoueur />
         {#await personnages}
           <p>Chargement de tes personnages…</p>
         {:then module}

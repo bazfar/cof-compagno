@@ -32,7 +32,7 @@ export const magasinsCarte = {
 };
 
 /** Joueurs et fiches de la table : le test y pose ce que Firestore enverrait (lot L2.2b). */
-export const joueurs = $state({ elements: [] as { id: string; nom: string; rejointLe: number; persoActif?: string }[], pret: true, erreur: null as string | null });
+export const joueurs = $state({ elements: [] as { id: string; nom: string; rejointLe: number; persoActif?: string; protege?: boolean }[], pret: true, erreur: null as string | null });
 export const persos = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
 
 export const magasinsPresents = {

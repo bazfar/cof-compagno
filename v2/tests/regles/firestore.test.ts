@@ -78,6 +78,12 @@ describe('joueurs', () => {
     await assertFails(pourAlice().doc(`${TABLE}/joueurs/alice`).set({ nom: '', rejointLe: 1 }));
   });
 
+  it('code perso (correctif du 19/10) : « protege » est un booléen, posé à l’inscription ou après', async () => {
+    await assertSucceeds(pourAlice().doc(`${TABLE}/joueurs/alice`).set({ nom: 'Alice', protege: true, rejointLe: 1 }));
+    await assertSucceeds(pourAlice().doc(`${TABLE}/joueurs/alice`).update({ protege: true }));
+    await assertFails(pourAlice().doc(`${TABLE}/joueurs/alice`).update({ protege: 'oui' }));
+  });
+
   it('seul un membre voit la liste des joueurs', async () => {
     await aliceEstJoueuse();
     await assertSucceeds(pourAlice().collection(`${TABLE}/joueurs`).get());

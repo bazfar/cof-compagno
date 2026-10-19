@@ -266,13 +266,17 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
-      // Devenir joueur : uniquement pour soi. Le MJ peut retirer un joueur.
+      // Devenir joueur : uniquement pour soi. Le MJ peut retirer un joueur
+      // (un doublon, par exemple). `protege` (correctif du 19/10) : le joueur
+      // a un code perso et se retrouve sur un autre appareil ; c'est son
+      // compte pseudo + code qui le garantit, ce champ ne sert qu'à l'affichage.
       match /joueurs/{uid} {
         allow read: if connecte() && (request.auth.uid == uid || estMembre(table));
         allow create, update: if connecte()
           && request.auth.uid == uid
-          && request.resource.data.keys().hasOnly(['nom', 'couleur', 'persoActif', 'rejointLe'])
+          && request.resource.data.keys().hasOnly(['nom', 'couleur', 'persoActif', 'protege', 'rejointLe'])
           && nomValide(request.resource.data.nom)
+          && (!('protege' in request.resource.data) || request.resource.data.protege is bool)
           && request.resource.data.rejointLe is int;
         allow delete: if estMj(table);
       }

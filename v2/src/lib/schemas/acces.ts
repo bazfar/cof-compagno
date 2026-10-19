@@ -21,6 +21,8 @@ export const schemaJoueur = z.object({
     .regex(/^#[0-9a-fA-F]{6}$/)
     .optional(),
   persoActif: z.string().optional(),
+  /** Le joueur a choisi un code perso (correctif du 19/10) : le MJ voit qui peut se retrouver ailleurs. */
+  protege: z.boolean().optional(),
   rejointLe: z.number().int().nonnegative(),
 });
 export type Joueur = z.infer<typeof schemaJoueur>;
