@@ -106,3 +106,10 @@ export const dons = $state({ elements: [] as Record<string, unknown>[], pret: tr
 export const magasinsDons = {
   suivreMesDons: () => ({ etat: dons, arreter: () => {} }),
 };
+
+/** Butins de la table (L3.4). */
+export const butins = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+
+export const magasinsButins = {
+  suivreButins: () => ({ etat: butins, arreter: () => {} }),
+};

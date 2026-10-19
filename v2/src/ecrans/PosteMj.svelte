@@ -6,7 +6,8 @@
    * Poste MJ (mise en page L2.6, maquette validée le 18/10), en sections
    * dans la barre du haut :
    * - Séance : la carte au centre ; à droite la séance (ouvrir, présents,
-   *   clore : L3.1) et le groupe en cartes compactes (la fiche complète
+   *   clore : L3.1), le butin (vote Besoin / Envie, attribution : L3.4)
+   *   et le groupe en cartes compactes (la fiche complète
    *   s'ouvre en panneau latéral) ; le journal en bas ;
    * - Données, en quatre onglets : Bestiaire (L3.2, chargé à la première
    *   visite), Fiches v1, Imports (lore et bestiaire de la v1), Joueurs
@@ -43,6 +44,8 @@
   const groupe = import('../composants/GroupeMj.svelte');
   // Séance et présents (L3.1), chargés à part comme le groupe.
   const seance = import('../composants/SeanceMj.svelte');
+  // Butin (L3.4), chargé à part : il embarque le catalogue d'objets.
+  const butin = import('../composants/ButinMj.svelte');
   // Import du lore v1 (L2.7a) : chargé à part, avec le schéma du lore.
   const importLore = import('../composants/ImportLoreV1.svelte');
   // Import du bestiaire (L3.2), avec son schéma.
@@ -84,6 +87,11 @@
           <module.default />
         {:catch e}
           <p role="alert">Séance indisponible : {String(e)}</p>
+        {/await}
+        {#await butin then module}
+          <module.default />
+        {:catch e}
+          <p role="alert">Butin indisponible : {String(e)}</p>
         {/await}
         {#await groupe then module}
           <module.default />

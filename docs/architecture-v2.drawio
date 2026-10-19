@@ -724,6 +724,42 @@
         <mxCell id="l33f" parent="1" source="dAct" target="dSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="titre-l34" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Butin (L3.4) — vote Besoin / Envie, d100 lancé en votant, relance des ex aequo ; le MJ peut attribuer directement" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="4000" as="geometry" />
+        </mxCell>
+        <mxCell id="btSchema" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/butin.ts  (L3.4)&lt;/b&gt;&lt;hr&gt;Butin : objet, statut vote | relance | clos | attribue,&lt;br&gt;tour, enLice, votes.&amp;lt;uid&amp;gt;, gagnant" vertex="1">
+          <mxGeometry height="70" width="300" x="40" y="4040" as="geometry" />
+        </mxCell>
+        <mxCell id="btLib" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/butin/butin.ts&lt;/b&gt;&lt;hr&gt;issueDuVote : Besoin avant Envie, d100,&lt;br&gt;relances des ex aequo ; gesteJoueur" vertex="1">
+          <mxGeometry height="70" width="300" x="380" y="4040" as="geometry" />
+        </mxCell>
+        <mxCell id="btUi" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/ButinJoueur, ButinMj&lt;/b&gt;&lt;hr&gt;joueur : Besoin / Envie / Passer, relance ;&lt;br&gt;MJ : mettre au vote, clore, attribuer, retirer" vertex="1">
+          <mxGeometry height="70" width="300" x="720" y="4040" as="geometry" />
+        </mxCell>
+        <mxCell id="btAct" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;lib/actions/butin.ts&lt;/b&gt;&lt;hr&gt;voter, relancer (joueur) ; avancer, attribuer :&lt;br&gt;TRANSACTION butin + sac du gagnant" vertex="1">
+          <mxGeometry height="70" width="290" x="1060" y="4040" as="geometry" />
+        </mxCell>
+        <mxCell id="btMag" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f8cecc;strokeColor=#b85450;" value="&lt;b&gt;lib/magasins/butins.svelte.ts&lt;/b&gt;&lt;hr&gt;40 derniers butins (creeLe)" vertex="1">
+          <mxGeometry height="54" width="320" x="1390" y="4040" as="geometry" />
+        </mxCell>
+        <mxCell id="l34a" parent="1" source="joueur" target="btUi" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l34b" parent="1" source="mj" target="btUi" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l34c" parent="1" source="btUi" target="btAct" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l34d" parent="1" source="btUi" target="btMag" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l34e" parent="1" source="btUi" target="btLib" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l34f" parent="1" source="btAct" target="btSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
 </root>
     </mxGraphModel>
   </diagram>
@@ -759,8 +795,8 @@
         <mxCell id="seances" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;seances/{id}  (L3.1)&lt;/b&gt;&lt;hr&gt;{ numero, ouverteLe, closeLe, presents[] }&lt;br&gt;toute la table lit, le MJ seul écrit ;&lt;br&gt;séance ouverte aussi dans tables/{t}.seanceOuverte" vertex="1">
           <mxGeometry height="54" width="260" x="330" y="440" as="geometry" />
         </mxCell>
-        <mxCell id="loot" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontColor=#666666;" value="&lt;b&gt;loot/{id}  (L3)&lt;/b&gt;&lt;hr&gt;objets proposés, votes" vertex="1">
-          <mxGeometry height="54" width="280" x="620" y="440" as="geometry" />
+        <mxCell id="loot" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;butins/{id}  (L3.4)&lt;/b&gt;&lt;hr&gt;{ objet, statut, tour, enLice,&lt;br&gt;votes.&amp;lt;uid&amp;gt;, gagnant } ; le MJ écrit,&lt;br&gt;un joueur n'écrit que son vote" vertex="1">
+          <mxGeometry height="70" width="280" x="620" y="440" as="geometry" />
         </mxCell>
         <mxCell id="scenes" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;scenes/{id}  (L5.3)&lt;/b&gt;&lt;hr&gt;{ portesOuvertes, exploration,&lt;br&gt;  explorationRaz }&lt;br&gt;portes : tout membre | le reste : MJ&lt;br&gt;(la géométrie est dans src/donnees/scenes)" vertex="1">
           <mxGeometry height="118" width="260" x="40" y="560" as="geometry" />
@@ -801,7 +837,7 @@
         <mxCell id="c5" parent="1" source="tbl" target="seances" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;dashed=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="c6" parent="1" source="tbl" target="loot" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;dashed=1;" value="" edge="1">
+        <mxCell id="c6" parent="1" source="tbl" target="loot" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="c7" parent="1" source="tbl" target="scenes" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" value="" edge="1">

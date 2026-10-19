@@ -129,6 +129,61 @@ service cloud.firestore {
           || (request.auth.uid == avant.deUid && avant.statut == 'propose' && apres.statut == 'annule')
           || (request.auth.uid == avant.deUid && avant.statut == 'refuse' && apres.statut == 'repris'));
     }
+    // Aligné sur schemaButin et schemaVoteButin (src/lib/schemas/butin.ts), lot L3.4.
+    function voteButinValide(v) {
+      return v.keys().hasOnly(['choix', 'perso', 'nom', 'd100', 'relances', 'le'])
+        && v.keys().hasAll(['choix', 'perso', 'nom', 'd100', 'relances', 'le'])
+        && v.choix in ['besoin', 'envie', 'passe']
+        && v.perso is string && v.perso.size() >= 1 && v.perso.size() <= 100
+        && v.nom is string && v.nom.size() >= 1 && v.nom.size() <= 80
+        && v.d100 is int && v.d100 >= 1 && v.d100 <= 100
+        && v.relances is list && v.relances.size() <= 20
+        && v.le is int;
+    }
+    function butinValide(d) {
+      return d.keys().hasOnly(['objet', 'statut', 'creeLe', 'tour', 'enLice', 'votes', 'gagnant', 'resoluLe'])
+        && d.keys().hasAll(['objet', 'statut', 'creeLe', 'tour', 'enLice', 'votes', 'gagnant', 'resoluLe'])
+        && d.objet is map
+        && d.statut in ['vote', 'relance', 'clos', 'attribue']
+        && d.creeLe is int
+        && d.tour is int && d.tour >= 0 && d.tour <= 20
+        && d.enLice is list && d.enLice.size() <= 50
+        && d.votes is map
+        && (d.gagnant == null || d.gagnant is map)
+        && (d.resoluLe == null || d.resoluLe is int);
+    }
+    // Un joueur n'écrit que son vote (votes.<uid>). Vote ouvert : choix
+    // libre, avec un de ses personnages ; le d100 et le personnage d'un
+    // premier vote ne changent plus. Relance : seulement un joueur à
+    // égalité, qui ajoute un d100 (1 à 100) pour le tour demandé, rien
+    // d'autre.
+    function voteJoueurValide(table, apres, avant) {
+      return apres.diff(avant).affectedKeys().hasOnly(['votes'])
+        && apres.votes.diff(avant.votes).affectedKeys().hasOnly([request.auth.uid])
+        && request.auth.uid in apres.votes
+        && voteButinValide(apres.votes[request.auth.uid])
+        && ((avant.statut == 'vote'
+            && apres.votes[request.auth.uid].relances.size() == 0
+            && proprietaireDuPerso(table, apres.votes[request.auth.uid].perso)
+            && (!(request.auth.uid in avant.votes)
+              || (apres.votes[request.auth.uid].d100 == avant.votes[request.auth.uid].d100
+                && apres.votes[request.auth.uid].perso == avant.votes[request.auth.uid].perso)))
+          || (avant.statut == 'relance'
+            && request.auth.uid in avant.enLice
+            && request.auth.uid in avant.votes
+            && apres.votes[request.auth.uid].choix == avant.votes[request.auth.uid].choix
+            && apres.votes[request.auth.uid].d100 == avant.votes[request.auth.uid].d100
+            && apres.votes[request.auth.uid].perso == avant.votes[request.auth.uid].perso
+            && avant.votes[request.auth.uid].relances.size() == avant.tour - 1
+            && apres.votes[request.auth.uid].relances.size() == avant.tour
+            // Au premier tour la tranche serait vide, et le moteur de règles
+            // refuse `liste[0:0]` (indice -1). La ligne du dessus garantit
+            // déjà qu'il n'y avait aucune relance à conserver.
+            && (avant.tour == 1 || apres.votes[request.auth.uid].relances[0:avant.tour - 1] == avant.votes[request.auth.uid].relances)
+            && apres.votes[request.auth.uid].relances[avant.tour - 1] is int
+            && apres.votes[request.auth.uid].relances[avant.tour - 1] >= 1
+            && apres.votes[request.auth.uid].relances[avant.tour - 1] <= 100));
+    }
     // Aligné sur schemaSeance (src/lib/schemas/seance.ts), lot L3.1.
     function seanceValide(d) {
       return d.keys().hasOnly(['numero', 'ouverteLe', 'closeLe', 'presents'])
@@ -464,6 +519,19 @@ service cloud.firestore {
         allow update: if estJoueur(table)
           && donValide(request.resource.data)
           && transitionDon(request.resource.data, resource.data);
+        allow delete: if estMj(table);
+      }
+
+      // Butin (L3.4, décisions des 18 et 19/10/2026) : toute la table lit
+      // les butins et les votes. Le MJ crée, clôt, attribue (directement ou
+      // au gagnant : l'objet entre dans le sac dans la même transaction) et
+      // retire. Un joueur n'écrit que son vote (voteJoueurValide).
+      match /butins/{butin} {
+        allow read: if estMembre(table);
+        allow create, update: if estMj(table) && butinValide(request.resource.data);
+        allow update: if estJoueur(table)
+          && butinValide(request.resource.data)
+          && voteJoueurValide(table, request.resource.data, resource.data);
         allow delete: if estMj(table);
       }
 

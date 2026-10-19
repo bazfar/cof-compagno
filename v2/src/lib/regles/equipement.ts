@@ -231,6 +231,19 @@ export function utiliser(f: Fiche, cle: string, alea: () => number = Math.random
   return { changement, formule, jet, soin: pv - actuel };
 }
 
+/**
+ * Butin (L3.4) : les objets à mettre au vote pour `combien` exemplaires
+ * d'un objet du catalogue. Un consommable forme une seule pile ; les autres
+ * objets sont votés un par un.
+ */
+export function objetsPourButin(idObjet: string, combien = 1): ObjetFiche[] {
+  const modele = objetParId.get(idObjet);
+  if (!modele) throw new RefusEquipement(`Objet inconnu : ${idObjet}`);
+  const n = Math.max(1, Math.min(99, Math.round(combien)));
+  const copie = structuredClone(modele) as ObjetFiche;
+  return TYPES_EMPILABLES.includes(modele.type) ? [{ ...copie, quantite: n }] : Array.from({ length: n }, () => structuredClone(copie));
+}
+
 /** MJ : ajouter un objet du catalogue au sac (décision 1a), en une ou plusieurs unités. */
 export function ajouterDuCatalogue(f: Fiche, idObjet: string, combien = 1): Changement {
   const modele = objetParId.get(idObjet);

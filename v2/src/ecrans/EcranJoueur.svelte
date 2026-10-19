@@ -6,8 +6,8 @@
   /*
    * Écran joueur (mise en page L2.6, maquette validée le 18/10) : deux
    * colonnes. À gauche, ce qui prime : les personnages et la fiche vivante.
-   * À droite, une carte réduite et le journal de dés compact, toujours
-   * visibles. Les joueurs de la table sont dans la barre du haut.
+   * À droite, une carte réduite, le butin au vote (L3.4) et le journal de
+   * dés compact, toujours visibles. Les joueurs de la table sont dans la barre du haut.
    *
    * Section Lore (L2.7b) : le lore que le MJ a partagé, avec le nombre de
    * fiches nouvelles dans la barre du haut. Changer de section masque
@@ -28,6 +28,8 @@
   // Les personnages aussi (L2.2b) : ils embarquent les données de règles
   // (classes, voies, sorts, objets), trop lourdes pour l'écran d'accueil.
   const personnages = import('../composants/MesPersonnages.svelte');
+  // Le butin (L3.4), chargé à part : il embarque le catalogue d'objets.
+  const butin = import('../composants/ButinJoueur.svelte');
   // Le lore (L2.7b), chargé à part lui aussi.
   const lore = import('../composants/LoreJoueur.svelte');
 
@@ -60,6 +62,11 @@
           <module.default role="joueur" hauteur="340px" />
         {:catch e}
           <p role="alert">Battlemap indisponible : {String(e)}</p>
+        {/await}
+        {#await butin then module}
+          <module.default />
+        {:catch e}
+          <p role="alert">Butin indisponible : {String(e)}</p>
         {/await}
         <JournalDes compact />
       </aside>
