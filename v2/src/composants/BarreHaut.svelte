@@ -6,8 +6,8 @@
 
   /*
    * Barre du haut. Depuis L2.6, elle porte aussi les sections de l'écran
-   * (poste MJ : Séance, Données, Lore ; Prépa combat en L3, Prépa social en
-   * 2.1 ; joueur : Personnage, Lore) et les joueurs de la table, qui ne
+   * (poste MJ : Séance, Prépa combat (L3.5), Données, Lore ; Prépa social
+   * en 2.1 ; joueur : Personnage, Lore) et les joueurs de la table, qui ne
    * prennent plus un bloc en bas de page. `badge` (L2.7b) : un compte à
    * côté d'une section (fiches de lore nouvelles).
    *

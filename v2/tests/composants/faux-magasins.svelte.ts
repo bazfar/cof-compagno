@@ -113,3 +113,10 @@ export const butins = $state({ elements: [] as Record<string, unknown>[], pret: 
 export const magasinsButins = {
   suivreButins: () => ({ etat: butins, arreter: () => {} }),
 };
+
+/** Rencontres préparées (L3.5). */
+export const rencontres = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+
+export const magasinsRencontres = {
+  suivreRencontres: () => ({ etat: rencontres, arreter: () => {} }),
+};

@@ -22,7 +22,7 @@
         <mxCell id="joueur" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;ecrans/EcranJoueur.svelte&lt;/b&gt;&lt;hr&gt;deux colonnes (L2.6) : personnages et&lt;br&gt;fiche vivante (à la demande) | carte&lt;br&gt;réduite et journal compact" vertex="1">
           <mxGeometry height="86" width="260" x="40" y="440" as="geometry" />
         </mxCell>
-        <mxCell id="mj" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;ecrans/PosteMj.svelte&lt;/b&gt;&lt;hr&gt;sections (L2.6) : Séance = carte, groupe,&lt;br&gt;journal ; Données = fiches v1 (à la demande)&lt;br&gt;; prépa combat, lore… : L2.7-L3" vertex="1">
+        <mxCell id="mj" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;ecrans/PosteMj.svelte&lt;/b&gt;&lt;hr&gt;sections : Séance = carte, séance, butin,&lt;br&gt;groupe, journal ; Prépa combat (L3.5) ;&lt;br&gt;Données = bestiaire, fiches v1, imports,&lt;br&gt;joueurs ; Lore" vertex="1">
           <mxGeometry height="86" width="260" x="40" y="530" as="geometry" />
         </mxCell>
         <mxCell id="barre" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/BarreHaut.svelte&lt;/b&gt;&lt;hr&gt;logo, rôle, sections de l'écran,&lt;br&gt;joueurs de la table, nom, table" vertex="1">
@@ -760,6 +760,42 @@
         <mxCell id="l34f" parent="1" source="btAct" target="btSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="titre-l35" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Prépa combat (L3.5) — rencontres du MJ : scène, monstres placés d'avance, jauge d'équilibrage v1, butin prévu ; lancer pose les jetons" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="4160" as="geometry" />
+        </mxCell>
+        <mxCell id="rSchema" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/rencontre.ts  (L3.5)&lt;/b&gt;&lt;hr&gt;Rencontre : nom, scène, monstres (clé, case),&lt;br&gt;butin prévu, statut préparée | lancée" vertex="1">
+          <mxGeometry height="70" width="300" x="40" y="4200" as="geometry" />
+        </mxCell>
+        <mxCell id="rLib" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/rencontres/rencontre.ts&lt;/b&gt;&lt;hr&gt;coût en Pm et budget (v1), verdict ;&lt;br&gt;ajouter, placer en spirale, prêt à lancer ?" vertex="1">
+          <mxGeometry height="70" width="300" x="380" y="4200" as="geometry" />
+        </mxCell>
+        <mxCell id="rUi" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/PrepaCombat, ApercuScene&lt;/b&gt;&lt;hr&gt;brouillon jamais écrasé ; aperçu de la scène&lt;br&gt;pour le MJ seul (Battlemap, sans écriture)" vertex="1">
+          <mxGeometry height="70" width="300" x="720" y="4200" as="geometry" />
+        </mxCell>
+        <mxCell id="rAct" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;lib/actions/rencontres.ts&lt;/b&gt;&lt;hr&gt;lancer : jetons par lots de 8, puis scène&lt;br&gt;montrée ; envoyer le butin (actions/butin)" vertex="1">
+          <mxGeometry height="70" width="290" x="1060" y="4200" as="geometry" />
+        </mxCell>
+        <mxCell id="rMag" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f8cecc;strokeColor=#b85450;" value="&lt;b&gt;lib/magasins/rencontres.svelte.ts&lt;/b&gt;&lt;hr&gt;rencontres (MJ seul)" vertex="1">
+          <mxGeometry height="54" width="320" x="1390" y="4200" as="geometry" />
+        </mxCell>
+        <mxCell id="l35a" parent="1" source="mj" target="rUi" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l35b" parent="1" source="rUi" target="rAct" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l35c" parent="1" source="rUi" target="rMag" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l35d" parent="1" source="rUi" target="rLib" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l35e" parent="1" source="rAct" target="btAct" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l35f" parent="1" source="rAct" target="rSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
 </root>
     </mxGraphModel>
   </diagram>
@@ -901,6 +937,12 @@
           <mxGeometry height="70" width="300" x="1400" y="920" as="geometry" />
         </mxCell>
         <mxCell id="c33a" parent="1" source="tbl" target="donsDoc" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rencontresDoc" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;rencontres/{id}  (L3.5)&lt;/b&gt;&lt;hr&gt;{ nom, scene, monstres[], butin[], statut }&lt;br&gt;MJ seul (lecture et écriture)" vertex="1">
+          <mxGeometry height="54" width="300" x="1740" y="920" as="geometry" />
+        </mxCell>
+        <mxCell id="c35a" parent="1" source="tbl" target="rencontresDoc" style="endArrow=none;startArrow=diamondThin;startFill=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 </root>

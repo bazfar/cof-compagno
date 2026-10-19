@@ -14,8 +14,11 @@
    *   (correctif du 19/10 : code perso, doublons à retirer) ; objets en L3 ;
    * - Lore (L2.7b) : fiches, partage, sceaux et édition, chargé à la
    *   première visite seulement.
-   * Prépa combat (L3) et Prépa social (2.1) s'ajouteront à SECTIONS avec
-   * leur lot, pas avant : pas d'onglet vide.
+   * - Prépa combat (L3.5) : rencontres préparées (scène, monstres placés
+   *   d'avance, jauge d'équilibrage, butin prévu), chargée à la première
+   *   visite seulement.
+   * Prépa social (2.1) s'ajoutera à SECTIONS avec son lot, pas avant : pas
+   * d'onglet vide.
    *
    * Changer de section masque les autres sans les démonter : la carte garde
    * ses abonnements, et le client du MJ continue d'enregistrer
@@ -24,6 +27,7 @@
 
   const SECTIONS = [
     { id: 'seance', libelle: 'Séance' },
+    { id: 'prepa', libelle: 'Prépa combat' },
     { id: 'donnees', libelle: 'Données' },
     { id: 'lore', libelle: 'Lore' },
   ];
@@ -34,6 +38,13 @@
     if (section === 'lore') loreOuvert = true;
   });
   const lore = $derived(loreOuvert ? import('../composants/LoreMj.svelte') : null);
+  // Prépa combat (L3.5), chargée à la première visite, puis gardée montée
+  // (un brouillon en cours n'est jamais perdu en changeant de section).
+  let prepaOuverte = $state(false);
+  $effect(() => {
+    if (section === 'prepa') prepaOuverte = true;
+  });
+  const prepa = $derived(prepaOuverte ? import('../composants/PrepaCombat.svelte') : null);
 
   // La battlemap (lot L5.3) est chargée à part : son code et les scènes ne
   // retardent pas l'ouverture du poste.
@@ -103,6 +114,17 @@
         <JournalDes compact />
       </div>
     </div>
+  </div>
+  <div hidden={section !== 'prepa'}>
+    {#if prepa}
+      {#await prepa}
+        <p>Chargement de la prépa combat…</p>
+      {:then module}
+        <module.default />
+      {:catch e}
+        <p role="alert">Prépa combat indisponible : {String(e)}</p>
+      {/await}
+    {/if}
   </div>
   <div hidden={section !== 'donnees'}>
     <div class="onglets-donnees" role="tablist" aria-label="Données">

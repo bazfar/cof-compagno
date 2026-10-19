@@ -184,6 +184,21 @@ service cloud.firestore {
             && apres.votes[request.auth.uid].relances[avant.tour - 1] >= 1
             && apres.votes[request.auth.uid].relances[avant.tour - 1] <= 100));
     }
+    // Aligné sur schemaRencontre (src/lib/schemas/rencontre.ts), lot L3.5.
+    // Les règles vérifient le premier niveau ; monstres et butin sont
+    // validés par l'app (Zod).
+    function rencontreValide(d) {
+      return d.keys().hasOnly(['nom', 'scene', 'monstres', 'butin', 'statut', 'creeLe', 'majLe', 'lanceeLe', 'butinEnvoyeLe'])
+        && d.keys().hasAll(['nom', 'scene', 'monstres', 'butin', 'statut', 'creeLe', 'majLe', 'lanceeLe', 'butinEnvoyeLe'])
+        && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 80
+        && (d.scene == null || (d.scene is string && d.scene.size() >= 1 && d.scene.size() <= 100))
+        && d.monstres is list && d.monstres.size() <= 60
+        && d.butin is list && d.butin.size() <= 30
+        && d.statut in ['preparee', 'lancee']
+        && d.creeLe is int && d.majLe is int
+        && (d.lanceeLe == null || d.lanceeLe is int)
+        && (d.butinEnvoyeLe == null || d.butinEnvoyeLe is int);
+    }
     // Aligné sur schemaSeance (src/lib/schemas/seance.ts), lot L3.1.
     function seanceValide(d) {
       return d.keys().hasOnly(['numero', 'ouverteLe', 'closeLe', 'presents'])
@@ -533,6 +548,14 @@ service cloud.firestore {
           && butinValide(request.resource.data)
           && voteJoueurValide(table, request.resource.data, resource.data);
         allow delete: if estMj(table);
+      }
+
+      // Rencontres préparées (L3.5, décisions du 19/10/2026) : lisibles du
+      // MJ seul, comme le bestiaire qu'elles nomment. Lancer une rencontre
+      // pose des jetons de monstre ordinaires (règles des jetons).
+      match /rencontres/{rencontre} {
+        allow read, delete: if estMj(table);
+        allow create, update: if estMj(table) && rencontreValide(request.resource.data);
       }
 
       // Bestiaire du MJ (L3.2, décision du 18/10/2026) : lisible du MJ seul,
