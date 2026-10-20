@@ -48,6 +48,20 @@ export async function modifierPV(id: string, pvActuel: number, pvMax: number): P
   await updateDoc(doc(db, cheminPerso(id)), { pvActuel: Math.max(0, Math.min(pvMax, Math.round(pvActuel))) });
 }
 
+/**
+ * MJ (L3.6) : corrige des champs de la fiche (identité, caractéristiques,
+ * PV, voies, dons). Seuls les champs donnés sont écrits ; la fiche
+ * corrigée entière est d'abord validée par le schéma.
+ */
+export async function corrigerFiche(id: string, fiche: Fiche, champs: Partial<Fiche>): Promise<void> {
+  if (!Object.keys(champs).length) return;
+  const { id: _id, ...sansId } = fiche as Fiche & { id?: string }; // l'id du magasin n'est pas un champ
+  schemaFiche.parse({ ...sansId, ...champs });
+  const aEcrire: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(champs)) aEcrire[k] = v === null ? null : versFirestore(v);
+  await updateDoc(doc(db, cheminPerso(id)), aEcrire);
+}
+
 /** Bourse : seules les pièces changent. */
 export async function modifierPieces(id: string, pieces: { piecesOr: number; piecesArgent: number; piecesBronze: number }): Promise<void> {
   const positif = (n: number) => Math.max(0, Math.round(n));

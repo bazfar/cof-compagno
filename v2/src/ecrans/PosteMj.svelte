@@ -9,9 +9,10 @@
    *   clore : L3.1), le butin (vote Besoin / Envie, attribution : L3.4)
    *   et le groupe en cartes compactes (la fiche complète
    *   s'ouvre en panneau latéral) ; le journal en bas ;
-   * - Données, en quatre onglets : Bestiaire (L3.2, chargé à la première
-   *   visite), Fiches v1, Imports (lore et bestiaire de la v1), Joueurs
-   *   (correctif du 19/10 : code perso, doublons à retirer) ; objets en L3 ;
+   * - Données, en cinq onglets : Bestiaire (L3.2, chargé à la première
+   *   visite), Objets (L3.6 : catalogue, ajout au sac, mise au vote),
+   *   Fiches v1, Imports (lore et bestiaire de la v1), Joueurs (correctif
+   *   du 19/10 : code perso, doublons à retirer) ;
    * - Lore (L2.7b) : fiches, partage, sceaux et édition, chargé à la
    *   première visite seulement.
    * - Prépa combat (L3.5) : rencontres préparées (scène, monstres placés
@@ -68,6 +69,7 @@
   // qu'à la première visite de son onglet, puis gardé monté.
   const ONGLETS_DONNEES = [
     { id: 'bestiaire', libelle: 'Bestiaire' },
+    { id: 'objets', libelle: 'Objets' },
     { id: 'fiches', libelle: 'Fiches v1' },
     { id: 'imports', libelle: 'Imports' },
     { id: 'joueurs', libelle: 'Joueurs' },
@@ -78,6 +80,12 @@
     if (section === 'donnees' && ongletDonnees === 'bestiaire') bestiaireOuvert = true;
   });
   const bestiaire = $derived(bestiaireOuvert ? import('../composants/BestiaireMj.svelte') : null);
+  // Catalogue d'objets (L3.6), chargé à la première visite de son onglet.
+  let objetsOuvert = $state(false);
+  $effect(() => {
+    if (section === 'donnees' && ongletDonnees === 'objets') objetsOuvert = true;
+  });
+  const objetsMj = $derived(objetsOuvert ? import('../composants/ObjetsMj.svelte') : null);
 </script>
 
 <BarreHaut etiquette="Poste MJ" sections={SECTIONS} active={section} surSection={(id) => (section = id)} />
@@ -140,6 +148,17 @@
           <module.default />
         {:catch e}
           <p role="alert">Bestiaire indisponible : {String(e)}</p>
+        {/await}
+      {/if}
+    </div>
+    <div hidden={ongletDonnees !== 'objets'}>
+      {#if objetsMj}
+        {#await objetsMj}
+          <p>Chargement du catalogue…</p>
+        {:then module}
+          <module.default />
+        {:catch e}
+          <p role="alert">Objets indisponibles : {String(e)}</p>
         {/await}
       {/if}
     </div>

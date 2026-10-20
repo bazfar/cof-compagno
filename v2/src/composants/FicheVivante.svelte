@@ -12,6 +12,7 @@
   import { barreNiveau } from '../lib/regles/progression';
   import { SLOTS_EQUIPEMENT, type Slot } from '../lib/regles/fiche-calcul';
   import { LIMITE_NOTES, type Fiche } from '../lib/schemas/fiche';
+  import CorrectionFiche from './CorrectionFiche.svelte';
   import MonteeNiveau from './MonteeNiveau.svelte';
   import Portrait from './Portrait.svelte';
 
@@ -49,6 +50,10 @@
    * portrait passe dans « Suivi et notes » pour garder l'en-tête court.
    * Ce découpage est voulu : ne pas revenir à six onglets.
    *
+   * Correction (L3.6, MJ seul) : « Corriger la fiche » ouvre, sous
+   * l'en-tête, un brouillon de l'identité, des caractéristiques, des PV,
+   * des voies et des dons (CorrectionFiche).
+   *
    * Dons (L3.3) : `destinataires` (les personnages joués des autres
    * joueurs, fournis par MesPersonnages) ajoute « Donner… » sous chaque
    * objet du sac. Absent dans la vue du MJ, qui ajoute du catalogue.
@@ -67,6 +72,7 @@
   let usage = $state<'combat' | 'hors'>('combat');
   let message = $state('');
   let montee = $state(false);
+  let correction = $state(false);
 
   const vue = $derived(vueFiche(fiche));
   const voiesMontrees = $derived(vue.voies.filter((v) => v.horsCombat === (usage === 'hors')));
@@ -212,6 +218,7 @@
       <div>
         <h2>{fiche.nom}</h2>
         <p>{vue.titre} · dé de vie d{vue.deVie}</p>
+        {#if mj && !correction}<button class="petit discret" onclick={() => { message = ''; correction = true; }}>Corriger la fiche</button>{/if}
       </div>
     </div>
 
@@ -282,6 +289,9 @@
     </div>
   </header>
 
+  {#if correction}
+    <CorrectionFiche {fiche} surFin={(m) => { correction = false; message = m; }} />
+  {/if}
   {#if montee}
     <MonteeNiveau {fiche} surFin={(m) => { montee = false; message = m; }} />
   {/if}

@@ -796,6 +796,30 @@
         <mxCell id="l35f" parent="1" source="rAct" target="rSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="titre-l36" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Correction des fiches et objets (L3.6) — le MJ corrige une fiche champ par champ ; Données › Objets" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="4320" as="geometry" />
+        </mxCell>
+        <mxCell id="cLib" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/fiche/correction.ts  (L3.6)&lt;/b&gt;&lt;hr&gt;brouillon depuis la fiche à l'ouverture ; champs&lt;br&gt;changés seuls ; rangs par voie ; refus, alertes" vertex="1">
+          <mxGeometry height="70" width="300" x="40" y="4360" as="geometry" />
+        </mxCell>
+        <mxCell id="cUi" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;composants/CorrectionFiche, ObjetsMj&lt;/b&gt;&lt;hr&gt;« Corriger la fiche » (MJ) ; catalogue :&lt;br&gt;chercher, ajouter au sac, mettre au vote" vertex="1">
+          <mxGeometry height="70" width="300" x="380" y="4360" as="geometry" />
+        </mxCell>
+        <mxCell id="cAct" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;actions/persos.ts : corrigerFiche&lt;/b&gt;&lt;hr&gt;fiche entière validée, seuls les champs&lt;br&gt;donnés écrits (updateDoc)" vertex="1">
+          <mxGeometry height="70" width="290" x="720" y="4360" as="geometry" />
+        </mxCell>
+        <mxCell id="l36a" parent="1" source="mj" target="cUi" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l36b" parent="1" source="cUi" target="cLib" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l36c" parent="1" source="cUi" target="cAct" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l36d" parent="1" source="cUi" target="btAct" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
 </root>
     </mxGraphModel>
   </diagram>
