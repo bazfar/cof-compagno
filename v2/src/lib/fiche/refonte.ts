@@ -42,11 +42,12 @@ import { actionParId, actionsCommunes, classeParId, elementParId, voieParId } fr
  * (Envoûteur).
  */
 
-/** Classes v1 refondues, vers leur identifiant de la refonte (les cinq du groupe, puis le Chevalier au lot L4.13, décision 12a, et le Chasseur au lot L4.14 ; les autres suivent). */
+/** Classes v1 refondues, vers leur identifiant de la refonte (les cinq du groupe, puis le Chevalier au lot L4.13, décision 12a, le Chasseur au lot L4.14 et le Druide au lot L4.15 ; les autres suivent). */
 export const CLASSE_REFONTE: Readonly<Record<string, string>> = {
   guerrier: 'guerrier',
   chevalier: 'chevalier',
   chasseur: 'chasseur',
+  druide: 'druide',
   magicien: 'magicien',
   enchanteur: 'envouteur',
   pretre: 'pretre',
@@ -302,12 +303,13 @@ export const NOMS_ECOLES: Readonly<Record<string, string>> = {
   invocation: 'Invocation',
   illusion: 'Illusion',
   enchantement: 'Enchantement',
-  // Cercles du Prêtre et Chant du Barde (lot L4.12 : noms affichés dans l'onglet Actions).
+  // Cercles du Prêtre, Chant du Barde (lot L4.12 : noms affichés dans l'onglet Actions) et école du Druide (L4.15).
   guerison: 'Guérison',
   foi: 'Foi',
   bannissement: 'Bannissement',
   jugement: 'Jugement',
   chant: 'Chant',
+  nature: 'Éléments naturels',
 };
 export const nomEcole = (id: string): string => NOMS_ECOLES[id] ?? id;
 export const nomElement = (id: string): string => elementParId.get(id)?.nom ?? id;

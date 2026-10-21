@@ -15,6 +15,12 @@ import type { ActionSaisie } from '../lib/schemas/effets';
  * d'attaque spéciale (décision 1a du 21/10/2026).
  * Sorts mineurs du Barde (lot L4.8) : Moquerie et Rengaine en combat, à
  * 6 cases ; Mélodie et Ventriloquie hors combat.
+ * Sorts mineurs du Druide (lot L4.15) : Fouet d'épines, Gourdin, Pousse et
+ * Druidisme (« Sorts mineurs par classe (validé) »), plus Bouclier de
+ * terre, ajouté par Thomas (décision 9a du 21/10/2026 : +1 en DEF à un
+ * allié). Choix du lot, à valider : portées de 6 cases ; le Bouclier de
+ * terre dure jusqu'au prochain tour du Druide ; le Gourdin frappe au contact
+ * à l'attaque magique (SAG), dégâts physiques.
  */
 
 type Textes = [string, string, string];
@@ -232,4 +238,52 @@ export const MINEURS: ActionSaisie[] = [
     effets: [{ type: 'bonus', cible: 'deplacement', valeur: 1, duree: 'prochainTour' }],
     horsCombat: { paliers: ['Marche forcée sans fatigue pour le groupe.'] },
   },
+
+  // ---- Druide (lot L4.15 ; « Sorts mineurs par classe (validé) » et décision 9a) ----
+  {
+    id: 'mineur.fouet-d-epines',
+    nom: 'Fouet d’épines',
+    description: 'Une liane épineuse qui fouette et ramène.',
+    nature: 'mineur',
+    ecole: 'nature',
+    rang: 0,
+    etiquettes: ['combat'],
+    action: 'action',
+    ciblage: { type: 'creature', camp: 'ennemi', portee: 6 },
+    resolution: { jet: 'attaqueMagique' },
+    effets: [
+      { type: 'degats', des: '1d6', typeDegats: 'physique', progression: 'mineur' },
+      { type: 'deplacement', sens: 'attire', cases: 1, condition: 'touche' },
+    ],
+    element: { application: 'ciblePrincipale' },
+  },
+  {
+    id: 'mineur.gourdin',
+    nom: 'Gourdin',
+    description: 'Le bâton du Druide durcit et frappe avec la force de la nature.',
+    nature: 'mineur',
+    ecole: 'nature',
+    rang: 0,
+    etiquettes: ['combat'],
+    action: 'action',
+    ciblage: { type: 'creature', camp: 'ennemi', portee: 'contact' },
+    resolution: { jet: 'attaqueMagique' },
+    effets: [{ type: 'degats', des: '1d6', typeDegats: 'physique', progression: 'mineur', crans: 1 }],
+    element: { application: 'ciblePrincipale' },
+  },
+  {
+    id: 'mineur.bouclier-de-terre',
+    nom: 'Bouclier de terre',
+    description: 'Une plaque de terre se dresse devant un allié.',
+    nature: 'mineur',
+    ecole: 'nature',
+    rang: 0,
+    etiquettes: ['combat'],
+    action: 'action',
+    ciblage: { type: 'creature', camp: 'allie', portee: 6 },
+    resolution: { jet: 'aucun' },
+    effets: [{ type: 'bonus', cible: 'DEF', valeur: 1, duree: 'prochainTour' }],
+  },
+  simple('mineur.pousse', 'Pousse', 'La sève répond à sa main.', 'Faire pousser une plante, réparer du bois.'),
+  simple('mineur.druidisme', 'Druidisme', 'Les petits secrets de la nature.', 'Prévoir le temps, éteindre une flamme, faire éclore une fleur.'),
 ];

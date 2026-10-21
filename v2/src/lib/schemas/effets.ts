@@ -117,6 +117,8 @@ export const schemaDuree = z.union([
   z.strictObject({ des: schemaFormuleDes, plusModMagie: z.boolean().default(false) }),
   /** `base` + le mod de la cible pour cette caractéristique, au moins 1 round (élixirs du Barde : 3 + mod de CON du buveur, décision 15a ; lot L4.8). */
   z.strictObject({ base: z.number().int().min(0).max(10), plusModCible: schemaCarac }),
+  /** `base` + le mod de la caractéristique de classe du lanceur, au moins 1 round (Druide : 3 + mod de SAG pour ses alliés, lot L4.15). */
+  z.strictObject({ base: z.number().int().min(0).max(10), plusModMagie: z.literal(true) }),
 ]);
 export type Duree = z.infer<typeof schemaDuree>;
 
@@ -167,6 +169,10 @@ export const schemaCondition = z.enum([
   'cibleAccusee',
   /** La cible n'a pas encore agi dans ce combat (Premier coup du Chasseur, lot L4.14). */
   'cibleNAPasAgi',
+  /** Le lanceur a pris une forme animale, un état de forme (Masque du prédateur du Druide, lot L4.15). */
+  'enFormeAnimale',
+  /** Le combat se tient en milieu naturel, déclaré par le joueur et validé par le MJ (Symbiose protectrice, lot L4.15). */
+  'milieuNaturel',
 ]);
 
 /** Cibles de bonus et malus. Liste FERMÉE (piège v1 : cible inconnue jamais lue). */
@@ -238,6 +244,8 @@ const schemaEffetDegats = z.strictObject({
    * 1 à 4, 1d8 de 5 à 8, 1d10 de 9 à 12 (lib/effets/resolution.ts, deMineur).
    */
   progression: z.literal('mineur').optional(),
+  /** Crans de plus au dé d'un sort mineur (Gourdin du Druide : +1, lot L4.15) ; s'ajoutent à ceux de la Perfection. */
+  crans: z.number().int().min(1).max(2).optional(),
   /** Dégâts doublés contre les démons et morts-vivants (Flamme sacrée, lot L4.6). */
   doubleContre: z.literal('demonsMortsVivants').optional(),
   ...champsCommuns,
@@ -256,6 +264,8 @@ const schemaEffetSoin = z.strictObject({
 const schemaEffetPvTemp = z.strictObject({
   type: z.literal('pvTemp'),
   des: schemaFormuleDes,
+  /** Plus N × niveau du lanceur (formes du Druide : 2 × niveau, 4 × niveau ; lot L4.15). */
+  parNiveau: z.number().int().min(1).max(10).optional(),
   plusMod: z.boolean().default(false),
   ...champMod,
   ...champsCommuns,
@@ -652,6 +662,8 @@ export const schemaAction = z
     attaquePar: schemaCarac.optional(),
     /** L'action demande une arme de ces familles, sans être une attaque spéciale (Lancer un couteau : une dague ; lot L4.8). */
     armes: z.array(schemaFamilleArme).min(1).optional(),
+    /** Seulement sous l'une de ces formes, des états du catalogue (attaques des formes du Druide, lot L4.15). */
+    enForme: z.array(schemaId).min(1).optional(),
     /** Exige un élément au moins à ce rang (Serviteur : Initié ; Cataclysme : Maître). */
     elementMin: schemaMaitrise.optional(),
     declencheur: schemaDeclencheur.optional(),
@@ -695,6 +707,7 @@ export const schemaAction = z
     if (a.elementMin && !a.element) ko('une action qui exige un élément doit en accepter un', ['elementMin']);
     a.effets.forEach((e, i) => {
       if (e.type === 'degats' && e.progression === 'mineur' && a.nature !== 'mineur') ko('seul un sort mineur suit la progression des sorts mineurs', ['effets', i, 'progression']);
+      if (e.type === 'degats' && e.crans && e.progression !== 'mineur') ko('des crans montent le dé d’un sort mineur', ['effets', i, 'crans']);
       if ((e.type === 'degats' || e.type === 'soin' || e.type === 'pvTemp') && e.plusMod && e.mod) ko('un seul mod : celui de magie ou celui nommé', ['effets', i, 'mod']);
       if (e.type === 'degats' && e.des === 'arme' && !(a.resolution.jet === 'attaque' && !a.attaquePar)) ko('les dés de l’arme demandent une attaque à l’arme', ['effets', i, 'des']);
     });

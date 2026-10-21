@@ -8,7 +8,7 @@ import type { ClasseRefonte } from '../schemas/classes.ts';
 import type { Action, Element, Maitrise, Palier } from '../schemas/effets.ts';
 import { JAUGES_DE_CLASSE, type FicheV2, type JaugeDeClasse, type RefonteFiche } from '../schemas/fiche.ts';
 import { FAMILLE_DES_ARMES } from '../../regles/armes.ts';
-import { actionParId, combinaisons } from '../../regles/index.ts';
+import { actionParId, combinaisons, etatParId } from '../../regles/index.ts';
 import { classeDeLaRefonte, contexteDe, jaugesPleines, NOMS_MAITRISES, nomEcole, nomElement, profilDe, voieDeLaRefonte, type ContexteRefonte } from './refonte.ts';
 
 /*
@@ -108,6 +108,8 @@ const CONDITIONS: Record<string, string> = {
   armeLegere: 'avec une arme légère',
   premierRound: 'au premier round',
   cibleAffaiblie: 'contre une cible affaiblie',
+  enFormeAnimale: 'en forme animale',
+  milieuNaturel: 'en milieu naturel',
 };
 const DECLENCHEURS: Record<NonNullable<Action['declencheur']>, string> = {
   attaqueVisee: 'quand une attaque le vise',
@@ -212,7 +214,7 @@ function jetsDe(a: Action, nom: string, ctx: ContexteRefonte, mods: ModsDuPerso,
   const d = a.effets.find((e) => e.type === 'degats');
   let degats: JetAction | null = null;
   if (d && d.type === 'degats' && d.des !== 'arme') {
-    const des = d.progression === 'mineur' ? deMineur(ctx.niveau, crans) : d.des;
+    const des = d.progression === 'mineur' ? deMineur(ctx.niveau, crans + (d.crans ?? 0)) : d.des;
     const bonus = d.mod ? mods.mod(d.mod) : d.plusMod ? ctx.modMagie : 0;
     const formule = lancable(`${des}${signe(bonus)}`);
     if (formule) degats = { libelle: `${nom} : dégâts`, formule };
@@ -221,6 +223,8 @@ function jetsDe(a: Action, nom: string, ctx: ContexteRefonte, mods: ModsDuPerso,
 }
 
 function conditionDe(a: Action): string | null {
+  // Attaques des formes du Druide (lot L4.15) : seulement sous la forme.
+  if (a.enForme) return `seulement en ${a.enForme.map((f) => etatParId.get(f)?.nom ?? f).join(' ou ')}`;
   if (a.nature !== 'passif') return null;
   if (a.declencheur) return DECLENCHEURS[a.declencheur];
   const conds = a.effets.flatMap((e) => ('condition' in e && e.condition ? [CONDITIONS[e.condition] ?? e.condition] : []));

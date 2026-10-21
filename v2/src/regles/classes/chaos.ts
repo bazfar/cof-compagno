@@ -48,13 +48,25 @@ import type { ActionSaisie, EffetSaisi } from '../../lib/schemas/effets';
  * Chasse ultime (+4 à distance, couverts ignorés, 3 + mod de DEX rounds ;
  * ensuite il tire sur la créature la plus proche). L'Instinct sauvage v1
  * (R2) laisse la place au Don corrompu.
+ *
+ * Druide (lot L4.15, décision 8a) : Chair instable (griffes 1d6 à
+ * l'attaque magique ; poussées, +1d6 pour +1 Plongée), Fléau rampant (aura
+ * d'une case autour de lui, 1d4 chaotiques par tour à tous, alliés compris,
+ * 3 + mod de SAG rounds, comme en v1), Écorce corrompue (+2 DEF ; les bêtes
+ * se méfient de lui), Forme du chaos sauvage (une forme : attaque naturelle
+ * 2d8, dégâts physiques subis divisés par deux). L'Écorce corrompue passe du
+ * R2 au R4 ; l'Invocation corrompue v1 disparaît.
+ * Choix du lot, à valider : les griffes de Chair instable ne coûtent rien
+ * sans poussée ; les 2d8 de la Forme du chaos sauvage sont physiques, sans
+ * mod (règle des dégâts du chaos) ; ses +4 PV temporaires v1 disparaissent
+ * (le cadre ne les garde pas).
  */
 
 const surSoi = { type: 'soi', portee: 'soi' } as const;
 const sansJet = { jet: 'aucun' } as const;
 const plongee = (montant: number) => ({ type: 'ressource', ressource: 'plongee', montant, vise: 'lanceur' }) as const;
 const ame = { type: 'ressource', ressource: 'corruptionAme', montant: 1, vise: 'lanceur' } as const;
-const avatar = (carac: 'CON' | 'INT' | 'CHA' | 'DEX') => ({ base: 3, plusModCible: carac }) as const;
+const avatar = (carac: 'CON' | 'INT' | 'CHA' | 'DEX' | 'SAG') => ({ base: 3, plusModCible: carac }) as const;
 const deuxRounds = { rounds: 2 } as const;
 
 /** Action de chaos : jamais de coût en PP (1a), une étiquette combat par défaut. */
@@ -160,6 +172,57 @@ export const ACTIONS_CHAOS: ActionSaisie[] = [
       { type: 'bonus', cible: 'degats', valeur: '2d6', typeDegats: 'chaotique', duree: avatar('CON'), vise: 'lanceur' },
       { type: 'narratif', texte: 'Immunisé à la peur pendant l’Avatar ; au tour qui suit sa fin, il perd son déplacement.', vise: 'lanceur' },
     ]),
+  }),
+
+  // ---- Druide (L4.15, 8a) ----
+  chaos('druide.chair-instable', 'Chair instable', 'Sa main devient griffes : 1d6 chaotiques au contact, à l’attaque magique ; poussée, +1d6 pour +1 Plongée.', 1, {
+    nature: 'capacite',
+    action: 'action',
+    ciblage: { type: 'creature', camp: 'ennemi', portee: 'contact' },
+    resolution: { jet: 'attaqueMagique' },
+    effets: [{ type: 'degats', des: '1d6', typeDegats: 'chaotique' }],
+    variantes: [{ id: 'poussee', nom: 'Poussée : +1d6, +1 Plongée', palier: 'I', delta: { ajoute: [{ type: 'degats', des: '1d6', typeDegats: 'chaotique' }, plongee(1)] } }],
+  }),
+  chaos('druide.fleau-rampant', 'Fléau rampant', 'Une aura d’une case autour de lui, 3 + mod de SAG rounds : 1d4 chaotiques par tour à toute créature, alliés compris.', 3, {
+    nature: 'capacite',
+    action: 'action',
+    jetDeChaos: true,
+    ciblage: surSoi,
+    zone: { forme: 'cercle', taille: 1, origine: 'lanceur' },
+    resolution: sansJet,
+    persistance: { type: 'zone', duree: { base: 3, plusModMagie: true }, quand: 'debutTour' },
+    effets: [
+      { type: 'degats', des: '1d4', typeDegats: 'chaotique', vise: 'zone' },
+      { type: 'narratif', texte: 'L’aura le suit ; elle frappe au début de chaque tour, 3 + mod de SAG rounds.', vise: 'lanceur' },
+      plongee(2),
+    ],
+  }),
+  chaos('druide.ecorce-corrompue', 'Écorce corrompue', 'Dès 5 de Corruption d’Âme : une écorce noire, +2 DEF.', 4, {
+    nature: 'passif',
+    action: 'aucune',
+    corruptionAmeMin: 5,
+    ciblage: surSoi,
+    resolution: sansJet,
+    effets: [{ type: 'bonus', cible: 'DEF', valeur: 2, duree: 'permanente', vise: 'lanceur' }],
+  }),
+  chaos('druide.forme-du-chaos-sauvage', 'Forme du chaos sauvage', 'Une fois par scénario, 3 + mod de SAG rounds : une bête difforme ; attaque naturelle 2d8, dégâts physiques subis divisés par deux.', 5, {
+    nature: 'capacite',
+    action: 'action',
+    limite: '1x/scenario',
+    ciblage: surSoi,
+    resolution: sansJet,
+    effets: effetsDAvatar([
+      { type: 'retraitEtat', etats: ['forme_loup', 'forme_ours', 'forme_aigle', 'forme_primordiale'], nombre: 1, vise: 'lanceur' },
+      { type: 'etat', etat: 'forme_du_chaos_sauvage', duree: avatar('SAG'), vise: 'lanceur' },
+    ]),
+  }),
+  chaos('druide.griffes-du-chaos', 'Griffes du chaos', 'En Forme du chaos sauvage, à l’attaque magique : 2d8.', 5, {
+    nature: 'technique',
+    action: 'action',
+    enForme: ['forme_du_chaos_sauvage'],
+    ciblage: { type: 'creature', camp: 'ennemi', portee: 'contact' },
+    resolution: { jet: 'attaqueMagique' },
+    effets: [{ type: 'degats', des: '2d8', typeDegats: 'physique' }],
   }),
 
   // ---- Chasseur (L4.14, 8a) ----
@@ -387,6 +450,14 @@ function voieDuChaos(classe: string, description: string, r1: Rang, r3: Rang, r4
 }
 
 export const VOIES_CHAOS: VoieSaisie[] = [
+  voieDuChaos(
+    'druide',
+    'La nature corrompue : la bête et la ronce prennent le pas sur le gardien.',
+    { nom: 'Chair instable', description: 'Griffes 1d6 ; +1d6 pour +1 Plongée.', actions: ['chaos.druide.chair-instable'] },
+    { nom: 'Fléau rampant', description: 'Une aura qui ronge, alliés compris.', actions: ['chaos.druide.fleau-rampant'] },
+    { nom: 'Écorce corrompue', description: '+2 DEF.', actions: ['chaos.druide.ecorce-corrompue'], contrepartie: 'les bêtes se méfient de lui.' },
+    { nom: 'Forme du chaos sauvage', description: 'L’Avatar du Druide.', actions: ['chaos.druide.forme-du-chaos-sauvage', 'chaos.druide.griffes-du-chaos'] },
+  ),
   voieDuChaos(
     'chasseur',
     'Le prédateur prend le dessus sur le chasseur : il chasse pour le sang, plus pour la proie.',

@@ -138,6 +138,23 @@ describe('actions de la fiche (1b à 5a, 15b)', () => {
   });
 });
 
+describe('Druide (lot L4.15)', () => {
+  const druide = () =>
+    convertie('Hermione', 'druide', { elementDepart: 'eau', rangs: { 'druide.elements': 1, 'druide.formes': 1 }, mineurs: ['mineur.gourdin'] }, { classe: 'druide' });
+
+  it('école nommée, Gourdin un cran au-dessus du dé des mineurs, attaques de forme avec leur forme, Force de la nature', () => {
+    const f = druide();
+    const l = A.actionsDeLaFiche(f, mods());
+    expect(ligne(l, 'nature.enchevetrement')).toMatchObject({ ecole: 'Éléments naturels', cout: '2 PP', voie: 'druide.elements' });
+    expect(ligne(l, 'mineur.gourdin').degats?.formule).toBe('1d8');
+    expect(ligne(l, 'druide.morsure-du-loup')).toMatchObject({ condition: 'seulement en Forme du loup', attaque: { formule: '1d20+5' } });
+    expect(ligne(l, 'druide.forme-du-loup').cout).toBe('1 Force de la nature');
+    expect(ligne(l, 'arme.coup-assommant').cout).toBe('2 Force de la nature');
+    expect(A.magieDeLaFiche(f)!.elements.map((e) => [e.id, e.maitrise])).toEqual([['eau', 'Adepte']]);
+    expect(A.jaugesDeLaFiche(f)[0]).toMatchObject({ cle: 'forceNature', actuel: 4, max: 4 });
+  });
+});
+
 describe('magie (6a)', () => {
   it('école et maîtrise, éléments, et les combinaisons ouvertes par un élément Maître', () => {
     const m = A.magieDeLaFiche(ky())!;

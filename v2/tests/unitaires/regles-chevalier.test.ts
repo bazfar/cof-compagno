@@ -109,6 +109,8 @@ describe('Voie du bouclier (4b, 7a)', () => {
     expect(r.changements).toEqual([{ type: 'etat', cible: 'b', etat: 'protege', duree: 'finCombat' }]);
     const p = profilMagique(chevalier, choix({ rangs: { 'chevalier.bouclier': 1 } }), regles);
     expect(p.attaquesSpeciales?.cout).toEqual({ ressource: 'honneur', montant: 1 });
+    // Correctif L4.15 : le Maniement expert du Bouclier ne compte pas comme un rang du Maître d'armes.
+    expect(profilMagique(chevalier, choix({ rangs: { 'chevalier.bouclier': 5 } }), regles).voie.maitreDArmes).toBeUndefined();
   });
 
   it('Garde à distance : l’Interposition à 2 cases ; Bouclier vivant en réaction ; Mur de boucliers : −2 aux dégâts des alliés au contact ; Sacrifice 1x/scénario', () => {

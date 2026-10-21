@@ -136,6 +136,24 @@ describe('Voie de la gâchette (5a)', () => {
     expect(lancer({ action: a('chasseur.tir-ajuste'), cibles: [] }).changements).toEqual([{ type: 'bonus', cible: 'ysolde', sur: 'attaqueDistance', valeur: 1, duree: 'permanente' }]);
   });
 
+  it('correctif L4.15 : le Maniement expert de la Gâchette baisse le coût, sans Précision létale ni Coup double ; Tir fatal ouvre le seul Coup de maître', () => {
+    const p4 = profilMagique(chasseur, choix({ rangs: { 'chasseur.gachette': 4 } }), regles);
+    expect(p4.voie).toEqual({});
+    const p5 = profilMagique(chasseur, choix({ rangs: { 'chasseur.gachette': 5 } }), regles);
+    expect(p5.voie).toEqual({ coupDeMaitre: true });
+    const arc: ArmeEnJeu = { id: 'arc', famille: 'arc', des: '1d6', attaque: 6, degats: 0 };
+    const coup = { maitreDArmes: { rang: 0, coupDeMaitre: { etat: 'renverse' } } };
+    const r = lancer({ action: a('arme.tir-epinglant'), arme: arc, voie: { ...p5.voie, ...coup }, alea: des([20, 10], [6, 2]) });
+    expect(r.changements.filter((c) => c.type === 'etat').map((c) => c.type === 'etat' && [c.etat, c.duree])).toEqual([
+      ['immobilise', { rounds: 1 }],
+      ['renverse', { rounds: 1 }],
+    ]);
+    expect(essai({ action: a('arme.tir-epinglant'), arme: arc, voie: { ...p4.voie, ...coup } })).toEqual({ ok: false, raison: 'le Coup de maître vient au rang 5 de la Voie du maître d’armes' });
+    // Sans le rang 3 du Maître d'armes, un 19 n'est pas un critique.
+    const dix9 = lancer({ action: a('arme.tir-epinglant'), arme: arc, voie: p4.voie, alea: des([20, 19], [6, 2]) });
+    expect(dix9.jets[0]!.critique).toBeUndefined();
+  });
+
   it('Tir de couverture : réaction, −2 à l’attaque de l’ennemi qui vise un allié', () => {
     expect(a('chasseur.tir-de-couverture')).toMatchObject({ action: 'reaction', declencheur: 'allieCible' });
     expect(lancer({ action: a('chasseur.tir-de-couverture') }).changements).toEqual([{ type: 'bonus', cible: 'a', sur: 'attaque', valeur: -2, duree: 'prochainTour' }]);

@@ -57,6 +57,8 @@ export const schemaEtatRefonte = z
     cumulable: z.boolean().default(false),
     /** Le porteur ne lance aucun sort (Silence, lot L4.8) : le moteur refuse ses verbes et sorts mineurs. */
     interditSorts: z.boolean().default(false),
+    /** Forme animale du Druide (lot L4.15) : une seule à la fois ; le Masque du prédateur la lit (condition `enFormeAnimale`). */
+    formeAnimale: z.boolean().default(false),
   })
   .superRefine((e, ctx) => {
     const ko = (message: string, path: string[]) => ctx.addIssue({ code: 'custom', message, path });

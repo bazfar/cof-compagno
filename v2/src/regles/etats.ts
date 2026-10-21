@@ -36,7 +36,11 @@ import type { EtatSaisi } from '../lib/schemas/etats';
  * attend le combat (L6), qui lit leur règle.
  *
  * Les formes et avatars de la v1 (Ours, Avatar du Vide…) ne sont plus des
- * états : ils deviennent des actions de leur classe.
+ * états : ils deviennent des actions de leur classe. Les formes du Druide
+ * (lot L4.15) reviennent comme états posés par ces actions, pour que le
+ * combat sache laquelle est prise (une seule à la fois) et que les attaques
+ * de forme le vérifient ; elles durent le combat (décision 6a du
+ * 21/10/2026).
  */
 export const ETATS: EtatSaisi[] = [
   // ---- Contrôle ----
@@ -332,6 +336,44 @@ export const ETATS: EtatSaisi[] = [
     nom: 'Maîtrise tactique',
     categorie: 'physique',
     regle: 'La posture de combat peut aller jusqu’au double du rang dans la Voie du soldat.',
+  },
+
+  // ---- Formes du Druide (lot L4.15) ----
+  {
+    id: 'forme_loup',
+    nom: 'Forme du loup',
+    categorie: 'physique',
+    regle: 'Un loup : +2 cases de déplacement ; morsure à l’attaque magique, 1d8 + SAG, Saignement.',
+    modificateurs: [{ cible: 'deplacement', valeur: 2 }],
+    formeAnimale: true,
+  },
+  {
+    id: 'forme_ours',
+    nom: 'Forme de l’ours',
+    categorie: 'physique',
+    regle: 'Un ours : griffes à l’attaque magique, 1d10 + SAG ; sa charge renverse. Les PV de forme sont des PV temporaires, perdus en premier.',
+    formeAnimale: true,
+  },
+  {
+    id: 'forme_aigle',
+    nom: 'Forme de l’aigle',
+    categorie: 'physique',
+    regle: 'Un aigle : il vole ; serres à l’attaque magique, 1d6 + SAG.',
+    formeAnimale: true,
+  },
+  {
+    id: 'forme_primordiale',
+    nom: 'Forme primordiale',
+    categorie: 'physique',
+    regle: 'La bête des premiers âges : 2d8 + SAG à l’attaque magique ; une attaque spéciale gratuite par round. Les PV de forme sont des PV temporaires, perdus en premier.',
+    formeAnimale: true,
+  },
+  {
+    id: 'forme_du_chaos_sauvage',
+    nom: 'Forme du chaos sauvage',
+    categorie: 'physique',
+    regle: 'L’Avatar du Druide (Voie du chaos) : attaque naturelle 2d8 ; dégâts physiques subis divisés par deux.',
+    formeAnimale: true,
   },
 
   // ---- Perception ----

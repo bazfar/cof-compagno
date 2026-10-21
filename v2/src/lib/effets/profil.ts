@@ -257,8 +257,12 @@ export function profilMagique(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
             p.capacites.push({ nom: regle.nom, limite: regle.limite });
             // Posture de combat : plafond = rang dans la voie qui la donne (v1).
             if (regle.nom === 'postureDeCombat') p.voie.soldat = { rang };
-            // Voie du maître d'armes : son rang, qui compte aussi Spécimen d'élite.
-            if (regle.nom === 'maniementExpert') p.voie.maitreDArmes = { rang };
+            // Voie du maître d'armes : son rang, qui compte aussi Spécimen d'élite. Le Maniement expert
+            // d'une autre voie (Bouclier du Chevalier, Gâchette du Chasseur, lots L4.13-14) ne baisse que
+            // le coût : il n'ouvre ni Précision létale, ni Coup double, ni Coup de maître.
+            if (regle.nom === 'maniementExpert' && id === 'guerrier.maitre-d-armes') p.voie.maitreDArmes = { rang };
+            // Tir fatal (Gâchette 5 du Chasseur, lot L4.14) : le Coup de maître seul.
+            if (regle.nom === 'coupDeMaitre' && id !== 'guerrier.maitre-d-armes') p.voie.coupDeMaitre = true;
             // Voie du chaos (lot L4.9) : son rang (Don corrompu dès 2), et l'Éclat chaotique de l'Envoûteur.
             if (regle.nom === 'donCorrompu' || regle.nom === 'eclatChaotique')
               p.voie.chaos = { ...p.voie.chaos, rang, ...(regle.nom === 'eclatChaotique' ? { eclatChaotique: true } : {}) };

@@ -139,6 +139,8 @@ export interface LanceurEnJeu extends Combattant {
  * est encore disponible.
  */
 export interface ModificateursDeVoie {
+  /** Coup de maître hors de la Voie du maître d'armes (Tir fatal du Chasseur, lot L4.14) : le choix passe par `maitreDArmes.coupDeMaitre`. */
+  coupDeMaitre?: boolean;
   sauvage?: {
     rang: number;
     /** Instinct chaotique (rang 2) : le meilleur de deux jets. */
@@ -254,6 +256,8 @@ export interface Lancer {
   protegeUnAllie?: boolean;
   /** Premier round du combat (Entrée en scène, lot L4.8). */
   premierRound?: boolean;
+  /** Le combat se tient en milieu naturel, déclaré par le joueur (Symbiose protectrice du Druide, lot L4.15). */
+  milieuNaturel?: boolean;
   /** Caractéristique choisie au lancer (élixirs : bonus `caracAuChoix`, lot L4.8). */
   caracChoisie?: Carac;
   alea?: () => number;
@@ -375,7 +379,10 @@ function coutFixe(action: Action, palier: Palier, surcharge?: boolean): CoutCalc
   return { ok: true, pp, palierLance, detail: [{ terme: 'base', valeur: pp }] };
 }
 
-type Mods = { magie: number; caracs: Partial<Record<Carac, number>>; choix?: Carac; pointsDeChaos?: number; lanceur?: string };
+type Mods = { magie: number; caracs: Partial<Record<Carac, number>>; choix?: Carac; pointsDeChaos?: number; lanceur?: string; niveau?: number };
+
+/** PV temporaires : le dé, le mod, et N × niveau du lanceur s'il le faut (formes du Druide, lot L4.15). */
+const pvTempParNiveau = (e: { parNiveau?: number }, m: Mods) => (e.parNiveau ?? 0) * (m.niveau ?? 1);
 
 /** Mod ajouté par un effet : celui de magie (`plusMod`) ou celui d'une caractéristique nommée (12a). */
 function modDeLEffet(e: { plusMod?: boolean; mod?: Carac }, m: Mods): number {
@@ -416,6 +423,8 @@ export function deMineur(niveau: number, crans = 0): string {
 function avecDureesTirees(action: Action, alea: () => number, modMagie: number, jets: JetNote[]): Action {
   const tirees = new Map<string, Duree>();
   const tirer = (d: Duree): Duree => {
+    // 3 + mod de la caractéristique de classe du lanceur (lot L4.15) : sans jet.
+    if (typeof d === 'object' && 'base' in d && 'plusModMagie' in d) return { rounds: Math.max(1, d.base + modMagie) };
     if (typeof d === 'string' || !('des' in d)) return d;
     const cle = `${d.des}|${d.plusModMagie}`;
     if (!tirees.has(cle)) {
@@ -450,7 +459,12 @@ export const BOOSTS_PAR_CERCLE = {
   jugement: ['ignoreResistances', 'marquePartagee'],
   /** Boost d'Inspiration du Barde (validé, lot L4.8) : +1 cible ou +1 round, payé en Inspiration. */
   chant: ['plusUneCible', 'plusUnRound'],
+  /** Boost de Force de la nature du Druide (validé, lot L4.15) : zone +1 case ou +1 round, payé en Force de la nature. */
+  nature: ['plusUneCase', 'plusUnRound'],
 } as const;
+
+/** Ressource qui paie le boost d'une école : Inspiration (chant), Force de la nature (nature) ; le Sacré sinon. */
+const RESSOURCE_DU_BOOST: Readonly<Record<string, string>> = { chant: 'inspiration', nature: 'forceNature' };
 export type BoostSacre = (typeof BOOSTS_PAR_CERCLE)[keyof typeof BOOSTS_PAR_CERCLE][number];
 
 const FACTEUR_DEGRESSIF = (anneau: number) => (anneau <= 0 ? 1 : anneau === 1 ? 0.75 : 0.5);
@@ -499,6 +513,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   if (l.boost) {
     const permis: readonly string[] = (BOOSTS_PAR_CERCLE as Record<string, readonly string[]>)[action.ecole ?? ''] ?? [];
     if (!permis.includes(l.boost)) return { ok: false, raison: `le boost ${l.boost} ne s’applique pas à ${action.nom}` };
+    // Boost de Force de la nature (lot L4.15) : sans zone, +1 case ne porte sur rien.
+    if (l.boost === 'plusUneCase' && !action.zone) return { ok: false, raison: `${action.nom} n’a pas de zone à agrandir` };
   }
   if (action.elementMin) {
     // Serviteur : un élément au moins Initié (validé) ; Cataclysme : un élément Maître.
@@ -507,6 +523,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       return { ok: false, raison: `${action.id} demande un élément au moins ${NOM_MAITRISE[action.elementMin]}` };
   }
   if (action.effets.some((e) => e.type === 'invocation' && e.parElement) && !l.element) return { ok: false, raison: `${action.id} s'invoque avec un élément` };
+  // Attaques des formes du Druide (lot L4.15) : seulement sous la forme qui les donne.
+  if (action.enForme && !action.enForme.some((f) => l.lanceur.etats.includes(f))) return { ok: false, raison: `${action.nom} : seulement en forme ${action.enForme.map((f) => cat.etats.get(f)?.nom ?? f).join(' ou ')}` };
 
   // Attaques d'arme et ressources de classe (lot L4.7).
   const ressources: Record<string, number> = {};
@@ -545,7 +563,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   if (don && !action.effets.some((e) => e.type === 'degats')) return { ok: false, raison: 'le Don corrompu force un sort ou une attaque qui fait des dégâts' };
   let attaqueSpecialeDuCombat = false;
   let coupDouble = false;
-  if (l.boost && action.ecole === 'chant') ressources.inspiration = (ressources.inspiration ?? 0) + 1;
+  const ressourceDuBoost = action.ecole ? RESSOURCE_DU_BOOST[action.ecole] : undefined;
+  if (l.boost && ressourceDuBoost) ressources[ressourceDuBoost] = (ressources[ressourceDuBoost] ?? 0) + 1;
   if (action.famille) {
     const permises = l.attaquesSpeciales;
     if (!permises) return { ok: false, raison: 'ce personnage n’a pas d’attaque spéciale' };
@@ -562,9 +581,10 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     ...(l.caracChoisie ? { choix: l.caracChoisie } : {}),
     ...(pointsDeChaos !== undefined ? { pointsDeChaos } : {}),
     lanceur: l.lanceur.id,
+    niveau: l.lanceur.niveau ?? 1,
   };
   const maitre = v.maitreDArmes?.rang ?? 0;
-  const coupDeMaitre = maitre >= 5 ? v.maitreDArmes?.coupDeMaitre : undefined;
+  const coupDeMaitre = maitre >= 5 || v.coupDeMaitre ? v.maitreDArmes?.coupDeMaitre : undefined;
   if (v.maitreDArmes?.coupDeMaitre && !action.famille) return { ok: false, raison: 'le Coup de maître porte une attaque spéciale' };
   if (v.maitreDArmes?.coupDeMaitre && !coupDeMaitre) return { ok: false, raison: 'le Coup de maître vient au rang 5 de la Voie du maître d’armes' };
   const ficheCoup = coupDeMaitre && 'element' in coupDeMaitre ? cat.elements.get(coupDeMaitre.element) : undefined;
@@ -626,7 +646,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       pp,
       pv: pvPaye + pvEnPlus,
       // Boost : 1 Sacré (Prêtre), ou 1 Inspiration (chant du Barde, rendue avec les ressources).
-      ...(l.boost && action.ecole !== 'chant' ? { sacre: 1 } : {}),
+      ...(l.boost && !ressourceDuBoost ? { sacre: 1 } : {}),
       ...(Object.keys(ressources).length ? { ressources } : {}),
       ...(attaqueSpecialeDuCombat ? { attaqueSpecialeDuCombat: true as const } : {}),
       ...(combinaisonReduite ? { combinaisonDuCombat: true as const } : {}),
@@ -691,6 +711,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
 
   // Durées tirées au lancement (Pierre en chair : 1d4 + CHA), un seul jet par sort.
   action = avecDureesTirees(action, alea, l.lanceur.modMagie, jets);
+  // Boost de Force de la nature : la zone gagne une case.
+  if (l.boost === 'plusUneCase' && action.zone) action = { ...action, zone: { ...action.zone, taille: action.zone.taille + 1 } };
   // Boost de Foi : +1 round.
   if (l.boost === 'plusUnRound')
     action = {
@@ -795,6 +817,10 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
         return etatsDe(c, cat).some((x) => x.categorie === 'malus' || x.categorie === 'controle');
       case 'premierRound':
         return !!l.premierRound;
+      case 'enFormeAnimale':
+        return etatsDe(l.lanceur, cat).some((x) => x.formeAnimale);
+      case 'milieuNaturel':
+        return !!l.milieuNaturel;
     }
   };
 
@@ -902,7 +928,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
         jets.push({ quoi: e.type === 'soin' ? 'soin' : 'PV temporaires', des: j.des, total: j.total });
         jetsZone.set(indice, j);
       }
-      changements.push({ type: e.type, cible: c.id, montant: jetsZone.get(indice)!.total + modDeLEffet(e, m) });
+      changements.push({ type: e.type, cible: c.id, montant: jetsZone.get(indice)!.total + modDeLEffet(e, m) + (e.type === 'pvTemp' ? pvTempParNiveau(e, m) : 0) });
       return;
     }
     if (e.type === 'soin' && e.enChaine) {
@@ -933,7 +959,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     }
     if (e.type === 'degats') {
       // Dés de l'arme (lot L4.7) : doublés sur un critique (4a), son bonus de dégâts ajouté une fois.
-      let formule = e.des === 'arme' ? (i.critique ? doublerDes(l.arme!.des) : l.arme!.des) : e.progression === 'mineur' ? deMineur(l.lanceur.niveau ?? 1, v.virtuose?.crans ?? 0) : e.des;
+      let formule = e.des === 'arme' ? (i.critique ? doublerDes(l.arme!.des) : l.arme!.des) : e.progression === 'mineur' ? deMineur(l.lanceur.niveau ?? 1, (v.virtuose?.crans ?? 0) + (e.crans ?? 0)) : e.des;
       if (mineur && v.virtuose?.gesteUnique) formule = doublerDes(formule);
       let jet: { des: number[]; total: number };
       if (e.vise === 'zone' && UN_JET_PAR_ZONE) {
@@ -1192,7 +1218,7 @@ function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () =>
       out.push({ type: 'soin', cible, montant: lancerDes(e.des, alea).total + modDeLEffet(e, m) });
       return;
     case 'pvTemp':
-      out.push({ type: 'pvTemp', cible, montant: lancerDes(e.des, alea).total + modDeLEffet(e, m) });
+      out.push({ type: 'pvTemp', cible, montant: lancerDes(e.des, alea).total + modDeLEffet(e, m) + pvTempParNiveau(e, m) });
       return;
     case 'etat':
       out.push({
