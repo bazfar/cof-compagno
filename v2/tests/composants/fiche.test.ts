@@ -38,8 +38,18 @@ const crans = vi.hoisted(() => {
 });
 vi.mock('../../src/lib/actions/progression', () => crans);
 // Montée de niveau (L2.5b) : on vérifie ce qui part à l'écriture.
-const montee = vi.hoisted(() => ({ monterNiveau: vi.fn(async (_id: string, _m: unknown) => ({ fiche: { niveau: 4 }, pvGagnes: 7 }) as unknown) }));
+const montee = vi.hoisted(() => ({
+  monterNiveau: vi.fn(async (_id: string, _m: unknown) => ({ fiche: { niveau: 4 }, pvGagnes: 7 }) as unknown),
+  monterNiveauRefonte: vi.fn(async (_id: string, _m: unknown) => ({ fiche: { niveau: 4 }, pvGagnes: 6 }) as unknown),
+}));
 vi.mock('../../src/lib/actions/montee', () => montee);
+// Refonte (L4.11b) : conversion, « Refaire mes voies », octrois du MJ.
+const refonte = vi.hoisted(() => ({
+  convertirPerso: vi.fn(async (_id: string, _r: unknown) => ({}) as unknown),
+  refaireVoiesPerso: vi.fn(async (_id: string, _r: unknown) => ({}) as unknown),
+  modifierOctrois: vi.fn(async (_id: string, _o: unknown) => {}),
+}));
+vi.mock('../../src/lib/actions/refonte', () => refonte);
 vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPersos);
 vi.mock('../../src/lib/magasins/presents.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPresents);
 // Séance ouverte et présents (L3.1).
@@ -53,6 +63,8 @@ const { vueFiche } = await import('../../src/lib/fiche/vue-fiche');
 const { default: FicheVivante } = await import('../../src/composants/FicheVivante.svelte');
 const { default: GroupeMj } = await import('../../src/composants/GroupeMj.svelte');
 const E = await import('../../src/lib/regles/equipement');
+const RF = await import('../../src/lib/fiche/refonte');
+const { classeParId } = await import('../../src/regles');
 
 const FICHES = JSON.parse(readFileSync('tests/fixtures/fiches-v1.json', 'utf8')).fiches;
 const reelle = (nom: string, id: string, uid = 'alice') => ({ ...ficheDepuisV1(FICHES.find((f: { nom: string }) => f.nom.startsWith(nom)), uid, 1).fiche, id });
@@ -63,6 +75,8 @@ beforeEach(() => {
   Object.values(actions).forEach((f) => f.mockClear());
   Object.values(journal).forEach((f) => f.mockClear());
   montee.monterNiveau.mockClear();
+  montee.monterNiveauRefonte.mockClear();
+  Object.values(refonte).forEach((f) => f.mockClear());
   crans.donnerCran.mockReset();
   crans.donnerCran.mockResolvedValue(0);
   for (const k of Object.keys(portraits)) delete portraits[k];
@@ -437,5 +451,149 @@ describe('montée de niveau guidée (L2.5b)', () => {
     await fireEvent.click(zone.getByRole('button', { name: 'Prendre' }));
     await fireEvent.click(zone.getByRole('button', { name: 'Passer au niveau 4' }));
     await waitFor(() => expect(zone.getByRole('alert').textContent).toBe('La fiche a changé pendant la montée de niveau : recommence-la.'));
+  });
+});
+
+describe('refonte (L4.11b)', () => {
+  const guerrier = classeParId.get('guerrier')!;
+  /** Karlach passée à la refonte (Soldat 3, Peuple 2), barre pleine. */
+  const karlachV2 = (patch: Record<string, unknown> = {}) => ({
+    ...RF.convertirFiche(reelle('Karlach', 'p-c'), { ...RF.refonteVierge(guerrier, 3), rangs: { 'guerrier.soldat': 3, 'guerrier.peuple': 2 } }),
+    id: 'p-c',
+    progression: { crans: 3 },
+    ...patch,
+  });
+
+  it('« Passer à la refonte » : pour une classe refondue, à qui peut modifier la fiche ; pas pour le Chevalier', () => {
+    const vue = render(FicheVivante, { props: { fiche: reelle('Karlach', 'p-c'), modifiable: true } });
+    expect(screen.getByRole('button', { name: 'Passer à la refonte' })).toBeTruthy();
+    vue.unmount();
+    const lecture = render(FicheVivante, { props: { fiche: reelle('Karlach', 'p-c'), modifiable: false } });
+    expect(screen.queryByRole('button', { name: 'Passer à la refonte' })).toBeNull();
+    lecture.unmount();
+    render(FicheVivante, { props: { fiche: reelle('Hyrma', 'p-h'), modifiable: true } });
+    expect(screen.queryByRole('button', { name: 'Passer à la refonte' })).toBeNull();
+  });
+
+  it('conversion : anciennes voies rappelées, voies refaites, confirmation, puis l’écriture', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(FicheVivante, { props: { fiche: reelle('Karlach', 'p-c'), modifiable: true } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Passer à la refonte' }));
+    const zone = within(screen.getByRole('region', { name: 'Passer à la refonte' }));
+    expect(zone.getByText(/Tes voies en v1/)).toBeTruthy();
+    for (const rang of [1, 2, 3]) await fireEvent.click(zone.getByRole('button', { name: `Prendre guerrier.soldat rang ${rang}` }));
+    await fireEvent.click(zone.getByRole('button', { name: 'Prendre guerrier.peuple rang 1' }));
+    await fireEvent.click(zone.getByRole('button', { name: 'Prendre guerrier.peuple rang 2' }));
+    await fireEvent.click(zone.getByRole('button', { name: 'Prendre guerrier.ingenieur rang 1' }));
+    expect(zone.getByRole('alert').textContent).toBe('Pas assez de points de voie.');
+    await fireEvent.click(zone.getByRole('button', { name: 'Passer à la refonte' }));
+    await waitFor(() => expect(refonte.convertirPerso).toHaveBeenCalledTimes(1));
+    expect(refonte.convertirPerso.mock.calls[0]![0]).toBe('p-c');
+    expect(refonte.convertirPerso.mock.calls[0]![1]).toMatchObject({ classe: 'guerrier', rangs: { 'guerrier.soldat': 3, 'guerrier.peuple': 2 } });
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/est passé\(e\) à la refonte\.$/));
+  });
+
+  it('conversion : la Voie du chaos n’est proposée qu’à qui l’avait en v1 (12a)', async () => {
+    const vue = render(FicheVivante, { props: { fiche: reelle('Karlach', 'p-c'), modifiable: true } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Passer à la refonte' }));
+    expect(screen.queryByRole('button', { name: 'Prendre guerrier.chaos rang 1' })).toBeNull();
+    vue.unmount();
+    render(FicheVivante, { props: { fiche: reelle('Magnus', 'p-m'), modifiable: true } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Passer à la refonte' }));
+    const zone = within(screen.getByRole('region', { name: 'Passer à la refonte' }));
+    expect(zone.getByText(/Tu avais la Voie du chaos en v1/)).toBeTruthy();
+    expect(zone.getByRole('button', { name: 'Prendre envouteur.chaos rang 1' })).toBeTruthy();
+  });
+
+  it('conversion annulée à la confirmation : rien n’est écrit', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(FicheVivante, { props: { fiche: reelle('Karlach', 'p-c'), modifiable: true } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Passer à la refonte' }));
+    const zone = within(screen.getByRole('region', { name: 'Passer à la refonte' }));
+    await fireEvent.click(zone.getByRole('button', { name: 'Passer à la refonte' }));
+    expect(refonte.convertirPerso).not.toHaveBeenCalled();
+  });
+
+  it('« Refaire mes voies » quand le MJ a rouvert la conversion ; pas sinon', async () => {
+    const vue = render(FicheVivante, { props: { fiche: karlachV2(), modifiable: true } });
+    expect(screen.queryByRole('button', { name: 'Refaire mes voies' })).toBeNull();
+    vue.unmount();
+    const f = karlachV2();
+    render(FicheVivante, { props: { fiche: { ...f, octrois: { ...f.octrois, reconversion: true } }, modifiable: true } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Refaire mes voies' }));
+    const zone = within(screen.getByRole('region', { name: 'Refaire mes voies' }));
+    await fireEvent.click(zone.getByRole('button', { name: 'Retirer guerrier.peuple rang 2' }));
+    await fireEvent.click(zone.getByRole('button', { name: 'Valider mes voies' }));
+    await waitFor(() => expect(refonte.refaireVoiesPerso).toHaveBeenCalledWith('p-c', expect.objectContaining({ rangs: { 'guerrier.soldat': 3, 'guerrier.peuple': 1 } })));
+  });
+
+  it('montée d’une fiche de la refonte : rangs acquis figés, gestes, puis l’écriture', async () => {
+    persos.elements = [karlachV2()];
+    render(FicheVivante, { props: { fiche: persos.elements[0] as ReturnType<typeof karlachV2>, modifiable: true } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Passer au niveau 4' }));
+    const zone = within(screen.getByRole('region', { name: 'Montée de niveau' }));
+    expect(zone.queryByRole('button', { name: 'Retirer guerrier.soldat rang 3' })).toBeNull();
+    await fireEvent.click(zone.getByRole('button', { name: 'Prendre guerrier.ingenieur rang 1' }));
+    expect(zone.getByRole('button', { name: 'Retirer guerrier.ingenieur rang 1' })).toBeTruthy();
+    await fireEvent.click(zone.getByRole('button', { name: 'Lancer le dé de vie (d10)' }));
+    expect(zone.getByText(/^Endurance : 4 → 4$/)).toBeTruthy(); // 3 + niveau / 3 : 4 aux niveaux 3 et 4
+    await fireEvent.change(zone.getByLabelText('Don'), { target: { value: 'alerte' } });
+    await fireEvent.click(zone.getByRole('button', { name: 'Prendre' }));
+    await fireEvent.click(zone.getByRole('button', { name: 'Passer au niveau 4' }));
+    await waitFor(() => expect(montee.monterNiveauRefonte).toHaveBeenCalledTimes(1));
+    const [id, m] = montee.monterNiveauRefonte.mock.calls[0]! as [string, { r: { rangs: Record<string, number> }; b: { dons: string[] } }];
+    expect(id).toBe('p-c');
+    expect(m.r.rangs).toEqual({ 'guerrier.soldat': 3, 'guerrier.peuple': 2, 'guerrier.ingenieur': 1 });
+    expect(m.b.dons).toContain('alerte');
+    expect(montee.monterNiveau).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/passe au niveau 4 \(\+6 PV max\)\.$/));
+  });
+
+  it('octrois : le MJ seul ; chaos ouvert, élément et verbe accordés, puis « Enregistrer »', async () => {
+    const vue = render(FicheVivante, { props: { fiche: karlachV2(), modifiable: true } });
+    expect(screen.queryByRole('button', { name: 'Octrois de la refonte' })).toBeNull();
+    vue.unmount();
+    render(FicheVivante, { props: { fiche: karlachV2(), modifiable: true, mj: true } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Octrois de la refonte' }));
+    const zone = within(screen.getByRole('region', { name: 'Octrois de la refonte' }));
+    await fireEvent.click(zone.getByLabelText('Voie du chaos ouverte'));
+    await fireEvent.change(zone.getByLabelText('Élément Glace'), { target: { value: 'initie' } });
+    await fireEvent.change(zone.getByLabelText('Verbe à accorder'), { target: { value: 'evocation.missile' } });
+    await fireEvent.click(zone.getByRole('button', { name: 'Accorder' }));
+    expect(zone.getByRole('button', { name: `Retirer ${RF.nomAction('evocation.missile')}` })).toBeTruthy();
+    await fireEvent.click(zone.getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() =>
+      expect(refonte.modifierOctrois).toHaveBeenCalledWith('p-c', { chaos: true, elements: { glace: 'initie' }, verbes: [{ id: 'evocation.missile', maitrise: 'initie' }], reconversion: false }),
+    );
+  });
+
+  it('octrois : fermer la Voie du chaos d’un personnage qui y a des rangs est refusé, la case reste cochée', async () => {
+    const f = karlachV2();
+    const avecChaos = { ...f, refonte: { ...f.refonte, rangs: { ...f.refonte.rangs, 'guerrier.chaos': 1 } }, octrois: { ...f.octrois, chaos: true } };
+    render(FicheVivante, { props: { fiche: avecChaos, modifiable: true, mj: true } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Octrois de la refonte' }));
+    const zone = within(screen.getByRole('region', { name: 'Octrois de la refonte' }));
+    const caseChaos = zone.getByLabelText('Voie du chaos ouverte') as HTMLInputElement;
+    await fireEvent.click(caseChaos);
+    expect(zone.getByRole('alert').textContent).toContain('rouvre sa conversion');
+    expect(caseChaos.checked).toBe(true);
+  });
+
+  it('vue du groupe : le MJ voit où en est chaque personnage avec la refonte', () => {
+    session.uid = 'mj';
+    const f = karlachV2();
+    persos.elements = [
+      { ...f, id: 'p-1', nom: 'Converti' },
+      { ...f, id: 'p-2', nom: 'Rouvert', octrois: { ...f.octrois, reconversion: true } },
+      { ...reelle('Vhorgar', 'p-3'), nom: 'A convertir' },
+      { ...reelle('Hyrma', 'p-4'), nom: 'Chevalier' },
+    ];
+    render(GroupeMj);
+    const lignes = within(screen.getByRole('list', { name: 'Personnages de la table' })).getAllByRole('listitem');
+    const badges = (nom: string) => [...lignes.find((l) => l.querySelector('strong')?.textContent === nom)!.querySelectorAll('.badge')].map((b) => b.textContent);
+    expect(badges('Converti')).toEqual(['refonte']);
+    expect(badges('Rouvert')).toEqual(['conversion rouverte']);
+    expect(badges('A convertir')).toEqual(['à convertir']);
+    expect(badges('Chevalier')).toEqual([]);
   });
 });

@@ -7,6 +7,7 @@
   import { suivrePersos } from '../lib/magasins/persos.svelte';
   import { suivreSeances } from '../lib/magasins/seances.svelte';
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
+  import { etatRefonte } from '../lib/fiche/refonte';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import { session } from '../lib/session.svelte';
   import FicheVivante from './FicheVivante.svelte';
@@ -137,6 +138,12 @@
     <p>Aucun personnage à cette table pour l'instant.</p>
   {:else}
     <ul aria-label="Personnages de la table">
+      {#snippet badgeRefonte(etat: ReturnType<typeof etatRefonte>)}
+        <!-- L4.11b : où en est chaque personnage avec la refonte, vu du MJ. -->
+        {#if etat === 'refonte'} <span class="badge refonte">refonte</span>
+        {:else if etat === 'reconversion'} <span class="badge refonte">conversion rouverte</span>
+        {:else if etat === 'aConvertir'} <span class="badge a-convertir">à convertir</span>{/if}
+      {/snippet}
       {#each lignes as { fiche, vue, barre } (fiche.id)}
         {@const pourcent = Math.max(0, Math.min(100, Math.round((100 * vue.pv.actuel) / Math.max(1, vue.pv.max))))}
         <li class="pj" class:joue={joues.has(fiche.id)} class:ouvert={ouvert === fiche.id}>
@@ -144,7 +151,7 @@
             <Portrait idPerso={fiche.id} nom={fiche.nom} taille={36} />
             <span class="nom">
               <strong>{fiche.nom}</strong>
-              <span class="aide">{nomJoueur(fiche.proprietaireUid)}{#if joues.has(fiche.id)} <span class="badge">joué</span>{/if}{#if desPresents.has(fiche.id)} <span class="badge present">présent</span>{/if}</span>
+              <span class="aide">{nomJoueur(fiche.proprietaireUid)}{#if joues.has(fiche.id)} <span class="badge">joué</span>{/if}{#if desPresents.has(fiche.id)} <span class="badge present">présent</span>{/if}{@render badgeRefonte(etatRefonte(fiche))}</span>
             </span>
           </button>
           <div class="ligne-pv">
@@ -319,6 +326,14 @@
   }
   .badge.present {
     background: var(--couleur-succes);
+  }
+  .badge.refonte {
+    background: var(--couleur-or);
+  }
+  .badge.a-convertir {
+    background: var(--couleur-surface-claire);
+    color: var(--couleur-or-texte);
+    border: 1px solid var(--couleur-or);
   }
   .groupe > .aide {
     margin: 0;

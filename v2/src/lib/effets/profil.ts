@@ -134,6 +134,22 @@ function reglesAtteintes(classe: ClasseRefonte, c: ChoixDePersonnage, r: Regles)
   return classe.voies.flatMap((id) => (r.voies.get(id)?.rangs ?? []).slice(0, c.rangs[id] ?? 0).flatMap((rv) => rv.regles));
 }
 
+/** Choix que les voies prises demandent (lot L4.11b) : second élément, élément Maître, Répertoire, caractéristique en plus. */
+export function choixRequis(
+  classe: ClasseRefonte,
+  c: ChoixDePersonnage,
+  r: Regles,
+): { secondElement: boolean; elementMaitre: boolean; repertoire: boolean; caracEnPlus: { valeur: number; parmi: readonly Carac[] } | null } {
+  const regles = reglesAtteintes(classe, c, r);
+  const carac = regles.find((x) => x.type === 'caracEnPlus');
+  return {
+    secondElement: regles.some((x) => x.type === 'secondElement'),
+    elementMaitre: regles.some((x) => x.type === 'maitriseElement' && x.quel === 'auChoix'),
+    repertoire: aCapacite(regles, 'repertoire'),
+    caracEnPlus: carac?.type === 'caracEnPlus' ? { valeur: carac.valeur, parmi: carac.parmi } : null,
+  };
+}
+
 /** Les erreurs d'un choix, en phrases pour le joueur ; vide : le choix est valide. */
 export function verifierChoix(classe: ClasseRefonte, c: ChoixDePersonnage, r: Regles): string[] {
   const e: string[] = [];

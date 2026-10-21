@@ -134,6 +134,24 @@ export function choisirVarianteAction(m: MonteeRefonte, action: string, variante
   return avecR(m, R.choisirVarianteAction(m.r, action, variante));
 }
 
+/** Un geste de l'étape Voies (ChoixRefonte.svelte), avec les verrous de la montée. */
+export function appliquerGeste(m: MonteeRefonte, g: R.GesteRefonte): MonteeRefonte {
+  switch (g.type) {
+    case 'prendre':
+      return prendreRang(m, g.voie);
+    case 'offrir':
+      return offrirRang(m, g.voie);
+    case 'retirer':
+      return retirerRang(m, g.voie);
+    case 'choix':
+      return poserChoix(m, g.champ, g.valeur);
+    case 'mineur':
+      return basculerMineur(m, g.id);
+    case 'variante':
+      return choisirVarianteAction(m, g.action, g.variante);
+  }
+}
+
 export function prendreDon(m: MonteeRefonte, idDon: string, choix?: unknown): MonteeRefonte {
   return avecB(m, C.prendreDon(m.b, idDon, choix));
 }

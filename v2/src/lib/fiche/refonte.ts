@@ -1,11 +1,11 @@
-import { pointsDeVoies, profilMagique, verifierChoix, type ChoixDePersonnage, type ProfilMagique, type Regles } from '../effets/profil.ts';
+import { choixRequis, pointsDeVoies, profilMagique, verifierChoix, type ChoixDePersonnage, type ProfilMagique, type Regles } from '../effets/profil.ts';
 import { CalculsPersonnage } from '../regles/calculs.ts';
 import { RefusCreation, rangRaceMax } from '../regles/creation.ts';
 import { ficheCalculDepuisFiche, versFirestore } from '../regles/fiche-document.ts';
 import type { ClasseRefonte } from '../schemas/classes.ts';
 import { ELEMENTS, MAITRISES, type Action, type Element, type Maitrise } from '../schemas/effets.ts';
 import { octroisVierges, schemaFicheV2, VERSION_FICHE_REFONTE, type Fiche, type FicheV1, type FicheV2, type Octrois, type RefonteFiche } from '../schemas/fiche.ts';
-import { actionParId, actionsCommunes, classeParId, voieParId } from '../../regles/index.ts';
+import { actionParId, actionsCommunes, classeParId, elementParId, voieParId } from '../../regles/index.ts';
 
 /*
  * La refonte sur la fiche (lot L4.11a), en fonctions pures : les choix
@@ -228,6 +228,99 @@ export function choisirVarianteAction(r: RefonteFiche, action: string, variante:
   if (variante === null) return { ...r, variantes: autres };
   if (!actionParId.get(action)?.variantes.some((v) => v.id === variante && v.palier === 'I')) throw new RefusCreation('Ce choix n’existe pas pour cette capacité.');
   return { ...r, variantes: { ...autres, [action]: variante } };
+}
+
+/** Un geste de l'étape Voies de la refonte, tel que l'écran le transmet (ChoixRefonte.svelte). */
+export type GesteRefonte =
+  | { type: 'prendre'; voie: string }
+  | { type: 'offrir'; voie: string }
+  | { type: 'retirer'; voie: string }
+  | { [K in ChampDeChoix]: { type: 'choix'; champ: K; valeur: RefonteFiche[K] } }[ChampDeChoix]
+  | { type: 'mineur'; id: string }
+  | { type: 'variante'; action: string; variante: string | null };
+
+/** Applique un geste au bloc `refonte` ; refus expliqué (RefusCreation) sinon. */
+export function appliquerGeste(classe: ClasseRefonte, r: RefonteFiche, ctx: ContexteRefonte, g: GesteRefonte): RefonteFiche {
+  switch (g.type) {
+    case 'prendre':
+      return prendreRang(classe, r, ctx, g.voie);
+    case 'offrir':
+      return offrirRang(classe, r, ctx, g.voie);
+    case 'retirer':
+      return retirerRang(r, g.voie);
+    case 'choix':
+      return poserChoix(r, g.champ, g.valeur);
+    case 'mineur':
+      return basculerMineur(classe, r, ctx, g.id);
+    case 'variante':
+      return choisirVarianteAction(r, g.action, g.variante);
+  }
+}
+
+/** Ce que l'écran propose, d'après la classe et les voies prises : listes vides ou null quand le choix ne s'offre pas. */
+export interface ChoixOuverts {
+  ecoles: readonly string[];
+  elementsDepart: readonly Element[];
+  elementsSecond: readonly Element[];
+  elementsMaitre: readonly Element[];
+  caracEnPlus: { valeur: number; parmi: readonly string[] } | null;
+  repertoire: boolean;
+  /** Sorts mineurs permis à ce niveau (Répertoire compris), et la liste de la classe. */
+  mineursMax: number;
+  mineurs: readonly string[];
+  /** Voies montrées : celles de la classe, la Voie du chaos seulement si le MJ l'a ouverte (12a). */
+  voies: readonly string[];
+}
+
+export function choixOuverts(classe: ClasseRefonte, r: RefonteFiche, ctx: ContexteRefonte): ChoixOuverts {
+  const requis = choixRequis(classe, choixDe(r, ctx), REGLES_REFONTE);
+  const departs = [r.elementDepart, r.secondElement].filter((e): e is Element => e !== null);
+  return {
+    ecoles: classe.creation.ecoles,
+    elementsDepart: classe.creation.elements ?? [],
+    elementsSecond: requis.secondElement ? classe.creation.elementsSecond.filter((e) => e !== r.elementDepart) : [],
+    elementsMaitre: requis.elementMaitre ? departs : [],
+    caracEnPlus: requis.caracEnPlus,
+    repertoire: requis.repertoire,
+    mineursMax: profilDe(classe, r, ctx).mineursMax,
+    mineurs: classe.mineurs.liste,
+    voies: classe.voies.filter((v) => ctx.octrois.chaos || !voieParId.get(v)?.surAccordDuMJ),
+  };
+}
+
+// --------------------------------------------- Noms pour l'écran (L4.11b)
+
+/** Noms des écoles (les données les désignent par identifiant). */
+export const NOMS_ECOLES: Readonly<Record<string, string>> = {
+  evocation: 'Évocation',
+  abjuration: 'Abjuration',
+  invocation: 'Invocation',
+  illusion: 'Illusion',
+  enchantement: 'Enchantement',
+};
+export const nomEcole = (id: string): string => NOMS_ECOLES[id] ?? id;
+export const nomElement = (id: string): string => elementParId.get(id)?.nom ?? id;
+export const nomAction = (id: string): string => actionParId.get(id)?.nom ?? id;
+export const voieDeLaRefonte = (id: string) => voieParId.get(id);
+
+export const classeDeLaRefonte = (id: string) => classeParId.get(id);
+
+/** Noms des maîtrises, pour les octrois du MJ. */
+export const NOMS_MAITRISES: Readonly<Record<Maitrise, string>> = { nonMaitrise: 'Non maîtrisé', initie: 'Initié', adepte: 'Adepte', maitre: 'Maître' };
+
+/**
+ * Où en est un personnage avec la refonte, pour le badge du MJ et le bouton
+ * de la fiche : passé à la refonte, conversion rouverte par le MJ, à
+ * convertir (classe refondue, fiche v1), ou v1 (classe pas encore refondue).
+ */
+export function etatRefonte(f: Fiche): 'refonte' | 'reconversion' | 'aConvertir' | 'v1' {
+  if (f.schemaVersion === 2) return f.octrois.reconversion ? 'reconversion' : 'refonte';
+  return classeRefonteDe(f.classe) ? 'aConvertir' : 'v1';
+}
+
+/** Verbes que le MJ peut accorder par grimoire (7a) : tous les verbes des écoles, par école puis rang. */
+export function verbesAccordables(): Action[] {
+  return [...actionParId.values()].filter((a) => a.nature === 'verbe').sort((x, y) => (x.ecole ?? '').localeCompare(y.ecole ?? '') || x.rang - y.rang);
 }
 
 // ------------------------------------------------ Octrois du MJ (L4.11b)

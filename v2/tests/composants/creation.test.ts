@@ -13,6 +13,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * après la création (bug v1 : « + Nouveau personnage » rouvrait le
  * précédent et l'écrasait). Firestore est remplacé par de faux magasins et
  * des actions espionnées.
+ *
+ * L4.11b (décision 10a) : le Guerrier, le Magicien, l'Enchanteur, le
+ * Prêtre et le Barde créent désormais une fiche de la refonte. Le parcours
+ * v1 se teste avec le Chevalier, pas encore refondu ; celui de la refonte
+ * a sa propre partie, plus bas.
  */
 
 const actions = vi.hoisted(() => ({
@@ -43,17 +48,28 @@ const { ficheDepuisV1 } = await import('../../src/lib/regles/fiche-document');
 const bouton = (nom: string | RegExp) => screen.getByRole('button', { name: nom });
 const etape = (nom: string) => fireEvent.click(bouton(new RegExp(`^${nom}`)));
 
-/** Guerrier nain niveau 1, rempli à la main comme le ferait un joueur. */
-async function remplirGuerrierNain(nom = 'Borin') {
+/** Chevalier nain niveau 1 (classe pas encore refondue : parcours v1), rempli à la main comme le ferait un joueur. */
+async function remplirChevalierNain(nom = 'Borin') {
+  await fireEvent.input(screen.getByLabelText('Nom'), { target: { value: nom } });
+  await fireEvent.click(bouton('Nain'));
+  await fireEvent.click(bouton('Chevalier'));
+  await etape('Caractéristiques');
+  for (const c of ['FOR', 'FOR', 'FOR', 'CON', 'CON', 'CON']) await fireEvent.click(bouton(`Ajouter un point en ${c}`));
+  await etape('Voies');
+  await fireEvent.click(bouton('Prendre chevalier.noble.1'));
+  await fireEvent.click(bouton('Prendre chevalier.commandant.1'));
+}
+
+/** Guerrier nain niveau 1 de la refonte : identité, caractéristiques, deux rangs de Soldat. */
+async function remplirGuerrierRefonte(nom = 'Torg') {
   await fireEvent.input(screen.getByLabelText('Nom'), { target: { value: nom } });
   await fireEvent.click(bouton('Nain'));
   await fireEvent.click(bouton('Guerrier'));
   await etape('Caractéristiques');
   for (const c of ['FOR', 'FOR', 'FOR', 'CON', 'CON', 'CON']) await fireEvent.click(bouton(`Ajouter un point en ${c}`));
   await etape('Voies');
-  await fireEvent.click(bouton('Prendre guerrier.soldat.1'));
-  await fireEvent.change(screen.getByLabelText('Choix pour guerrier.elite.1'), { target: { value: 'FOR' } });
-  await fireEvent.click(bouton('Prendre guerrier.elite.1'));
+  await fireEvent.click(bouton('Prendre guerrier.soldat rang 1'));
+  await fireEvent.click(bouton('Prendre guerrier.soldat rang 2'));
 }
 
 beforeEach(() => {
@@ -71,10 +87,10 @@ beforeEach(() => {
 });
 
 describe('assistant de création', () => {
-  it('un guerrier nain créé de bout en bout : fiche complète écrite, brouillon effacé', async () => {
+  it('un chevalier nain créé de bout en bout : fiche complète écrite, brouillon effacé', async () => {
     const surCree = vi.fn();
     render(AssistantCreation, { props: { surCree, surAnnuler: () => {} } });
-    await remplirGuerrierNain();
+    await remplirChevalierNain();
     expect(screen.getByTestId('points-voie').textContent).toBe('0');
 
     await etape('Récapitulatif');
@@ -85,9 +101,9 @@ describe('assistant de création', () => {
     const [id, fiche] = actions.creerPerso.mock.calls[0]!;
     expect(id).toBe('p-nouveau');
     expect(fiche).toMatchObject({
-      nom: 'Borin', proprietaireUid: 'alice', classe: 'guerrier', race: 'nain', niveau: 1, capacitesRace: [1],
-      capacites: [{ id: 'guerrier.soldat.1' }, { id: 'guerrier.elite.1', choix: 'FOR' }],
-      caracs: { FOR: 15, CON: 14 }, pvMax: 16, pvActuel: 16,
+      nom: 'Borin', proprietaireUid: 'alice', classe: 'chevalier', race: 'nain', niveau: 1, capacitesRace: [1],
+      capacites: [{ id: 'chevalier.noble.1' }, { id: 'chevalier.commandant.1' }],
+      caracs: { FOR: 15, CON: 13 }, pvMax: 15, pvActuel: 15,
     });
     // Bug v1 corrigé : l'assistant repart d'un brouillon vide.
     expect(localStorage.getItem('cof2:creation:t1:alice')).not.toContain('Borin');
@@ -97,8 +113,8 @@ describe('assistant de création', () => {
 
   it('un geste refusé par les règles affiche la raison, sans rien changer', async () => {
     render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
-    await remplirGuerrierNain();
-    await fireEvent.click(bouton('Prendre guerrier.peuple.1'));
+    await remplirChevalierNain();
+    await fireEvent.click(bouton('Prendre chevalier.protecteur.1'));
     expect(screen.getByRole('alert').textContent).toBe('Pas assez de points de capacité.');
     expect(screen.getByTestId('points-voie').textContent).toBe('0');
   });
@@ -115,7 +131,7 @@ describe('assistant de création', () => {
 
   it('le brouillon survit à un rechargement ; « Recommencer » le vide', async () => {
     const premier = render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
-    await remplirGuerrierNain('Gimra');
+    await remplirChevalierNain('Gimra');
     premier.unmount();
 
     render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
@@ -134,7 +150,7 @@ describe('assistant de création', () => {
 
   it('niveau 3 : les PV des niveaux suivants se lancent un par un, la création les exige', async () => {
     render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
-    await remplirGuerrierNain();
+    await remplirChevalierNain();
     await etape('Identité');
     await fireEvent.change(screen.getByLabelText('Niveau'), { target: { value: '3' } });
     await etape('PV et dons');
@@ -147,15 +163,87 @@ describe('assistant de création', () => {
   it('Polyvalence : le bouton « Offert » n’apparaît que pour un Humain niveau 5', async () => {
     render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
     await fireEvent.click(bouton('Humain'));
-    await fireEvent.click(bouton('Guerrier'));
+    await fireEvent.click(bouton('Chevalier'));
     await etape('Voies');
-    expect(screen.queryByRole('button', { name: 'Prendre guerrier.soldat.1 offert' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Prendre chevalier.noble.1 offert' })).toBeNull();
     await etape('Identité');
     await fireEvent.change(screen.getByLabelText('Niveau'), { target: { value: '5' } });
     await etape('Voies');
-    await fireEvent.click(bouton('Prendre guerrier.soldat.1 offert'));
+    await fireEvent.click(bouton('Prendre chevalier.noble.1 offert'));
     expect(screen.getByTestId('points-voie').textContent).toBe('10');
     expect(screen.queryByRole('button', { name: /offert$/ })).toBeNull();
+  });
+});
+
+describe('assistant de création : classes de la refonte (L4.11b, 10a)', () => {
+  it('un guerrier de la refonte : étape Voies de la refonte, pas d’étape Magie, fiche v2 écrite', async () => {
+    const surCree = vi.fn();
+    render(AssistantCreation, { props: { surCree, surAnnuler: () => {} } });
+    await remplirGuerrierRefonte();
+    expect(screen.getByTestId('points-refonte').textContent).toBe('0');
+    expect(screen.queryByRole('button', { name: /^Magie/ })).toBeNull();
+    // La Voie du chaos n'est pas proposée à la création (12a).
+    expect(screen.queryByText(/chaos — ouverte par le MJ/)).toBeNull();
+    await etape('Récapitulatif');
+    expect(screen.queryByLabelText('À compléter')).toBeNull();
+    await fireEvent.click(bouton('Créer le personnage'));
+    await waitFor(() => expect(surCree).toHaveBeenCalledWith('p-nouveau'));
+    const fiche = actions.creerPerso.mock.calls[0]![1] as Record<string, unknown>;
+    expect(fiche).toMatchObject({
+      schemaVersion: 2, nom: 'Torg', classe: 'guerrier', race: 'nain', niveau: 1,
+      refonte: { classe: 'guerrier', rangs: { 'guerrier.soldat': 2 }, jauges: { endurance: 3, plongee: 0, corruptionAme: 0 } },
+      octrois: { chaos: false, elements: {}, verbes: [], reconversion: false },
+    });
+    expect('capacites' in fiche).toBe(false);
+  });
+
+  it('un geste refusé par la refonte s’affiche ; retirer un rang le rend', async () => {
+    render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
+    await remplirGuerrierRefonte();
+    await fireEvent.click(bouton('Prendre guerrier.peuple rang 1'));
+    expect(screen.getByRole('alert').textContent).toBe('Pas assez de points de voie.');
+    await fireEvent.click(bouton('Retirer guerrier.soldat rang 2'));
+    expect(screen.getByTestId('points-refonte').textContent).toBe('1');
+  });
+
+  it('magicien : école, élément et sorts mineurs à choisir ; la liste dit ce qui manque', async () => {
+    render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
+    await fireEvent.click(bouton('Magicien'));
+    await etape('Voies');
+    const manque = within(screen.getByLabelText('Voies à compléter'));
+    expect(manque.getByText(/^Choisis une école/)).toBeTruthy();
+    await fireEvent.click(bouton('Évocation'));
+    await fireEvent.click(bouton('Feu'));
+    await fireEvent.click(screen.getByLabelText('Lumière'));
+    await fireEvent.click(screen.getByLabelText('Main du mage'));
+    await fireEvent.click(screen.getByLabelText('Trait arcanique'));
+    expect(screen.getByRole('alert').textContent).toBe('2 sorts mineurs au plus à ce niveau.');
+    expect(screen.getByText('Sorts mineurs (2 / 2)')).toBeTruthy();
+    expect(screen.queryByLabelText('Voies à compléter')).toBeNull();
+  });
+
+  it('Polyvalence : « Offert » seulement pour un Humain niveau 5, une fois, hors budget', async () => {
+    render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
+    await fireEvent.click(bouton('Humain'));
+    await fireEvent.click(bouton('Guerrier'));
+    await etape('Voies');
+    expect(screen.queryByRole('button', { name: 'Offrir guerrier.soldat rang 1' })).toBeNull();
+    await etape('Identité');
+    await fireEvent.change(screen.getByLabelText('Niveau'), { target: { value: '5' } });
+    await etape('Voies');
+    await fireEvent.click(bouton('Offrir guerrier.soldat rang 1'));
+    expect(screen.getByTestId('points-refonte').textContent).toBe('10');
+    expect(screen.getByText('offert')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^Offrir / })).toBeNull();
+  });
+
+  it('le bloc de la refonte survit au rechargement, avec le reste du brouillon', async () => {
+    const premier = render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
+    await remplirGuerrierRefonte('Gimra');
+    premier.unmount();
+    render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
+    await etape('Voies');
+    expect(screen.getByTestId('points-refonte').textContent).toBe('0');
   });
 });
 
@@ -180,7 +268,7 @@ describe('mes personnages', () => {
     render(MesPersonnages);
     expect(screen.getByText("Tu n'as pas encore de personnage à cette table.")).toBeTruthy();
     await fireEvent.click(bouton('Créer un personnage'));
-    await remplirGuerrierNain();
+    await remplirChevalierNain();
     await etape('Récapitulatif');
     await fireEvent.click(bouton('Créer le personnage'));
     await waitFor(() => expect(actions.choisirPersoActif).toHaveBeenCalledWith('p-nouveau'));

@@ -2,12 +2,15 @@
   import { marquerImportRepris } from '../lib/actions/imports';
   import { creerPerso, enregistrerPortrait, messageErreurPerso, nouvelIdPerso } from '../lib/actions/persos';
   import { garderBrouillon, lireBrouillon, oublierBrouillon } from '../lib/creation/brouillon-local';
+  import * as K from '../lib/fiche/creation-refonte';
+  import * as RF from '../lib/fiche/refonte';
   import { statistiquesFiche } from '../lib/regles/calculs';
   import * as R from '../lib/regles/creation';
   import { anciensChoixLisibles, reprendreAnciensChoix } from '../lib/regles/import-v1';
   import { classeParId, constantes, donParId, dons, raceParId, sortParId, voieParId } from '../lib/regles/donnees';
   import type { Carac } from '../lib/regles/fiche-calcul';
   import { session } from '../lib/session.svelte';
+  import ChoixRefonte from './ChoixRefonte.svelte';
 
   /*
    * Assistant de création de personnage (lot L2.2b). L'écran n'applique
@@ -23,6 +26,12 @@
    * niveau et caractéristiques y sont verrouillés (les règles refusent d'y
    * toucher) ; les anciens choix s'affichent à côté, et « Reprendre mes
    * anciens choix » les rejoue à travers les règles actuelles.
+   *
+   * Refonte (L4.11b, décision 10a) : pour une classe refondue, l'étape
+   * Voies montre les choix de la refonte (ChoixRefonte, gestes de
+   * lib/fiche/creation-refonte.ts), l'étape Magie disparaît, et « Créer »
+   * écrit une fiche de la refonte. Les anciens choix v1 restent affichés
+   * pour mémoire, sans « Reprendre » : leurs voies n'existent plus.
    */
 
   let {
@@ -60,13 +69,18 @@
   const stats = $derived(statistiquesFiche(calc));
   const caracs = $derived(R.caracsDuBrouillon(b));
   const pts = $derived(R.pointsVoie(b));
-  const erreurs = $derived(R.erreursCreation(b));
-  const avertissements = $derived(R.avertissementsCreation(b));
+  const erreurs = $derived(K.erreursCreationRefonte(b));
+  const avertissements = $derived(K.avertissementsCreationRefonte(b));
   const magie = $derived(R.aUnGrimoire(b.classe));
   const race = $derived(b.race ? raceParId.get(b.race) : undefined);
   const rangsRace = $derived(R.capacitesRaceDuBrouillon(b));
   const polyvalence = $derived(R.polyvalenceAcquise(b) && !R.rangOffert(b));
   const anciens = $derived(b.reprise ? anciensChoixLisibles(b.reprise.anciens) : null);
+  const refondue = $derived(K.classeDuBrouillon(b));
+  const refonte = $derived(K.refonteDuBrouillon(b));
+  const ctxRefonte = $derived(refondue ? K.contexteDuBrouillon(b, refondue) : null);
+  const erreursVoiesRefonte = $derived(refondue && refonte && ctxRefonte ? RF.erreursRefonte(refondue, refonte, ctxRefonte) : []);
+  const etapes = $derived(refondue ? ETAPES.filter((e) => e !== 'Magie') : ETAPES);
   let nonRepris = $state<string[] | null>(null);
 
   function reprendre() {
@@ -107,7 +121,8 @@
     refus = '';
     enCours = true;
     try {
-      const fiche = R.ficheDepuisBrouillon($state.snapshot(b) as R.Brouillon, session.uid, Date.now());
+      const brouillon = $state.snapshot(b) as R.Brouillon;
+      const fiche = refondue ? K.ficheV2DepuisBrouillon(brouillon, session.uid, Date.now()) : R.ficheDepuisBrouillon(brouillon, session.uid, Date.now());
       const id = nouvelIdPerso();
       await creerPerso(id, fiche);
       // Portrait v1 repris (L2.3) : dans son propre document, après la fiche.
@@ -129,7 +144,7 @@
   const aFaire = $derived({
     Identité: !b.classe || !b.race || !b.nom.trim() || R.choixRaciauxRequis(b).some(([r]) => !b.capacitesRaceChoix[String(r)]) || (R.varianteRequise(b) && !b.raceVariante),
     Caractéristiques: R.pointsCaracsRestants(b) !== 0,
-    Voies: pts.restants < 0,
+    Voies: refondue ? erreursVoiesRefonte.length > 0 : pts.restants < 0,
     'PV et dons': b.jetsPV.length < b.niveau - 1 || b.dons.length < R.donsRequis(b),
     Magie: magie && b.sorts.length > 0 && R.sortsAChoisir(b) < 0,
     Récapitulatif: erreurs.length > 0,
@@ -145,7 +160,7 @@
   </div>
 
   <nav aria-label="Étapes">
-    {#each ETAPES as e (e)}
+    {#each etapes as e (e)}
       <button class="onglet" class:actif={etape === e} aria-current={etape === e ? 'step' : undefined} onclick={() => (etape = e)}>
         {e}{#if aFaire[e]}<span class="pastille" aria-label="à compléter">•</span>{/if}
       </button>
@@ -161,7 +176,7 @@
       {#if anciens.voies.length}<p><strong>Voies :</strong> {anciens.voies.join(' ; ')}</p>{/if}
       {#if anciens.race.length}<p><strong>Voie raciale :</strong> {anciens.race.join(' ; ')}</p>{/if}
       <p><strong>Dons :</strong> {anciens.dons.length ? anciens.dons.join(' ; ') : 'aucun'}</p>
-      {#if etape === 'Voies'}
+      {#if etape === 'Voies' && !refondue}
         <button onclick={reprendre}>Reprendre mes anciens choix</button>
       {/if}
       {#if nonRepris}
@@ -255,6 +270,11 @@
   {:else if etape === 'Voies'}
     {#if !b.classe}
       <p>Choisis d'abord une classe.</p>
+    {:else if refondue && refonte && ctxRefonte}
+      <ChoixRefonte classe={refondue} r={refonte} ctx={ctxRefonte} surGeste={(g) => geste((x) => K.gesteRefonte(x, (c, r, ctx) => RF.appliquerGeste(c, r, ctx, g)))} />
+      {#if erreursVoiesRefonte.length}
+        <ul class="erreurs" aria-label="Voies à compléter">{#each erreursVoiesRefonte as e (e)}<li>{e}</li>{/each}</ul>
+      {/if}
     {:else}
       <p class="compteur" aria-live="polite">Points de capacité : <strong data-testid="points-voie">{pts.restants}</strong> / {pts.total}</p>
       <p class="aide">Rangs 1-2 : 1 point ; rangs 3-5 : 2 points ; dans l'ordre.</p>
@@ -355,7 +375,7 @@
         {#if donChoisi}<p class="effet">{donParId.get(donChoisi)?.effet}</p>{/if}
       {/if}
     {/if}
-  {:else if etape === 'Magie'}
+  {:else if etape === 'Magie' && !refondue}
     {#if b.classe === 'pretre'}
       <label>
         Cercle

@@ -105,10 +105,13 @@ describe('joueur : reprise d’une fiche v1', () => {
     await fireEvent.click(bouton('Elfe'));
     expect(screen.getByRole('alert').textContent).toContain('Fiche reprise de la v1');
 
+    // L4.11b (10a) : le Barde est refondu ; ses voies se refont avec la refonte, les anciennes restent affichées pour mémoire.
     await fireEvent.click(bouton(/^Voies/));
-    await fireEvent.click(bouton('Reprendre mes anciens choix'));
-    expect(screen.getByRole('status').textContent).toBe('Tous tes anciens choix ont été repris.');
-    expect(screen.getByTestId('points-voie').textContent).toBe('0');
+    expect(screen.queryByRole('button', { name: 'Reprendre mes anciens choix' })).toBeNull();
+    for (const rang of [1, 2, 3]) await fireEvent.click(bouton(`Prendre barde.chant rang ${rang}`));
+    for (const rang of [1, 2]) await fireEvent.click(bouton(`Prendre barde.rapiere rang ${rang}`));
+    await fireEvent.click(screen.getByLabelText('Moquerie'));
+    expect(screen.getByTestId('points-refonte').textContent).toBe('0');
 
     await fireEvent.click(bouton(/^Récapitulatif/));
     await fireEvent.click(bouton('Créer le personnage'));
@@ -116,8 +119,8 @@ describe('joueur : reprise d’une fiche v1', () => {
     expect(actions.enregistrerPortrait).toHaveBeenCalledWith('p-nouveau', PORTRAIT);
     const fiche = actions.creerPerso.mock.calls[0]![1] as Record<string, unknown>;
     expect(fiche).toMatchObject({
-      nom: KARGASH.nom, classe: 'barde', race: 'nain', niveau: 3, piecesOr: KARGASH.piecesOr,
-      corruptionMajeure: KARGASH.corruptionMajeure, capacitesRace: [1, 2],
+      schemaVersion: 2, nom: KARGASH.nom, classe: 'barde', race: 'nain', niveau: 3, piecesOr: KARGASH.piecesOr, capacitesRace: [1, 2],
+      refonte: { rangs: { 'barde.chant': 3, 'barde.rapiere': 2 }, mineurs: ['mineur.moquerie'], jauges: { corruptionAme: KARGASH.corruptionMajeure } },
     });
   });
 

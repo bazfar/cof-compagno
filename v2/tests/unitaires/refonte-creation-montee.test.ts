@@ -458,3 +458,63 @@ describe('écritures (faux SDK Firestore)', () => {
     for (const c of [...M.CHAMPS_MONTEE_REFONTE, 'progression']) expect(permis).toContain(c);
   });
 });
+
+describe('pour les écrans (L4.11b2)', () => {
+  const m = classe('magicien');
+  const ctx: ContexteRefonte = { niveau: 6, race: 'elfe', modMagie: 2, octrois: octroisVierges() };
+  const base = { ...R.refonteVierge(m, 6), ecole: 'evocation', elementDepart: 'feu' as const };
+
+  it('appliquerGeste : chaque geste de l’écran passe par la fonction de règles correspondante', () => {
+    let r = R.appliquerGeste(m, base, ctx, { type: 'prendre', voie: 'magicien.elementaire' });
+    expect(r.rangs).toEqual({ 'magicien.elementaire': 1 });
+    r = R.appliquerGeste(m, r, ctx, { type: 'retirer', voie: 'magicien.elementaire' });
+    expect(r.rangs).toEqual({});
+    expect(R.appliquerGeste(m, r, ctx, { type: 'choix', champ: 'ecole', valeur: 'abjuration' }).ecole).toBe('abjuration');
+    expect(R.appliquerGeste(m, r, ctx, { type: 'mineur', id: 'mineur.lumiere' }).mineurs).toEqual(['mineur.lumiere']);
+    expect(R.appliquerGeste(m, r, ctx, { type: 'variante', action: 'chaos.magicien.esprit-fissure', variante: 'garde' }).variantes).toEqual({ 'chaos.magicien.esprit-fissure': 'garde' });
+    expect(() => R.appliquerGeste(m, r, ctx, { type: 'offrir', voie: 'magicien.ecole' })).toThrow('Polyvalence');
+  });
+
+  it('choixOuverts : école et élément de la classe ; second élément et Maître selon les voies ; chaos caché tant qu’il est fermé', () => {
+    const o = R.choixOuverts(m, base, ctx);
+    expect(o).toMatchObject({ ecoles: ['evocation', 'abjuration', 'invocation'], elementsSecond: [], elementsMaitre: [], caracEnPlus: null, repertoire: false, mineursMax: 3 });
+    expect(o.voies).not.toContain('magicien.chaos');
+    expect(R.choixOuverts(m, base, { ...ctx, octrois: { ...octroisVierges(), chaos: true } }).voies).toContain('magicien.chaos');
+    // Le second élément s'ouvre avec la voie qui le donne ; il exclut l'élément de départ.
+    const elem = Array.from({ length: 5 }, (_, i) => i + 1).find((n) => R.choixOuverts(m, { ...base, rangs: { 'magicien.elementaire': n } }, ctx).elementsSecond.length > 0)!;
+    const ouverts = R.choixOuverts(m, { ...base, rangs: { 'magicien.elementaire': elem }, secondElement: 'glace' }, ctx);
+    expect(ouverts.elementsSecond).toEqual(['glace', 'terre', 'eau', 'electricite']);
+    // Le Spécimen d'élite du Maître d'armes : la caractéristique et sa liste.
+    const g = classe('guerrier');
+    const specimen = Array.from({ length: 5 }, (_, i) => i + 1).find((n) => R.choixOuverts(g, { ...R.refonteVierge(g, 12), rangs: { 'guerrier.maitre-d-armes': n } }, { ...ctx, niveau: 12 }).caracEnPlus)!;
+    expect(R.choixOuverts(g, { ...R.refonteVierge(g, 12), rangs: { 'guerrier.maitre-d-armes': specimen } }, { ...ctx, niveau: 12 }).caracEnPlus).toMatchObject({ valeur: expect.any(Number) });
+  });
+
+  it('montée : appliquerGeste garde les verrous', () => {
+    const f = cree('guerrier', 'nain', 3);
+    const mo = M.ouvrirMonteeRefonte(f);
+    const voie = Object.keys(f.refonte.rangs)[0]!;
+    expect(() => M.appliquerGeste(mo, { type: 'retirer', voie })).toThrow('Ce rang est acquis');
+    expect(M.appliquerGeste(mo, { type: 'prendre', voie: 'guerrier.ingenieur' }).r.rangs['guerrier.ingenieur']).toBe(1);
+    expect(() => M.appliquerGeste(mo, { type: 'offrir', voie: 'guerrier.ingenieur' })).toThrow('Polyvalence');
+    expect(() => M.appliquerGeste(mo, { type: 'mineur', id: 'mineur.lumiere' })).toThrow('pas un sort de ta classe');
+    expect(M.appliquerGeste(mo, { type: 'choix', champ: 'caracEnPlus', valeur: 'FOR' }).r.caracEnPlus).toBe('FOR');
+    expect(M.appliquerGeste(mo, { type: 'variante', action: 'chaos.magicien.esprit-fissure', variante: 'garde' }).r.variantes).toEqual({ 'chaos.magicien.esprit-fissure': 'garde' });
+  });
+
+  it('etatRefonte : refonte, conversion rouverte, à convertir, v1', () => {
+    const v2 = R.convertirFiche(reelle('Karlach'), R.refonteVierge(classe('guerrier'), 3));
+    expect(R.etatRefonte(v2)).toBe('refonte');
+    expect(R.etatRefonte({ ...v2, octrois: { ...v2.octrois, reconversion: true } })).toBe('reconversion');
+    expect(R.etatRefonte(reelle('Karlach'))).toBe('aConvertir');
+    expect(R.etatRefonte(reelle('Hyrma'))).toBe('v1');
+  });
+
+  it('verbes accordables : tous les verbes, par école puis rang ; noms des écoles et éléments', () => {
+    const v = R.verbesAccordables();
+    expect(v.every((a) => a.nature === 'verbe')).toBe(true);
+    expect(v.map((a) => `${a.ecole}:${a.rang}`)).toEqual([...v].sort((x, y) => (x.ecole ?? '').localeCompare(y.ecole ?? '') || x.rang - y.rang).map((a) => `${a.ecole}:${a.rang}`));
+    expect(v.some((a) => a.id === 'evocation.missile')).toBe(true);
+    expect([R.nomEcole('evocation'), R.nomEcole('inconnue'), R.nomElement('electricite'), R.nomAction('mineur.lumiere')]).toEqual(['Évocation', 'inconnue', 'Électricité', 'Lumière']);
+  });
+});

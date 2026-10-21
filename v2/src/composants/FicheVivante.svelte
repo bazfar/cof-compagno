@@ -6,14 +6,18 @@
   import type { AvecId } from '../lib/firebase/suivre.svelte';
   import type { Destinataire } from '../lib/dons/dons';
   import { comprimerPortrait } from '../lib/fiche/portrait';
+  import { etatRefonte } from '../lib/fiche/refonte';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import { formuleTest, texteJet } from '../lib/regles/des';
   import * as E from '../lib/regles/equipement';
   import { barreNiveau } from '../lib/regles/progression';
   import { SLOTS_EQUIPEMENT, type Slot } from '../lib/regles/fiche-calcul';
   import { LIMITE_NOTES, type Fiche } from '../lib/schemas/fiche';
+  import ConversionRefonte from './ConversionRefonte.svelte';
   import CorrectionFiche from './CorrectionFiche.svelte';
   import MonteeNiveau from './MonteeNiveau.svelte';
+  import MonteeRefonte from './MonteeRefonte.svelte';
+  import OctroisMj from './OctroisMj.svelte';
   import Portrait from './Portrait.svelte';
 
   /*
@@ -54,6 +58,12 @@
    * l'en-tête, un brouillon de l'identité, des caractéristiques, des PV,
    * des voies et des dons (CorrectionFiche).
    *
+   * Refonte (L4.11b) : « Passer à la refonte » (fiche v1 d'une classe
+   * refondue) ou « Refaire mes voies » (conversion rouverte par le MJ)
+   * ouvre ConversionRefonte ; la montée d'une fiche de la refonte passe par
+   * MonteeRefonte ; le MJ ouvre « Octrois » (OctroisMj) sur une fiche de la
+   * refonte.
+   *
    * Dons (L3.3) : `destinataires` (les personnages joués des autres
    * joueurs, fournis par MesPersonnages) ajoute « Donner… » sous chaque
    * objet du sac. Absent dans la vue du MJ, qui ajoute du catalogue.
@@ -73,6 +83,9 @@
   let message = $state('');
   let montee = $state(false);
   let correction = $state(false);
+  let conversion = $state(false);
+  let octrois = $state(false);
+  const refonte = $derived(etatRefonte(fiche));
 
   const vue = $derived(vueFiche(fiche));
   const voiesMontrees = $derived(vue.voies.filter((v) => v.horsCombat === (usage === 'hors')));
@@ -219,6 +232,10 @@
         <h2>{fiche.nom}</h2>
         <p>{vue.titre} · dé de vie d{vue.deVie}</p>
         {#if mj && !correction}<button class="petit discret" onclick={() => { message = ''; correction = true; }}>Corriger la fiche</button>{/if}
+        {#if mj && fiche.schemaVersion === 2 && !octrois}<button class="petit discret" onclick={() => { message = ''; octrois = true; }}>Octrois de la refonte</button>{/if}
+        {#if modifiable && !conversion && (refonte === 'aConvertir' || refonte === 'reconversion')}
+          <button class="petit" onclick={() => { message = ''; montee = false; conversion = true; }}>{refonte === 'aConvertir' ? 'Passer à la refonte' : 'Refaire mes voies'}</button>
+        {/if}
       </div>
     </div>
 
@@ -232,7 +249,7 @@
           <span class="aide" data-testid="crans">{barre.crans} / {barre.requis} crans vers le niveau {fiche.niveau + 1}</span>
           {#if barre.pleine}
             <strong class="pleine">Barre pleine</strong>
-            {#if modifiable && !montee && fiche.schemaVersion === 1}<button class="petit" onclick={() => { message = ''; montee = true; }}>Passer au niveau {fiche.niveau + 1}</button>{/if}
+            {#if modifiable && !montee && !conversion}<button class="petit" onclick={() => { message = ''; montee = true; }}>Passer au niveau {fiche.niveau + 1}</button>{/if}
           {/if}
         {/if}
       </div>
@@ -292,8 +309,18 @@
   {#if correction}
     <CorrectionFiche {fiche} surFin={(m) => { correction = false; message = m; }} />
   {/if}
+  {#if octrois && fiche.schemaVersion === 2}
+    <OctroisMj {fiche} surFin={(m) => { octrois = false; message = m; }} />
+  {/if}
+  {#if conversion}
+    <ConversionRefonte {fiche} surFin={(m) => { conversion = false; message = m; }} />
+  {/if}
   {#if montee}
-    <MonteeNiveau {fiche} surFin={(m) => { montee = false; message = m; }} />
+    {#if fiche.schemaVersion === 2}
+      <MonteeRefonte {fiche} surFin={(m) => { montee = false; message = m; }} />
+    {:else}
+      <MonteeNiveau {fiche} surFin={(m) => { montee = false; message = m; }} />
+    {/if}
   {/if}
 
   <div class="onglets" role="tablist" aria-label="Sections de la fiche">
