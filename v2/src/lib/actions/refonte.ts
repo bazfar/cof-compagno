@@ -3,7 +3,7 @@ import { db } from '../firebase/client';
 import { champsDeConversion, convertirFiche, refaireVoies } from '../fiche/refonte';
 import { versFirestore } from '../regles/fiche-document';
 import { RefusCreation } from '../regles/creation';
-import { schemaFiche, schemaOctrois, type FicheV2, type Octrois, type RefonteFiche } from '../schemas/fiche';
+import { schemaFiche, schemaOctrois, schemaRefonteFiche, type FicheV2, type Octrois, type RefonteFiche } from '../schemas/fiche';
 import { session } from '../session.svelte';
 
 /*
@@ -57,4 +57,14 @@ export async function refaireVoiesPerso(id: string, r: RefonteFiche): Promise<Fi
 /** MJ : les octrois d'un personnage de la refonte, écrits en entier (validés par le schéma). */
 export async function modifierOctrois(id: string, octrois: Octrois): Promise<void> {
   await updateDoc(refPerso(id), { octrois: versFirestore(schemaOctrois.parse(octrois)) });
+}
+
+/**
+ * Jauges de la refonte (lot L4.12, décision 8b : le joueur les gère toutes) :
+ * seul `refonte.jauges` est écrit, ce que les règles Firestore permettent
+ * au joueur à tout moment (refonteParJoueur). Valeurs déjà bornées par
+ * lib/fiche/actions-fiche.ts (changerJauge, finDuCombat).
+ */
+export async function modifierJauges(id: string, jauges: RefonteFiche['jauges']): Promise<void> {
+  await updateDoc(refPerso(id), { 'refonte.jauges': versFirestore(schemaRefonteFiche.shape.jauges.parse(jauges)) });
 }

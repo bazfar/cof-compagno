@@ -6,13 +6,16 @@
   import type { AvecId } from '../lib/firebase/suivre.svelte';
   import type { Destinataire } from '../lib/dons/dons';
   import { comprimerPortrait } from '../lib/fiche/portrait';
-  import { etatRefonte } from '../lib/fiche/refonte';
+  import { modifierJauges } from '../lib/actions/refonte';
+  import { changerJauge, finDuCombat, type CleJauge } from '../lib/fiche/actions-fiche';
+  import { classeDeLaRefonte, etatRefonte } from '../lib/fiche/refonte';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import { formuleTest, texteJet } from '../lib/regles/des';
   import * as E from '../lib/regles/equipement';
   import { barreNiveau } from '../lib/regles/progression';
   import { SLOTS_EQUIPEMENT, type Slot } from '../lib/regles/fiche-calcul';
   import { LIMITE_NOTES, type Fiche } from '../lib/schemas/fiche';
+  import ActionsRefonte from './ActionsRefonte.svelte';
   import ConversionRefonte from './ConversionRefonte.svelte';
   import CorrectionFiche from './CorrectionFiche.svelte';
   import MonteeNiveau from './MonteeNiveau.svelte';
@@ -64,6 +67,13 @@
    * MonteeRefonte ; le MJ ouvre « Octrois » (OctroisMj) sur une fiche de la
    * refonte.
    *
+   * Refonte, lot L4.12 (décisions 1b, 7a, 8b, 9a, 10a, 15b du 21/10/2026) :
+   * une fiche de la refonte a un cinquième onglet, Actions
+   * (ActionsRefonte), et ses jauges dans l'en-tête (− et + pour qui peut
+   * modifier la fiche, « Fin du combat » remet la Plongée à 0) ; les
+   * annonces de Corruption d'Âme et de paliers de mutation s'affichent dans
+   * le message de la fiche.
+   *
    * Dons (L3.3) : `destinataires` (les personnages joués des autres
    * joueurs, fournis par MesPersonnages) ajoute « Donner… » sous chaque
    * objet du sac. Absent dans la vue du MJ, qui ajoute du catalogue.
@@ -76,8 +86,10 @@
     destinataires = [],
   }: { fiche: AvecId<Fiche>; modifiable: boolean; mj?: boolean; destinataires?: Destinataire[] } = $props();
 
-  const ONGLETS = ['Combat', 'Capacités', 'Équipement', 'Suivi et notes'] as const;
+  const ONGLETS = ['Combat', 'Capacités', 'Actions', 'Équipement', 'Suivi et notes'] as const;
   let onglet = $state<(typeof ONGLETS)[number]>('Combat');
+  /** L'onglet Actions n'existe que pour une fiche de la refonte (L4.12, 1b). */
+  const onglets = $derived(ONGLETS.filter((o) => o !== 'Actions' || fiche.schemaVersion === 2));
   /** Capacités : usage en combat ou hors combat (L2.6). Hors combat = voies de VOIES_HORS_COMBAT. */
   let usage = $state<'combat' | 'hors'>('combat');
   let message = $state('');
@@ -117,6 +129,26 @@
 
   const pv = (n: number) => ecrire(modifierPV(fiche.id, n, vue.pv.max));
   const pp = (n: number) => vue.pp && ecrire(modifierPP(fiche.id, n, vue.pp.max));
+  /** Jauges de la refonte (L4.12) : bornées et Plongée → Corruption d'Âme par lib/fiche/actions-fiche.ts. */
+  async function jauge(cle: CleJauge, valeur: number) {
+    if (fiche.schemaVersion !== 2) return;
+    const { jauges, annonces } = changerJauge(fiche, cle, valeur);
+    await ecrire(modifierJauges(fiche.id, jauges));
+    if (!message && annonces.length) message = annonces.join(' ');
+  }
+  function finCombat() {
+    if (fiche.schemaVersion === 2) ecrire(modifierJauges(fiche.id, finDuCombat(fiche)));
+  }
+  /** Jet d'une action (15b) : attaque ou dégâts, au journal commun. */
+  async function lancer(libelle: string, formule: string) {
+    message = '';
+    try {
+      const jet = await lancerEtNoter(libelle, formule, fiche.nom);
+      if (jet) message = `${libelle} : ${texteJet(formule, jet)}`;
+    } catch (e) {
+      message = messageErreurPerso(e);
+    }
+  }
   function bourse() {
     const n = (s: string) => Number.parseInt(s, 10) || 0;
     ecrire(modifierPieces(fiche.id, { piecesOr: n(valeurs.or), piecesArgent: n(valeurs.argent), piecesBronze: n(valeurs.bronze) }));
@@ -300,6 +332,20 @@
           {/if}
         </div>
       {/if}
+      {#each vue.refonte?.jauges ?? [] as j (j.cle)}
+        <div class="ressource" aria-label={j.nom}>
+          <span class="etiquette nom-jauge">{j.nom}</span>
+          {#if j.max !== null}<div class="barre jauge" aria-hidden="true"><span style:width="{Math.round((100 * j.actuel) / Math.max(1, j.max))}%"></span></div>{:else}<span class="sans-barre"></span>{/if}
+          {#if modifiable}
+            <button class="petit" aria-label={`Retirer 1 ${j.nom}`} onclick={() => jauge(j.cle, j.actuel - 1)}>−</button>
+            <strong data-testid={`jauge-${j.cle}`}>{j.actuel}</strong>{#if j.max !== null}<span class="sur">/ {j.max}</span>{/if}
+            <button class="petit" aria-label={`Ajouter 1 ${j.nom}`} onclick={() => jauge(j.cle, j.actuel + 1)}>+</button>
+            {#if j.cle === 'plongee' && j.actuel > 0}<button class="petit discret" onclick={finCombat}>Fin du combat</button>{/if}
+          {:else}
+            <strong data-testid={`jauge-${j.cle}`}>{j.actuel}{j.max !== null ? ` / ${j.max}` : ''}</strong>
+          {/if}
+        </div>
+      {/each}
       {#if vue.pointsCercle.length}
         <p class="aide">Points de Cercle : {vue.pointsCercle.map((c) => `${c.nom} ${c.actuel}/${c.max}`).join(' · ')}</p>
       {/if}
@@ -324,7 +370,7 @@
   {/if}
 
   <div class="onglets" role="tablist" aria-label="Sections de la fiche">
-    {#each ONGLETS as o (o)}
+    {#each onglets as o (o)}
       <button class="onglet" role="tab" aria-selected={onglet === o} onclick={() => (onglet = o)}>{o}</button>
     {/each}
   </div>
@@ -411,6 +457,15 @@
     {:else if voiesMontrees.length === 0}
       <p class="aide">Aucune capacité hors combat pour l'instant. L'arbre du Vécu arrive avec la 2.1.</p>
     {/if}
+  {:else if onglet === 'Actions' && vue.refonte}
+    <ActionsRefonte
+      actions={vue.refonte.actions}
+      magie={vue.refonte.magie}
+      passifs={vue.refonte.passifs}
+      classe={fiche.schemaVersion === 2 ? (classeDeLaRefonte(fiche.refonte.classe) ?? null) : null}
+      {modifiable}
+      surLancer={lancer}
+    />
   {:else if onglet === 'Équipement'}
     {#if alertes.length}<ul class="alertes">{#each alertes as a (a)}<li>⚠ {a}</li>{/each}</ul>{/if}
     <div class="emplacements">
@@ -631,6 +686,19 @@
   }
   .barre.pp span {
     background: var(--couleur-accent-clair);
+  }
+  .etiquette.nom-jauge {
+    width: auto;
+    min-width: 52px;
+  }
+  .sans-barre {
+    flex: 1 1 120px;
+  }
+  .barre.jauge {
+    background: var(--couleur-accent-pale);
+  }
+  .barre.jauge span {
+    background: var(--couleur-or);
   }
   .barre.crans {
     background: var(--couleur-accent-pale);

@@ -4,6 +4,7 @@ import { CalculsPersonnage, decouperCapacite, statistiquesFiche, type Statistiqu
 import { capaciteParId, classeParId, constantes, donParId, mutations as tableMutations, raceParId, voieParId } from '../regles/donnees.ts';
 import type { Carac } from '../regles/fiche-calcul.ts';
 import { ficheCalculDepuisFiche } from '../regles/fiche-document.ts';
+import { actionsDeLaFiche, bonusDesPassifs, jaugesDeLaFiche, magieDeLaFiche, reservesDeLaFiche, type ActionAffichee, type JaugeAffichee, type MagieAffichee, type ModsDuPerso } from './actions-fiche.ts';
 
 /*
  * Ce que la fiche vivante affiche (lot L2.3), calculé d'un coup depuis le
@@ -17,8 +18,12 @@ import { ficheCalculDepuisFiche } from '../regles/fiche-document.ts';
  *
  * Fiche de la refonte (version 2, lot L4.11a) : les voies viennent de
  * src/regles/ (rangs pris dans `refonte.rangs`), sans points de Cercle ; la
- * Corruption d'Âme tient lieu de corruption majeure. Les actions et les
- * jauges s'afficheront au lot L4.12.
+ * Corruption d'Âme tient lieu de corruption majeure.
+ *
+ * Lot L4.12 (décisions du 21/10/2026) : une fiche de la refonte porte en
+ * plus ses jauges, ses actions et sa magie (lib/fiche/actions-fiche.ts) ;
+ * ses PP sont la réserve de la refonte (11a), ses PV max comptent le Pacte
+ * de sang ; DEF et initiative comptent les passifs permanents (12a).
  */
 
 export interface LigneCarac {
@@ -64,6 +69,8 @@ export interface VueFiche {
   mutations: { palier: number; nom: string; effet: string }[];
   corruptionMajeure: number;
   amesStockees: number;
+  /** Fiche de la refonte (L4.12) : jauges, actions, magie, passifs comptés ; null pour une fiche v1. */
+  refonte: { jauges: JaugeAffichee[]; actions: ActionAffichee[]; magie: MagieAffichee | null; passifs: string[] } | null;
 }
 
 /*
@@ -153,12 +160,30 @@ export function vueFiche(f: Fiche): VueFiche {
         })
     : [];
 
-  const pvMax = f.pvMax;
+  let pvMax = f.pvMax;
+  let pp = stats.ppMax === null ? null : { actuel: f.ppActuel ?? stats.ppMax, max: stats.ppMax };
+  let refonte: VueFiche['refonte'] = null;
+  let statsAffichees = stats;
+  if (f.schemaVersion === 2) {
+    const mods: ModsDuPerso = {
+      attaqueContact: stats.attaque.contact ?? 0,
+      attaqueDistance: stats.attaque.distance ?? 0,
+      attaqueMagique: stats.attaque.magique ?? 0,
+      mod: (k) => c.mod(k as Carac),
+      armure: f.equipement.torse?.type === 'armure',
+    };
+    const reserves = reservesDeLaFiche(f);
+    pvMax += reserves.pvEnPlus;
+    pp = reserves.pp > 0 ? { actuel: Math.min(f.ppActuel ?? reserves.pp, reserves.pp), max: reserves.pp } : null;
+    const passifs = bonusDesPassifs(f, mods);
+    statsAffichees = { ...stats, ca: stats.ca + passifs.DEF, initiative: stats.initiative + passifs.initiative };
+    refonte = { jauges: jaugesDeLaFiche(f), actions: actionsDeLaFiche(f, mods), magie: magieDeLaFiche(f), passifs: passifs.detail };
+  }
   return {
     titre: `${race?.nom ?? '—'} · ${classeRefonte?.nom ?? classe?.nom ?? '—'} · niveau ${f.niveau}`,
-    stats,
-    pv: { actuel: f.pvActuel ?? pvMax, max: pvMax },
-    pp: stats.ppMax === null ? null : { actuel: f.ppActuel ?? stats.ppMax, max: stats.ppMax },
+    stats: statsAffichees,
+    pv: { actuel: Math.min(f.pvActuel ?? pvMax, pvMax), max: pvMax },
+    pp,
     deVie: c.facesDeVie(),
     caracs: constantes.caracs.map((k) => ({ code: k.code as Carac, nom: k.nom, valeur: f.caracs[k.code as Carac] ?? 10, mod: stats.mods[k.code as Carac] })),
     competences: (Object.entries(constantes.competencesParCarac) as [Carac, string[]][]).flatMap(([carac, noms]) =>
@@ -185,5 +210,6 @@ export function vueFiche(f: Fiche): VueFiche {
     }),
     corruptionMajeure: f.schemaVersion === 1 ? f.corruptionMajeure : f.refonte.jauges.corruptionAme,
     amesStockees: f.amesStockees,
+    refonte,
   };
 }

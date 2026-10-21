@@ -1,4 +1,6 @@
-import { LIMITE_NOTES, progressionVierge, schemaFicheV1, VERSION_FICHE, type Fiche, type FicheV1, type ObjetFiche } from '../schemas/fiche.ts';
+import { choixRequis } from '../effets/profil.ts';
+import { LIMITE_NOTES, progressionVierge, schemaFicheV1, VERSION_FICHE, type Fiche, type FicheV1, type FicheV2, type ObjetFiche } from '../schemas/fiche.ts';
+import { actionParId, classeParId as classeRefonteParId, voieParId as voieRefonteParId } from '../../regles/index.ts';
 import { ficheV1VersCalcul } from './conversion-v1.ts';
 import type { FicheCalcul } from './fiche-calcul.ts';
 
@@ -171,9 +173,12 @@ export function ficheDepuisV1(v1: FicheBrute, proprietaireUid: string, creeLe: n
  * Document de la 2.0 → fiche de calcul (L1.3). Une fiche de la refonte
  * (version 2, lot L4.11a) n'a plus de voies v1 : les calculs v1 n'y voient
  * aucune capacité, aucun sort ni Cercle ; la Plongée tient lieu de
- * corruption de combat, la Corruption d'Âme de corruption majeure. Les
- * passifs de la refonte (DEF, initiative…) seront lus du profil avec
- * l'affichage des actions (lot L4.12).
+ * corruption de combat, la Corruption d'Âme de corruption majeure.
+ *
+ * Spécimen d'élite (décision 14a du 21/10/2026, lot L4.12) : la
+ * caractéristique choisie gagne son bonus dans les calculs (modificateur,
+ * attaque, PV…), sans changer la valeur stockée. Les passifs de DEF et
+ * d'initiative s'ajoutent à l'affichage (lib/fiche/vue-fiche.ts).
  */
 export function ficheCalculDepuisFiche(f: Fiche): FicheCalcul {
   const v1 = f.schemaVersion === 1 ? f : null;
@@ -182,7 +187,7 @@ export function ficheCalculDepuisFiche(f: Fiche): FicheCalcul {
     classe: f.classe,
     race: f.race,
     raceVariante: f.raceVariante ?? null,
-    caracs: f.caracs,
+    caracs: f.schemaVersion === 1 ? f.caracs : caracsDeLaRefonte(f),
     capacites: v1?.capacites ?? [],
     capacitesRace: f.capacitesRace,
     capacitesRaceChoix: f.capacitesRaceChoix,
@@ -208,4 +213,15 @@ export function ficheCalculDepuisFiche(f: Fiche): FicheCalcul {
     grimoireSortsPrepares: v1?.grimoireSortsPrepares ?? [],
     cercleSpecialisation: v1?.cercleSpecialisation ?? null,
   };
+}
+
+/** Caractéristiques d'une fiche de la refonte, Spécimen d'élite compris (14a) : seulement si une voie prise le donne. */
+export function caracsDeLaRefonte(f: FicheV2): FicheV2['caracs'] {
+  const r = f.refonte;
+  const classe = classeRefonteParId.get(r.classe);
+  if (!classe || !r.caracEnPlus) return f.caracs;
+  const choix = { niveau: f.niveau, modMagie: 0, rangs: r.rangs, mineurs: r.mineurs };
+  const regle = choixRequis(classe, choix, { voies: voieRefonteParId, actions: actionParId }).caracEnPlus;
+  if (!regle || !regle.parmi.includes(r.caracEnPlus)) return f.caracs;
+  return { ...f.caracs, [r.caracEnPlus]: (f.caracs[r.caracEnPlus] ?? 10) + regle.valeur };
 }

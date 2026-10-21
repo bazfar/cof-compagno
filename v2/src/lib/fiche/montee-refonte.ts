@@ -26,9 +26,9 @@ import { classeParId } from '../../regles/index.ts';
  * Sacré) ; la valeur du moment gagne le même écart, sans rien perdre de ce
  * qui a été dépensé. Plongée et Corruption d'Âme ne bougent pas.
  *
- * PV et PP : comme en v1 (écart de pvCalcule et de PP max entre avant et
- * après). Les PP restent ceux de la fiche v1 tant que la fiche n'affiche
- * pas la réserve de la refonte (lot L4.12).
+ * PV : comme en v1 (écart de pvCalcule entre avant et après). PP : la
+ * réserve de la refonte (décision 11a du lot L4.12, 4 + 2 × niveau +
+ * 2 × mod), les PP du moment gagnant l'écart de la réserve.
  *
  * Écriture (actions/montee.ts) : `appliquerMonteeRefonte` est rejouée sur
  * la fiche relue dans une transaction ; jauges relues comprises, puisque le
@@ -292,12 +292,13 @@ function construire(lue: FicheV2, m: MonteeRefonte, requis: number): MonteeRefon
   const pvGagnes = calcApres.pvCalcule() - calcAvant.pvCalcule();
   const pvMax = Math.max(1, f.pvMax + pvGagnes);
   const pvActuel = Math.max(0, Math.min(pvMax, (f.pvActuel ?? f.pvMax) + pvGagnes));
-  const ppAvant = calcAvant.calculerPPMax();
-  const ppApres = calcApres.calculerPPMax();
-  const ppActuel = ppApres === null ? f.ppActuel : Math.max(0, Math.min(ppApres, (f.ppActuel ?? ppAvant ?? 0) + ppApres - (ppAvant ?? 0)));
+  const ppAvant = R.profilDe(classe, f.refonte, R.contexteDe(f, classe)).reservePP;
+  const ppApres = R.profilDe(classe, avecPV.refonte, R.contexteDe(avecPV, classe)).reservePP;
+  const ppActuel = ppApres <= 0 ? undefined : Math.max(0, Math.min(ppApres, Math.min(f.ppActuel ?? ppAvant, ppAvant) + ppApres - ppAvant));
 
+  const { ppActuel: _pp, ...sansPP } = avecPV;
   const fiche = schemaFicheV2.parse(versFirestore({
-    ...avecPV,
+    ...sansPP,
     pvMax,
     pvActuel,
     ...(ppActuel === null || ppActuel === undefined ? {} : { ppActuel }),

@@ -1,8 +1,9 @@
 import { CalculsPersonnage } from '../regles/calculs.ts';
+import { ficheCalculDepuisFiche } from '../regles/fiche-document.ts';
 import * as C from '../regles/creation.ts';
 import type { ClasseRefonte } from '../schemas/classes.ts';
 import { octroisVierges, type FicheV2, type Octrois, type RefonteFiche } from '../schemas/fiche.ts';
-import { avertissementsRefonte, classeRefonteDe, convertirFiche, erreursRefonte, refonteVierge, type ContexteRefonte } from './refonte.ts';
+import { avertissementsRefonte, classeRefonteDe, contexteDe, convertirFiche, erreursRefonte, profilDe, refonteVierge, type ContexteRefonte } from './refonte.ts';
 
 /*
  * Création d'un personnage de la refonte (lot L4.11b, décision 10a du
@@ -67,5 +68,21 @@ export function ficheV2DepuisBrouillon(b: C.Brouillon, proprietaireUid: string, 
   if (!classe) throw new C.RefusCreation('Cette classe n’est pas encore passée à la refonte.');
   const erreurs = erreursCreationRefonte(b);
   if (erreurs.length) throw new C.RefusCreation(erreurs.join(' '));
-  return convertirFiche(C.ficheDepuisBrouillon(sansChoixV1(b), proprietaireUid, creeLe), refonteDuBrouillon(b)!);
+  const v1 = C.ficheDepuisBrouillon(sansChoixV1(b), proprietaireUid, creeLe);
+  const converti = convertirFiche(v1, refonteDuBrouillon(b)!);
+  // L4.12 : le Spécimen d'élite (14a) compte dans les PV — jets de PV recalculés avec le mod de CON
+  // effectif, comme à la montée (décision 2a) —, et les PP sont la réserve de la refonte (11a).
+  const modCON = new CalculsPersonnage(ficheCalculDepuisFiche(converti)).mod('CON');
+  const v2 = { ...converti, pvHistorique: converti.pvHistorique.map((j) => (typeof j.jet === 'number' ? { ...j, modCON, total: Math.max(1, j.jet + modCON) } : j)) };
+  const pvGagnes = pvCalcules(v2) - pvCalcules(v1);
+  const pvMax = Math.max(1, v2.pvMax + pvGagnes);
+  const pvActuel = Math.max(0, Math.min(pvMax, (v2.pvActuel ?? v2.pvMax) + pvGagnes));
+  const reserve = profilDe(classe, v2.refonte, contexteDe(v2, classe)).reservePP;
+  const { ppActuel: _pp, ...sansPP } = v2;
+  if (reserve <= 0) return { ...sansPP, pvMax, pvActuel };
+  // Reprise d'une fiche v1 : ses PP actuels, dans la réserve ; sinon, réserve pleine.
+  const ppActuel = b.reprise && b.reprise.report.ppActuel !== null ? Math.max(0, Math.min(reserve, b.reprise.report.ppActuel)) : reserve;
+  return { ...sansPP, pvMax, pvActuel, ppActuel };
 }
+
+const pvCalcules = (f: Parameters<typeof ficheCalculDepuisFiche>[0]) => new CalculsPersonnage(ficheCalculDepuisFiche(f)).pvCalcule();

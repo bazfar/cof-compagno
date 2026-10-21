@@ -48,6 +48,7 @@ const refonte = vi.hoisted(() => ({
   convertirPerso: vi.fn(async (_id: string, _r: unknown) => ({}) as unknown),
   refaireVoiesPerso: vi.fn(async (_id: string, _r: unknown) => ({}) as unknown),
   modifierOctrois: vi.fn(async (_id: string, _o: unknown) => {}),
+  modifierJauges: vi.fn(async (_id: string, _j: unknown) => {}),
 }));
 vi.mock('../../src/lib/actions/refonte', () => refonte);
 vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPersos);
@@ -595,5 +596,88 @@ describe('refonte (L4.11b)', () => {
     expect(badges('Rouvert')).toEqual(['conversion rouverte']);
     expect(badges('A convertir')).toEqual(['à convertir']);
     expect(badges('Chevalier')).toEqual([]);
+  });
+});
+
+describe('fiche de la refonte : jauges et actions (L4.12)', () => {
+  const kylhian = () => {
+    const v1 = reelle('Kylhian', 'p-k');
+    const f = RF.convertirFiche(v1, {
+      ...RF.refonteVierge(classeParId.get('magicien')!, v1.niveau),
+      ecole: 'evocation', elementDepart: 'feu', rangs: { 'magicien.ecole': 2, 'magicien.virtuose': 1 },
+      mineurs: ['mineur.trait-arcanique', 'mineur.lumiere', 'mineur.main-du-mage'], mineurPalierII: 'mineur.trait-arcanique',
+    });
+    return { ...f, id: 'p-k' };
+  };
+  const karlach = (jauges: Record<string, number> = {}) => {
+    const f = RF.convertirFiche(reelle('Karlach', 'p-c'), { ...RF.refonteVierge(classeParId.get('guerrier')!, 3), rangs: { 'guerrier.soldat': 3, 'guerrier.peuple': 2 } });
+    return { ...f, id: 'p-c', refonte: { ...f.refonte, jauges: { ...f.refonte.jauges, ...jauges } } };
+  };
+
+  it('onglet Actions seulement pour une fiche de la refonte (1b)', () => {
+    const v1 = render(FicheVivante, { props: { fiche: reelle('Karlach', 'p-c'), modifiable: true } });
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Combat', 'Capacités', 'Équipement', 'Suivi et notes']);
+    v1.unmount();
+    render(FicheVivante, { props: { fiche: karlach(), modifiable: true } });
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Combat', 'Capacités', 'Actions', 'Équipement', 'Suivi et notes']);
+  });
+
+  it('jauges dans l’en-tête (7a) : − et + écrivent seulement les jauges, bornées', async () => {
+    render(FicheVivante, { props: { fiche: karlach(), modifiable: true } });
+    expect(screen.getByTestId('jauge-endurance').textContent).toBe('4');
+    await fireEvent.click(screen.getByRole('button', { name: 'Retirer 1 Endurance' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Ajouter 1 Endurance' }));
+    expect(refonte.modifierJauges.mock.calls.map((c) => (c[1] as { endurance: number }).endurance)).toEqual([3, 4]);
+    expect(refonte.modifierJauges.mock.calls[0]![0]).toBe('p-c');
+  });
+
+  it('Plongée au-delà de 6 : +1 Corruption d’Âme et l’annonce du palier de mutation (9a, 10a) ; « Fin du combat »', async () => {
+    render(FicheVivante, { props: { fiche: karlach({ plongee: 6, corruptionAme: 0 }), modifiable: true } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Ajouter 1 Plongée' }));
+    await waitFor(() => expect(refonte.modifierJauges).toHaveBeenCalledWith('p-c', expect.objectContaining({ plongee: 7, corruptionAme: 1 })));
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('La Plongée dépasse 6 : +1 Corruption d’Âme. Palier de mutation 1 franchi : mutation à tirer avec le MJ.'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Fin du combat' }));
+    await waitFor(() => expect(refonte.modifierJauges).toHaveBeenLastCalledWith('p-c', expect.objectContaining({ plongee: 0 })));
+  });
+
+  it('lecture seule : jauges affichées, sans bouton', () => {
+    render(FicheVivante, { props: { fiche: karlach({ plongee: 2 }), modifiable: false } });
+    expect(screen.getByTestId('jauge-plongee').textContent).toBe('2');
+    expect(screen.queryByRole('button', { name: /^Ajouter 1 / })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Fin du combat' })).toBeNull();
+  });
+
+  it('Actions : un clic lance l’attaque magique et les dégâts au journal (15b) ; la sauvegarde montre son DD', async () => {
+    const f = kylhian();
+    render(FicheVivante, { props: { fiche: f, modifiable: true } });
+    await fireEvent.click(screen.getByRole('tab', { name: 'Actions' }));
+    const trait = within(screen.getByRole('listitem', { name: 'Trait arcanique' }));
+    expect(trait.getByText('palier II')).toBeTruthy();
+    const bouton = trait.getByRole('button', { name: 'Lancer Trait arcanique : attaque magique' });
+    await fireEvent.click(bouton);
+    const formule = bouton.textContent!.replace('Attaque ', '');
+    expect(journal.lancerEtNoter).toHaveBeenCalledWith('Trait arcanique : attaque magique', formule, f.nom);
+    await fireEvent.click(trait.getByRole('button', { name: 'Lancer Trait arcanique : dégâts' }));
+    expect(journal.lancerEtNoter).toHaveBeenLastCalledWith('Trait arcanique : dégâts', '1d6', f.nom);
+    expect(within(screen.getByRole('listitem', { name: 'Choc' })).getByText(/^DD \d+, sauvegarde de FOR$/)).toBeTruthy();
+  });
+
+  it('Actions : hors combat (4a), seulement ce qui a un usage hors combat, avec son coût réduit ; tri par voie (2a)', async () => {
+    render(FicheVivante, { props: { fiche: kylhian(), modifiable: true } });
+    await fireEvent.click(screen.getByRole('tab', { name: 'Actions' }));
+    expect(screen.getByRole('heading', { name: 'Attaques d’arme' })).toBeTruthy();
+    await fireEvent.click(screen.getByRole('button', { name: 'Par voie' }));
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toContain('Voie de l’école');
+    await fireEvent.click(screen.getByRole('button', { name: 'Hors combat' }));
+    expect(screen.queryByRole('listitem', { name: 'Attaque' })).toBeNull();
+    expect(within(screen.getByRole('listitem', { name: 'Choc' })).getByText(/2 PP hors combat/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^Lancer / })).toBeNull();
+  });
+
+  it('lecture seule : les actions sans bouton de jet', async () => {
+    render(FicheVivante, { props: { fiche: kylhian(), modifiable: false } });
+    await fireEvent.click(screen.getByRole('tab', { name: 'Actions' }));
+    expect(screen.queryByRole('button', { name: /^Lancer / })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Magie' })).toBeTruthy();
   });
 });

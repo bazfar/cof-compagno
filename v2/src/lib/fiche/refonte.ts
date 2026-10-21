@@ -297,6 +297,12 @@ export const NOMS_ECOLES: Readonly<Record<string, string>> = {
   invocation: 'Invocation',
   illusion: 'Illusion',
   enchantement: 'Enchantement',
+  // Cercles du Prêtre et Chant du Barde (lot L4.12 : noms affichés dans l'onglet Actions).
+  guerison: 'Guérison',
+  foi: 'Foi',
+  bannissement: 'Bannissement',
+  jugement: 'Jugement',
+  chant: 'Chant',
 };
 export const nomEcole = (id: string): string => NOMS_ECOLES[id] ?? id;
 export const nomElement = (id: string): string => elementParId.get(id)?.nom ?? id;
