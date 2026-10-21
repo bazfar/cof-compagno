@@ -2,7 +2,7 @@ import { lancerFormule } from '../regles/des';
 import type { Action, Duree, Effet, Element, Palier, Sauvegarde } from '../schemas/effets';
 import type { FicheElement } from '../schemas/elements';
 import type { EtatRefonte } from '../schemas/etats';
-import { coutSort, ddSort, seuilEchec, type Maitrise } from './cout';
+import { coutSort, ddSort, MAITRISES, seuilEchec, type CoutCalcule, type Maitrise } from './cout';
 import { actionAuPalier } from './paliers';
 
 /*
@@ -70,6 +70,8 @@ export interface CibleEnJeu extends Combattant {
 export interface LanceurEnJeu extends Combattant {
   modMagie: number;
   attaqueMagique: number;
+  /** Niveau du lanceur (dés des sorts mineurs) ; 1 par défaut. */
+  niveau?: number;
 }
 
 export interface Catalogue {
@@ -189,6 +191,28 @@ function avantageAttaque(lanceur: Combattant, cible: Combattant, cat: Catalogue)
   return (av ? 1 : 0) - (des ? 1 : 0);
 }
 
+const NOM_MAITRISE: Record<Maitrise, string> = { nonMaitrise: 'Non maîtrisé', initie: 'Initié', adepte: 'Adepte', maitre: 'Maître' };
+
+/**
+ * Coût fixe d'une capacité (Cataclysme : 6 PP). Le moteur ne paie que les
+ * PP et les PV ; les ressources de classe (Endurance, Sacré…) viendront avec
+ * les classes qui les utilisent.
+ */
+function coutFixe(cout: readonly { ressource: string; montant: number }[], surcharge?: boolean): CoutCalcule {
+  if (surcharge) return { ok: false, raison: 'seul un verbe se surcharge' };
+  const autre = cout.find((c) => c.ressource !== 'pp');
+  if (autre) return { ok: false, raison: `ressource ${autre.ressource} : pas encore gérée par le moteur` };
+  const pp = cout.reduce((s, c) => s + c.montant, 0);
+  return { ok: true, pp, palierLance: 'I', detail: [{ terme: 'base', valeur: pp }] };
+}
+
+/** Dé d'un sort mineur selon le niveau (validé) : 1d6 (1 à 4), 1d8 (5 à 8), 1d10 (9 à 12) ; `crans` le monte (Perfection). */
+export function deMineur(niveau: number, crans = 0): string {
+  const echelle = ['1d6', '1d8', '1d10', '1d12'];
+  const base = niveau <= 4 ? 0 : niveau <= 8 ? 1 : 2;
+  return echelle[Math.min(base + crans, echelle.length - 1)]!;
+}
+
 /** Zone : un seul jet de dégâts pour toutes les cibles (décision 2a du 21/10/2026). */
 const UN_JET_PAR_ZONE = true;
 
@@ -210,21 +234,25 @@ export function degatsReduits(base: number, facteurs: readonly number[]): number
 export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   const alea = l.alea ?? Math.random;
   if (l.secondElement) return { ok: false, raison: 'les combinaisons de deux éléments arrivent avec leurs signatures (lots des classes)' };
-  const cout = coutSort(l.action, {
-    palier: l.palier,
-    surcharge: l.surcharge,
-    element: l.element?.maitrise ?? null,
-    ecole: l.ecole,
-  });
+  const cout = l.action.cout
+    ? coutFixe(l.action.cout, l.surcharge)
+    : coutSort(l.action, {
+        palier: l.palier,
+        surcharge: l.surcharge,
+        element: l.element?.maitrise ?? null,
+        ecole: l.ecole,
+      });
   if (!cout.ok) return cout;
   if (l.variante !== undefined && !l.action.variantes.some((v) => v.id === l.variante && v.palier === cout.palierLance))
     return { ok: false, raison: `${l.action.id} n'a pas de variante ${l.variante} au palier ${cout.palierLance}` };
   const action = actionAuPalier(l.action, cout.palierLance, l.variante);
-  if (action.effets.some((e) => e.type === 'invocation' && e.parElement)) {
-    // Serviteurs (validé) : celui d'un élément au moins Initié.
-    if (!l.element) return { ok: false, raison: `${action.id} s'invoque avec un élément` };
-    if (l.element.maitrise === 'nonMaitrise') return { ok: false, raison: 'un serviteur s’invoque avec un élément au moins Initié' };
+  if (action.elementMin) {
+    // Serviteur : un élément au moins Initié (validé) ; Cataclysme : un élément Maître.
+    if (!l.element) return { ok: false, raison: `${action.id} demande un élément` };
+    if (MAITRISES.indexOf(l.element.maitrise) < MAITRISES.indexOf(action.elementMin))
+      return { ok: false, raison: `${action.id} demande un élément au moins ${NOM_MAITRISE[action.elementMin]}` };
   }
+  if (action.effets.some((e) => e.type === 'invocation' && e.parElement) && !l.element) return { ok: false, raison: `${action.id} s'invoque avec un élément` };
   const dd = ddSort(l.lanceur.modMagie, l.ecole ?? 'adepte');
   const jets: JetNote[] = [];
   const changements: Changement[] = [];
@@ -377,11 +405,12 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   const appliquer = (e: Effet, indice: number, c: CibleEnJeu, i: Issue, sauvegardeEffet?: Sauvegarde) => {
     if (!conditionRemplie(e, c, i, sauvegardeEffet)) return;
     if (e.type === 'degats') {
+      const formule = e.progression === 'mineur' ? deMineur(l.lanceur.niveau ?? 1) : e.des;
       let jet: { des: number[]; total: number };
       if (e.vise === 'zone' && UN_JET_PAR_ZONE) {
-        if (!jetsZone.has(indice)) jetsZone.set(indice, lancerDes(e.des, alea));
+        if (!jetsZone.has(indice)) jetsZone.set(indice, lancerDes(formule, alea));
         jet = jetsZone.get(indice)!;
-      } else jet = lancerDes(e.des, alea);
+      } else jet = lancerDes(formule, alea);
       let base = jet.total + (e.plusMod ? l.lanceur.modMagie : 0);
       const des = [...jet.des];
       if (sang && indice === premierDegats) {

@@ -48,6 +48,7 @@ export const schemaTypeAction = z.enum(['action', 'reaction', 'gratuite', 'aucun
 
 /** Fréquence d'usage. */
 export const schemaLimite = z.enum(['volonte', '1x/round', '1x/combat', '1x/scene', '1x/scenario']);
+export type Limite = z.infer<typeof schemaLimite>;
 
 /** Ressources de classe (doc de cadre, « Ressources de classe (validé) »), plus PV et âmes. */
 export const RESSOURCES = [
@@ -84,6 +85,11 @@ export const schemaTypeDegats = z.enum([
   'chaotique',
   ...ELEMENTS,
 ]);
+
+/** Échelle de maîtrise d'un élément ou d'une école (validé). */
+export const MAITRISES = ['nonMaitrise', 'initie', 'adepte', 'maitre'] as const;
+export const schemaMaitrise = z.enum(MAITRISES);
+export type Maitrise = z.infer<typeof schemaMaitrise>;
 
 /** Sauvegardes de la refonte : FOR, DEX, CON et Volonté (doc de cadre). */
 export const schemaSauvegarde = z.enum(['FOR', 'DEX', 'CON', 'Volonte']);
@@ -163,6 +169,11 @@ const schemaEffetDegats = z.strictObject({
    * moitié de 4 à 6).
    */
   attenuation: z.strictObject({ pleinsJusqua: z.number().int().min(1).max(20), auDela: z.literal('moitie') }).optional(),
+  /**
+   * Sort mineur (validé) : le dé suit le niveau du lanceur, 1d6 aux niveaux
+   * 1 à 4, 1d8 de 5 à 8, 1d10 de 9 à 12 (lib/effets/resolution.ts, deMineur).
+   */
+  progression: z.literal('mineur').optional(),
   ...champsCommuns,
 });
 
@@ -428,6 +439,8 @@ export const schemaAction = z
     limite: schemaLimite.default('volonte'),
     /** Coût fixe. Absent pour un verbe (formule) et un sort mineur (0). */
     cout: z.array(schemaCout).optional(),
+    /** Exige un élément au moins à ce rang (Serviteur : Initié ; Cataclysme : Maître). */
+    elementMin: schemaMaitrise.optional(),
     declencheur: schemaDeclencheur.optional(),
     ciblage: schemaCiblage,
     zone: schemaZone.nullable().default(null),
@@ -466,6 +479,10 @@ export const schemaAction = z
     if ((a.nature === 'reaction' || a.action === 'reaction') && !a.declencheur) ko('une réaction a un déclencheur', ['declencheur']);
     if (a.declencheur && a.action !== 'reaction') ko('seule une réaction a un déclencheur', ['declencheur']);
     if (a.nature === 'passif' && a.action !== 'aucune') ko('un passif ne coûte aucune action', ['action']);
+    if (a.elementMin && !a.element) ko('une action qui exige un élément doit en accepter un', ['elementMin']);
+    a.effets.forEach((e, i) => {
+      if (e.type === 'degats' && e.progression === 'mineur' && a.nature !== 'mineur') ko('seul un sort mineur suit la progression des sorts mineurs', ['effets', i, 'progression']);
+    });
     if (a.horsCombat && !a.etiquettes.some((e) => e !== 'combat')) ko('un usage hors combat demande l’étiquette exploration ou social', ['etiquettes']);
     if (a.effets.length === 0 && !a.manuel) ko('une action sans effet est manuelle, avec sa raison', ['effets']);
     if (a.persistance.type === 'concentration' && a.persistance.duree === undefined && a.persistance.maintien === undefined)

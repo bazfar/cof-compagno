@@ -1,4 +1,4 @@
-import type { Action, Palier } from '../schemas/effets';
+import { MAITRISES, type Action, type Maitrise, type Palier } from '../schemas/effets';
 import { paliersDefinis, palierSuivant } from './paliers';
 
 /*
@@ -27,8 +27,7 @@ import { paliersDefinis, palierSuivant } from './paliers';
  * (maquette 2.0, écran Joueur · grimoire).
  */
 
-export const MAITRISES = ['nonMaitrise', 'initie', 'adepte', 'maitre'] as const;
-export type Maitrise = (typeof MAITRISES)[number];
+export { MAITRISES, type Maitrise };
 
 export interface ParametresLancer {
   /** Palier auquel le lanceur a accès (lib/effets/paliers.ts, palierAtteint). */

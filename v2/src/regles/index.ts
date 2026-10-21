@@ -2,6 +2,9 @@ import { schemaAction, type Action, type Effet } from '../lib/schemas/effets';
 import { schemaFicheElement, type FicheElement } from '../lib/schemas/elements';
 import { schemaEtatRefonte, type EtatRefonte } from '../lib/schemas/etats';
 import { schemaInvocation, type Invocation } from '../lib/schemas/invocations';
+import { schemaClasseRefonte, schemaVoieRefonte, type ClasseRefonte, type VoieRefonte } from '../lib/schemas/classes';
+import { ACTIONS_MAGICIEN, MAGICIEN, VOIES_MAGICIEN } from './classes/magicien';
+import { MINEURS } from './mineurs';
 import { ABJURATION } from './ecoles/abjuration';
 import { INVOCATION } from './ecoles/invocation';
 import { INVOCATIONS } from './invocations';
@@ -36,7 +39,10 @@ export const elementParId: ReadonlyMap<string, FicheElement> = indexer(ELEMENTS_
 
 export const invocationParId: ReadonlyMap<string, Invocation> = indexer(INVOCATIONS, (s) => schemaInvocation.parse(s), 'Invocation');
 
-export const actionParId: ReadonlyMap<string, Action> = indexer([...EVOCATION, ...ABJURATION, ...INVOCATION], (s) => schemaAction.parse(s), 'Action');
+export const actionParId: ReadonlyMap<string, Action> = indexer([...EVOCATION, ...ABJURATION, ...INVOCATION, ...MINEURS, ...ACTIONS_MAGICIEN], (s) => schemaAction.parse(s), 'Action');
+
+export const voieParId: ReadonlyMap<string, VoieRefonte> = indexer(VOIES_MAGICIEN, (s) => schemaVoieRefonte.parse(s), 'Voie');
+export const classeParId: ReadonlyMap<string, ClasseRefonte> = indexer([MAGICIEN], (s) => schemaClasseRefonte.parse(s), 'Classe');
 export const actions: readonly Action[] = [...actionParId.values()];
 
 /** Identifiants d'états cités par une liste d'effets. */
@@ -94,3 +100,23 @@ if (sansCreature.length) throw new Error(`Invocations inconnues : ${sansCreature
 export function verbesDeLEcole(ecole: string): Action[] {
   return actions.filter((a) => a.nature === 'verbe' && a.ecole === ecole).sort((a, b) => a.rang - b.rang);
 }
+
+/**
+ * Ce qu'une classe ou une voie cite et qui n'existe pas (lot L4.4b1) : voie
+ * d'une classe, action d'un rang, sort mineur, école de création qui n'a pas
+ * ses cinq verbes.
+ */
+export function referencesManquantes(): string[] {
+  const manque: string[] = [];
+  for (const k of classeParId.values()) {
+    for (const v of [...k.voies, ...k.voiesExclusives.flat()]) if (!voieParId.has(v)) manque.push(`voie ${v} (classe ${k.id})`);
+    for (const m of k.mineurs.liste) if (actionParId.get(m)?.nature !== 'mineur') manque.push(`sort mineur ${m} (classe ${k.id})`);
+    for (const e of k.creation.ecoles)
+      if (verbesDeLEcole(e).map((a) => a.rang).join() !== '1,2,3,4,5') manque.push(`les cinq verbes de l'école ${e} (classe ${k.id})`);
+  }
+  for (const v of voieParId.values()) for (const r of v.rangs) for (const a of r.actions) if (!actionParId.has(a)) manque.push(`action ${a} (${v.id}, rang ${r.rang})`);
+  return manque;
+}
+
+const manquantes = referencesManquantes();
+if (manquantes.length) throw new Error(`Références manquantes : ${manquantes.join(', ')}`);

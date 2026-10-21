@@ -89,6 +89,7 @@ export const INVOCATION: ActionSaisie[] = [
     persistance: { type: 'duree', duree: 'finCombat' },
     effets: [{ type: 'invocation', creature: 'serviteur', parElement: true, duree: 'finCombat' }],
     element: { application: 'ciblePrincipale' },
+    elementMin: 'initie',
     horsCombat: { paliers: ['Porter, garder, ouvrir.'] },
   },
   {
