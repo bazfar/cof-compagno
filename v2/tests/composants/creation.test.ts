@@ -16,7 +16,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  *
  * L4.11b (décision 10a) : le Guerrier, le Magicien, l'Enchanteur, le
  * Prêtre et le Barde créent désormais une fiche de la refonte. Le parcours
- * v1 se teste avec le Chevalier, pas encore refondu ; celui de la refonte
+ * v1 se teste avec le Nécromancien, pas encore refondu (le Chevalier l'est
+ * depuis L4.13) ; celui de la refonte
  * a sa propre partie, plus bas.
  */
 
@@ -48,16 +49,16 @@ const { ficheDepuisV1 } = await import('../../src/lib/regles/fiche-document');
 const bouton = (nom: string | RegExp) => screen.getByRole('button', { name: nom });
 const etape = (nom: string) => fireEvent.click(bouton(new RegExp(`^${nom}`)));
 
-/** Chevalier nain niveau 1 (classe pas encore refondue : parcours v1), rempli à la main comme le ferait un joueur. */
-async function remplirChevalierNain(nom = 'Borin') {
+/** Nécromancien nain niveau 1 (classe pas encore refondue : parcours v1), rempli à la main comme le ferait un joueur. */
+async function remplirNecromancienNain(nom = 'Borin') {
   await fireEvent.input(screen.getByLabelText('Nom'), { target: { value: nom } });
   await fireEvent.click(bouton('Nain'));
-  await fireEvent.click(bouton('Chevalier'));
+  await fireEvent.click(bouton('Nécromancien'));
   await etape('Caractéristiques');
   for (const c of ['FOR', 'FOR', 'FOR', 'CON', 'CON', 'CON']) await fireEvent.click(bouton(`Ajouter un point en ${c}`));
   await etape('Voies');
-  await fireEvent.click(bouton('Prendre chevalier.noble.1'));
-  await fireEvent.click(bouton('Prendre chevalier.commandant.1'));
+  await fireEvent.click(bouton('Prendre necromancien.sang.1'));
+  await fireEvent.click(bouton('Prendre necromancien.outre-tombe.1'));
 }
 
 /** Guerrier nain niveau 1 de la refonte : identité, caractéristiques, deux rangs de Soldat. */
@@ -87,10 +88,10 @@ beforeEach(() => {
 });
 
 describe('assistant de création', () => {
-  it('un chevalier nain créé de bout en bout : fiche complète écrite, brouillon effacé', async () => {
+  it('un nécromancien nain créé de bout en bout : fiche complète écrite, brouillon effacé', async () => {
     const surCree = vi.fn();
     render(AssistantCreation, { props: { surCree, surAnnuler: () => {} } });
-    await remplirChevalierNain();
+    await remplirNecromancienNain();
     expect(screen.getByTestId('points-voie').textContent).toBe('0');
 
     await etape('Récapitulatif');
@@ -101,9 +102,9 @@ describe('assistant de création', () => {
     const [id, fiche] = actions.creerPerso.mock.calls[0]!;
     expect(id).toBe('p-nouveau');
     expect(fiche).toMatchObject({
-      nom: 'Borin', proprietaireUid: 'alice', classe: 'chevalier', race: 'nain', niveau: 1, capacitesRace: [1],
-      capacites: [{ id: 'chevalier.noble.1' }, { id: 'chevalier.commandant.1' }],
-      caracs: { FOR: 15, CON: 13 }, pvMax: 15, pvActuel: 15,
+      nom: 'Borin', proprietaireUid: 'alice', classe: 'necromancien', race: 'nain', niveau: 1, capacitesRace: [1],
+      capacites: [{ id: 'necromancien.sang.1' }, { id: 'necromancien.outre-tombe.1' }],
+      caracs: { FOR: 13, CON: 13 }, pvMax: 9, pvActuel: 9,
     });
     // Bug v1 corrigé : l'assistant repart d'un brouillon vide.
     expect(localStorage.getItem('cof2:creation:t1:alice')).not.toContain('Borin');
@@ -113,8 +114,8 @@ describe('assistant de création', () => {
 
   it('un geste refusé par les règles affiche la raison, sans rien changer', async () => {
     render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
-    await remplirChevalierNain();
-    await fireEvent.click(bouton('Prendre chevalier.protecteur.1'));
+    await remplirNecromancienNain();
+    await fireEvent.click(bouton('Prendre necromancien.sombre-magie.1'));
     expect(screen.getByRole('alert').textContent).toBe('Pas assez de points de capacité.');
     expect(screen.getByTestId('points-voie').textContent).toBe('0');
   });
@@ -131,7 +132,7 @@ describe('assistant de création', () => {
 
   it('le brouillon survit à un rechargement ; « Recommencer » le vide', async () => {
     const premier = render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
-    await remplirChevalierNain('Gimra');
+    await remplirNecromancienNain('Gimra');
     premier.unmount();
 
     render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
@@ -150,7 +151,7 @@ describe('assistant de création', () => {
 
   it('niveau 3 : les PV des niveaux suivants se lancent un par un, la création les exige', async () => {
     render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
-    await remplirChevalierNain();
+    await remplirNecromancienNain();
     await etape('Identité');
     await fireEvent.change(screen.getByLabelText('Niveau'), { target: { value: '3' } });
     await etape('PV et dons');
@@ -163,13 +164,13 @@ describe('assistant de création', () => {
   it('Polyvalence : le bouton « Offert » n’apparaît que pour un Humain niveau 5', async () => {
     render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
     await fireEvent.click(bouton('Humain'));
-    await fireEvent.click(bouton('Chevalier'));
+    await fireEvent.click(bouton('Nécromancien'));
     await etape('Voies');
-    expect(screen.queryByRole('button', { name: 'Prendre chevalier.noble.1 offert' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Prendre necromancien.sang.1 offert' })).toBeNull();
     await etape('Identité');
     await fireEvent.change(screen.getByLabelText('Niveau'), { target: { value: '5' } });
     await etape('Voies');
-    await fireEvent.click(bouton('Prendre chevalier.noble.1 offert'));
+    await fireEvent.click(bouton('Prendre necromancien.sang.1 offert'));
     expect(screen.getByTestId('points-voie').textContent).toBe('10');
     expect(screen.queryByRole('button', { name: /offert$/ })).toBeNull();
   });
@@ -268,7 +269,7 @@ describe('mes personnages', () => {
     render(MesPersonnages);
     expect(screen.getByText("Tu n'as pas encore de personnage à cette table.")).toBeTruthy();
     await fireEvent.click(bouton('Créer un personnage'));
-    await remplirChevalierNain();
+    await remplirNecromancienNain();
     await etape('Récapitulatif');
     await fireEvent.click(bouton('Créer le personnage'));
     await waitFor(() => expect(actions.choisirPersoActif).toHaveBeenCalledWith('p-nouveau'));

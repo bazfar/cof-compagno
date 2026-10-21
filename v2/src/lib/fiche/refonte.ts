@@ -4,7 +4,7 @@ import { RefusCreation, rangRaceMax } from '../regles/creation.ts';
 import { ficheCalculDepuisFiche, versFirestore } from '../regles/fiche-document.ts';
 import type { ClasseRefonte } from '../schemas/classes.ts';
 import { ELEMENTS, MAITRISES, type Action, type Element, type Maitrise } from '../schemas/effets.ts';
-import { octroisVierges, schemaFicheV2, VERSION_FICHE_REFONTE, type Fiche, type FicheV1, type FicheV2, type Octrois, type RefonteFiche } from '../schemas/fiche.ts';
+import { JAUGES_DE_CLASSE, octroisVierges, schemaFicheV2, VERSION_FICHE_REFONTE, type Fiche, type FicheV1, type FicheV2, type Octrois, type RefonteFiche } from '../schemas/fiche.ts';
 import { actionParId, actionsCommunes, classeParId, elementParId, voieParId } from '../../regles/index.ts';
 
 /*
@@ -42,9 +42,10 @@ import { actionParId, actionsCommunes, classeParId, elementParId, voieParId } fr
  * (Envoûteur).
  */
 
-/** Classes v1 refondues, vers leur identifiant de la refonte (les cinq du groupe ; les autres suivent). */
+/** Classes v1 refondues, vers leur identifiant de la refonte (les cinq du groupe, puis le Chevalier au lot L4.13, décision 12a ; les autres suivent). */
 export const CLASSE_REFONTE: Readonly<Record<string, string>> = {
   guerrier: 'guerrier',
+  chevalier: 'chevalier',
   magicien: 'magicien',
   enchanteur: 'envouteur',
   pretre: 'pretre',
@@ -120,13 +121,16 @@ export function avertissementsRefonte(r: RefonteFiche, ctx: ContexteRefonte): st
   return a;
 }
 
-/** Jauges pleines (9a) : Endurance, Inspiration ou Sacré selon la classe ; Plongée à 0 ; la Corruption d'Âme donnée. */
+/** Jauges pleines (9a) : la ressource de classe (Endurance, Honneur, Inspiration…) et le Sacré ; Plongée à 0 ; la Corruption d'Âme donnée. */
 export function jaugesPleines(classe: ClasseRefonte, niveau: number, corruptionAme: number): RefonteFiche['jauges'] {
   const res = classe.ressourceDeClasse;
   const max = res ? res.base + Math.floor(niveau / res.diviseurNiveau) : 0;
+  // Les ressources ajoutées au lot L4.13 n'apparaissent que pour leur classe (champs optionnels).
+  const autre = res && res.ressource !== 'endurance' && res.ressource !== 'inspiration' && (JAUGES_DE_CLASSE as readonly string[]).includes(res.ressource) ? { [res.ressource]: max } : {};
   return {
     endurance: res?.ressource === 'endurance' ? max : null,
     inspiration: res?.ressource === 'inspiration' ? max : null,
+    ...autre,
     sacre: classe.reserveSacre ? classe.reserveSacre.base + Math.floor(niveau / classe.reserveSacre.diviseurNiveau) : null,
     plongee: 0,
     corruptionAme,

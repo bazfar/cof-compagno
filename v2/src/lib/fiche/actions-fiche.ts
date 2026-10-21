@@ -6,7 +6,7 @@ import { deMineur } from '../effets/resolution.ts';
 import { lancerFormule } from '../regles/des.ts';
 import type { ClasseRefonte } from '../schemas/classes.ts';
 import type { Action, Element, Maitrise, Palier } from '../schemas/effets.ts';
-import type { FicheV2, RefonteFiche } from '../schemas/fiche.ts';
+import { JAUGES_DE_CLASSE, type FicheV2, type JaugeDeClasse, type RefonteFiche } from '../schemas/fiche.ts';
 import { actionParId, combinaisons } from '../../regles/index.ts';
 import { classeDeLaRefonte, contexteDe, jaugesPleines, NOMS_MAITRISES, nomEcole, nomElement, profilDe, voieDeLaRefonte, type ContexteRefonte } from './refonte.ts';
 
@@ -330,7 +330,7 @@ export function bonusDesPassifs(f: FicheV2, mods: ModsDuPerso, actions: Readonly
 
 // ------------------------------------------------------- Jauges (7a à 10a)
 
-export type CleJauge = 'endurance' | 'inspiration' | 'sacre' | 'plongee' | 'corruptionAme';
+export type CleJauge = JaugeDeClasse | 'sacre' | 'plongee' | 'corruptionAme';
 
 export interface JaugeAffichee {
   cle: CleJauge;
@@ -340,7 +340,10 @@ export interface JaugeAffichee {
   max: number | null;
 }
 
-const NOMS_JAUGES: Record<CleJauge, string> = { endurance: 'Endurance', inspiration: 'Inspiration', sacre: 'Sacré', plongee: 'Plongée', corruptionAme: 'Corruption d’Âme' };
+const NOMS_JAUGES: Record<CleJauge, string> = {
+  endurance: 'Endurance', honneur: 'Honneur', instinct: 'Instinct', inspiration: 'Inspiration', forceNature: 'Force de la nature', ki: 'Ki',
+  sacre: 'Sacré', plongee: 'Plongée', corruptionAme: 'Corruption d’Âme',
+};
 
 /** Jauges de la fiche : la ressource de classe et le Sacré, puis Plongée et Corruption d'Âme (7a). */
 export function jaugesDeLaFiche(f: FicheV2): JaugeAffichee[] {
@@ -348,7 +351,7 @@ export function jaugesDeLaFiche(f: FicheV2): JaugeAffichee[] {
   const max = classe ? jaugesPleines(classe, f.niveau, 0) : null;
   const j = f.refonte.jauges;
   const l: JaugeAffichee[] = [];
-  for (const cle of ['endurance', 'inspiration', 'sacre'] as const) {
+  for (const cle of [...JAUGES_DE_CLASSE, 'sacre'] as const) {
     const m = max?.[cle];
     if (m !== null && m !== undefined) l.push({ cle, nom: NOMS_JAUGES[cle], actuel: Math.min(j[cle] ?? m, m), max: m });
   }

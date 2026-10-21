@@ -151,6 +151,15 @@ export const schemaFicheV1 = z.strictObject({
  *     conversion ; la Corruption d'Âme reprend la corruption majeure v1, la
  *     Plongée part de 0 (décision 9a).
  */
+/**
+ * Ressources de classe tenues en jauge (lot L4.13) : Endurance et
+ * Inspiration depuis L4.11a ; Honneur (Chevalier), puis Instinct, Force de
+ * la nature et Ki, absents des fiches d'avant (optionnels, pour ne pas
+ * invalider une fiche déjà convertie).
+ */
+export const JAUGES_DE_CLASSE = ['endurance', 'honneur', 'instinct', 'inspiration', 'forceNature', 'ki'] as const;
+export type JaugeDeClasse = (typeof JAUGES_DE_CLASSE)[number];
+
 export const schemaRefonteFiche = z.strictObject({
   classe: schemaId,
   rangs: z.record(schemaId, entier.min(0).max(5)),
@@ -166,6 +175,10 @@ export const schemaRefonteFiche = z.strictObject({
   jauges: z.strictObject({
     endurance: entier.nonnegative().nullable(),
     inspiration: entier.nonnegative().nullable(),
+    honneur: entier.nonnegative().nullable().optional(),
+    instinct: entier.nonnegative().nullable().optional(),
+    forceNature: entier.nonnegative().nullable().optional(),
+    ki: entier.nonnegative().nullable().optional(),
     sacre: entier.nonnegative().nullable(),
     plongee: entier.nonnegative(),
     corruptionAme: entier.nonnegative(),

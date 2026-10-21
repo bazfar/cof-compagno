@@ -779,6 +779,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
         return !!c.demonOuMortVivant;
       case 'cibleMarquee':
         return c.etats.includes('marque');
+      case 'cibleAccusee':
+        return c.etats.includes('accuse');
       case 'immobile':
         return !!l.immobile;
       case 'protegeUnAllie':

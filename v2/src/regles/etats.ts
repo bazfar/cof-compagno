@@ -223,6 +223,38 @@ export const ETATS: EtatSaisi[] = [
     regle: 'Désigné comme cible ; le bonus contre lui dépend de la capacité qui l’a marqué.',
     parSource: true,
   },
+  // Chevalier (lot L4.13) : Défi loyal, Duel d'honneur, Garde rapprochée, Mise en accusation (8a).
+  {
+    id: 'defie',
+    nom: 'Défié',
+    categorie: 'malus',
+    regle: '−2 à tous ses tests s’il n’attaque pas celui qui l’a défié.',
+    parSource: true,
+  },
+  {
+    id: 'duel',
+    nom: 'En duel',
+    categorie: 'malus',
+    regle: 'En duel singulier avec celui qui l’a défié : celui-ci a +2 en attaque et en DEF contre lui.',
+    parSource: true,
+  },
+  {
+    id: 'protege',
+    nom: 'Protégé',
+    categorie: 'physique',
+    regle: '+2 DEF tant qu’il reste au contact de son protecteur.',
+    parSource: true,
+  },
+  {
+    id: 'accuse',
+    nom: 'Accusé',
+    categorie: 'malus',
+    regle: 'Jugé coupable : −4 en attaque et en DEF jusqu’à la fin du combat.',
+    modificateurs: [
+      { cible: 'attaque', valeur: -4 },
+      { cible: 'DEF', valeur: -4 },
+    ],
+  },
   {
     id: 'influence',
     nom: 'Influencé',

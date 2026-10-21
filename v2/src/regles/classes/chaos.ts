@@ -33,6 +33,13 @@ import type { ActionSaisie, EffetSaisi } from '../../lib/schemas/effets';
  *   - le détail par classe : réponses 6 à 11 (a).
  * Les contreparties sociales des R4 sont des textes, appliqués par le MJ
  * (11a). Les Voies du chaos des autres classes viendront avec elles.
+ *
+ * Chevalier (lot L4.13, décision 9a du 21/10/2026) : signatures du cadre.
+ * Lame liée (+1d6 à la prochaine frappe réussie), Frappe du pacte (+2d6),
+ * Marque du serment brisé (+2 DEF ou +1d8 sur l'arme, choix fixé à
+ * l'acquisition), Avatar du pacte (+4 DEF, +2d6, immunisé à la peur, sans
+ * déplacement au tour suivant). La Faveur sombre de la v1 (R2) laisse la
+ * place au Don corrompu.
  */
 
 const surSoi = { type: 'soi', portee: 'soi' } as const;
@@ -105,6 +112,45 @@ export const ACTIONS_CHAOS: ActionSaisie[] = [
       { type: 'bonus', cible: 'attaque', valeur: 4, duree: avatar('CON'), vise: 'lanceur' },
       { type: 'bonus', cible: 'degats', valeur: '2d6', typeDegats: 'chaotique', duree: avatar('CON'), vise: 'lanceur' },
       { type: 'etat', etat: 'dechainement', duree: avatar('CON'), vise: 'lanceur' },
+    ]),
+  }),
+
+  // ---- Chevalier (L4.13, 9a) ----
+  chaos('chevalier.lame-liee', 'Lame liée', 'Une fois par tour, en action gratuite : sa prochaine attaque réussie ce tour inflige +1d6 chaotiques.', 1, {
+    nature: 'capacite',
+    action: 'gratuite',
+    limite: '1x/round',
+    ciblage: surSoi,
+    resolution: sansJet,
+    effets: [{ type: 'bonus', cible: 'degats', valeur: '1d6', typeDegats: 'chaotique', consomme: 'prochaineFrappe', duree: 'prochainTour', vise: 'lanceur' }, plongee(1)],
+  }),
+  chaos('chevalier.frappe-du-pacte', 'Frappe du pacte', 'Une attaque au contact : +2d6 chaotiques si elle touche.', 3, {
+    nature: 'capacite',
+    action: 'action',
+    jetDeChaos: true,
+    ciblage: { type: 'creature', camp: 'ennemi', portee: 'arme' },
+    resolution: { jet: 'attaque' },
+    effets: [{ type: 'degats', des: 'arme', typeDegats: 'physique' }, { type: 'degats', des: '2d6', typeDegats: 'chaotique' }, plongee(2)],
+  }),
+  chaos('chevalier.marque-du-serment-brise', 'Marque du serment brisé', 'Dès 5 de Corruption d’Âme, au choix fixé à l’acquisition : +2 DEF, ou +1d8 chaotiques sur son arme.', 4, {
+    nature: 'passif',
+    action: 'aucune',
+    corruptionAmeMin: 5,
+    ciblage: surSoi,
+    resolution: sansJet,
+    effets: [{ type: 'bonus', cible: 'DEF', valeur: 2, duree: 'permanente', vise: 'lanceur' }],
+    variantes: [{ id: 'arme', nom: '+1d8 chaotiques sur l’arme', palier: 'I', delta: { remplaceEffets: [{ type: 'bonus', cible: 'degats', valeur: '1d8', typeDegats: 'chaotique', duree: 'permanente', vise: 'lanceur' }] } }],
+  }),
+  chaos('chevalier.avatar-du-pacte', 'Avatar du pacte', 'Une fois par scénario, 3 + mod de CON rounds : armure semi-spectrale, +4 DEF, +2d6 chaotiques à toutes ses attaques, immunisé à la peur. Au tour qui suit, il perd son déplacement.', 5, {
+    nature: 'capacite',
+    action: 'action',
+    limite: '1x/scenario',
+    ciblage: surSoi,
+    resolution: sansJet,
+    effets: effetsDAvatar([
+      { type: 'bonus', cible: 'DEF', valeur: 4, duree: avatar('CON'), vise: 'lanceur' },
+      { type: 'bonus', cible: 'degats', valeur: '2d6', typeDegats: 'chaotique', duree: avatar('CON'), vise: 'lanceur' },
+      { type: 'narratif', texte: 'Immunisé à la peur pendant l’Avatar ; au tour qui suit sa fin, il perd son déplacement.', vise: 'lanceur' },
     ]),
   }),
 
@@ -292,6 +338,14 @@ function voieDuChaos(classe: string, description: string, r1: Rang, r3: Rang, r4
 }
 
 export const VOIES_CHAOS: VoieSaisie[] = [
+  voieDuChaos(
+    'chevalier',
+    'Un serment rompu, un pacte noué à sa place : la lame obéit à autre chose que l’honneur.',
+    { nom: 'Lame liée', description: '+1d6 chaotiques à la prochaine frappe.', actions: ['chaos.chevalier.lame-liee'] },
+    { nom: 'Frappe du pacte', description: '+2d6 chaotiques.', actions: ['chaos.chevalier.frappe-du-pacte'] },
+    { nom: 'Marque du serment brisé', description: '+2 DEF ou +1d8 sur l’arme.', actions: ['chaos.chevalier.marque-du-serment-brise'], contrepartie: 'les ordres de chevalerie le rejettent.' },
+    { nom: 'Avatar du pacte', description: 'L’Avatar du Chevalier.', actions: ['chaos.chevalier.avatar-du-pacte'] },
+  ),
   voieDuChaos(
     'guerrier',
     'Un soldat qui a vécu trop de guerre : la fureur monte malgré lui, à chaque coup encaissé.',

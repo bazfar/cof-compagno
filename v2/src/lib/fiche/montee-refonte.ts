@@ -5,7 +5,7 @@ import { ficheCalculDepuisFiche, versFirestore } from '../regles/fiche-document.
 import type { Carac } from '../regles/fiche-calcul.ts';
 import { barreNiveau } from '../regles/progression.ts';
 import type { ClasseRefonte } from '../schemas/classes.ts';
-import { schemaFicheV2, type Fiche, type FicheV2, type RefonteFiche } from '../schemas/fiche.ts';
+import { JAUGES_DE_CLASSE, schemaFicheV2, type Fiche, type FicheV2, type JaugeDeClasse, type RefonteFiche } from '../schemas/fiche.ts';
 import { contexteDuBrouillon } from './creation-refonte.ts';
 import * as R from './refonte.ts';
 import { classeParId } from '../../regles/index.ts';
@@ -259,9 +259,12 @@ export function apercuMontee(m: MonteeRefonte): MonteeRefonteAppliquee | null {
 export function jaugesMontees(classe: ClasseRefonte, niveau: number, j: RefonteFiche['jauges']): RefonteFiche['jauges'] {
   const avant = R.jaugesPleines(classe, niveau, 0);
   const apres = R.jaugesPleines(classe, niveau + 1, 0);
-  const monte = (k: 'endurance' | 'inspiration' | 'sacre') =>
-    apres[k] === null ? null : Math.max(0, Math.min(apres[k]!, (j[k] ?? avant[k] ?? 0) + apres[k]! - (avant[k] ?? 0)));
-  return { ...j, endurance: monte('endurance'), inspiration: monte('inspiration'), sacre: monte('sacre') };
+  const monte = (k: JaugeDeClasse | 'sacre') =>
+    apres[k] === null || apres[k] === undefined ? null : Math.max(0, Math.min(apres[k]!, (j[k] ?? avant[k] ?? 0) + apres[k]! - (avant[k] ?? 0)));
+  const r = { ...j, endurance: monte('endurance'), inspiration: monte('inspiration'), sacre: monte('sacre') };
+  // Ressources ajoutées au lot L4.13 (Honneur…) : seulement pour leur classe.
+  for (const k of JAUGES_DE_CLASSE) if (k !== 'endurance' && k !== 'inspiration' && apres[k] !== undefined) r[k] = monte(k);
+  return r;
 }
 
 function construire(lue: FicheV2, m: MonteeRefonte, requis: number): MonteeRefonteAppliquee {

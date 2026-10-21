@@ -465,14 +465,14 @@ describe('refonte (L4.11b)', () => {
     ...patch,
   });
 
-  it('« Passer à la refonte » : pour une classe refondue, à qui peut modifier la fiche ; pas pour le Chevalier', () => {
+  it('« Passer à la refonte » : pour une classe refondue, à qui peut modifier la fiche ; pas pour le Nécromancien', () => {
     const vue = render(FicheVivante, { props: { fiche: reelle('Karlach', 'p-c'), modifiable: true } });
     expect(screen.getByRole('button', { name: 'Passer à la refonte' })).toBeTruthy();
     vue.unmount();
     const lecture = render(FicheVivante, { props: { fiche: reelle('Karlach', 'p-c'), modifiable: false } });
     expect(screen.queryByRole('button', { name: 'Passer à la refonte' })).toBeNull();
     lecture.unmount();
-    render(FicheVivante, { props: { fiche: reelle('Hyrma', 'p-h'), modifiable: true } });
+    render(FicheVivante, { props: { fiche: { ...reelle('Hyrma', 'p-h'), classe: 'necromancien' }, modifiable: true } });
     expect(screen.queryByRole('button', { name: 'Passer à la refonte' })).toBeNull();
   });
 
@@ -587,7 +587,7 @@ describe('refonte (L4.11b)', () => {
       { ...f, id: 'p-1', nom: 'Converti' },
       { ...f, id: 'p-2', nom: 'Rouvert', octrois: { ...f.octrois, reconversion: true } },
       { ...reelle('Vhorgar', 'p-3'), nom: 'A convertir' },
-      { ...reelle('Hyrma', 'p-4'), nom: 'Chevalier' },
+      { ...reelle('Hyrma', 'p-4'), classe: 'necromancien', nom: 'Nécromancien' },
     ];
     render(GroupeMj);
     const lignes = within(screen.getByRole('list', { name: 'Personnages de la table' })).getAllByRole('listitem');
@@ -595,7 +595,7 @@ describe('refonte (L4.11b)', () => {
     expect(badges('Converti')).toEqual(['refonte']);
     expect(badges('Rouvert')).toEqual(['conversion rouverte']);
     expect(badges('A convertir')).toEqual(['à convertir']);
-    expect(badges('Chevalier')).toEqual([]);
+    expect(badges('Nécromancien')).toEqual([]);
   });
 });
 

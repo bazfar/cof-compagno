@@ -171,11 +171,11 @@ describe('création (10a) : une classe refondue crée une fiche de la refonte', 
     expect(C.choisirClasse(avec, 'barde').refonte).toBeNull();
     // Un bloc d'une autre classe (brouillon gardé avant un changement) ne compte pas.
     expect(K.refonteDuBrouillon({ ...avec, classe: 'enchanteur' })).toEqual(R.refonteVierge(classe('envouteur'), 1));
-    const chevalier = { ...C.brouillonVide(), classe: 'chevalier' };
-    expect(K.refonteDuBrouillon(chevalier)).toBeNull();
-    expect(K.erreursCreationRefonte(chevalier)).toEqual(C.erreursCreation(chevalier));
-    expect(() => K.gesteRefonte(chevalier, (_c, r) => r)).toThrow('pas encore passée à la refonte');
-    expect(() => K.ficheV2DepuisBrouillon(chevalier, 'alice', 1)).toThrow('pas encore passée à la refonte');
+    const necro = { ...C.brouillonVide(), classe: 'necromancien' };
+    expect(K.refonteDuBrouillon(necro)).toBeNull();
+    expect(K.erreursCreationRefonte(necro)).toEqual(C.erreursCreation(necro));
+    expect(() => K.gesteRefonte(necro, (_c, r) => r)).toThrow('pas encore passée à la refonte');
+    expect(() => K.ficheV2DepuisBrouillon(necro, 'alice', 1)).toThrow('pas encore passée à la refonte');
   });
 
   it('les erreurs de l’assistant, puis celles de la refonte ; voies, sorts et Cercle v1 ne comptent plus', () => {
@@ -207,7 +207,7 @@ describe('création (10a) : une classe refondue crée une fiche de la refonte', 
   it('avertissements : ceux de la refonte (Polyvalence, points), pas ceux des voies v1', () => {
     const b = C.changerNiveau({ ...C.brouillonVide(), classe: 'guerrier', race: 'humain' }, 5);
     expect(K.avertissementsCreationRefonte(b)).toEqual(['Polyvalence : le rang offert reste à choisir.', '10 points de voie à dépenser.']);
-    expect(K.avertissementsCreationRefonte({ ...C.brouillonVide(), classe: 'chevalier' })).toEqual(C.avertissementsCreation({ ...C.brouillonVide(), classe: 'chevalier' }));
+    expect(K.avertissementsCreationRefonte({ ...C.brouillonVide(), classe: 'necromancien' })).toEqual(C.avertissementsCreation({ ...C.brouillonVide(), classe: 'necromancien' }));
   });
 
   it('reprise d’une fiche v1 en refonte : la Corruption d’Âme reprend la corruption majeure', () => {
@@ -507,7 +507,8 @@ describe('pour les écrans (L4.11b2)', () => {
     expect(R.etatRefonte(v2)).toBe('refonte');
     expect(R.etatRefonte({ ...v2, octrois: { ...v2.octrois, reconversion: true } })).toBe('reconversion');
     expect(R.etatRefonte(reelle('Karlach'))).toBe('aConvertir');
-    expect(R.etatRefonte(reelle('Hyrma'))).toBe('v1');
+    expect(R.etatRefonte(reelle('Hyrma'))).toBe('aConvertir');
+    expect(R.etatRefonte(reelle('Hyrma', { classe: 'necromancien' }))).toBe('v1');
   });
 
   it('verbes accordables : tous les verbes, par école puis rang ; noms des écoles et éléments', () => {

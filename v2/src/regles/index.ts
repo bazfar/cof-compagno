@@ -6,6 +6,7 @@ import { schemaInvocation, type Invocation } from '../lib/schemas/invocations';
 import { schemaClasseRefonte, schemaVoieRefonte, type ClasseRefonte, type VoieRefonte } from '../lib/schemas/classes';
 import { ACTIONS_ARMES, ACTIONS_COMMUNES } from './armes';
 import { ACTIONS_BARDE, BARDE, VOIES_BARDE } from './classes/barde';
+import { ACTIONS_CHEVALIER, CHEVALIER, VOIES_CHEVALIER } from './classes/chevalier';
 import { ACTIONS_CHAOS, VOIES_CHAOS } from './classes/chaos';
 import { CHANT } from './ecoles/chant';
 import { ACTIONS_ENVOUTEUR, ENVOUTEUR, VOIES_ENVOUTEUR } from './classes/envouteur';
@@ -56,10 +57,10 @@ if (new Set(paires).size !== paires.length) throw new Error(`Deux signatures pou
 
 export const invocationParId: ReadonlyMap<string, Invocation> = indexer(INVOCATIONS, (s) => schemaInvocation.parse(s), 'Invocation');
 
-export const actionParId: ReadonlyMap<string, Action> = indexer([...EVOCATION, ...ABJURATION, ...INVOCATION, ...ILLUSION, ...ENCHANTEMENT, ...GUERISON, ...FOI, ...BANNISSEMENT, ...JUGEMENT, ...MINEURS, ...ACTIONS_MAGICIEN, ...ACTIONS_ENVOUTEUR, ...ACTIONS_PRETRE, ...ACTIONS_ARMES, ...ACTIONS_GUERRIER, ...CHANT, ...ACTIONS_BARDE, ...ACTIONS_CHAOS], (s) => schemaAction.parse(s), 'Action');
+export const actionParId: ReadonlyMap<string, Action> = indexer([...EVOCATION, ...ABJURATION, ...INVOCATION, ...ILLUSION, ...ENCHANTEMENT, ...GUERISON, ...FOI, ...BANNISSEMENT, ...JUGEMENT, ...MINEURS, ...ACTIONS_MAGICIEN, ...ACTIONS_ENVOUTEUR, ...ACTIONS_PRETRE, ...ACTIONS_ARMES, ...ACTIONS_GUERRIER, ...CHANT, ...ACTIONS_BARDE, ...ACTIONS_CHEVALIER, ...ACTIONS_CHAOS], (s) => schemaAction.parse(s), 'Action');
 
-export const voieParId: ReadonlyMap<string, VoieRefonte> = indexer([...VOIES_MAGICIEN, ...VOIES_ENVOUTEUR, ...VOIES_PRETRE, ...VOIES_GUERRIER, ...VOIES_BARDE, ...VOIES_CHAOS], (s) => schemaVoieRefonte.parse(s), 'Voie');
-export const classeParId: ReadonlyMap<string, ClasseRefonte> = indexer([MAGICIEN, ENVOUTEUR, PRETRE, GUERRIER, BARDE], (s) => schemaClasseRefonte.parse(s), 'Classe');
+export const voieParId: ReadonlyMap<string, VoieRefonte> = indexer([...VOIES_MAGICIEN, ...VOIES_ENVOUTEUR, ...VOIES_PRETRE, ...VOIES_GUERRIER, ...VOIES_BARDE, ...VOIES_CHEVALIER, ...VOIES_CHAOS], (s) => schemaVoieRefonte.parse(s), 'Voie');
+export const classeParId: ReadonlyMap<string, ClasseRefonte> = indexer([MAGICIEN, ENVOUTEUR, PRETRE, GUERRIER, BARDE, CHEVALIER], (s) => schemaClasseRefonte.parse(s), 'Classe');
 /** Actions d'arme de toutes les classes (lot L4.7) : le profil les reçoit dans ses règles (Regles.actionsCommunes). */
 export const actionsCommunes: readonly string[] = ACTIONS_COMMUNES;
 export const actions: readonly Action[] = [...actionParId.values()];

@@ -162,6 +162,8 @@ export const schemaCondition = z.enum([
   'cibleAffaiblie',
   /** Premier round du combat (Entrée en scène, 11b). */
   'premierRound',
+  /** La cible porte l'état Accusé (Mise en accusation du Chevalier, décision 8a ; lot L4.13). */
+  'cibleAccusee',
 ]);
 
 /** Cibles de bonus et malus. Liste FERMÉE (piège v1 : cible inconnue jamais lue). */
