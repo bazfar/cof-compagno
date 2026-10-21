@@ -25,6 +25,8 @@ import type { EtatSaisi } from '../lib/schemas/etats';
  * Doublé fait rater une attaque par charge. Métamorphosé et Présage
  * viennent de la Transmutation et de la Prescience. Commandé, Apaisé et
  * Banni (lot L4.6) viennent des Cercles du Prêtre ; Apaisé reprend la v1.
+ * Maîtrise tactique (lot L4.7) vient de la Voie du soldat (v1 : état
+ * `maitrise_tactique`) ; elle dure 2 rounds (décision du 20/10/2026).
  *
  * Les formes et avatars de la v1 (Ours, Avatar du Vide…) ne sont plus des
  * états : ils deviennent des actions de leur classe.
@@ -244,6 +246,12 @@ export const ETATS: EtatSaisi[] = [
     regle: 'À terre : −4 en DEF ; se relever coûte une action de mouvement.',
     modificateurs: [{ cible: 'DEF', valeur: -4 }],
     rompuPar: ['actionMouvement'],
+  },
+  {
+    id: 'maitrise_tactique',
+    nom: 'Maîtrise tactique',
+    categorie: 'physique',
+    regle: 'La posture de combat peut aller jusqu’au double du rang dans la Voie du soldat.',
   },
 
   // ---- Perception ----

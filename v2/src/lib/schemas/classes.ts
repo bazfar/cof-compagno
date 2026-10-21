@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { schemaCarac, schemaId } from './commun.ts';
-import { schemaElement, schemaLimite, schemaMaitrise } from './effets.ts';
+import { schemaElement, schemaFamilleArme, schemaLimite, schemaMaitrise, schemaRessource } from './effets.ts';
 
 /*
  * Classes et voies de la refonte (lot L4.4b1). Une voie a 5 rangs ; un rang
@@ -47,6 +47,22 @@ export const CAPACITES_DE_VOIE = [
   'perfection',
   'gesteUnique',
   'realiteDeLEsprit',
+  /*
+   * Guerrier (lot L4.7) :
+   *   - Voie du soldat : postureDeCombat (le profil passe au moteur le rang
+   *     de la voie, plafond de la posture), maitriseTactique ;
+   *   - Voie du maître d'armes : maniementExpert (attaque spéciale −1
+   *     Endurance), precisionLetale (critique sur 19–20, état d'attaque
+   *     spéciale +1 round), enchainement (une 2ᵉ attaque spéciale si la 1ʳᵉ
+   *     touche, au coût normal : décision 10a du 21/10/2026), coupDeMaitre
+   *     (1x/combat : deux états, ou l'arme et un élément).
+   */
+  'postureDeCombat',
+  'maitriseTactique',
+  'maniementExpert',
+  'precisionLetale',
+  'enchainement',
+  'coupDeMaitre',
 ] as const;
 export type CapaciteDeVoie = (typeof CAPACITES_DE_VOIE)[number];
 
@@ -68,6 +84,8 @@ export const schemaRegleDeVoie = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('secondElement'), niveau: schemaMaitrise }),
   z.strictObject({ type: z.literal('annuleDerapage'), limite: schemaLimite }),
   z.strictObject({ type: z.literal('texte'), texte: z.string().min(1) }),
+  /** +valeur à une caractéristique choisie parmi `parmi`, fixée à l'acquisition (Spécimen d'élite, lot L4.7). */
+  z.strictObject({ type: z.literal('caracEnPlus'), parmi: z.array(schemaCarac).min(1), valeur: z.number().int().min(1).max(2) }),
   /** Une capacité que le moteur ou le profil lit par son nom (lot L4.4b2). */
   z.strictObject({ type: z.literal('capacite'), nom: z.enum(CAPACITES_DE_VOIE), limite: schemaLimite.default('volonte') }),
 ]);
@@ -107,6 +125,33 @@ export const schemaClasseRefonte = z.strictObject({
   reservePP: z.strictObject({ base: z.number().int(), parNiveau: z.number().int(), parMod: z.number().int() }).optional(),
   /** Réserve de Sacré du Prêtre (lot L4.6, validé) : base + niveau / diviseur, arrondi à l'inférieur. */
   reserveSacre: z.strictObject({ base: z.number().int(), diviseurNiveau: z.number().int().min(1) }).optional(),
+  /**
+   * Ressource martiale (doc de cadre, « Ressources de classe (validé) » ;
+   * lot L4.7) : réserve = base + niveau / diviseur, arrondi à l'inférieur ;
+   * `parDegatsSubis` : gain quand le porteur subit des dégâts, une fois par
+   * round (Endurance du Guerrier : +1). Le combat (L6) tient la réserve.
+   */
+  ressourceDeClasse: z
+    .strictObject({
+      ressource: schemaRessource,
+      base: z.number().int().min(0),
+      diviseurNiveau: z.number().int().min(1),
+      recharge: z.enum(['reposCourt', 'reposLong']),
+      parDegatsSubis: z.number().int().min(0).max(3).default(0),
+    })
+    .optional(),
+  /**
+   * Attaques spéciales d'arme (lot L4.7) : les familles permises et leur
+   * coût. Guerrier : toutes, 2 Endurance (validé). Hybrides : leur famille
+   * de prédilection (décision du 20/10/2026), une fois par combat, sans
+   * coût (décision 3c du 21/10/2026).
+   */
+  attaquesSpeciales: z
+    .strictObject({
+      familles: z.union([z.literal('toutes'), z.array(schemaFamilleArme).min(1)]),
+      cout: z.union([z.strictObject({ ressource: schemaRessource, montant: z.number().int().min(1).max(5) }), z.literal('unParCombat')]),
+    })
+    .optional(),
   /** Actions de classe, hors voies (Vêtements sacrés du Prêtre). */
   actionsDeClasse: z.array(schemaId).default([]),
   /** Voies de la classe, dans l'ordre d'affichage. */

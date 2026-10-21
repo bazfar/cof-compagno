@@ -19,7 +19,9 @@ la refonte les remplace.
 | `ecoles/illusion.ts`, `ecoles/enchantement.ts` | Les verbes d'Illusion et d'Enchantement (lot L4.5) |
 | `classes/commun.ts` | Voie de l'école et seconde école, communes aux lanceurs (lot L4.5) |
 | `ecoles/cercles.ts` | Les quatre Cercles du Prêtre : Guérison, Foi, Bannissement, Jugement (lot L4.6) |
-| `classes/pretre.ts` | La classe Prêtre : Cercles en voies, réserve de Sacré, Vêtements sacrés (lot L4.6) |
+| `classes/pretre.ts` | La classe Prêtre : Cercles en voies, réserve de Sacré, Vêtements sacrés (lot L4.6) ; attaque spéciale contondante, Frappe sacrée (lot L4.7) |
+| `armes.ts` | Les attaques d'arme : famille de chaque arme du catalogue, attaque, attaque d'opportunité, une attaque spéciale par famille (lot L4.7) |
+| `classes/guerrier.ts` | La classe Guerrier : Endurance, Voies du soldat, du peuple, du maître d'armes, de l'ingénieur (lot L4.7) |
 | `classes/envouteur.ts` | La classe Envoûteur : voies de l'esprit, de la transmutation, de la prescience, seconde école (lot L4.5) |
 | `mineurs.ts` | Les sorts mineurs du Magicien (avec leurs paliers de Virtuose) et de l'Envoûteur (lots L4.4b1, L4.4b2, L4.5) |
 | `classes/magicien.ts` | La classe Magicien : création, réserve de PP, Voie de l'école, Voie élémentaire, Cataclysme (L4.4b1) ; Voie sauvage, Hémomancie, Virtuose, Saignée (L4.4b2) |

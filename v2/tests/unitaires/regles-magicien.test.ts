@@ -134,6 +134,11 @@ describe('profil magique', () => {
       pvEnPlus: 0,
       voie: {},
       textes: [],
+      ressourceDeClasse: null,
+      attaquesSpeciales: null,
+      attaques: [],
+      caracs: {},
+      paliersDActions: {},
     });
   });
 

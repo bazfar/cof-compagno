@@ -53,7 +53,9 @@ describe('la classe', () => {
     const c: ChoixDePersonnage = { niveau: 6, modMagie: 3, rangs: { 'pretre.guerison': 3, 'pretre.jugement': 2 }, mineurs: ['mineur.stabiliser'] };
     expect(verifierChoix(pretre, c, regles)).toEqual([]);
     const p = profilMagique(pretre, c, regles);
-    expect(p).toMatchObject({ reservePP: 19, reserveSacre: 4, maitriseEcole: 'adepte', mineursMax: 1, actions: ['pretre.vetements-sacres'] });
+    expect(p).toMatchObject({ reservePP: 19, reserveSacre: 4, maitriseEcole: 'adepte', mineursMax: 1, actions: ['pretre.vetements-sacres', 'pretre.frappe-sacree'] });
+    // Frappe sacrée (lot L4.7) : ses paliers suivent le Cercle le plus avancé.
+    expect(p.paliersDActions).toEqual({ 'pretre.frappe-sacree': 'II' });
     expect(p.verbes).toEqual([
       { id: 'guerison.imposition', palier: 'II' },
       { id: 'guerison.chaine-de-vie', palier: 'I' },

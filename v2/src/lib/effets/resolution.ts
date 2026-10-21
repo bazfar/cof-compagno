@@ -1,5 +1,6 @@
 import { lancerFormule } from '../regles/des';
-import type { Action, Duree, Effet, Element, Palier, Sauvegarde } from '../schemas/effets';
+import type { CARACS } from '../schemas/commun';
+import type { Action, Duree, Effet, Element, FamilleArme, Palier, Sauvegarde } from '../schemas/effets';
 import type { FicheElement } from '../schemas/elements';
 import type { EtatRefonte } from '../schemas/etats';
 import { coutSort, ddSort, MAITRISES, seuilEchec, type CoutCalcule, type Maitrise } from './cout';
@@ -41,6 +42,23 @@ import { actionAuPalier, paliersDefinis } from './paliers';
  * dé payé en PV en plus des PP (6a), le lanceur en récupère la moitié.
  * Les combinaisons de deux éléments viendront avec leurs signatures, dans
  * les lots des classes : le moteur les refuse d'ici là.
+ *
+ * Attaques d'arme (lot L4.7, Guerrier ; décisions de Thomas du 21/10/2026) :
+ *   - le jet `attaque` prend le bonus d'attaque de l'arme maniée, que la
+ *     fiche calcule ; les dés `arme` sont ceux de l'arme, plus son bonus de
+ *     dégâts ; un piège attaque avec un mod nommé (DEX contre la DEF, v1) ;
+ *   - critique (4a) : un 20 naturel, 19–20 avec Précision létale ; il
+ *     touche toujours (règle COF) et double les dés de l'arme, pas ses
+ *     bonus ;
+ *   - attaque spéciale : il faut une arme de sa famille (1a) ; l'état est
+ *     posé d'office si l'attaque touche (2a) et dure 1 round, 2 avec
+ *     Précision létale ; elle coûte ce que dit la classe : 2 Endurance au
+ *     Guerrier, 1 avec Maniement expert, une fois par combat sans coût aux
+ *     hybrides (3c) ;
+ *   - les mods de caractéristique sont lus par leur nom (12a) ;
+ *   - le moteur ne tient ni l'Endurance, ni la réaction du round, ni les
+ *     limites par combat : il rend ce qu'un lancer coûte, le combat (L6)
+ *     vérifie et décompte.
  */
 
 // ---------- Entrées ----------
@@ -71,8 +89,12 @@ export interface CibleEnJeu extends Combattant {
   anneau?: number;
 }
 
+export type Carac = (typeof CARACS)[number];
+
 export interface LanceurEnJeu extends Combattant {
   modMagie: number;
+  /** Mods des caractéristiques (décision 12a du 21/10/2026, lot L4.7) : un effet qui nomme une caractéristique lit le sien ici. */
+  mods?: Partial<Record<Carac, number>>;
   attaqueMagique: number;
   /** Niveau du lanceur (dés des sorts mineurs) ; 1 par défaut. */
   niveau?: number;
@@ -114,7 +136,41 @@ export interface ModificateursDeVoie {
     /** Le geste unique (rang 5) : dés doublés. */
     gesteUnique?: boolean;
   };
+  /** Voie du soldat (lot L4.7) : son rang plafonne la posture. */
+  soldat?: { rang: number };
+  maitreDArmes?: {
+    rang: number;
+    /** Cette attaque spéciale est déjà la seconde de l'Enchaînement (rang 4) : pas de troisième. */
+    enchainee?: boolean;
+    /** Coup de maître (rang 5, 1x/combat) : un second état, ou l'arme et un élément. */
+    coupDeMaitre?: { etat: string } | { element: Element };
+  };
 }
+
+/**
+ * Arme maniée (lot L4.7), telle que la fiche la calcule : la famille vient
+ * de src/regles/armes.ts ; le bonus d'attaque et le bonus de dégâts
+ * (caractéristique, enchantement) viennent de la fiche. Bouclier et mains
+ * nues se passent aussi comme une arme.
+ */
+export interface ArmeEnJeu {
+  id: string;
+  famille: FamilleArme;
+  /** Dés de l'arme (« 1d8 ») ; un critique les double (décision 4a du 21/10/2026). */
+  des: string;
+  attaque: number;
+  degats: number;
+  /** Mod de la caractéristique d'attaque : le DD des effets portés par l'arme est 10 + ce mod. */
+  modCarac?: number;
+}
+
+/** Attaques spéciales permises au personnage et leur coût (profil, lot L4.7). */
+export interface AttaquesSpecialesEnJeu {
+  familles: 'toutes' | readonly FamilleArme[];
+  cout: { ressource: string; montant: number } | 'unParCombat';
+}
+
+export type AxePosture = 'attaque' | 'DEF' | 'degats';
 
 export interface Catalogue {
   etats: ReadonlyMap<string, EtatRefonte>;
@@ -149,6 +205,16 @@ export interface Lancer {
   rebond?: CibleEnJeu;
   /** Eau : 2 cases de poussée en plus (défaut), ou retirer un état à l'allié choisi. */
   choixEau?: 'poussee' | 'retraitEtat';
+  /** Arme maniée : attaques d'arme, attaques spéciales (lot L4.7). */
+  arme?: ArmeEnJeu;
+  /** Attaques spéciales du personnage (profil) ; absent : il n'en a pas. */
+  attaquesSpeciales?: AttaquesSpecialesEnJeu;
+  /** Posture choisie : un axe en bonus, un autre en malus, de la même valeur. */
+  posture?: { plus: AxePosture; moins: AxePosture; valeur: number };
+  /** Le lanceur n'a pas bougé ce tour (L'exemple). */
+  immobile?: boolean;
+  /** Le lanceur protège activement un allié, déclaré par le joueur (Pilier du village). */
+  protegeUnAllie?: boolean;
   alea?: () => number;
 }
 
@@ -163,7 +229,7 @@ export type Changement =
   | { type: 'jetsReserves'; cible: string; valeurs: number[] }
   | { type: 'retraitEtat'; cible: string; etats: readonly string[]; nombre: number }
   | { type: 'deplacement'; cible: string; sens: 'repousse' | 'attire' | 'teleporte'; cases: number }
-  | { type: 'bonus'; cible: string; sur: string; valeur: number | string; duree: Duree; typeDegats?: string; consomme?: 'prochaineFrappe' }
+  | { type: 'bonus'; cible: string; sur: string; valeur: number | string; duree: Duree; typeDegats?: string; consomme?: 'prochaineFrappe'; parAllieAuContact?: true }
   | { type: 'plancherPv'; cible: string; valeur: number }
   | { type: 'ressource'; cible: string; ressource: string; montant: number }
   | { type: 'invocation'; creature: string; nombre: number; duree: Duree; element?: Element }
@@ -181,6 +247,8 @@ export interface JetNote {
   /** DD ou DEF visés, et l'issue. */
   contre?: number;
   reussi?: boolean;
+  /** Critique (lot L4.7). */
+  critique?: true;
 }
 
 export type Resultat =
@@ -188,10 +256,17 @@ export type Resultat =
       ok: true;
       issue: 'reussi' | 'echecEcole' | 'derapage';
       palierLance: Palier;
-      cout: { pp: number; pv: number; sacre?: number };
+      /**
+       * `ressources` : Endurance et autres ressources de classe (lot L4.7) ;
+       * `attaqueSpecialeDuCombat` : l'attaque spéciale gratuite du combat
+       * d'un hybride (3c), que le combat décompte.
+       */
+      cout: { pp: number; pv: number; sacre?: number; ressources?: Record<string, number>; attaqueSpecialeDuCombat?: true };
       dd: number;
       jets: JetNote[];
       changements: Changement[];
+      /** Enchaînement (Maître d'armes 4) : l'attaque spéciale a touché, une seconde peut suivre. */
+      enchainement?: true;
     }
   | { ok: false; raison: string };
 
@@ -245,16 +320,33 @@ function avantageAttaque(lanceur: Combattant, cible: Combattant, cat: Catalogue)
 const NOM_MAITRISE: Record<Maitrise, string> = { nonMaitrise: 'Non maîtrisé', initie: 'Initié', adepte: 'Adepte', maitre: 'Maître' };
 
 /**
- * Coût fixe d'une capacité (Cataclysme : 6 PP). Le moteur ne paie que les
- * PP et les PV ; les ressources de classe (Endurance, Sacré…) viendront avec
- * les classes qui les utilisent.
+ * Coût fixe en PP d'une action qui n'est pas un sort (Cataclysme : 6 PP).
+ * Ses autres ressources (PV, Endurance…) sont rendues à part (lot L4.7).
+ * Une capacité à paliers (Frappe sacrée) se lance au palier donné.
  */
-function coutFixe(cout: readonly { ressource: string; montant: number }[], surcharge?: boolean): CoutCalcule {
+function coutFixe(action: Action, palier: Palier, surcharge?: boolean): CoutCalcule {
   if (surcharge) return { ok: false, raison: 'seul un verbe se surcharge' };
-  const autre = cout.find((c) => c.ressource !== 'pp');
-  if (autre) return { ok: false, raison: `ressource ${autre.ressource} : pas encore gérée par le moteur` };
-  const pp = cout.reduce((s, c) => s + c.montant, 0);
-  return { ok: true, pp, palierLance: 'I', detail: [{ terme: 'base', valeur: pp }] };
+  const palierLance = paliersDefinis(action).includes(palier) ? palier : 'I';
+  const pp = (action.cout ?? []).filter((c) => c.ressource === 'pp').reduce((s, c) => s + c.montant, 0);
+  return { ok: true, pp, palierLance, detail: [{ terme: 'base', valeur: pp }] };
+}
+
+type Mods = { magie: number; caracs: Partial<Record<Carac, number>> };
+
+/** Mod ajouté par un effet : celui de magie (`plusMod`) ou celui d'une caractéristique nommée (12a). */
+function modDeLEffet(e: { plusMod?: boolean; mod?: Carac }, m: Mods): number {
+  if (e.plusMod) return m.magie;
+  return e.mod ? (m.caracs[e.mod] ?? 0) : 0;
+}
+
+/** Caractéristiques qu'une action lit par leur nom (12a) : le lanceur doit en donner le mod. */
+function caracsLues(action: Action): Carac[] {
+  const lues: Carac[] = action.attaquePar ? [action.attaquePar] : [];
+  for (const e of action.effets) {
+    if ((e.type === 'degats' || e.type === 'soin' || e.type === 'pvTemp') && e.mod) lues.push(e.mod);
+    if (e.type === 'bonus' && typeof e.valeur === 'object') lues.push(e.valeur.mod);
+  }
+  return lues;
 }
 
 /** Dé d'un sort mineur selon le niveau (validé) : 1d6 (1 à 4), 1d8 (5 à 8), 1d10 (9 à 12) ; `crans` le monte (Perfection). */
@@ -328,8 +420,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   // Seuil critique (Hémomancie 3, décision 1a du 21/10) : sous la moitié des PV, la surcharge perd ses +2.
   const seuilCritique = hemo >= 3 && l.lanceur.pv !== undefined && l.lanceur.pvMax !== undefined && l.lanceur.pv < l.lanceur.pvMax / 2;
   const estSort = l.action.nature === 'verbe' || l.action.nature === 'mineur';
-  const cout = !estSort || l.action.cout
-    ? coutFixe(l.action.cout ?? [], l.surcharge)
+  const cout = !estSort
+    ? coutFixe(l.action, l.palier, l.surcharge)
     : coutSort(l.action, {
         palier: saignee ? paliersDefinis(l.action).at(-1)! : l.palier,
         surcharge: l.surcharge,
@@ -354,7 +446,47 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       return { ok: false, raison: `${action.id} demande un élément au moins ${NOM_MAITRISE[action.elementMin]}` };
   }
   if (action.effets.some((e) => e.type === 'invocation' && e.parElement) && !l.element) return { ok: false, raison: `${action.id} s'invoque avec un élément` };
-  const dd = ddSort(l.lanceur.modMagie, l.ecole ?? 'adepte');
+
+  // Attaques d'arme et ressources de classe (lot L4.7).
+  const ressources: Record<string, number> = {};
+  let pvFixes = 0;
+  for (const c of action.cout ?? []) {
+    if (c.ressource === 'pv') pvFixes += c.montant;
+    else if (c.ressource !== 'pp') ressources[c.ressource] = (ressources[c.ressource] ?? 0) + c.montant;
+  }
+  const aLArme = action.resolution.jet === 'attaque' && !action.attaquePar;
+  if (aLArme && !l.arme) return { ok: false, raison: `${action.nom} demande une arme` };
+  let attaqueSpecialeDuCombat = false;
+  let enchainement = false;
+  if (action.famille) {
+    const permises = l.attaquesSpeciales;
+    if (!permises) return { ok: false, raison: 'ce personnage n’a pas d’attaque spéciale' };
+    if (permises.familles !== 'toutes' && !permises.familles.includes(action.famille)) return { ok: false, raison: `${action.nom} n’est pas une attaque spéciale de sa classe` };
+    if (l.arme!.famille !== action.famille) return { ok: false, raison: `${action.nom} demande une arme de la famille ${action.famille}` };
+    if (permises.cout === 'unParCombat') attaqueSpecialeDuCombat = true;
+    else ressources[permises.cout.ressource] = (ressources[permises.cout.ressource] ?? 0) + permises.cout.montant;
+  }
+  const sansMod = caracsLues(action).find((c) => l.lanceur.mods?.[c] === undefined);
+  if (sansMod) return { ok: false, raison: `il faut le mod de ${sansMod} du lanceur` };
+  const m: Mods = { magie: l.lanceur.modMagie, caracs: l.lanceur.mods ?? {} };
+  const maitre = v.maitreDArmes?.rang ?? 0;
+  const coupDeMaitre = maitre >= 5 ? v.maitreDArmes?.coupDeMaitre : undefined;
+  if (v.maitreDArmes?.coupDeMaitre && !action.famille) return { ok: false, raison: 'le Coup de maître porte une attaque spéciale' };
+  if (v.maitreDArmes?.coupDeMaitre && !coupDeMaitre) return { ok: false, raison: 'le Coup de maître vient au rang 5 de la Voie du maître d’armes' };
+  const ficheCoup = coupDeMaitre && 'element' in coupDeMaitre ? cat.elements.get(coupDeMaitre.element) : undefined;
+  if (coupDeMaitre && 'element' in coupDeMaitre && !ficheCoup) return { ok: false, raison: `élément inconnu : ${coupDeMaitre.element}` };
+  if (coupDeMaitre && 'etat' in coupDeMaitre && !cat.etats.has(coupDeMaitre.etat)) return { ok: false, raison: `état inconnu : ${coupDeMaitre.etat}` };
+  const posture = action.effets.find((e) => e.type === 'posture');
+  if (posture?.type === 'posture') {
+    // Plafond : le rang dans la Voie du soldat, doublé sous Maîtrise tactique (décision du 20/10/2026).
+    const plafond = (v.soldat?.rang ?? 0) * (l.lanceur.etats.includes('maitrise_tactique') ? 2 : 1);
+    const p = l.posture;
+    if (!p) return { ok: false, raison: 'choisis la posture : un axe en bonus, un autre en malus, et la valeur' };
+    if (p.plus === p.moins || !posture.axes.includes(p.plus) || !posture.axes.includes(p.moins)) return { ok: false, raison: 'une posture prend deux axes différents' };
+    if (!Number.isInteger(p.valeur) || p.valeur < 1 || p.valeur > plafond) return { ok: false, raison: `posture de 1 à ${plafond}` };
+  }
+  // DD : celui du lanceur ; un effet porté par l'arme se sauve contre 10 + le mod de sa caractéristique.
+  const dd = aLArme && l.arme?.modCarac !== undefined ? ddSort(l.arme.modCarac) : ddSort(l.lanceur.modMagie, l.ecole ?? 'adepte');
   const jets: JetNote[] = [];
   const changements: Changement[] = [];
   const fiche = l.element ? cat.elements.get(l.element.id) : undefined;
@@ -365,7 +497,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   const sang = l.element?.id === 'sang' && (!mineur || affinite);
   // Paiement : le Pacte de sang paie les PP en PV ; la Saignée ne coûte que la moitié des PV actuels.
   let pp = (saignee ? 0 : cout.pp) + (reserve?.type === 'jetsReserves' ? reserve.ppParDe * l.nombreDeDes! : 0);
-  let pvPaye = 0;
+  let pvPaye = pvFixes;
   if (hemo >= 1) {
     pvPaye += pp;
     pp = 0;
@@ -374,16 +506,29 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     if (l.lanceur.pv === undefined) return { ok: false, raison: 'il faut connaître les PV du lanceur' };
     pvPaye += Math.floor(l.lanceur.pv / 2);
   }
+  // Prouesse : 1d4 PV sacrifiés (v1), tirés avant tout autre dé.
+  if (typeof action.sacrifice === 'object') {
+    const j = lancerDes(action.sacrifice.des, alea);
+    jets.push({ quoi: 'sacrifice', des: j.des, total: j.total });
+    pvPaye += j.total;
+  }
   const sansSousUnPv = (pv: number): string | null =>
     l.lanceur.pv !== undefined && pv > 0 && l.lanceur.pv - pv < 1 ? 'un sort ne fait jamais tomber son lanceur sous 1 PV' : null;
   const fin = (issue: 'reussi' | 'echecEcole' | 'derapage', pvEnPlus: number): Resultat => ({
     ok: true,
     issue,
     palierLance: cout.palierLance,
-    cout: { pp, pv: pvPaye + pvEnPlus, ...(l.boost ? { sacre: 1 } : {}) },
+    cout: {
+      pp,
+      pv: pvPaye + pvEnPlus,
+      ...(l.boost ? { sacre: 1 } : {}),
+      ...(Object.keys(ressources).length ? { ressources } : {}),
+      ...(attaqueSpecialeDuCombat ? { attaqueSpecialeDuCombat: true as const } : {}),
+    },
     dd,
     jets,
     changements,
+    ...(enchainement ? { enchainement: true as const } : {}),
   });
   const refusPv = sansSousUnPv(pvPaye + (sang ? cout.pp : 0));
   if (refusPv) return { ok: false, raison: refusPv };
@@ -413,7 +558,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   let pv = sang && !sansElement ? cout.pp : 0;
   if (derape && fiche) {
     if (fiche.derapage.modifie.coutPvMultiplie) pv *= fiche.derapage.modifie.coutPvMultiplie;
-    for (const e of fiche.derapage.effets) appliquerSimple(e, l.lanceur.id, changements, alea, l.lanceur.modMagie);
+    for (const e of fiche.derapage.effets) appliquerSimple(e, l.lanceur.id, changements, alea, m);
     return fin('derapage', pv);
   }
 
@@ -454,24 +599,31 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   };
   const affaibli = etatsDe(l.lanceur, cat).find((e) => e.degatsInfliges);
 
-  type Issue = { touche?: boolean; sauveReussie?: boolean };
+  type Issue = { touche?: boolean; critique?: boolean; sauveReussie?: boolean };
+  // Critique (4a) : 20 naturel, 19–20 avec Précision létale (Maître d'armes 3).
+  const seuilCoupCritique = maitre >= 3 ? 19 : 20;
+  const nomJet = action.resolution.jet === 'attaque' ? 'attaque' : 'attaque magique';
+  let aTouche = false;
   const issueDe = (c: CibleEnJeu): Issue => {
     if (attaque) {
       // Double (lot L4.5) : une charge fait rater l'attaque, sans jet.
       const leurre = etatsDe(c, cat).find((e) => e.annuleAttaquesContre);
       if (leurre) {
         changements.push({ type: 'chargeConsommee', cible: c.id, etat: leurre.id });
-        jets.push({ quoi: `attaque magique (${leurre.nom} : ratée d’office)`, cible: c.id, des: [], total: 0, reussi: false });
+        jets.push({ quoi: `${nomJet} (${leurre.nom} : ratée d’office)`, cible: c.id, des: [], total: 0, reussi: false });
         return { touche: false };
       }
       const av = avantageAttaque(l.lanceur, c, cat);
       const defBase = elementActif?.sort.modifie.ignoreArmure || action.ignoreArmure ? (c.defSansArmure ?? c.def) : c.def;
       const def = defBase + modificateur(c, cat, ['DEF']);
       const j = d20(alea, av);
-      const total = j.garde + l.lanceur.attaqueMagique;
-      const touche = total >= def;
-      jets.push({ quoi: 'attaque magique', cible: c.id, des: j.des, total, contre: def, reussi: touche });
-      return { touche };
+      const bonus = action.resolution.jet === 'attaqueMagique' ? l.lanceur.attaqueMagique : action.attaquePar ? m.caracs[action.attaquePar]! : l.arme!.attaque;
+      const total = j.garde + bonus;
+      const critique = aLArme && j.garde >= seuilCoupCritique;
+      const touche = critique || total >= def;
+      if (touche) aTouche = true;
+      jets.push({ quoi: nomJet, cible: c.id, des: j.des, total, contre: def, reussi: touche, ...(critique ? { critique: true as const } : {}) });
+      return { touche, critique };
     }
     // Un allié consentant accepte l'effet sans sauvegarder (Portail, lot L4.4a).
     if (sauvegarde && action.resolution.consentant && memeCamp(c)) return { sauveReussie: false };
@@ -501,10 +653,16 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
         return !!c.demonOuMortVivant;
       case 'cibleMarquee':
         return c.etats.includes('marque');
+      case 'immobile':
+        return !!l.immobile;
+      case 'protegeUnAllie':
+        return !!l.protegeUnAllie;
     }
   };
 
-  const typeDegats = (e: Extract<Effet, { type: 'degats' }>) => (l.element && !sansElement ? l.element.id : e.typeDegats);
+  const typeDegats = (e: Extract<Effet, { type: 'degats' }>) => (l.element && !sansElement ? l.element.id : (ficheCoup?.id ?? e.typeDegats));
+  // Précision létale (Maître d'armes 3) : l'état d'une attaque spéciale dure 1 round de plus.
+  const roundsEnPlus = action.famille && maitre >= 3 ? 1 : 0;
 
   // Mutation sauvage (Voie sauvage 1, règle v1 conservée) : 2d4 − 4 aux dégâts de chaque sort offensif.
   let mutation = 0;
@@ -599,7 +757,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
         jets.push({ quoi: e.type === 'soin' ? 'soin' : 'PV temporaires', des: j.des, total: j.total });
         jetsZone.set(indice, j);
       }
-      changements.push({ type: e.type, cible: c.id, montant: jetsZone.get(indice)!.total + (e.plusMod ? l.lanceur.modMagie : 0) });
+      changements.push({ type: e.type, cible: c.id, montant: jetsZone.get(indice)!.total + modDeLEffet(e, m) });
       return;
     }
     if (e.type === 'soin' && e.enChaine) {
@@ -607,25 +765,37 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       if (!chaines.has(indice)) {
         const j = lancerDes(e.des, alea);
         jets.push({ quoi: 'soin', des: j.des, total: j.total });
-        chaines.set(indice, { total: j.total + (e.plusMod ? l.lanceur.modMagie : 0), vues: 0 });
+        chaines.set(indice, { total: j.total + modDeLEffet(e, m), vues: 0 });
       }
       const ch = chaines.get(indice)!;
       changements.push({ type: 'soin', cible: c.id, montant: ch.vues++ === 0 ? ch.total : Math.floor(ch.total / 2) });
       return;
     }
     if (e.type === 'etat' && l.boost === 'doubleContreDemons' && c.demonOuMortVivant && typeof e.duree === 'object' && 'rounds' in e.duree) {
-      appliquerSimple({ ...e, duree: { rounds: e.duree.rounds * 2 } }, c.id, changements, alea, l.lanceur.modMagie);
+      appliquerSimple({ ...e, duree: { rounds: e.duree.rounds * 2 } }, c.id, changements, alea, m);
+      return;
+    }
+    // Pas sur l'effet générique d'un élément (indice −1) : seulement l'état de l'attaque spéciale, ou le second du Coup de maître (−2).
+    if (e.type === 'etat' && roundsEnPlus && indice !== -1 && typeof e.duree === 'object' && 'rounds' in e.duree) {
+      appliquerSimple({ ...e, duree: { rounds: e.duree.rounds + roundsEnPlus } }, c.id, changements, alea, m);
+      return;
+    }
+    if (e.type === 'posture') {
+      const p = l.posture!;
+      changements.push({ type: 'bonus', cible: c.id, sur: p.plus, valeur: p.valeur, duree: 'prochainTour' });
+      changements.push({ type: 'bonus', cible: c.id, sur: p.moins, valeur: -p.valeur, duree: 'prochainTour' });
       return;
     }
     if (e.type === 'degats') {
-      let formule = e.progression === 'mineur' ? deMineur(l.lanceur.niveau ?? 1, v.virtuose?.crans ?? 0) : e.des;
+      // Dés de l'arme (lot L4.7) : doublés sur un critique (4a), son bonus de dégâts ajouté une fois.
+      let formule = e.des === 'arme' ? (i.critique ? doublerDes(l.arme!.des) : l.arme!.des) : e.progression === 'mineur' ? deMineur(l.lanceur.niveau ?? 1, v.virtuose?.crans ?? 0) : e.des;
       if (mineur && v.virtuose?.gesteUnique) formule = doublerDes(formule);
       let jet: { des: number[]; total: number };
       if (e.vise === 'zone' && UN_JET_PAR_ZONE) {
         if (!jetsZone.has(indice)) jetsZone.set(indice, lancerDes(formule, alea));
         jet = jetsZone.get(indice)!;
       } else jet = lancerDes(formule, alea);
-      let base = jet.total + (e.plusMod ? l.lanceur.modMagie : 0);
+      let base = jet.total + modDeLEffet(e, m) + (e.des === 'arme' ? l.arme!.degats : 0);
       const des = [...jet.des];
       // Dés en plus (sang, Sang versé, Saignée) et Mutation sauvage : une fois par sort,
       // donc sur le jet commun d'une zone, ou sur le premier projectile seulement.
@@ -675,7 +845,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       changements.push({ type: 'deplacement', cible: c.id, sens: e.sens, cases: e.cases + elementActif.sort.modifie.pousseeEnPlus });
       return;
     }
-    appliquerSimple(e, c.id, changements, alea, l.lanceur.modMagie);
+    appliquerSimple(e, c.id, changements, alea, m);
   };
 
   const ciblesPour = (e: Effet): CibleEnJeu[] =>
@@ -716,7 +886,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       const i = issuePour(c, p);
       for (const e of effetsElement) appliquer({ ...e, vise: 'cible' } as Effet, -1, c, i, sauvegardeEffet);
     });
-    if (l.choixEau === 'retraitEtat' && l.allie) for (const e of elementActif.sort.auChoix) appliquerSimple(e, l.allie.id, changements, alea, l.lanceur.modMagie);
+    if (l.choixEau === 'retraitEtat' && l.allie) for (const e of elementActif.sort.auChoix) appliquerSimple(e, l.allie.id, changements, alea, m);
     // Rebond de l'électricité : moitié des dégâts de la cible principale, même sauvegarde (7a).
     const rebond = elementActif.sort.modifie.rebond;
     const premier = action.effets[premierDegats];
@@ -729,6 +899,17 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       }
     }
   }
+
+  // Coup de maître (Maître d'armes 5, 1x/combat) : un second état, ou l'effet générique d'un élément, sur la cible touchée.
+  if (coupDeMaitre && action.famille) {
+    l.cibles.forEach((c, p) => {
+      const i = issuePour(c, p);
+      if ('etat' in coupDeMaitre) appliquer({ type: 'etat', etat: coupDeMaitre.etat, duree: { rounds: 1 }, vise: 'cible' }, -2, c, i);
+      else for (const e of ficheCoup!.sort.effets) appliquer({ ...e, vise: 'cible' } as Effet, -1, c, i, ficheCoup!.sort.sauvegardeSiAucune);
+    });
+  }
+  // Enchaînement (Maître d'armes 4, décision 10a) : une attaque spéciale qui touche en ouvre une seconde, une seule fois.
+  enchainement = !!action.famille && maitre >= 4 && !v.maitreDArmes?.enchainee && aTouche;
 
   // Mutation sauvage : Canalisation profonde (rang 3) sur +3 ou plus ; Submersion négative ou positive (rang 5).
   if (sauvage >= 1 && offensifDegats) {
@@ -764,16 +945,18 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
 }
 
 /** Effets qui ne demandent ni jet ni calcul de dégâts. */
-function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () => number, modMagie: number): void {
+function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () => number, m: Mods): void {
   switch (e.type) {
     case 'degats':
-      out.push({ type: 'degats', cible, montant: lancerDes(e.des, alea).total + (e.plusMod ? modMagie : 0), typeDegats: e.typeDegats, calcul: e.des });
+      // Les dés de l'arme ne passent que par le jet d'attaque (resoudreLancer).
+      if (e.des === 'arme') return;
+      out.push({ type: 'degats', cible, montant: lancerDes(e.des, alea).total + modDeLEffet(e, m), typeDegats: e.typeDegats, calcul: e.des });
       return;
     case 'soin':
-      out.push({ type: 'soin', cible, montant: lancerDes(e.des, alea).total + (e.plusMod ? modMagie : 0) });
+      out.push({ type: 'soin', cible, montant: lancerDes(e.des, alea).total + modDeLEffet(e, m) });
       return;
     case 'pvTemp':
-      out.push({ type: 'pvTemp', cible, montant: lancerDes(e.des, alea).total + (e.plusMod ? modMagie : 0) });
+      out.push({ type: 'pvTemp', cible, montant: lancerDes(e.des, alea).total + modDeLEffet(e, m) });
       return;
     case 'etat':
       out.push({ type: 'etat', cible, etat: e.etat, duree: e.duree, ...(e.charges ? { charges: e.charges } : {}), ...(e.contre ? { contre: e.contre } : {}) });
@@ -785,7 +968,18 @@ function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () =>
       out.push({ type: 'deplacement', cible, sens: e.sens, cases: e.cases });
       return;
     case 'bonus':
-      out.push({ type: 'bonus', cible, sur: e.cible, valeur: e.valeur === 'modMagie' ? modMagie : e.valeur, duree: e.duree, ...(e.typeDegats ? { typeDegats: e.typeDegats } : {}), ...(e.consomme ? { consomme: e.consomme } : {}) });
+      out.push({
+        type: 'bonus',
+        cible,
+        sur: e.cible,
+        valeur: e.valeur === 'modMagie' ? m.magie : typeof e.valeur === 'object' ? (m.caracs[e.valeur.mod] ?? 0) : e.valeur,
+        duree: e.duree,
+        ...(e.typeDegats ? { typeDegats: e.typeDegats } : {}),
+        ...(e.consomme ? { consomme: e.consomme } : {}),
+        ...(e.parAllieAuContact ? { parAllieAuContact: true as const } : {}),
+      });
+      return;
+    case 'posture':
       return;
     case 'ressource':
       out.push({ type: 'ressource', cible, ressource: e.ressource, montant: e.montant });

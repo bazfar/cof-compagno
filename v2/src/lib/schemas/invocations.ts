@@ -18,10 +18,18 @@ export const schemaInvocation = z.strictObject({
   id: schemaId,
   nom: z.string().min(1),
   description: z.string().min(1),
-  /** PV = `parNiveau` × niveau du lanceur, arrondi à l'inférieur ; ou la moitié de ses PV actuels (Illusion vivante, lot L4.5). */
-  pv: z.union([z.strictObject({ parNiveau: z.number().min(0.5).max(10) }), z.strictObject({ moitiePvLanceur: z.literal(true) })]),
-  /** DEF de base (+ mod de magie) ; ou celle du lanceur (Illusion vivante). */
-  def: z.union([z.strictObject({ base: z.number().int().min(5).max(25), plusModMagie: z.boolean().default(false) }), z.strictObject({ commeLanceur: z.literal(true) })]),
+  /**
+   * PV = `base` + `parNiveau` × niveau du lanceur, arrondi à l'inférieur
+   * (barricade : 10 + niveau, v1 ; lot L4.7) ; ou la moitié de ses PV
+   * actuels (Illusion vivante, lot L4.5).
+   */
+  pv: z.union([z.strictObject({ parNiveau: z.number().min(0.5).max(10), base: z.number().int().min(1).max(50).optional() }), z.strictObject({ moitiePvLanceur: z.literal(true) })]),
+  /** DEF de base (+ mod de magie) ; ou celle du lanceur (Illusion vivante) ; ou un objet, que toute attaque touche (barricade, lot L4.7). */
+  def: z.union([
+    z.strictObject({ base: z.number().int().min(5).max(25), plusModMagie: z.boolean().default(false) }),
+    z.strictObject({ commeLanceur: z.literal(true) }),
+    z.strictObject({ objet: z.literal(true) }),
+  ]),
   deplacement: z.number().int().min(0).max(30),
   vol: z.boolean().default(false),
   /** Frappe au jet d'attaque magique du lanceur ; null : elle n'attaque pas. */

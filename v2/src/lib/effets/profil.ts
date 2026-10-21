@@ -1,5 +1,5 @@
 import type { CapaciteDeVoie, ClasseRefonte, RegleDeVoie, VoieRefonte } from '../schemas/classes';
-import type { ModificateursDeVoie } from './resolution';
+import type { AttaquesSpecialesEnJeu, Carac, ModificateursDeVoie } from './resolution';
 import type { Action, Element, Limite, Maitrise, Palier } from '../schemas/effets';
 import { MAITRISES } from '../schemas/effets';
 import { palierAtteint } from './paliers';
@@ -14,6 +14,12 @@ import { palierAtteint } from './paliers';
  *
  * `verifierChoix` refuse un choix impossible avec une phrase pour le joueur.
  * Budget de voies : 2 rangs par niveau, dans l'ordre (règle v1 conservée).
+ *
+ * Classes physiques (lot L4.7) : la ressource de classe et sa réserve, les
+ * attaques spéciales permises et leur coût, les attaques d'arme ouvertes
+ * (attaque, attaque d'opportunité pour toutes les classes : décision 6a du
+ * 21/10/2026 ; attaques spéciales des familles permises), et la
+ * caractéristique choisie au Spécimen d'élite.
  */
 
 export interface ChoixDePersonnage {
@@ -29,11 +35,15 @@ export interface ChoixDePersonnage {
   mineurs: readonly string[];
   /** Répertoire (Virtuose 1) : le sort mineur qui passe au palier II. */
   mineurPalierII?: string;
+  /** Spécimen d'élite (Maître d'armes 2) : la caractéristique qui gagne +1. */
+  caracEnPlus?: Carac;
 }
 
 export interface Regles {
   voies: ReadonlyMap<string, VoieRefonte>;
   actions: ReadonlyMap<string, Action>;
+  /** Actions de toutes les classes : attaque à l'arme, attaque d'opportunité (lot L4.7). */
+  actionsCommunes?: readonly string[];
 }
 
 export interface ProfilMagique {
@@ -60,6 +70,16 @@ export interface ProfilMagique {
   voie: ModificateursDeVoie;
   /** Règles écrites que l'app ne calcule pas encore. */
   textes: string[];
+  /** Ressource martiale et sa réserve (Endurance du Guerrier : 3 + niveau / 3). */
+  ressourceDeClasse: { ressource: string; max: number } | null;
+  /** Attaques spéciales permises et leur coût, Maniement expert compris : ce que le moteur reçoit (lancer.attaquesSpeciales). */
+  attaquesSpeciales: AttaquesSpecialesEnJeu | null;
+  /** Attaques d'arme ouvertes : actions communes, puis attaques spéciales des familles permises. */
+  attaques: string[];
+  /** Caractéristiques augmentées par les voies (Spécimen d'élite). */
+  caracs: Partial<Record<Carac, number>>;
+  /** Palier des actions de classe à paliers (Frappe sacrée : celui de la voie la plus avancée). */
+  paliersDActions: Record<string, Palier>;
 }
 
 const plusHaute = (a: Maitrise | undefined, b: Maitrise): Maitrise => (a && MAITRISES.indexOf(a) > MAITRISES.indexOf(b) ? a : b);
@@ -112,6 +132,10 @@ export function verifierChoix(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
   const max = mineursAutorises(classe, c.niveau, repertoire);
   if (repertoire && (!c.mineurPalierII || !c.mineurs.includes(c.mineurPalierII))) e.push('Répertoire : choisis lequel de tes sorts mineurs passe au palier II.');
   if (!repertoire && c.mineurPalierII) e.push('Un sort mineur passe au palier II avec Répertoire (Voie du virtuose).');
+  const carac = regles.find((x) => x.type === 'caracEnPlus');
+  if (carac?.type === 'caracEnPlus') {
+    if (!c.caracEnPlus || !carac.parmi.includes(c.caracEnPlus)) e.push(`Choisis la caractéristique qui gagne +${carac.valeur} : ${carac.parmi.join(', ')}.`);
+  } else if (c.caracEnPlus) e.push('Une caractéristique gagne un point avec la voie qui le donne.');
   if (new Set(c.mineurs).size !== c.mineurs.length) e.push('Un sort mineur ne se prend qu’une fois.');
   if (c.mineurs.length > max) e.push(`${max} sorts mineurs au plus au niveau ${c.niveau}.`);
   for (const m of c.mineurs) if (!classe.mineurs.liste.includes(m)) e.push(`${m} n’est pas un sort mineur de ${classe.nom}.`);
@@ -135,6 +159,13 @@ export function profilMagique(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
     pvEnPlus: 0,
     voie: {},
     textes: [],
+    ressourceDeClasse: classe.ressourceDeClasse
+      ? { ressource: classe.ressourceDeClasse.ressource, max: classe.ressourceDeClasse.base + Math.floor(c.niveau / classe.ressourceDeClasse.diviseurNiveau) }
+      : null,
+    attaquesSpeciales: classe.attaquesSpeciales ? { familles: classe.attaquesSpeciales.familles, cout: classe.attaquesSpeciales.cout } : null,
+    attaques: [],
+    caracs: {},
+    paliersDActions: {},
   };
   for (const id of classe.voies) {
     const voie = r.voies.get(id);
@@ -171,6 +202,13 @@ export function profilMagique(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
             break;
           case 'capacite':
             p.capacites.push({ nom: regle.nom, limite: regle.limite });
+            // Posture de combat : plafond = rang dans la voie qui la donne (v1).
+            if (regle.nom === 'postureDeCombat') p.voie.soldat = { rang };
+            // Voie du maître d'armes : son rang, qui compte aussi Spécimen d'élite.
+            if (regle.nom === 'maniementExpert') p.voie.maitreDArmes = { rang };
+            break;
+          case 'caracEnPlus':
+            if (c.caracEnPlus) p.caracs[c.caracEnPlus] = (p.caracs[c.caracEnPlus] ?? 0) + regle.valeur;
             break;
         }
       }
@@ -191,5 +229,17 @@ export function profilMagique(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
   if (a('perfection')) p.mineurs = p.mineurs.map((m) => ({ id: m.id, palier: 'III' }));
   else if (a('repertoire') && c.mineurPalierII) p.mineurs = p.mineurs.map((m) => (m.id === c.mineurPalierII ? { id: m.id, palier: 'II' } : m));
   if (a('perfection') || a('affinite')) p.voie.virtuose = { ...(a('perfection') ? { crans: 1 } : {}), ...(a('affinite') ? { affinite: true } : {}) };
+  // Maniement expert (Maître d'armes 1, lot L4.7) : attaque spéciale −1.
+  const as = p.attaquesSpeciales;
+  if (as && a('maniementExpert') && as.cout !== 'unParCombat') p.attaquesSpeciales = { ...as, cout: { ...as.cout, montant: Math.max(1, as.cout.montant - 1) } };
+  const permises = p.attaquesSpeciales?.familles;
+  const speciales = [...r.actions.values()].filter((x) => x.famille && permises && (permises === 'toutes' || permises.includes(x.famille))).map((x) => x.id);
+  p.attaques = [...(r.actionsCommunes ?? []), ...speciales];
+  // Actions de classe à paliers (Frappe sacrée, lot L4.7) : palier de la voie la plus avancée.
+  const rangMax = Math.max(0, ...classe.voies.map((v) => c.rangs[v] ?? 0));
+  for (const id of classe.actionsDeClasse) {
+    const x = r.actions.get(id);
+    if (x && x.paliers.II) p.paliersDActions[id] = palierAtteint(x, rangMax, true);
+  }
   return p;
 }

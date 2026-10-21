@@ -21,6 +21,11 @@ import type { ActionSaisie } from '../../lib/schemas/effets';
  *     spéciale contondante et la Frappe sacrée viendront avec le système des
  *     attaques d'arme, au Guerrier (10a) ; Flamme vacillante à 10 cases,
  *     à l'attaque magique (11a).
+ * Attaques d'arme (lot L4.7, décisions de Thomas du 21/10/2026) : famille
+ * de prédilection contondante (décision du 20/10/2026), son attaque
+ * spéciale une fois par combat, sans coût (3c) ; Frappe sacrée = attaque
+ * d'arme + 1d6 sacrés, 2 PP, +1d6 au palier III (11a) ; ses paliers
+ * suivent le Cercle le plus avancé, comme un verbe de rang 1.
  * La Voie du chaos aura son lot commun.
  */
 
@@ -39,6 +44,24 @@ export const ACTIONS_PRETRE: ActionSaisie[] = [
       { type: 'bonus', cible: 'DEF', valeur: 'modMagie', duree: 'permanente', vise: 'lanceur' },
       { type: 'narratif', texte: 'Seulement sans armure.', vise: 'lanceur' },
     ],
+  },
+  {
+    id: 'pretre.frappe-sacree',
+    nom: 'Frappe sacrée',
+    description: 'Une attaque d’arme chargée de foi : +1d6 dégâts sacrés, 2d6 au palier III.',
+    nature: 'technique',
+    rang: 1,
+    etiquettes: ['combat'],
+    action: 'action',
+    cout: [{ ressource: 'pp', montant: 2 }],
+    ciblage: { type: 'creature', camp: 'ennemi', portee: 'arme' },
+    resolution: { jet: 'attaque' },
+    effets: [
+      { type: 'degats', des: 'arme', typeDegats: 'physique' },
+      { type: 'degats', des: '1d6', typeDegats: 'sacre' },
+    ],
+    // Le palier II ne change rien : la Frappe gagne son second dé au palier III (11a).
+    paliers: { II: {}, III: { effets: { '1': { des: '2d6' } } } },
   },
 ];
 
@@ -69,7 +92,8 @@ export const PRETRE: ClasseSaisie = {
   caracMagie: 'SAG',
   reservePP: { base: 4, parNiveau: 2, parMod: 1 },
   reserveSacre: { base: 2, diviseurNiveau: 3 },
-  actionsDeClasse: ['pretre.vetements-sacres'],
+  attaquesSpeciales: { familles: ['contondant'], cout: 'unParCombat' },
+  actionsDeClasse: ['pretre.vetements-sacres', 'pretre.frappe-sacree'],
   voies: ['pretre.guerison', 'pretre.foi', 'pretre.bannissement', 'pretre.jugement'],
   creation: { ecoles: [], elements: null, elementsSecond: [] },
   mineurs: {

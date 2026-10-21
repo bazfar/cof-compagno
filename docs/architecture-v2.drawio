@@ -976,6 +976,21 @@
         <mxCell id="e461" parent="1" source="eMoteur46" target="eResolution" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="titre-l47" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Le Guerrier (L4.7) — attaques d'arme, Endurance, postures, critique" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="5920" as="geometry" />
+        </mxCell>
+        <mxCell id="eGuerrier" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b&gt;src/regles/classes/guerrier.ts, armes.ts&lt;/b&gt;&lt;hr&gt;Soldat, Peuple, Maître d'armes, Ingénieur ; Endurance = 3 + niveau / 3 ;&lt;br&gt;famille de chaque arme, attaque, attaque d'opportunité,&lt;br&gt;neuf attaques spéciales ; Frappe sacrée du Prêtre" vertex="1">
+          <mxGeometry height="100" width="460" x="40" y="5960" as="geometry" />
+        </mxCell>
+        <mxCell id="eMoteur47" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;Moteur (L4.7)&lt;/b&gt;&lt;hr&gt;attaque à l'arme, critique 20 (19–20), dés de l'arme doublés,&lt;br&gt;coût en ressource de classe ou 1x/combat, postures,&lt;br&gt;mods par caractéristique, Enchaînement, Coup de maître" vertex="1">
+          <mxGeometry height="100" width="460" x="540" y="5960" as="geometry" />
+        </mxCell>
+        <mxCell id="e470" parent="1" source="eGuerrier" target="eClasses" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e471" parent="1" source="eMoteur47" target="eResolution" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
 </root>
     </mxGraphModel>
   </diagram>

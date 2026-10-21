@@ -16,6 +16,10 @@ import type { Element } from '../lib/schemas/effets';
  * début de chaque round (multiplié par le coefficient de race du mage, à
  * confirmer : la jauge de Remous n'est pas encore en 2.0).
  *
+ * La barricade du Guerrier ingénieur (lot L4.7) n'est pas une invocation
+ * d'école : c'est un objet sur la battlemap, avec ses PV (10 + niveau,
+ * v1), que toute attaque touche.
+ *
  * Décisions de Thomas du 21/10/2026 : déplacement de 6 cases (3a) ;
  * arme spirituelle à PV = niveau et DEF 12 (4a). La DEF des mineurs de
  * Légion n'est pas dans le cadre : 12, comme le familier.
@@ -115,6 +119,25 @@ export const INVOCATIONS: InvocationSaisie[] = [
       {
         nom: 'Relais',
         texte: 'Le double ne frappe pas. Chaque sort de l’Envoûteur part, au choix, de l’Envoûteur ou du double : portée et ligne de vue se mesurent depuis l’un ou l’autre.',
+      },
+    ],
+  },
+  {
+    id: 'barricade',
+    nom: 'Barricade',
+    description: 'Fortification de fortune du Guerrier ingénieur (lot L4.7, v1) : une barricade improvisée sur une case, qui abrite les alliés.',
+    pv: { base: 10, parNiveau: 1 },
+    def: { objet: true },
+    deplacement: 0,
+    attaque: null,
+    capacites: [
+      {
+        nom: 'Abri',
+        texte: 'Un allié abrité derrière la barricade gagne +4 DEF contre les attaques à distance et +2 au contact (v1).',
+        effets: [
+          { type: 'bonus', cible: 'DEFDistance', valeur: 4, duree: 'finCombat', vise: 'allie' },
+          { type: 'bonus', cible: 'DEFContact', valeur: 2, duree: 'finCombat', vise: 'allie' },
+        ],
       },
     ],
   },

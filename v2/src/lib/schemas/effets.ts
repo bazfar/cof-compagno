@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { schemaFormuleDes, schemaId } from './commun.ts';
+import { schemaCarac, schemaFormuleDes, schemaId } from './commun.ts';
 
 /*
  * Grammaire des actions et de leurs effets (lot L4.1, moteur d'effets).
@@ -43,8 +43,12 @@ export const schemaNature = z.enum(NATURES);
 /** Étiquettes (validé) : la magie ne sert pas qu'au combat. */
 export const schemaEtiquette = z.enum(['combat', 'exploration', 'social']);
 
-/** Ce que coûte l'action dans le tour. `aucune` : passif. */
-export const schemaTypeAction = z.enum(['action', 'reaction', 'gratuite', 'aucune']);
+/**
+ * Ce que coûte l'action dans le tour. `aucune` : passif. `mineure` : action
+ * mineure, à côté de l'action du tour (Second souffle, décision 7a du
+ * 21/10/2026 ; le Piège de fortune, action de mouvement en v1 ; lot L4.7).
+ */
+export const schemaTypeAction = z.enum(['action', 'mineure', 'reaction', 'gratuite', 'aucune']);
 
 /** Fréquence d'usage. */
 export const schemaLimite = z.enum(['volonte', '1x/round', '1x/combat', '1x/scene', '1x/scenario']);
@@ -107,8 +111,18 @@ export const schemaDuree = z.union([
 ]);
 export type Duree = z.infer<typeof schemaDuree>;
 
-/** Portée : contact, soi, ou un nombre de cases. */
-export const schemaPortee = z.union([z.enum(['contact', 'soi']), z.number().int().min(1).max(100)]);
+/**
+ * Familles d'armes (doc de cadre, « Attaques spéciales d'arme ») : chacune
+ * donne son attaque spéciale. La famille de chaque arme du catalogue est
+ * dans src/regles/armes.ts (décision 1a du 21/10/2026, lot L4.7) ; bouclier
+ * et mains nues ne sont pas des objets du catalogue.
+ */
+export const FAMILLES_ARME = ['contondant', 'tranchantLourd', 'tranchantLeger', 'perforant', 'dague', 'bouclier', 'arc', 'arbalete', 'mainsNues'] as const;
+export const schemaFamilleArme = z.enum(FAMILLES_ARME);
+export type FamilleArme = z.infer<typeof schemaFamilleArme>;
+
+/** Portée : contact, soi, un nombre de cases, ou celle de l'arme maniée (`arme`, lot L4.7 : allonge de la lance, tir de l'arc). */
+export const schemaPortee = z.union([z.enum(['contact', 'soi', 'arme']), z.number().int().min(1).max(100)]);
 
 /** Qui reçoit un effet. `zone` : chaque créature de la zone, filtre de la zone appliqué. */
 export const schemaVise = z.enum(['cible', 'zone', 'lanceur', 'allie']);
@@ -124,6 +138,10 @@ export const schemaCondition = z.enum([
   'contreMetal',
   'contreDemonsMortsVivants',
   'cibleMarquee',
+  /** Le lanceur n'a pas bougé ce tour (L'exemple, Voie du peuple ; lot L4.7). */
+  'immobile',
+  /** Le lanceur protège activement un allié, déclaré par le joueur comme en v1 (Pilier du village). */
+  'protegeUnAllie',
 ]);
 
 /** Cibles de bonus et malus. Liste FERMÉE (piège v1 : cible inconnue jamais lue). */
@@ -150,6 +168,11 @@ export const schemaCibleBonus = z.enum([
   'CHA',
   'reductionDegats',
   'prochainJet',
+  /** Tous les jets d20 du porteur : attaques, sauvegardes, tests (Le héros qu'on n'oublie pas : −4 ; lot L4.7). */
+  'tests',
+  /** DEF contre les seules attaques au contact, ou à distance (abri de la Fortification de fortune, v1). */
+  'DEFContact',
+  'DEFDistance',
 ]);
 
 // ---------- Effets ----------
@@ -163,11 +186,19 @@ const champsCommuns = {
   sinon: z.number().int().min(0).max(20).optional(),
 };
 
+/** Mod d'une caractéristique nommée, à la place du mod de magie (Second souffle : CON ; décision 12a du 21/10/2026, lot L4.7). */
+const champMod = { mod: schemaCarac.optional() };
+
 const schemaEffetDegats = z.strictObject({
   type: z.literal('degats'),
-  des: schemaFormuleDes,
+  /**
+   * `arme` : les dés de l'arme maniée, plus son bonus de dégâts, tous deux
+   * fournis par le lancer (lot L4.7) ; un critique double ces dés.
+   */
+  des: z.union([schemaFormuleDes, z.literal('arme')]),
   /** Ajoute le mod de la caractéristique de magie (ou d'attaque). */
   plusMod: z.boolean().default(false),
+  ...champMod,
   typeDegats: schemaTypeDegats,
   /**
    * Dégâts pleins jusqu'à `pleinsJusqua` cases du lanceur, réduits au-delà,
@@ -191,6 +222,7 @@ const schemaEffetSoin = z.strictObject({
   plusMod: z.boolean().default(false),
   /** Chaîne (lot L4.6) : les cibles après la première reçoivent la moitié du même jet. */
   enChaine: z.literal('moitie').optional(),
+  ...champMod,
   ...champsCommuns,
 });
 
@@ -198,6 +230,7 @@ const schemaEffetPvTemp = z.strictObject({
   type: z.literal('pvTemp'),
   des: schemaFormuleDes,
   plusMod: z.boolean().default(false),
+  ...champMod,
   ...champsCommuns,
 });
 
@@ -234,13 +267,32 @@ const schemaEffetDeplacement = z.strictObject({
 const schemaEffetBonus = z.strictObject({
   type: z.literal('bonus'),
   cible: schemaCibleBonus,
-  /** Signé : un malus est négatif. Formule de dés autorisée (« 1d4 ») ; `modMagie` : le mod de la caractéristique de magie (Vêtements sacrés, lot L4.6). */
-  valeur: z.union([z.number().int().min(-20).max(20), schemaFormuleDes, z.literal('modMagie')]),
+  /**
+   * Signé : un malus est négatif. Formule de dés autorisée (« 1d4 ») ;
+   * `modMagie` : le mod de la caractéristique de magie (Vêtements sacrés,
+   * lot L4.6) ; `{ mod }` : celui d'une caractéristique nommée (lot L4.7).
+   */
+  valeur: z.union([z.number().int().min(-20).max(20), schemaFormuleDes, z.literal('modMagie'), z.strictObject({ mod: schemaCarac })]),
   duree: schemaDuree,
   /** Dégâts en plus : leur type (Châtiment : sacrés, lot L4.6). */
   typeDegats: schemaTypeDegats.optional(),
   /** Le bonus tombe après usage (Châtiment : la prochaine frappe au contact). */
   consomme: z.literal('prochaineFrappe').optional(),
+  /** Multiplié par le nombre d'alliés au contact, que compte le combat (Combat en phalange : +1 DEF par allié ; lot L4.7). */
+  parAllieAuContact: z.literal(true).optional(),
+  ...champsCommuns,
+});
+
+/**
+ * Posture (Posture de combat, Voie du soldat, règle v1 conservée ; lot
+ * L4.7) : le porteur prend jusqu'à son rang dans la voie en malus sur un
+ * axe et autant en bonus sur un autre, jusqu'à son prochain tour ; la
+ * Maîtrise tactique double ce plafond (décision du 20/10/2026). Le joueur
+ * choisit les axes et la valeur au lancer.
+ */
+const schemaEffetPosture = z.strictObject({
+  type: z.literal('posture'),
+  axes: z.array(z.enum(['attaque', 'DEF', 'degats'])).min(2),
   ...champsCommuns,
 });
 
@@ -328,6 +380,7 @@ export const schemaEffet = z.discriminatedUnion('type', [
   schemaEffetRetraitEtat,
   schemaEffetDeplacement,
   schemaEffetBonus,
+  schemaEffetPosture,
   schemaEffetRessource,
   schemaEffetInvocation,
   schemaEffetTerrain,
@@ -388,8 +441,8 @@ export const schemaPersistance = z.strictObject({
   /** Coût de maintien par round, en points de la ressource de l'action. */
   maintien: z.number().int().min(1).max(5).optional(),
   rupture: z.array(z.enum(['cibleAttaquee', 'lanceurSurpris', 'lanceurAttaque', 'autreConcentration'])).default([]),
-  /** Zone persistante : quand elle agit. */
-  quand: z.enum(['entree', 'debutTour', 'finTour']).optional(),
+  /** Zone persistante : quand elle agit. `finDeplacement` : une créature y finit son déplacement (pièges, v1 ; lot L4.7). */
+  quand: z.enum(['entree', 'finDeplacement', 'debutTour', 'finTour']).optional(),
 });
 
 /** Ce qui déclenche une réaction. */
@@ -406,6 +459,8 @@ export const schemaDeclencheur = z.enum([
   'controleMental',
   'allieTombe',
   'jetAllie',
+  /** À tout moment hors de son tour (changement de posture, Maîtrise tactique ; lot L4.7). */
+  'aToutMoment',
 ]);
 
 /** Un coût fixe (techniques, capacités) ; les verbes ont le leur par formule (lib/effets/cout.ts). */
@@ -469,7 +524,7 @@ export const schemaDeltaPalier = z.strictObject({
       duree: schemaDuree.optional(),
       maintien: z.number().int().min(1).max(5).optional(),
       rupture: z.array(z.enum(['cibleAttaquee', 'lanceurSurpris', 'lanceurAttaque', 'autreConcentration'])).optional(),
-      quand: z.enum(['entree', 'debutTour', 'finTour']).optional(),
+      quand: z.enum(['entree', 'finDeplacement', 'debutTour', 'finTour']).optional(),
     })
     .optional(),
   effets: z.record(z.string().regex(/^\d+$/), z.record(z.string(), z.unknown())).optional(),
@@ -499,8 +554,12 @@ export const schemaAction = z
     cout: z.array(schemaCout).optional(),
     /** L'attaque vise la DEF sans armure (Pique mentale, lot L4.5). */
     ignoreArmure: z.literal(true).optional(),
-    /** Le lanceur sacrifie des PV en plus du coût (Saignée : la moitié de ses PV actuels). */
-    sacrifice: z.literal('moitiePvActuels').optional(),
+    /** Le lanceur sacrifie des PV en plus du coût (Saignée : la moitié de ses PV actuels ; Prouesse : 1d4, lot L4.7). */
+    sacrifice: z.union([z.literal('moitiePvActuels'), z.strictObject({ des: schemaFormuleDes })]).optional(),
+    /** Attaque spéciale de cette famille d'armes (lot L4.7) : il faut une arme de la famille, et son coût vient de la classe. */
+    famille: schemaFamilleArme.optional(),
+    /** Jet d'attaque fait avec le mod de cette caractéristique, sans arme (pièges : DEX contre la DEF, v1). */
+    attaquePar: schemaCarac.optional(),
     /** Exige un élément au moins à ce rang (Serviteur : Initié ; Cataclysme : Maître). */
     elementMin: schemaMaitrise.optional(),
     declencheur: schemaDeclencheur.optional(),
@@ -543,7 +602,13 @@ export const schemaAction = z
     if (a.elementMin && !a.element) ko('une action qui exige un élément doit en accepter un', ['elementMin']);
     a.effets.forEach((e, i) => {
       if (e.type === 'degats' && e.progression === 'mineur' && a.nature !== 'mineur') ko('seul un sort mineur suit la progression des sorts mineurs', ['effets', i, 'progression']);
+      if ((e.type === 'degats' || e.type === 'soin' || e.type === 'pvTemp') && e.plusMod && e.mod) ko('un seul mod : celui de magie ou celui nommé', ['effets', i, 'mod']);
+      if (e.type === 'degats' && e.des === 'arme' && !(a.resolution.jet === 'attaque' && !a.attaquePar)) ko('les dés de l’arme demandent une attaque à l’arme', ['effets', i, 'des']);
     });
+    // Attaques d'arme (lot L4.7).
+    if (a.attaquePar && a.resolution.jet !== 'attaque') ko('attaquePar demande un jet d’attaque', ['attaquePar']);
+    if (a.famille && (a.nature !== 'technique' || a.resolution.jet !== 'attaque' || a.attaquePar)) ko('une attaque spéciale est une technique, à l’attaque d’arme', ['famille']);
+    if (a.famille && a.cout) ko('le coût d’une attaque spéciale vient de la classe', ['cout']);
     if (a.horsCombat && !a.etiquettes.some((e) => e !== 'combat')) ko('un usage hors combat demande l’étiquette exploration ou social', ['etiquettes']);
     if (a.effets.length === 0 && !a.manuel) ko('une action sans effet est manuelle, avec sa raison', ['effets']);
     if (a.persistance.type === 'concentration' && a.persistance.duree === undefined && a.persistance.maintien === undefined)
