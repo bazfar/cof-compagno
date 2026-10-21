@@ -12,8 +12,10 @@ la refonte les remplace.
 
 | Fichier | Contenu |
 | --- | --- |
-| `index.ts` | Charge et valide toutes les actions, les indexe par identifiant |
+| `index.ts` | Charge et valide tout, indexe par identifiant, vérifie que chaque état cité existe |
 | `ecoles/evocation.ts` | Les cinq verbes d'Évocation (lot L4.1), gabarit des autres écoles |
+| `etats.ts` | Le catalogue des états de la refonte (lot L4.2) |
+| `elements.ts` | Les sept éléments : effet générique sur un sort et dérapage (lot L4.2) |
 
 Chaque action suit le schéma `src/lib/schemas/effets.ts` : ciblage, zone,
 résolution, persistance, effets typés, paliers en deltas, usage hors
@@ -37,5 +39,6 @@ deux et quatre rangs après le verbe (`src/lib/effets/paliers.ts`).
 
 ## Identifiants
 
-`<école>.<verbe>` (`evocation.missile`) : ce sont eux que les fiches
-stockeront. **Ils ne changent jamais**, même si le nom affiché change.
+`<école>.<verbe>` (`evocation.missile`) pour les actions, le nom au
+masculin pour les états (`ralenti`, `expose`), le nom de l'élément pour les
+éléments (`electricite`) : ce sont eux que les fiches stockeront. **Ils ne changent jamais**, même si le nom affiché change.

@@ -844,6 +844,27 @@
         <mxCell id="e41c" parent="1" source="eCout" target="ePaliers" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="titre-l42" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="États et éléments (L4.2) — catalogue typé, effet générique des éléments, vérification croisée des états cités" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="4660" as="geometry" />
+        </mxCell>
+        <mxCell id="eEtatsSchema" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/etats.ts  (L4.2)&lt;/b&gt;&lt;hr&gt;EtatRefonte : modificateurs, degatsParTour,&lt;br&gt;degatsInfliges (%), deplacement, agit, ciblable,&lt;br&gt;avantage / désavantage (2d20), rompuPar, parSource" vertex="1">
+          <mxGeometry height="100" width="380" x="40" y="4700" as="geometry" />
+        </mxCell>
+        <mxCell id="eElemSchema" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/elements.ts  (L4.2)&lt;/b&gt;&lt;hr&gt;FicheElement : sort et dérapage, chacun en effets typés,&lt;br&gt;modifications du sort (poussée, rebond, métal,&lt;br&gt;dé de sang, Volonté) et choix offert" vertex="1">
+          <mxGeometry height="100" width="380" x="480" y="4700" as="geometry" />
+        </mxCell>
+        <mxCell id="eEtatsDonnees" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b&gt;src/regles/etats.ts, elements.ts&lt;/b&gt;&lt;hr&gt;22 états (décisions du 21/10/2026, chiffres v1 gardés),&lt;br&gt;7 éléments ; index.ts : etatParId, elementParId,&lt;br&gt;citationsDEtats + etatsInconnus au chargement" vertex="1">
+          <mxGeometry height="100" width="400" x="920" y="4700" as="geometry" />
+        </mxCell>
+        <mxCell id="e42a" parent="1" source="eEtatsDonnees" target="eEtatsSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e42b" parent="1" source="eEtatsDonnees" target="eElemSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e42c" parent="1" source="eElemSchema" target="eSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
 </root>
     </mxGraphModel>
   </diagram>
