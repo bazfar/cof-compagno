@@ -67,6 +67,7 @@ export const schemaRessource = z.enum(RESSOURCES);
 /** Les sept éléments (validé). */
 export const ELEMENTS = ['feu', 'glace', 'terre', 'eau', 'electricite', 'sang', 'psionique'] as const;
 export const schemaElement = z.enum(ELEMENTS);
+export type Element = z.infer<typeof schemaElement>;
 
 /**
  * Types de dégâts. `magique` : magie pure, sans élément (validé : « sans
@@ -86,6 +87,7 @@ export const schemaTypeDegats = z.enum([
 
 /** Sauvegardes de la refonte : FOR, DEX, CON et Volonté (doc de cadre). */
 export const schemaSauvegarde = z.enum(['FOR', 'DEX', 'CON', 'Volonte']);
+export type Sauvegarde = z.infer<typeof schemaSauvegarde>;
 
 /**
  * Durée : un nombre de rounds, ou un mot-clé. Jamais d'objet libre.

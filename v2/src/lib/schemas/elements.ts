@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ELEMENTS, schemaEffet, schemaElement } from './effets.ts';
+import { ELEMENTS, schemaEffet, schemaElement, schemaSauvegarde } from './effets.ts';
 
 /*
  * Les sept éléments (lot L4.2 ; doc « Refonte classes et magie — cadre »,
@@ -17,6 +17,12 @@ import { ELEMENTS, schemaEffet, schemaElement } from './effets.ts';
  *   - coutPvMultiplie : le dérapage du sang double le coût en PV.
  * Un sort mineur ne prend de l'élément que le type de dégâts (validé), sauf
  * avec la Voie du virtuose.
+ *
+ * `sauvegardeSiAucune` (lot L4.3, décisions 4a et 5a du 21/10/2026) : un
+ * effet de l'élément conditionné à une sauvegarde ratée, porté par un sort
+ * qui n'en a pas (Missile), se joue sur cette sauvegarde contre le DD du
+ * sort, pour cet effet seulement : FOR pour la terre, Volonté pour le
+ * psionique.
  */
 
 const schemaModifications = z.strictObject({
@@ -36,6 +42,7 @@ const schemaVolet = z.strictObject({
   modifie: schemaModifications.default({}),
   /** Choix offert au lanceur à la place de l'effet (eau : retirer un état à un allié de la zone). */
   auChoix: z.array(schemaEffet).default([]),
+  sauvegardeSiAucune: schemaSauvegarde.optional(),
 });
 
 export const schemaFicheElement = z.strictObject({

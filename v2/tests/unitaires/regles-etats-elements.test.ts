@@ -102,8 +102,11 @@ describe('les sept éléments (doc de cadre, « Effet générique des éléments
     expect(el('glace').derapage.effets[0]).toMatchObject({ etat: 'ralenti', vise: 'lanceur' });
   });
 
-  it('terre : Renversé si la sauvegarde est ratée', () => {
+  it('terre : Renversé si la sauvegarde est ratée ; sur un sort sans sauvegarde, une FOR (4a)', () => {
     expect(el('terre').sort.effets[0]).toMatchObject({ etat: 'renverse', condition: 'sauvegardeRatee' });
+    expect(el('terre').sort.sauvegardeSiAucune).toBe('FOR');
+    expect(el('psionique').sort.sauvegardeSiAucune).toBe('Volonte');
+    expect([...elementParId.values()].filter((e) => e.sort.sauvegardeSiAucune).map((e) => e.id)).toEqual(['terre', 'psionique']);
   });
 
   it('eau : 2 cases de poussée en plus, ou un allié perd un état', () => {

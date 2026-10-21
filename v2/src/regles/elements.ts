@@ -7,6 +7,10 @@ import type { FicheElementSaisie } from '../lib/schemas/elements';
  * quelques combinaisons signature seront écrites à la main avec leurs
  * verbes.
  *
+ * Sur un sort sans sauvegarde (Missile), la terre se joue sur une
+ * sauvegarde de FOR et le psionique sur une sauvegarde de Volonté, pour leur
+ * effet seulement (décisions 4a et 5a du 21/10/2026, lot L4.3).
+ *
  * Laissés en texte, faute de chiffre dans le cadre (le MJ arbitre) : les
  * dérapages de l'eau (de combien de cases ?) et de l'électricité (qui prend
  * le rebond ?). La version « arme » des éléments (don Sensibilité
@@ -34,6 +38,7 @@ export const ELEMENTS_REFONTE: FicheElementSaisie[] = [
     sort: {
       texte: 'Renversé si sauvegarde ratée.',
       effets: [{ type: 'etat', etat: 'renverse', duree: { rounds: 1 }, condition: 'sauvegardeRatee' }],
+      sauvegardeSiAucune: 'FOR',
     },
     derapage: { texte: 'Le lanceur est renversé.', effets: [{ type: 'etat', etat: 'renverse', duree: { rounds: 1 }, vise: 'lanceur' }] },
   },
@@ -82,6 +87,7 @@ export const ELEMENTS_REFONTE: FicheElementSaisie[] = [
       texte: 'Sauvegarde de Volonté, armure ignorée ; ratée : Affaibli 1 tour.',
       modifie: { sauvegarde: 'Volonte', ignoreArmure: true },
       effets: [{ type: 'etat', etat: 'affaibli', duree: { rounds: 1 }, condition: 'sauvegardeRatee' }],
+      sauvegardeSiAucune: 'Volonte',
     },
     derapage: { texte: 'Le lanceur est étourdi.', effets: [{ type: 'etat', etat: 'etourdi', duree: { rounds: 1 }, vise: 'lanceur' }] },
   },

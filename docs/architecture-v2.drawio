@@ -865,6 +865,24 @@
         <mxCell id="e42c" parent="1" source="eElemSchema" target="eSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="titre-l43" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Résolution (L4.3) — un lancer donne la liste des changements, sans rien écrire ; le combat (L6) les écrira" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="4840" as="geometry" />
+        </mxCell>
+        <mxCell id="eResolution" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/effets/resolution.ts  (L4.3)&lt;/b&gt;&lt;hr&gt;resoudreLancer(lancer, catalogue) → coût (PP, PV), DD, issue,&lt;br&gt;jets notés, changements : dégâts (calcul détaillé), états,&lt;br&gt;poussées, soins, retraits… ; dés injectés (alea)&lt;br&gt;degatsReduits (un arrondi), appliquerAffaibli" vertex="1">
+          <mxGeometry height="110" width="460" x="40" y="4880" as="geometry" />
+        </mxCell>
+        <mxCell id="e430" parent="1" source="eResolution" target="eCout" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e431" parent="1" source="eResolution" target="ePaliers" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e432" parent="1" source="eResolution" target="eEtatsSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e433" parent="1" source="eResolution" target="eElemSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
 </root>
     </mxGraphModel>
   </diagram>
