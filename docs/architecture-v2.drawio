@@ -1036,6 +1036,21 @@
         <mxCell id="e4101" parent="1" source="eMoteur410" target="eResolution" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="titre-l411a" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="La fiche de la refonte (L4.11a) — fiche v2, budget, conversion" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="6640" as="geometry" />
+        </mxCell>
+        <mxCell id="eFicheV2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;lib/schemas/fiche.ts, firestore.rules&lt;/b&gt;&lt;hr&gt;fiche v1 ou v2 (schemaVersion) ; v2 : refonte, octrois du MJ ;&lt;br&gt;le joueur convertit, ne s'accorde rien, change ses jauges ;&lt;br&gt;ses rangs à la montée ou quand le MJ rouvre" vertex="1">
+          <mxGeometry height="100" width="460" x="40" y="6680" as="geometry" />
+        </mxCell>
+        <mxCell id="eRefonteFiche" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/fiche/refonte.ts&lt;/b&gt;&lt;hr&gt;choix, budget v1 (rangs 3–5 à 2 points), Polyvalence,&lt;br&gt;gestes, jauges pleines, conversion d'une fiche v1,&lt;br&gt;reconversion ; profil et moteur derrière" vertex="1">
+          <mxGeometry height="100" width="460" x="540" y="6680" as="geometry" />
+        </mxCell>
+        <mxCell id="e4110" parent="1" source="eRefonteFiche" target="eFicheV2" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4111" parent="1" source="eRefonteFiche" target="eProfil" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
 </root>
     </mxGraphModel>
   </diagram>

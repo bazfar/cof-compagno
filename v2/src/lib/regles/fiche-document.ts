@@ -1,4 +1,4 @@
-import { LIMITE_NOTES, progressionVierge, schemaFiche, VERSION_FICHE, type Fiche, type ObjetFiche } from '../schemas/fiche.ts';
+import { LIMITE_NOTES, progressionVierge, schemaFicheV1, VERSION_FICHE, type Fiche, type FicheV1, type ObjetFiche } from '../schemas/fiche.ts';
 import { ficheV1VersCalcul } from './conversion-v1.ts';
 import type { FicheCalcul } from './fiche-calcul.ts';
 
@@ -12,7 +12,7 @@ import type { FicheCalcul } from './fiche-calcul.ts';
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- forme v1 non typée
-type FicheV1 = Record<string, any>;
+type FicheBrute = Record<string, any>;
 
 /**
  * Champs v1 volontairement abandonnés à l'import (cadrage, « Migration et
@@ -64,13 +64,13 @@ const CHAMPS_V1_REPRIS = [
 ] as const;
 
 /** Ce que la 2.0 ne lit pas encore d'une fiche v1, gardé tel quel (décision 5a). */
-export function modulesV1(v1: FicheV1): Record<string, unknown> {
+export function modulesV1(v1: FicheBrute): Record<string, unknown> {
   const connus = new Set<string>([...CHAMPS_V1_REPRIS, ...CHAMPS_V1_ABANDONNES, ...CHAMPS_V1_REMPLACES, ...CHAMPS_V1_IMAGES]);
   return Object.fromEntries(Object.entries(v1).filter(([k, v]) => !connus.has(k) && v !== undefined));
 }
 
 /** Points de Cercle du Prêtre, des quatre champs v1 au dictionnaire 2.0. */
-export function pointsCercleV1(v1: FicheV1): Record<string, number> {
+export function pointsCercleV1(v1: FicheBrute): Record<string, number> {
   return Object.fromEntries(
     Object.entries(POINTS_CERCLE_V1).filter(([v1Cle]) => typeof v1[v1Cle] === 'number').map(([v1Cle, cle]) => [cle, v1[v1Cle] as number]),
   );
@@ -115,7 +115,7 @@ export function versFirestore<T>(valeur: T, chemin = 'fiche'): T {
  * (conversion-v1, qui lève si une voie est introuvable) ; tout champ v1 non
  * repris et non abandonné va dans `modules`.
  */
-export function ficheDepuisV1(v1: FicheV1, proprietaireUid: string, creeLe: number): { fiche: Fiche; portrait: string | null } {
+export function ficheDepuisV1(v1: FicheBrute, proprietaireUid: string, creeLe: number): { fiche: FicheV1; portrait: string | null } {
   const calc = ficheV1VersCalcul(v1);
   const modules = modulesV1(v1);
   const pointsCercle = pointsCercleV1(v1);
@@ -164,21 +164,29 @@ export function ficheDepuisV1(v1: FicheV1, proprietaireUid: string, creeLe: numb
     modules,
   };
   const portrait = typeof v1.portrait === 'string' && v1.portrait ? v1.portrait : null;
-  return { fiche: schemaFiche.parse(versFirestore(brute, v1.nom ?? 'fiche')), portrait };
+  return { fiche: schemaFicheV1.parse(versFirestore(brute, v1.nom ?? 'fiche')), portrait };
 }
 
-/** Document de la 2.0 → fiche de calcul (L1.3). */
+/**
+ * Document de la 2.0 → fiche de calcul (L1.3). Une fiche de la refonte
+ * (version 2, lot L4.11a) n'a plus de voies v1 : les calculs v1 n'y voient
+ * aucune capacité, aucun sort ni Cercle ; la Plongée tient lieu de
+ * corruption de combat, la Corruption d'Âme de corruption majeure. Les
+ * passifs de la refonte (DEF, initiative…) seront lus du profil avec
+ * l'affichage des actions (lot L4.12).
+ */
 export function ficheCalculDepuisFiche(f: Fiche): FicheCalcul {
+  const v1 = f.schemaVersion === 1 ? f : null;
   return {
     niveau: f.niveau,
     classe: f.classe,
     race: f.race,
     raceVariante: f.raceVariante ?? null,
     caracs: f.caracs,
-    capacites: f.capacites,
+    capacites: v1?.capacites ?? [],
     capacitesRace: f.capacitesRace,
     capacitesRaceChoix: f.capacitesRaceChoix,
-    voiesHorsProfil: f.voiesHorsProfil,
+    voiesHorsProfil: v1?.voiesHorsProfil ?? [],
     dons: f.dons,
     donsChoix: f.donsChoix,
     bonusCompetences: f.bonusCompetences,
@@ -189,15 +197,15 @@ export function ficheCalculDepuisFiche(f: Fiche): FicheCalcul {
     inventaireListe: Object.values(f.inventaire),
     etatsActifs: f.etatsActifs as FicheCalcul['etatsActifs'],
     mutations: (f.mutations ?? undefined) as FicheCalcul['mutations'],
-    corruptionCombat: f.corruptionCombat,
-    corruptionMajeure: f.corruptionMajeure,
+    corruptionCombat: f.schemaVersion === 1 ? f.corruptionCombat : f.refonte.jauges.plongee,
+    corruptionMajeure: f.schemaVersion === 1 ? f.corruptionMajeure : f.refonte.jauges.corruptionAme,
     contratDemoniaquePenalite: (f.contratDemoniaquePenalite ?? null) as FicheCalcul['contratDemoniaquePenalite'],
     amesStockees: f.amesStockees,
     piecesOr: f.piecesOr,
     piecesArgent: f.piecesArgent,
     piecesBronze: f.piecesBronze,
-    grimoireSortsConnus: f.grimoireSortsConnus,
-    grimoireSortsPrepares: f.grimoireSortsPrepares,
-    cercleSpecialisation: f.cercleSpecialisation,
+    grimoireSortsConnus: v1?.grimoireSortsConnus ?? [],
+    grimoireSortsPrepares: v1?.grimoireSortsPrepares ?? [],
+    cercleSpecialisation: v1?.cercleSpecialisation ?? null,
   };
 }

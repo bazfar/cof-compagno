@@ -232,7 +232,7 @@
           <span class="aide" data-testid="crans">{barre.crans} / {barre.requis} crans vers le niveau {fiche.niveau + 1}</span>
           {#if barre.pleine}
             <strong class="pleine">Barre pleine</strong>
-            {#if modifiable && !montee}<button class="petit" onclick={() => { message = ''; montee = true; }}>Passer au niveau {fiche.niveau + 1}</button>{/if}
+            {#if modifiable && !montee && fiche.schemaVersion === 1}<button class="petit" onclick={() => { message = ''; montee = true; }}>Passer au niveau {fiche.niveau + 1}</button>{/if}
           {/if}
         {/if}
       </div>

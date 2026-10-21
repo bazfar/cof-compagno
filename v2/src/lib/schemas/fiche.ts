@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { schemaNom } from './acces.ts';
-import { CARACS } from './commun.ts';
+import { CARACS, schemaId } from './commun.ts';
+import { schemaElement, schemaMaitrise } from './effets.ts';
 
 /*
  * La fiche d'un personnage (lot L2.1) : tables/{table}/persos/{id}.
@@ -27,9 +28,21 @@ import { CARACS } from './commun.ts';
  *
  * Le portrait n'est pas ici : il a son propre document,
  * persos/{id}/images/portrait (décision 6a, L2.3 ; schemas/portrait.ts).
+ *
+ * Version 2, la refonte (lot L4.11a, décisions de Thomas du 21/10/2026) :
+ * chaque joueur refait ses voies au même niveau, valeurs conservées (4a).
+ * Une fiche non convertie reste en version 1, lisible telle quelle ; la
+ * conversion REMPLACE les champs propres à la v1 (capacités, voies hors
+ * profil, grimoire, Cercle et points de Cercle, corruptions) par le bloc
+ * `refonte` (1b), et le MJ accorde à part ce qui ne se choisit pas
+ * (`octrois` : Voie du chaos, éléments découverts, verbes appris par
+ * grimoire, conversion rouverte). Les voies hors profil disparaissent,
+ * leurs points sont rendus (3a). Les deux versions vivent sous un même
+ * schéma, discriminé par `schemaVersion`.
  */
 
 export const VERSION_FICHE = 1;
+export const VERSION_FICHE_REFONTE = 2;
 
 /** Notes libres : au plus 10 000 caractères (marge large sous le 1 Mo d'un document). */
 export const LIMITE_NOTES = 10_000;
@@ -43,8 +56,8 @@ export const schemaObjetFiche = z.looseObject({
 const entier = z.number().int();
 const schemaEtatActif = z.looseObject({ idEtat: z.string() });
 
-export const schemaFiche = z.strictObject({
-  schemaVersion: z.literal(VERSION_FICHE),
+/** Champs communs aux deux versions de la fiche. */
+const champsCommuns = {
   /** uid du joueur à qui appartient le personnage (un joueur peut en avoir plusieurs, décision 2a). */
   proprietaireUid: z.string().min(1),
   creeLe: entier.nonnegative(),
@@ -59,11 +72,8 @@ export const schemaFiche = z.strictObject({
 
   // ---- Règles (mêmes champs que regles/fiche-calcul.ts) ----
   caracs: z.partialRecord(z.enum(CARACS), entier),
-  /** `offert` : rang gratuit (Polyvalence de l'Humain, décision du 16/10), hors budget de points. */
-  capacites: z.array(z.object({ id: z.string(), choix: z.string().optional(), offert: z.literal(true).optional() })),
   capacitesRace: z.array(entier),
   capacitesRaceChoix: z.record(z.string(), z.string()),
-  voiesHorsProfil: z.array(z.object({ voie: z.string(), cout: z.number().optional() })),
   dons: z.array(z.string()),
   donsChoix: z.record(z.string(), z.unknown()),
   bonusCompetences: z.record(z.string(), z.number()),
@@ -73,8 +83,6 @@ export const schemaFiche = z.strictObject({
   pvActuel: entier.nullable(),
   pvHistorique: z.array(z.looseObject({})),
   ppActuel: entier.nullable().optional(),
-  /** Points de Cercle du Prêtre (v1 : pointsBannissement, pointsBenediction…). */
-  pointsCercle: z.record(z.string(), entier).optional(),
 
   // ---- Équipement et possessions ----
   equipement: z.record(z.string(), schemaObjetFiche.nullable()),
@@ -86,15 +94,8 @@ export const schemaFiche = z.strictObject({
   // ---- État et corruption ----
   etatsActifs: z.array(schemaEtatActif),
   mutations: z.array(z.looseObject({ palier: z.number(), d6: z.number() })).nullable(),
-  corruptionCombat: entier,
-  corruptionMajeure: entier,
   contratDemoniaquePenalite: z.looseObject({}).nullable().optional(),
   amesStockees: entier.nonnegative(),
-
-  // ---- Magie ----
-  grimoireSortsConnus: z.array(z.string()),
-  grimoireSortsPrepares: z.array(z.string()),
-  cercleSpecialisation: z.string().nullable(),
 
   // ---- Progression et Vécu (cadrage « Rencontres, PNJ et Vécu », décidé le 16/10) ----
   // Réservés dès L2.1, vides. Chaque cran sera un document persos/{id}/jalons/{id}
@@ -117,9 +118,95 @@ export const schemaFiche = z.strictObject({
 
   // ---- Modules pas encore migrés (décision 5a) ----
   modules: z.record(z.string(), z.unknown()),
+};
+
+/** Fiche v1 : les voies, le grimoire et les jauges de la v1. */
+export const schemaFicheV1 = z.strictObject({
+  schemaVersion: z.literal(VERSION_FICHE),
+  ...champsCommuns,
+  /** `offert` : rang gratuit (Polyvalence de l'Humain, décision du 16/10), hors budget de points. */
+  capacites: z.array(z.object({ id: z.string(), choix: z.string().optional(), offert: z.literal(true).optional() })),
+  voiesHorsProfil: z.array(z.object({ voie: z.string(), cout: z.number().optional() })),
+  /** Points de Cercle du Prêtre (v1 : pointsBannissement, pointsBenediction…). */
+  pointsCercle: z.record(z.string(), entier).optional(),
+  corruptionCombat: entier,
+  corruptionMajeure: entier,
+  grimoireSortsConnus: z.array(z.string()),
+  grimoireSortsPrepares: z.array(z.string()),
+  cercleSpecialisation: z.string().nullable(),
 });
 
+/**
+ * Les choix de la refonte (lot L4.11a) : ce que lit le profil
+ * (lib/effets/profil.ts, ChoixDePersonnage), et les jauges.
+ *   - `classe` : la classe de la refonte (Envoûteur pour l'Enchanteur v1) ;
+ *     le champ `classe` de la fiche garde l'identifiant v1, que lisent les
+ *     calculs de la fiche (dé de vie, PP, attaque) ;
+ *   - `rangOffert` : le rang gratuit de la Polyvalence (Humain), dans une
+ *     voie de la classe ; son coût ne compte pas ;
+ *   - `variantes` : choix fixés à l'acquisition d'un passif (Esprit
+ *     fissuré : `garde`), par identifiant d'action ;
+ *   - `jauges` : Endurance, Inspiration et Sacré actuels (null : la classe
+ *     n'en a pas), Plongée du combat, Corruption d'Âme. Pleines à la
+ *     conversion ; la Corruption d'Âme reprend la corruption majeure v1, la
+ *     Plongée part de 0 (décision 9a).
+ */
+export const schemaRefonteFiche = z.strictObject({
+  classe: schemaId,
+  rangs: z.record(schemaId, entier.min(0).max(5)),
+  rangOffert: z.strictObject({ voie: schemaId, rang: entier.min(1).max(5) }).nullable(),
+  ecole: schemaId.nullable(),
+  elementDepart: schemaElement.nullable(),
+  secondElement: schemaElement.nullable(),
+  elementMaitre: schemaElement.nullable(),
+  mineurs: z.array(schemaId),
+  mineurPalierII: schemaId.nullable(),
+  caracEnPlus: z.enum(CARACS).nullable(),
+  variantes: z.record(schemaId, schemaId),
+  jauges: z.strictObject({
+    endurance: entier.nonnegative().nullable(),
+    inspiration: entier.nonnegative().nullable(),
+    sacre: entier.nonnegative().nullable(),
+    plongee: entier.nonnegative(),
+    corruptionAme: entier.nonnegative(),
+  }),
+});
+
+/**
+ * Ce que le MJ accorde (décisions 5a, 6a, 7a, 12a) ; le joueur ne l'écrit
+ * pas (règles Firestore) :
+ *   - `chaos` : la Voie du chaos est ouverte à ce personnage ;
+ *   - `elements` : éléments découverts en jeu, avec leur maîtrise ;
+ *   - `verbes` : verbes d'une autre école appris par grimoire (palier I) ;
+ *   - `reconversion` : le joueur peut refaire ses voies une fois de plus.
+ */
+export const schemaOctrois = z.strictObject({
+  chaos: z.boolean(),
+  elements: z.partialRecord(schemaElement, schemaMaitrise),
+  verbes: z.array(z.strictObject({ id: schemaId, maitrise: z.enum(['nonMaitrise', 'initie']) })),
+  reconversion: z.boolean(),
+});
+
+/** Fiche v2 : la refonte, sans les champs propres à la v1. */
+export const schemaFicheV2 = z.strictObject({
+  schemaVersion: z.literal(VERSION_FICHE_REFONTE),
+  ...champsCommuns,
+  refonte: schemaRefonteFiche,
+  octrois: schemaOctrois,
+});
+
+export const schemaFiche = z.discriminatedUnion('schemaVersion', [schemaFicheV1, schemaFicheV2]);
+
 export type Fiche = z.infer<typeof schemaFiche>;
+export type FicheV1 = z.infer<typeof schemaFicheV1>;
+export type FicheV2 = z.infer<typeof schemaFicheV2>;
+export type RefonteFiche = z.infer<typeof schemaRefonteFiche>;
+export type Octrois = z.infer<typeof schemaOctrois>;
+
+/** Rien d'accordé : la Voie du chaos fermée, aucun élément ni verbe en plus. */
+export function octroisVierges(): Octrois {
+  return { chaos: false, elements: {}, verbes: [], reconversion: false };
+}
 
 /** Valeurs vides des champs réservés : toute nouvelle fiche part de là. */
 export function progressionVierge(): Pick<Fiche, 'progression' | 'vecu' | 'usages'> {

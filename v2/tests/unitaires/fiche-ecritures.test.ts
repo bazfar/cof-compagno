@@ -24,7 +24,7 @@ vi.mock('firebase/firestore', () => ({
 const { session } = await import('../../src/lib/session.svelte');
 const actions = await import('../../src/lib/actions/persos');
 const { ficheDepuisV1 } = await import('../../src/lib/regles/fiche-document');
-const { schemaFiche } = await import('../../src/lib/schemas/fiche');
+const { schemaFiche, schemaFicheV1, schemaFicheV2, schemaOctrois } = await import('../../src/lib/schemas/fiche');
 const { LIMITE_PORTRAIT, schemaPortrait } = await import('../../src/lib/schemas/portrait');
 
 const FICHE_V1 = JSON.parse(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../fixtures/fiches-v1.json'), 'utf8')).fiches[0];
@@ -116,11 +116,15 @@ describe('équipement et sac (L2.4)', () => {
 });
 
 describe('schéma de fiche aligné sur firestore.rules', () => {
-  it('mêmes champs autorisés des deux côtés', () => {
-    const corps = regles.slice(regles.indexOf('function ficheValide('));
-    const liste = /hasOnly\(\[([^\]]*)\]\)/.exec(corps)?.[1] ?? '';
-    const champsRegles = liste.split(',').map((c) => c.trim().replace(/'/g, '')).filter(Boolean).sort();
-    expect(champsRegles).toEqual(Object.keys(schemaFiche.shape).sort());
+  it('mêmes champs autorisés des deux côtés, pour chaque version (lot L4.11a)', () => {
+    const champsDe = (fonction: string) => {
+      const corps = regles.slice(regles.indexOf(`function ${fonction}(`));
+      const liste = /hasOnly\(\[([^\]]*)\]\)/.exec(corps)?.[1] ?? '';
+      return liste.split(',').map((c) => c.trim().replace(/'/g, '')).filter(Boolean).sort();
+    };
+    expect(champsDe('ficheV1Valide')).toEqual(Object.keys(schemaFicheV1.shape).sort());
+    expect(champsDe('ficheV2Valide')).toEqual(Object.keys(schemaFicheV2.shape).sort());
+    expect(champsDe('octroisValides')).toEqual(Object.keys(schemaOctrois.shape).sort());
   });
 
   it('portrait : mêmes champs et même limite que portraitValide', () => {

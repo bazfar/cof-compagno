@@ -1,4 +1,4 @@
-import { schemaFiche, type Fiche } from '../schemas/fiche.ts';
+import { schemaFicheV1, type Fiche, type FicheV1 } from '../schemas/fiche.ts';
 import { CalculsPersonnage, decouperCapacite } from './calculs.ts';
 import * as C from './creation.ts';
 import { constantes, voieParId } from './donnees.ts';
@@ -36,7 +36,7 @@ import { barreNiveau } from './progression.ts';
 /** Ce que le joueur a choisi pour ce niveau, sur la fiche lue à l'ouverture. */
 export interface Montee {
   /** Fiche au moment de l'ouverture : ses choix sont verrouillés. */
-  avant: Fiche;
+  avant: FicheV1;
   /** Brouillon de règles au niveau suivant : choix acquis + nouveaux. */
   b: C.Brouillon;
   /** Dé de vie tiré pour le nouveau niveau ; null tant qu'il n'est pas lancé. */
@@ -45,18 +45,22 @@ export interface Montee {
 
 export const RefusMontee = C.RefusCreation;
 
+/** Fiche convertie à la refonte (lot L4.11a) : sa montée de niveau arrive avec l'étape Voies de la refonte (L4.11b). */
+export const MONTEE_REFONTE = 'Ce personnage est passé à la refonte : sa montée de niveau arrive avec le prochain lot.';
+
 const CARACS_CODES = constantes.caracs.map((c) => c.code) as Carac[];
 
 /** Sorts appris de la fiche, hors sorts accordés (ceux-là se recalculent). */
-function apprisDe(f: Fiche, b: C.Brouillon): string[] {
+function apprisDe(f: FicheV1, b: C.Brouillon): string[] {
   const accordes = C.sortsAccordes(b);
   return f.grimoireSortsConnus.filter((s) => !accordes.includes(s));
 }
 
 /** Ouvre la montée : refusée si la barre n'est pas pleine ou au plafond. */
 export function ouvrirMontee(lue: Fiche): Montee {
+  if (lue.schemaVersion !== 1) throw new RefusMontee(MONTEE_REFONTE);
   // Copie simple : la fiche affichée est un état réactif (proxy), que structuredClone refuse.
-  const f = JSON.parse(JSON.stringify(lue)) as Fiche;
+  const f = JSON.parse(JSON.stringify(lue)) as FicheV1;
   const barre = barreNiveau(f);
   if (barre.requis === null) throw new RefusMontee('Niveau maximum atteint.');
   if (!barre.pleine) throw new RefusMontee(`Il manque ${barre.requis - barre.crans} cran(s) pour monter de niveau.`);
@@ -218,7 +222,7 @@ export const CHAMPS_MONTEE = [
 
 export interface MonteeAppliquee {
   /** Fiche après la montée (validée par le schéma), crans déjà dépensés. */
-  fiche: Fiche;
+  fiche: FicheV1;
   /** Champs à écrire, sans `progression` (dépensée par l'action). */
   champs: Partial<Record<(typeof CHAMPS_MONTEE)[number], unknown>>;
   /** Crans dépensés. */
@@ -227,7 +231,7 @@ export interface MonteeAppliquee {
 }
 
 /** Choix acquis d'une fiche : s'ils ont changé depuis l'ouverture, la montée est à refaire. */
-const acquis = (f: Fiche) => JSON.stringify([
+const acquis = (f: FicheV1) => JSON.stringify([
   f.niveau, f.classe, f.race, f.raceVariante ?? null, f.caracs, f.capacites, f.capacitesRace, f.capacitesRaceChoix,
   f.voiesHorsProfil, f.dons, f.donsChoix, f.grimoireSortsConnus, f.cercleSpecialisation,
 ]);
@@ -239,6 +243,7 @@ const acquis = (f: Fiche) => JSON.stringify([
  * changé entre-temps.
  */
 export function appliquerMontee(f: Fiche, m: Montee): MonteeAppliquee {
+  if (f.schemaVersion !== 1) throw new RefusMontee(MONTEE_REFONTE);
   if (acquis(f) !== acquis(m.avant)) throw new RefusMontee('La fiche a changé pendant la montée de niveau : recommence-la.');
   const barre = barreNiveau(f);
   if (barre.requis === null || !barre.pleine) throw new RefusMontee('La barre de progression n’est plus pleine.');
@@ -253,9 +258,9 @@ export function apercuMontee(m: Montee): MonteeAppliquee | null {
   return m.jetPV === null || requis === null ? null : construire(m.avant, m, requis);
 }
 
-function construire(lue: Fiche, m: Montee, requis: number): MonteeAppliquee {
+function construire(lue: FicheV1, m: Montee, requis: number): MonteeAppliquee {
   // La fiche affichée porte son identifiant de document, que le schéma ne connaît pas.
-  const { id: _id, ...f } = lue as Fiche & { id?: string };
+  const { id: _id, ...f } = lue as FicheV1 & { id?: string };
   const { b } = m;
   const n = nouveautes(m);
   const calcAvant = new CalculsPersonnage(ficheCalculDepuisFiche(f));
@@ -291,7 +296,7 @@ function construire(lue: Fiche, m: Montee, requis: number): MonteeAppliquee {
   const ppApres = calcApres.calculerPPMax();
   const ppActuel = ppApres === null ? f.ppActuel : Math.max(0, Math.min(ppApres, (f.ppActuel ?? ppAvant ?? 0) + ppApres - (ppAvant ?? 0)));
 
-  const fiche = schemaFiche.parse(versFirestore({
+  const fiche = schemaFicheV1.parse(versFirestore({
     ...avecPV,
     pvMax,
     pvActuel,

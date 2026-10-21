@@ -129,3 +129,43 @@ describe('fiche vivante (L2.3)', () => {
     await assertSucceeds(alice().doc(chemin).delete());
   });
 });
+
+describe('fiche de la refonte (L4.11a)', () => {
+  const refonte = { classe: 'magicien', rangs: { 'magicien.ecole': 2 }, rangOffert: null, ecole: 'evocation', elementDepart: 'feu', secondElement: null, elementMaitre: null, mineurs: [], mineurPalierII: null, caracEnPlus: null, variantes: {}, jauges: { endurance: null, inspiration: null, sacre: null, plongee: 0, corruptionAme: 0 } };
+  const octrois = { chaos: false, elements: {}, verbes: [], reconversion: false };
+  const v2 = (proprietaireUid: string, extra: Record<string, unknown> = {}) => {
+    const { capacites: _c, ...communs } = fiche(proprietaireUid);
+    return { ...communs, schemaVersion: 2, refonte, octrois, ...extra };
+  };
+  const convertie = (extra: Record<string, unknown> = {}) => {
+    const { capacites: _c, ...communs } = fiche('alice');
+    return { ...communs, schemaVersion: 2, refonte, octrois, ...extra };
+  };
+
+  it('une joueuse convertit sa fiche v1 (version 2, champs v1 retirés), sans rien s’accorder', async () => {
+    await poser('p1', fiche('alice'));
+    await assertSucceeds(alice().doc(`${TABLE}/persos/p1`).set(convertie()));
+    await poser('p2', fiche('alice'));
+    await assertSucceeds(alice().doc(`${TABLE}/persos/p2`).set(convertie({ octrois: { ...octrois, chaos: true } })));
+    await poser('p3', fiche('alice'));
+    await assertFails(alice().doc(`${TABLE}/persos/p3`).set(convertie({ octrois: { ...octrois, elements: { glace: 'initie' } } })));
+    await assertFails(alice().doc(`${TABLE}/persos/p3`).set(convertie({ capacites: [] })));
+  });
+
+  it('ensuite, ce qu’accorde le MJ (octrois) ne se touche pas ; les jauges, si ; les rangs, à la montée ou rouverts', async () => {
+    await poser('p1', v2('alice'));
+    await assertFails(alice().doc(`${TABLE}/persos/p1`).update({ 'octrois.chaos': true }));
+    await assertSucceeds(alice().doc(`${TABLE}/persos/p1`).update({ 'refonte.jauges.plongee': 3 }));
+    await assertFails(alice().doc(`${TABLE}/persos/p1`).update({ 'refonte.rangs': { 'magicien.ecole': 3 } }));
+    await assertFails(alice().doc(`${TABLE}/persos/p1`).update({ schemaVersion: 1 }));
+    await assertSucceeds(bob().doc(`${TABLE}/persos/p1`).update({ 'octrois.reconversion': true, 'octrois.chaos': true }));
+    await assertSucceeds(alice().doc(`${TABLE}/persos/p1`).update({ 'refonte.rangs': { 'magicien.ecole': 1 }, 'octrois.reconversion': false }));
+    await assertFails(alice().doc(`${TABLE}/persos/p1`).update({ 'refonte.rangs': { 'magicien.ecole': 2 } }));
+  });
+
+  it('une joueuse crée une fiche de la refonte sans rien d’accordé ; le MJ, comme il veut', async () => {
+    await assertSucceeds(alice().doc(`${TABLE}/persos/p1`).set(v2('alice')));
+    await assertFails(alice().doc(`${TABLE}/persos/p2`).set(v2('alice', { octrois: { ...octrois, chaos: true } })));
+    await assertSucceeds(bob().doc(`${TABLE}/persos/p3`).set(v2('alice', { octrois: { ...octrois, chaos: true } })));
+  });
+});

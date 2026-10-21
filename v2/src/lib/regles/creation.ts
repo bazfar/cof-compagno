@@ -1,4 +1,4 @@
-import { progressionVierge, schemaFiche, VERSION_FICHE, type Fiche, type ObjetFiche } from '../schemas/fiche.ts';
+import { progressionVierge, schemaFicheV1, VERSION_FICHE, type FicheV1, type ObjetFiche } from '../schemas/fiche.ts';
 import { CalculsPersonnage, decouperCapacite } from './calculs.ts';
 import { classeParId, constantes, donParId, equipementDepart, objetParId, raceParId, sorts, voieParId } from './donnees.ts';
 import { inventaireEnDictionnaire, versFirestore } from './fiche-document.ts';
@@ -674,7 +674,7 @@ export function avertissementsCreation(b: Brouillon): string[] {
  * La fiche Firestore du personnage créé (validée par le schéma). Lève une
  * RefusCreation listant les erreurs si le brouillon n'est pas complet.
  */
-export function ficheDepuisBrouillon(b: Brouillon, proprietaireUid: string, creeLe: number): Fiche {
+export function ficheDepuisBrouillon(b: Brouillon, proprietaireUid: string, creeLe: number): FicheV1 {
   const erreurs = erreursCreation(b);
   if (erreurs.length) throw new RefusCreation(erreurs.join(' '));
   const calc = ficheCalculDuBrouillon(b);
@@ -726,5 +726,5 @@ export function ficheDepuisBrouillon(b: Brouillon, proprietaireUid: string, cree
     ...(r?.notes ? { notes: r.notes } : {}),
     modules: r?.modules ?? {},
   };
-  return schemaFiche.parse(versFirestore(brute, b.nom || 'fiche'));
+  return schemaFicheV1.parse(versFirestore(brute, b.nom || 'fiche'));
 }

@@ -134,6 +134,7 @@ describe('profil magique', () => {
       pvEnPlus: 0,
       voie: {},
       textes: [],
+      verbesHorsVoie: [],
       ressourceDeClasse: null,
       attaquesSpeciales: null,
       attaques: [],
@@ -163,7 +164,8 @@ describe('profil magique', () => {
   });
 
   it('rang 5 partout : Missile au palier III, Choc et Rayon au II (deux rangs après eux), Cataclysme et Résonance débloqués', () => {
-    const c = choix({ niveau: 5, secondElement: 'eau', elementMaitre: 'eau', rangs: { 'magicien.ecole': 5, 'magicien.elementaire': 5 } });
+    // 16 points de voie : niveau 8 (budget v1, corrigé au lot L4.11a).
+    const c = choix({ niveau: 8, secondElement: 'eau', elementMaitre: 'eau', rangs: { 'magicien.ecole': 5, 'magicien.elementaire': 5 } });
     expect(verifierChoix(magicien, c, regles)).toEqual([]);
     const p = profilMagique(magicien, c, regles);
     expect(p.verbes.map((v) => v.palier)).toEqual(['III', 'II', 'II', 'I', 'I']);
@@ -174,10 +176,13 @@ describe('profil magique', () => {
     const erreurs = (c: Partial<ChoixDePersonnage>) => verifierChoix(magicien, choix(c), regles);
     expect(erreurs({ ecole: 'illusion' })).toEqual([expect.stringMatching(/Choisis une école/)]);
     expect(erreurs({ elementDepart: 'sang' })).toEqual([expect.stringMatching(/élément de départ/)]);
-    expect(erreurs({ rangs: { 'magicien.ecole': 2, 'magicien.elementaire': 1 } })).toEqual(['3 rangs pour 2 possibles au niveau 1.']);
+    expect(erreurs({ rangs: { 'magicien.ecole': 2, 'magicien.elementaire': 1 } })).toEqual(['3 points de voie pour 2 au niveau 1.']);
+    // Budget v1 (lot L4.11a) : les rangs 3 à 5 coûtent 2 points ; 5 rangs dans une voie font 8 points.
+    expect(erreurs({ niveau: 3, rangs: { 'magicien.ecole': 4 } })).toEqual([]);
+    expect(erreurs({ niveau: 3, rangs: { 'magicien.ecole': 5 } })).toEqual(['8 points de voie pour 6 au niveau 3.']);
     expect(erreurs({ niveau: 2, rangs: { 'magicien.ecole': 2, 'magicien.elementaire': 2 } })).toEqual(['Choisis un second élément.']);
     expect(erreurs({ niveau: 2, secondElement: 'feu', rangs: { 'magicien.ecole': 2, 'magicien.elementaire': 2 } })).toEqual(['Le second élément doit différer du premier.']);
-    expect(erreurs({ niveau: 2, secondElement: 'glace', rangs: { 'magicien.ecole': 1, 'magicien.elementaire': 3 } })).toEqual(['Choisis lequel de tes éléments devient Maître.']);
+    expect(erreurs({ niveau: 3, secondElement: 'glace', rangs: { 'magicien.ecole': 1, 'magicien.elementaire': 3 } })).toEqual(['Choisis lequel de tes éléments devient Maître.']);
     expect(erreurs({ secondElement: 'glace' })).toEqual([expect.stringMatching(/second élément vient/)]);
     expect(erreurs({ mineurs: ['mineur.lumiere', 'mineur.lumiere'] })).toEqual(['Un sort mineur ne se prend qu’une fois.']);
     expect(erreurs({ mineurs: ['mineur.lumiere', 'mineur.trait-arcanique', 'mineur.prestidigitation'] })).toEqual(['2 sorts mineurs au plus au niveau 1.']);

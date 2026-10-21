@@ -13,7 +13,15 @@ import { palierAtteint } from './paliers';
  * leur maîtrise.
  *
  * `verifierChoix` refuse un choix impossible avec une phrase pour le joueur.
- * Budget de voies : 2 rangs par niveau, dans l'ordre (règle v1 conservée).
+ * Budget de voies (règle v1 conservée, corrigée au lot L4.11a : le lot
+ * L4.4b1 comptait 2 RANGS par niveau) : 2 POINTS par niveau ; un rang coûte
+ * 1 point aux rangs 1 et 2, 2 points aux rangs 3 à 5 ; le rang offert de la
+ * Polyvalence (Humain) ne coûte rien.
+ *
+ * Lot L4.11a, décisions de Thomas du 21/10/2026 : la Voie du chaos ne se
+ * prend qu'ouverte par le MJ (12a) ; les éléments découverts en jeu et les
+ * verbes appris par grimoire sont accordés par le MJ (6a, 7a) ; les voies
+ * hors profil de la v1 n'existent pas dans la refonte (3a).
  *
  * Classes physiques (lot L4.7) : la ressource de classe et sa réserve, les
  * attaques spéciales permises et leur coût, les attaques d'arme ouvertes
@@ -37,6 +45,28 @@ export interface ChoixDePersonnage {
   mineurPalierII?: string;
   /** Spécimen d'élite (Maître d'armes 2) : la caractéristique qui gagne +1. */
   caracEnPlus?: Carac;
+  /** Polyvalence (Humain) : un rang d'une voie de la classe, offert. */
+  rangOffert?: { voie: string; rang: number } | null;
+  /** La Voie du chaos est ouverte par le MJ (lot L4.11a). */
+  chaosOuvert?: boolean;
+  /** Éléments découverts en jeu, accordés par le MJ, avec leur maîtrise. */
+  elementsAccordes?: Partial<Record<Element, Maitrise>>;
+  /** Verbes d'une autre école appris par grimoire (palier I), accordés par le MJ. */
+  verbesHorsVoie?: readonly { id: string; maitrise: 'nonMaitrise' | 'initie' }[];
+}
+
+/** Coût d'un rang de voie (v1) : 1 point aux rangs 1 et 2, 2 aux rangs 3 à 5. */
+export function coutDuRang(rang: number): number {
+  return rang >= 3 ? 2 : 1;
+}
+
+/** Points de voie : 2 par niveau ; dépensés, rang offert déduit ; restants (négatifs : trop dépensé). */
+export function pointsDeVoies(c: Pick<ChoixDePersonnage, 'niveau' | 'rangs' | 'rangOffert'>): { total: number; depenses: number; restants: number } {
+  const total = 2 * c.niveau;
+  let depenses = 0;
+  for (const rang of Object.values(c.rangs)) for (let r = 1; r <= (rang ?? 0); r++) depenses += coutDuRang(r);
+  if (c.rangOffert && (c.rangs[c.rangOffert.voie] ?? 0) >= c.rangOffert.rang) depenses -= coutDuRang(c.rangOffert.rang);
+  return { total, depenses, restants: total - depenses };
 }
 
 export interface Regles {
@@ -70,6 +100,8 @@ export interface ProfilMagique {
   voie: ModificateursDeVoie;
   /** Règles écrites que l'app ne calcule pas encore. */
   textes: string[];
+  /** Verbes appris par grimoire (palier I), avec la maîtrise de leur école (lot L4.11a). */
+  verbesHorsVoie: { id: string; maitrise: 'nonMaitrise' | 'initie' }[];
   /** Ressource martiale et sa réserve (Endurance du Guerrier : 3 + niveau / 3). */
   ressourceDeClasse: { ressource: string; max: number } | null;
   /** Attaques spéciales permises et leur coût, Maniement expert compris : ce que le moteur reçoit (lancer.attaquesSpeciales). */
@@ -109,15 +141,19 @@ export function verifierChoix(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
   if (classe.creation.ecoles.length && (!c.ecole || !classe.creation.ecoles.includes(c.ecole))) e.push(`Choisis une école : ${classe.creation.ecoles.join(', ')}.`);
   if (classe.creation.elements && (!c.elementDepart || !classe.creation.elements.includes(c.elementDepart)))
     e.push(`Choisis un élément de départ : ${classe.creation.elements.join(', ')}.`);
-  let total = 0;
   for (const [voie, rang] of Object.entries(c.rangs)) {
     if (!rang) continue;
     if (!classe.voies.includes(voie)) e.push(`La voie ${voie} n’est pas une voie de ${classe.nom}.`);
     else if (!r.voies.has(voie)) e.push(`La voie ${voie} n’existe pas encore.`);
     if (!Number.isInteger(rang) || rang < 0 || rang > 5) e.push(`Rang ${rang} impossible dans ${voie}.`);
-    total += rang;
+    if (r.voies.get(voie)?.surAccordDuMJ && !c.chaosOuvert) e.push(`${r.voies.get(voie)!.nom} : elle s’ouvre avec l’accord du MJ.`);
   }
-  if (total > 2 * c.niveau) e.push(`${total} rangs pour ${2 * c.niveau} possibles au niveau ${c.niveau}.`);
+  const points = pointsDeVoies(c);
+  if (points.restants < 0) e.push(`${points.depenses} points de voie pour ${points.total} au niveau ${c.niveau}.`);
+  if (c.rangOffert) {
+    if (!classe.voies.includes(c.rangOffert.voie) || r.voies.get(c.rangOffert.voie)?.surAccordDuMJ) e.push('Le rang offert se prend dans une voie de la classe.');
+    else if ((c.rangs[c.rangOffert.voie] ?? 0) < c.rangOffert.rang) e.push('Le rang offert doit être un rang pris.');
+  }
   for (const groupe of classe.voiesExclusives)
     if (groupe.filter((v) => (c.rangs[v] ?? 0) > 0).length > 1) e.push(`Une seule voie parmi : ${groupe.join(', ')}.`);
   const regles = reglesAtteintes(classe, c, r);
@@ -151,6 +187,7 @@ export function profilMagique(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
     maitriseSecondeEcole: null,
     elements: c.elementDepart ? { [c.elementDepart]: classe.creation.maitriseElementDepart } : {},
     verbes: [],
+    verbesHorsVoie: [...(c.verbesHorsVoie ?? [])],
     actions: [...classe.actionsDeClasse],
     annuleDerapage: null,
     mineursMax: mineursAutorises(classe, c.niveau),
@@ -217,6 +254,8 @@ export function profilMagique(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
       }
     }
   }
+  // Éléments découverts en jeu (lot L4.11a, 7a) : la plus haute des maîtrises.
+  for (const [el, m] of Object.entries(c.elementsAccordes ?? {}) as [Element, Maitrise][]) p.elements[el] = plusHaute(p.elements[el], m);
   // Capacités de voie (lot L4.4b2) : ce qu'elles changent au profil, et ce que le moteur en reçoit.
   const a = (nom: CapaciteDeVoie) => p.capacites.some((x) => x.nom === nom);
   const rangDe = (noms: CapaciteDeVoie[]) => noms.filter(a).length;

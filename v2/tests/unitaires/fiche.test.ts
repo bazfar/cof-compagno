@@ -11,7 +11,7 @@ import {
   inventaireEnDictionnaire,
   versFirestore,
 } from '../../src/lib/regles/fiche-document';
-import { schemaFiche } from '../../src/lib/schemas/fiche';
+import { schemaFiche, schemaFicheV1 } from '../../src/lib/schemas/fiche';
 
 /*
  * La fiche dans Firestore (lot L2.1), éprouvée sur les 9 fiches réelles de
@@ -96,7 +96,7 @@ describe('outils de la fiche', () => {
 
   it('le schéma refuse un champ inconnu et une version future', () => {
     const { fiche } = ficheDepuisV1(FICHES[0], 'u', 1);
-    expect(schemaFiche.strict().safeParse({ ...fiche, def: 14 }).success).toBe(false);
+    expect(schemaFicheV1.strict().safeParse({ ...fiche, def: 14 }).success).toBe(false);
     expect(schemaFiche.safeParse({ ...fiche, schemaVersion: 2 }).success).toBe(false);
   });
 });

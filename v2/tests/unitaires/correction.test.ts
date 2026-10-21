@@ -44,7 +44,7 @@ describe('champs corrigés', () => {
 describe('voies et rangs', () => {
   it('les voies de la classe sont réglables, avec le rang atteint', () => {
     const k = reelle('Karlach');
-    const voies = voiesCorrigeables(k, k.voiesHorsProfil);
+    const voies = voiesCorrigeables(k, k);
     expect(voies.length).toBeGreaterThanOrEqual(5);
     const prise = voies.find((v) => rangDeVoie(k.capacites, v.id) > 0)!;
     expect(prise.max).toBeGreaterThanOrEqual(rangDeVoie(k.capacites, prise.id));

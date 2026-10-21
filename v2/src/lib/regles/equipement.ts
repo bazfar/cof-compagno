@@ -284,7 +284,7 @@ export function recevoirObjet(f: Fiche, objet: ObjetFiche): Changement {
 }
 
 /** Applique un Changement à une fiche (pour l'affichage et les tests ; Firestore fait de même champ par champ). */
-export function appliquer(f: Fiche, ch: Changement): Fiche {
+export function appliquer<F extends Fiche>(f: F, ch: Changement): F {
   const inventaire = { ...f.inventaire };
   for (const [k, v] of Object.entries(ch.inventaire)) {
     if (v) inventaire[k] = v;

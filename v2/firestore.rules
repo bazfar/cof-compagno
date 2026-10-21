@@ -60,7 +60,12 @@ service cloud.firestore {
     // Fiche de personnage (lot L2.1). Aligné sur schemaFiche
     // (src/lib/schemas/fiche.ts) ; la forme détaillée est vérifiée par Zod
     // dans l'app, les règles bornent les champs et l'essentiel.
+    // Deux versions (lot L4.11a) : la v1, et la fiche convertie à la refonte
+    // (schemaFicheV1, schemaFicheV2). Chacune a sa liste de champs.
     function ficheValide(d) {
+      return (d.schemaVersion == 1 && ficheV1Valide(d)) || (d.schemaVersion == 2 && ficheV2Valide(d));
+    }
+    function ficheV1Valide(d) {
       return d.keys().hasOnly([
           'schemaVersion', 'proprietaireUid', 'creeLe', 'nom', 'genre', 'niveau',
           'classe', 'race', 'raceVariante', 'caracs', 'capacites', 'capacitesRace',
@@ -69,9 +74,53 @@ service cloud.firestore {
           'piecesOr', 'piecesArgent', 'piecesBronze', 'etatsActifs', 'mutations', 'corruptionCombat',
           'corruptionMajeure', 'contratDemoniaquePenalite', 'amesStockees', 'grimoireSortsConnus', 'grimoireSortsPrepares', 'cercleSpecialisation',
           'progression', 'vecu', 'usages', 'notes', 'modules'])
-        && d.keys().hasAll(['schemaVersion', 'proprietaireUid', 'creeLe', 'nom', 'niveau', 'pvMax', 'inventaire', 'equipement',
+        && ficheCommuneValide(d);
+    }
+    function ficheV2Valide(d) {
+      return d.keys().hasOnly([
+          'schemaVersion', 'proprietaireUid', 'creeLe', 'nom', 'genre', 'niveau',
+          'classe', 'race', 'raceVariante', 'caracs', 'capacitesRace',
+          'capacitesRaceChoix', 'dons', 'donsChoix', 'bonusCompetences', 'pvMax',
+          'pvActuel', 'pvHistorique', 'ppActuel', 'equipement', 'inventaire',
+          'piecesOr', 'piecesArgent', 'piecesBronze', 'etatsActifs', 'mutations',
+          'contratDemoniaquePenalite', 'amesStockees',
+          'progression', 'vecu', 'usages', 'notes', 'modules', 'refonte', 'octrois'])
+        && d.keys().hasAll(['refonte', 'octrois'])
+        && d.refonte is map && d.refonte.rangs is map && d.refonte.jauges is map
+        && d.refonte.jauges.plongee is int && d.refonte.jauges.corruptionAme is int
+        && octroisValides(d.octrois)
+        && ficheCommuneValide(d);
+    }
+    // Ce que le MJ accorde (schemaOctrois) : le joueur ne l'écrit pas, sauf à
+    // sa conversion et pour refermer une reconversion (refonteParJoueur).
+    function octroisValides(o) {
+      return o is map && o.keys().hasOnly(['chaos', 'elements', 'verbes', 'reconversion'])
+        && o.chaos is bool && o.elements is map && o.verbes is list && o.verbes.size() <= 30 && o.reconversion is bool;
+    }
+    function octroisVierges(o) {
+      return o.chaos == false && o.elements.size() == 0 && o.verbes.size() == 0 && o.reconversion == false;
+    }
+    // Ce que le joueur change seul à la refonte de son personnage :
+    //   - la conversion (v1 → v2), une fois : rien d'accordé, sauf la Voie du
+    //     chaos qu'il avait en v1 (décision 12a ; vérifiée par l'app) ;
+    //   - une reconversion rouverte par le MJ, qu'il referme en la faisant ;
+    //   - à la montée de niveau, ses nouveaux rangs ;
+    //   - à tout moment, ses jauges (Endurance, Inspiration…).
+    function refonteParJoueur(apres, avant) {
+      return (avant.schemaVersion == 1 && apres.schemaVersion == 2
+          && apres.octrois.elements.size() == 0 && apres.octrois.verbes.size() == 0 && apres.octrois.reconversion == false)
+        || (avant.schemaVersion == 2 && apres.schemaVersion == 2
+          && (!apres.diff(avant).affectedKeys().hasAny(['octrois'])
+            || (avant.octrois.reconversion == true && apres.octrois.reconversion == false
+              && apres.octrois.diff(avant.octrois).affectedKeys().hasOnly(['reconversion'])))
+          && (!apres.diff(avant).affectedKeys().hasAny(['refonte'])
+            || apres.refonte.diff(avant.refonte).affectedKeys().hasOnly(['jauges'])
+            || avant.octrois.reconversion == true
+            || apres.niveau == avant.niveau + 1));
+    }
+    function ficheCommuneValide(d) {
+      return d.keys().hasAll(['schemaVersion', 'proprietaireUid', 'creeLe', 'nom', 'niveau', 'pvMax', 'inventaire', 'equipement',
           'progression', 'vecu', 'usages'])
-        && d.schemaVersion == 1
         && d.proprietaireUid is string
         && nomValide(d.nom)
         && d.niveau is int && d.niveau >= 1 && d.niveau <= 20
@@ -460,12 +509,15 @@ service cloud.firestore {
           && (estMj(table)
             || (estJoueur(table)
               && request.resource.data.proprietaireUid == request.auth.uid
-              && progressionVierge(request.resource.data)));
+              && progressionVierge(request.resource.data)
+              && (request.resource.data.schemaVersion == 1 || octroisVierges(request.resource.data.octrois))));
         allow update: if ficheValide(request.resource.data)
           && (estMj(table)
             || (estJoueur(table)
               && resource.data.proprietaireUid == request.auth.uid
-              && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['proprietaireUid', 'schemaVersion', 'creeLe'])
+              && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['proprietaireUid', 'creeLe'])
+              && ((resource.data.schemaVersion == 1 && request.resource.data.schemaVersion == 1)
+                || refonteParJoueur(request.resource.data, resource.data))
               && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['niveau', 'progression'])
                 || monteeValide(request.resource.data, resource.data))
               && vecuChoisiParJoueur(request.resource.data.vecu, resource.data.vecu)));

@@ -36,6 +36,7 @@ const { constantes } = await import('../../src/lib/regles/donnees');
 const { ficheCalculDepuisFiche, ficheDepuisV1 } = await import('../../src/lib/regles/fiche-document');
 const { cransRequis } = await import('../../src/lib/regles/progression');
 type Fiche = import('../../src/lib/schemas/fiche').Fiche;
+type FicheV1 = import('../../src/lib/schemas/fiche').FicheV1;
 type Brouillon = import('../../src/lib/regles/creation').Brouillon;
 type Montee = import('../../src/lib/regles/montee').Montee;
 
@@ -80,7 +81,7 @@ const gestesMontee = {
 };
 
 /** Personnage créé par l'assistant, barre pleine. */
-function cree(classe: string, race: string, niveau: number, jet = 0.5): Fiche {
+function cree(classe: string, race: string, niveau: number, jet = 0.5): FicheV1 {
   let b = C.changerNiveau({ ...C.brouillonVide(), nom: `${classe} ${race}`, classe, race, caracsLibres: { DEX: 3, CON: 3 } }, niveau);
   while (b.jetsPV.length < niveau - 1) b = C.lancerJetPV(b, des(jet));
   b = premiersChoix(b, (x) => x, gestesBrouillon);

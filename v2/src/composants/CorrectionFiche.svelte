@@ -41,7 +41,7 @@
 
   const champs = $derived(champsCorriges(base, $state.snapshot(c) as Correction));
   const changes = $derived(Object.keys(champs) as (keyof Correction)[]);
-  const voies = $derived(voiesCorrigeables(c, fiche.voiesHorsProfil));
+  const voies = $derived(voiesCorrigeables(c, fiche));
   const rangsRaciaux = $derived(rangsRace(c.race));
   const alertes = $derived(avertissements(fiche, $state.snapshot(c) as Correction));
   const donsDispo = $derived(dons.filter((d) => !c.dons.includes(d.id)).sort((a, b) => a.nom.localeCompare(b.nom, 'fr')));
@@ -112,7 +112,7 @@
         </select>
       </label>
     {:else}
-      <p class="aide">Choisis une classe pour régler ses voies.</p>
+      <p class="aide">{fiche.schemaVersion === 1 ? 'Choisis une classe pour régler ses voies.' : 'Personnage passé à la refonte : ses voies se refont par la conversion.'}</p>
     {/each}
   </fieldset>
 

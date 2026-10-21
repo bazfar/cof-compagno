@@ -1,7 +1,7 @@
 import { decouperCapacite } from '../regles/calculs.ts';
 import { classeParId, donParId, raceParId, voieParId } from '../regles/donnees.ts';
 import { CARACS } from '../schemas/commun.ts';
-import { schemaFiche, type Fiche } from '../schemas/fiche.ts';
+import { schemaFiche, type Fiche, type FicheV1 } from '../schemas/fiche.ts';
 
 /*
  * Correction d'une fiche par le MJ (lot L3.6, cadrage L3 « édition des
@@ -11,6 +11,10 @@ import { schemaFiche, type Fiche } from '../schemas/fiche.ts';
  * (la « base »). À l'enregistrement, seuls les champs que le MJ a changés
  * par rapport à cette base sont écrits : une modification faite entre-temps
  * par le joueur (PV, sac…) sur un autre champ n'est jamais écrasée.
+ *
+ * Fiche convertie à la refonte (lot L4.11a) : ses voies ne se corrigent pas
+ * ici (pas de `capacites`) ; le MJ rouvre la conversion pour que le joueur
+ * les refasse (décision 5a du 21/10/2026, écran au lot L4.11b).
  */
 
 export interface Correction {
@@ -19,10 +23,10 @@ export interface Correction {
   niveau: number;
   classe: string | null;
   race: string | null;
-  caracs: Fiche['caracs'];
+  caracs: FicheV1['caracs'];
   pvMax: number;
   pvActuel: number | null;
-  capacites: Fiche['capacites'];
+  capacites: FicheV1['capacites'];
   capacitesRace: number[];
   dons: string[];
 }
@@ -56,19 +60,22 @@ export function correctionDepuis(f: Fiche): Correction {
     caracs: f.caracs,
     pvMax: f.pvMax,
     pvActuel: f.pvActuel,
-    capacites: f.capacites,
+    capacites: f.schemaVersion === 1 ? f.capacites : [],
     capacitesRace: f.capacitesRace,
     dons: f.dons,
   });
 }
 
 /** Rang atteint dans une voie (le plus haut rang pris). */
-export function rangDeVoie(capacites: Fiche['capacites'], voie: string): number {
+export function rangDeVoie(capacites: FicheV1['capacites'], voie: string): number {
   return Math.max(0, ...capacites.map((c) => decouperCapacite(c.id)).filter((c) => c.voie === voie).map((c) => c.rang));
 }
 
 /** Les voies que le MJ peut régler : celles de la classe, les hors profil, et toute voie déjà présente dans la fiche. */
-export function voiesCorrigeables(c: Pick<Correction, 'classe' | 'capacites'>, voiesHorsProfil: Fiche['voiesHorsProfil']): { id: string; nom: string; max: number; horsProfil: boolean }[] {
+export function voiesCorrigeables(c: Pick<Correction, 'classe' | 'capacites'>, fiche: Fiche): { id: string; nom: string; max: number; horsProfil: boolean }[] {
+  // Fiche de la refonte : ses voies se refont par la conversion, pas ici.
+  if (fiche.schemaVersion !== 1) return [];
+  const voiesHorsProfil = fiche.voiesHorsProfil;
   const classe = c.classe ? classeParId.get(c.classe) : undefined;
   const ids = [...(classe?.voies.map((v) => v.id) ?? []), ...voiesHorsProfil.map((h) => h.voie), ...c.capacites.map((cap) => decouperCapacite(cap.id).voie)];
   return [...new Set(ids)].map((id) => {
@@ -82,7 +89,7 @@ export function voiesCorrigeables(c: Pick<Correction, 'classe' | 'capacites'>, v
  * et rang offert compris), les rangs manquants jusqu'au rang voulu sont
  * ajoutés, ceux au-delà sont retirés.
  */
-export function avecRang(capacites: Fiche['capacites'], voie: string, rang: number): Fiche['capacites'] {
+export function avecRang(capacites: FicheV1['capacites'], voie: string, rang: number): FicheV1['capacites'] {
   const autres = capacites.filter((c) => decouperCapacite(c.id).voie !== voie);
   const gardes = capacites.filter((c) => {
     const d = decouperCapacite(c.id);
@@ -120,7 +127,9 @@ export function refusCorrection(fiche: Fiche, champs: Partial<Correction>): stri
     if (v !== undefined && (!Number.isInteger(v) || v < 1 || v > 30)) return `${k} doit être un entier entre 1 et 30.`;
   }
   const { id: _id, ...sansId } = fiche as Fiche & { id?: string }; // l'id du magasin n'est pas un champ
-  const r = schemaFiche.safeParse({ ...sansId, ...champs, ...(champs.nom !== undefined ? { nom: champs.nom.trim() } : {}) });
+  // Une fiche de la refonte n'a pas de `capacites` : le brouillon en porte une liste vide, jamais écrite.
+  const { capacites, ...autres } = champs;
+  const r = schemaFiche.safeParse({ ...sansId, ...(fiche.schemaVersion === 1 && capacites ? { capacites } : {}), ...autres, ...(champs.nom !== undefined ? { nom: champs.nom.trim() } : {}) });
   if (!r.success) {
     const i = r.error.issues[0];
     return `Correction refusée (${i?.path.join('.') ?? '?'}) : ${i?.message ?? 'valeur invalide'}.`;
@@ -129,11 +138,11 @@ export function refusCorrection(fiche: Fiche, champs: Partial<Correction>): stri
 }
 
 /** Avertissements (n'empêchent pas d'enregistrer). */
-export function avertissements(fiche: Pick<Fiche, 'voiesHorsProfil'>, c: Correction): string[] {
+export function avertissements(fiche: Fiche, c: Correction): string[] {
   const a: string[] = [];
   if (c.pvActuel !== null && c.pvActuel > c.pvMax) a.push('Les PV actuels dépassent les PV max.');
   const classe = c.classe ? classeParId.get(c.classe) : undefined;
-  const horsClasse = new Set(fiche.voiesHorsProfil.map((h) => h.voie));
+  const horsClasse = new Set(fiche.schemaVersion === 1 ? fiche.voiesHorsProfil.map((h) => h.voie) : []);
   const etrangeres = [...new Set(c.capacites.map((cap) => decouperCapacite(cap.id).voie))].filter((v) => !classe?.voies.some((x) => x.id === v) && !horsClasse.has(v));
   if (etrangeres.length) a.push(`Rangs dans des voies hors de la classe : ${etrangeres.map((v) => voieParId.get(v)?.nom ?? v).join(', ')}.`);
   const race = c.race ? raceParId.get(c.race) : undefined;
