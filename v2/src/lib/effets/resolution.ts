@@ -4,6 +4,7 @@ import type { Action, Duree, Effet, Element, FamilleArme, Palier, Sauvegarde } f
 import type { FicheElement } from '../schemas/elements';
 import type { EtatRefonte } from '../schemas/etats';
 import { coutSort, ddSort, MAITRISES, seuilEchec, type CoutCalcule, type Maitrise } from './cout';
+import { corruptionParLaPlongee } from './chaos';
 import { actionAuPalier, paliersDefinis } from './paliers';
 
 /*
@@ -66,6 +67,14 @@ import { actionAuPalier, paliersDefinis } from './paliers';
  * peut dépendre d'un mod de la cible (3 + mod de CON du buveur, 15a) ; un
  * lanceur réduit au Silence ne lance aucun sort (3a) ; une action peut
  * exiger une famille d'armes (Lancer un couteau).
+ *
+ * Voies du chaos (lot L4.9, décisions de Thomas du 21/10/2026) : elles ne
+ * coûtent ni PP ni ressource de classe, seulement la Plongée qu'elles
+ * ajoutent (1a) ; le R3 lance un d20 de chaos, mutation du palier 1 sur
+ * 18–20 (5a) ; le Don corrompu donne +1d6 chaotiques ou relance le dé de
+ * dégâts le plus bas, une fois par sort, +1 Plongée (4a) ; quand le moteur
+ * connaît la Plongée du lanceur, il rend la Corruption d'Âme gagnée, +1
+ * par multiple de 6 dépassé (1b ; lib/effets/chaos.ts).
  */
 
 // ---------- Entrées ----------
@@ -108,6 +117,9 @@ export interface LanceurEnJeu extends Combattant {
   /** PV actuels et max : coûts en PV (sang, Pacte, Saignée), jamais sous 1 PV ; Seuil critique. */
   pv?: number;
   pvMax?: number;
+  /** Plongée du combat en cours et Corruption d'Âme (Voies du chaos, lot L4.9). */
+  plongee?: number;
+  corruptionAme?: number;
 }
 
 /**
@@ -143,6 +155,8 @@ export interface ModificateursDeVoie {
     /** Le geste unique (rang 5) : dés doublés. */
     gesteUnique?: boolean;
   };
+  /** Voie du chaos (lot L4.9) : Éclat chaotique (Envoûteur R1) ; le Don corrompu choisi pour ce lancer (R2). */
+  chaos?: { rang: number; eclatChaotique?: boolean; donCorrompu?: 'plus1d6' | 'relance' };
   /** Voie du soldat (lot L4.7) : son rang plafonne la posture. */
   soldat?: { rang: number };
   maitreDArmes?: {
@@ -244,8 +258,10 @@ export type Changement =
   | { type: 'deplacement'; cible: string; sens: 'repousse' | 'attire' | 'teleporte' | 'libre'; cases: number }
   | { type: 'relance'; cible: string }
   | { type: 'bonus'; cible: string; sur: string; valeur: number | string; duree: Duree; typeDegats?: string; consomme?: 'prochaineFrappe'; parAllieAuContact?: true }
-  | { type: 'plancherPv'; cible: string; valeur: number }
-  | { type: 'ressource'; cible: string; ressource: string; montant: number }
+  | { type: 'plancherPv'; cible: string; valeur: number; duree?: Duree }
+  | { type: 'ressource'; cible: string; ressource: string; montant: number | 'vider' }
+  | { type: 'tombe'; cible: string }
+  | { type: 'mutation'; cible: string; palier: 1 }
   | { type: 'invocation'; creature: string; nombre: number; duree: Duree; element?: Element }
   | { type: 'terrain'; nature: string; duree: Duree }
   | { type: 'dissipation'; cible: string; nombre: number }
@@ -345,7 +361,7 @@ function coutFixe(action: Action, palier: Palier, surcharge?: boolean): CoutCalc
   return { ok: true, pp, palierLance, detail: [{ terme: 'base', valeur: pp }] };
 }
 
-type Mods = { magie: number; caracs: Partial<Record<Carac, number>>; choix?: Carac };
+type Mods = { magie: number; caracs: Partial<Record<Carac, number>>; choix?: Carac; pointsDeChaos?: number };
 
 /** Mod ajouté par un effet : celui de magie (`plusMod`) ou celui d'une caractéristique nommée (12a). */
 function modDeLEffet(e: { plusMod?: boolean; mod?: Carac }, m: Mods): number {
@@ -390,7 +406,7 @@ function avecDureesTirees(action: Action, alea: () => number, modMagie: number, 
     }
     return tirees.get(cle)!;
   };
-  return { ...action, effets: action.effets.map((e) => ('duree' in e ? { ...e, duree: tirer(e.duree) } : e)) as Action['effets'] };
+  return { ...action, effets: action.effets.map((e) => ('duree' in e && e.duree !== undefined ? { ...e, duree: tirer(e.duree) } : e)) as Action['effets'] };
 }
 
 /** Le geste unique (Virtuose 5, décision 15b du 21/10/2026) : « 1d8 » devient « 2d8 ». */
@@ -484,9 +500,29 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   if (action.armes && !action.armes.includes(l.arme!.famille)) return { ok: false, raison: `${action.nom} demande une arme : ${action.armes.join(', ')}` };
   // Élixirs (lot L4.8) : la caractéristique choisie, et le mod de la cible que lit la durée.
   if (action.effets.some((e) => e.type === 'bonus' && e.cible === 'caracAuChoix') && !l.caracChoisie) return { ok: false, raison: 'choisis la caractéristique' };
-  const modsDeCible = [...new Set(action.effets.flatMap((e) => ('duree' in e && typeof e.duree === 'object' && 'plusModCible' in e.duree ? [e.duree.plusModCible] : [])))];
-  const sansModCible = [...l.cibles, ...(l.allie ? [l.allie] : [])].find((c) => modsDeCible.some((k) => c.mods?.[k] === undefined));
-  if (sansModCible) return { ok: false, raison: `il faut le mod de ${modsDeCible.join(', ')} de ${sansModCible.id}` };
+  // Une durée qui lit un mod (élixirs, Avatars : lot L4.9) : chaque créature qu'elle vise doit le donner.
+  for (const e of action.effets) {
+    if (!('duree' in e) || typeof e.duree !== 'object' || !('plusModCible' in e.duree)) continue;
+    const k = e.duree.plusModCible;
+    const visees = e.vise === 'lanceur' ? [l.lanceur] : e.vise === 'allie' ? (l.allie ? [l.allie] : []) : e.vise === 'zone' ? [...(l.zone ?? [])] : [...l.cibles];
+    const sans = visees.find((c) => c.mods?.[k] === undefined);
+    if (sans) return { ok: false, raison: `il faut le mod de ${k} de ${sans.id}` };
+  }
+  // Voies du chaos (lot L4.9).
+  if (action.corruptionAmeMin && (l.lanceur.corruptionAme ?? 0) < action.corruptionAmeMin)
+    return { ok: false, raison: `${action.nom} : actif dès ${action.corruptionAmeMin} de Corruption d’Âme` };
+  if (ressources.plongee && l.lanceur.plongee !== undefined && l.lanceur.plongee < ressources.plongee) return { ok: false, raison: 'pas assez de Plongée' };
+  const litLeChaos = (typeof action.sacrifice === 'object' && 'parPointDeChaos' in action.sacrifice) || action.effets.some((e) => e.type === 'bonus' && e.valeur === 'pointsDeChaos');
+  let pointsDeChaos: number | undefined;
+  if (litLeChaos) {
+    if (l.lanceur.plongee === undefined || l.lanceur.corruptionAme === undefined) return { ok: false, raison: 'il faut la Plongée et la Corruption d’Âme du lanceur' };
+    const plafond = typeof action.sacrifice === 'object' && 'parPointDeChaos' in action.sacrifice ? action.sacrifice.plafond : Infinity;
+    pointsDeChaos = Math.min(plafond, l.lanceur.plongee + l.lanceur.corruptionAme);
+    if (pointsDeChaos < 1) return { ok: false, raison: 'aucun point de chaos' };
+  }
+  const don = v.chaos?.donCorrompu;
+  if (don && (v.chaos?.rang ?? 0) < 2) return { ok: false, raison: 'le Don corrompu vient au rang 2 de la Voie du chaos' };
+  if (don && !action.effets.some((e) => e.type === 'degats')) return { ok: false, raison: 'le Don corrompu force un sort ou une attaque qui fait des dégâts' };
   let attaqueSpecialeDuCombat = false;
   let coupDouble = false;
   if (l.boost && action.ecole === 'chant') ressources.inspiration = (ressources.inspiration ?? 0) + 1;
@@ -500,7 +536,12 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   }
   const sansMod = caracsLues(action).find((c) => l.lanceur.mods?.[c] === undefined);
   if (sansMod) return { ok: false, raison: `il faut le mod de ${sansMod} du lanceur` };
-  const m: Mods = { magie: l.lanceur.modMagie, caracs: l.lanceur.mods ?? {}, ...(l.caracChoisie ? { choix: l.caracChoisie } : {}) };
+  const m: Mods = {
+    magie: l.lanceur.modMagie,
+    caracs: l.lanceur.mods ?? {},
+    ...(l.caracChoisie ? { choix: l.caracChoisie } : {}),
+    ...(pointsDeChaos !== undefined ? { pointsDeChaos } : {}),
+  };
   const maitre = v.maitreDArmes?.rang ?? 0;
   const coupDeMaitre = maitre >= 5 ? v.maitreDArmes?.coupDeMaitre : undefined;
   if (v.maitreDArmes?.coupDeMaitre && !action.famille) return { ok: false, raison: 'le Coup de maître porte une attaque spéciale' };
@@ -539,9 +580,9 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     if (l.lanceur.pv === undefined) return { ok: false, raison: 'il faut connaître les PV du lanceur' };
     pvPaye += Math.floor(l.lanceur.pv / 2);
   }
-  // Prouesse : 1d4 PV sacrifiés (v1), tirés avant tout autre dé.
+  // Prouesse : 1d4 PV sacrifiés (v1) ; Corruption motivante : X d4 (lot L4.9). Tirés avant tout autre dé.
   if (typeof action.sacrifice === 'object') {
-    const j = lancerDes(action.sacrifice.des, alea);
+    const j = lancerDes('des' in action.sacrifice ? action.sacrifice.des : `${pointsDeChaos}${action.sacrifice.parPointDeChaos}`, alea);
     jets.push({ quoi: 'sacrifice', des: j.des, total: j.total });
     pvPaye += j.total;
   }
@@ -594,6 +635,13 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     if (fiche.derapage.modifie.coutPvMultiplie) pv *= fiche.derapage.modifie.coutPvMultiplie;
     for (const e of fiche.derapage.effets) appliquerSimple(e, l.lanceur.id, changements, alea, m);
     return fin('derapage', pv);
+  }
+
+  // d20 de chaos (R3 des Voies du chaos, 5a) : 18 à 20, mutation du palier 1.
+  if (action.jetDeChaos) {
+    const j = d20(alea, 0);
+    jets.push({ quoi: 'd20 de chaos', des: j.des, total: j.garde, contre: 18, reussi: j.garde < 18 });
+    if (j.garde >= 18) changements.push({ type: 'mutation', cible: l.lanceur.id, palier: 1 });
   }
 
   // Durées tirées au lancement (Pierre en chair : 1d4 + CHA), un seul jet par sort.
@@ -735,6 +783,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   const pris = new Set<string>();
   const chaines = new Map<number, { total: number; vues: number }>();
   let premierJetFait = false;
+  let donApplique = false;
+  let deDuDon: { des: number[]; total: number } | null = null;
 
   const degatsSur = (e: Extract<Effet, { type: 'degats' }>, indice: number, c: CibleEnJeu, i: Issue, base: number, deJet: number[]) => {
     const facteurs: number[] = [];
@@ -777,7 +827,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   };
 
   const appliquer = (e0: Effet, indice: number, c: CibleEnJeu, i: Issue, sauvegardeEffet?: Sauvegarde) => {
-    const e = 'duree' in e0 ? ({ ...e0, duree: dureePourLaCible(e0.duree, c) } as Effet) : e0;
+    const e = 'duree' in e0 && e0.duree !== undefined ? ({ ...e0, duree: dureePourLaCible(e0.duree, c) } as Effet) : e0;
     if (!conditionRemplie(e, c, i, sauvegardeEffet)) return;
     // Boss et démons D5 : immunisés à Sommeil, Ordre, Domination (validé).
     if (e.saufBoss && c.boss) {
@@ -837,6 +887,21 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
         if (!jetsZone.has(indice)) jetsZone.set(indice, lancerDes(formule, alea));
         jet = jetsZone.get(indice)!;
       } else jet = lancerDes(formule, alea);
+      // Don corrompu, relance (4a) : le dé le plus bas du premier jet de dégâts, une fois par sort.
+      if (don === 'relance' && indice === premierDegats && !donApplique) {
+        const t = /^(\d*)d(\d+)/.exec(formule.replace(/^[+]/, ''));
+        const n = Math.min(Number(t?.[1] || 1), jet.des.length);
+        if (t && n > 0) {
+          const k = jet.des.slice(0, n).reduce((kMin, d, ix, arr) => (d < arr[kMin]! ? ix : kMin), 0);
+          const r = lancerDes(`1d${t[2]}`, alea);
+          jets.push({ quoi: 'Don corrompu : relance', des: [jet.des[k]!, ...r.des], total: r.total });
+          const desNeufs = [...jet.des];
+          desNeufs[k] = r.total;
+          jet = { des: desNeufs, total: jet.total - jet.des[k]! + r.total };
+          if (e.vise === 'zone' && UN_JET_PAR_ZONE) jetsZone.set(indice, jet);
+        }
+        donApplique = true;
+      }
       let base = jet.total + modDeLEffet(e, m) + (e.des === 'arme' ? l.arme!.degats : 0);
       const des = [...jet.des];
       // Dés en plus (sang, Sang versé, Saignée) et Mutation sauvage : une fois par sort,
@@ -868,6 +933,23 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       }
       jets.push({ quoi: 'dégâts', cible: c.id, des, total: base });
       degatsSur(e, indice, c, i, base, des);
+      // Don corrompu, +1d6 chaotiques (4a) : un jet par sort, porté comme les dés en plus.
+      if (don === 'plus1d6' && porteDesEnPlus) {
+        if (!deDuDon) {
+          deDuDon = lancerDes('1d6', alea);
+          jets.push({ quoi: 'Don corrompu', des: deDuDon.des, total: deDuDon.total });
+        }
+        changements.push({ type: 'degats', cible: c.id, montant: deDuDon.total, typeDegats: 'chaotique', calcul: `Don corrompu 1d6 (${deDuDon.total})` });
+      }
+      return;
+    }
+    // Table au d20 (Murmure terrifiant, lot L4.9) : un d20 par cible, la ligne du plus haut `min` atteint.
+    if (e.type === 'tableD20') {
+      const j = d20(alea, 0);
+      const ligne = e.lignes.find((x) => j.garde >= x.min)!;
+      jets.push({ quoi: `${action.nom} : d20`, cible: c.id, des: j.des, total: j.garde });
+      const base = 1000 * (indice + 1);
+      ligne.effets.forEach((x, k) => appliquer({ ...x, ...(x.sinon !== undefined ? { sinon: base + x.sinon } : {}) } as Effet, base + k, c, { ...i, touche: undefined, sauveReussie: undefined }));
       return;
     }
     if (e.type === 'jetsReserves') {
@@ -950,6 +1032,19 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       else for (const e of ficheCoup!.sort.effets) appliquer({ ...e, vise: 'cible' } as Effet, -1, c, i, ficheCoup!.sort.sauvegardeSiAucune);
     });
   }
+  // Éclat chaotique (Envoûteur, Voie du chaos 1 ; 8a) : un sort d'Illusion inflige aussi 1d6 chaotiques à chaque ennemi qu'il affecte.
+  if (v.chaos?.eclatChaotique && action.ecole === 'illusion') {
+    const ennemis = new Set([...l.cibles, ...(l.zone ?? [])].filter((c) => !memeCamp(c)).map((c) => c.id));
+    const touchees = [...new Set(changements.filter((c) => 'cible' in c && ennemis.has(c.cible) && c.type !== 'narratif').map((c) => (c as { cible: string }).cible))];
+    for (const id of touchees) {
+      const d = lancerDes('1d6', alea);
+      jets.push({ quoi: 'Éclat chaotique', cible: id, des: d.des, total: d.total });
+      changements.push({ type: 'degats', cible: id, montant: d.total, typeDegats: 'chaotique', calcul: `Éclat chaotique 1d6 (${d.total})` });
+    }
+    if (touchees.length) changements.push({ type: 'ressource', cible: l.lanceur.id, ressource: 'plongee', montant: 1 });
+  }
+  if (don) changements.push({ type: 'ressource', cible: l.lanceur.id, ressource: 'plongee', montant: 1 });
+
   // Coup double (Maître d'armes 4, décision 10a ; nommé au lot L4.8, 9a) : une attaque spéciale qui touche en ouvre une seconde, une seule fois.
   coupDouble = !!action.famille && maitre >= 4 && !v.maitreDArmes?.secondeDuCoupDouble && aTouche;
 
@@ -983,6 +1078,13 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   if (de) changements.push({ type: 'soin', cible: l.lanceur.id, montant: Math.floor(de.total / 2) });
 
   if (rompus.length) changements.push({ type: 'retraitEtat', cible: l.lanceur.id, etats: [...new Set(rompus)], nombre: new Set(rompus).size });
+  // Corruption d'Âme (1b) : +1 par multiple de 6 de Plongée dépassé, quand le moteur connaît la Plongée du lanceur.
+  if (l.lanceur.plongee !== undefined) {
+    const gain = changements.reduce((s, c) => (c.type === 'ressource' && c.cible === l.lanceur.id && c.ressource === 'plongee' && typeof c.montant === 'number' ? s + c.montant : s), 0);
+    const avant = l.lanceur.plongee - (ressources.plongee ?? 0);
+    const ame = corruptionParLaPlongee(avant, avant + gain);
+    if (ame) changements.push({ type: 'ressource', cible: l.lanceur.id, ressource: 'corruptionAme', montant: ame });
+  }
   return fin('reussi', pv);
 }
 
@@ -1014,7 +1116,7 @@ function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () =>
         type: 'bonus',
         cible,
         sur: e.cible === 'caracAuChoix' ? (m.choix ?? e.cible) : e.cible,
-        valeur: e.valeur === 'modMagie' ? m.magie : typeof e.valeur === 'object' ? (m.caracs[e.valeur.mod] ?? 0) : e.valeur,
+        valeur: e.valeur === 'modMagie' ? m.magie : e.valeur === 'pointsDeChaos' ? (m.pointsDeChaos ?? 0) : typeof e.valeur === 'object' ? (m.caracs[e.valeur.mod] ?? 0) : e.valeur,
         duree: e.duree,
         ...(e.typeDegats ? { typeDegats: e.typeDegats } : {}),
         ...(e.consomme ? { consomme: e.consomme } : {}),
@@ -1050,7 +1152,12 @@ function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () =>
     case 'jetsReserves':
       return;
     case 'plancherPv':
-      out.push({ type: 'plancherPv', cible, valeur: e.valeur });
+      out.push({ type: 'plancherPv', cible, valeur: e.valeur, ...(e.duree ? { duree: e.duree } : {}) });
+      return;
+    case 'tombe':
+      out.push({ type: 'tombe', cible });
+      return;
+    case 'tableD20':
       return;
   }
 }

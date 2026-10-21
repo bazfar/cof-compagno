@@ -15,7 +15,7 @@ import { voieDeLaSecondeEcole, voieDeLEcole } from './commun';
  *     (validé) ;
  *   - voies : école, esprit, transmutation, puis au choix Prescience ou
  *     seconde école (plafonnée à Adepte, sans palier III ; son rang 5 reste
- *     au palier I : 14a) ; la Voie du chaos aura son lot commun ;
+ *     au palier I : 14a) ; la Voie du chaos est dans classes/chaos.ts (L4.9) ;
  *   - Lien mental : tout le groupe est lié ; une fois par round, un allié
  *     lié gagne +1 à son prochain jet (8a) ;
  *   - Réalité de l'esprit : une illusion psionique inflige 1d6 psychiques à
@@ -317,7 +317,7 @@ export const ENVOUTEUR: ClasseSaisie = {
   deVie: 4,
   caracMagie: 'CHA',
   reservePP: { base: 4, parNiveau: 2, parMod: 2 },
-  voies: ['envouteur.ecole', 'envouteur.esprit', 'envouteur.transmutation', 'envouteur.prescience', 'envouteur.seconde-ecole'],
+  voies: ['envouteur.ecole', 'envouteur.esprit', 'envouteur.transmutation', 'envouteur.prescience', 'envouteur.seconde-ecole', 'envouteur.chaos'],
   voiesExclusives: [['envouteur.prescience', 'envouteur.seconde-ecole']],
   creation: {
     ecoles: ['illusion', 'enchantement'],

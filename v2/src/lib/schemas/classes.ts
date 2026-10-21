@@ -63,6 +63,15 @@ export const CAPACITES_DE_VOIE = [
   'precisionLetale',
   'coupDouble',
   'coupDeMaitre',
+  /*
+   * Voies du chaos (lot L4.9) : donCorrompu (R2, commun : une fois par
+   * tour, +1d6 chaotiques ou relance du dé de dégâts le plus bas, +1
+   * Plongée : décision 4a du 21/10/2026) ; eclatChaotique (Envoûteur R1 :
+   * chaque sort d'Illusion qui affecte un ennemi lui inflige aussi 1d6
+   * chaotiques, +1 Plongée par sort : 8a).
+   */
+  'donCorrompu',
+  'eclatChaotique',
 ] as const;
 export type CapaciteDeVoie = (typeof CAPACITES_DE_VOIE)[number];
 
@@ -104,6 +113,8 @@ export const schemaVoieRefonte = z
     id: schemaId,
     nom: z.string().min(1),
     description: z.string().min(1),
+    /** Voie du chaos (lot L4.9) : proposée sur demande du joueur ou par accord du MJ, jamais par défaut (règle v1). */
+    surAccordDuMJ: z.boolean().default(false),
     rangs: z.array(schemaRangDeVoie).length(5),
   })
   .superRefine((v, ctx) => {

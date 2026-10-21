@@ -31,6 +31,9 @@ import type { EtatSaisi } from '../lib/schemas/etats';
  * interdit tout sort (Requiem du silence, 3a) ; Feinté donne l'avantage à la
  * prochaine attaque contre le porteur (Feinte, 8b) ; Ivresse vaut −1 à tous
  * les tests par point, cumulable, jusqu'à la fin de la scène (16a).
+ * Déchaîné, Avatar du Vide et Ascension chaotique (lot L4.9) sont les
+ * Avatars des Voies du chaos (v1) ; ce qu'ils doublent ou divisent
+ * attend le combat (L6), qui lit leur règle.
  *
  * Les formes et avatars de la v1 (Ours, Avatar du Vide…) ne sont plus des
  * états : ils deviennent des actions de leur classe.
@@ -273,6 +276,24 @@ export const ETATS: EtatSaisi[] = [
     regle: 'À terre : −4 en DEF ; se relever coûte une action de mouvement.',
     modificateurs: [{ cible: 'DEF', valeur: -4 }],
     rompuPar: ['actionMouvement'],
+  },
+  {
+    id: 'dechainement',
+    nom: 'Déchaîné',
+    categorie: 'physique',
+    regle: 'Chaque tour, Volonté DD 14 ; raté, son attaque vise la créature la plus proche, allié compris.',
+  },
+  {
+    id: 'avatar_du_vide',
+    nom: 'Avatar du Vide',
+    categorie: 'physique',
+    regle: 'Dégâts physiques subis divisés par deux. À la fin : Volonté DD 12, sinon Halluciné 1 round et 1d4 dégâts.',
+  },
+  {
+    id: 'ascension_chaotique',
+    nom: 'Ascension chaotique',
+    categorie: 'physique',
+    regle: 'PV max et bonus de caractéristiques doublés ; réserve de PP doublée et remplie.',
   },
   {
     id: 'maitrise_tactique',

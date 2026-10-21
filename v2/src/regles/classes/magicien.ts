@@ -45,7 +45,8 @@ import { voieDeLEcole } from './commun';
  *     attaque un allié adjacent (14a) ; Geste unique = dés doublés (15b) ;
  *     Perfection monte les dés d'un cran (20/10).
  * La 4ᵉ voie est l'Hémomancie ou le Virtuose, jamais les deux (validé). Les
- * combinaisons de Maître et la Voie du chaos auront leur lot commun.
+ * combinaisons de Maître auront leur lot commun ; la Voie du chaos est dans
+ * src/regles/classes/chaos.ts (lot L4.9).
  */
 
 export const ACTIONS_MAGICIEN: ActionSaisie[] = [
@@ -183,7 +184,7 @@ export const MAGICIEN: ClasseSaisie = {
   deVie: 4,
   caracMagie: 'INT',
   reservePP: { base: 4, parNiveau: 2, parMod: 2 },
-  voies: ['magicien.ecole', 'magicien.elementaire', 'magicien.sauvage', 'magicien.hemomancie', 'magicien.virtuose'],
+  voies: ['magicien.ecole', 'magicien.elementaire', 'magicien.sauvage', 'magicien.hemomancie', 'magicien.virtuose', 'magicien.chaos'],
   voiesExclusives: [['magicien.hemomancie', 'magicien.virtuose']],
   creation: {
     ecoles: ['evocation', 'abjuration', 'invocation'],

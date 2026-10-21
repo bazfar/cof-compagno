@@ -26,7 +26,7 @@ import type { ActionSaisie } from '../../lib/schemas/effets';
  * spéciale une fois par combat, sans coût (3c) ; Frappe sacrée = attaque
  * d'arme + 1d6 sacrés, 2 PP, +1d6 au palier III (11a) ; ses paliers
  * suivent le Cercle le plus avancé, comme un verbe de rang 1.
- * La Voie du chaos aura son lot commun.
+ * La Voie du chaos : src/regles/classes/chaos.ts (lot L4.9).
  */
 
 export const ACTIONS_PRETRE: ActionSaisie[] = [
@@ -94,7 +94,7 @@ export const PRETRE: ClasseSaisie = {
   reserveSacre: { base: 2, diviseurNiveau: 3 },
   attaquesSpeciales: { familles: ['contondant'], cout: 'unParCombat' },
   actionsDeClasse: ['pretre.vetements-sacres', 'pretre.frappe-sacree'],
-  voies: ['pretre.guerison', 'pretre.foi', 'pretre.bannissement', 'pretre.jugement'],
+  voies: ['pretre.guerison', 'pretre.foi', 'pretre.bannissement', 'pretre.jugement', 'pretre.chaos'],
   creation: { ecoles: [], elements: null, elementsSecond: [] },
   mineurs: {
     liste: ['mineur.flamme-vacillante', 'mineur.stabiliser', 'mineur.benediction-mineure', 'mineur.sentir-le-mal', 'mineur.purifier'],

@@ -206,6 +206,9 @@ export function profilMagique(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
             if (regle.nom === 'postureDeCombat') p.voie.soldat = { rang };
             // Voie du maître d'armes : son rang, qui compte aussi Spécimen d'élite.
             if (regle.nom === 'maniementExpert') p.voie.maitreDArmes = { rang };
+            // Voie du chaos (lot L4.9) : son rang (Don corrompu dès 2), et l'Éclat chaotique de l'Envoûteur.
+            if (regle.nom === 'donCorrompu' || regle.nom === 'eclatChaotique')
+              p.voie.chaos = { ...p.voie.chaos, rang, ...(regle.nom === 'eclatChaotique' ? { eclatChaotique: true } : {}) };
             break;
           case 'caracEnPlus':
             if (c.caracEnPlus) p.caracs[c.caracEnPlus] = (p.caracs[c.caracEnPlus] ?? 0) + regle.valeur;

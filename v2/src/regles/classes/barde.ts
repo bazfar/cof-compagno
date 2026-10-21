@@ -43,7 +43,7 @@ import type { ActionSaisie } from '../../lib/schemas/effets';
  *     échec, moitié du bonus et 1 Ivresse (15a) ; Ivresse −1 à tous les
  *     tests par point, cumulable, jusqu'à la fin de la scène ; la tolérance
  *     v1 disparaît (16a) ; les doses viennent du métier de brassage.
- * La Voie du chaos aura son lot commun.
+ * La Voie du chaos : src/regles/classes/chaos.ts (lot L4.9).
  */
 
 const surSoi = { type: 'soi', portee: 'soi' } as const;
@@ -332,7 +332,7 @@ export const BARDE: ClasseSaisie = {
   ressourceDeClasse: { ressource: 'inspiration', base: 2, diviseurNiveau: 4, recharge: 'jamais', parVingtNaturel: 'luiEtAlliesQuiLEntendent' },
   attaquesSpeciales: { familles: ['perforant'], cout: 'unParCombat' },
   actionsDeClasse: ['barde.relance'],
-  voies: ['barde.chant', 'barde.rapiere', 'barde.spectacle', 'barde.alcoolisme'],
+  voies: ['barde.chant', 'barde.rapiere', 'barde.spectacle', 'barde.alcoolisme', 'barde.chaos'],
   creation: {},
   mineurs: { liste: ['mineur.moquerie', 'mineur.melodie', 'mineur.ventriloquie', 'mineur.rengaine'], creation: 1, plusUnAuNiveau: [7] },
 };

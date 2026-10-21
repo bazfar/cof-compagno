@@ -66,6 +66,13 @@ export const RESSOURCES = [
   'ki',
   'pv',
   'ame',
+  /**
+   * Voies du chaos (lot L4.9) : la Plongée, jauge de combat remise à 0 en
+   * fin de combat ; la Corruption d'Âme, permanente (doc de cadre, « Voies
+   * du chaos (validé) »).
+   */
+  'plongee',
+  'corruptionAme',
 ] as const;
 export const schemaRessource = z.enum(RESSOURCES);
 
@@ -280,9 +287,11 @@ const schemaEffetBonus = z.strictObject({
   /**
    * Signé : un malus est négatif. Formule de dés autorisée (« 1d4 ») ;
    * `modMagie` : le mod de la caractéristique de magie (Vêtements sacrés,
-   * lot L4.6) ; `{ mod }` : celui d'une caractéristique nommée (lot L4.7).
+   * lot L4.6) ; `{ mod }` : celui d'une caractéristique nommée (lot L4.7) ;
+   * `pointsDeChaos` : Plongée + Corruption d'Âme du lanceur, plafonnés
+   * (Corruption motivante, lot L4.9).
    */
-  valeur: z.union([z.number().int().min(-20).max(20), schemaFormuleDes, z.literal('modMagie'), z.strictObject({ mod: schemaCarac })]),
+  valeur: z.union([z.number().int().min(-20).max(20), schemaFormuleDes, z.literal('modMagie'), z.strictObject({ mod: schemaCarac }), z.literal('pointsDeChaos')]),
   duree: schemaDuree,
   /** Dégâts en plus : leur type (Châtiment : sacrés, lot L4.6). */
   typeDegats: schemaTypeDegats.optional(),
@@ -306,18 +315,29 @@ const schemaEffetPosture = z.strictObject({
   ...champsCommuns,
 });
 
-/** Les PV de la cible ne descendent pas sous `valeur` (Protection contre la mort, lot L4.6). */
+/**
+ * Les PV de la cible ne descendent pas sous `valeur` (Protection contre la
+ * mort, lot L4.6) ; pendant `duree` si elle est donnée (Le fléau, c'est
+ * moi : 3 rounds, lot L4.9), sinon jusqu'au prochain coup.
+ */
 const schemaEffetPlancherPv = z.strictObject({
   type: z.literal('plancherPv'),
   valeur: z.number().int().min(1).max(10),
+  duree: schemaDuree.optional(),
   ...champsCommuns,
 });
 
 const schemaEffetRessource = z.strictObject({
   type: z.literal('ressource'),
   ressource: schemaRessource,
-  /** Signé : gain positif, perte négative. */
-  montant: z.number().int().min(-20).max(20),
+  /** Signé : gain positif, perte négative ; `vider` : la réserve tombe à 0 (Ascension chaotique, lot L4.9). */
+  montant: z.union([z.number().int().min(-20).max(20), z.literal('vider')]),
+  ...champsCommuns,
+});
+
+/** La cible tombe à 0 PV (Murmure terrifiant, 19–20 ; lot L4.9). */
+const schemaEffetTombe = z.strictObject({
+  type: z.literal('tombe'),
   ...champsCommuns,
 });
 
@@ -388,7 +408,7 @@ const schemaEffetNarratif = z.strictObject({
   ...champsCommuns,
 });
 
-export const schemaEffet = z.discriminatedUnion('type', [
+const EFFETS_DE_BASE = [
   schemaEffetDegats,
   schemaEffetSoin,
   schemaEffetPvTemp,
@@ -406,8 +426,26 @@ export const schemaEffet = z.discriminatedUnion('type', [
   schemaEffetJetsReserves,
   schemaEffetPlancherPv,
   schemaEffetRelance,
+  schemaEffetTombe,
   schemaEffetNarratif,
-]);
+] as const;
+
+/**
+ * Table au d20 (Murmure terrifiant, lot L4.9) : un d20 par cible, la ligne
+ * dont `min` est le plus haut atteint s'applique. Ses lignes ne contiennent
+ * pas d'autre table. Un « sinon » d'une ligne renvoie à un effet de la même
+ * ligne.
+ */
+const schemaEffetTableD20 = z.strictObject({
+  type: z.literal('tableD20'),
+  lignes: z
+    .array(z.strictObject({ min: z.number().int().min(1).max(20), effets: z.array(z.discriminatedUnion('type', [...EFFETS_DE_BASE])).min(1) }))
+    .min(2)
+    .refine((l) => l.every((x, i) => i === 0 || x.min < l[i - 1]!.min) && l.at(-1)!.min === 1, 'lignes par min décroissant, la dernière à 1'),
+  ...champsCommuns,
+});
+
+export const schemaEffet = z.discriminatedUnion('type', [...EFFETS_DE_BASE, schemaEffetTableD20]);
 export type Effet = z.infer<typeof schemaEffet>;
 export type EffetSaisi = z.input<typeof schemaEffet>;
 export const TYPES_EFFET = schemaEffet.options.map((o) => o.shape.type.value);
@@ -482,6 +520,8 @@ export const schemaDeclencheur = z.enum([
   'aToutMoment',
   /** Le porteur subit un état (Échappée du Barde ; lot L4.8). */
   'etatSubi',
+  /** Il réduit un ennemi à 0 PV (Soif de sang, Voie du chaos du Guerrier ; lot L4.9). */
+  'ennemiAbattu',
 ]);
 
 /** Un coût fixe (techniques, capacités) ; les verbes ont le leur par formule (lib/effets/cout.ts). */
@@ -575,8 +615,23 @@ export const schemaAction = z
     cout: z.array(schemaCout).optional(),
     /** L'attaque vise la DEF sans armure (Pique mentale, lot L4.5). */
     ignoreArmure: z.literal(true).optional(),
-    /** Le lanceur sacrifie des PV en plus du coût (Saignée : la moitié de ses PV actuels ; Prouesse : 1d4, lot L4.7). */
-    sacrifice: z.union([z.literal('moitiePvActuels'), z.strictObject({ des: schemaFormuleDes })]).optional(),
+    /**
+     * Le lanceur sacrifie des PV en plus du coût (Saignée : la moitié de ses
+     * PV actuels ; Prouesse : 1d4, lot L4.7) ; `parPointDeChaos` : un dé
+     * par point de Plongée + Corruption d'Âme, au plus `plafond`
+     * (Corruption motivante, lot L4.9).
+     */
+    sacrifice: z
+      .union([
+        z.literal('moitiePvActuels'),
+        z.strictObject({ des: schemaFormuleDes }),
+        z.strictObject({ parPointDeChaos: z.enum(['d4', 'd6']), plafond: z.number().int().min(1).max(10) }),
+      ])
+      .optional(),
+    /** Voie du chaos, R3 (lot L4.9) : un d20 de chaos à chaque usage ; 18 à 20, mutation du palier 1. */
+    jetDeChaos: z.literal(true).optional(),
+    /** Voie du chaos, R4 : active seulement dès cette Corruption d'Âme (5, validé). */
+    corruptionAmeMin: z.number().int().min(1).max(10).optional(),
     /** Attaque spéciale de cette famille d'armes (lot L4.7) : il faut une arme de la famille, et son coût vient de la classe. */
     famille: schemaFamilleArme.optional(),
     /** Jet d'attaque fait avec le mod de cette caractéristique, sans arme (pièges : DEX contre la DEF, v1). */
@@ -620,7 +675,8 @@ export const schemaAction = z
     });
     if (new Set(a.variantes.map((v) => v.id)).size !== a.variantes.length) ko('deux variantes ont le même identifiant', ['variantes']);
     if ((a.nature === 'reaction' || a.action === 'reaction') && !a.declencheur) ko('une réaction a un déclencheur', ['declencheur']);
-    if (a.declencheur && a.action !== 'reaction') ko('seule une réaction a un déclencheur', ['declencheur']);
+    // Un passif peut avoir un déclencheur : il joue d'office (Premier sang, Soif de sang ; lot L4.9).
+    if (a.declencheur && a.action !== 'reaction' && a.nature !== 'passif') ko('seule une réaction, ou un passif, a un déclencheur', ['declencheur']);
     if (a.nature === 'passif' && a.action !== 'aucune') ko('un passif ne coûte aucune action', ['action']);
     if (a.elementMin && !a.element) ko('une action qui exige un élément doit en accepter un', ['elementMin']);
     a.effets.forEach((e, i) => {

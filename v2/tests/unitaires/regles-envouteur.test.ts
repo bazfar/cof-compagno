@@ -45,7 +45,7 @@ describe('la classe', () => {
   });
 
   it('cinq voies ; Prescience et seconde école exclusives (validé) ; tout ce qu’elle cite existe', () => {
-    expect(env.voies).toEqual(['envouteur.ecole', 'envouteur.esprit', 'envouteur.transmutation', 'envouteur.prescience', 'envouteur.seconde-ecole']);
+    expect(env.voies).toEqual(['envouteur.ecole', 'envouteur.esprit', 'envouteur.transmutation', 'envouteur.prescience', 'envouteur.seconde-ecole', 'envouteur.chaos']);
     expect(env.voiesExclusives).toEqual([['envouteur.prescience', 'envouteur.seconde-ecole']]);
     expect(referencesManquantes()).toEqual([]);
   });

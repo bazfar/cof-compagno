@@ -53,7 +53,7 @@ describe('la classe', () => {
       attaquesSpeciales: { familles: 'toutes', cout: { ressource: 'endurance', montant: 2 } },
     });
     expect(guerrier.reservePP).toBeUndefined();
-    expect(guerrier.voies).toEqual(['guerrier.soldat', 'guerrier.peuple', 'guerrier.maitre-d-armes', 'guerrier.ingenieur']);
+    expect(guerrier.voies).toEqual(['guerrier.soldat', 'guerrier.peuple', 'guerrier.maitre-d-armes', 'guerrier.ingenieur', 'guerrier.chaos']);
     expect(referencesManquantes()).toEqual([]);
   });
 

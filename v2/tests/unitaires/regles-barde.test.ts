@@ -50,7 +50,7 @@ describe('la classe', () => {
       reservePP: { base: 4, parNiveau: 2, parMod: 1 },
       ressourceDeClasse: { ressource: 'inspiration', base: 2, diviseurNiveau: 4, recharge: 'jamais', parVingtNaturel: 'luiEtAlliesQuiLEntendent' },
       attaquesSpeciales: { familles: ['perforant'], cout: 'unParCombat' },
-      voies: ['barde.chant', 'barde.rapiere', 'barde.spectacle', 'barde.alcoolisme'],
+      voies: ['barde.chant', 'barde.rapiere', 'barde.spectacle', 'barde.alcoolisme', 'barde.chaos'],
       mineurs: { creation: 1, plusUnAuNiveau: [7] },
     });
     expect(barde.creation).toEqual({ ecoles: [], elements: null, elementsSecond: [], maitriseElementDepart: 'adepte' });

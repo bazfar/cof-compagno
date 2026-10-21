@@ -43,7 +43,7 @@ const choix = (c: Partial<ChoixDePersonnage>): ChoixDePersonnage => ({
 
 describe('la classe et ses voies', () => {
   it('cinq voies, l’Hémomancie et le Virtuose exclusifs (validé)', () => {
-    expect(magicien.voies).toEqual(['magicien.ecole', 'magicien.elementaire', 'magicien.sauvage', 'magicien.hemomancie', 'magicien.virtuose']);
+    expect(magicien.voies).toEqual(['magicien.ecole', 'magicien.elementaire', 'magicien.sauvage', 'magicien.hemomancie', 'magicien.virtuose', 'magicien.chaos']);
     expect(magicien.voiesExclusives).toEqual([['magicien.hemomancie', 'magicien.virtuose']]);
     expect(verifierChoix(magicien, choix({ rangs: { 'magicien.hemomancie': 1, 'magicien.virtuose': 1 } }), regles)).toContainEqual(expect.stringMatching(/Une seule voie/));
   });

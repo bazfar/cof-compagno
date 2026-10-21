@@ -34,7 +34,7 @@ import type { ActionSaisie } from '../../lib/schemas/effets';
  * qu'on n'oublie pas (−4 à tous ses tests), pièges (DEX contre la DEF,
  * 1d6 puis 2d6, Ralenti 3 rounds), barricade (10 + niveau PV, +4 DEF à
  * distance et +2 au contact), Bastion (+2 DEF).
- * La Voie du chaos aura son lot commun ; la Sensibilité élémentaire (don
+ * La Voie du chaos est dans src/regles/classes/chaos.ts (lot L4.9) ; la Sensibilité élémentaire (don
  * du niveau 4) viendra avec les dons.
  */
 
@@ -358,7 +358,7 @@ export const GUERRIER: ClasseSaisie = {
   deVie: 10,
   ressourceDeClasse: { ressource: 'endurance', base: 3, diviseurNiveau: 3, recharge: 'reposCourt', parDegatsSubis: 1 },
   attaquesSpeciales: { familles: 'toutes', cout: { ressource: 'endurance', montant: 2 } },
-  voies: ['guerrier.soldat', 'guerrier.peuple', 'guerrier.maitre-d-armes', 'guerrier.ingenieur'],
+  voies: ['guerrier.soldat', 'guerrier.peuple', 'guerrier.maitre-d-armes', 'guerrier.ingenieur', 'guerrier.chaos'],
   creation: {},
   mineurs: { liste: [], creation: 0, plusUnAuNiveau: [] },
 };
