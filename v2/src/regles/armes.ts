@@ -21,6 +21,12 @@ import type { ActionSaisie, FamilleArme } from '../lib/schemas/effets';
  *     décision du 20/10/2026) ; elle arrête le déplacement (doc de cadre).
  * La portée `arme` est celle de l'arme maniée : contact, allonge de la
  * lance, tir de l'arc.
+ *
+ * Armes à feu (lot L4.14, décision 2b du 21/10/2026) : deux familles, sans
+ * état. Pistolet et fusil : Précision, il vise un tour sans tirer, et sa
+ * prochaine attaque gagne +1d6 (+1d10 sur un critique). Tromblon :
+ * Décharge, ses trois balles de 1d4 sur trois cibles au plus, un jet
+ * d'attaque par balle.
  */
 
 /** Famille de chaque arme du catalogue (src/donnees/objets.json), par identifiant (1a). */
@@ -62,6 +68,10 @@ export const FAMILLE_DES_ARMES: Readonly<Record<string, FamilleArme>> = {
   arbalete: 'arbalete',
   arbalete_lourde: 'arbalete',
   arbalete_courte: 'arbalete',
+  // Armes à feu (lot L4.14, décision 2b) : ajoutées au catalogue v1 (data/loot.js), exceptionnellement.
+  pistolet: 'armeAFeu',
+  fusil: 'armeAFeu',
+  tromblon: 'tromblon',
 };
 
 /** Armes légères (décision 7a du lot L4.8) : dagues, épée courte, cimeterre, rapière. La fiche en tire `ArmeEnJeu.legere`. */
@@ -129,6 +139,35 @@ export const ACTIONS_ARMES: ActionSaisie[] = [
   }),
   speciale('tir-epinglant', 'Tir épinglant', 'arc', 'Un arc : si la flèche touche, la cible est Immobilisée 1 round.', { type: 'etat', etat: 'immobilise', duree: unRound }),
   speciale('carreau-lourd', 'Carreau lourd', 'arbalete', 'Une arbalète : si le carreau touche, la cible est repoussée d’une case (9a).', { type: 'deplacement', sens: 'repousse', cases: 1 }),
+  {
+    id: 'arme.precision',
+    nom: 'Précision',
+    description: 'Un pistolet ou un fusil : il vise un tour entier sans tirer ; sa prochaine attaque gagne +1d6 aux dégâts, +1d10 sur un critique.',
+    nature: 'technique',
+    rang: 1,
+    etiquettes: ['combat'],
+    action: 'action',
+    famille: 'armeAFeu',
+    ciblage: auContactOuALaPortee,
+    resolution: { jet: 'aucun' },
+    effets: [
+      { type: 'bonus', cible: 'degats', valeur: '1d6', typeDegats: 'physique', consomme: 'prochaineFrappe', duree: 'finCombat', vise: 'lanceur' },
+      { type: 'narratif', texte: 'Pas d’attaque ce tour. Sur un critique, la prochaine attaque gagne 1d10 au lieu de 1d6.', vise: 'lanceur' },
+    ],
+  },
+  {
+    id: 'arme.decharge',
+    nom: 'Décharge',
+    description: 'Un tromblon : ses trois balles partent sur trois cibles au plus, à 1d4 chacune, un jet d’attaque par balle.',
+    nature: 'technique',
+    rang: 1,
+    etiquettes: ['combat'],
+    action: 'action',
+    famille: 'tromblon',
+    ciblage: { type: 'creature', camp: 'ennemi', portee: 'arme', nbCibles: 3 },
+    resolution: { jet: 'attaque' },
+    effets: [{ type: 'degats', des: '1d4', typeDegats: 'physique' }],
+  },
   speciale('frappe-nerveuse', 'Frappe nerveuse', 'mainsNues', 'À mains nues : si le coup touche, la cible est Ralentie 1 round.', { type: 'etat', etat: 'ralenti', duree: unRound }, {
     ciblage: { type: 'creature', camp: 'ennemi', portee: 'contact' },
   }),

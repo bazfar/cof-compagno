@@ -40,13 +40,21 @@ import type { ActionSaisie, EffetSaisi } from '../../lib/schemas/effets';
  * l'acquisition), Avatar du pacte (+4 DEF, +2d6, immunisé à la peur, sans
  * déplacement au tour suivant). La Faveur sombre de la v1 (R2) laisse la
  * place au Don corrompu.
+ *
+ * Chasseur (lot L4.14, décision 8a) : Premier sang du prédateur (+1
+ * Plongée par touche à distance ou par piège, 6 par combat au plus),
+ * Hurlement du prédateur (Volonté : raté, Effroi 1 round ; réussi, −2 DEF
+ * 2 rounds), Sens du sang (les blessés à 100 m ; les bêtes le fuient),
+ * Chasse ultime (+4 à distance, couverts ignorés, 3 + mod de DEX rounds ;
+ * ensuite il tire sur la créature la plus proche). L'Instinct sauvage v1
+ * (R2) laisse la place au Don corrompu.
  */
 
 const surSoi = { type: 'soi', portee: 'soi' } as const;
 const sansJet = { jet: 'aucun' } as const;
 const plongee = (montant: number) => ({ type: 'ressource', ressource: 'plongee', montant, vise: 'lanceur' }) as const;
 const ame = { type: 'ressource', ressource: 'corruptionAme', montant: 1, vise: 'lanceur' } as const;
-const avatar = (carac: 'CON' | 'INT' | 'CHA') => ({ base: 3, plusModCible: carac }) as const;
+const avatar = (carac: 'CON' | 'INT' | 'CHA' | 'DEX') => ({ base: 3, plusModCible: carac }) as const;
 const deuxRounds = { rounds: 2 } as const;
 
 /** Action de chaos : jamais de coût en PP (1a), une étiquette combat par défaut. */
@@ -151,6 +159,47 @@ export const ACTIONS_CHAOS: ActionSaisie[] = [
       { type: 'bonus', cible: 'DEF', valeur: 4, duree: avatar('CON'), vise: 'lanceur' },
       { type: 'bonus', cible: 'degats', valeur: '2d6', typeDegats: 'chaotique', duree: avatar('CON'), vise: 'lanceur' },
       { type: 'narratif', texte: 'Immunisé à la peur pendant l’Avatar ; au tour qui suit sa fin, il perd son déplacement.', vise: 'lanceur' },
+    ]),
+  }),
+
+  // ---- Chasseur (L4.14, 8a) ----
+  chaos('chasseur.premier-sang-du-predateur', 'Premier sang du prédateur', 'Chaque touche à distance ou par un piège : +1 Plongée, 6 par combat au plus.', 1, {
+    nature: 'passif',
+    action: 'aucune',
+    ciblage: surSoi,
+    resolution: sansJet,
+    effets: [plongee(1), { type: 'narratif', texte: 'À chaque touche à distance ou par un piège ; au plus 6 Plongée par combat (v1).', vise: 'lanceur' }],
+  }),
+  chaos('chasseur.hurlement-du-predateur', 'Hurlement du prédateur', 'Un hurlement de bête : Volonté ; raté, la cible fuit (Effroi 1 round) ; réussi, elle a quand même −2 DEF 2 rounds.', 3, {
+    nature: 'capacite',
+    action: 'action',
+    jetDeChaos: true,
+    ciblage: { type: 'creature', camp: 'ennemi', portee: 10 },
+    resolution: { jet: 'sauvegarde', sauvegarde: 'Volonte', siSauvegarde: 'rien' },
+    effets: [
+      { type: 'etat', etat: 'effroi', duree: { rounds: 1 }, condition: 'sauvegardeRatee' },
+      { type: 'bonus', cible: 'DEF', valeur: -2, duree: deuxRounds, condition: 'sauvegardeReussie' },
+      plongee(2),
+    ],
+  }),
+  chaos('chasseur.sens-du-sang', 'Sens du sang', 'Dès 5 de Corruption d’Âme : il sent toute créature blessée à 100 m.', 4, {
+    nature: 'passif',
+    action: 'aucune',
+    corruptionAmeMin: 5,
+    etiquettes: ['combat', 'exploration'],
+    ciblage: surSoi,
+    resolution: sansJet,
+    effets: [{ type: 'narratif', texte: 'Détecte toute créature blessée à 100 m.', vise: 'lanceur' }],
+  }),
+  chaos('chasseur.chasse-ultime', 'Chasse ultime', 'Une fois par scénario, 3 + mod de DEX rounds : +4 en attaque à distance, il ignore les couverts. À la fin, il tire sur la créature la plus proche dans sa ligne de mire, alliée ou non.', 5, {
+    nature: 'capacite',
+    action: 'action',
+    limite: '1x/scenario',
+    ciblage: surSoi,
+    resolution: sansJet,
+    effets: effetsDAvatar([
+      { type: 'bonus', cible: 'attaqueDistance', valeur: 4, duree: avatar('DEX'), vise: 'lanceur' },
+      { type: 'narratif', texte: 'Ignore les couverts ; à la fin, un tir sur la créature la plus proche dans sa ligne de mire, alliée ou non.', vise: 'lanceur' },
     ]),
   }),
 
@@ -338,6 +387,14 @@ function voieDuChaos(classe: string, description: string, r1: Rang, r3: Rang, r4
 }
 
 export const VOIES_CHAOS: VoieSaisie[] = [
+  voieDuChaos(
+    'chasseur',
+    'Le prédateur prend le dessus sur le chasseur : il chasse pour le sang, plus pour la proie.',
+    { nom: 'Premier sang du prédateur', description: '+1 Plongée par touche à distance ou par piège.', actions: ['chaos.chasseur.premier-sang-du-predateur'] },
+    { nom: 'Hurlement du prédateur', description: 'La cible fuit, ou perd 2 DEF.', actions: ['chaos.chasseur.hurlement-du-predateur'] },
+    { nom: 'Sens du sang', description: 'Les blessés à 100 m.', actions: ['chaos.chasseur.sens-du-sang'], contrepartie: 'les bêtes sauvages le fuient d’instinct.' },
+    { nom: 'Chasse ultime', description: 'L’Avatar du Chasseur.', actions: ['chaos.chasseur.chasse-ultime'] },
+  ),
   voieDuChaos(
     'chevalier',
     'Un serment rompu, un pacte noué à sa place : la lame obéit à autre chose que l’honneur.',

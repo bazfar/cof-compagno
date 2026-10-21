@@ -126,7 +126,8 @@ export type Duree = z.infer<typeof schemaDuree>;
  * dans src/regles/armes.ts (décision 1a du 21/10/2026, lot L4.7) ; bouclier
  * et mains nues ne sont pas des objets du catalogue.
  */
-export const FAMILLES_ARME = ['contondant', 'tranchantLourd', 'tranchantLeger', 'perforant', 'dague', 'bouclier', 'arc', 'arbalete', 'mainsNues'] as const;
+/** `armeAFeu` (pistolet, fusil) et `tromblon` : armes à feu du Chasseur (lot L4.14, décision 2b du 21/10/2026). */
+export const FAMILLES_ARME = ['contondant', 'tranchantLourd', 'tranchantLeger', 'perforant', 'dague', 'bouclier', 'arc', 'arbalete', 'armeAFeu', 'tromblon', 'mainsNues'] as const;
 export const schemaFamilleArme = z.enum(FAMILLES_ARME);
 export type FamilleArme = z.infer<typeof schemaFamilleArme>;
 
@@ -164,6 +165,8 @@ export const schemaCondition = z.enum([
   'premierRound',
   /** La cible porte l'état Accusé (Mise en accusation du Chevalier, décision 8a ; lot L4.13). */
   'cibleAccusee',
+  /** La cible n'a pas encore agi dans ce combat (Premier coup du Chasseur, lot L4.14). */
+  'cibleNAPasAgi',
 ]);
 
 /** Cibles de bonus et malus. Liste FERMÉE (piège v1 : cible inconnue jamais lue). */
@@ -531,6 +534,8 @@ export const schemaDeclencheur = z.enum([
   'etatSubi',
   /** Il réduit un ennemi à 0 PV (Soif de sang, Voie du chaos du Guerrier ; lot L4.9). */
   'ennemiAbattu',
+  /** Un ennemi arrive à son contact (Repli du Chasseur, lot L4.14). */
+  'ennemiArriveAuContact',
 ]);
 
 /** Un coût fixe (techniques, capacités) ; les verbes ont le leur par formule (lib/effets/cout.ts). */
@@ -695,7 +700,8 @@ export const schemaAction = z
     });
     // Attaques d'arme (lot L4.7).
     if (a.attaquePar && a.resolution.jet !== 'attaque') ko('attaquePar demande un jet d’attaque', ['attaquePar']);
-    if (a.famille && (a.nature !== 'technique' || a.resolution.jet !== 'attaque' || a.attaquePar)) ko('une attaque spéciale est une technique, à l’attaque d’arme', ['famille']);
+    // Une attaque spéciale frappe à l'arme, ou la prépare sans jet (Précision des armes à feu : il vise un tour sans tirer, lot L4.14).
+    if (a.famille && (a.nature !== 'technique' || (a.resolution.jet !== 'attaque' && a.resolution.jet !== 'aucun') || a.attaquePar)) ko('une attaque spéciale est une technique, à l’attaque d’arme ou sans jet', ['famille']);
     if (a.famille && a.cout) ko('le coût d’une attaque spéciale vient de la classe', ['cout']);
     if (a.armes && !(a.resolution.jet === 'attaque' && !a.attaquePar)) ko('une arme exigée demande une attaque à l’arme', ['armes']);
     if (a.horsCombat && !a.etiquettes.some((e) => e !== 'combat')) ko('un usage hors combat demande l’étiquette exploration ou social', ['etiquettes']);

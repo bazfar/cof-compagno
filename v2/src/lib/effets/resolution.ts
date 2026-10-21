@@ -113,6 +113,8 @@ export interface Combattant {
 export interface CibleEnJeu extends Combattant {
   /** Distance au lanceur, en cases. */
   distance: number;
+  /** A déjà agi dans ce combat (Premier coup du Chasseur, lot L4.14) ; absent : pas encore. */
+  aAgi?: boolean;
   /** Zone : cases entre la cible et le centre (0 au centre), pour le dégressif. */
   anneau?: number;
 }
@@ -781,6 +783,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
         return c.etats.includes('marque');
       case 'cibleAccusee':
         return c.etats.includes('accuse');
+      case 'cibleNAPasAgi':
+        return !c.aAgi;
       case 'immobile':
         return !!l.immobile;
       case 'protegeUnAllie':

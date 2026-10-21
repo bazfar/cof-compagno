@@ -142,6 +142,20 @@ export const INVOCATIONS: InvocationSaisie[] = [
     ],
   },
   {
+    id: 'limier',
+    nom: 'Limier',
+    description: 'Le chien de chasse du Chasseur (lot L4.14, décision 7a) : un jeton qui agit au tour du Chasseur.',
+    pv: { base: 5, parNiveau: 2 },
+    def: { base: 13 },
+    deplacement: 6,
+    attaque: { des: '1d6+2', typeDegats: 'physique' },
+    capacites: [
+      { nom: 'Flair', texte: 'Voie du limier, rang 2 : il détecte les créatures Dissimulées ou Invisibles à 2 cases.' },
+      { nom: 'Saisie', texte: 'Voie du limier, rang 3 : sa morsure qui touche immobilise la cible 1 round.' },
+      { nom: 'Meute', texte: 'Voie du limier, rang 4 : une réaction ; lui et le Chasseur au contact d’une même cible ont +2 en attaque contre elle.' },
+    ],
+  },
+  {
     id: 'embrun',
     nom: 'Embrun',
     description: 'Serviteur mineur de Légion, sans élément. Les trois Embruns ajoutent ensemble 1 PP de Remous par round.',

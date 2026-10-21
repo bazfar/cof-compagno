@@ -42,10 +42,11 @@ import { actionParId, actionsCommunes, classeParId, elementParId, voieParId } fr
  * (Envoûteur).
  */
 
-/** Classes v1 refondues, vers leur identifiant de la refonte (les cinq du groupe, puis le Chevalier au lot L4.13, décision 12a ; les autres suivent). */
+/** Classes v1 refondues, vers leur identifiant de la refonte (les cinq du groupe, puis le Chevalier au lot L4.13, décision 12a, et le Chasseur au lot L4.14 ; les autres suivent). */
 export const CLASSE_REFONTE: Readonly<Record<string, string>> = {
   guerrier: 'guerrier',
   chevalier: 'chevalier',
+  chasseur: 'chasseur',
   magicien: 'magicien',
   enchanteur: 'envouteur',
   pretre: 'pretre',

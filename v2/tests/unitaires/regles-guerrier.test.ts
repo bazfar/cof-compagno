@@ -83,7 +83,10 @@ describe('la classe', () => {
       'frappe-nerveuse': expect.objectContaining({ etat: 'ralenti', duree: { rounds: 1 } }),
     });
     expect(a('arme.carreau-lourd').effets[1]).toMatchObject({ type: 'deplacement', sens: 'repousse', cases: 1 });
-    for (const x of speciales) expect(x).toMatchObject({ nature: 'technique', action: 'action', resolution: { jet: 'attaque' } });
+    // Armes à feu (L4.14, 2b) : Précision vise sans tirer ; Décharge tire trois balles sur trois cibles au plus.
+    for (const x of speciales.filter((s) => s.id !== 'arme.precision')) expect(x).toMatchObject({ nature: 'technique', action: 'action', resolution: { jet: 'attaque' } });
+    expect(a('arme.precision')).toMatchObject({ famille: 'armeAFeu', resolution: { jet: 'aucun' } });
+    expect(a('arme.decharge')).toMatchObject({ famille: 'tromblon', ciblage: { nbCibles: 3 }, effets: [{ type: 'degats', des: '1d4' }] });
   });
 });
 
@@ -184,14 +187,14 @@ describe('attaques spéciales', () => {
 describe('profil', () => {
   const choix = (c: Partial<ChoixDePersonnage>): ChoixDePersonnage => ({ niveau: 6, modMagie: 0, rangs: {}, mineurs: [], ...c });
 
-  it('Endurance 3 + 6 / 3 = 5 ; attaques communes et les neuf spéciales ; Maniement expert : 1 Endurance ; Spécimen d’élite', () => {
+  it('Endurance 3 + 6 / 3 = 5 ; attaques communes et les onze spéciales (armes à feu comprises, L4.14) ; Maniement expert : 1 Endurance ; Spécimen d’élite', () => {
     const c = choix({ rangs: { 'guerrier.soldat': 3, 'guerrier.maitre-d-armes': 2 }, caracEnPlus: 'FOR' });
     expect(verifierChoix(guerrier, c, regles)).toEqual([]);
     const p = profilMagique(guerrier, c, regles);
     expect(p).toMatchObject({ reservePP: 0, ressourceDeClasse: { ressource: 'endurance', max: 5 }, caracs: { FOR: 1 }, voie: { soldat: { rang: 3 }, maitreDArmes: { rang: 2 } } });
     expect(p.attaquesSpeciales).toEqual({ familles: 'toutes', cout: { ressource: 'endurance', montant: 1 } });
     expect(p.attaques.slice(0, 2)).toEqual(['arme.attaque', 'arme.opportunite']);
-    expect(p.attaques).toHaveLength(11);
+    expect(p.attaques).toHaveLength(13);
     expect(p.actions).toEqual(['guerrier.posture-de-combat', 'guerrier.combat-en-phalange', 'guerrier.second-souffle']);
   });
 

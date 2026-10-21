@@ -123,8 +123,9 @@ const DECLENCHEURS: Record<NonNullable<Action['declencheur']>, string> = {
   aToutMoment: 'à tout moment',
   etatSubi: 'quand il subit un état',
   ennemiAbattu: 'quand il abat un ennemi',
+  ennemiArriveAuContact: 'quand un ennemi arrive à son contact',
 };
-const DISTANCE = new Set(['arc', 'arbalete']);
+const DISTANCE = new Set(['arc', 'arbalete', 'armeAFeu', 'tromblon']);
 /** Passifs qui ne valent que sans armure (Vêtements sacrés : narratif « Seulement sans armure »). */
 const SANS_ARMURE = new Set(['pretre.vetements-sacres']);
 

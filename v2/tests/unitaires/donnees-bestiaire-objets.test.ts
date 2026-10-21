@@ -35,11 +35,11 @@ describe('schémas', () => {
 });
 
 describe('volumes (garde-fou contre un import tronqué)', () => {
-  it('122 monstres, 152 armes et 50 armures de monstres, 414 objets', () => {
+  it('122 monstres, 152 armes et 50 armures de monstres, 417 objets (dont pistolet, fusil et tromblon, lot L4.14)', () => {
     expect(monstres).toHaveLength(122);
     expect(armesMonstres).toHaveLength(152);
     expect(armuresMonstres).toHaveLength(50);
-    expect(objets).toHaveLength(414);
+    expect(objets).toHaveLength(417);
   });
 });
 
