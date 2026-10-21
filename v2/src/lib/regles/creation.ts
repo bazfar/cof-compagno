@@ -1,4 +1,4 @@
-import { progressionVierge, schemaFicheV1, VERSION_FICHE, type FicheV1, type ObjetFiche } from '../schemas/fiche.ts';
+import { progressionVierge, schemaFicheV1, VERSION_FICHE, type FicheV1, type ObjetFiche, type RefonteFiche } from '../schemas/fiche.ts';
 import { CalculsPersonnage, decouperCapacite } from './calculs.ts';
 import { classeParId, constantes, donParId, equipementDepart, objetParId, raceParId, sorts, voieParId } from './donnees.ts';
 import { inventaireEnDictionnaire, versFirestore } from './fiche-document.ts';
@@ -75,6 +75,12 @@ export interface Brouillon {
   equipementManuel: Partial<Record<string, ObjetFiche | null>>;
   /** Fiche v1 en cours de reprise (L2.2c), sinon null. */
   reprise: RepriseV1 | null;
+  /**
+   * Choix de la refonte (lot L4.11b, décision 10a) pour une classe refondue :
+   * ils remplacent alors voies, sorts et Cercle v1, laissés vides. Absent ou
+   * null ailleurs (brouillons d'avant L4.11b compris).
+   */
+  refonte?: RefonteFiche | null;
 }
 
 /** Choix v1 à refaire, affichés à côté de l'assistant (voies par NOM, comme en v1). */
@@ -166,7 +172,7 @@ export function choisirClasse(b: Brouillon, classe: string): Brouillon {
   if (!classeParId.has(classe)) throw new RefusCreation(`Classe inconnue : ${classe}`);
   if (b.classe === classe) return b;
   verrouReprise(b, 'la classe est');
-  return { ...b, classe, capacites: [], voiesHorsProfil: [], sorts: [], cercleSpecialisation: null, jetsPV: [] };
+  return { ...b, classe, capacites: [], voiesHorsProfil: [], sorts: [], cercleSpecialisation: null, jetsPV: [], refonte: null };
 }
 
 /** Changer de race efface la nation et les choix raciaux. */

@@ -1,5 +1,6 @@
 import { doc, runTransaction } from 'firebase/firestore';
 import { db } from '../firebase/client';
+import { appliquerMonteeRefonte, type MonteeRefonte, type MonteeRefonteAppliquee } from '../fiche/montee-refonte';
 import { appliquerMontee, RefusMontee, type Montee, type MonteeAppliquee } from '../regles/montee';
 import { schemaFiche } from '../schemas/fiche';
 import { session } from '../session.svelte';
@@ -22,6 +23,18 @@ export async function monterNiveau(idPerso: string, m: Montee): Promise<MonteeAp
     const lu = await tx.get(ref);
     if (!lu.exists()) throw new RefusMontee('Ce personnage n’existe plus.');
     const r = appliquerMontee(schemaFiche.parse(lu.data()), m);
+    tx.update(ref, { ...r.champs, 'progression.crans': r.fiche.progression.crans });
+    return r;
+  });
+}
+
+/** Montée d'un personnage de la refonte (L4.11b) : même transaction, règles de lib/fiche/montee-refonte.ts. */
+export async function monterNiveauRefonte(idPerso: string, m: MonteeRefonte): Promise<MonteeRefonteAppliquee> {
+  const ref = doc(db, `tables/${session.table}/persos/${idPerso}`);
+  return runTransaction(db, async (tx) => {
+    const lu = await tx.get(ref);
+    if (!lu.exists()) throw new RefusMontee('Ce personnage n’existe plus.');
+    const r = appliquerMonteeRefonte(schemaFiche.parse(lu.data()), m);
     tx.update(ref, { ...r.champs, 'progression.crans': r.fiche.progression.crans });
     return r;
   });

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Brouillon } from '../regles/creation.ts';
 import { CARACS } from '../schemas/commun.ts';
+import { schemaRefonteFiche } from '../schemas/fiche.ts';
 
 /*
  * Brouillon de création gardé dans le navigateur (lot L2.2b) : un
@@ -68,6 +69,7 @@ const schemaBrouillon: z.ZodType<Brouillon> = z.strictObject({
   cercleSpecialisation: z.string().nullable(),
   equipementManuel: z.record(z.string(), objet.nullable()),
   reprise: schemaReprise.nullable(),
+  refonte: schemaRefonteFiche.nullable().optional(),
 });
 
 const cle = (table: string, uid: string, idImport?: string) => `cof2:creation:${table}:${uid}${idImport ? `:${idImport}` : ''}`;
