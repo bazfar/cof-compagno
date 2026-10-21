@@ -14,6 +14,8 @@ la refonte les remplace.
 | --- | --- |
 | `index.ts` | Charge et valide tout, indexe par identifiant, vérifie que chaque état cité existe |
 | `ecoles/evocation.ts` | Les cinq verbes d'Évocation (lot L4.1), gabarit des autres écoles |
+| `ecoles/abjuration.ts`, `ecoles/invocation.ts` | Les verbes d'Abjuration et d'Invocation (lot L4.4a) |
+| `invocations.ts` | Les créatures invoquées : familier, arme spirituelle, les sept serviteurs, les Embruns (lot L4.4a) |
 | `etats.ts` | Le catalogue des états de la refonte (lot L4.2) |
 | `elements.ts` | Les sept éléments : effet générique sur un sort et dérapage (lot L4.2) |
 
@@ -41,4 +43,5 @@ deux et quatre rangs après le verbe (`src/lib/effets/paliers.ts`).
 
 `<école>.<verbe>` (`evocation.missile`) pour les actions, le nom au
 masculin pour les états (`ralenti`, `expose`), le nom de l'élément pour les
-éléments (`electricite`) : ce sont eux que les fiches stockeront. **Ils ne changent jamais**, même si le nom affiché change.
+éléments (`electricite`), `serviteur.<élément>` pour les serviteurs : ce
+sont eux que les fiches stockeront. **Ils ne changent jamais**, même si le nom affiché change.

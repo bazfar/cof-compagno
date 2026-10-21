@@ -223,8 +223,13 @@ const schemaEffetRessource = z.strictObject({
 
 const schemaEffetInvocation = z.strictObject({
   type: z.literal('invocation'),
-  /** Identifiant d'une créature invocable (serviteurs, familier… : L4.2 et suivants). */
+  /** Identifiant d'une créature invocable (src/regles/invocations.ts, lot L4.4a). */
   creature: schemaId,
+  /**
+   * La créature dépend de l'élément choisi au lancement : `<creature>.<élément>`
+   * (Serviteur : `serviteur.feu` est Tison). Le lancement exige alors un élément.
+   */
+  parElement: z.boolean().default(false),
   nombre: z.number().int().min(1).max(10).default(1),
   duree: schemaDuree,
   ...champsCommuns,
@@ -232,7 +237,8 @@ const schemaEffetInvocation = z.strictObject({
 
 const schemaEffetTerrain = z.strictObject({
   type: z.literal('terrain'),
-  nature: z.enum(['difficile', 'glissant', 'bloquant', 'couverture', 'enflamme']),
+  /** `bloquant` : bloque le passage et la vue, couverture totale (Rempart) ; `sanctuaire` : rien d'extérieur ne cible ceux qui sont dedans. */
+  nature: z.enum(['difficile', 'glissant', 'bloquant', 'couverture', 'enflamme', 'sanctuaire']),
   duree: schemaDuree,
   ...champsCommuns,
 });
@@ -240,6 +246,14 @@ const schemaEffetTerrain = z.strictObject({
 const schemaEffetDissipation = z.strictObject({
   type: z.literal('dissipation'),
   nombre: z.number().int().min(1).default(1),
+  ...champsCommuns,
+});
+
+/** Réaction : les dégâts du déclencheur sont réduits ; `renvoi` : la part retenue revient à celui qui les inflige (Renvoi). */
+const schemaEffetReductionDegats = z.strictObject({
+  type: z.literal('reductionDegats'),
+  part: z.literal('moitie'),
+  renvoi: z.boolean().default(false),
   ...champsCommuns,
 });
 
@@ -262,6 +276,7 @@ export const schemaEffet = z.discriminatedUnion('type', [
   schemaEffetInvocation,
   schemaEffetTerrain,
   schemaEffetDissipation,
+  schemaEffetReductionDegats,
   schemaEffetNarratif,
 ]);
 export type Effet = z.infer<typeof schemaEffet>;
@@ -298,6 +313,8 @@ export const schemaResolution = z
     sauvegarde: schemaSauvegarde.optional(),
     /** Ce que fait une sauvegarde réussie sur les effets sans condition. */
     siSauvegarde: z.enum(['annule', 'moitie', 'rien']).optional(),
+    /** Un allié du lanceur ne sauvegarde pas : il accepte l'effet (Portail). */
+    consentant: z.literal(true).optional(),
   })
   .refine((r) => (r.jet === 'sauvegarde') === (r.sauvegarde !== undefined), {
     message: 'une sauvegarde est nommée si et seulement si le jet est une sauvegarde',
@@ -318,6 +335,8 @@ export const schemaPersistance = z.strictObject({
 
 /** Ce qui déclenche une réaction. */
 export const schemaDeclencheur = z.enum([
+  /** Une attaque vise le lanceur, ou un allié à la portée du sort (Bouclier). */
+  'attaqueVisee',
   'allieCible',
   'allieAttaqueAuContact',
   'attaqueSubie',
@@ -416,6 +435,11 @@ export const schemaAction = z
     persistance: schemaPersistance.default({ type: 'instantane', rupture: [] }),
     effets: z.array(schemaEffet),
     paliers: z.strictObject({ II: schemaDeltaPalier.optional(), III: schemaDeltaPalier.optional() }).default({}),
+    /**
+     * Variantes d'un palier : à ce palier, le lanceur choisit ce delta à la
+     * place de celui du palier (Bouclier III : +3 DEF, ou deux cibles).
+     */
+    variantes: z.array(z.strictObject({ id: schemaId, nom: z.string().min(1), palier: z.enum(['II', 'III']), delta: schemaDeltaPalier })).default([]),
     element: schemaElementAutorise.nullable().default(null),
     horsCombat: schemaHorsCombat.nullable().default(null),
     /** Action laissée au MJ, avec sa raison : listée, jamais cachée. */
@@ -435,6 +459,10 @@ export const schemaAction = z
     }
     if (a.nature !== 'verbe' && a.nature !== 'mineur' && a.rang === 0) ko('seul un sort mineur est de rang 0', ['rang']);
     if (a.paliers.III && !a.paliers.II) ko('un palier III suppose un palier II', ['paliers']);
+    a.variantes.forEach((v, i) => {
+      if (!a.paliers[v.palier]) ko(`une variante du palier ${v.palier} suppose ce palier`, ['variantes', i, 'palier']);
+    });
+    if (new Set(a.variantes.map((v) => v.id)).size !== a.variantes.length) ko('deux variantes ont le même identifiant', ['variantes']);
     if ((a.nature === 'reaction' || a.action === 'reaction') && !a.declencheur) ko('une réaction a un déclencheur', ['declencheur']);
     if (a.declencheur && a.action !== 'reaction') ko('seule une réaction a un déclencheur', ['declencheur']);
     if (a.nature === 'passif' && a.action !== 'aucune') ko('un passif ne coûte aucune action', ['action']);

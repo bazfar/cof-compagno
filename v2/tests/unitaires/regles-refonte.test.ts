@@ -15,8 +15,9 @@ describe('toutes les actions des règles', () => {
     expect(new Set(actions.map((a) => a.id)).size).toBe(actions.length);
   });
 
-  it.each(actions.map((a) => [a.id, a] as const))('%s : chaque palier défini se résout', (_id, a) => {
+  it.each(actions.map((a) => [a.id, a] as const))('%s : chaque palier défini, et chaque variante, se résout', (_id, a) => {
     for (const p of paliersDefinis(a)) expect(() => actionAuPalier(a, p)).not.toThrow();
+    for (const v of a.variantes) expect(() => actionAuPalier(a, v.palier, v.id)).not.toThrow();
   });
 
   it.each(actions.filter((a) => a.nature === 'verbe').map((a) => [a.id, a] as const))(

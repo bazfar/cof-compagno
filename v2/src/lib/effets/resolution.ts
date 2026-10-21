@@ -82,6 +82,8 @@ export interface Lancer {
   action: Action;
   /** Palier atteint par le lanceur (paliers.ts, palierAtteint). */
   palier: Palier;
+  /** Variante choisie au palier lancé (Bouclier III : `deux-cibles`). */
+  variante?: string;
   surcharge?: boolean;
   /** Maîtrise de l'école du verbe ; Adepte par défaut. */
   ecole?: Maitrise;
@@ -112,9 +114,10 @@ export type Changement =
   | { type: 'deplacement'; cible: string; sens: 'repousse' | 'attire' | 'teleporte'; cases: number }
   | { type: 'bonus'; cible: string; sur: string; valeur: number | string; duree: Duree }
   | { type: 'ressource'; cible: string; ressource: string; montant: number }
-  | { type: 'invocation'; creature: string; nombre: number; duree: Duree }
+  | { type: 'invocation'; creature: string; nombre: number; duree: Duree; element?: Element }
   | { type: 'terrain'; nature: string; duree: Duree }
   | { type: 'dissipation'; cible: string; nombre: number }
+  | { type: 'reductionDegats'; cible: string; part: 'moitie'; renvoi: boolean }
   | { type: 'narratif'; cible: string; texte: string };
 
 export interface JetNote {
@@ -214,7 +217,14 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     ecole: l.ecole,
   });
   if (!cout.ok) return cout;
-  const action = actionAuPalier(l.action, cout.palierLance);
+  if (l.variante !== undefined && !l.action.variantes.some((v) => v.id === l.variante && v.palier === cout.palierLance))
+    return { ok: false, raison: `${l.action.id} n'a pas de variante ${l.variante} au palier ${cout.palierLance}` };
+  const action = actionAuPalier(l.action, cout.palierLance, l.variante);
+  if (action.effets.some((e) => e.type === 'invocation' && e.parElement)) {
+    // Serviteurs (validé) : celui d'un élément au moins Initié.
+    if (!l.element) return { ok: false, raison: `${action.id} s'invoque avec un élément` };
+    if (l.element.maitrise === 'nonMaitrise') return { ok: false, raison: 'un serviteur s’invoque avec un élément au moins Initié' };
+  }
   const dd = ddSort(l.lanceur.modMagie, l.ecole ?? 'adepte');
   const jets: JetNote[] = [];
   const changements: Changement[] = [];
@@ -297,6 +307,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       jets.push({ quoi: 'attaque magique', cible: c.id, des: j.des, total, contre: def, reussi: touche });
       return { touche };
     }
+    // Un allié consentant accepte l'effet sans sauvegarder (Portail, lot L4.4a).
+    if (sauvegarde && action.resolution.consentant && memeCamp(c)) return { sauveReussie: false };
     if (sauvegarde) return { sauveReussie: sauve(c, sauvegarde, `sauvegarde de ${sauvegarde}`) };
     return {};
   };
@@ -385,6 +397,13 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       degatsSur(e, indice, c, i, base, des);
       return;
     }
+    if (e.type === 'invocation') {
+      // L'élément choisi suit l'invocation : ses coups portent l'effet générique (Arme spirituelle, Serviteur).
+      const element = l.element && action.element ? l.element.id : undefined;
+      const creature = e.parElement && l.element ? `${e.creature}.${l.element.id}` : e.creature;
+      changements.push({ type: 'invocation', creature, nombre: e.nombre, duree: e.duree, ...(element ? { element } : {}) });
+      return;
+    }
     if (e.type === 'deplacement' && e.sens === 'repousse' && elementActif?.sort.modifie.pousseeEnPlus && (l.choixEau ?? 'poussee') === 'poussee') {
       changements.push({ type: 'deplacement', cible: c.id, sens: e.sens, cases: e.cases + elementActif.sort.modifie.pousseeEnPlus });
       return;
@@ -403,6 +422,11 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   };
 
   action.effets.forEach((e, indice) => {
+    // Terrain et invocation : une fois par lancer, sans cible (Rempart, Serviteur…).
+    if (e.type === 'terrain' || e.type === 'invocation') {
+      appliquer(e, indice, { ...l.lanceur, distance: 0 }, {});
+      return;
+    }
     if (e.vise === 'lanceur' || e.vise === 'allie') {
       for (const c of ciblesPour(e)) appliquer(e, indice, c, {});
       return;
@@ -477,6 +501,9 @@ function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () =>
       return;
     case 'dissipation':
       out.push({ type: 'dissipation', cible, nombre: e.nombre });
+      return;
+    case 'reductionDegats':
+      out.push({ type: 'reductionDegats', cible, part: e.part, renvoi: e.renvoi });
       return;
     case 'narratif':
       out.push({ type: 'narratif', cible, texte: e.texte });

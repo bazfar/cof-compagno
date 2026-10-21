@@ -8,7 +8,9 @@ import { schemaAction, type Action, type DeltaPalier, type Palier } from '../sch
  *     après (Missile R1 : II au rang 3, III au rang 5) ;
  *   - les paliers n'existent que dans la voie de l'école : un verbe appris
  *     hors voie (grimoire) reste au palier I ;
- *   - II et III sont écrits en deltas du palier I, appliqués dans l'ordre.
+ *   - II et III sont écrits en deltas du palier I, appliqués dans l'ordre ;
+ *   - une variante remplace le delta de son palier, au choix du lanceur
+ *     (lot L4.4a : Bouclier III, +3 DEF ou deux cibles).
  */
 
 const ORDRE: Palier[] = ['I', 'II', 'III'];
@@ -71,12 +73,20 @@ function appliquerDelta(a: Record<string, unknown>, d: DeltaPalier, id: string, 
  * paliers. Elle est revalidée : un delta qui casse l'action lève une erreur
  * (les tests des règles résolvent chaque palier de chaque verbe).
  */
-export function actionAuPalier(action: Action, palier: Palier): Action {
+export function actionAuPalier(action: Action, palier: Palier, variante?: string): Action {
   if (!paliersDefinis(action).includes(palier)) throw new Error(`${action.id} n'a pas de palier ${palier}`);
-  let brut: Record<string, unknown> = { ...action, paliers: {} };
-  if (palier !== 'I') brut = appliquerDelta(brut, action.paliers.II!, action.id, 'II');
-  if (palier === 'III') brut = appliquerDelta(brut, action.paliers.III!, action.id, 'III');
+  const v = variante === undefined ? undefined : action.variantes.find((x) => x.id === variante);
+  if (variante !== undefined && (!v || v.palier !== palier)) throw new Error(`${action.id} n'a pas de variante ${variante} au palier ${palier}`);
+  const delta = (p: 'II' | 'III') => (v && v.palier === p ? v.delta : action.paliers[p]!);
+  let brut: Record<string, unknown> = { ...action, paliers: {}, variantes: [] };
+  if (palier !== 'I') brut = appliquerDelta(brut, delta('II'), action.id, 'II');
+  if (palier === 'III') brut = appliquerDelta(brut, delta('III'), action.id, 'III');
   return schemaAction.parse(brut);
+}
+
+/** Variantes offertes au palier donné. */
+export function variantesAuPalier(action: Pick<Action, 'variantes'>, palier: Palier): { id: string; nom: string }[] {
+  return action.variantes.filter((v) => v.palier === palier).map(({ id, nom }) => ({ id, nom }));
 }
 
 /** Texte de l'usage hors combat au palier donné (le dernier défini s'il en a moins). */
