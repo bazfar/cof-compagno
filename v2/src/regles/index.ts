@@ -1,5 +1,6 @@
 import { schemaAction, type Action, type Effet } from '../lib/schemas/effets';
-import { schemaFicheElement, type FicheElement } from '../lib/schemas/elements';
+import { schemaCombinaison, schemaFicheElement, type Combinaison, type FicheElement } from '../lib/schemas/elements';
+import { COMBINAISONS } from './combinaisons';
 import { schemaEtatRefonte, type EtatRefonte } from '../lib/schemas/etats';
 import { schemaInvocation, type Invocation } from '../lib/schemas/invocations';
 import { schemaClasseRefonte, schemaVoieRefonte, type ClasseRefonte, type VoieRefonte } from '../lib/schemas/classes';
@@ -47,6 +48,12 @@ export const etatsRefonte: readonly EtatRefonte[] = [...etatParId.values()];
 
 export const elementParId: ReadonlyMap<string, FicheElement> = indexer(ELEMENTS_REFONTE, (s) => schemaFicheElement.parse(s), 'Élément');
 
+/** Combinaisons signature (lot L4.10) : une par paire d'éléments, au plus. */
+export const combinaisonParId: ReadonlyMap<string, Combinaison> = indexer(COMBINAISONS, (s) => schemaCombinaison.parse(s), 'Combinaison');
+export const combinaisons: readonly Combinaison[] = [...combinaisonParId.values()];
+const paires = combinaisons.map((c) => [...c.elements].sort().join('+'));
+if (new Set(paires).size !== paires.length) throw new Error(`Deux signatures pour la même paire : ${paires.join(', ')}`);
+
 export const invocationParId: ReadonlyMap<string, Invocation> = indexer(INVOCATIONS, (s) => schemaInvocation.parse(s), 'Invocation');
 
 export const actionParId: ReadonlyMap<string, Action> = indexer([...EVOCATION, ...ABJURATION, ...INVOCATION, ...ILLUSION, ...ENCHANTEMENT, ...GUERISON, ...FOI, ...BANNISSEMENT, ...JUGEMENT, ...MINEURS, ...ACTIONS_MAGICIEN, ...ACTIONS_ENVOUTEUR, ...ACTIONS_PRETRE, ...ACTIONS_ARMES, ...ACTIONS_GUERRIER, ...CHANT, ...ACTIONS_BARDE, ...ACTIONS_CHAOS], (s) => schemaAction.parse(s), 'Action');
@@ -74,6 +81,7 @@ export function citationsDEtats(): { ou: string; etat: string }[] {
   }
   for (const inv of invocationParId.values())
     for (const c of inv.capacites) for (const etat of etatsCites(c.effets)) ou.push({ ou: `invocation ${inv.id}`, etat });
+  for (const c of combinaisonParId.values()) for (const etat of etatsCites(c.effets)) ou.push({ ou: `combinaison ${c.id}`, etat });
   for (const el of elementParId.values())
     for (const volet of [el.sort, el.derapage])
       for (const etat of etatsCites([...volet.effets, ...volet.auChoix])) ou.push({ ou: `élément ${el.id}`, etat });

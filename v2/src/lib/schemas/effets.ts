@@ -133,8 +133,13 @@ export type FamilleArme = z.infer<typeof schemaFamilleArme>;
 /** Portée : contact, soi, un nombre de cases, ou celle de l'arme maniée (`arme`, lot L4.7 : allonge de la lance, tir de l'arc). */
 export const schemaPortee = z.union([z.enum(['contact', 'soi', 'arme']), z.number().int().min(1).max(100)]);
 
-/** Qui reçoit un effet. `zone` : chaque créature de la zone, filtre de la zone appliqué. */
-export const schemaVise = z.enum(['cible', 'zone', 'lanceur', 'allie']);
+/**
+ * Qui reçoit un effet. `zone` : chaque créature de la zone, filtre de la
+ * zone appliqué. `voisins` : les créatures à 1 case de la cible principale,
+ * fournies par le lancer (Onde sismique, combinaison terre + électricité ;
+ * lot L4.10).
+ */
+export const schemaVise = z.enum(['cible', 'zone', 'lanceur', 'allie', 'voisins']);
 
 /**
  * Conditions d'un effet. Liste fermée : une condition nouvelle s'ajoute
@@ -260,6 +265,8 @@ const schemaEffetEtat = z.strictObject({
   charges: z.number().int().min(1).max(5).optional(),
   /** Seulement si la cible a au plus `parNiveau` × niveau du lanceur en PV actuels (Sommeil : 4 × niveau ; Bannissement : 5 × niveau). */
   siPvAuPlus: z.strictObject({ parNiveau: z.number().int().min(1).max(10) }).optional(),
+  /** Les dégâts de l'état soignent le lanceur (Brûlure qui draine, combinaison feu + sang ; lot L4.10). */
+  draine: z.literal(true).optional(),
   /** Bonus des alliés du lanceur contre le porteur (Marque de l'Œil de l'inquisiteur, lot L4.6). */
   contre: z.array(z.strictObject({ cible: z.enum(['attaque', 'degats']), valeur: z.number().int().min(-10).max(10) })).optional(),
   ...champsCommuns,
@@ -358,7 +365,7 @@ const schemaEffetInvocation = z.strictObject({
 const schemaEffetTerrain = z.strictObject({
   type: z.literal('terrain'),
   /** `bloquant` : bloque le passage et la vue, couverture totale (Rempart) ; `sanctuaire` : rien d'extérieur ne cible ceux qui sont dedans. */
-  nature: z.enum(['difficile', 'glissant', 'bloquant', 'couverture', 'enflamme', 'sanctuaire', 'illusion', 'sanctifie']),
+  nature: z.enum(['difficile', 'glissant', 'bloquant', 'couverture', 'enflamme', 'sanctuaire', 'illusion', 'sanctifie', 'electrifie']),
   duree: schemaDuree,
   ...champsCommuns,
 });

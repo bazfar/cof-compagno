@@ -1,7 +1,7 @@
 import { lancerFormule } from '../regles/des';
 import type { CARACS } from '../schemas/commun';
 import type { Action, Duree, Effet, Element, FamilleArme, Palier, Sauvegarde } from '../schemas/effets';
-import type { FicheElement } from '../schemas/elements';
+import type { Combinaison, FicheElement } from '../schemas/elements';
 import type { EtatRefonte } from '../schemas/etats';
 import { coutSort, ddSort, MAITRISES, seuilEchec, type CoutCalcule, type Maitrise } from './cout';
 import { corruptionParLaPlongee } from './chaos';
@@ -41,8 +41,16 @@ import { actionAuPalier, paliersDefinis } from './paliers';
  * jouent sur leur propre sauvegarde (4a, 5a) ; le rebond de l'électricité
  * fait la même sauvegarde que la cible principale (7a) ; le sang ajoute un
  * dé payé en PV en plus des PP (6a), le lanceur en récupère la moitié.
- * Les combinaisons de deux éléments viendront avec leurs signatures, dans
- * les lots des classes : le moteur les refuse d'ici là.
+ * Combinaisons de Maître (lot L4.10, décisions de Thomas du 21/10/2026) :
+ * le premier élément est Maître ; le second paie son surcoût et peut
+ * déraper à son rang (le sort entier échoue alors, comme pour un élément
+ * seul) ; une paire signature remplace les deux effets génériques par le
+ * sien (12a) ; sinon les deux effets génériques s'appliquent à la suite,
+ * modifications du sort comprises (le premier l'emporte en cas de
+ * doublon) ; un second élément qui n'est pas Maître est réduit de moitié
+ * (durées divisées par deux arrondies au supérieur, dégâts en plus divisés
+ * par deux : 13a) et ne sert qu'une fois par combat, que le combat
+ * décompte (`cout.combinaisonDuCombat`).
  *
  * Attaques d'arme (lot L4.7, Guerrier ; décisions de Thomas du 21/10/2026) :
  *   - le jet `attaque` prend le bonus d'attaque de l'arme maniée, que la
@@ -198,6 +206,8 @@ export type AxePosture = 'attaque' | 'DEF' | 'degats';
 export interface Catalogue {
   etats: ReadonlyMap<string, EtatRefonte>;
   elements: ReadonlyMap<string, FicheElement>;
+  /** Combinaisons signature (lot L4.10) ; absentes : toute paire applique les deux effets génériques. */
+  combinaisons?: readonly Combinaison[];
 }
 
 export interface Lancer {
@@ -226,6 +236,8 @@ export interface Lancer {
   allie?: CibleEnJeu;
   /** Électricité : 2ᵉ cible du rebond, à 2 cases au plus de la cible principale. */
   rebond?: CibleEnJeu;
+  /** Créatures à 1 case de la cible principale (Onde sismique, lot L4.10), fournies par la carte. */
+  voisins?: readonly CibleEnJeu[];
   /** Eau : 2 cases de poussée en plus (défaut), ou retirer un état à l'allié choisi. */
   choixEau?: 'poussee' | 'retraitEtat';
   /** Arme maniée : attaques d'arme, attaques spéciales (lot L4.7). */
@@ -251,7 +263,7 @@ export type Changement =
   | { type: 'degats'; cible: string; montant: number; typeDegats: string; calcul: string }
   | { type: 'soin'; cible: string; montant: number }
   | { type: 'pvTemp'; cible: string; montant: number }
-  | { type: 'etat'; cible: string; etat: string; duree: Duree; charges?: number; contre?: { cible: 'attaque' | 'degats'; valeur: number }[] }
+  | { type: 'etat'; cible: string; etat: string; duree: Duree; charges?: number; contre?: { cible: 'attaque' | 'degats'; valeur: number }[]; drainePour?: string }
   | { type: 'chargeConsommee'; cible: string; etat: string }
   | { type: 'jetsReserves'; cible: string; valeurs: number[] }
   | { type: 'retraitEtat'; cible: string; etats: readonly string[]; nombre: number }
@@ -291,7 +303,7 @@ export type Resultat =
        * `attaqueSpecialeDuCombat` : l'attaque spéciale gratuite du combat
        * d'un hybride (3c), que le combat décompte.
        */
-      cout: { pp: number; pv: number; sacre?: number; ressources?: Record<string, number>; attaqueSpecialeDuCombat?: true };
+      cout: { pp: number; pv: number; sacre?: number; ressources?: Record<string, number>; attaqueSpecialeDuCombat?: true; combinaisonDuCombat?: true };
       dd: number;
       jets: JetNote[];
       changements: Changement[];
@@ -361,7 +373,7 @@ function coutFixe(action: Action, palier: Palier, surcharge?: boolean): CoutCalc
   return { ok: true, pp, palierLance, detail: [{ terme: 'base', valeur: pp }] };
 }
 
-type Mods = { magie: number; caracs: Partial<Record<Carac, number>>; choix?: Carac; pointsDeChaos?: number };
+type Mods = { magie: number; caracs: Partial<Record<Carac, number>>; choix?: Carac; pointsDeChaos?: number; lanceur?: string };
 
 /** Mod ajouté par un effet : celui de magie (`plusMod`) ou celui d'une caractéristique nommée (12a). */
 function modDeLEffet(e: { plusMod?: boolean; mod?: Carac }, m: Mods): number {
@@ -370,6 +382,12 @@ function modDeLEffet(e: { plusMod?: boolean; mod?: Carac }, m: Mods): number {
 }
 
 /** Caractéristiques qu'une action lit par leur nom (12a) : le lanceur doit en donner le mod. */
+/** Combinaison réduite (13a) : les durées en rounds divisées par deux, arrondies au supérieur (les dégâts : au calcul). */
+export function reduire(e: Effet): Effet {
+  if ('duree' in e && e.duree && typeof e.duree === 'object' && 'rounds' in e.duree) return { ...e, duree: { rounds: Math.ceil(e.duree.rounds / 2) } } as Effet;
+  return e;
+}
+
 /** Une durée qui lit un mod de la cible (élixirs, lot L4.8) devient des rounds, au moins 1. */
 function dureePourLaCible(d: Duree, c: Combattant): Duree {
   if (typeof d === 'string' || !('plusModCible' in d)) return d;
@@ -450,7 +468,6 @@ export function degatsReduits(base: number, facteurs: readonly number[]): number
 
 export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   const alea = l.alea ?? Math.random;
-  if (l.secondElement) return { ok: false, raison: 'les combinaisons de deux éléments arrivent avec leurs signatures (lots des classes)' };
   const v = l.voie ?? {};
   const hemo = v.hemomancie?.rang ?? 0;
   const saignee = hemo >= 5 && !!v.hemomancie?.saignee;
@@ -468,6 +485,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
         surcharge: l.surcharge,
         surchargeSansSurcout: seuilCritique,
         element: l.element?.maitrise ?? null,
+        secondElement: l.secondElement?.maitrise ?? null,
         ecole: l.ecole,
       });
   if (!cout.ok) return cout;
@@ -541,6 +559,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     caracs: l.lanceur.mods ?? {},
     ...(l.caracChoisie ? { choix: l.caracChoisie } : {}),
     ...(pointsDeChaos !== undefined ? { pointsDeChaos } : {}),
+    lanceur: l.lanceur.id,
   };
   const maitre = v.maitreDArmes?.rang ?? 0;
   const coupDeMaitre = maitre >= 5 ? v.maitreDArmes?.coupDeMaitre : undefined;
@@ -565,10 +584,19 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   const changements: Changement[] = [];
   const fiche = l.element ? cat.elements.get(l.element.id) : undefined;
   if (l.element && !fiche) return { ok: false, raison: `élément inconnu : ${l.element.id}` };
+  // Combinaison de Maître (lot L4.10) : coût et premier élément Maître déjà vérifiés par coutSort.
+  const fiche2 = l.secondElement ? cat.elements.get(l.secondElement.id) : undefined;
+  if (l.secondElement && !fiche2) return { ok: false, raison: `élément inconnu : ${l.secondElement.id}` };
+  if (l.secondElement && l.secondElement.id === l.element?.id) return { ok: false, raison: 'une combinaison prend deux éléments différents' };
+  const paire = l.element && l.secondElement ? [l.element.id, l.secondElement.id].sort().join('+') : null;
+  const signature = paire ? cat.combinaisons?.find((x) => [...x.elements].sort().join('+') === paire) : undefined;
+  const combinaisonReduite = !!l.secondElement && l.secondElement.maitrise !== 'maitre';
   const mineur = action.nature === 'mineur';
   // Affinité (Virtuose 2) : un sort mineur porte l'effet complet d'un élément au moins Adepte.
   const affinite = mineur && !!v.virtuose?.affinite && !!l.element && MAITRISES.indexOf(l.element.maitrise) >= MAITRISES.indexOf('adepte');
-  const sang = l.element?.id === 'sang' && (!mineur || affinite);
+  // Sang : son dé en plus, sauf quand une signature remplace les effets génériques ; réduit de moitié en second élément non Maître.
+  const sangSecond = !signature && l.secondElement?.id === 'sang';
+  const sang = !signature && (l.element?.id === 'sang' || sangSecond) && (!mineur || affinite);
   // Paiement : le Pacte de sang paie les PP en PV ; la Saignée ne coûte que la moitié des PV actuels.
   let pp = (saignee ? 0 : cout.pp) + (reserve?.type === 'jetsReserves' ? reserve.ppParDe * l.nombreDeDes! : 0);
   let pvPaye = pvFixes;
@@ -599,6 +627,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       ...(l.boost && action.ecole !== 'chant' ? { sacre: 1 } : {}),
       ...(Object.keys(ressources).length ? { ressources } : {}),
       ...(attaqueSpecialeDuCombat ? { attaqueSpecialeDuCombat: true as const } : {}),
+      ...(combinaisonReduite ? { combinaisonDuCombat: true as const } : {}),
     },
     dd,
     jets,
@@ -620,20 +649,34 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   // 3. Dérapage de l'élément.
   let derape = false; // élément raté : le sort entier échoue (1b)
   const seuilElement = l.element && (!mineur || affinite) ? seuilEchec(l.element.maitrise) : 0;
+  let ficheDerapee = fiche;
   if (seuilElement) {
     const j = d20(alea, 0);
     derape = j.garde <= seuilElement;
     jets.push({ quoi: 'maîtrise de l’élément', des: j.des, total: j.garde, contre: seuilElement, reussi: !derape });
   }
+  // Second élément d'une combinaison : il dérape à son rang (Initié 1–4, Non maîtrisé 1–10).
+  const seuilSecond = l.secondElement && !derape ? seuilEchec(l.secondElement.maitrise) : 0;
+  if (seuilSecond) {
+    const j = d20(alea, 0);
+    derape = j.garde <= seuilSecond;
+    if (derape) ficheDerapee = fiche2;
+    jets.push({ quoi: 'maîtrise du second élément', des: j.des, total: j.garde, contre: seuilSecond, reussi: !derape });
+  }
   // Voie sauvage (2a, 7b du 21/10) : le dérapage devient une Mutation sauvage, le sort part sans élément.
   const sauvage = v.sauvage?.rang ?? 0;
   const sansElement = derape && sauvage >= 1;
   if (sansElement) derape = false;
-  const elementActif = fiche && (!mineur || affinite) && !sansElement ? fiche : undefined;
+  const elementActif = fiche && (!mineur || affinite) && !sansElement && !signature ? fiche : undefined;
+  const secondActif = fiche2 && !sansElement && !signature ? fiche2 : undefined;
+  const signatureActive = signature && !sansElement ? signature : undefined;
+  // Ce que les éléments changent au sort : le premier l'emporte sur le second.
+  const modifs = { ...(secondActif?.sort.modifie ?? {}), ...(elementActif?.sort.modifie ?? {}) };
+  const rebondDuSecond = !elementActif?.sort.modifie.rebond && !!secondActif?.sort.modifie.rebond;
   let pv = sang && !sansElement ? cout.pp : 0;
-  if (derape && fiche) {
-    if (fiche.derapage.modifie.coutPvMultiplie) pv *= fiche.derapage.modifie.coutPvMultiplie;
-    for (const e of fiche.derapage.effets) appliquerSimple(e, l.lanceur.id, changements, alea, m);
+  if (derape && ficheDerapee) {
+    if (ficheDerapee.derapage.modifie.coutPvMultiplie) pv *= ficheDerapee.derapage.modifie.coutPvMultiplie;
+    for (const e of ficheDerapee.derapage.effets) appliquerSimple(e, l.lanceur.id, changements, alea, m);
     return fin('derapage', pv);
   }
 
@@ -667,7 +710,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     action.zone?.filtre === 'ennemis' ? !memeCamp(c) : action.zone?.filtre === 'allies' ? memeCamp(c) : true,
   );
   const sauvegarde: Sauvegarde | undefined =
-    action.resolution.jet === 'sauvegarde' ? (elementActif?.sort.modifie.sauvegarde ?? action.resolution.sauvegarde) : undefined;
+    action.resolution.jet === 'sauvegarde' ? (modifs.sauvegarde ?? action.resolution.sauvegarde) : undefined;
   const saves = new Map<string, boolean>();
   const sauve = (c: CibleEnJeu, type: Sauvegarde, quoi: string): boolean => {
     const cle = `${c.id}|${type}`;
@@ -696,7 +739,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
         return { touche: false };
       }
       const av = avantageAttaque(l.lanceur, c, cat);
-      const defBase = elementActif?.sort.modifie.ignoreArmure || action.ignoreArmure ? (c.defSansArmure ?? c.def) : c.def;
+      const defBase = modifs.ignoreArmure || action.ignoreArmure ? (c.defSansArmure ?? c.def) : c.def;
       const def = defBase + modificateur(c, cat, ['DEF']);
       const j = d20(alea, av);
       const bonus = action.resolution.jet === 'attaqueMagique' ? l.lanceur.attaqueMagique : action.attaquePar ? m.caracs[action.attaquePar]! : l.arme!.attaque;
@@ -786,9 +829,13 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   let donApplique = false;
   let deDuDon: { des: number[]; total: number } | null = null;
 
-  const degatsSur = (e: Extract<Effet, { type: 'degats' }>, indice: number, c: CibleEnJeu, i: Issue, base: number, deJet: number[]) => {
+  const degatsSur = (e: Extract<Effet, { type: 'degats' }>, indice: number, c: CibleEnJeu, i: Issue, base: number, deJet: number[], reduit = false) => {
     const facteurs: number[] = [];
     const calcul: string[] = [`${base} (${deJet.join(' + ') || base})`];
+    if (reduit) {
+      facteurs.push(0.5);
+      calcul.push('second élément non Maître ×½');
+    }
     if (i.sauveReussie && action.resolution.siSauvegarde === 'moitie' && !e.condition) {
       facteurs.push(0.5);
       calcul.push('sauvegarde réussie ×½');
@@ -812,9 +859,9 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       facteurs.push(2);
       calcul.push('boost de Sacré ×2');
     }
-    if (elementActif?.sort.modifie.contreMetal && c.armureMetal) {
-      facteurs.push(elementActif.sort.modifie.contreMetal);
-      calcul.push(`armure de métal ×${elementActif.sort.modifie.contreMetal}`);
+    if (modifs.contreMetal && c.armureMetal) {
+      facteurs.push(modifs.contreMetal);
+      calcul.push(`armure de métal ×${modifs.contreMetal}`);
     }
     let montant = degatsReduits(base, facteurs);
     if (affaibli?.degatsInfliges) {
@@ -826,7 +873,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     if (indice === premierDegats && baseRebond === null) baseRebond = base;
   };
 
-  const appliquer = (e0: Effet, indice: number, c: CibleEnJeu, i: Issue, sauvegardeEffet?: Sauvegarde) => {
+  const appliquer = (e0: Effet, indice: number, c: CibleEnJeu, i: Issue, sauvegardeEffet?: Sauvegarde, reduit = false) => {
     const e = 'duree' in e0 && e0.duree !== undefined ? ({ ...e0, duree: dureePourLaCible(e0.duree, c) } as Effet) : e0;
     if (!conditionRemplie(e, c, i, sauvegardeEffet)) return;
     // Boss et démons D5 : immunisés à Sommeil, Ordre, Domination (validé).
@@ -928,11 +975,12 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
           deSang = lancerDes(`1d${faces ?? 6}`, alea);
           jets.push({ quoi: 'dé de sang', des: deSang.des, total: deSang.total });
         }
-        base += deSang.total;
+        // Sang en second élément non Maître : son dé compte pour moitié (13a).
+        base += sangSecond && combinaisonReduite ? Math.floor(deSang.total / 2) : deSang.total;
         des.push(...deSang.des);
       }
       jets.push({ quoi: 'dégâts', cible: c.id, des, total: base });
-      degatsSur(e, indice, c, i, base, des);
+      degatsSur(e, indice, c, i, base, des, reduit);
       // Don corrompu, +1d6 chaotiques (4a) : un jet par sort, porté comme les dés en plus.
       if (don === 'plus1d6' && porteDesEnPlus) {
         if (!deDuDon) {
@@ -965,15 +1013,25 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       changements.push({ type: 'invocation', creature, nombre: e.nombre, duree: e.duree, ...(element ? { element } : {}) });
       return;
     }
-    if (e.type === 'deplacement' && e.sens === 'repousse' && elementActif?.sort.modifie.pousseeEnPlus && (l.choixEau ?? 'poussee') === 'poussee') {
-      changements.push({ type: 'deplacement', cible: c.id, sens: e.sens, cases: e.cases + elementActif.sort.modifie.pousseeEnPlus });
+    if (e.type === 'deplacement' && e.sens === 'repousse' && modifs.pousseeEnPlus && (l.choixEau ?? 'poussee') === 'poussee') {
+      changements.push({ type: 'deplacement', cible: c.id, sens: e.sens, cases: e.cases + modifs.pousseeEnPlus });
       return;
     }
     appliquerSimple(e, c.id, changements, alea, m);
   };
 
   const ciblesPour = (e: Effet): CibleEnJeu[] =>
-    e.vise === 'zone' ? [...zone] : e.vise === 'allie' ? (l.allie ? [l.allie] : []) : e.vise === 'lanceur' ? [{ ...l.lanceur, distance: 0 }] : [...l.cibles];
+    e.vise === 'zone'
+      ? [...zone]
+      : e.vise === 'allie'
+        ? l.allie
+          ? [l.allie]
+          : []
+        : e.vise === 'lanceur'
+          ? [{ ...l.lanceur, distance: 0 }]
+          : e.vise === 'voisins'
+            ? [...(l.voisins ?? [])]
+            : [...l.cibles];
 
   const issues = new Map<string, Issue>();
   const issuePour = (c: CibleEnJeu, projectile: number) => {
@@ -1000,26 +1058,54 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   if (l.boost === 'ignoreResistances') changements.push({ type: 'narratif', cible: l.lanceur.id, texte: 'Boost de Sacré : ce sort ignore les résistances.' });
   if (l.boost === 'marquePartagee') changements.push({ type: 'narratif', cible: l.lanceur.id, texte: 'Boost de Sacré : le bonus de la Marque vaut aussi pour les sorts des alliés.' });
 
-  // Effet générique de l'élément.
-  if (elementActif && action.element) {
+  // Effets génériques des éléments, ou la signature de la paire (lot L4.10).
+  if ((elementActif || secondActif || signatureActive) && action.element) {
     const surZone = action.zone !== null && action.effets.some((e) => e.vise === 'zone');
     const porteurs = surZone ? zone : action.element.application === 'ciblePrincipale' ? l.cibles.slice(0, 1) : [...l.cibles];
-    const sauvegardeEffet = action.resolution.jet === 'sauvegarde' ? undefined : elementActif.sort.sauvegardeSiAucune;
-    const effetsElement = l.choixEau === 'retraitEtat' ? [] : elementActif.sort.effets;
-    porteurs.forEach((c, p) => {
-      const i = issuePour(c, p);
-      for (const e of effetsElement) appliquer({ ...e, vise: 'cible' } as Effet, -1, c, i, sauvegardeEffet);
-    });
-    if (l.choixEau === 'retraitEtat' && l.allie) for (const e of elementActif.sort.auChoix) appliquerSimple(e, l.allie.id, changements, alea, m);
-    // Rebond de l'électricité : moitié des dégâts de la cible principale, même sauvegarde (7a).
-    const rebond = elementActif.sort.modifie.rebond;
+    const sansSauvegarde = action.resolution.jet !== 'sauvegarde';
+    type Volet = { effets: readonly Effet[]; sauvegarde?: Sauvegarde; propre?: boolean; reduit: boolean };
+    const volets: Volet[] = [];
+    const genere = (f: FicheElement, reduit: boolean) => {
+      // Eau : retirer un état à l'allié choisi plutôt que la poussée.
+      if (f.id === 'eau' && l.choixEau === 'retraitEtat') {
+        if (l.allie) for (const e of f.sort.auChoix) appliquerSimple(reduit ? reduire(e) : e, l.allie.id, changements, alea, m);
+        return;
+      }
+      volets.push({ effets: f.sort.effets, ...(sansSauvegarde && f.sort.sauvegardeSiAucune ? { sauvegarde: f.sort.sauvegardeSiAucune } : {}), reduit });
+    };
+    if (signatureActive) volets.push({ effets: signatureActive.effets, ...(signatureActive.sauvegarde ? { sauvegarde: signatureActive.sauvegarde, propre: true } : {}), reduit: combinaisonReduite });
+    else {
+      if (elementActif) genere(elementActif, false);
+      if (secondActif) genere(secondActif, combinaisonReduite);
+    }
+    const principal = porteurs[0];
+    for (const volet of volets) {
+      // Une signature joue sa propre sauvegarde (Vapeur : CON), indépendante de celle du sort.
+      const issueVolet = (i: Issue): Issue => (volet.propre ? { ...(i.touche !== undefined ? { touche: i.touche } : {}) } : i);
+      for (const e0 of volet.effets) {
+        const e = volet.reduit ? reduire(e0) : e0;
+        // Terrain : une fois, si le sort a pris sur la cible principale. Voisins : autour d'elle, chacun sa sauvegarde.
+        if (e.type === 'terrain') {
+          if (principal && conditionRemplie({ type: 'narratif', texte: '-', vise: 'cible' }, principal, issuePour(principal, 0))) appliquerSimple(e, l.lanceur.id, changements, alea, m);
+          continue;
+        }
+        if (e.vise === 'voisins') {
+          if (principal && conditionRemplie({ type: 'narratif', texte: '-', vise: 'cible' }, principal, issuePour(principal, 0)))
+            for (const c of l.voisins ?? []) appliquer(e, -1, c, {}, volet.sauvegarde, volet.reduit);
+          continue;
+        }
+        porteurs.forEach((c, p) => appliquer({ ...e, vise: 'cible' } as Effet, -1, c, issueVolet(issuePour(c, p)), volet.sauvegarde, volet.reduit));
+      }
+    }
+    // Rebond de l'électricité : moitié des dégâts de la cible principale, même sauvegarde (7a) ; un quart en second élément réduit.
+    const rebond = modifs.rebond;
     const premier = action.effets[premierDegats];
     if (rebond && l.rebond && baseRebond !== null && premier?.type === 'degats') {
       const c = l.rebond;
       const i: Issue = sauvegarde ? { sauveReussie: sauve(c, sauvegarde, `sauvegarde de ${sauvegarde} (rebond)`) } : {};
       if (!(i.sauveReussie && action.resolution.siSauvegarde === 'annule')) {
         const base = Math.floor(baseRebond / 2);
-        degatsSur({ ...premier, attenuation: undefined, vise: 'cible' }, -1, { ...c, distance: 0 }, i, base, [base]);
+        degatsSur({ ...premier, attenuation: undefined, vise: 'cible' }, -1, { ...c, distance: 0 }, i, base, [base], rebondDuSecond && combinaisonReduite);
       }
     }
   }
@@ -1103,7 +1189,15 @@ function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () =>
       out.push({ type: 'pvTemp', cible, montant: lancerDes(e.des, alea).total + modDeLEffet(e, m) });
       return;
     case 'etat':
-      out.push({ type: 'etat', cible, etat: e.etat, duree: e.duree, ...(e.charges ? { charges: e.charges } : {}), ...(e.contre ? { contre: e.contre } : {}) });
+      out.push({
+        type: 'etat',
+        cible,
+        etat: e.etat,
+        duree: e.duree,
+        ...(e.charges ? { charges: e.charges } : {}),
+        ...(e.contre ? { contre: e.contre } : {}),
+        ...(e.draine && m.lanceur ? { drainePour: m.lanceur } : {}),
+      });
       return;
     case 'retraitEtat':
       out.push({ type: 'retraitEtat', cible, etats: e.etats, nombre: e.nombre });

@@ -25,6 +25,7 @@ la refonte les remplace.
 | `ecoles/chant.ts` | La Voie du chant du Barde, son école : Note discordante, Ballade, Chant brisant, Contre-chant, Requiem du silence (lot L4.8) |
 | `classes/barde.ts` | La classe Barde : Inspiration, Voies de la rapière, du spectacle, de l'alcoolisme (lot L4.8) |
 | `classes/chaos.ts` | Les Voies du chaos du Guerrier, du Magicien, de l'Envoûteur, du Prêtre et du Barde, au gabarit commun (lot L4.9) |
+| `combinaisons.ts` | Les sept combinaisons signature de deux éléments (lot L4.10) |
 | `classes/envouteur.ts` | La classe Envoûteur : voies de l'esprit, de la transmutation, de la prescience, seconde école (lot L4.5) |
 | `mineurs.ts` | Les sorts mineurs du Magicien (avec leurs paliers de Virtuose) et de l'Envoûteur (lots L4.4b1, L4.4b2, L4.5) |
 | `classes/magicien.ts` | La classe Magicien : création, réserve de PP, Voie de l'école, Voie élémentaire, Cataclysme (L4.4b1) ; Voie sauvage, Hémomancie, Virtuose, Saignée (L4.4b2) |

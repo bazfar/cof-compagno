@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ELEMENTS, schemaEffet, schemaElement, schemaSauvegarde } from './effets.ts';
+import { schemaId } from './commun.ts';
 
 /*
  * Les sept éléments (lot L4.2 ; doc « Refonte classes et magie — cadre »,
@@ -54,4 +55,28 @@ export const schemaFicheElement = z.strictObject({
 });
 export type FicheElement = z.infer<typeof schemaFicheElement>;
 export type FicheElementSaisie = z.input<typeof schemaFicheElement>;
+
+/*
+ * Combinaisons de Maître (lot L4.10 ; doc de cadre, « Combinaisons de
+ * Maître », validé). Un Maître applique deux éléments sur un même sort ; le
+ * premier est Maître, le second garde les règles de son rang (coût,
+ * dérapage, effet réduit de moitié et une fois par combat s'il n'est pas
+ * Maître). Une paire qui a sa signature remplace les deux effets
+ * génériques par la sienne ; les autres paires appliquent les deux effets
+ * génériques à la suite (décision 12a du 21/10/2026).
+ *
+ * `sauvegarde` : les effets de la signature conditionnés à une sauvegarde
+ * ratée se jouent sur celle-ci, contre le DD du sort, quelle que soit la
+ * sauvegarde du sort.
+ */
+export const schemaCombinaison = z.strictObject({
+  id: schemaId,
+  nom: z.string().min(1),
+  elements: z.tuple([schemaElement, schemaElement]).refine(([a, b]) => a !== b, 'deux éléments différents'),
+  texte: z.string().min(1),
+  effets: z.array(schemaEffet).min(1),
+  sauvegarde: schemaSauvegarde.optional(),
+});
+export type Combinaison = z.infer<typeof schemaCombinaison>;
+export type CombinaisonSaisie = z.input<typeof schemaCombinaison>;
 export { ELEMENTS };

@@ -1021,6 +1021,21 @@
         <mxCell id="e491" parent="1" source="eMoteur49" target="eResolution" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="titre-l410" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Les Combinaisons de Maître (L4.10) — deux éléments sur un sort" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="6460" as="geometry" />
+        </mxCell>
+        <mxCell id="eCombinaisons" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b&gt;src/regles/combinaisons.ts&lt;/b&gt;&lt;hr&gt;sept signatures : Vapeur, Zone électrifiée, Lave, Gel,&lt;br&gt;Onde sismique, Emprise, Brûlure qui draine ;&lt;br&gt;les autres paires : deux effets génériques" vertex="1">
+          <mxGeometry height="100" width="460" x="40" y="6500" as="geometry" />
+        </mxCell>
+        <mxCell id="eMoteur410" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;Moteur (L4.10)&lt;/b&gt;&lt;hr&gt;second élément : surcoût, dérapage, moitié et 1x/combat&lt;br&gt;hors Maître ; signature ou effets à la suite ;&lt;br&gt;voisins, état qui draine, terrain électrifié" vertex="1">
+          <mxGeometry height="100" width="460" x="540" y="6500" as="geometry" />
+        </mxCell>
+        <mxCell id="e4100" parent="1" source="eCombinaisons" target="eClasses" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4101" parent="1" source="eMoteur410" target="eResolution" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
 </root>
     </mxGraphModel>
   </diagram>

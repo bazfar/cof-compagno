@@ -194,9 +194,9 @@ describe('maîtrise : échec d’école et dérapage d’élément', () => {
     expect(passe.changements).toContainEqual({ type: 'etat', cible: 'a', etat: 'brulure', duree: { rounds: 2 } });
   });
 
-  it('les combinaisons attendent leurs signatures : refusées', () => {
-    const r = resoudreLancer({ action: verbe('missile'), palier: 'III', lanceur: mage, cibles: [ennemi('a')], element: { id: 'feu', maitrise: 'maitre' }, secondElement: { id: 'glace', maitrise: 'maitre' } }, cat);
-    expect(r).toMatchObject({ ok: false });
+  it('une combinaison demande un premier élément Maître (lot L4.10 : tests dans regles-combinaisons.test.ts)', () => {
+    const r = resoudreLancer({ action: verbe('missile'), palier: 'III', lanceur: mage, cibles: [ennemi('a')], element: { id: 'feu', maitrise: 'adepte' }, secondElement: { id: 'glace', maitrise: 'maitre' } }, cat);
+    expect(r).toEqual({ ok: false, raison: 'une combinaison demande un premier élément Maître' });
   });
 });
 
