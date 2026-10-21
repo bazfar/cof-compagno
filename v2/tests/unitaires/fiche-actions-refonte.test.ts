@@ -57,6 +57,30 @@ beforeEach(() => {
   session.uid = 'alice';
 });
 
+describe('attaques spéciales et arme en main (décision du 21/10/2026)', () => {
+  const KARLACH = { rangs: { 'guerrier.maitre-d-armes': 1 } };
+  const arme = (id: string, nom: string) => ({ id, nom, type: 'arme' as const, porte: false, degats: '1d8', typedegats: 'physique' as const, enchantement: 0, deuxMains: false, prixPo: 1, description: '' });
+
+  it('sans arme en main, aucune attaque spéciale ; l’attaque commune reste', () => {
+    const f = convertie('Karlach', 'guerrier', KARLACH, { equipement: {} });
+    const ids = A.actionsDeLaFiche(f, mods()).map((a) => a.id);
+    expect(ids).toContain('arme.attaque');
+    expect(ids.filter((id) => id.startsWith('arme.')).sort()).toEqual(['arme.attaque', 'arme.opportunite']);
+  });
+
+  it('seule l’attaque spéciale de la famille portée paraît', () => {
+    const hache = convertie('Karlach', 'guerrier', KARLACH, { equipement: { main_droite: arme('hache_guerre', 'Hache de guerre') } });
+    const idsHache = A.actionsDeLaFiche(hache, mods()).map((a) => a.id);
+    expect(idsHache).toContain('arme.fendre');
+    expect(idsHache).not.toContain('arme.coup-d-estoc');
+
+    const lance = convertie('Karlach', 'guerrier', KARLACH, { equipement: { main_droite: arme('lance', 'Lance') } });
+    const idsLance = A.actionsDeLaFiche(lance, mods()).map((a) => a.id);
+    expect(idsLance).toContain('arme.coup-d-estoc');
+    expect(idsLance).not.toContain('arme.fendre');
+  });
+});
+
 describe('actions de la fiche (1b à 5a, 15b)', () => {
   it('Kylhian : attaques d’arme, verbes de l’école, grimoire, sorts mineurs, rangés par type de geste', () => {
     const l = A.actionsDeLaFiche(ky(), mods());

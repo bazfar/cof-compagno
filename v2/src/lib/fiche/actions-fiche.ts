@@ -7,6 +7,7 @@ import { lancerFormule } from '../regles/des.ts';
 import type { ClasseRefonte } from '../schemas/classes.ts';
 import type { Action, Element, Maitrise, Palier } from '../schemas/effets.ts';
 import { JAUGES_DE_CLASSE, type FicheV2, type JaugeDeClasse, type RefonteFiche } from '../schemas/fiche.ts';
+import { FAMILLE_DES_ARMES } from '../../regles/armes.ts';
 import { actionParId, combinaisons } from '../../regles/index.ts';
 import { classeDeLaRefonte, contexteDe, jaugesPleines, NOMS_MAITRISES, nomEcole, nomElement, profilDe, voieDeLaRefonte, type ContexteRefonte } from './refonte.ts';
 
@@ -150,6 +151,26 @@ function sources(classe: ClasseRefonte, r: RefonteFiche, actions: ReadonlyMap<st
   return m;
 }
 
+/**
+ * Familles des armes en main (décision de Thomas du 21/10/2026) : une
+ * attaque spéciale d'arme, ou une action qui exige une arme, ne paraît sur
+ * la fiche qu'avec l'arme correspondante équipée.
+ */
+function famillesEquipees(f: FicheV2): ReadonlySet<string> {
+  const familles = new Set<string>();
+  for (const o of Object.values(f.equipement)) {
+    const famille = o?.id ? FAMILLE_DES_ARMES[o.id] : undefined;
+    if (famille) familles.add(famille);
+  }
+  return familles;
+}
+
+/** Vrai si l'action ne demande aucune arme, ou si l'arme qu'elle demande est en main. */
+function armeEnMain(a: Action, familles: ReadonlySet<string>): boolean {
+  if (a.famille && !familles.has(a.famille)) return false;
+  return !a.armes || a.armes.some((x) => familles.has(x));
+}
+
 function groupeDe(a: Action, attaque: boolean): GroupeAction {
   if (attaque) return 'arme';
   if (a.nature === 'verbe') return 'verbe';
@@ -216,6 +237,7 @@ export function actionsDeLaFiche(f: FicheV2, mods: ModsDuPerso, actions: Readonl
   const p = profilDe(classe, f.refonte, ctx);
   const src = sources(classe, f.refonte, actions);
   const crans = p.voie.virtuose?.crans ?? 0;
+  const familles = famillesEquipees(f);
   const ecoleDe = (a: Action): Maitrise => (a.ecole === f.refonte.ecole ? (p.maitriseEcole ?? 'adepte') : a.ecole === secondeEcole(classe, { ecole: f.refonte.ecole ?? undefined }) ? (p.maitriseSecondeEcole ?? 'adepte') : 'adepte');
 
   const entrees: { id: string; palier: Palier | null; attaque?: boolean; grimoire?: 'nonMaitrise' | 'initie' }[] = [
@@ -232,6 +254,7 @@ export function actionsDeLaFiche(f: FicheV2, mods: ModsDuPerso, actions: Readonl
     const brute = actions.get(e.id);
     if (!brute || vues.has(e.id)) continue;
     vues.add(e.id);
+    if (!armeEnMain(brute, familles)) continue;
     const palier = e.palier ?? 'I';
     const a = palier === 'I' ? brute : actionAuPalier(brute, palier);
     const s = src.get(e.id);

@@ -202,7 +202,10 @@ describe('Hyrma passe à la refonte (12a)', () => {
     expect(A.changerJauge(v2, 'honneur', 9).jauges.honneur).toBe(4);
     const l = A.actionsDeLaFiche(v2, { attaqueContact: 4, attaqueDistance: 0, attaqueMagique: 0, mod: () => 1, armure: true });
     expect(l.find((x) => x.id === 'chevalier.interposition')).toMatchObject({ groupe: 'reaction', voie: null });
-    expect(l.find((x) => x.id === 'arme.fendre')?.cout).toBe('1 Honneur');
+    // Elle porte une lance (perforante) : seule l'attaque spéciale de cette
+    // famille paraît, celle du tranchant lourd est masquée (décision du 21/10).
+    expect(l.find((x) => x.id === 'arme.coup-d-estoc')?.cout).toBe('1 Honneur');
+    expect(l.find((x) => x.id === 'arme.fendre')).toBeUndefined();
   });
 });
 
