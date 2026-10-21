@@ -53,6 +53,10 @@ export const schemaEtatRefonte = z
     parSource: z.boolean().default(false),
     /** Chaque charge fait rater une attaque contre le porteur (Double, lot L4.5). */
     annuleAttaquesContre: z.boolean().default(false),
+    /** Chaque nouvelle pose s'ajoute aux précédentes, ses modificateurs aussi (Ivresse : −1 par point, lot L4.8). */
+    cumulable: z.boolean().default(false),
+    /** Le porteur ne lance aucun sort (Silence, lot L4.8) : le moteur refuse ses verbes et sorts mineurs. */
+    interditSorts: z.boolean().default(false),
   })
   .superRefine((e, ctx) => {
     const ko = (message: string, path: string[]) => ctx.addIssue({ code: 'custom', message, path });

@@ -991,6 +991,21 @@
         <mxCell id="e471" parent="1" source="eMoteur47" target="eResolution" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="titre-l48" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Le Barde (L4.8) — Voie du chant, Inspiration, élixirs" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="6100" as="geometry" />
+        </mxCell>
+        <mxCell id="eBarde" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b&gt;src/regles/classes/barde.ts, ecoles/chant.ts&lt;/b&gt;&lt;hr&gt;Chant (5 verbes), Rapière, Spectacle, Alcoolisme ;&lt;br&gt;Inspiration = 2 + niveau / 4, relance d'un d20 ;&lt;br&gt;Silence, Feinté, Ivresse ; 4 sorts mineurs" vertex="1">
+          <mxGeometry height="100" width="460" x="40" y="6140" as="geometry" />
+        </mxCell>
+        <mxCell id="eMoteur48" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;Moteur (L4.8)&lt;/b&gt;&lt;hr&gt;boost d'Inspiration, DD fixe, durée selon la cible,&lt;br&gt;Silence interdit les sorts, caractéristique au choix,&lt;br&gt;arme exigée, état cumulable" vertex="1">
+          <mxGeometry height="100" width="460" x="540" y="6140" as="geometry" />
+        </mxCell>
+        <mxCell id="e480" parent="1" source="eBarde" target="eClasses" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e481" parent="1" source="eMoteur48" target="eResolution" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
 </root>
     </mxGraphModel>
   </diagram>

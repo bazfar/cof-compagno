@@ -59,12 +59,23 @@ import { actionAuPalier, paliersDefinis } from './paliers';
  *   - le moteur ne tient ni l'Endurance, ni la réaction du round, ni les
  *     limites par combat : il rend ce qu'un lancer coûte, le combat (L6)
  *     vérifie et décompte.
+ *
+ * Barde (lot L4.8, décisions de Thomas du 21/10/2026) : le boost
+ * d'Inspiration (1 point, un par chant : +1 cible ou +1 round) se paie en
+ * Inspiration ; un DD fixe remplace celui du lanceur (élixirs) ; une durée
+ * peut dépendre d'un mod de la cible (3 + mod de CON du buveur, 15a) ; un
+ * lanceur réduit au Silence ne lance aucun sort (3a) ; une action peut
+ * exiger une famille d'armes (Lancer un couteau).
  */
 
 // ---------- Entrées ----------
 
+export type Carac = (typeof CARACS)[number];
+
 export interface Combattant {
   id: string;
+  /** Mods des caractéristiques (décision 12a du 21/10/2026, lot L4.7) : un effet qui nomme une caractéristique lit le sien ici ; une durée peut lire celui de la cible (lot L4.8). */
+  mods?: Partial<Record<Carac, number>>;
   /** Camp : les alliés du lanceur sont ceux du même camp. */
   camp: string;
   def: number;
@@ -89,12 +100,8 @@ export interface CibleEnJeu extends Combattant {
   anneau?: number;
 }
 
-export type Carac = (typeof CARACS)[number];
-
 export interface LanceurEnJeu extends Combattant {
   modMagie: number;
-  /** Mods des caractéristiques (décision 12a du 21/10/2026, lot L4.7) : un effet qui nomme une caractéristique lit le sien ici. */
-  mods?: Partial<Record<Carac, number>>;
   attaqueMagique: number;
   /** Niveau du lanceur (dés des sorts mineurs) ; 1 par défaut. */
   niveau?: number;
@@ -140,8 +147,8 @@ export interface ModificateursDeVoie {
   soldat?: { rang: number };
   maitreDArmes?: {
     rang: number;
-    /** Cette attaque spéciale est déjà la seconde de l'Enchaînement (rang 4) : pas de troisième. */
-    enchainee?: boolean;
+    /** Cette attaque spéciale est déjà la seconde du Coup double (rang 4) : pas de troisième. */
+    secondeDuCoupDouble?: boolean;
     /** Coup de maître (rang 5, 1x/combat) : un second état, ou l'arme et un élément. */
     coupDeMaitre?: { etat: string } | { element: Element };
   };
@@ -162,6 +169,8 @@ export interface ArmeEnJeu {
   degats: number;
   /** Mod de la caractéristique d'attaque : le DD des effets portés par l'arme est 10 + ce mod. */
   modCarac?: number;
+  /** Arme légère (src/regles/armes.ts, ARMES_LEGERES ; décision 7a, lot L4.8). */
+  legere?: boolean;
 }
 
 /** Attaques spéciales permises au personnage et leur coût (profil, lot L4.7). */
@@ -215,6 +224,10 @@ export interface Lancer {
   immobile?: boolean;
   /** Le lanceur protège activement un allié, déclaré par le joueur (Pilier du village). */
   protegeUnAllie?: boolean;
+  /** Premier round du combat (Entrée en scène, lot L4.8). */
+  premierRound?: boolean;
+  /** Caractéristique choisie au lancer (élixirs : bonus `caracAuChoix`, lot L4.8). */
+  caracChoisie?: Carac;
   alea?: () => number;
 }
 
@@ -228,7 +241,8 @@ export type Changement =
   | { type: 'chargeConsommee'; cible: string; etat: string }
   | { type: 'jetsReserves'; cible: string; valeurs: number[] }
   | { type: 'retraitEtat'; cible: string; etats: readonly string[]; nombre: number }
-  | { type: 'deplacement'; cible: string; sens: 'repousse' | 'attire' | 'teleporte'; cases: number }
+  | { type: 'deplacement'; cible: string; sens: 'repousse' | 'attire' | 'teleporte' | 'libre'; cases: number }
+  | { type: 'relance'; cible: string }
   | { type: 'bonus'; cible: string; sur: string; valeur: number | string; duree: Duree; typeDegats?: string; consomme?: 'prochaineFrappe'; parAllieAuContact?: true }
   | { type: 'plancherPv'; cible: string; valeur: number }
   | { type: 'ressource'; cible: string; ressource: string; montant: number }
@@ -265,8 +279,8 @@ export type Resultat =
       dd: number;
       jets: JetNote[];
       changements: Changement[];
-      /** Enchaînement (Maître d'armes 4) : l'attaque spéciale a touché, une seconde peut suivre. */
-      enchainement?: true;
+      /** Coup double (Maître d'armes 4) : l'attaque spéciale a touché, une seconde peut suivre. */
+      coupDouble?: true;
     }
   | { ok: false; raison: string };
 
@@ -331,7 +345,7 @@ function coutFixe(action: Action, palier: Palier, surcharge?: boolean): CoutCalc
   return { ok: true, pp, palierLance, detail: [{ terme: 'base', valeur: pp }] };
 }
 
-type Mods = { magie: number; caracs: Partial<Record<Carac, number>> };
+type Mods = { magie: number; caracs: Partial<Record<Carac, number>>; choix?: Carac };
 
 /** Mod ajouté par un effet : celui de magie (`plusMod`) ou celui d'une caractéristique nommée (12a). */
 function modDeLEffet(e: { plusMod?: boolean; mod?: Carac }, m: Mods): number {
@@ -340,6 +354,12 @@ function modDeLEffet(e: { plusMod?: boolean; mod?: Carac }, m: Mods): number {
 }
 
 /** Caractéristiques qu'une action lit par leur nom (12a) : le lanceur doit en donner le mod. */
+/** Une durée qui lit un mod de la cible (élixirs, lot L4.8) devient des rounds, au moins 1. */
+function dureePourLaCible(d: Duree, c: Combattant): Duree {
+  if (typeof d === 'string' || !('plusModCible' in d)) return d;
+  return { rounds: Math.max(1, d.base + (c.mods?.[d.plusModCible] ?? 0)) };
+}
+
 function caracsLues(action: Action): Carac[] {
   const lues: Carac[] = action.attaquePar ? [action.attaquePar] : [];
   for (const e of action.effets) {
@@ -392,6 +412,8 @@ export const BOOSTS_PAR_CERCLE = {
   foi: ['sansSauvegarde', 'plusUnRound'],
   bannissement: ['doubleContreDemons'],
   jugement: ['ignoreResistances', 'marquePartagee'],
+  /** Boost d'Inspiration du Barde (validé, lot L4.8) : +1 cible ou +1 round, payé en Inspiration. */
+  chant: ['plusUneCible', 'plusUnRound'],
 } as const;
 export type BoostSacre = (typeof BOOSTS_PAR_CERCLE)[keyof typeof BOOSTS_PAR_CERCLE][number];
 
@@ -420,6 +442,9 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   // Seuil critique (Hémomancie 3, décision 1a du 21/10) : sous la moitié des PV, la surcharge perd ses +2.
   const seuilCritique = hemo >= 3 && l.lanceur.pv !== undefined && l.lanceur.pvMax !== undefined && l.lanceur.pv < l.lanceur.pvMax / 2;
   const estSort = l.action.nature === 'verbe' || l.action.nature === 'mineur';
+  // Silence (Requiem du silence, décision 3a du lot L4.8) : aucun sort.
+  const baillonne = l.lanceur.etats.map((id) => cat.etats.get(id)).find((e) => e?.interditSorts);
+  if (estSort && baillonne) return { ok: false, raison: `${baillonne.nom} : aucun sort` };
   const cout = !estSort
     ? coutFixe(l.action, l.palier, l.surcharge)
     : coutSort(l.action, {
@@ -456,8 +481,15 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   }
   const aLArme = action.resolution.jet === 'attaque' && !action.attaquePar;
   if (aLArme && !l.arme) return { ok: false, raison: `${action.nom} demande une arme` };
+  if (action.armes && !action.armes.includes(l.arme!.famille)) return { ok: false, raison: `${action.nom} demande une arme : ${action.armes.join(', ')}` };
+  // Élixirs (lot L4.8) : la caractéristique choisie, et le mod de la cible que lit la durée.
+  if (action.effets.some((e) => e.type === 'bonus' && e.cible === 'caracAuChoix') && !l.caracChoisie) return { ok: false, raison: 'choisis la caractéristique' };
+  const modsDeCible = [...new Set(action.effets.flatMap((e) => ('duree' in e && typeof e.duree === 'object' && 'plusModCible' in e.duree ? [e.duree.plusModCible] : [])))];
+  const sansModCible = [...l.cibles, ...(l.allie ? [l.allie] : [])].find((c) => modsDeCible.some((k) => c.mods?.[k] === undefined));
+  if (sansModCible) return { ok: false, raison: `il faut le mod de ${modsDeCible.join(', ')} de ${sansModCible.id}` };
   let attaqueSpecialeDuCombat = false;
-  let enchainement = false;
+  let coupDouble = false;
+  if (l.boost && action.ecole === 'chant') ressources.inspiration = (ressources.inspiration ?? 0) + 1;
   if (action.famille) {
     const permises = l.attaquesSpeciales;
     if (!permises) return { ok: false, raison: 'ce personnage n’a pas d’attaque spéciale' };
@@ -468,7 +500,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   }
   const sansMod = caracsLues(action).find((c) => l.lanceur.mods?.[c] === undefined);
   if (sansMod) return { ok: false, raison: `il faut le mod de ${sansMod} du lanceur` };
-  const m: Mods = { magie: l.lanceur.modMagie, caracs: l.lanceur.mods ?? {} };
+  const m: Mods = { magie: l.lanceur.modMagie, caracs: l.lanceur.mods ?? {}, ...(l.caracChoisie ? { choix: l.caracChoisie } : {}) };
   const maitre = v.maitreDArmes?.rang ?? 0;
   const coupDeMaitre = maitre >= 5 ? v.maitreDArmes?.coupDeMaitre : undefined;
   if (v.maitreDArmes?.coupDeMaitre && !action.famille) return { ok: false, raison: 'le Coup de maître porte une attaque spéciale' };
@@ -486,7 +518,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     if (!Number.isInteger(p.valeur) || p.valeur < 1 || p.valeur > plafond) return { ok: false, raison: `posture de 1 à ${plafond}` };
   }
   // DD : celui du lanceur ; un effet porté par l'arme se sauve contre 10 + le mod de sa caractéristique.
-  const dd = aLArme && l.arme?.modCarac !== undefined ? ddSort(l.arme.modCarac) : ddSort(l.lanceur.modMagie, l.ecole ?? 'adepte');
+  const dd =
+    action.resolution.ddFixe ?? (aLArme && l.arme?.modCarac !== undefined ? ddSort(l.arme.modCarac) : ddSort(l.lanceur.modMagie, l.ecole ?? 'adepte'));
   const jets: JetNote[] = [];
   const changements: Changement[] = [];
   const fiche = l.element ? cat.elements.get(l.element.id) : undefined;
@@ -521,14 +554,15 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     cout: {
       pp,
       pv: pvPaye + pvEnPlus,
-      ...(l.boost ? { sacre: 1 } : {}),
+      // Boost : 1 Sacré (Prêtre), ou 1 Inspiration (chant du Barde, rendue avec les ressources).
+      ...(l.boost && action.ecole !== 'chant' ? { sacre: 1 } : {}),
       ...(Object.keys(ressources).length ? { ressources } : {}),
       ...(attaqueSpecialeDuCombat ? { attaqueSpecialeDuCombat: true as const } : {}),
     },
     dd,
     jets,
     changements,
-    ...(enchainement ? { enchainement: true as const } : {}),
+    ...(coupDouble ? { coupDouble: true as const } : {}),
   });
   const refusPv = sansSousUnPv(pvPaye + (sang ? cout.pp : 0));
   if (refusPv) return { ok: false, raison: refusPv };
@@ -634,9 +668,10 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   };
 
   const conditionRemplie = (e: Effet, c: CibleEnJeu, i: Issue, sauvegardeEffet?: Sauvegarde): boolean => {
+    // Une attaque ratée ne porte rien, quelle que soit la condition (Botte mortelle : +2d6 sur cible affaiblie, lot L4.8).
+    if (i.touche === false) return false;
     switch (e.condition) {
       case undefined:
-        if (i.touche === false) return false;
         return !(i.sauveReussie && action.resolution.siSauvegarde === 'annule');
       case 'touche':
         return i.touche === true;
@@ -657,6 +692,12 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
         return !!l.immobile;
       case 'protegeUnAllie':
         return !!l.protegeUnAllie;
+      case 'armeLegere':
+        return !!l.arme?.legere;
+      case 'cibleAffaiblie':
+        return etatsDe(c, cat).some((x) => x.categorie === 'malus' || x.categorie === 'controle');
+      case 'premierRound':
+        return !!l.premierRound;
     }
   };
 
@@ -735,7 +776,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     if (indice === premierDegats && baseRebond === null) baseRebond = base;
   };
 
-  const appliquer = (e: Effet, indice: number, c: CibleEnJeu, i: Issue, sauvegardeEffet?: Sauvegarde) => {
+  const appliquer = (e0: Effet, indice: number, c: CibleEnJeu, i: Issue, sauvegardeEffet?: Sauvegarde) => {
+    const e = 'duree' in e0 ? ({ ...e0, duree: dureePourLaCible(e0.duree, c) } as Effet) : e0;
     if (!conditionRemplie(e, c, i, sauvegardeEffet)) return;
     // Boss et démons D5 : immunisés à Sommeil, Ordre, Domination (validé).
     if (e.saufBoss && c.boss) {
@@ -908,8 +950,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       else for (const e of ficheCoup!.sort.effets) appliquer({ ...e, vise: 'cible' } as Effet, -1, c, i, ficheCoup!.sort.sauvegardeSiAucune);
     });
   }
-  // Enchaînement (Maître d'armes 4, décision 10a) : une attaque spéciale qui touche en ouvre une seconde, une seule fois.
-  enchainement = !!action.famille && maitre >= 4 && !v.maitreDArmes?.enchainee && aTouche;
+  // Coup double (Maître d'armes 4, décision 10a ; nommé au lot L4.8, 9a) : une attaque spéciale qui touche en ouvre une seconde, une seule fois.
+  coupDouble = !!action.famille && maitre >= 4 && !v.maitreDArmes?.secondeDuCoupDouble && aTouche;
 
   // Mutation sauvage : Canalisation profonde (rang 3) sur +3 ou plus ; Submersion négative ou positive (rang 5).
   if (sauvage >= 1 && offensifDegats) {
@@ -971,7 +1013,7 @@ function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () =>
       out.push({
         type: 'bonus',
         cible,
-        sur: e.cible,
+        sur: e.cible === 'caracAuChoix' ? (m.choix ?? e.cible) : e.cible,
         valeur: e.valeur === 'modMagie' ? m.magie : typeof e.valeur === 'object' ? (m.caracs[e.valeur.mod] ?? 0) : e.valeur,
         duree: e.duree,
         ...(e.typeDegats ? { typeDegats: e.typeDegats } : {}),
@@ -980,6 +1022,9 @@ function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () =>
       });
       return;
     case 'posture':
+      return;
+    case 'relance':
+      out.push({ type: 'relance', cible });
       return;
     case 'ressource':
       out.push({ type: 'ressource', cible, ressource: e.ressource, montant: e.montant });

@@ -4,6 +4,8 @@ import { schemaEtatRefonte, type EtatRefonte } from '../lib/schemas/etats';
 import { schemaInvocation, type Invocation } from '../lib/schemas/invocations';
 import { schemaClasseRefonte, schemaVoieRefonte, type ClasseRefonte, type VoieRefonte } from '../lib/schemas/classes';
 import { ACTIONS_ARMES, ACTIONS_COMMUNES } from './armes';
+import { ACTIONS_BARDE, BARDE, VOIES_BARDE } from './classes/barde';
+import { CHANT } from './ecoles/chant';
 import { ACTIONS_ENVOUTEUR, ENVOUTEUR, VOIES_ENVOUTEUR } from './classes/envouteur';
 import { ACTIONS_GUERRIER, GUERRIER, VOIES_GUERRIER } from './classes/guerrier';
 import { ACTIONS_MAGICIEN, MAGICIEN, VOIES_MAGICIEN } from './classes/magicien';
@@ -46,10 +48,10 @@ export const elementParId: ReadonlyMap<string, FicheElement> = indexer(ELEMENTS_
 
 export const invocationParId: ReadonlyMap<string, Invocation> = indexer(INVOCATIONS, (s) => schemaInvocation.parse(s), 'Invocation');
 
-export const actionParId: ReadonlyMap<string, Action> = indexer([...EVOCATION, ...ABJURATION, ...INVOCATION, ...ILLUSION, ...ENCHANTEMENT, ...GUERISON, ...FOI, ...BANNISSEMENT, ...JUGEMENT, ...MINEURS, ...ACTIONS_MAGICIEN, ...ACTIONS_ENVOUTEUR, ...ACTIONS_PRETRE, ...ACTIONS_ARMES, ...ACTIONS_GUERRIER], (s) => schemaAction.parse(s), 'Action');
+export const actionParId: ReadonlyMap<string, Action> = indexer([...EVOCATION, ...ABJURATION, ...INVOCATION, ...ILLUSION, ...ENCHANTEMENT, ...GUERISON, ...FOI, ...BANNISSEMENT, ...JUGEMENT, ...MINEURS, ...ACTIONS_MAGICIEN, ...ACTIONS_ENVOUTEUR, ...ACTIONS_PRETRE, ...ACTIONS_ARMES, ...ACTIONS_GUERRIER, ...CHANT, ...ACTIONS_BARDE], (s) => schemaAction.parse(s), 'Action');
 
-export const voieParId: ReadonlyMap<string, VoieRefonte> = indexer([...VOIES_MAGICIEN, ...VOIES_ENVOUTEUR, ...VOIES_PRETRE, ...VOIES_GUERRIER], (s) => schemaVoieRefonte.parse(s), 'Voie');
-export const classeParId: ReadonlyMap<string, ClasseRefonte> = indexer([MAGICIEN, ENVOUTEUR, PRETRE, GUERRIER], (s) => schemaClasseRefonte.parse(s), 'Classe');
+export const voieParId: ReadonlyMap<string, VoieRefonte> = indexer([...VOIES_MAGICIEN, ...VOIES_ENVOUTEUR, ...VOIES_PRETRE, ...VOIES_GUERRIER, ...VOIES_BARDE], (s) => schemaVoieRefonte.parse(s), 'Voie');
+export const classeParId: ReadonlyMap<string, ClasseRefonte> = indexer([MAGICIEN, ENVOUTEUR, PRETRE, GUERRIER, BARDE], (s) => schemaClasseRefonte.parse(s), 'Classe');
 /** Actions d'arme de toutes les classes (lot L4.7) : le profil les reçoit dans ses règles (Regles.actionsCommunes). */
 export const actionsCommunes: readonly string[] = ACTIONS_COMMUNES;
 export const actions: readonly Action[] = [...actionParId.values()];

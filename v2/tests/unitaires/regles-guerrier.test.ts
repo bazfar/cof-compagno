@@ -153,11 +153,11 @@ describe('attaques spéciales', () => {
     expect(lancer({ action: a('arme.fendre'), voie: { maitreDArmes: { rang: 3 } }, alea: des([20, 10], [8, 1]) }).changements[1]).toEqual({ type: 'etat', cible: 'a', etat: 'expose', duree: { rounds: 2 } });
   });
 
-  it('Enchaînement (4, 10a) : touché, une seconde peut suivre ; pas une troisième ; raté, rien', () => {
-    expect(lancer({ action: a('arme.fendre'), voie: { maitreDArmes: { rang: 4 } }, alea: des([20, 10], [8, 1]) }).enchainement).toBe(true);
-    expect(lancer({ action: a('arme.fendre'), voie: { maitreDArmes: { rang: 4, enchainee: true } }, alea: des([20, 10], [8, 1]) }).enchainement).toBeUndefined();
-    expect(lancer({ action: a('arme.fendre'), voie: { maitreDArmes: { rang: 4 } }, alea: des([20, 2]) }).enchainement).toBeUndefined();
-    expect(lancer({ action: a('arme.attaque'), voie: { maitreDArmes: { rang: 4 } }, alea: des([20, 10], [8, 1]) }).enchainement).toBeUndefined();
+  it('Coup double (4, 10a) : touché, une seconde peut suivre ; pas une troisième ; raté, rien', () => {
+    expect(lancer({ action: a('arme.fendre'), voie: { maitreDArmes: { rang: 4 } }, alea: des([20, 10], [8, 1]) }).coupDouble).toBe(true);
+    expect(lancer({ action: a('arme.fendre'), voie: { maitreDArmes: { rang: 4, secondeDuCoupDouble: true } }, alea: des([20, 10], [8, 1]) }).coupDouble).toBeUndefined();
+    expect(lancer({ action: a('arme.fendre'), voie: { maitreDArmes: { rang: 4 } }, alea: des([20, 2]) }).coupDouble).toBeUndefined();
+    expect(lancer({ action: a('arme.attaque'), voie: { maitreDArmes: { rang: 4 } }, alea: des([20, 10], [8, 1]) }).coupDouble).toBeUndefined();
   });
 
   it('Coup de maître (5) : un second état, ou l’arme et un élément ; seulement sur une attaque spéciale, au rang 5', () => {

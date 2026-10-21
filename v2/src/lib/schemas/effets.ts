@@ -108,6 +108,8 @@ export const schemaDuree = z.union([
   z.enum(['prochainTour', 'finCombat', 'scene', 'permanente']),
   /** Durée tirée au lancement, un seul jet par sort (Pierre en chair : 1d4 + CHA rounds, v1 ; lot L4.5). */
   z.strictObject({ des: schemaFormuleDes, plusModMagie: z.boolean().default(false) }),
+  /** `base` + le mod de la cible pour cette caractéristique, au moins 1 round (élixirs du Barde : 3 + mod de CON du buveur, décision 15a ; lot L4.8). */
+  z.strictObject({ base: z.number().int().min(0).max(10), plusModCible: schemaCarac }),
 ]);
 export type Duree = z.infer<typeof schemaDuree>;
 
@@ -142,6 +144,12 @@ export const schemaCondition = z.enum([
   'immobile',
   /** Le lanceur protège activement un allié, déclaré par le joueur comme en v1 (Pilier du village). */
   'protegeUnAllie',
+  /** L'arme maniée est légère : dagues, épée courte, cimeterre, rapière (Précision du Barde, décision 7a ; lot L4.8). */
+  'armeLegere',
+  /** La cible porte un état de malus ou de contrôle (Botte mortelle, 10a). */
+  'cibleAffaiblie',
+  /** Premier round du combat (Entrée en scène, 11b). */
+  'premierRound',
 ]);
 
 /** Cibles de bonus et malus. Liste FERMÉE (piège v1 : cible inconnue jamais lue). */
@@ -173,6 +181,8 @@ export const schemaCibleBonus = z.enum([
   /** DEF contre les seules attaques au contact, ou à distance (abri de la Fortification de fortune, v1). */
   'DEFContact',
   'DEFDistance',
+  /** La caractéristique que le lanceur choisit au lancer (élixirs du Barde ; lot L4.8). */
+  'caracAuChoix',
 ]);
 
 // ---------- Effets ----------
@@ -258,8 +268,8 @@ const schemaEffetRetraitEtat = z.strictObject({
 
 const schemaEffetDeplacement = z.strictObject({
   type: z.literal('deplacement'),
-  /** repousse : s'éloigne du lanceur (ou du centre) ; attire : s'en approche ; teleporte : vers une case choisie. */
-  sens: z.enum(['repousse', 'attire', 'teleporte']),
+  /** repousse : s'éloigne du lanceur (ou du centre) ; attire : s'en approche ; teleporte : vers une case choisie ; libre : il se déplace où il veut (Esquive acrobatique, lot L4.8). */
+  sens: z.enum(['repousse', 'attire', 'teleporte', 'libre']),
   cases: z.number().int().min(1).max(20),
   ...champsCommuns,
 });
@@ -365,6 +375,12 @@ const schemaEffetJetsReserves = z.strictObject({
   ...champsCommuns,
 });
 
+/** Le d20 qui déclenche la réaction est relancé, le second jet compte (Inspiration du Barde, décision 6a ; lot L4.8). */
+const schemaEffetRelance = z.strictObject({
+  type: z.literal('relance'),
+  ...champsCommuns,
+});
+
 /** Effet d'arbitrage, assumé : l'app l'affiche, le MJ l'applique. */
 const schemaEffetNarratif = z.strictObject({
   type: z.literal('narratif'),
@@ -389,6 +405,7 @@ export const schemaEffet = z.discriminatedUnion('type', [
   schemaEffetSoinComplet,
   schemaEffetJetsReserves,
   schemaEffetPlancherPv,
+  schemaEffetRelance,
   schemaEffetNarratif,
 ]);
 export type Effet = z.infer<typeof schemaEffet>;
@@ -427,6 +444,8 @@ export const schemaResolution = z
     siSauvegarde: z.enum(['annule', 'moitie', 'rien']).optional(),
     /** Un allié du lanceur ne sauvegarde pas : il accepte l'effet (Portail). */
     consentant: z.literal(true).optional(),
+    /** DD fixe, à la place de celui du lanceur (test de CON d'un élixir : 12 à 20, v1 ; lot L4.8). */
+    ddFixe: z.number().int().min(5).max(30).optional(),
   })
   .refine((r) => (r.jet === 'sauvegarde') === (r.sauvegarde !== undefined), {
     message: 'une sauvegarde est nommée si et seulement si le jet est une sauvegarde',
@@ -461,6 +480,8 @@ export const schemaDeclencheur = z.enum([
   'jetAllie',
   /** À tout moment hors de son tour (changement de posture, Maîtrise tactique ; lot L4.7). */
   'aToutMoment',
+  /** Le porteur subit un état (Échappée du Barde ; lot L4.8). */
+  'etatSubi',
 ]);
 
 /** Un coût fixe (techniques, capacités) ; les verbes ont le leur par formule (lib/effets/cout.ts). */
@@ -560,6 +581,8 @@ export const schemaAction = z
     famille: schemaFamilleArme.optional(),
     /** Jet d'attaque fait avec le mod de cette caractéristique, sans arme (pièges : DEX contre la DEF, v1). */
     attaquePar: schemaCarac.optional(),
+    /** L'action demande une arme de ces familles, sans être une attaque spéciale (Lancer un couteau : une dague ; lot L4.8). */
+    armes: z.array(schemaFamilleArme).min(1).optional(),
     /** Exige un élément au moins à ce rang (Serviteur : Initié ; Cataclysme : Maître). */
     elementMin: schemaMaitrise.optional(),
     declencheur: schemaDeclencheur.optional(),
@@ -609,6 +632,7 @@ export const schemaAction = z
     if (a.attaquePar && a.resolution.jet !== 'attaque') ko('attaquePar demande un jet d’attaque', ['attaquePar']);
     if (a.famille && (a.nature !== 'technique' || a.resolution.jet !== 'attaque' || a.attaquePar)) ko('une attaque spéciale est une technique, à l’attaque d’arme', ['famille']);
     if (a.famille && a.cout) ko('le coût d’une attaque spéciale vient de la classe', ['cout']);
+    if (a.armes && !(a.resolution.jet === 'attaque' && !a.attaquePar)) ko('une arme exigée demande une attaque à l’arme', ['armes']);
     if (a.horsCombat && !a.etiquettes.some((e) => e !== 'combat')) ko('un usage hors combat demande l’étiquette exploration ou social', ['etiquettes']);
     if (a.effets.length === 0 && !a.manuel) ko('une action sans effet est manuelle, avec sa raison', ['effets']);
     if (a.persistance.type === 'concentration' && a.persistance.duree === undefined && a.persistance.maintien === undefined)

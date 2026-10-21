@@ -13,6 +13,8 @@ import type { ActionSaisie } from '../lib/schemas/effets';
  * 21/10/2026 (décision 13a) et repris sans correction de Thomas. Désarmé
  * (Main du mage III) et Aveuglé (Lumière III) durent 1 round, comme un état
  * d'attaque spéciale (décision 1a du 21/10/2026).
+ * Sorts mineurs du Barde (lot L4.8) : Moquerie et Rengaine en combat, à
+ * 6 cases ; Mélodie et Ventriloquie hors combat.
  */
 
 type Textes = [string, string, string];
@@ -196,4 +198,38 @@ export const MINEURS: ActionSaisie[] = [
   },
   simple('mineur.sentir-le-mal', 'Sentir le mal', 'Le Prêtre sent ce qui vient de la Mer.', 'Savoir s’il y a un démon ou un mort-vivant à 6 cases.'),
   simple('mineur.purifier', 'Purifier', 'Une bénédiction sur la table.', 'Rendre une eau ou un repas sain.'),
+
+  // ---- Barde (lot L4.8 ; « Sorts mineurs par classe (validé) » ; portées de 6 cases) ----
+  {
+    id: 'mineur.moquerie',
+    nom: 'Moquerie',
+    description: 'Un mot qui blesse, et la cible doute.',
+    nature: 'mineur',
+    ecole: 'chant',
+    rang: 0,
+    etiquettes: ['combat'],
+    action: 'action',
+    ciblage: { type: 'creature', camp: 'ennemi', portee: 6 },
+    resolution: { jet: 'attaqueMagique' },
+    effets: [
+      { type: 'degats', des: '1d6', typeDegats: 'psychique', progression: 'mineur' },
+      { type: 'bonus', cible: 'prochainJet', valeur: -1, duree: 'prochainTour' },
+    ],
+  },
+  simple('mineur.melodie', 'Mélodie', 'Un air qui met la salle de son côté.', '+1 en Représentation pour la scène.', ['social']),
+  simple('mineur.ventriloquie', 'Ventriloquie', 'Sa voix vient d’ailleurs.', 'Déplacer sa voix jusqu’à 6 cases.', ['social']),
+  {
+    id: 'mineur.rengaine',
+    nom: 'Rengaine',
+    description: 'Un air de marche.',
+    nature: 'mineur',
+    ecole: 'chant',
+    rang: 0,
+    etiquettes: ['combat', 'exploration'],
+    action: 'action',
+    ciblage: { type: 'creature', camp: 'allie', portee: 6 },
+    resolution: { jet: 'aucun' },
+    effets: [{ type: 'bonus', cible: 'deplacement', valeur: 1, duree: 'prochainTour' }],
+    horsCombat: { paliers: ['Marche forcée sans fatigue pour le groupe.'] },
+  },
 ];

@@ -64,6 +64,9 @@ export const FAMILLE_DES_ARMES: Readonly<Record<string, FamilleArme>> = {
   arbalete_courte: 'arbalete',
 };
 
+/** Armes légères (décision 7a du lot L4.8) : dagues, épée courte, cimeterre, rapière. La fiche en tire `ArmeEnJeu.legere`. */
+export const ARMES_LEGERES: readonly string[] = ['dague', 'dague_p2', 'poignards_jumeaux', 'epee_courte', 'cimeterre', 'rapiere'];
+
 /** Les actions d'arme que toutes les classes ont (6a). */
 export const ACTIONS_COMMUNES = ['arme.attaque', 'arme.opportunite'] as const;
 

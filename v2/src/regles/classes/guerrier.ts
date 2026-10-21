@@ -25,7 +25,8 @@ import type { ActionSaisie } from '../../lib/schemas/effets';
  *   - décisions de Thomas du 21/10/2026 : critique sur 20 naturel, dés de
  *     l'arme doublés (4a) ; Second souffle 1 fois par combat, en action
  *     mineure : 2d6 + mod de CON en PV et +2 Endurance (7a) ; l'Ingénieur
- *     reste une voie du Guerrier (8a) ; Enchaînement au coût normal (10a) ;
+ *     reste une voie du Guerrier (8a) ; Coup double au coût normal (10a ; ainsi
+ *     nommé au lot L4.8, l'Enchaînement restant au Barde : 9a) ;
  *     mods de caractéristique lus par leur nom (12a).
  * Chiffres repris de la v1 : Posture de combat (jusqu'au rang en malus et
  * autant en bonus), Prouesse (1d4 PV pour +5), Cri du rassemblement
@@ -332,7 +333,7 @@ export const VOIES_GUERRIER: VoieSaisie[] = [
       { rang: 1, nom: 'Maniement expert', description: 'Les attaques spéciales coûtent 1 Endurance de moins.', regles: [{ type: 'capacite', nom: 'maniementExpert' }] },
       { rang: 2, nom: 'Spécimen d’élite', description: '+1 en FOR, DEX ou CON, choisi à l’acquisition.', regles: [{ type: 'caracEnPlus', parmi: ['FOR', 'DEX', 'CON'], valeur: 1 }] },
       { rang: 3, nom: 'Précision létale', description: 'Critique sur 19–20 ; l’état d’une attaque spéciale dure 1 round de plus.', regles: [{ type: 'capacite', nom: 'precisionLetale' }] },
-      { rang: 4, nom: 'Enchaînement', description: 'Une attaque spéciale qui touche en permet une seconde, au coût normal.', regles: [{ type: 'capacite', nom: 'enchainement' }] },
+      { rang: 4, nom: 'Coup double', description: 'Une attaque spéciale qui touche en permet une seconde, au coût normal.', regles: [{ type: 'capacite', nom: 'coupDouble' }] },
       { rang: 5, nom: 'Coup de maître', description: '1x/combat, une attaque spéciale pose deux états, ou porte l’arme et un élément.', regles: [{ type: 'capacite', nom: 'coupDeMaitre', limite: '1x/combat' }] },
     ],
   },

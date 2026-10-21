@@ -53,7 +53,7 @@ export const CAPACITES_DE_VOIE = [
    *     de la voie, plafond de la posture), maitriseTactique ;
    *   - Voie du maître d'armes : maniementExpert (attaque spéciale −1
    *     Endurance), precisionLetale (critique sur 19–20, état d'attaque
-   *     spéciale +1 round), enchainement (une 2ᵉ attaque spéciale si la 1ʳᵉ
+   *     spéciale +1 round), coupDouble (une 2ᵉ attaque spéciale si la 1ʳᵉ
    *     touche, au coût normal : décision 10a du 21/10/2026), coupDeMaitre
    *     (1x/combat : deux états, ou l'arme et un élément).
    */
@@ -61,7 +61,7 @@ export const CAPACITES_DE_VOIE = [
   'maitriseTactique',
   'maniementExpert',
   'precisionLetale',
-  'enchainement',
+  'coupDouble',
   'coupDeMaitre',
 ] as const;
 export type CapaciteDeVoie = (typeof CAPACITES_DE_VOIE)[number];
@@ -136,8 +136,15 @@ export const schemaClasseRefonte = z.strictObject({
       ressource: schemaRessource,
       base: z.number().int().min(0),
       diviseurNiveau: z.number().int().min(1),
-      recharge: z.enum(['reposCourt', 'reposLong']),
+      /** `jamais` : pleine à la création, elle ne remonte que par ses gains (Inspiration du Barde, lot L4.8). */
+      recharge: z.enum(['reposCourt', 'reposLong', 'jamais']),
       parDegatsSubis: z.number().int().min(0).max(3).default(0),
+      /**
+       * +1 sur un 20 naturel (Inspiration) : le sien, ou aussi celui de tout
+       * allié qui l'entend (décision 5b du 21/10/2026, lot L4.8). Le combat
+       * (L6) l'applique ; le MJ ajoute ceux des actions inspirantes.
+       */
+      parVingtNaturel: z.enum(['lui', 'luiEtAlliesQuiLEntendent']).optional(),
     })
     .optional(),
   /**

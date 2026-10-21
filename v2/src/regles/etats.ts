@@ -27,6 +27,10 @@ import type { EtatSaisi } from '../lib/schemas/etats';
  * Banni (lot L4.6) viennent des Cercles du Prêtre ; Apaisé reprend la v1.
  * Maîtrise tactique (lot L4.7) vient de la Voie du soldat (v1 : état
  * `maitrise_tactique`) ; elle dure 2 rounds (décision du 20/10/2026).
+ * Silence, Feinté et Ivresse (lot L4.8) viennent du Barde : Silence
+ * interdit tout sort (Requiem du silence, 3a) ; Feinté donne l'avantage à la
+ * prochaine attaque contre le porteur (Feinte, 8b) ; Ivresse vaut −1 à tous
+ * les tests par point, cumulable, jusqu'à la fin de la scène (16a).
  *
  * Les formes et avatars de la v1 (Ours, Avatar du Vide…) ne sont plus des
  * états : ils deviennent des actions de leur classe.
@@ -151,6 +155,13 @@ export const ETATS: EtatSaisi[] = [
 
   // ---- Malus ----
   {
+    id: 'silence',
+    nom: 'Silence',
+    categorie: 'controle',
+    regle: 'Ne peut lancer aucun sort ni crier (chant, cri de ralliement).',
+    interditSorts: true,
+  },
+  {
     id: 'expose',
     nom: 'Exposé',
     categorie: 'malus',
@@ -170,6 +181,22 @@ export const ETATS: EtatSaisi[] = [
     categorie: 'malus',
     regle: 'Les dégâts qu’il inflige sont réduits de 25 %, d’au moins 1.',
     degatsInfliges: { pourcent: 25, minimum: 1 },
+  },
+  {
+    id: 'feinte',
+    nom: 'Feinté',
+    categorie: 'malus',
+    regle: 'La prochaine attaque contre lui se fait avec l’avantage ; l’état tombe à cette attaque.',
+    avantage: ['attaquesContre'],
+    rompuPar: ['estAttaque'],
+  },
+  {
+    id: 'ivresse',
+    nom: 'Ivresse',
+    categorie: 'malus',
+    regle: '−1 à tous ses tests par point d’Ivresse ; les points s’ajoutent.',
+    modificateurs: [{ cible: 'tests', valeur: -1 }],
+    cumulable: true,
   },
   {
     id: 'ralenti',
