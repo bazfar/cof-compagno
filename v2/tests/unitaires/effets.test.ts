@@ -70,11 +70,12 @@ describe('schéma des actions : les pièges de la v1 sont fermés', () => {
     expect(refuse({ cout: [{ ressource: 'pp', montant: 2 }] })).toBe(false);
   });
 
-  it('un sort mineur est de rang 0, sans coût ni palier', () => {
+  it('un sort mineur est de rang 0, sans coût ; ses paliers viennent de la Voie du virtuose (L4.4b2)', () => {
     const mineur = { nature: 'mineur', rang: 0, paliers: {} };
     expect(refuse(mineur)).toBe(true);
     expect(refuse({ ...mineur, rang: 1 })).toBe(false);
-    expect(refuse({ ...mineur, paliers: { II: { ciblage: { nbCibles: 2 } } } })).toBe(false);
+    expect(refuse({ ...mineur, cout: [{ ressource: 'pp', montant: 1 }] })).toBe(false);
+    expect(refuse({ ...mineur, paliers: { II: { ciblage: { nbCibles: 2 } } } })).toBe(true);
   });
 
   it('une réaction a un déclencheur, et seule une réaction en a un', () => {

@@ -34,6 +34,8 @@ export interface ParametresLancer {
   palier: Palier;
   /** Lancer au palier immédiatement supérieur. */
   surcharge?: boolean;
+  /** Seuil critique (Hémomancie 3) : la surcharge ne coûte pas ses +2 ; le +1 du palier reste. */
+  surchargeSansSurcout?: boolean;
   /** Maîtrise de l'élément appliqué, ou null sans élément. */
   element?: Maitrise | null;
   /** Combinaison de Maître : maîtrise du 2ᵉ élément (le 1ᵉʳ doit être Maître). */
@@ -61,7 +63,9 @@ export function coutSort(action: Pick<Action, 'id' | 'nature' | 'rang' | 'limite
   if (action.nature === 'mineur') {
     if (p.surcharge) return { ok: false, raison: 'un sort mineur ne se surcharge pas' };
     if (p.secondElement) return { ok: false, raison: 'un sort mineur ne combine pas deux éléments' };
-    return { ok: true, pp: 0, palierLance: 'I', detail: [] };
+    // Paliers des sorts mineurs : Voie du virtuose (L4.4b2) ; toujours 0 PP.
+    if (!paliersDefinis(action).includes(p.palier)) return { ok: false, raison: `${action.id} n'a pas de palier ${p.palier}` };
+    return { ok: true, pp: 0, palierLance: p.palier, detail: [] };
   }
   if (action.nature !== 'verbe') return { ok: false, raison: `${action.id} n'est pas un sort` };
   if (!paliersDefinis(action).includes(p.palier)) return { ok: false, raison: `${action.id} n'a pas de palier ${p.palier}` };
@@ -76,7 +80,7 @@ export function coutSort(action: Pick<Action, 'id' | 'nature' | 'rang' | 'limite
   }
   const crans = ORDRE.indexOf(palierLance);
   if (crans > 0) detail.push({ terme: 'palier', valeur: crans });
-  if (p.surcharge) detail.push({ terme: 'surcharge', valeur: 2 });
+  if (p.surcharge && !p.surchargeSansSurcout) detail.push({ terme: 'surcharge', valeur: 2 });
 
   if (p.element || p.secondElement) {
     if (!action.element) return { ok: false, raison: `${action.id} ne prend pas d'élément` };

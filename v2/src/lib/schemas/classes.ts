@@ -18,6 +18,34 @@ import { schemaElement, schemaLimite, schemaMaitrise } from './effets.ts';
  * Le reste des règles de la refonte s'ajoutera ici, au fil des classes.
  */
 
+/**
+ * Capacités de voie que le code lit (lot L4.4b2) :
+ *   - Voie sauvage : mutationSauvage (2d4 − 4 aux dégâts de chaque sort
+ *     offensif, et à la place du dérapage), instinctChaotique, canalisation,
+ *     maitriseDuChaos, submersion ;
+ *   - Hémomancie : pacteDeSang, sangAppelleSang, seuilCritique, sangVerse,
+ *     saignee ;
+ *   - Virtuose : repertoire, affinite, gesteReflexe, perfection, gesteUnique.
+ */
+export const CAPACITES_DE_VOIE = [
+  'mutationSauvage',
+  'instinctChaotique',
+  'canalisation',
+  'maitriseDuChaos',
+  'submersion',
+  'pacteDeSang',
+  'sangAppelleSang',
+  'seuilCritique',
+  'sangVerse',
+  'saignee',
+  'repertoire',
+  'affinite',
+  'gesteReflexe',
+  'perfection',
+  'gesteUnique',
+] as const;
+export type CapaciteDeVoie = (typeof CAPACITES_DE_VOIE)[number];
+
 export const schemaRegleDeVoie = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('verbeDeLEcole') }),
   z.strictObject({ type: z.literal('maitriseEcole'), niveau: schemaMaitrise }),
@@ -25,6 +53,8 @@ export const schemaRegleDeVoie = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('secondElement'), niveau: schemaMaitrise }),
   z.strictObject({ type: z.literal('annuleDerapage'), limite: schemaLimite }),
   z.strictObject({ type: z.literal('texte'), texte: z.string().min(1) }),
+  /** Une capacité que le moteur ou le profil lit par son nom (lot L4.4b2). */
+  z.strictObject({ type: z.literal('capacite'), nom: z.enum(CAPACITES_DE_VOIE), limite: schemaLimite.default('volonte') }),
 ]);
 export type RegleDeVoie = z.infer<typeof schemaRegleDeVoie>;
 

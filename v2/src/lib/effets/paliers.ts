@@ -56,6 +56,7 @@ function appliquerDelta(a: Record<string, unknown>, d: DeltaPalier, id: string, 
   if (d.zone === null) r.zone = null;
   else if (d.zone) r.zone = { ...((a.zone as object | null) ?? {}), ...d.zone };
   if (d.element) r.element = d.element;
+  if (d.etiquettes) r.etiquettes = d.etiquettes;
   const effets = [...(a.effets as Record<string, unknown>[])];
   for (const [i, patch] of Object.entries(d.effets ?? {})) {
     const n = Number(i);

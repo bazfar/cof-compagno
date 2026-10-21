@@ -1,16 +1,23 @@
 import type { ActionSaisie } from '../lib/schemas/effets';
 
 /*
- * Sorts mineurs (lot L4.4b1), palier I. Source : doc « Refonte classes et
+ * Sorts mineurs (lots L4.4b1 et L4.4b2). Source : doc « Refonte classes et
  * magie — cadre », « Sorts mineurs (niveau 0) » et « Sorts mineurs par
  * classe (validé) » : 0 PP, à volonté ; dégâts à l'attaque magique, dont le
  * dé suit le niveau (1d6, 1d8, 1d10) ; un élément ne leur donne que son
- * type de dégâts, sauf avec la Voie du virtuose. Trait arcanique porte à 10
- * cases (décision 16a du 21/10/2026).
- * Les paliers II et III (Voie du virtuose) arrivent en L4.4b2.
+ * type de dégâts, sauf avec la Voie du virtuose (Affinité). Trait arcanique
+ * porte à 10 cases (décision 16a du 21/10/2026).
+ *
+ * Paliers II et III : seulement par la Voie du virtuose (Répertoire en
+ * passe un au II, Perfection les passe tous au III). Tableau proposé le
+ * 21/10/2026 (décision 13a) et repris sans correction de Thomas. Désarmé
+ * (Main du mage III) et Aveuglé (Lumière III) durent 1 round, comme un état
+ * d'attaque spéciale (décision 1a du 21/10/2026).
  */
 
-const horsCombat = (id: string, nom: string, description: string, texte: string): ActionSaisie => ({
+type Textes = [string, string, string];
+
+const horsCombat = (id: string, nom: string, description: string, textes: Textes, paliers: ActionSaisie['paliers'] = {}): ActionSaisie => ({
   id,
   nom,
   description,
@@ -20,8 +27,13 @@ const horsCombat = (id: string, nom: string, description: string, texte: string)
   action: 'action',
   ciblage: { type: 'aucun', portee: 'soi' },
   resolution: { jet: 'aucun' },
-  effets: [{ type: 'narratif', texte, vise: 'lanceur' }],
-  horsCombat: { paliers: [texte] },
+  effets: [{ type: 'narratif', texte: textes[0], vise: 'lanceur' }],
+  paliers: {
+    II: { effets: { '0': { texte: textes[1] } } },
+    III: { effets: { '0': { texte: textes[2] } } },
+    ...paliers,
+  },
+  horsCombat: { paliers: textes },
 });
 
 export const MINEURS: ActionSaisie[] = [
@@ -38,9 +50,53 @@ export const MINEURS: ActionSaisie[] = [
     resolution: { jet: 'attaqueMagique' },
     effets: [{ type: 'degats', des: '1d6', typeDegats: 'magique', progression: 'mineur' }],
     element: { application: 'ciblePrincipale' },
+    paliers: {
+      II: { ciblage: { portee: 15 } },
+      III: { ciblage: { nbCibles: 2 } },
+    },
   },
-  horsCombat('mineur.main-du-mage', 'Main du mage', 'Une main invisible.', 'Déplacer un petit objet à distance.'),
-  horsCombat('mineur.lumiere', 'Lumière', 'Une lueur qui suit le mage.', 'Éclairer.'),
-  horsCombat('mineur.detection-magie', 'Détection de la magie', 'Le mage sent les auras.', 'Sentir une aura magique à 6 cases.'),
-  horsCombat('mineur.prestidigitation', 'Prestidigitation', 'Petits tours de magie.', 'Nettoyer, chauffer, faire un petit tour de magie.'),
+  horsCombat(
+    'mineur.main-du-mage',
+    'Main du mage',
+    'Une main invisible.',
+    [
+      'Déplacer un petit objet à 6 cases.',
+      'Déplacer jusqu’à 10 kg, ou manipuler : ouvrir, tirer un levier.',
+      'Arracher son arme à une cible (sauvegarde de FOR).',
+    ],
+    {
+      III: {
+        etiquettes: ['combat', 'exploration'],
+        ciblage: { type: 'creature', camp: 'ennemi', portee: 6 },
+        resolution: { jet: 'sauvegarde', sauvegarde: 'FOR', siSauvegarde: 'annule' },
+        effets: { '0': { texte: 'Arracher son arme à une cible (sauvegarde de FOR).' } },
+        ajoute: [{ type: 'etat', etat: 'desarme', duree: { rounds: 1 } }],
+      },
+    },
+  ),
+  horsCombat(
+    'mineur.lumiere',
+    'Lumière',
+    'Une lueur qui suit le mage.',
+    ['Éclairer.', 'Une lumière colorée ou clignotante, signal visible de loin.', 'Un éclat qui aveugle une créature 1 round (sauvegarde de CON).'],
+    {
+      III: {
+        etiquettes: ['combat', 'exploration'],
+        ciblage: { type: 'creature', camp: 'ennemi', portee: 6 },
+        resolution: { jet: 'sauvegarde', sauvegarde: 'CON', siSauvegarde: 'annule' },
+        effets: { '0': { texte: 'Un éclat qui aveugle une créature 1 round (sauvegarde de CON).' } },
+        ajoute: [{ type: 'etat', etat: 'aveugle', duree: { rounds: 1 } }],
+      },
+    },
+  ),
+  horsCombat('mineur.detection-magie', 'Détection de la magie', 'Le mage sent les auras.', [
+    'Sentir une aura magique à 6 cases.',
+    'Connaître l’école ou l’élément de l’aura.',
+    'À 12 cases, et à travers une cloison.',
+  ]),
+  horsCombat('mineur.prestidigitation', 'Prestidigitation', 'Petits tours de magie.', [
+    'Nettoyer, chauffer, faire un petit tour de magie.',
+    'Une petite illusion sonore ou visuelle, une minute.',
+    'Réparer un objet simple cassé.',
+  ]),
 ];

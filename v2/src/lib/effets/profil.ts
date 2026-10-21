@@ -1,4 +1,5 @@
-import type { ClasseRefonte, RegleDeVoie, VoieRefonte } from '../schemas/classes';
+import type { CapaciteDeVoie, ClasseRefonte, RegleDeVoie, VoieRefonte } from '../schemas/classes';
+import type { ModificateursDeVoie } from './resolution';
 import type { Action, Element, Limite, Maitrise, Palier } from '../schemas/effets';
 import { MAITRISES } from '../schemas/effets';
 import { palierAtteint } from './paliers';
@@ -26,6 +27,8 @@ export interface ChoixDePersonnage {
   /** Rang atteint dans chaque voie (0 ou absent : pas prise). */
   rangs: Readonly<Record<string, number>>;
   mineurs: readonly string[];
+  /** Répertoire (Virtuose 1) : le sort mineur qui passe au palier II. */
+  mineurPalierII?: string;
 }
 
 export interface Regles {
@@ -43,16 +46,25 @@ export interface ProfilMagique {
   actions: string[];
   annuleDerapage: Limite | null;
   mineursMax: number;
-  mineurs: string[];
+  /** Sorts mineurs avec leur palier (Virtuose : Répertoire II, Perfection III). */
+  mineurs: { id: string; palier: Palier }[];
+  /** Capacités de voie que lit le moteur, avec leur limite (lot L4.4b2). */
+  capacites: { nom: CapaciteDeVoie; limite: Limite }[];
+  /** PV max en plus : le Pacte de sang y verse la réserve de PP. */
+  pvEnPlus: number;
+  /** Ce que le moteur de résolution reçoit du profil (lancer.voie), avant les choix du moment. */
+  voie: ModificateursDeVoie;
   /** Règles écrites que l'app ne calcule pas encore. */
   textes: string[];
 }
 
 const plusHaute = (a: Maitrise | undefined, b: Maitrise): Maitrise => (a && MAITRISES.indexOf(a) > MAITRISES.indexOf(b) ? a : b);
 
-export function mineursAutorises(classe: ClasseRefonte, niveau: number): number {
-  return classe.mineurs.creation + classe.mineurs.plusUnAuNiveau.filter((n) => n <= niveau).length;
+export function mineursAutorises(classe: ClasseRefonte, niveau: number, repertoire = false): number {
+  return classe.mineurs.creation + classe.mineurs.plusUnAuNiveau.filter((n) => n <= niveau).length + (repertoire ? 1 : 0);
 }
+
+const aCapacite = (regles: readonly RegleDeVoie[], nom: CapaciteDeVoie) => regles.some((x) => x.type === 'capacite' && x.nom === nom);
 
 /** Les règles de voie atteintes par un choix, rang par rang. */
 function reglesAtteintes(classe: ClasseRefonte, c: ChoixDePersonnage, r: Regles): RegleDeVoie[] {
@@ -85,7 +97,10 @@ export function verifierChoix(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
   if (regles.some((x) => x.type === 'maitriseElement' && x.quel === 'auChoix')) {
     if (!c.elementMaitre || ![c.elementDepart, c.secondElement].includes(c.elementMaitre)) e.push('Choisis lequel de tes éléments devient Maître.');
   } else if (c.elementMaitre) e.push('Un élément devient Maître avec la voie qui le donne.');
-  const max = mineursAutorises(classe, c.niveau);
+  const repertoire = aCapacite(regles, 'repertoire');
+  const max = mineursAutorises(classe, c.niveau, repertoire);
+  if (repertoire && (!c.mineurPalierII || !c.mineurs.includes(c.mineurPalierII))) e.push('Répertoire : choisis lequel de tes sorts mineurs passe au palier II.');
+  if (!repertoire && c.mineurPalierII) e.push('Un sort mineur passe au palier II avec Répertoire (Voie du virtuose).');
   if (new Set(c.mineurs).size !== c.mineurs.length) e.push('Un sort mineur ne se prend qu’une fois.');
   if (c.mineurs.length > max) e.push(`${max} sorts mineurs au plus au niveau ${c.niveau}.`);
   for (const m of c.mineurs) if (!classe.mineurs.liste.includes(m)) e.push(`${m} n’est pas un sort mineur de ${classe.nom}.`);
@@ -102,7 +117,10 @@ export function profilMagique(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
     actions: [],
     annuleDerapage: null,
     mineursMax: mineursAutorises(classe, c.niveau),
-    mineurs: [...c.mineurs],
+    mineurs: c.mineurs.map((id) => ({ id, palier: 'I' as Palier })),
+    capacites: [],
+    pvEnPlus: 0,
+    voie: {},
     textes: [],
   };
   for (const id of classe.voies) {
@@ -135,6 +153,9 @@ export function profilMagique(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
           case 'texte':
             p.textes.push(regle.texte);
             break;
+          case 'capacite':
+            p.capacites.push({ nom: regle.nom, limite: regle.limite });
+            break;
         }
       }
     }
@@ -142,5 +163,20 @@ export function profilMagique(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
     if (voie.rangs.some((rv) => rv.regles.some((x) => x.type === 'verbeDeLEcole')))
       p.verbes = p.verbes.map((v) => ({ id: v.id, palier: palierAtteint(r.actions.get(v.id)!, rang, true) }));
   }
+  // Capacités de voie (lot L4.4b2) : ce qu'elles changent au profil, et ce que le moteur en reçoit.
+  const a = (nom: CapaciteDeVoie) => p.capacites.some((x) => x.nom === nom);
+  const rangDe = (noms: CapaciteDeVoie[]) => noms.filter(a).length;
+  const sauvage = rangDe(['mutationSauvage', 'instinctChaotique', 'canalisation', 'maitriseDuChaos', 'submersion']);
+  const hemomancie = rangDe(['pacteDeSang', 'sangAppelleSang', 'seuilCritique', 'sangVerse', 'saignee']);
+  if (sauvage) p.voie.sauvage = { rang: sauvage };
+  if (hemomancie) p.voie.hemomancie = { rang: hemomancie };
+  if (a('pacteDeSang')) {
+    p.pvEnPlus = p.reservePP;
+    p.reservePP = 0;
+  }
+  if (a('repertoire')) p.mineursMax += 1;
+  if (a('perfection')) p.mineurs = p.mineurs.map((m) => ({ id: m.id, palier: 'III' }));
+  else if (a('repertoire') && c.mineurPalierII) p.mineurs = p.mineurs.map((m) => (m.id === c.mineurPalierII ? { id: m.id, palier: 'II' } : m));
+  if (a('perfection') || a('affinite')) p.voie.virtuose = { ...(a('perfection') ? { crans: 1 } : {}), ...(a('affinite') ? { affinite: true } : {}) };
   return p;
 }

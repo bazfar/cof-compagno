@@ -3,7 +3,7 @@ import type { Action, Duree, Effet, Element, Palier, Sauvegarde } from '../schem
 import type { FicheElement } from '../schemas/elements';
 import type { EtatRefonte } from '../schemas/etats';
 import { coutSort, ddSort, MAITRISES, seuilEchec, type CoutCalcule, type Maitrise } from './cout';
-import { actionAuPalier } from './paliers';
+import { actionAuPalier, paliersDefinis } from './paliers';
 
 /*
  * Moteur de résolution d'un sort (lot L4.3), en fonction pure : un lancer
@@ -72,6 +72,44 @@ export interface LanceurEnJeu extends Combattant {
   attaqueMagique: number;
   /** Niveau du lanceur (dés des sorts mineurs) ; 1 par défaut. */
   niveau?: number;
+  /** PV actuels et max : coûts en PV (sang, Pacte, Saignée), jamais sous 1 PV ; Seuil critique. */
+  pv?: number;
+  pvMax?: number;
+}
+
+/**
+ * Capacités de voie du lanceur et choix du moment (lot L4.4b2). Les rangs
+ * viennent du profil (lib/effets/profil.ts) ; les limites par combat ou par
+ * scénario sont tenues par le combat (L6), qui ne passe un choix que s'il
+ * est encore disponible.
+ */
+export interface ModificateursDeVoie {
+  sauvage?: {
+    rang: number;
+    /** Instinct chaotique (rang 2) : le meilleur de deux jets. */
+    instinct?: boolean;
+    /** Maîtrise du chaos (rang 4) : +4 sans jet. */
+    maitriseDuChaos?: boolean;
+    /** Submersion arcanique (rang 5) : la mutation compte double. */
+    submersion?: boolean;
+    /** Canalisation profonde (rang 3), sur une mutation de +3 ou plus. */
+    canalisation?: 'repousse' | 'brulure' | 'aveugle';
+  };
+  hemomancie?: {
+    rang: number;
+    /** Sang versé (rang 4) : au moins 5 dégâts subis depuis le dernier sort. */
+    sangVerse?: boolean;
+    /** Saignée (rang 5) : ce verbe au palier le plus haut, sans coût, +2d6, pour la moitié des PV actuels. */
+    saignee?: boolean;
+  };
+  virtuose?: {
+    /** Crans de dé des sorts mineurs (Perfection : 1). */
+    crans?: number;
+    /** Affinité (rang 2) : l'élément, au moins Adepte, porte son effet complet sur un sort mineur. */
+    affinite?: boolean;
+    /** Le geste unique (rang 5) : dés doublés. */
+    gesteUnique?: boolean;
+  };
 }
 
 export interface Catalogue {
@@ -86,6 +124,7 @@ export interface Lancer {
   palier: Palier;
   /** Variante choisie au palier lancé (Bouclier III : `deux-cibles`). */
   variante?: string;
+  voie?: ModificateursDeVoie;
   surcharge?: boolean;
   /** Maîtrise de l'école du verbe ; Adepte par défaut. */
   ecole?: Maitrise;
@@ -120,6 +159,7 @@ export type Changement =
   | { type: 'terrain'; nature: string; duree: Duree }
   | { type: 'dissipation'; cible: string; nombre: number }
   | { type: 'reductionDegats'; cible: string; part: 'moitie'; renvoi: boolean }
+  | { type: 'soinComplet'; cible: string }
   | { type: 'narratif'; cible: string; texte: string };
 
 export interface JetNote {
@@ -213,6 +253,11 @@ export function deMineur(niveau: number, crans = 0): string {
   return echelle[Math.min(base + crans, echelle.length - 1)]!;
 }
 
+/** Le geste unique (Virtuose 5, décision 15b du 21/10/2026) : « 1d8 » devient « 2d8 ». */
+export function doublerDes(formule: string): string {
+  return formule.replace(/(\d*)d(\d+)/g, (_m, n: string, f: string) => `${2 * Number(n || 1)}d${f}`);
+}
+
 /** Zone : un seul jet de dégâts pour toutes les cibles (décision 2a du 21/10/2026). */
 const UN_JET_PAR_ZONE = true;
 
@@ -234,11 +279,19 @@ export function degatsReduits(base: number, facteurs: readonly number[]): number
 export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   const alea = l.alea ?? Math.random;
   if (l.secondElement) return { ok: false, raison: 'les combinaisons de deux éléments arrivent avec leurs signatures (lots des classes)' };
-  const cout = l.action.cout
-    ? coutFixe(l.action.cout, l.surcharge)
+  const v = l.voie ?? {};
+  const hemo = v.hemomancie?.rang ?? 0;
+  const saignee = hemo >= 5 && !!v.hemomancie?.saignee;
+  if (saignee && (l.action.nature !== 'verbe' || l.surcharge)) return { ok: false, raison: 'la Saignée porte un verbe, sans surcharge' };
+  // Seuil critique (Hémomancie 3, décision 1a du 21/10) : sous la moitié des PV, la surcharge perd ses +2.
+  const seuilCritique = hemo >= 3 && l.lanceur.pv !== undefined && l.lanceur.pvMax !== undefined && l.lanceur.pv < l.lanceur.pvMax / 2;
+  const estSort = l.action.nature === 'verbe' || l.action.nature === 'mineur';
+  const cout = !estSort || l.action.cout
+    ? coutFixe(l.action.cout ?? [], l.surcharge)
     : coutSort(l.action, {
-        palier: l.palier,
+        palier: saignee ? paliersDefinis(l.action).at(-1)! : l.palier,
         surcharge: l.surcharge,
+        surchargeSansSurcout: seuilCritique,
         element: l.element?.maitrise ?? null,
         ecole: l.ecole,
       });
@@ -259,16 +312,33 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   const fiche = l.element ? cat.elements.get(l.element.id) : undefined;
   if (l.element && !fiche) return { ok: false, raison: `élément inconnu : ${l.element.id}` };
   const mineur = action.nature === 'mineur';
-  const sang = l.element?.id === 'sang' && !mineur;
-  const fin = (issue: 'reussi' | 'echecEcole' | 'derapage', pv: number): Resultat => ({
+  // Affinité (Virtuose 2) : un sort mineur porte l'effet complet d'un élément au moins Adepte.
+  const affinite = mineur && !!v.virtuose?.affinite && !!l.element && MAITRISES.indexOf(l.element.maitrise) >= MAITRISES.indexOf('adepte');
+  const sang = l.element?.id === 'sang' && (!mineur || affinite);
+  // Paiement : le Pacte de sang paie les PP en PV ; la Saignée ne coûte que la moitié des PV actuels.
+  let pp = saignee ? 0 : cout.pp;
+  let pvPaye = 0;
+  if (hemo >= 1) {
+    pvPaye += pp;
+    pp = 0;
+  }
+  if (saignee || action.sacrifice === 'moitiePvActuels') {
+    if (l.lanceur.pv === undefined) return { ok: false, raison: 'il faut connaître les PV du lanceur' };
+    pvPaye += Math.floor(l.lanceur.pv / 2);
+  }
+  const sansSousUnPv = (pv: number): string | null =>
+    l.lanceur.pv !== undefined && pv > 0 && l.lanceur.pv - pv < 1 ? 'un sort ne fait jamais tomber son lanceur sous 1 PV' : null;
+  const fin = (issue: 'reussi' | 'echecEcole' | 'derapage', pvEnPlus: number): Resultat => ({
     ok: true,
     issue,
     palierLance: cout.palierLance,
-    cout: { pp: cout.pp, pv },
+    cout: { pp, pv: pvPaye + pvEnPlus },
     dd,
     jets,
     changements,
   });
+  const refusPv = sansSousUnPv(pvPaye + (sang ? cout.pp : 0));
+  if (refusPv) return { ok: false, raison: refusPv };
 
   // 2. Échec d'école.
   const seuilEcole = seuilEchec(l.ecole ?? 'adepte');
@@ -281,14 +351,18 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
 
   // 3. Dérapage de l'élément.
   let derape = false; // élément raté : le sort entier échoue (1b)
-  const seuilElement = l.element && !mineur ? seuilEchec(l.element.maitrise) : 0;
+  const seuilElement = l.element && (!mineur || affinite) ? seuilEchec(l.element.maitrise) : 0;
   if (seuilElement) {
     const j = d20(alea, 0);
     derape = j.garde <= seuilElement;
     jets.push({ quoi: 'maîtrise de l’élément', des: j.des, total: j.garde, contre: seuilElement, reussi: !derape });
   }
-  const elementActif = fiche && !mineur ? fiche : undefined;
-  let pv = sang ? cout.pp : 0;
+  // Voie sauvage (2a, 7b du 21/10) : le dérapage devient une Mutation sauvage, le sort part sans élément.
+  const sauvage = v.sauvage?.rang ?? 0;
+  const sansElement = derape && sauvage >= 1;
+  if (sansElement) derape = false;
+  const elementActif = fiche && (!mineur || affinite) && !sansElement ? fiche : undefined;
+  let pv = sang && !sansElement ? cout.pp : 0;
   if (derape && fiche) {
     if (fiche.derapage.modifie.coutPvMultiplie) pv *= fiche.derapage.modifie.coutPvMultiplie;
     for (const e of fiche.derapage.effets) appliquerSimple(e, l.lanceur.id, changements, alea, l.lanceur.modMagie);
@@ -364,11 +438,36 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     }
   };
 
-  const typeDegats = (e: Extract<Effet, { type: 'degats' }>) => (l.element ? l.element.id : e.typeDegats);
+  const typeDegats = (e: Extract<Effet, { type: 'degats' }>) => (l.element && !sansElement ? l.element.id : e.typeDegats);
+
+  // Mutation sauvage (Voie sauvage 1, règle v1 conservée) : 2d4 − 4 aux dégâts de chaque sort offensif.
+  let mutation = 0;
+  const offensifDegats = action.effets.some((e) => e.type === 'degats');
+  if (sauvage >= 1 && offensifDegats) {
+    if (sauvage >= 4 && v.sauvage?.maitriseDuChaos) {
+      mutation = 4;
+      jets.push({ quoi: 'Maîtrise du chaos', des: [], total: 4 });
+    } else {
+      const tirer = () => lancerDes('2d4', alea);
+      const a = tirer();
+      let garde = a;
+      if (sauvage >= 2 && v.sauvage?.instinct) {
+        const b = tirer();
+        garde = b.total > a.total ? b : a;
+        jets.push({ quoi: 'Instinct chaotique', des: [...a.des, ...b.des], total: garde.total - 4 });
+      } else jets.push({ quoi: 'Mutation sauvage', des: a.des, total: a.total - 4 });
+      mutation = garde.total - 4;
+    }
+    if (sauvage >= 5 && v.sauvage?.submersion) mutation *= 2;
+  }
+  // Dés en plus sur le premier effet de dégâts : Sang versé (Hémomancie 4) et Saignée (+2d6).
+  const desEnPlus = [hemo >= 4 && v.hemomancie?.sangVerse ? 'sangVerse' : null, saignee ? 'saignee' : null].filter((x): x is string => !!x);
   const jetsZone = new Map<number, { des: number[]; total: number }>();
   const premierDegats = action.effets.findIndex((e) => e.type === 'degats');
   let baseRebond: number | null = null;
   let deSang: { des: number[]; total: number } | null = null;
+  const desSupplementaires = new Map<string, { des: number[]; total: number }>();
+  let premierJetFait = false;
 
   const degatsSur = (e: Extract<Effet, { type: 'degats' }>, indice: number, c: CibleEnJeu, i: Issue, base: number, deJet: number[]) => {
     const facteurs: number[] = [];
@@ -405,7 +504,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   const appliquer = (e: Effet, indice: number, c: CibleEnJeu, i: Issue, sauvegardeEffet?: Sauvegarde) => {
     if (!conditionRemplie(e, c, i, sauvegardeEffet)) return;
     if (e.type === 'degats') {
-      const formule = e.progression === 'mineur' ? deMineur(l.lanceur.niveau ?? 1) : e.des;
+      let formule = e.progression === 'mineur' ? deMineur(l.lanceur.niveau ?? 1, v.virtuose?.crans ?? 0) : e.des;
+      if (mineur && v.virtuose?.gesteUnique) formule = doublerDes(formule);
       let jet: { des: number[]; total: number };
       if (e.vise === 'zone' && UN_JET_PAR_ZONE) {
         if (!jetsZone.has(indice)) jetsZone.set(indice, lancerDes(formule, alea));
@@ -413,7 +513,25 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       } else jet = lancerDes(formule, alea);
       let base = jet.total + (e.plusMod ? l.lanceur.modMagie : 0);
       const des = [...jet.des];
-      if (sang && indice === premierDegats) {
+      // Dés en plus (sang, Sang versé, Saignée) et Mutation sauvage : une fois par sort,
+      // donc sur le jet commun d'une zone, ou sur le premier projectile seulement.
+      const porteDesEnPlus = indice === premierDegats && (e.vise === 'zone' || !premierJetFait);
+      if (indice === premierDegats) premierJetFait = true;
+      if (porteDesEnPlus) {
+        for (const quoi of desEnPlus) {
+          if (!desSupplementaires.has(quoi)) {
+            const faces = /d(\d+)/.exec(formule)?.[1] ?? '6';
+            const d = lancerDes(quoi === 'saignee' ? '2d6' : `1d${faces}`, alea);
+            jets.push({ quoi: quoi === 'saignee' ? 'Saignée' : 'Sang versé', des: d.des, total: d.total });
+            desSupplementaires.set(quoi, d);
+          }
+          const d = desSupplementaires.get(quoi)!;
+          base += d.total;
+          des.push(...d.des);
+        }
+      }
+      if (mutation && porteDesEnPlus) base = Math.max(0, base + mutation);
+      if (sang && porteDesEnPlus) {
         if (!deSang) {
           const faces = /d(\d+)/.exec(e.des)?.[1];
           deSang = lancerDes(`1d${faces ?? 6}`, alea);
@@ -487,6 +605,31 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     }
   }
 
+  // Mutation sauvage : Canalisation profonde (rang 3) sur +3 ou plus ; Submersion négative ou positive (rang 5).
+  if (sauvage >= 1 && offensifDegats) {
+    const premiere = changements.find((c) => c.type === 'degats' && c.cible !== l.lanceur.id);
+    if (sauvage >= 3 && mutation >= 3 && v.sauvage?.canalisation && premiere?.type === 'degats') {
+      const choix = v.sauvage.canalisation;
+      if (choix === 'repousse') changements.push({ type: 'deplacement', cible: premiere.cible, sens: 'repousse', cases: 1 });
+      else changements.push({ type: 'etat', cible: premiere.cible, etat: choix === 'brulure' ? 'brulure' : 'aveugle', duree: { rounds: 1 } });
+    }
+    if (sauvage >= 5 && v.sauvage?.submersion) {
+      if (mutation < 0) {
+        const choc = lancerDes('1d4', alea);
+        jets.push({ quoi: 'Submersion : contrecoup', des: choc.des, total: choc.total });
+        changements.push({ type: 'degats', cible: l.lanceur.id, montant: choc.total, typeDegats: 'magique', calcul: `1d4 (${choc.total})` });
+        changements.push({ type: 'etat', cible: l.lanceur.id, etat: 'etourdi', duree: { rounds: 1 } });
+      } else if (mutation > 0) changements.push({ type: 'narratif', cible: l.lanceur.id, texte: 'Submersion arcanique : un effet spectaculaire, au choix du MJ.' });
+    }
+  }
+
+  // Sang appelle sang (Hémomancie 2, 10c et 3a du 21/10) : un quart des dégâts infligés, au plus la moitié du coût du sort.
+  if (hemo >= 2) {
+    const inflige = changements.reduce((s, c) => (c.type === 'degats' && c.cible !== l.lanceur.id ? s + c.montant : s), 0);
+    const rendu = Math.min(Math.floor(inflige / 4), Math.ceil(cout.pp / 2));
+    if (rendu > 0) changements.push({ type: 'soin', cible: l.lanceur.id, montant: rendu });
+  }
+
   // Sang : le lanceur récupère la moitié du dé ajouté.
   const de = deSang as { total: number } | null;
   if (de) changements.push({ type: 'soin', cible: l.lanceur.id, montant: Math.floor(de.total / 2) });
@@ -533,6 +676,9 @@ function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () =>
       return;
     case 'reductionDegats':
       out.push({ type: 'reductionDegats', cible, part: e.part, renvoi: e.renvoi });
+      return;
+    case 'soinComplet':
+      out.push({ type: 'soinComplet', cible });
       return;
     case 'narratif':
       out.push({ type: 'narratif', cible, texte: e.texte });

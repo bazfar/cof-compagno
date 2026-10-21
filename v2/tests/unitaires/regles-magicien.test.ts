@@ -106,9 +106,9 @@ describe('sorts mineurs', () => {
     expect(r.ok && r.changements[0]).toMatchObject({ type: 'degats', montant: 7 });
   });
 
-  it('les quatre autres servent hors combat', () => {
+  it('les quatre autres servent hors combat, avec un texte par palier', () => {
     for (const id of ['mineur.main-du-mage', 'mineur.lumiere', 'mineur.detection-magie', 'mineur.prestidigitation'])
-      expect(actionParId.get(id)).toMatchObject({ nature: 'mineur', etiquettes: ['exploration'], horsCombat: { paliers: [expect.any(String)] } });
+      expect(actionParId.get(id)).toMatchObject({ nature: 'mineur', etiquettes: ['exploration'], horsCombat: { paliers: [expect.any(String), expect.any(String), expect.any(String)] } });
   });
 });
 
@@ -124,7 +124,13 @@ describe('profil magique', () => {
       actions: [],
       annuleDerapage: null,
       mineursMax: 2,
-      mineurs: ['mineur.trait-arcanique', 'mineur.lumiere'],
+      mineurs: [
+        { id: 'mineur.trait-arcanique', palier: 'I' },
+        { id: 'mineur.lumiere', palier: 'I' },
+      ],
+      capacites: [],
+      pvEnPlus: 0,
+      voie: {},
       textes: [],
     });
   });
@@ -168,7 +174,7 @@ describe('profil magique', () => {
     expect(erreurs({ secondElement: 'glace' })).toEqual([expect.stringMatching(/second élément vient/)]);
     expect(erreurs({ mineurs: ['mineur.lumiere', 'mineur.lumiere'] })).toEqual(['Un sort mineur ne se prend qu’une fois.']);
     expect(erreurs({ mineurs: ['mineur.lumiere', 'mineur.trait-arcanique', 'mineur.prestidigitation'] })).toEqual(['2 sorts mineurs au plus au niveau 1.']);
-    expect(erreurs({ rangs: { 'magicien.sauvage': 1 } })).toEqual([expect.stringMatching(/pas une voie de Magicien/)]);
+    expect(erreurs({ rangs: { 'magicien.pyromancie': 1 } })).toEqual([expect.stringMatching(/pas une voie de Magicien/)]);
     expect(erreurs({ niveau: 13 })).toContainEqual('Le niveau va de 1 à 12.');
   });
 });

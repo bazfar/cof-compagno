@@ -260,6 +260,12 @@ const schemaEffetDissipation = z.strictObject({
   ...champsCommuns,
 });
 
+/** Rend tous ses PV à la cible (Saignée, lot L4.4b2). */
+const schemaEffetSoinComplet = z.strictObject({
+  type: z.literal('soinComplet'),
+  ...champsCommuns,
+});
+
 /** Réaction : les dégâts du déclencheur sont réduits ; `renvoi` : la part retenue revient à celui qui les inflige (Renvoi). */
 const schemaEffetReductionDegats = z.strictObject({
   type: z.literal('reductionDegats'),
@@ -288,6 +294,7 @@ export const schemaEffet = z.discriminatedUnion('type', [
   schemaEffetTerrain,
   schemaEffetDissipation,
   schemaEffetReductionDegats,
+  schemaEffetSoinComplet,
   schemaEffetNarratif,
 ]);
 export type Effet = z.infer<typeof schemaEffet>;
@@ -406,7 +413,15 @@ export const schemaDeltaPalier = z.strictObject({
     })
     .nullable()
     .optional(),
-  resolution: z.strictObject({ sauvegarde: schemaSauvegarde.optional(), siSauvegarde: z.enum(['annule', 'moitie', 'rien']).optional() }).optional(),
+  resolution: z
+    .strictObject({
+      jet: z.enum(['auto', 'sauvegarde', 'attaqueMagique', 'attaque', 'aucun']).optional(),
+      sauvegarde: schemaSauvegarde.optional(),
+      siSauvegarde: z.enum(['annule', 'moitie', 'rien']).optional(),
+    })
+    .optional(),
+  /** Un palier peut ouvrir un usage (Main du mage III : en combat, lot L4.4b2). */
+  etiquettes: z.array(schemaEtiquette).min(1).optional(),
   persistance: z
     .strictObject({
       type: schemaPersistance.shape.type.optional(),
@@ -439,6 +454,8 @@ export const schemaAction = z
     limite: schemaLimite.default('volonte'),
     /** Coût fixe. Absent pour un verbe (formule) et un sort mineur (0). */
     cout: z.array(schemaCout).optional(),
+    /** Le lanceur sacrifie des PV en plus du coût (Saignée : la moitié de ses PV actuels). */
+    sacrifice: z.literal('moitiePvActuels').optional(),
     /** Exige un élément au moins à ce rang (Serviteur : Initié ; Cataclysme : Maître). */
     elementMin: schemaMaitrise.optional(),
     declencheur: schemaDeclencheur.optional(),
@@ -468,7 +485,6 @@ export const schemaAction = z
     if (a.nature === 'mineur') {
       if (a.rang !== 0) ko('un sort mineur est de rang 0', ['rang']);
       if (a.cout) ko('un sort mineur coûte 0 PP', ['cout']);
-      if (a.paliers.II || a.paliers.III) ko('un sort mineur n’a pas de paliers (sauf Voie du virtuose, plus tard)', ['paliers']);
     }
     if (a.nature !== 'verbe' && a.nature !== 'mineur' && a.rang === 0) ko('seul un sort mineur est de rang 0', ['rang']);
     if (a.paliers.III && !a.paliers.II) ko('un palier III suppose un palier II', ['paliers']);

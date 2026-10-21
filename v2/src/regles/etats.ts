@@ -20,6 +20,8 @@ import type { EtatSaisi } from '../lib/schemas/etats';
  *     calcul de ligne de vue (décision antérieure) ;
  *   - Ralenti : déplacement divisé par deux, arrondi au supérieur (8a).
  *
+ * Désarmé (lot L4.4b2, Main du mage au palier III) reprend la v1.
+ *
  * Les formes et avatars de la v1 (Ours, Avatar du Vide…) ne sont plus des
  * états : ils deviennent des actions de leur classe.
  */
@@ -70,6 +72,12 @@ export const ETATS: EtatSaisi[] = [
     agit: 'non',
     deplacement: 'nul',
     rompuPar: ['degatsSubis'],
+  },
+  {
+    id: 'desarme',
+    nom: 'Désarmé',
+    categorie: 'controle',
+    regle: 'Ne peut plus se servir de son arme ; mains nues et sorts restent possibles.',
   },
   {
     id: 'confus',

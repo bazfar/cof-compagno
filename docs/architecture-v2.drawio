@@ -925,6 +925,24 @@
         <mxCell id="e44b3" parent="1" source="eClasses" target="eSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="titre-l44b2" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Voies du Magicien (L4.4b2) — Voie sauvage, Hémomancie, Virtuose : capacités nommées, lues par le profil et le moteur" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="5380" as="geometry" />
+        </mxCell>
+        <mxCell id="eVoiesMag" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b&gt;src/regles/classes/magicien.ts, mineurs.ts  (L4.4b2)&lt;/b&gt;&lt;hr&gt;Voie sauvage, Hémomancie, Virtuose (règles « capacite ») ;&lt;br&gt;Saignée (soin) ; paliers II et III des sorts mineurs" vertex="1">
+          <mxGeometry height="100" width="420" x="40" y="5420" as="geometry" />
+        </mxCell>
+        <mxCell id="eModifs" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;ModificateursDeVoie (resolution.ts)&lt;/b&gt;&lt;hr&gt;profil.voie → lancer.voie : mutation, Pacte, Sang appelle sang,&lt;br&gt;Seuil critique, Sang versé, Saignée, crans, Affinité, Geste unique ;&lt;br&gt;dés en plus et mutation : une fois par sort" vertex="1">
+          <mxGeometry height="100" width="460" x="500" y="5420" as="geometry" />
+        </mxCell>
+        <mxCell id="e44c0" parent="1" source="eVoiesMag" target="eClasses" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e44c1" parent="1" source="eProfil" target="eModifs" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e44c2" parent="1" source="eModifs" target="eResolution" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
 </root>
     </mxGraphModel>
   </diagram>
