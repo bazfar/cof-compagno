@@ -104,6 +104,21 @@ export const INVOCATIONS: InvocationSaisie[] = [
   },
   ...SERVITEURS,
   {
+    id: 'double_illusoire',
+    nom: 'Illusion vivante',
+    description: 'Le double de l’Envoûteur (lot L4.5) : il ne frappe pas, il encaisse, et les sorts de l’Envoûteur peuvent partir de lui.',
+    pv: { moitiePvLanceur: true },
+    def: { commeLanceur: true },
+    deplacement: 6,
+    attaque: null,
+    capacites: [
+      {
+        nom: 'Relais',
+        texte: 'Le double ne frappe pas. Chaque sort de l’Envoûteur part, au choix, de l’Envoûteur ou du double : portée et ligne de vue se mesurent depuis l’un ou l’autre.',
+      },
+    ],
+  },
+  {
     id: 'embrun',
     nom: 'Embrun',
     description: 'Serviteur mineur de Légion, sans élément. Les trois Embruns ajoutent ensemble 1 PP de Remous par round.',

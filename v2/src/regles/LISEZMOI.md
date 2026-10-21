@@ -16,7 +16,10 @@ la refonte les remplace.
 | `ecoles/evocation.ts` | Les cinq verbes d'Évocation (lot L4.1), gabarit des autres écoles |
 | `ecoles/abjuration.ts`, `ecoles/invocation.ts` | Les verbes d'Abjuration et d'Invocation (lot L4.4a) |
 | `invocations.ts` | Les créatures invoquées : familier, arme spirituelle, les sept serviteurs, les Embruns (lot L4.4a) |
-| `mineurs.ts` | Les sorts mineurs et leurs paliers de Virtuose (lots L4.4b1 et L4.4b2) |
+| `ecoles/illusion.ts`, `ecoles/enchantement.ts` | Les verbes d'Illusion et d'Enchantement (lot L4.5) |
+| `classes/commun.ts` | Voie de l'école et seconde école, communes aux lanceurs (lot L4.5) |
+| `classes/envouteur.ts` | La classe Envoûteur : voies de l'esprit, de la transmutation, de la prescience, seconde école (lot L4.5) |
+| `mineurs.ts` | Les sorts mineurs du Magicien (avec leurs paliers de Virtuose) et de l'Envoûteur (lots L4.4b1, L4.4b2, L4.5) |
 | `classes/magicien.ts` | La classe Magicien : création, réserve de PP, Voie de l'école, Voie élémentaire, Cataclysme (L4.4b1) ; Voie sauvage, Hémomancie, Virtuose, Saignée (L4.4b2) |
 | `etats.ts` | Le catalogue des états de la refonte (lot L4.2) |
 | `elements.ts` | Les sept éléments : effet générique sur un sort et dérapage (lot L4.2) |

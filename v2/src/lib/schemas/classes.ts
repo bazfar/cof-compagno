@@ -25,7 +25,10 @@ import { schemaElement, schemaLimite, schemaMaitrise } from './effets.ts';
  *     maitriseDuChaos, submersion ;
  *   - Hémomancie : pacteDeSang, sangAppelleSang, seuilCritique, sangVerse,
  *     saignee ;
- *   - Virtuose : repertoire, affinite, gesteReflexe, perfection, gesteUnique.
+ *   - Virtuose : repertoire, affinite, gesteReflexe, perfection, gesteUnique ;
+ *   - Voie de l'esprit (Envoûteur, lot L4.5) : realiteDeLEsprit (une
+ *     illusion psionique inflige 1d6 psychiques à sa cible au début de
+ *     chacun de ses tours, décision 9a du 21/10/2026 ; appliqué par L6).
  */
 export const CAPACITES_DE_VOIE = [
   'mutationSauvage',
@@ -43,12 +46,18 @@ export const CAPACITES_DE_VOIE = [
   'gesteReflexe',
   'perfection',
   'gesteUnique',
+  'realiteDeLEsprit',
 ] as const;
 export type CapaciteDeVoie = (typeof CAPACITES_DE_VOIE)[number];
 
 export const schemaRegleDeVoie = z.discriminatedUnion('type', [
-  z.strictObject({ type: z.literal('verbeDeLEcole') }),
-  z.strictObject({ type: z.literal('maitriseEcole'), niveau: schemaMaitrise }),
+  /**
+   * `quelle` : l'école choisie à la création, ou la seconde (4ᵉ voie de
+   * l'Envoûteur, lot L4.5) ; `palierMax` plafonne ses paliers (seconde
+   * école : pas de palier III, validé).
+   */
+  z.strictObject({ type: z.literal('verbeDeLEcole'), quelle: z.enum(['choisie', 'seconde']).default('choisie'), palierMax: z.enum(['I', 'II', 'III']).optional() }),
+  z.strictObject({ type: z.literal('maitriseEcole'), quelle: z.enum(['choisie', 'seconde']).default('choisie'), niveau: schemaMaitrise }),
   z.strictObject({ type: z.literal('maitriseElement'), quel: z.enum(['depart', 'auChoix']), niveau: schemaMaitrise }),
   z.strictObject({ type: z.literal('secondElement'), niveau: schemaMaitrise }),
   z.strictObject({ type: z.literal('annuleDerapage'), limite: schemaLimite }),

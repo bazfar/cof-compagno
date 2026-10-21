@@ -3,9 +3,12 @@ import { schemaFicheElement, type FicheElement } from '../lib/schemas/elements';
 import { schemaEtatRefonte, type EtatRefonte } from '../lib/schemas/etats';
 import { schemaInvocation, type Invocation } from '../lib/schemas/invocations';
 import { schemaClasseRefonte, schemaVoieRefonte, type ClasseRefonte, type VoieRefonte } from '../lib/schemas/classes';
+import { ACTIONS_ENVOUTEUR, ENVOUTEUR, VOIES_ENVOUTEUR } from './classes/envouteur';
 import { ACTIONS_MAGICIEN, MAGICIEN, VOIES_MAGICIEN } from './classes/magicien';
 import { MINEURS } from './mineurs';
 import { ABJURATION } from './ecoles/abjuration';
+import { ENCHANTEMENT } from './ecoles/enchantement';
+import { ILLUSION } from './ecoles/illusion';
 import { INVOCATION } from './ecoles/invocation';
 import { INVOCATIONS } from './invocations';
 import { ELEMENTS_REFONTE } from './elements';
@@ -39,10 +42,10 @@ export const elementParId: ReadonlyMap<string, FicheElement> = indexer(ELEMENTS_
 
 export const invocationParId: ReadonlyMap<string, Invocation> = indexer(INVOCATIONS, (s) => schemaInvocation.parse(s), 'Invocation');
 
-export const actionParId: ReadonlyMap<string, Action> = indexer([...EVOCATION, ...ABJURATION, ...INVOCATION, ...MINEURS, ...ACTIONS_MAGICIEN], (s) => schemaAction.parse(s), 'Action');
+export const actionParId: ReadonlyMap<string, Action> = indexer([...EVOCATION, ...ABJURATION, ...INVOCATION, ...ILLUSION, ...ENCHANTEMENT, ...MINEURS, ...ACTIONS_MAGICIEN, ...ACTIONS_ENVOUTEUR], (s) => schemaAction.parse(s), 'Action');
 
-export const voieParId: ReadonlyMap<string, VoieRefonte> = indexer(VOIES_MAGICIEN, (s) => schemaVoieRefonte.parse(s), 'Voie');
-export const classeParId: ReadonlyMap<string, ClasseRefonte> = indexer([MAGICIEN], (s) => schemaClasseRefonte.parse(s), 'Classe');
+export const voieParId: ReadonlyMap<string, VoieRefonte> = indexer([...VOIES_MAGICIEN, ...VOIES_ENVOUTEUR], (s) => schemaVoieRefonte.parse(s), 'Voie');
+export const classeParId: ReadonlyMap<string, ClasseRefonte> = indexer([MAGICIEN, ENVOUTEUR], (s) => schemaClasseRefonte.parse(s), 'Classe');
 export const actions: readonly Action[] = [...actionParId.values()];
 
 /** Identifiants d'états cités par une liste d'effets. */

@@ -36,6 +36,21 @@ const horsCombat = (id: string, nom: string, description: string, textes: Textes
   horsCombat: { paliers: textes },
 });
 
+/** Sort mineur hors combat sans paliers (Envoûteur : le Virtuose est propre au Magicien, 15a du 21/10/2026). */
+const simple = (id: string, nom: string, description: string, texte: string, etiquettes: ActionSaisie['etiquettes'] = ['exploration']): ActionSaisie => ({
+  id,
+  nom,
+  description,
+  nature: 'mineur',
+  rang: 0,
+  etiquettes,
+  action: 'action',
+  ciblage: { type: 'aucun', portee: 'soi' },
+  resolution: { jet: 'aucun' },
+  effets: [{ type: 'narratif', texte, vise: 'lanceur' }],
+  horsCombat: { paliers: [texte] },
+});
+
 export const MINEURS: ActionSaisie[] = [
   {
     id: 'mineur.trait-arcanique',
@@ -99,4 +114,37 @@ export const MINEURS: ActionSaisie[] = [
     'Une petite illusion sonore ou visuelle, une minute.',
     'Réparer un objet simple cassé.',
   ]),
+
+  // ---- Envoûteur (lot L4.5 ; « Sorts mineurs par classe (validé) ») ----
+  {
+    id: 'mineur.pique-mentale',
+    nom: 'Pique mentale',
+    description: 'Une aiguille dans l’esprit, que l’armure n’arrête pas.',
+    nature: 'mineur',
+    ecole: 'enchantement',
+    rang: 0,
+    etiquettes: ['combat'],
+    action: 'action',
+    ignoreArmure: true,
+    ciblage: { type: 'creature', camp: 'ennemi', portee: 10 },
+    resolution: { jet: 'attaqueMagique' },
+    effets: [{ type: 'degats', des: '1d6', typeDegats: 'psychique', progression: 'mineur' }],
+    element: { application: 'ciblePrincipale' },
+  },
+  simple('mineur.murmure', 'Murmure', 'Un message pour une seule oreille.', 'Un message que seule la cible entend, à 10 cases.', ['exploration', 'social']),
+  simple('mineur.fantasme-mineur', 'Fantasme mineur', 'Une petite image ou un petit son.', 'Une petite image ou un petit son, une minute ; il ne compte pas de réussite.', ['exploration', 'social']),
+  simple('mineur.amitie', 'Amitié', 'Un sourire qui ouvre les portes.', '+1 au prochain jet social sur un PNJ, qui s’en aperçoit ensuite (attitude −1 cran).', ['social']),
+  {
+    id: 'mineur.trouble',
+    nom: 'Trouble',
+    description: 'Un doute au mauvais moment.',
+    nature: 'mineur',
+    ecole: 'enchantement',
+    rang: 0,
+    etiquettes: ['combat'],
+    action: 'action',
+    ciblage: { type: 'creature', camp: 'ennemi', portee: 10 },
+    resolution: { jet: 'sauvegarde', sauvegarde: 'Volonte', siSauvegarde: 'annule' },
+    effets: [{ type: 'bonus', cible: 'attaque', valeur: -1, duree: 'prochainTour' }],
+  },
 ];

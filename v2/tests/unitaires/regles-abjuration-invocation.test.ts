@@ -102,7 +102,7 @@ describe('créatures invoquées', () => {
   });
 
   it('rôles : Bornier PV × 1,5 et s’interpose, Fulgure déplacement doublé, Rémanence vole', () => {
-    expect(inv('serviteur.terre').pv.parNiveau).toBe(4.5);
+    expect(inv('serviteur.terre').pv).toEqual({ parNiveau: 4.5 });
     expect(inv('serviteur.terre').capacites[0]?.nom).toBe('Interposition');
     expect([inv('serviteur.feu').deplacement, inv('serviteur.electricite').deplacement]).toEqual([6, 12]);
     expect(inv('serviteur.psionique').vol).toBe(true);

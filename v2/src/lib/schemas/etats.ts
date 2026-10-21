@@ -51,6 +51,8 @@ export const schemaEtatRefonte = z
     avantage: z.array(schemaJetsAffectes).default([]),
     rompuPar: z.array(z.enum(['degatsSubis', 'sesAttaques', 'estAttaque', 'actionMouvement'])).default([]),
     parSource: z.boolean().default(false),
+    /** Chaque charge fait rater une attaque contre le porteur (Double, lot L4.5). */
+    annuleAttaquesContre: z.boolean().default(false),
   })
   .superRefine((e, ctx) => {
     const ko = (message: string, path: string[]) => ctx.addIssue({ code: 'custom', message, path });

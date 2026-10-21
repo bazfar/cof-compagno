@@ -1,5 +1,6 @@
 import type { CapaciteDeVoie, ClasseSaisie, VoieSaisie } from '../../lib/schemas/classes';
 import type { ActionSaisie } from '../../lib/schemas/effets';
+import { voieDeLEcole } from './commun';
 
 /*
  * Le Magicien de la refonte (lot L4.4b1). Source : doc « Refonte classes et
@@ -85,23 +86,7 @@ export const ACTIONS_MAGICIEN: ActionSaisie[] = [
 const capacite = (nom: CapaciteDeVoie, limite?: '1x/combat' | '1x/scenario') => ({ type: 'capacite' as const, nom, ...(limite ? { limite } : {}) });
 
 export const VOIES_MAGICIEN: VoieSaisie[] = [
-  {
-    id: 'magicien.ecole',
-    nom: 'Voie de l’école',
-    description: 'L’école choisie à la création, jusqu’à la maîtrise.',
-    rangs: [
-      { rang: 1, nom: 'Premier verbe', description: 'Le verbe de rang 1 de l’école ; l’école est Adepte.', regles: [{ type: 'verbeDeLEcole' }, { type: 'maitriseEcole', niveau: 'adepte' }] },
-      { rang: 2, nom: 'Deuxième verbe', description: 'Le verbe de rang 2 de l’école.', regles: [{ type: 'verbeDeLEcole' }] },
-      { rang: 3, nom: 'Troisième verbe', description: 'Le verbe de rang 3 de l’école ; le verbe de rang 1 passe au palier II.', regles: [{ type: 'verbeDeLEcole' }] },
-      {
-        rang: 4,
-        nom: 'Maître de l’école',
-        description: 'Le verbe de rang 4 ; l’école est Maître : −1 PP sur ses verbes, +2 au DD.',
-        regles: [{ type: 'verbeDeLEcole' }, { type: 'maitriseEcole', niveau: 'maitre' }],
-      },
-      { rang: 5, nom: 'Cinquième verbe', description: 'Le verbe de rang 5 de l’école (1x/combat).', regles: [{ type: 'verbeDeLEcole' }] },
-    ],
-  },
+  voieDeLEcole('magicien'),
   {
     id: 'magicien.elementaire',
     nom: 'Voie élémentaire',

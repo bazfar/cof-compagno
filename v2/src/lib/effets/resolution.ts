@@ -58,6 +58,10 @@ export interface Combattant {
   etats: readonly string[];
   armureMetal?: boolean;
   demonOuMortVivant?: boolean;
+  /** Boss ou démon D5 : immunisé à Sommeil, Ordre et Domination (validé). */
+  boss?: boolean;
+  /** PV actuels (seuil de Sommeil). */
+  pv?: number;
 }
 
 export interface CibleEnJeu extends Combattant {
@@ -124,6 +128,8 @@ export interface Lancer {
   palier: Palier;
   /** Variante choisie au palier lancé (Bouclier III : `deux-cibles`). */
   variante?: string;
+  /** Prophétie (lot L4.5) : combien de dés le lanceur tire d'avance. */
+  nombreDeDes?: number;
   voie?: ModificateursDeVoie;
   surcharge?: boolean;
   /** Maîtrise de l'école du verbe ; Adepte par défaut. */
@@ -150,7 +156,9 @@ export type Changement =
   | { type: 'degats'; cible: string; montant: number; typeDegats: string; calcul: string }
   | { type: 'soin'; cible: string; montant: number }
   | { type: 'pvTemp'; cible: string; montant: number }
-  | { type: 'etat'; cible: string; etat: string; duree: Duree }
+  | { type: 'etat'; cible: string; etat: string; duree: Duree; charges?: number }
+  | { type: 'chargeConsommee'; cible: string; etat: string }
+  | { type: 'jetsReserves'; cible: string; valeurs: number[] }
   | { type: 'retraitEtat'; cible: string; etats: readonly string[]; nombre: number }
   | { type: 'deplacement'; cible: string; sens: 'repousse' | 'attire' | 'teleporte'; cases: number }
   | { type: 'bonus'; cible: string; sur: string; valeur: number | string; duree: Duree }
@@ -253,6 +261,23 @@ export function deMineur(niveau: number, crans = 0): string {
   return echelle[Math.min(base + crans, echelle.length - 1)]!;
 }
 
+/** Remplace chaque durée à dés par des rounds tirés une fois pour tout le sort (au moins 1). */
+function avecDureesTirees(action: Action, alea: () => number, modMagie: number, jets: JetNote[]): Action {
+  const tirees = new Map<string, Duree>();
+  const tirer = (d: Duree): Duree => {
+    if (typeof d === 'string' || !('des' in d)) return d;
+    const cle = `${d.des}|${d.plusModMagie}`;
+    if (!tirees.has(cle)) {
+      const j = lancerDes(d.des, alea);
+      const rounds = Math.max(1, j.total + (d.plusModMagie ? modMagie : 0));
+      jets.push({ quoi: 'durée', des: j.des, total: rounds });
+      tirees.set(cle, { rounds });
+    }
+    return tirees.get(cle)!;
+  };
+  return { ...action, effets: action.effets.map((e) => ('duree' in e ? { ...e, duree: tirer(e.duree) } : e)) as Action['effets'] };
+}
+
 /** Le geste unique (Virtuose 5, décision 15b du 21/10/2026) : « 1d8 » devient « 2d8 ». */
 export function doublerDes(formule: string): string {
   return formule.replace(/(\d*)d(\d+)/g, (_m, n: string, f: string) => `${2 * Number(n || 1)}d${f}`);
@@ -298,7 +323,9 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   if (!cout.ok) return cout;
   if (l.variante !== undefined && !l.action.variantes.some((v) => v.id === l.variante && v.palier === cout.palierLance))
     return { ok: false, raison: `${l.action.id} n'a pas de variante ${l.variante} au palier ${cout.palierLance}` };
-  const action = actionAuPalier(l.action, cout.palierLance, l.variante);
+  let action = actionAuPalier(l.action, cout.palierLance, l.variante);
+  const reserve = action.effets.find((e) => e.type === 'jetsReserves');
+  if (reserve && (!l.nombreDeDes || l.nombreDeDes < 1 || !Number.isInteger(l.nombreDeDes))) return { ok: false, raison: `${action.id} : combien de dés ?` };
   if (action.elementMin) {
     // Serviteur : un élément au moins Initié (validé) ; Cataclysme : un élément Maître.
     if (!l.element) return { ok: false, raison: `${action.id} demande un élément` };
@@ -316,7 +343,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   const affinite = mineur && !!v.virtuose?.affinite && !!l.element && MAITRISES.indexOf(l.element.maitrise) >= MAITRISES.indexOf('adepte');
   const sang = l.element?.id === 'sang' && (!mineur || affinite);
   // Paiement : le Pacte de sang paie les PP en PV ; la Saignée ne coûte que la moitié des PV actuels.
-  let pp = saignee ? 0 : cout.pp;
+  let pp = (saignee ? 0 : cout.pp) + (reserve?.type === 'jetsReserves' ? reserve.ppParDe * l.nombreDeDes! : 0);
   let pvPaye = 0;
   if (hemo >= 1) {
     pvPaye += pp;
@@ -369,6 +396,9 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     return fin('derapage', pv);
   }
 
+  // Durées tirées au lancement (Pierre en chair : 1d4 + CHA), un seul jet par sort.
+  action = avecDureesTirees(action, alea, l.lanceur.modMagie, jets);
+
   // Le lanceur qui attaque perd Dissimulé, Invisible ; Déséquilibré tombe après son jet d'attaque.
   const offensif = action.ciblage.camp === 'ennemi' || action.effets.some((e) => e.type === 'degats');
   const rompus = etatsDe(l.lanceur, cat)
@@ -400,8 +430,15 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   type Issue = { touche?: boolean; sauveReussie?: boolean };
   const issueDe = (c: CibleEnJeu): Issue => {
     if (attaque) {
+      // Double (lot L4.5) : une charge fait rater l'attaque, sans jet.
+      const leurre = etatsDe(c, cat).find((e) => e.annuleAttaquesContre);
+      if (leurre) {
+        changements.push({ type: 'chargeConsommee', cible: c.id, etat: leurre.id });
+        jets.push({ quoi: `attaque magique (${leurre.nom} : ratée d’office)`, cible: c.id, des: [], total: 0, reussi: false });
+        return { touche: false };
+      }
       const av = avantageAttaque(l.lanceur, c, cat);
-      const defBase = elementActif?.sort.modifie.ignoreArmure ? (c.defSansArmure ?? c.def) : c.def;
+      const defBase = elementActif?.sort.modifie.ignoreArmure || action.ignoreArmure ? (c.defSansArmure ?? c.def) : c.def;
       const def = defBase + modificateur(c, cat, ['DEF']);
       const j = d20(alea, av);
       const total = j.garde + l.lanceur.attaqueMagique;
@@ -503,6 +540,16 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
 
   const appliquer = (e: Effet, indice: number, c: CibleEnJeu, i: Issue, sauvegardeEffet?: Sauvegarde) => {
     if (!conditionRemplie(e, c, i, sauvegardeEffet)) return;
+    // Boss et démons D5 : immunisés à Sommeil, Ordre, Domination (validé).
+    if (e.saufBoss && c.boss) {
+      changements.push({ type: 'narratif', cible: c.id, texte: `${c.id} n’y est pas soumis (boss).` });
+      return;
+    }
+    // Sommeil : seulement sous un seuil de PV actuels (4 × niveau du lanceur, validé).
+    if (e.type === 'etat' && e.siPvAuPlus) {
+      const seuil = e.siPvAuPlus.parNiveau * (l.lanceur.niveau ?? 1);
+      if (c.pv === undefined || c.pv > seuil) return;
+    }
     if (e.type === 'degats') {
       let formule = e.progression === 'mineur' ? deMineur(l.lanceur.niveau ?? 1, v.virtuose?.crans ?? 0) : e.des;
       if (mineur && v.virtuose?.gesteUnique) formule = doublerDes(formule);
@@ -542,6 +589,12 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       }
       jets.push({ quoi: 'dégâts', cible: c.id, des, total: base });
       degatsSur(e, indice, c, i, base, des);
+      return;
+    }
+    if (e.type === 'jetsReserves') {
+      const valeurs = Array.from({ length: l.nombreDeDes ?? 0 }, () => lancerDes(e.des, alea).total);
+      jets.push({ quoi: `${action.nom} : dés tirés d’avance`, des: valeurs, total: valeurs.length });
+      changements.push({ type: 'jetsReserves', cible: c.id, valeurs });
       return;
     }
     if (e.type === 'invocation') {
@@ -651,7 +704,7 @@ function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () =>
       out.push({ type: 'pvTemp', cible, montant: lancerDes(e.des, alea).total + (e.plusMod ? modMagie : 0) });
       return;
     case 'etat':
-      out.push({ type: 'etat', cible, etat: e.etat, duree: e.duree });
+      out.push({ type: 'etat', cible, etat: e.etat, duree: e.duree, ...(e.charges ? { charges: e.charges } : {}) });
       return;
     case 'retraitEtat':
       out.push({ type: 'retraitEtat', cible, etats: e.etats, nombre: e.nombre });
@@ -682,6 +735,8 @@ function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () =>
       return;
     case 'narratif':
       out.push({ type: 'narratif', cible, texte: e.texte });
+      return;
+    case 'jetsReserves':
       return;
   }
 }

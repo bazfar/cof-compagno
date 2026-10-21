@@ -102,6 +102,8 @@ export type Sauvegarde = z.infer<typeof schemaSauvegarde>;
 export const schemaDuree = z.union([
   z.strictObject({ rounds: z.number().int().min(1).max(20) }),
   z.enum(['prochainTour', 'finCombat', 'scene', 'permanente']),
+  /** Durée tirée au lancement, un seul jet par sort (Pierre en chair : 1d4 + CHA rounds, v1 ; lot L4.5). */
+  z.strictObject({ des: schemaFormuleDes, plusModMagie: z.boolean().default(false) }),
 ]);
 export type Duree = z.infer<typeof schemaDuree>;
 
@@ -155,6 +157,8 @@ export const schemaCibleBonus = z.enum([
 const champsCommuns = {
   vise: schemaVise.default('cible'),
   condition: schemaCondition.optional(),
+  /** Boss et démons D5 n'y sont pas soumis (Sommeil, Ordre, Domination : validé ; lot L4.5). */
+  saufBoss: z.literal(true).optional(),
 };
 
 const schemaEffetDegats = z.strictObject({
@@ -196,6 +200,10 @@ const schemaEffetEtat = z.strictObject({
   /** Identifiant d'un état du catalogue (L4.2). */
   etat: schemaId,
   duree: schemaDuree,
+  /** Usages avant que l'état tombe (Double : la prochaine attaque, puis deux au palier II ; lot L4.5). */
+  charges: z.number().int().min(1).max(5).optional(),
+  /** Seulement si la cible a au plus `parNiveau` × niveau du lanceur en PV actuels (Sommeil : 4 × niveau, validé). */
+  siPvAuPlus: z.strictObject({ parNiveau: z.number().int().min(1).max(10) }).optional(),
   ...champsCommuns,
 });
 
@@ -249,7 +257,7 @@ const schemaEffetInvocation = z.strictObject({
 const schemaEffetTerrain = z.strictObject({
   type: z.literal('terrain'),
   /** `bloquant` : bloque le passage et la vue, couverture totale (Rempart) ; `sanctuaire` : rien d'extérieur ne cible ceux qui sont dedans. */
-  nature: z.enum(['difficile', 'glissant', 'bloquant', 'couverture', 'enflamme', 'sanctuaire']),
+  nature: z.enum(['difficile', 'glissant', 'bloquant', 'couverture', 'enflamme', 'sanctuaire', 'illusion']),
   duree: schemaDuree,
   ...champsCommuns,
 });
@@ -274,6 +282,18 @@ const schemaEffetReductionDegats = z.strictObject({
   ...champsCommuns,
 });
 
+/**
+ * Dés lancés d'avance (Prophétie, lot L4.5) : le lanceur en choisit le
+ * nombre au lancement, chacun coûte `ppParDe` ; il attribue ensuite chaque
+ * résultat à une créature, qui le prend comme valeur de son prochain jet.
+ */
+const schemaEffetJetsReserves = z.strictObject({
+  type: z.literal('jetsReserves'),
+  des: schemaFormuleDes,
+  ppParDe: z.number().int().min(1).max(10),
+  ...champsCommuns,
+});
+
 /** Effet d'arbitrage, assumé : l'app l'affiche, le MJ l'applique. */
 const schemaEffetNarratif = z.strictObject({
   type: z.literal('narratif'),
@@ -295,6 +315,7 @@ export const schemaEffet = z.discriminatedUnion('type', [
   schemaEffetDissipation,
   schemaEffetReductionDegats,
   schemaEffetSoinComplet,
+  schemaEffetJetsReserves,
   schemaEffetNarratif,
 ]);
 export type Effet = z.infer<typeof schemaEffet>;
@@ -454,6 +475,8 @@ export const schemaAction = z
     limite: schemaLimite.default('volonte'),
     /** Coût fixe. Absent pour un verbe (formule) et un sort mineur (0). */
     cout: z.array(schemaCout).optional(),
+    /** L'attaque vise la DEF sans armure (Pique mentale, lot L4.5). */
+    ignoreArmure: z.literal(true).optional(),
     /** Le lanceur sacrifie des PV en plus du coût (Saignée : la moitié de ses PV actuels). */
     sacrifice: z.literal('moitiePvActuels').optional(),
     /** Exige un élément au moins à ce rang (Serviteur : Initié ; Cataclysme : Maître). */

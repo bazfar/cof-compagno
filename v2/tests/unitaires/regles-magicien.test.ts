@@ -62,8 +62,8 @@ describe('voies', () => {
   it('Voie de l’école : un verbe par rang ; Adepte au rang 1, Maître au rang 4 (validé)', () => {
     const v = voieParId.get('magicien.ecole')!;
     expect(v.rangs.every((r) => r.regles.some((x) => x.type === 'verbeDeLEcole'))).toBe(true);
-    expect(v.rangs[0]!.regles).toContainEqual({ type: 'maitriseEcole', niveau: 'adepte' });
-    expect(v.rangs[3]!.regles).toContainEqual({ type: 'maitriseEcole', niveau: 'maitre' });
+    expect(v.rangs[0]!.regles).toContainEqual({ type: 'maitriseEcole', quelle: 'choisie', niveau: 'adepte' });
+    expect(v.rangs[3]!.regles).toContainEqual({ type: 'maitriseEcole', quelle: 'choisie', niveau: 'maitre' });
   });
 
   it('Voie élémentaire : départ Adepte, second Initié, un Maître, Résonance 1x/combat, Cataclysme', () => {
@@ -119,6 +119,7 @@ describe('profil magique', () => {
     expect(profilMagique(magicien, c, regles)).toEqual({
       reservePP: 12,
       maitriseEcole: 'adepte',
+      maitriseSecondeEcole: null,
       elements: { feu: 'adepte' },
       verbes: [{ id: 'evocation.missile', palier: 'I' }],
       actions: [],

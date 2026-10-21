@@ -21,6 +21,9 @@ import type { EtatSaisi } from '../lib/schemas/etats';
  *   - Ralenti : déplacement divisé par deux, arrondi au supérieur (8a).
  *
  * Désarmé (lot L4.4b2, Main du mage au palier III) reprend la v1.
+ * Leurré, Doublé et Dominé (lot L4.5) viennent des verbes de l'Envoûteur ;
+ * Doublé fait rater une attaque par charge. Métamorphosé et Présage
+ * viennent de la Transmutation et de la Prescience.
  *
  * Les formes et avatars de la v1 (Ours, Avatar du Vide…) ne sont plus des
  * états : ils deviennent des actions de leur classe.
@@ -72,6 +75,41 @@ export const ETATS: EtatSaisi[] = [
     agit: 'non',
     deplacement: 'nul',
     rompuPar: ['degatsSubis'],
+  },
+  {
+    id: 'leurre',
+    nom: 'Leurré',
+    categorie: 'controle',
+    regle: 'Doit attaquer le leurre de l’Envoûteur ; l’attaque ne touche rien de réel.',
+    parSource: true,
+  },
+  {
+    id: 'leurre_eclatant',
+    nom: 'Leurré (éclatant)',
+    categorie: 'controle',
+    regle: 'Doit attaquer le leurre ; quand il le frappe, le leurre éclate en lumière et Aveugle 1 round tout ce qui l’entoure (rayon 1).',
+    parSource: true,
+  },
+  {
+    id: 'metamorphose',
+    nom: 'Métamorphosé',
+    categorie: 'controle',
+    regle: 'Changé en petit animal inoffensif : il se déplace, mais n’attaque pas et ne lance rien.',
+    agit: 'deplacementSeul',
+  },
+  {
+    id: 'presage',
+    nom: 'Présage',
+    categorie: 'malus',
+    regle: 'Son prochain jet d’attaque se fait avec le désavantage : l’Envoûteur l’a vu venir.',
+    desavantage: ['prochaineAttaque'],
+  },
+  {
+    id: 'domine',
+    nom: 'Dominé',
+    categorie: 'controle',
+    regle: 'L’Envoûteur joue son prochain tour.',
+    parSource: true,
   },
   {
     id: 'desarme',
@@ -193,6 +231,13 @@ export const ETATS: EtatSaisi[] = [
     regle: 'Les attaques contre lui se font avec le désavantage ; l’état tombe quand il attaque. Déclaré par le joueur, validé par le MJ.',
     desavantage: ['attaquesContre'],
     rompuPar: ['sesAttaques'],
+  },
+  {
+    id: 'double',
+    nom: 'Doublé',
+    categorie: 'perception',
+    regle: 'Une illusion le double : chaque charge fait rater une attaque contre lui.',
+    annuleAttaquesContre: true,
   },
   {
     id: 'invisible',
