@@ -820,6 +820,30 @@
         <mxCell id="l36d" parent="1" source="cUi" target="btAct" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="titre-l41" parent="1" style="text;html=1;align=left;fontSize=13;fontStyle=1;" value="Moteur d’effets (L4.1) — la refonte écrite à la main : actions typées, paliers en deltas, coût et DD en fonctions pures" vertex="1">
+          <mxGeometry height="24" width="1400" x="40" y="4480" as="geometry" />
+        </mxCell>
+        <mxCell id="eSchema" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/schemas/effets.ts  (L4.1)&lt;/b&gt;&lt;hr&gt;Action : nature, école, rang, étiquettes, action, limite,&lt;br&gt;ciblage, zone, résolution, persistance, effets typés,&lt;br&gt;paliers II/III en deltas, élément, hors combat, manuel" vertex="1">
+          <mxGeometry height="100" width="380" x="40" y="4520" as="geometry" />
+        </mxCell>
+        <mxCell id="eRegles" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b&gt;src/regles/  (écrit à la main)&lt;/b&gt;&lt;hr&gt;index.ts : actions validées au chargement, par id&lt;br&gt;ecoles/evocation.ts : Missile, Choc, Rayon, Vortex, Nova" vertex="1">
+          <mxGeometry height="100" width="380" x="480" y="4520" as="geometry" />
+        </mxCell>
+        <mxCell id="ePaliers" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/effets/paliers.ts&lt;/b&gt;&lt;hr&gt;rangDeblocage, palierAtteint (voie / grimoire),&lt;br&gt;actionAuPalier (deltas revalidés), horsCombatAuPalier" vertex="1">
+          <mxGeometry height="100" width="380" x="920" y="4520" as="geometry" />
+        </mxCell>
+        <mxCell id="eCout" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;lib/effets/cout.ts&lt;/b&gt;&lt;hr&gt;coutSort : base + palier + élément + combinaison&lt;br&gt;+ surcharge + maîtrise d’école, plancher 1, terme par terme ;&lt;br&gt;coutHorsCombat, ddSort, seuilEchec, regleCombinaison" vertex="1">
+          <mxGeometry height="100" width="400" x="1360" y="4520" as="geometry" />
+        </mxCell>
+        <mxCell id="e41a" parent="1" source="eRegles" target="eSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e41b" parent="1" source="ePaliers" target="eSchema" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e41c" parent="1" source="eCout" target="ePaliers" style="endArrow=open;dashed=1;html=1;" value="" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
 </root>
     </mxGraphModel>
   </diagram>
