@@ -159,6 +159,8 @@ const champsCommuns = {
   condition: schemaCondition.optional(),
   /** Boss et démons D5 n'y sont pas soumis (Sommeil, Ordre, Domination : validé ; lot L4.5). */
   saufBoss: z.literal(true).optional(),
+  /** « Sinon » : seulement si l'effet d'index donné n'a pas pris sur cette cible (Bannissement, lot L4.6). */
+  sinon: z.number().int().min(0).max(20).optional(),
 };
 
 const schemaEffetDegats = z.strictObject({
@@ -178,6 +180,8 @@ const schemaEffetDegats = z.strictObject({
    * 1 à 4, 1d8 de 5 à 8, 1d10 de 9 à 12 (lib/effets/resolution.ts, deMineur).
    */
   progression: z.literal('mineur').optional(),
+  /** Dégâts doublés contre les démons et morts-vivants (Flamme sacrée, lot L4.6). */
+  doubleContre: z.literal('demonsMortsVivants').optional(),
   ...champsCommuns,
 });
 
@@ -185,6 +189,8 @@ const schemaEffetSoin = z.strictObject({
   type: z.literal('soin'),
   des: schemaFormuleDes,
   plusMod: z.boolean().default(false),
+  /** Chaîne (lot L4.6) : les cibles après la première reçoivent la moitié du même jet. */
+  enChaine: z.literal('moitie').optional(),
   ...champsCommuns,
 });
 
@@ -202,8 +208,10 @@ const schemaEffetEtat = z.strictObject({
   duree: schemaDuree,
   /** Usages avant que l'état tombe (Double : la prochaine attaque, puis deux au palier II ; lot L4.5). */
   charges: z.number().int().min(1).max(5).optional(),
-  /** Seulement si la cible a au plus `parNiveau` × niveau du lanceur en PV actuels (Sommeil : 4 × niveau, validé). */
+  /** Seulement si la cible a au plus `parNiveau` × niveau du lanceur en PV actuels (Sommeil : 4 × niveau ; Bannissement : 5 × niveau). */
   siPvAuPlus: z.strictObject({ parNiveau: z.number().int().min(1).max(10) }).optional(),
+  /** Bonus des alliés du lanceur contre le porteur (Marque de l'Œil de l'inquisiteur, lot L4.6). */
+  contre: z.array(z.strictObject({ cible: z.enum(['attaque', 'degats']), valeur: z.number().int().min(-10).max(10) })).optional(),
   ...champsCommuns,
 });
 
@@ -226,9 +234,20 @@ const schemaEffetDeplacement = z.strictObject({
 const schemaEffetBonus = z.strictObject({
   type: z.literal('bonus'),
   cible: schemaCibleBonus,
-  /** Signé : un malus est négatif. Formule de dés autorisée (« 1d4 »). */
-  valeur: z.union([z.number().int().min(-20).max(20), schemaFormuleDes]),
+  /** Signé : un malus est négatif. Formule de dés autorisée (« 1d4 ») ; `modMagie` : le mod de la caractéristique de magie (Vêtements sacrés, lot L4.6). */
+  valeur: z.union([z.number().int().min(-20).max(20), schemaFormuleDes, z.literal('modMagie')]),
   duree: schemaDuree,
+  /** Dégâts en plus : leur type (Châtiment : sacrés, lot L4.6). */
+  typeDegats: schemaTypeDegats.optional(),
+  /** Le bonus tombe après usage (Châtiment : la prochaine frappe au contact). */
+  consomme: z.literal('prochaineFrappe').optional(),
+  ...champsCommuns,
+});
+
+/** Les PV de la cible ne descendent pas sous `valeur` (Protection contre la mort, lot L4.6). */
+const schemaEffetPlancherPv = z.strictObject({
+  type: z.literal('plancherPv'),
+  valeur: z.number().int().min(1).max(10),
   ...champsCommuns,
 });
 
@@ -257,7 +276,7 @@ const schemaEffetInvocation = z.strictObject({
 const schemaEffetTerrain = z.strictObject({
   type: z.literal('terrain'),
   /** `bloquant` : bloque le passage et la vue, couverture totale (Rempart) ; `sanctuaire` : rien d'extérieur ne cible ceux qui sont dedans. */
-  nature: z.enum(['difficile', 'glissant', 'bloquant', 'couverture', 'enflamme', 'sanctuaire', 'illusion']),
+  nature: z.enum(['difficile', 'glissant', 'bloquant', 'couverture', 'enflamme', 'sanctuaire', 'illusion', 'sanctifie']),
   duree: schemaDuree,
   ...champsCommuns,
 });
@@ -316,6 +335,7 @@ export const schemaEffet = z.discriminatedUnion('type', [
   schemaEffetReductionDegats,
   schemaEffetSoinComplet,
   schemaEffetJetsReserves,
+  schemaEffetPlancherPv,
   schemaEffetNarratif,
 ]);
 export type Effet = z.infer<typeof schemaEffet>;
@@ -454,6 +474,8 @@ export const schemaDeltaPalier = z.strictObject({
     .optional(),
   effets: z.record(z.string().regex(/^\d+$/), z.record(z.string(), z.unknown())).optional(),
   ajoute: z.array(schemaEffet).optional(),
+  /** Remplace tous les effets (une variante qui fait autre chose : Calme les esprits, lot L4.6). */
+  remplaceEffets: z.array(schemaEffet).min(1).optional(),
   element: schemaElementAutorise.optional(),
 });
 export type DeltaPalier = z.infer<typeof schemaDeltaPalier>;
@@ -492,7 +514,7 @@ export const schemaAction = z
      * Variantes d'un palier : à ce palier, le lanceur choisit ce delta à la
      * place de celui du palier (Bouclier III : +3 DEF, ou deux cibles).
      */
-    variantes: z.array(z.strictObject({ id: schemaId, nom: z.string().min(1), palier: z.enum(['II', 'III']), delta: schemaDeltaPalier })).default([]),
+    variantes: z.array(z.strictObject({ id: schemaId, nom: z.string().min(1), palier: z.enum(['I', 'II', 'III']), delta: schemaDeltaPalier })).default([]),
     element: schemaElementAutorise.nullable().default(null),
     horsCombat: schemaHorsCombat.nullable().default(null),
     /** Action laissée au MJ, avec sa raison : listée, jamais cachée. */
@@ -512,7 +534,7 @@ export const schemaAction = z
     if (a.nature !== 'verbe' && a.nature !== 'mineur' && a.rang === 0) ko('seul un sort mineur est de rang 0', ['rang']);
     if (a.paliers.III && !a.paliers.II) ko('un palier III suppose un palier II', ['paliers']);
     a.variantes.forEach((v, i) => {
-      if (!a.paliers[v.palier]) ko(`une variante du palier ${v.palier} suppose ce palier`, ['variantes', i, 'palier']);
+      if (v.palier !== 'I' && !a.paliers[v.palier]) ko(`une variante du palier ${v.palier} suppose ce palier`, ['variantes', i, 'palier']);
     });
     if (new Set(a.variantes.map((v) => v.id)).size !== a.variantes.length) ko('deux variantes ont le même identifiant', ['variantes']);
     if ((a.nature === 'reaction' || a.action === 'reaction') && !a.declencheur) ko('une réaction a un déclencheur', ['declencheur']);
@@ -527,6 +549,7 @@ export const schemaAction = z
     if (a.persistance.type === 'concentration' && a.persistance.duree === undefined && a.persistance.maintien === undefined)
       ko('une concentration a une durée ou un coût de maintien', ['persistance']);
     a.effets.forEach((e, i) => {
+      if (e.sinon !== undefined && e.sinon >= i) ko('« sinon » renvoie à un effet qui le précède', ['effets', i, 'sinon']);
       if (e.vise === 'zone' && !a.zone) ko('un effet sur la zone demande une zone', ['effets', i, 'vise']);
       if (e.type === 'degats' && e.attenuation && !(typeof a.ciblage.portee === 'number' && a.ciblage.portee > e.attenuation.pleinsJusqua))
         ko('une atténuation demande une portée en cases au-delà des dégâts pleins', ['effets', i, 'attenuation']);

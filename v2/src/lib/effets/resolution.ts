@@ -130,6 +130,8 @@ export interface Lancer {
   variante?: string;
   /** Prophétie (lot L4.5) : combien de dés le lanceur tire d'avance. */
   nombreDeDes?: number;
+  /** Boost de Sacré du Prêtre (1 point, un par sort ; lot L4.6), propre au Cercle du verbe. */
+  boost?: BoostSacre;
   voie?: ModificateursDeVoie;
   surcharge?: boolean;
   /** Maîtrise de l'école du verbe ; Adepte par défaut. */
@@ -156,12 +158,13 @@ export type Changement =
   | { type: 'degats'; cible: string; montant: number; typeDegats: string; calcul: string }
   | { type: 'soin'; cible: string; montant: number }
   | { type: 'pvTemp'; cible: string; montant: number }
-  | { type: 'etat'; cible: string; etat: string; duree: Duree; charges?: number }
+  | { type: 'etat'; cible: string; etat: string; duree: Duree; charges?: number; contre?: { cible: 'attaque' | 'degats'; valeur: number }[] }
   | { type: 'chargeConsommee'; cible: string; etat: string }
   | { type: 'jetsReserves'; cible: string; valeurs: number[] }
   | { type: 'retraitEtat'; cible: string; etats: readonly string[]; nombre: number }
   | { type: 'deplacement'; cible: string; sens: 'repousse' | 'attire' | 'teleporte'; cases: number }
-  | { type: 'bonus'; cible: string; sur: string; valeur: number | string; duree: Duree }
+  | { type: 'bonus'; cible: string; sur: string; valeur: number | string; duree: Duree; typeDegats?: string; consomme?: 'prochaineFrappe' }
+  | { type: 'plancherPv'; cible: string; valeur: number }
   | { type: 'ressource'; cible: string; ressource: string; montant: number }
   | { type: 'invocation'; creature: string; nombre: number; duree: Duree; element?: Element }
   | { type: 'terrain'; nature: string; duree: Duree }
@@ -185,7 +188,7 @@ export type Resultat =
       ok: true;
       issue: 'reussi' | 'echecEcole' | 'derapage';
       palierLance: Palier;
-      cout: { pp: number; pv: number };
+      cout: { pp: number; pv: number; sacre?: number };
       dd: number;
       jets: JetNote[];
       changements: Changement[];
@@ -286,6 +289,20 @@ export function doublerDes(formule: string): string {
 /** Zone : un seul jet de dégâts pour toutes les cibles (décision 2a du 21/10/2026). */
 const UN_JET_PAR_ZONE = true;
 
+/**
+ * Boosts de Sacré (doc de cadre, « Prêtre — Points de Sacré », validé) :
+ * Guérison → un 2ᵉ allié ou retirer un état ; Foi → pas de sauvegarde ou +1
+ * round ; Bannissement → double effet contre démons et morts-vivants ;
+ * Jugement → ignore les résistances ou Marque partagée par le groupe.
+ */
+export const BOOSTS_PAR_CERCLE = {
+  guerison: ['secondAllie', 'retraitEtat'],
+  foi: ['sansSauvegarde', 'plusUnRound'],
+  bannissement: ['doubleContreDemons'],
+  jugement: ['ignoreResistances', 'marquePartagee'],
+} as const;
+export type BoostSacre = (typeof BOOSTS_PAR_CERCLE)[keyof typeof BOOSTS_PAR_CERCLE][number];
+
 const FACTEUR_DEGRESSIF = (anneau: number) => (anneau <= 0 ? 1 : anneau === 1 ? 0.75 : 0.5);
 
 /** Affaibli (décisions 1b et 2b du 21/10/2026) : −25 % arrondis au plus proche, jamais sous 1. */
@@ -321,11 +338,15 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
         ecole: l.ecole,
       });
   if (!cout.ok) return cout;
-  if (l.variante !== undefined && !l.action.variantes.some((v) => v.id === l.variante && v.palier === cout.palierLance))
+  if (l.variante !== undefined && !l.action.variantes.some((v) => v.id === l.variante && (v.palier === cout.palierLance || v.palier === 'I')))
     return { ok: false, raison: `${l.action.id} n'a pas de variante ${l.variante} au palier ${cout.palierLance}` };
   let action = actionAuPalier(l.action, cout.palierLance, l.variante);
   const reserve = action.effets.find((e) => e.type === 'jetsReserves');
   if (reserve && (!l.nombreDeDes || l.nombreDeDes < 1 || !Number.isInteger(l.nombreDeDes))) return { ok: false, raison: `${action.id} : combien de dés ?` };
+  if (l.boost) {
+    const permis: readonly string[] = (BOOSTS_PAR_CERCLE as Record<string, readonly string[]>)[action.ecole ?? ''] ?? [];
+    if (!permis.includes(l.boost)) return { ok: false, raison: `le boost ${l.boost} ne s’applique pas à ${action.nom}` };
+  }
   if (action.elementMin) {
     // Serviteur : un élément au moins Initié (validé) ; Cataclysme : un élément Maître.
     if (!l.element) return { ok: false, raison: `${action.id} demande un élément` };
@@ -359,7 +380,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     ok: true,
     issue,
     palierLance: cout.palierLance,
-    cout: { pp, pv: pvPaye + pvEnPlus },
+    cout: { pp, pv: pvPaye + pvEnPlus, ...(l.boost ? { sacre: 1 } : {}) },
     dd,
     jets,
     changements,
@@ -398,6 +419,12 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
 
   // Durées tirées au lancement (Pierre en chair : 1d4 + CHA), un seul jet par sort.
   action = avecDureesTirees(action, alea, l.lanceur.modMagie, jets);
+  // Boost de Foi : +1 round.
+  if (l.boost === 'plusUnRound')
+    action = {
+      ...action,
+      effets: action.effets.map((e) => ('duree' in e && typeof e.duree === 'object' && 'rounds' in e.duree ? { ...e, duree: { rounds: e.duree.rounds + 1 } } : e)) as Action['effets'],
+    };
 
   // Le lanceur qui attaque perd Dissimulé, Invisible ; Déséquilibré tombe après son jet d'attaque.
   const offensif = action.ciblage.camp === 'ennemi' || action.effets.some((e) => e.type === 'degats');
@@ -448,6 +475,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     }
     // Un allié consentant accepte l'effet sans sauvegarder (Portail, lot L4.4a).
     if (sauvegarde && action.resolution.consentant && memeCamp(c)) return { sauveReussie: false };
+    // Boost de Foi : pas de sauvegarde.
+    if (sauvegarde && l.boost === 'sansSauvegarde') return { sauveReussie: false };
     if (sauvegarde) return { sauveReussie: sauve(c, sauvegarde, `sauvegarde de ${sauvegarde}`) };
     return {};
   };
@@ -504,6 +533,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   let baseRebond: number | null = null;
   let deSang: { des: number[]; total: number } | null = null;
   const desSupplementaires = new Map<string, { des: number[]; total: number }>();
+  const pris = new Set<string>();
+  const chaines = new Map<number, { total: number; vues: number }>();
   let premierJetFait = false;
 
   const degatsSur = (e: Extract<Effet, { type: 'degats' }>, indice: number, c: CibleEnJeu, i: Issue, base: number, deJet: number[]) => {
@@ -523,6 +554,14 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
         facteurs.push(f);
         calcul.push(`dégressif ×${f}`);
       }
+    }
+    if (e.doubleContre === 'demonsMortsVivants' && c.demonOuMortVivant) {
+      facteurs.push(2);
+      calcul.push('démon ou mort-vivant ×2');
+    }
+    if (l.boost === 'doubleContreDemons' && c.demonOuMortVivant) {
+      facteurs.push(2);
+      calcul.push('boost de Sacré ×2');
     }
     if (elementActif?.sort.modifie.contreMetal && c.armureMetal) {
       facteurs.push(elementActif.sort.modifie.contreMetal);
@@ -549,6 +588,34 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     if (e.type === 'etat' && e.siPvAuPlus) {
       const seuil = e.siPvAuPlus.parNiveau * (l.lanceur.niveau ?? 1);
       if (c.pv === undefined || c.pv > seuil) return;
+    }
+    // « Sinon » (Bannissement) : seulement si l'effet visé n'a pas pris sur cette cible.
+    if (e.sinon !== undefined && pris.has(`${e.sinon}|${c.id}`)) return;
+    pris.add(`${indice}|${c.id}`);
+    if ((e.type === 'soin' || e.type === 'pvTemp') && e.vise === 'zone' && UN_JET_PAR_ZONE) {
+      // Zone : un seul jet de soin pour tous, comme pour les dégâts (2a du 21/10/2026).
+      if (!jetsZone.has(indice)) {
+        const j = lancerDes(e.des, alea);
+        jets.push({ quoi: e.type === 'soin' ? 'soin' : 'PV temporaires', des: j.des, total: j.total });
+        jetsZone.set(indice, j);
+      }
+      changements.push({ type: e.type, cible: c.id, montant: jetsZone.get(indice)!.total + (e.plusMod ? l.lanceur.modMagie : 0) });
+      return;
+    }
+    if (e.type === 'soin' && e.enChaine) {
+      // Chaîne de vie : un seul jet ; la première cible le reçoit entier, les suivantes pour moitié.
+      if (!chaines.has(indice)) {
+        const j = lancerDes(e.des, alea);
+        jets.push({ quoi: 'soin', des: j.des, total: j.total });
+        chaines.set(indice, { total: j.total + (e.plusMod ? l.lanceur.modMagie : 0), vues: 0 });
+      }
+      const ch = chaines.get(indice)!;
+      changements.push({ type: 'soin', cible: c.id, montant: ch.vues++ === 0 ? ch.total : Math.floor(ch.total / 2) });
+      return;
+    }
+    if (e.type === 'etat' && l.boost === 'doubleContreDemons' && c.demonOuMortVivant && typeof e.duree === 'object' && 'rounds' in e.duree) {
+      appliquerSimple({ ...e, duree: { rounds: e.duree.rounds * 2 } }, c.id, changements, alea, l.lanceur.modMagie);
+      return;
     }
     if (e.type === 'degats') {
       let formule = e.progression === 'mineur' ? deMineur(l.lanceur.niveau ?? 1, v.virtuose?.crans ?? 0) : e.des;
@@ -634,6 +701,11 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     ciblesPour(e).forEach((c, p) => appliquer(e, indice, c, issuePour(c, p)));
   });
 
+  // Boosts de Sacré sans effet propre au verbe.
+  if (l.boost === 'retraitEtat') for (const c of l.cibles) changements.push({ type: 'retraitEtat', cible: c.id, etats: [], nombre: 1 });
+  if (l.boost === 'ignoreResistances') changements.push({ type: 'narratif', cible: l.lanceur.id, texte: 'Boost de Sacré : ce sort ignore les résistances.' });
+  if (l.boost === 'marquePartagee') changements.push({ type: 'narratif', cible: l.lanceur.id, texte: 'Boost de Sacré : le bonus de la Marque vaut aussi pour les sorts des alliés.' });
+
   // Effet générique de l'élément.
   if (elementActif && action.element) {
     const surZone = action.zone !== null && action.effets.some((e) => e.vise === 'zone');
@@ -704,7 +776,7 @@ function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () =>
       out.push({ type: 'pvTemp', cible, montant: lancerDes(e.des, alea).total + (e.plusMod ? modMagie : 0) });
       return;
     case 'etat':
-      out.push({ type: 'etat', cible, etat: e.etat, duree: e.duree, ...(e.charges ? { charges: e.charges } : {}) });
+      out.push({ type: 'etat', cible, etat: e.etat, duree: e.duree, ...(e.charges ? { charges: e.charges } : {}), ...(e.contre ? { contre: e.contre } : {}) });
       return;
     case 'retraitEtat':
       out.push({ type: 'retraitEtat', cible, etats: e.etats, nombre: e.nombre });
@@ -713,7 +785,7 @@ function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () =>
       out.push({ type: 'deplacement', cible, sens: e.sens, cases: e.cases });
       return;
     case 'bonus':
-      out.push({ type: 'bonus', cible, sur: e.cible, valeur: e.valeur, duree: e.duree });
+      out.push({ type: 'bonus', cible, sur: e.cible, valeur: e.valeur === 'modMagie' ? modMagie : e.valeur, duree: e.duree, ...(e.typeDegats ? { typeDegats: e.typeDegats } : {}), ...(e.consomme ? { consomme: e.consomme } : {}) });
       return;
     case 'ressource':
       out.push({ type: 'ressource', cible, ressource: e.ressource, montant: e.montant });
@@ -737,6 +809,9 @@ function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () =>
       out.push({ type: 'narratif', cible, texte: e.texte });
       return;
     case 'jetsReserves':
+      return;
+    case 'plancherPv':
+      out.push({ type: 'plancherPv', cible, valeur: e.valeur });
       return;
   }
 }

@@ -118,6 +118,7 @@ describe('profil magique', () => {
     expect(verifierChoix(magicien, c, regles)).toEqual([]);
     expect(profilMagique(magicien, c, regles)).toEqual({
       reservePP: 12,
+      reserveSacre: 0,
       maitriseEcole: 'adepte',
       maitriseSecondeEcole: null,
       elements: { feu: 'adepte' },

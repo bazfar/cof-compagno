@@ -46,6 +46,7 @@ export function palierSuivant(action: Pick<Action, 'paliers'>, palier: Palier): 
 }
 
 function appliquerDelta(a: Record<string, unknown>, d: DeltaPalier, id: string, palier: Palier): Record<string, unknown> {
+  // `remplaceEffets` : la liste repart de zéro, puis les patchs et ajouts s'y appliquent.
   const r: Record<string, unknown> = { ...a };
   const fusion = (cle: 'ciblage' | 'resolution' | 'persistance', valeur: object | undefined) => {
     if (valeur) r[cle] = { ...(a[cle] as object), ...valeur };
@@ -57,7 +58,7 @@ function appliquerDelta(a: Record<string, unknown>, d: DeltaPalier, id: string, 
   else if (d.zone) r.zone = { ...((a.zone as object | null) ?? {}), ...d.zone };
   if (d.element) r.element = d.element;
   if (d.etiquettes) r.etiquettes = d.etiquettes;
-  const effets = [...(a.effets as Record<string, unknown>[])];
+  const effets = [...((d.remplaceEffets ?? a.effets) as Record<string, unknown>[])];
   for (const [i, patch] of Object.entries(d.effets ?? {})) {
     const n = Number(i);
     const effet = effets[n];
@@ -77,9 +78,12 @@ function appliquerDelta(a: Record<string, unknown>, d: DeltaPalier, id: string, 
 export function actionAuPalier(action: Action, palier: Palier, variante?: string): Action {
   if (!paliersDefinis(action).includes(palier)) throw new Error(`${action.id} n'a pas de palier ${palier}`);
   const v = variante === undefined ? undefined : action.variantes.find((x) => x.id === variante);
-  if (variante !== undefined && (!v || v.palier !== palier)) throw new Error(`${action.id} n'a pas de variante ${variante} au palier ${palier}`);
+  if (variante !== undefined && (!v || (v.palier !== palier && v.palier !== 'I'))) throw new Error(`${action.id} n'a pas de variante ${variante} au palier ${palier}`);
   const delta = (p: 'II' | 'III') => (v && v.palier === p ? v.delta : action.paliers[p]!);
   let brut: Record<string, unknown> = { ...action, paliers: {}, variantes: [] };
+  // Une variante du palier I (Calme les esprits, lot L4.6) s'applique dès le palier I, sous les deltas suivants.
+  const vI = action.variantes.find((x) => x.id === variante && x.palier === 'I');
+  if (vI) brut = appliquerDelta(brut, vI.delta, action.id, 'I');
   if (palier !== 'I') brut = appliquerDelta(brut, delta('II'), action.id, 'II');
   if (palier === 'III') brut = appliquerDelta(brut, delta('III'), action.id, 'III');
   return schemaAction.parse(brut);
@@ -87,7 +91,7 @@ export function actionAuPalier(action: Action, palier: Palier, variante?: string
 
 /** Variantes offertes au palier donné. */
 export function variantesAuPalier(action: Pick<Action, 'variantes'>, palier: Palier): { id: string; nom: string }[] {
-  return action.variantes.filter((v) => v.palier === palier).map(({ id, nom }) => ({ id, nom }));
+  return action.variantes.filter((v) => v.palier === palier || v.palier === 'I').map(({ id, nom }) => ({ id, nom }));
 }
 
 /** Texte de l'usage hors combat au palier donné (le dernier défini s'il en a moins). */

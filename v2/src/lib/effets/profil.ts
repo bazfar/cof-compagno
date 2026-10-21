@@ -38,6 +38,8 @@ export interface Regles {
 
 export interface ProfilMagique {
   reservePP: number;
+  /** Réserve de Sacré (Prêtre) ; 0 pour les autres classes. */
+  reserveSacre: number;
   maitriseEcole: Maitrise | null;
   /** Seconde école (4ᵉ voie de l'Envoûteur) : plafonnée à Adepte (validé). */
   maitriseSecondeEcole: Maitrise | null;
@@ -120,11 +122,12 @@ export function verifierChoix(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
 export function profilMagique(classe: ClasseRefonte, c: ChoixDePersonnage, r: Regles): ProfilMagique {
   const p: ProfilMagique = {
     reservePP: classe.reservePP ? classe.reservePP.base + classe.reservePP.parNiveau * c.niveau + classe.reservePP.parMod * c.modMagie : 0,
+    reserveSacre: classe.reserveSacre ? classe.reserveSacre.base + Math.floor(c.niveau / classe.reserveSacre.diviseurNiveau) : 0,
     maitriseEcole: null,
     maitriseSecondeEcole: null,
     elements: c.elementDepart ? { [c.elementDepart]: classe.creation.maitriseElementDepart } : {},
     verbes: [],
-    actions: [],
+    actions: [...classe.actionsDeClasse],
     annuleDerapage: null,
     mineursMax: mineursAutorises(classe, c.niveau),
     mineurs: c.mineurs.map((id) => ({ id, palier: 'I' as Palier })),
@@ -142,7 +145,7 @@ export function profilMagique(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
       for (const regle of rv.regles) {
         switch (regle.type) {
           case 'verbeDeLEcole': {
-            const ecole = regle.quelle === 'seconde' ? secondeEcole(classe, c) : c.ecole;
+            const ecole = regle.ecole ?? (regle.quelle === 'seconde' ? secondeEcole(classe, c) : c.ecole);
             const verbe = [...r.actions.values()].find((a) => a.nature === 'verbe' && a.ecole === ecole && a.rang === rv.rang);
             // Paliers (validé) : selon le rang atteint dans CETTE voie, plafonnés au besoin (seconde école : II).
             if (verbe) p.verbes.push({ id: verbe.id, palier: plafonner(palierAtteint(verbe, rang, true), regle.palierMax) });

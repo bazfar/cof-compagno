@@ -23,7 +23,8 @@ import type { EtatSaisi } from '../lib/schemas/etats';
  * Désarmé (lot L4.4b2, Main du mage au palier III) reprend la v1.
  * Leurré, Doublé et Dominé (lot L4.5) viennent des verbes de l'Envoûteur ;
  * Doublé fait rater une attaque par charge. Métamorphosé et Présage
- * viennent de la Transmutation et de la Prescience.
+ * viennent de la Transmutation et de la Prescience. Commandé, Apaisé et
+ * Banni (lot L4.6) viennent des Cercles du Prêtre ; Apaisé reprend la v1.
  *
  * Les formes et avatars de la v1 (Ours, Avatar du Vide…) ne sont plus des
  * états : ils deviennent des actions de leur classe.
@@ -103,6 +104,28 @@ export const ETATS: EtatSaisi[] = [
     categorie: 'malus',
     regle: 'Son prochain jet d’attaque se fait avec le désavantage : l’Envoûteur l’a vu venir.',
     desavantage: ['prochaineAttaque'],
+  },
+  {
+    id: 'commande',
+    nom: 'Commandé',
+    categorie: 'controle',
+    regle: 'Exécute le mot du Prêtre : recule, lâche, à genoux.',
+    parSource: true,
+  },
+  {
+    id: 'apaise',
+    nom: 'Apaisé',
+    categorie: 'controle',
+    regle: 'Ne peut pas attaquer, sauf pour se défendre.',
+  },
+  {
+    id: 'banni',
+    nom: 'Banni',
+    categorie: 'controle',
+    regle: 'Renvoyé à la Mer : il quitte le combat.',
+    agit: 'non',
+    deplacement: 'nul',
+    ciblable: false,
   },
   {
     id: 'domine',

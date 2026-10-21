@@ -56,7 +56,13 @@ export const schemaRegleDeVoie = z.discriminatedUnion('type', [
    * l'Envoûteur, lot L4.5) ; `palierMax` plafonne ses paliers (seconde
    * école : pas de palier III, validé).
    */
-  z.strictObject({ type: z.literal('verbeDeLEcole'), quelle: z.enum(['choisie', 'seconde']).default('choisie'), palierMax: z.enum(['I', 'II', 'III']).optional() }),
+  z.strictObject({
+    type: z.literal('verbeDeLEcole'),
+    quelle: z.enum(['choisie', 'seconde']).default('choisie'),
+    /** École fixée par la voie elle-même (les Cercles du Prêtre, lot L4.6) : prime sur `quelle`. */
+    ecole: schemaId.optional(),
+    palierMax: z.enum(['I', 'II', 'III']).optional(),
+  }),
   z.strictObject({ type: z.literal('maitriseEcole'), quelle: z.enum(['choisie', 'seconde']).default('choisie'), niveau: schemaMaitrise }),
   z.strictObject({ type: z.literal('maitriseElement'), quel: z.enum(['depart', 'auChoix']), niveau: schemaMaitrise }),
   z.strictObject({ type: z.literal('secondElement'), niveau: schemaMaitrise }),
@@ -99,6 +105,10 @@ export const schemaClasseRefonte = z.strictObject({
   caracMagie: schemaCarac.optional(),
   /** Réserve de PP = base + parNiveau × niveau + parMod × mod de magie (formule v1 conservée, validé). */
   reservePP: z.strictObject({ base: z.number().int(), parNiveau: z.number().int(), parMod: z.number().int() }).optional(),
+  /** Réserve de Sacré du Prêtre (lot L4.6, validé) : base + niveau / diviseur, arrondi à l'inférieur. */
+  reserveSacre: z.strictObject({ base: z.number().int(), diviseurNiveau: z.number().int().min(1) }).optional(),
+  /** Actions de classe, hors voies (Vêtements sacrés du Prêtre). */
+  actionsDeClasse: z.array(schemaId).default([]),
   /** Voies de la classe, dans l'ordre d'affichage. */
   voies: z.array(schemaId).min(1),
   /** Groupes de voies exclusives : on n'en prend qu'une par groupe (4ᵉ voie du Magicien). */

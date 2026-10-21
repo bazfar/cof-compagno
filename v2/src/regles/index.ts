@@ -5,6 +5,8 @@ import { schemaInvocation, type Invocation } from '../lib/schemas/invocations';
 import { schemaClasseRefonte, schemaVoieRefonte, type ClasseRefonte, type VoieRefonte } from '../lib/schemas/classes';
 import { ACTIONS_ENVOUTEUR, ENVOUTEUR, VOIES_ENVOUTEUR } from './classes/envouteur';
 import { ACTIONS_MAGICIEN, MAGICIEN, VOIES_MAGICIEN } from './classes/magicien';
+import { ACTIONS_PRETRE, PRETRE, VOIES_PRETRE } from './classes/pretre';
+import { BANNISSEMENT, FOI, GUERISON, JUGEMENT } from './ecoles/cercles';
 import { MINEURS } from './mineurs';
 import { ABJURATION } from './ecoles/abjuration';
 import { ENCHANTEMENT } from './ecoles/enchantement';
@@ -42,10 +44,10 @@ export const elementParId: ReadonlyMap<string, FicheElement> = indexer(ELEMENTS_
 
 export const invocationParId: ReadonlyMap<string, Invocation> = indexer(INVOCATIONS, (s) => schemaInvocation.parse(s), 'Invocation');
 
-export const actionParId: ReadonlyMap<string, Action> = indexer([...EVOCATION, ...ABJURATION, ...INVOCATION, ...ILLUSION, ...ENCHANTEMENT, ...MINEURS, ...ACTIONS_MAGICIEN, ...ACTIONS_ENVOUTEUR], (s) => schemaAction.parse(s), 'Action');
+export const actionParId: ReadonlyMap<string, Action> = indexer([...EVOCATION, ...ABJURATION, ...INVOCATION, ...ILLUSION, ...ENCHANTEMENT, ...GUERISON, ...FOI, ...BANNISSEMENT, ...JUGEMENT, ...MINEURS, ...ACTIONS_MAGICIEN, ...ACTIONS_ENVOUTEUR, ...ACTIONS_PRETRE], (s) => schemaAction.parse(s), 'Action');
 
-export const voieParId: ReadonlyMap<string, VoieRefonte> = indexer([...VOIES_MAGICIEN, ...VOIES_ENVOUTEUR], (s) => schemaVoieRefonte.parse(s), 'Voie');
-export const classeParId: ReadonlyMap<string, ClasseRefonte> = indexer([MAGICIEN, ENVOUTEUR], (s) => schemaClasseRefonte.parse(s), 'Classe');
+export const voieParId: ReadonlyMap<string, VoieRefonte> = indexer([...VOIES_MAGICIEN, ...VOIES_ENVOUTEUR, ...VOIES_PRETRE], (s) => schemaVoieRefonte.parse(s), 'Voie');
+export const classeParId: ReadonlyMap<string, ClasseRefonte> = indexer([MAGICIEN, ENVOUTEUR, PRETRE], (s) => schemaClasseRefonte.parse(s), 'Classe');
 export const actions: readonly Action[] = [...actionParId.values()];
 
 /** Identifiants d'états cités par une liste d'effets. */
@@ -114,10 +116,17 @@ export function referencesManquantes(): string[] {
   for (const k of classeParId.values()) {
     for (const v of [...k.voies, ...k.voiesExclusives.flat()]) if (!voieParId.has(v)) manque.push(`voie ${v} (classe ${k.id})`);
     for (const m of k.mineurs.liste) if (actionParId.get(m)?.nature !== 'mineur') manque.push(`sort mineur ${m} (classe ${k.id})`);
+    for (const a of k.actionsDeClasse) if (!actionParId.has(a)) manque.push(`action de classe ${a} (classe ${k.id})`);
     for (const e of k.creation.ecoles)
       if (verbesDeLEcole(e).map((a) => a.rang).join() !== '1,2,3,4,5') manque.push(`les cinq verbes de l'école ${e} (classe ${k.id})`);
   }
-  for (const v of voieParId.values()) for (const r of v.rangs) for (const a of r.actions) if (!actionParId.has(a)) manque.push(`action ${a} (${v.id}, rang ${r.rang})`);
+  for (const v of voieParId.values())
+    for (const r of v.rangs) {
+      for (const a of r.actions) if (!actionParId.has(a)) manque.push(`action ${a} (${v.id}, rang ${r.rang})`);
+      // Une voie qui fixe son école (Cercles du Prêtre) doit trouver le verbe de son rang.
+      for (const x of r.regles)
+        if (x.type === 'verbeDeLEcole' && x.ecole && !verbesDeLEcole(x.ecole).some((a) => a.rang === r.rang)) manque.push(`verbe de rang ${r.rang} de ${x.ecole} (${v.id})`);
+    }
   return manque;
 }
 
