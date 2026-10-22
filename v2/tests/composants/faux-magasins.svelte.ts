@@ -147,9 +147,25 @@ export const magasinsPnj = {
 export const sceneHc = $state({ donnees: null as Record<string, unknown> | null, pret: true, erreur: null as string | null });
 export const sceneHcMj = $state({ donnees: null as { dd: number } | null, pret: true, erreur: null as string | null });
 export const actionsScene = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+/** S3 : capacités du Vécu utilisées dans la scène, questions au MJ. */
+export const utilisationsScene = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+export const questionsMj = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
 
 export const magasinsScenes = {
   suivreSceneHorsCombat: () => ({ etat: sceneHc, arreter: () => {} }),
   suivreSceneHorsCombatMj: () => ({ etat: sceneHcMj, arreter: () => {} }),
   suivreActionsScene: () => ({ etat: actionsScene, arreter: () => {} }),
+  suivreUtilisationsScene: () => ({ etat: utilisationsScene, arreter: () => {} }),
+  suivreQuestionsMj: () => ({ etat: questionsMj, arreter: () => {} }),
+  // Comme la requête du joueur : ses questions seulement.
+  suivreMesQuestions: (_t: string, uid: string) => ({
+    etat: {
+      get elements() {
+        return questionsMj.elements.filter((q) => q.uid === uid);
+      },
+      pret: true,
+      erreur: null,
+    },
+    arreter: () => {},
+  }),
 };

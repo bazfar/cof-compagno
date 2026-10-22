@@ -34,7 +34,7 @@ export async function creerPnj(nom: string, faction: string | null): Promise<str
   if (faction && !factionParId.has(faction)) throw new RefusAttitude(`Faction inconnue : ${faction}.`);
   const id = nouvelIdPnj(nom);
   const maintenant = Date.now();
-  const p = schemaPnj.parse({ nom, faction, lore: null, rencontre: false, cran: null, tendance: null, mensonges: 0, creeLe: maintenant, majLe: maintenant });
+  const p = schemaPnj.parse({ nom, faction, lore: null, rencontre: false, cran: null, tendance: null, mensonges: 0, peuple: false, secrets: [], creeLe: maintenant, majLe: maintenant });
   await setDoc(refPnj(id), p);
   return id;
 }
@@ -97,6 +97,15 @@ export function corrigerAttitudePnj(id: string, delta: 1 | -1, motif: string, se
 export function mensongeDecouvertPnj(id: string, motif: string, seance?: string): Promise<Pnj> {
   if (!motif.trim()) throw new RefusAttitude('Dis comment le mensonge a été découvert.');
   return geste(id, 'mensonge', motif, seance, (p) => decouvrirMensonge(p, Date.now()));
+}
+
+/** Homme du peuple (S3, 2a) : le MJ marque un PNJ « du peuple », ou l'en retire. */
+export async function marquerPeuplePnj(id: string, peuple: boolean): Promise<void> {
+  await runTransaction(db, async (tx) => {
+    const lu = await tx.get(refPnj(id));
+    if (!lu.exists()) throw new RefusAttitude('Ce PNJ n’existe plus.');
+    tx.set(refPnj(id), schemaPnj.parse({ ...schemaPnj.parse(lu.data()), peuple, majLe: Date.now() }));
+  });
 }
 
 /** Le MJ ajuste la réputation du groupe auprès d'une faction (bornée à −10 et au plafond). */

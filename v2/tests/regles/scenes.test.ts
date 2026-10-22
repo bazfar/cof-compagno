@@ -97,3 +97,61 @@ describe('scènes hors combat (S2)', () => {
     await assertSucceeds(pour('carol').collection(actes).get());
   });
 });
+
+describe('Vécu en scène (S3)', () => {
+  it('relance (Mémoire eidétique) : `<tour>-<uid>-r`, pour un échec à soi, scène pas close ; le MJ annule l’original', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(`${actes}/1-alice`).set(action({ resultat: 'echec' }));
+    });
+    await assertFails(pour('alice').doc(`${actes}/1-alice-r`).set(action({ relance: true, resultat: 'reussite' })));
+    await assertFails(pour('alice').doc(`${actes}/1-alice-r`).set(action({ relance: false })));
+    await assertFails(pour('alice').doc(`${actes}/1-alice-r`).set(action({ relance: true, note: 'triche' })));
+    await assertSucceeds(pour('alice').doc(`${actes}/1-alice-r`).set(action({ relance: true, note: null, delta: null, annule: false })));
+    await assertSucceeds(pour('bob').doc(`${actes}/1-alice`).update({ annule: true }));
+    await assertSucceeds(pour('bob').doc(`${actes}/1-alice-r`).update({ resultat: 'reussite', note: 'Mémoire eidétique', delta: { reussites: 1 } }));
+    // Pas de relance d'une réussite, ni pour un autre.
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(`${actes}/2-alice`).set(action({ tour: 2, resultat: 'reussite' }));
+    });
+    await assertFails(pour('alice').doc(`${actes}/2-alice-r`).set(action({ tour: 2, relance: true })));
+    await assertFails(pour('carol').doc(`${actes}/1-carol-r`).set(action({ uid: 'carol', relance: true })));
+  });
+
+  it('une action vierge à la création : ni note, ni delta, ni annulation', async () => {
+    await assertFails(pour('alice').doc(`${actes}/1-alice`).set(action({ note: 'Orateur' })));
+    await assertFails(pour('alice').doc(`${actes}/1-alice`).set(action({ annule: true })));
+    await assertSucceeds(pour('alice').doc(`${actes}/1-alice`).set(action({ option: 'lire', competence: 'Discernement', relance: false, note: null, delta: null, annule: false })));
+  });
+
+  it('capacités du Vécu : un appelé, à son nom, une fois pour un même identifiant', async () => {
+    const u = { uid: 'alice', perso: 'p-magnus', nom: 'Magnus', noeud: 'compagnon-oiseau', tour: 1, creeLe: 1 };
+    const chemin = `${TABLE}/scenesHorsCombat/sh1/utilisations`;
+    await assertFails(pour('alice').doc(`${chemin}/x`).set({ ...u, uid: 'carol' }));
+    await assertFails(pour('carol').doc(`${chemin}/carol-compagnon-oiseau`).set({ ...u, uid: 'carol' }));
+    await assertSucceeds(pour('alice').doc(`${chemin}/alice-compagnon-oiseau`).set(u));
+    await assertFails(pour('alice').doc(`${chemin}/alice-compagnon-oiseau`).set({ ...u, tour: 2 }));
+    await assertSucceeds(pour('carol').collection(chemin).get());
+  });
+
+  it('questions : le joueur pose Savant ou Réseau de rumeurs, lit les siennes seulement ; le MJ répond et pose Lire les gens', async () => {
+    const q = { uid: 'alice', perso: 'p-magnus', nom: 'Magnus', noeud: 'savant', scene: 'sh1', question: 'Qui ?', dd: null, reponse: null, creeLe: 1, reponduLe: null };
+    const chemin = `${TABLE}/questions`;
+    await assertSucceeds(pour('alice').doc(`${chemin}/sh1-alice-savant`).set(q));
+    await assertFails(pour('alice').doc(`${chemin}/a2`).set({ ...q, noeud: 'lire-les-gens' }));
+    await assertFails(pour('alice').doc(`${chemin}/a3`).set({ ...q, reponse: 'Moi' }));
+    await assertFails(pour('alice').doc(`${chemin}/a4`).set({ ...q, uid: 'carol' }));
+    await assertFails(pour('alice').doc(`${chemin}/sh1-alice-savant`).set(q));
+    await assertSucceeds(pour('alice').collection(chemin).where('uid', '==', 'alice').get());
+    await assertFails(pour('carol').doc(`${chemin}/sh1-alice-savant`).get());
+    await assertFails(pour('carol').collection(chemin).get());
+    await assertFails(pour('alice').doc(`${chemin}/sh1-alice-savant`).update({ reponse: 'Moi' }));
+    await assertSucceeds(pour('bob').doc(`${chemin}/sh1-alice-savant`).update({ reponse: 'Les forges de Mornac', reponduLe: 2 }));
+    await assertFails(pour('bob').doc(`${chemin}/sh1-alice-savant`).update({ question: 'Autre' }));
+    await assertSucceeds(pour('bob').doc(`${chemin}/sh1-alice-lire`).set({ ...q, noeud: 'lire-les-gens', question: null, dd: 12 }));
+  });
+
+  it('scène de S3 : peuple, foule, autorité, nœuds relevés, usages', async () => {
+    await assertSucceeds(pour('bob').doc(`${TABLE}/scenesHorsCombat/sh3`).set(scene({ peuple: 1, foule: true, autorite: false, vecus: { alice: ['orateur'] }, usages: { alice: ['langue-d-argent'] } })));
+    await assertFails(pour('bob').doc(`${TABLE}/scenesHorsCombat/sh3`).set(scene({ peuple: 2 })));
+  });
+});

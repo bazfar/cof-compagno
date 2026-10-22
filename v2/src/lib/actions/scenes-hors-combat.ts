@@ -1,12 +1,17 @@
-import { collection, doc, runTransaction, setDoc } from 'firebase/firestore';
+import { collection, doc, FieldPath, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/client';
 import { formuleTest } from '../regles/des';
-import { apresLeTour, contributeurs, idAction, manquePourOuvrir, OPTIONS, pnjApresScene, RefusScene, resoudre } from '../scenes/hors-combat';
+import { noeudsPossedes } from '../fiche/vecu';
+import { aLeNoeud, apresLeTour, contributeurs, defaireJet, idAction, manquePourOuvrir, OPTIONS, pnjApresScene, RefusScene, relancable, resoudre } from '../scenes/hors-combat';
+import { CLE_HORS_SEANCE, dejaUtiliseCetteSeance, NARRATIFS, noeudsEnScene, nomNoeud } from '../scenes/vecu-en-scene';
+import { schemaVecu } from '../schemas/fiche';
 import { schemaGesteAttitude, schemaPnj } from '../schemas/pnj';
 import {
   schemaActionScene,
+  schemaQuestionMj,
   schemaSceneHorsCombat,
   schemaSceneHorsCombatMj,
+  schemaUtilisationVecu,
   type ActionScene,
   type Appele,
   type OptionScene,
@@ -44,6 +49,9 @@ export interface BrouillonScene {
   toleres: number;
   echecsVisibles: boolean;
   marquante: boolean;
+  /** S3 : face à une foule ou un groupe (Orateur, 3a), face à une autorité (Citer le précédent, 5a). */
+  foule: boolean;
+  autorite: boolean;
   appeles: Appele[];
 }
 
@@ -61,12 +69,24 @@ export async function ouvrirScene(b: BrouillonScene, seance?: string): Promise<s
     const enCours = table.get('sceneHorsCombat') as string | null | undefined;
     if (enCours) throw new RefusScene('Une scène est déjà en cours : clos-la d’abord.');
     let depart = null;
+    let duPeuple = false;
     if (b.type === 'social') {
       const lu = await tx.get(refPnj(b.pnj!));
       const p = lu.exists() ? schemaPnj.parse(lu.data()) : null;
       if (!p?.cran) throw new RefusScene('Ce PNJ n’est pas encore rencontré.');
       depart = p.cran;
+      duPeuple = p.peuple;
     }
+    // S3 : les nœuds du Vécu utiles en scène de chaque appelé, relevés sur sa fiche.
+    const vecus: Record<string, string[]> = {};
+    for (const ap of b.appeles) {
+      const f = await tx.get(doc(db, `tables/${session.table}/persos/${ap.perso}`));
+      const v = f.exists() ? schemaVecu.safeParse(f.get('vecu')) : null;
+      const n = v?.success ? noeudsEnScene(noeudsPossedes(v.data)) : [];
+      if (n.length) vecus[ap.uid] = n;
+    }
+    // Homme du peuple (2a) : un cran de plus au départ, un seul, face à un PNJ du peuple.
+    const peuple = duPeuple && Object.values(vecus).some((n) => n.includes('homme-du-peuple')) ? 1 : 0;
     const scene = schemaSceneHorsCombat.parse({
       type: b.type,
       pnj: b.type === 'social' ? b.pnj : null,
@@ -95,6 +115,11 @@ export async function ouvrirScene(b: BrouillonScene, seance?: string): Promise<s
       ...(seance ? { seance } : {}),
       creeLe: Date.now(),
       closeLe: null,
+      peuple,
+      foule: b.foule,
+      autorite: b.autorite,
+      vecus,
+      usages: {},
     });
     tx.set(refScene(id), scene);
     tx.set(refSceneMj(id), schemaSceneHorsCombatMj.parse({ dd: b.dd }));
@@ -138,14 +163,35 @@ export async function agirEnScene(idScene: string, s: SceneHorsCombat, option: O
  * Client du MJ (5a) : résout une action en attente, avec le DD qu'il est
  * seul à lire, puis ouvre le tour suivant si chacun a agi ou passé (7a).
  * Une action passée (sans résultat à calculer) peut seulement faire tourner.
+ * S3 : le Vécu de l'appelé compte (Langue d'argent, Orateur, Crocheter…) ;
+ * Lire les gens réussi laisse au joueur seul une révélation (le DD du
+ * moment), que le MJ complète de l'intention du PNJ ; une relance (8a)
+ * défait l'échec qu'elle remplace.
  */
 export async function resoudreAction(idScene: string, idActe: string): Promise<void> {
   await runTransaction(db, async (tx) => {
     const refActe = doc(db, `${chemin(idScene)}/actions/${idActe}`);
     const [lu, luMj, luActe] = [await tx.get(refScene(idScene)), await tx.get(refSceneMj(idScene)), await tx.get(refActe)];
     if (!lu.exists() || !luMj.exists() || !luActe.exists()) return;
-    const s = schemaSceneHorsCombat.parse(lu.data());
+    let s = schemaSceneHorsCombat.parse(lu.data());
     const a = schemaActionScene.parse(luActe.data());
+    const dd = schemaSceneHorsCombatMj.parse(luMj.data()).dd;
+    if (a.relance) {
+      if (a.resultat !== null || s.statut === 'close') return;
+      const refOrigine = doc(db, `${chemin(idScene)}/actions/${idAction(a.tour, a.uid)}`);
+      const luOrigine = await tx.get(refOrigine);
+      const origine = luOrigine.exists() ? schemaActionScene.parse(luOrigine.data()) : null;
+      if (!origine || !relancable(s, origine)) {
+        tx.update(refActe, { resultat: 'passe', note: 'Relance refusée' });
+        return;
+      }
+      s = defaireJet(s, origine.delta ?? {});
+      const r = resoudre(s, dd, a);
+      tx.update(refOrigine, { annule: true });
+      tx.update(refActe, { resultat: r.resultat, note: r.note ? `Mémoire eidétique, ${r.note}` : 'Mémoire eidétique', delta: r.delta });
+      tx.set(refScene(idScene), schemaSceneHorsCombat.parse(r.scene));
+      return;
+    }
     if (s.statut !== 'ouverte' || a.tour !== s.tour) return;
     const autres = await Promise.all(
       s.appelesUids.filter((u) => u !== a.uid).map(async (u) => {
@@ -156,13 +202,108 @@ export async function resoudreAction(idScene: string, idActe: string): Promise<v
     let apres = s;
     let resultat = a.resultat;
     if (resultat === null) {
-      const r = resoudre(s, schemaSceneHorsCombatMj.parse(luMj.data()).dd, a);
+      const r = resoudre(s, dd, a);
       apres = r.scene;
       resultat = r.resultat;
-      tx.update(refActe, { resultat });
+      tx.update(refActe, { resultat, note: r.note, delta: r.delta });
+      if (r.revelation !== null)
+        tx.set(
+          doc(db, `tables/${session.table}/questions/${idScene}-${a.uid}-lire`),
+          schemaQuestionMj.parse({ uid: a.uid, perso: a.perso, nom: a.nom, noeud: 'lire-les-gens', scene: idScene, question: null, dd: r.revelation, reponse: null, creeLe: Date.now(), reponduLe: null }),
+        );
     }
     apres = apresLeTour(apres, [...autres, { uid: a.uid, resultat }]);
     if (apres !== s) tx.set(refScene(idScene), schemaSceneHorsCombat.parse(apres));
+  });
+}
+
+/** Clé de `usages` de la fiche : la séance en cours, ou hors séance (11a). */
+const cleSeance = (seance: string | undefined) => seance ?? CLE_HORS_SEANCE;
+async function noterUsage(perso: string, noeud: string, seance: string | undefined): Promise<void> {
+  await updateDoc(doc(db, `tables/${session.table}/persos/${perso}`), new FieldPath('usages', noeud), { seance: cleSeance(seance), le: Date.now() });
+}
+
+/**
+ * Mémoire eidétique (8a) : le joueur relance un échec d'INT ou de CHA, une
+ * fois par séance. Le nouveau d20 part au journal ; le client du MJ défait
+ * l'échec et tranche le nouveau jet.
+ */
+export async function relancerEnScene(idScene: string, s: SceneHorsCombat, origine: ActionScene, usages: Record<string, unknown>, seance: string | undefined): Promise<ActionScene> {
+  const moi = s.appeles.find((x) => x.uid === session.uid);
+  if (!moi || origine.uid !== moi.uid) throw new RefusScene('Ce jet n’est pas le tien.');
+  if (!relancable(s, origine)) throw new RefusScene('Ce jet ne peut pas être relancé.');
+  if (dejaUtiliseCetteSeance(usages, 'memoire-eidetique', seance)) throw new RefusScene('Mémoire eidétique a déjà servi cette séance.');
+  const jet = await lancerEtNoter(`Scène : relance (${origine.competence})`.slice(0, 80), formuleTest(origine.bonus), moi.nom);
+  const a = schemaActionScene.parse({ ...origine, de: jet!.des[0]!, resultat: null, relance: true, note: null, delta: null, annule: false, creeLe: Date.now() });
+  await setDoc(doc(db, `${chemin(idScene)}/actions/${idAction(origine.tour, moi.uid)}-r`), a);
+  await noterUsage(moi.perso, 'memoire-eidetique', seance);
+  return a;
+}
+
+/**
+ * « Capacités du Vécu » (10a) : un nœud narratif utilisé pendant la scène,
+ * noté pour le MJ qui le raconte. Un « 1x/scène » ne sert qu'une fois par
+ * scène ; un « 1x/jour », une fois par séance (11a) ; les autres, le MJ juge.
+ */
+export async function utiliserCapacite(idScene: string, s: SceneHorsCombat, noeud: string, usages: Record<string, unknown>): Promise<void> {
+  const moi = s.appeles.find((x) => x.uid === session.uid);
+  const decompte = NARRATIFS[noeud];
+  if (!moi || !decompte || !aLeNoeud(s, moi.uid, noeud)) throw new RefusScene('Tu n’as pas cette capacité dans cette scène.');
+  if (s.statut === 'close') throw new RefusScene('La scène est close.');
+  if (decompte === 'jour' && dejaUtiliseCetteSeance(usages, noeud, s.seance)) throw new RefusScene(`${nomNoeud(noeud)} a déjà servi cette séance.`);
+  const u = schemaUtilisationVecu.parse({ uid: moi.uid, perso: moi.perso, nom: moi.nom, noeud, tour: s.tour, creeLe: Date.now() });
+  const id = decompte === 'scene' ? `${moi.uid}-${noeud}` : `${moi.uid}-${noeud}-${Date.now().toString(36)}`;
+  await setDoc(doc(db, `${chemin(idScene)}/utilisations/${id}`), u);
+  if (decompte === 'jour') await noterUsage(moi.perso, noeud, s.seance);
+}
+
+/**
+ * Une question au MJ (9a) : Savant, une fois par scène, pendant une scène ;
+ * Réseau de rumeurs, une fois par séance, depuis la fiche. Le MJ répond dans
+ * l'app, le joueur seul lit la réponse.
+ */
+export async function poserQuestion(
+  noeud: 'savant' | 'reseau-de-rumeurs',
+  question: string,
+  qui: { perso: string; nom: string; usages: Record<string, unknown>; seance: string | undefined; scene: string | null },
+): Promise<string> {
+  if (!question.trim()) throw new RefusScene('Écris ta question.');
+  if (noeud === 'savant' && !qui.scene) throw new RefusScene('Savant se pose pendant une scène.');
+  if (noeud === 'reseau-de-rumeurs' && dejaUtiliseCetteSeance(qui.usages, noeud, qui.seance)) throw new RefusScene('Réseau de rumeurs a déjà servi cette séance.');
+  const id = noeud === 'savant' ? `${qui.scene}-${session.uid}-savant` : `${cleSeance(qui.seance)}-${session.uid}-rumeurs`;
+  const q = schemaQuestionMj.parse({ uid: session.uid, perso: qui.perso, nom: qui.nom, noeud, scene: noeud === 'savant' ? qui.scene : null, question, dd: null, reponse: null, creeLe: Date.now(), reponduLe: null });
+  await setDoc(doc(db, `tables/${session.table}/questions/${id}`), q);
+  if (noeud === 'reseau-de-rumeurs') await noterUsage(qui.perso, noeud, qui.seance);
+  return id;
+}
+
+/** Le MJ répond à une question, ou donne l'intention lue par Lire les gens. */
+export async function repondreQuestion(id: string, reponse: string): Promise<void> {
+  if (!reponse.trim()) throw new RefusScene('Écris la réponse.');
+  await updateDoc(doc(db, `tables/${session.table}/questions/${id}`), { reponse: reponse.trim().slice(0, 500), reponduLe: Date.now() });
+}
+
+/**
+ * Levier (6a) : le MJ valide un secret connu d'un appelé ; la scène prend
+ * ±2 crans, et le secret est noté sur le PNJ pour ne servir qu'une fois.
+ */
+export async function levierEnScene(idScene: string, sens: 1 | -1, secret: string): Promise<SceneHorsCombat> {
+  const texte = secret.trim().slice(0, 120);
+  if (!texte) throw new RefusScene('Note le secret utilisé.');
+  return runTransaction(db, async (tx) => {
+    const lu = await tx.get(refScene(idScene));
+    if (!lu.exists()) throw new RefusScene('Cette scène n’existe plus.');
+    const s = schemaSceneHorsCombat.parse(lu.data());
+    if (s.statut !== 'ouverte' || s.type !== 'social' || !s.pnj) throw new RefusScene('Le levier se joue dans une scène sociale en cours.');
+    if (!s.appelesUids.some((u) => aLeNoeud(s, u, 'levier'))) throw new RefusScene('Aucun appelé n’a Levier.');
+    const luPnj = await tx.get(refPnj(s.pnj));
+    if (!luPnj.exists()) throw new RefusScene('Ce PNJ n’existe plus.');
+    const p = schemaPnj.parse(luPnj.data());
+    if (p.secrets.some((x) => x.toLowerCase() === texte.toLowerCase())) throw new RefusScene('Ce secret a déjà servi.');
+    const apres = schemaSceneHorsCombat.parse(sens > 0 ? { ...s, hausses: s.hausses + 2 } : { ...s, baisses: s.baisses + 2 });
+    tx.set(refScene(idScene), apres);
+    tx.set(refPnj(s.pnj), schemaPnj.parse({ ...p, secrets: [...p.secrets, texte], majLe: Date.now() }));
+    return apres;
   });
 }
 

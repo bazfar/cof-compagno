@@ -19,6 +19,12 @@ const actions = vi.hoisted(() => {
     resoudreAction: vi.fn(async (_id: string, _a: string) => {}),
     cloreScene: vi.fn(async (_id: string, _i: string) => ({})),
     donnerVecuDeScene: vi.fn(async (_s: unknown, _a: unknown, p: string[]) => p.length),
+    // S3
+    relancerEnScene: vi.fn(async (_id: string, _s: unknown, _a: unknown, _u: unknown, _se?: string) => ({})),
+    utiliserCapacite: vi.fn(async (_id: string, _s: unknown, _n: string, _u: unknown) => {}),
+    poserQuestion: vi.fn(async (_n: string, _q: string, _qui: unknown) => 'q1'),
+    repondreQuestion: vi.fn(async (_id: string, _r: string) => {}),
+    levierEnScene: vi.fn(async (_id: string, _s: 1 | -1, _t: string) => ({})),
   };
 });
 vi.mock('../../src/lib/actions/scenes-hors-combat', () => actions);
@@ -30,17 +36,19 @@ vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./fau
 vi.mock('../../src/lib/magasins/presents.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPresents);
 vi.mock('../../src/lib/magasins/seances.svelte', async () => (await import('./faux-magasins.svelte')).magasinsSeances);
 
-const { table, joueurs, persos, seances, sceneHc, sceneHcMj, actionsScene } = await import('./faux-magasins.svelte');
+const { table, joueurs, persos, seances, sceneHc, sceneHcMj, actionsScene, utilisationsScene, questionsMj } = await import('./faux-magasins.svelte');
 const { session } = await import('../../src/lib/session.svelte');
 const { ficheDepuisV1 } = await import('../../src/lib/regles/fiche-document');
 const { vueFiche } = await import('../../src/lib/fiche/vue-fiche');
 const { default: SceneMj } = await import('../../src/composants/SceneMj.svelte');
 const { default: SceneJoueur } = await import('../../src/composants/SceneJoueur.svelte');
 const { default: ArbitreScene } = await import('../../src/composants/ArbitreScene.svelte');
+const { default: QuestionsMj } = await import('../../src/composants/QuestionsMj.svelte');
+const { default: RumeursVecu } = await import('../../src/composants/RumeursVecu.svelte');
 
 const FICHES = JSON.parse(readFileSync('tests/fixtures/fiches-v1.json', 'utf8')).fiches;
 const reelle = (nom: string, id: string, uid: string) => ({ ...ficheDepuisV1(FICHES.find((f: { nom: string }) => f.nom.startsWith(nom)), uid, 1).fiche, id });
-const PNJ = [{ id: 'pnj-aude', nom: 'Aude Berlan', faction: null, lore: null, rencontre: true, cran: 'neutre' as const, tendance: null, mensonges: 0, creeLe: 1, majLe: 1 }];
+const PNJ = [{ id: 'pnj-aude', nom: 'Aude Berlan', faction: null, lore: null, rencontre: true, cran: 'neutre' as const, tendance: null, mensonges: 0, peuple: false, secrets: [], creeLe: 1, majLe: 1 }];
 const APPELES = [
   { uid: 'alice', perso: 'p-magnus', nom: 'Magnus Bane' },
   { uid: 'bob', perso: 'p-kargash', nom: "Kargash corde d'or" },
@@ -48,9 +56,10 @@ const APPELES = [
 const scene = (s: Record<string, unknown> = {}) => ({
   type: 'social', pnj: 'pnj-aude', cible: 'Aude Berlan', objectif: 'Savoir d’où vient la fiole', mode: 'individuel', competence: null,
   requis: 3, toleres: 2, echecsVisibles: true, marquante: false, appeles: APPELES, appelesUids: ['alice', 'bob'], tour: 1, reussites: 0, echecs: 0,
-  depart: 'neutre', hausses: 0, baisses: 0, menaces: 0, temp: 0, mensonges: 0, seduction: null, statut: 'ouverte', issue: null, creeLe: 1, closeLe: null, ...s,
+  depart: 'neutre', hausses: 0, baisses: 0, menaces: 0, temp: 0, mensonges: 0, seduction: null, statut: 'ouverte', issue: null, creeLe: 1, closeLe: null,
+  peuple: 0, foule: false, autorite: false, vecus: {}, usages: {}, ...s,
 });
-const action = (a: Record<string, unknown> = {}) => ({ id: '1-alice', uid: 'alice', perso: 'p-magnus', nom: 'Magnus Bane', tour: 1, option: 'convaincre', competence: 'Persuasion', de: 12, bonus: 3, resultat: null, creeLe: 1, ...a });
+const action = (a: Record<string, unknown> = {}) => ({ id: '1-alice', uid: 'alice', perso: 'p-magnus', nom: 'Magnus Bane', tour: 1, option: 'convaincre', competence: 'Persuasion', de: 12, bonus: 3, resultat: null, creeLe: 1, relance: false, note: null, delta: null, annule: false, ...a });
 
 beforeEach(() => {
   session.table = 't1';
@@ -64,6 +73,8 @@ beforeEach(() => {
   sceneHc.donnees = null;
   sceneHcMj.donnees = null;
   actionsScene.elements = [];
+  utilisationsScene.elements = [];
+  questionsMj.elements = [];
 });
 
 describe('scène, côté MJ', () => {
@@ -221,10 +232,141 @@ describe('arbitre (5a, 7a)', () => {
     actionsScene.elements = [action({ resultat: 'reussite' }), action({ id: '1-bob', uid: 'bob', option: 'passer', competence: null, de: null, resultat: 'passe' })];
     await waitFor(() => expect(actions.resoudreAction).toHaveBeenCalledWith('sh1', '1-alice'));
     actions.resoudreAction.mockClear();
-    // Scène terminée : plus rien.
+    // Scène terminée : plus rien, sauf une relance de Mémoire eidétique (S3).
     sceneHc.donnees = scene({ statut: 'terminee', issue: 'gagnee' });
     actionsScene.elements = [action({ id: '1-alice' })];
     await new Promise((r) => setTimeout(r, 20));
     expect(actions.resoudreAction).not.toHaveBeenCalled();
+    actionsScene.elements = [action({ id: '1-alice', resultat: 'echec' }), action({ id: '1-alice-r', relance: true })];
+    await waitFor(() => expect(actions.resoudreAction).toHaveBeenCalledWith('sh1', '1-alice-r'));
+  });
+});
+
+describe('Vécu en scène (S3)', () => {
+  const avec = (uid: string, ...n: string[]) => ({ vecus: { [uid]: n } });
+  beforeEach(() => {
+    persos.elements = [reelle('Magnus', 'p-magnus', 'alice'), reelle('Kargash', 'p-kargash', 'bob')];
+    table.donnees = { ...table.donnees, sceneHorsCombat: 'sh1' };
+  });
+
+  it('MJ : foule et autorité à l’ouverture (scène sociale)', async () => {
+    table.donnees = { ...table.donnees, sceneHorsCombat: null };
+    render(SceneMj, { props: { pnjs: PNJ } });
+    await fireEvent.change(screen.getByLabelText('PNJ'), { target: { value: 'pnj-aude' } });
+    await fireEvent.input(screen.getByLabelText('Objectif'), { target: { value: 'Convaincre l’Assemblée' } });
+    await fireEvent.click(screen.getByLabelText(/Face à une foule/));
+    await fireEvent.click(screen.getByLabelText(/Face à une autorité/));
+    await fireEvent.click(screen.getByRole('button', { name: 'Ouvrir la scène' }));
+    expect(actions.ouvrirScene.mock.calls[0]![0]).toMatchObject({ foule: true, autorite: true });
+    await fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'exploration' } });
+    expect(screen.queryByLabelText(/Face à une foule/)).toBeNull();
+  });
+
+  it('MJ : Levier si un appelé l’a, avec le secret ; les notes du Vécu et les relances sur les jets ; les capacités utilisées', async () => {
+    sceneHc.donnees = scene({ ...avec('bob', 'levier'), peuple: 1 });
+    sceneHcMj.donnees = { dd: 13 };
+    actionsScene.elements = [action({ resultat: 'reussite', note: 'Langue d’argent' })];
+    utilisationsScene.elements = [{ id: 'bob-compagnon-oiseau', uid: 'bob', perso: 'p-kargash', nom: "Kargash corde d'or", noeud: 'compagnon-oiseau', tour: 1, creeLe: 1 }];
+    render(SceneMj, { props: { pnjs: PNJ } });
+    const zone = screen.getByRole('region', { name: 'Scène' });
+    expect(zone.textContent).toContain('Homme du peuple : la scène a commencé un cran plus haut.');
+    expect(zone.textContent).toContain('Magnus Bane : Convaincre, 15 — réussite (Langue d’argent)');
+    expect(screen.getByTestId('scene-capacites').textContent).toContain("Kargash corde d'or — Compagnon oiseau (tour 1)");
+    const plus = screen.getByRole('button', { name: '+2 crans' }) as HTMLButtonElement;
+    expect(plus.disabled).toBe(true);
+    await fireEvent.input(screen.getByLabelText(/Levier/), { target: { value: 'La dette envers le Roi' } });
+    await fireEvent.click(plus);
+    expect(actions.levierEnScene).toHaveBeenCalledWith('sh1', 1, 'La dette envers le Roi');
+    sceneHc.donnees = scene();
+    await waitFor(() => expect(screen.queryByRole('button', { name: '+2 crans' })).toBeNull());
+  });
+
+  it('joueur : Lire les gens et Citer le précédent parmi ses options ; relancer un échec ; capacités ; Savant', async () => {
+    session.uid = 'alice';
+    sceneHc.donnees = scene({ ...avec('alice', 'lire-les-gens', 'citer-le-precedent', 'memoire-eidetique', 'savant', 'compagnon-oiseau', 'faconnage'), autorite: true, seance: 's0014', tour: 2 });
+    const echec = action({ resultat: 'echec' });
+    actionsScene.elements = [echec];
+    utilisationsScene.elements = [{ id: 'alice-compagnon-oiseau', uid: 'alice', perso: 'p-magnus', nom: 'Magnus Bane', noeud: 'compagnon-oiseau', tour: 1, creeLe: 1 }];
+    render(SceneJoueur);
+    const groupe = screen.getByRole('group', { name: 'Ton action' });
+    expect(within(groupe).getAllByRole('button').map((b) => b.textContent?.split(' · ')[0]?.trim())).toEqual(['Convaincre', 'Menacer', 'Tromper', 'Séduire', 'Lire les gens', 'Citer le précédent', 'Passer mon tour']);
+    await fireEvent.click(screen.getByRole('button', { name: 'Relancer (Mémoire eidétique) : Persuasion' }));
+    expect(actions.relancerEnScene).toHaveBeenCalledWith('sh1', expect.objectContaining({ tour: 2 }), expect.objectContaining({ id: '1-alice' }), expect.anything(), 's0014');
+    const capacites = screen.getByRole('group', { name: 'Capacités du Vécu' });
+    expect((within(capacites).getByRole('button', { name: 'Utiliser Compagnon oiseau' }) as HTMLButtonElement).disabled).toBe(true);
+    await fireEvent.click(within(capacites).getByRole('button', { name: 'Utiliser Façonnage' }));
+    expect(actions.utiliserCapacite).toHaveBeenCalledWith('sh1', expect.anything(), 'faconnage', expect.anything());
+    await fireEvent.input(screen.getByLabelText(/Savant/), { target: { value: 'Qui a forgé ce sceau ?' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Poser au MJ' }));
+    expect(actions.poserQuestion).toHaveBeenCalledWith('savant', 'Qui a forgé ce sceau ?', expect.objectContaining({ scene: 'sh1', perso: 'p-magnus', seance: 's0014' }));
+  });
+
+  it('joueur : la relance déjà faite ou la séance déjà servie la retirent ; un autre que le porteur ne voit rien', async () => {
+    session.uid = 'alice';
+    sceneHc.donnees = scene(avec('alice', 'memoire-eidetique'));
+    actionsScene.elements = [action({ resultat: 'echec' }), action({ id: '1-alice-r', relance: true, resultat: 'echec' })];
+    const { unmount } = render(SceneJoueur);
+    expect(screen.queryByRole('button', { name: /^Relancer/ })).toBeNull();
+    expect(screen.getByText(/relance, Convaincre — 15, échec/)).toBeTruthy();
+    unmount();
+    sceneHc.donnees = scene({ ...avec('alice', 'memoire-eidetique'), seance: 's0014' });
+    actionsScene.elements = [action({ resultat: 'echec' })];
+    persos.elements = [{ ...persos.elements[0]!, usages: { 'memoire-eidetique': { seance: 's0014' } } }, persos.elements[1]!];
+    const deux = render(SceneJoueur);
+    expect(screen.queryByRole('button', { name: /^Relancer/ })).toBeNull();
+    deux.unmount();
+    session.uid = 'bob';
+    render(SceneJoueur);
+    expect(screen.queryByRole('button', { name: /^Relancer/ })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Capacités du Vécu' })).toBeNull();
+  });
+
+  it('joueur : ce que Lire les gens révèle, et la réponse du MJ, chez lui seul', async () => {
+    sceneHc.donnees = scene(avec('alice', 'lire-les-gens'));
+    // Une lecture d'une scène passée ne s'affiche pas dans celle-ci.
+    const ancienne = { id: 'sh0-alice-lire', uid: 'alice', perso: 'p-magnus', nom: 'Magnus Bane', noeud: 'lire-les-gens', scene: 'sh0', question: null, dd: 9, reponse: 'Rien', creeLe: 0, reponduLe: 1 };
+    const lecture = { id: 'sh1-alice-lire', uid: 'alice', perso: 'p-magnus', nom: 'Magnus Bane', noeud: 'lire-les-gens', scene: 'sh1', question: null, dd: 12, reponse: null, creeLe: 1, reponduLe: null };
+    questionsMj.elements = [ancienne, lecture];
+    session.uid = 'alice';
+    const { unmount } = render(SceneJoueur);
+    expect(screen.getByTestId('lecture').textContent).toBe('Lire les gens : il te faudra 12. Le MJ te dit son intention…');
+    questionsMj.elements = [ancienne, { ...lecture, reponse: 'Elle protège son frère.' }];
+    await waitFor(() => expect(screen.getByTestId('lecture').textContent).toBe('Lire les gens : il te faudra 12. Intention : Elle protège son frère.'));
+    unmount();
+    session.uid = 'bob';
+    render(SceneJoueur);
+    expect(screen.queryByTestId('lecture')).toBeNull();
+  });
+
+  it('MJ : les questions en attente, et la réponse', async () => {
+    questionsMj.elements = [
+      { id: 'sh1-alice-lire', uid: 'alice', perso: 'p-magnus', nom: 'Magnus Bane', noeud: 'lire-les-gens', scene: 'sh1', question: null, dd: 12, reponse: null, creeLe: 1, reponduLe: null },
+      { id: 'sh1-bob-savant', uid: 'bob', perso: 'p-kargash', nom: 'Kargash', noeud: 'savant', scene: 'sh1', question: 'Qui a forgé ce sceau ?', dd: null, reponse: null, creeLe: 2, reponduLe: null },
+      { id: 's0013-carol-rumeurs', uid: 'carol', perso: 'p-x', nom: 'Shyrion', noeud: 'reseau-de-rumeurs', scene: null, question: 'Où dort Marec ?', dd: null, reponse: 'Rangée B', creeLe: 0, reponduLe: 1 },
+    ];
+    render(QuestionsMj);
+    expect(screen.queryByLabelText('Réponse à Shyrion')).toBeNull();
+    const zone = screen.getByRole('region', { name: 'Questions des joueurs' });
+    expect(zone.textContent).toContain('Magnus Bane a lu son interlocuteur (Lire les gens) : il lui faudra 12. Donne son intention.');
+    expect(zone.textContent).toContain('Kargash (Savant) : Qui a forgé ce sceau ?');
+    await fireEvent.input(screen.getByLabelText('Réponse à Kargash'), { target: { value: 'Les forges de Mornac' } });
+    await fireEvent.click(within(zone).getAllByRole('button', { name: 'Répondre' })[1]!);
+    expect(actions.repondreQuestion).toHaveBeenCalledWith('sh1-bob-savant', 'Les forges de Mornac');
+  });
+
+  it('Réseau de rumeurs sur la fiche : une question par séance ; les réponses ; rien sans le nœud', async () => {
+    session.uid = 'alice';
+    const f = reelle('Magnus', 'p-magnus', 'alice');
+    const avecRumeurs = { ...f, vecu: { crans: 0, paliers: 3, points: 0, noeuds: ['affable', 'beau-parleur', 'reseau-de-rumeurs'], noeudOffert: 'lire-les-gens' } };
+    questionsMj.elements = [{ id: 's0013-alice-rumeurs', uid: 'alice', perso: 'p-magnus', nom: 'Magnus Bane', noeud: 'reseau-de-rumeurs', scene: null, question: 'Où dort Marec ?', dd: null, reponse: 'Rangée B', creeLe: 1, reponduLe: 2 }];
+    const { unmount } = render(RumeursVecu, { props: { fiche: avecRumeurs as never } });
+    expect(screen.getByText('Où dort Marec ? — Rangée B')).toBeTruthy();
+    await fireEvent.input(screen.getByLabelText(/Une question au MJ/), { target: { value: 'Qui tient le B0 ?' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Poser au MJ' }));
+    expect(actions.poserQuestion).toHaveBeenCalledWith('reseau-de-rumeurs', 'Qui tient le B0 ?', expect.objectContaining({ perso: 'p-magnus', seance: 's0014', scene: null }));
+    unmount();
+    render(RumeursVecu, { props: { fiche: { ...avecRumeurs, usages: { 'reseau-de-rumeurs': { seance: 's0014' } } } as never } });
+    expect(screen.getByText('Déjà utilisé cette séance.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Poser au MJ' })).toBeNull();
   });
 });

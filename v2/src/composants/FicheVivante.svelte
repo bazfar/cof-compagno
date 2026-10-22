@@ -15,8 +15,10 @@
   import { barreNiveau } from '../lib/regles/progression';
   import { SLOTS_EQUIPEMENT, type Slot } from '../lib/regles/fiche-calcul';
   import { LIMITE_NOTES, type Fiche } from '../lib/schemas/fiche';
+  import { session } from '../lib/session.svelte';
   import ActionsRefonte from './ActionsRefonte.svelte';
   import ArbreVecu from './ArbreVecu.svelte';
+  import RumeursVecu from './RumeursVecu.svelte';
   import ConversionRefonte from './ConversionRefonte.svelte';
   import CorrectionFiche from './CorrectionFiche.svelte';
   import MonteeNiveau from './MonteeNiveau.svelte';
@@ -461,6 +463,8 @@
     {:else}
       <!-- L4.18 : l'arbre du Vécu, pour toutes les fiches. -->
       <ArbreVecu {fiche} {modifiable} {mj} />
+      <!-- S3 (9a) : Réseau de rumeurs, une question au MJ, pour le joueur propriétaire. -->
+      {#if modifiable && !mj && fiche.proprietaireUid === session.uid}<RumeursVecu {fiche} />{/if}
     {/if}
   {:else if onglet === 'Actions' && vue.refonte}
     <ActionsRefonte

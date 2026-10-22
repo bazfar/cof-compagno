@@ -57,7 +57,7 @@ const { schemaReputationV1 } = await import('../../src/lib/schemas/reputation');
 type Pnj = import('../../src/lib/schemas/pnj').Pnj;
 type ReputationGroupe = import('../../src/lib/schemas/reputation').ReputationGroupe;
 
-const pnj = (p: Partial<Pnj> = {}): Pnj => ({ nom: 'Aude Berlan', faction: null, lore: null, rencontre: false, cran: null, tendance: null, mensonges: 0, creeLe: 1, majLe: 1, ...p });
+const pnj = (p: Partial<Pnj> = {}): Pnj => ({ nom: 'Aude Berlan', faction: null, lore: null, rencontre: false, cran: null, tendance: null, mensonges: 0, peuple: false, secrets: [], creeLe: 1, majLe: 1, ...p });
 const rep = (scores: Record<string, number>): ReputationGroupe => ({ scores, majLe: 1 });
 const vu = (cran: Pnj['cran'], p: Partial<Pnj> = {}) => pnj({ rencontre: true, cran, ...p });
 

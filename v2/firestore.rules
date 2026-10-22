@@ -374,7 +374,7 @@ service cloud.firestore {
     // Aligné sur schemaPnj (src/lib/schemas/pnj.ts).
     function pnjValide(d) {
       return d.keys().hasAll(['nom', 'faction', 'lore', 'rencontre', 'cran', 'tendance', 'creeLe', 'majLe'])
-        && d.keys().hasOnly(['nom', 'faction', 'lore', 'rencontre', 'cran', 'tendance', 'mensonges', 'creeLe', 'majLe'])
+        && d.keys().hasOnly(['nom', 'faction', 'lore', 'rencontre', 'cran', 'tendance', 'mensonges', 'peuple', 'secrets', 'creeLe', 'majLe'])
         && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 80
         && (d.faction == null || d.faction in factionsReputation())
         && (d.lore == null || (d.lore is string && d.lore.size() >= 1 && d.lore.size() <= 100))
@@ -382,6 +382,8 @@ service cloud.firestore {
         && ((d.rencontre == true && d.cran in cransAttitude()) || (d.rencontre == false && d.cran == null))
         && (d.tendance == null || d.tendance in ['hausse', 'baisse'])
         && (!('mensonges' in d) || (d.mensonges is int && d.mensonges >= 0 && d.mensonges <= 99))
+        && (!('peuple' in d) || d.peuple is bool)
+        && (!('secrets' in d) || (d.secrets is list && d.secrets.size() <= 30))
         && d.creeLe is int && d.majLe is int;
     }
     // Aligné sur schemaGesteAttitude (src/lib/schemas/pnj.ts).
@@ -423,8 +425,13 @@ service cloud.firestore {
           'seduction', 'statut', 'issue', 'creeLe', 'closeLe'])
         && d.keys().hasOnly(['type', 'pnj', 'cible', 'objectif', 'mode', 'competence', 'requis', 'toleres', 'echecsVisibles', 'marquante',
           'appeles', 'appelesUids', 'tour', 'reussites', 'echecs', 'depart', 'hausses', 'baisses', 'menaces', 'temp', 'mensonges',
-          'seduction', 'statut', 'issue', 'seance', 'creeLe', 'closeLe'])
+          'seduction', 'statut', 'issue', 'seance', 'creeLe', 'closeLe', 'peuple', 'foule', 'autorite', 'vecus', 'usages'])
         && d.type in ['social', 'exploration', 'enquete']
+        && (!('peuple' in d) || entierEntre(d.peuple, 0, 1))
+        && (!('foule' in d) || d.foule is bool)
+        && (!('autorite' in d) || d.autorite is bool)
+        && (!('vecus' in d) || d.vecus is map)
+        && (!('usages' in d) || d.usages is map)
         && d.mode in ['individuel', 'groupe']
         && d.cible is string && d.cible.size() >= 1 && d.cible.size() <= 80
         && d.objectif is string && d.objectif.size() >= 1 && d.objectif.size() <= 200
@@ -443,8 +450,12 @@ service cloud.firestore {
     // Aligné sur schemaActionScene (src/lib/schemas/scene-hors-combat.ts).
     function actionSceneValide(d) {
       return d.keys().hasAll(['uid', 'perso', 'nom', 'tour', 'option', 'competence', 'de', 'bonus', 'resultat', 'creeLe'])
-        && d.keys().hasOnly(['uid', 'perso', 'nom', 'tour', 'option', 'competence', 'de', 'bonus', 'resultat', 'creeLe'])
-        && d.option in ['convaincre', 'menacer', 'tromper', 'seduire', 'competence', 'passer']
+        && d.keys().hasOnly(['uid', 'perso', 'nom', 'tour', 'option', 'competence', 'de', 'bonus', 'resultat', 'creeLe', 'relance', 'note', 'delta', 'annule'])
+        && d.option in ['convaincre', 'menacer', 'tromper', 'seduire', 'competence', 'lire', 'citer', 'passer']
+        && (!('relance' in d) || d.relance is bool)
+        && (!('note' in d) || d.note == null || (d.note is string && d.note.size() <= 60))
+        && (!('delta' in d) || d.delta == null || d.delta is map)
+        && (!('annule' in d) || d.annule is bool)
         && entierEntre(d.tour, 1, 99)
         && (d.de == null || entierEntre(d.de, 1, 20))
         && entierEntre(d.bonus, -20, 40)
@@ -459,8 +470,43 @@ service cloud.firestore {
         && acte == string(d.tour) + '-' + request.auth.uid
         && s.statut == 'ouverte' && s.tour == d.tour
         && request.auth.uid in s.appelesUids
+        && actionVierge(d)
+        && (!('relance' in d) || d.relance == false)
         && ((d.option == 'passer' && d.de == null && d.resultat == 'passe')
           || (d.option != 'passer' && d.de != null && d.resultat == null));
+    }
+    // Ce que seul le client du MJ écrit sur une action (S3) : vide à la création.
+    function actionVierge(d) {
+      return (!('note' in d) || d.note == null) && (!('delta' in d) || d.delta == null) && (!('annule' in d) || d.annule == false);
+    }
+    // Mémoire eidétique (S3, 8a) : une relance `<tour>-<uid>-r`, pour un échec de l'appelé, scène pas close.
+    function relanceDuJoueur(table, scene, acte, d) {
+      let s = get(/databases/$(database)/documents/tables/$(table)/scenesHorsCombat/$(scene)).data;
+      let origine = /databases/$(database)/documents/tables/$(table)/scenesHorsCombat/$(scene)/actions/$(string(d.tour) + '-' + request.auth.uid);
+      return d.uid == request.auth.uid
+        && acte == string(d.tour) + '-' + request.auth.uid + '-r'
+        && d.relance == true && d.de != null && d.resultat == null
+        && actionVierge(d)
+        && s.statut != 'close'
+        && request.auth.uid in s.appelesUids
+        && exists(origine) && get(origine).data.resultat == 'echec';
+    }
+    // Aligné sur schemaUtilisationVecu (src/lib/schemas/scene-hors-combat.ts).
+    function utilisationValide(d) {
+      return d.keys().hasOnly(['uid', 'perso', 'nom', 'noeud', 'tour', 'creeLe'])
+        && d.keys().hasAll(['uid', 'perso', 'nom', 'noeud', 'tour', 'creeLe'])
+        && d.noeud is string && d.noeud.size() >= 1 && d.noeud.size() <= 40
+        && entierEntre(d.tour, 1, 99) && d.creeLe is int;
+    }
+    // Aligné sur schemaQuestionMj (src/lib/schemas/scene-hors-combat.ts).
+    function questionValide(d) {
+      return d.keys().hasOnly(['uid', 'perso', 'nom', 'noeud', 'scene', 'question', 'dd', 'reponse', 'creeLe', 'reponduLe'])
+        && d.keys().hasAll(['uid', 'perso', 'nom', 'noeud', 'scene', 'question', 'dd', 'reponse', 'creeLe', 'reponduLe'])
+        && d.noeud in ['savant', 'reseau-de-rumeurs', 'lire-les-gens']
+        && (d.question == null || (d.question is string && d.question.size() >= 1 && d.question.size() <= 300))
+        && (d.reponse == null || (d.reponse is string && d.reponse.size() >= 1 && d.reponse.size() <= 500))
+        && (d.dd == null || entierEntre(d.dd, 0, 40))
+        && d.creeLe is int;
     }
     // Aligné sur schemaEtatScene (src/lib/schemas/carte.ts).
     function etatSceneValide(d) {
@@ -772,11 +818,41 @@ service cloud.firestore {
         match /actions/{acte} {
           allow read: if estMembre(table);
           allow create: if estJoueur(table) && actionSceneValide(request.resource.data)
-            && actionDuJoueur(table, scene, acte, request.resource.data);
+            && (actionDuJoueur(table, scene, acte, request.resource.data)
+              || relanceDuJoueur(table, scene, acte, request.resource.data));
           allow update: if estMj(table) && actionSceneValide(request.resource.data)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resultat']);
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resultat', 'note', 'delta', 'annule']);
           allow delete: if estMj(table);
         }
+        // Capacités du Vécu utilisées pendant la scène (S3, 10a), par un appelé, à son nom.
+        match /utilisations/{utilisation} {
+          allow read: if estMembre(table);
+          allow create: if estJoueur(table) && utilisationValide(request.resource.data)
+            && request.resource.data.uid == request.auth.uid
+            && request.auth.uid in get(/databases/$(database)/documents/tables/$(table)/scenesHorsCombat/$(scene)).data.appelesUids
+            && get(/databases/$(database)/documents/tables/$(table)/scenesHorsCombat/$(scene)).data.statut != 'close';
+          allow update: if false;
+          allow delete: if estMj(table);
+        }
+      }
+
+      // Questions au MJ (S3, 1a et 9a) : lues du MJ et de qui les a posées
+      // (requête joueur : uid == le sien). Le joueur pose Savant ou Réseau de
+      // rumeurs ; le client du MJ pose la révélation de Lire les gens ; le MJ seul répond.
+      match /questions/{question} {
+        allow read: if estMj(table) || (estJoueur(table) && resource.data.uid == request.auth.uid);
+        allow create: if questionValide(request.resource.data)
+          && (estMj(table)
+            || (estJoueur(table)
+              && request.resource.data.uid == request.auth.uid
+              && request.resource.data.noeud in ['savant', 'reseau-de-rumeurs']
+              && request.resource.data.question != null
+              && request.resource.data.dd == null
+              && request.resource.data.reponse == null
+              && request.resource.data.reponduLe == null));
+        allow update: if estMj(table) && questionValide(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reponse', 'reponduLe']);
+        allow delete: if estMj(table);
       }
       match /scenesHorsCombatMj/{scene} {
         allow read, delete: if estMj(table);

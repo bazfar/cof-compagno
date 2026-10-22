@@ -147,7 +147,7 @@ export function pnjDepuisLore(fiches: readonly FicheLorePourPnj[], existants: Re
     .filter((f) => f.source?.startsWith('v1:pnj:') && !existants.has(f.id))
     .map((f) => ({
       id: f.id,
-      pnj: { nom: f.titre.slice(0, 80), faction: factionDuLore(f.etiquettes[0]), lore: f.id, rencontre: false, cran: null, tendance: null, mensonges: 0, creeLe: maintenant, majLe: maintenant },
+      pnj: { nom: f.titre.slice(0, 80), faction: factionDuLore(f.etiquettes[0]), lore: f.id, rencontre: false, cran: null, tendance: null, mensonges: 0, peuple: false, secrets: [], creeLe: maintenant, majLe: maintenant },
     }));
 }
 

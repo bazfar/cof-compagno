@@ -23,7 +23,8 @@ export type TypeScene = (typeof TYPES_SCENE)[number];
 export const MODES_SCENE = ['individuel', 'groupe'] as const;
 export const OPTIONS_SOCIALES = ['convaincre', 'menacer', 'tromper', 'seduire'] as const;
 export type OptionSociale = (typeof OPTIONS_SOCIALES)[number];
-export const OPTIONS_SCENE = [...OPTIONS_SOCIALES, 'competence', 'passer'] as const;
+/** `lire` (Lire les gens) et `citer` (Citer le précédent) : options du Vécu en scène sociale (S3). */
+export const OPTIONS_SCENE = [...OPTIONS_SOCIALES, 'competence', 'lire', 'citer', 'passer'] as const;
 export type OptionScene = (typeof OPTIONS_SCENE)[number];
 
 const schemaUid = z.string().min(1).max(128);
@@ -78,6 +79,17 @@ export const schemaSceneHorsCombat = z
     seance: z.string().min(1).max(40).optional(),
     creeLe: z.number().int().nonnegative(),
     closeLe: z.number().int().nonnegative().nullable(),
+    // ---- Vécu en scène (lot S3). Absents des scènes de S2 : valeurs par défaut. ----
+    /** Homme du peuple (2a) : la scène commence un cran plus haut. */
+    peuple: z.number().int().min(0).max(1).default(0),
+    /** Face à une foule ou un groupe (3a, Orateur). */
+    foule: z.boolean().default(false),
+    /** Face à une autorité (5a, Citer le précédent). */
+    autorite: z.boolean().default(false),
+    /** Nœuds du Vécu utiles en scène de chaque appelé, relevés à l'ouverture. */
+    vecus: z.record(schemaUid, z.array(z.string().min(1).max(40)).max(40)).default({}),
+    /** Nœuds « 1x/scène » déjà utilisés, par appelé, notés par le client du MJ. */
+    usages: z.record(schemaUid, z.array(z.string().min(1).max(40)).max(40)).default({}),
   })
   .superRefine((s, ctx) => {
     if (s.type === 'social' && (s.pnj === null || s.depart === null)) ctx.addIssue({ code: 'custom', message: 'une scène sociale vise un PNJ rencontré', path: ['pnj'] });
@@ -105,6 +117,15 @@ export const schemaActionScene = z
     bonus: z.number().int().min(-20).max(40),
     resultat: z.enum(['reussite', 'echec', 'passe']).nullable(),
     creeLe: z.number().int().nonnegative(),
+    // ---- Lot S3 ----
+    /** Relance de Mémoire eidétique (8a) : l'action `<tour>-<uid>-r`, qui remplace un échec. */
+    relance: z.boolean().default(false),
+    /** Ce que le client du MJ a noté (« Langue d'argent », « Orateur »…). */
+    note: z.string().max(60).nullable().default(null),
+    /** Ce que le jet a changé à la scène, pour qu'une relance puisse le défaire. */
+    delta: z.record(z.string().max(20), z.number().int()).nullable().default(null),
+    /** Échec remplacé par une relance. */
+    annule: z.boolean().default(false),
   })
   .superRefine((a, ctx) => {
     const passe = a.option === 'passer';
@@ -112,3 +133,42 @@ export const schemaActionScene = z
     if (!passe && a.competence === null) ctx.addIssue({ code: 'custom', message: 'une action lance une compétence', path: ['competence'] });
   });
 export type ActionScene = z.infer<typeof schemaActionScene>;
+
+/**
+ * tables/{t}/scenesHorsCombat/{id}/utilisations/{u} (S3, 10a) : un nœud
+ * narratif du Vécu utilisé pendant la scène (« Capacités du Vécu »). Un
+ * « 1x/scène » a l'identifiant `<uid>-<nœud>` : une seule fois par scène.
+ */
+export const schemaUtilisationVecu = z.strictObject({
+  uid: schemaUid,
+  perso: z.string().min(1).max(100),
+  nom: z.string().min(1).max(40),
+  noeud: z.string().min(1).max(40),
+  tour: z.number().int().min(1).max(99),
+  creeLe: z.number().int().nonnegative(),
+});
+export type UtilisationVecu = z.infer<typeof schemaUtilisationVecu>;
+
+/**
+ * tables/{t}/questions/{id} (S3, 1a et 9a) : une question au MJ, ou ce que
+ * Lire les gens révèle. Le MJ et le joueur qui l'a posée la lisent seuls.
+ *   - Savant (1x/scène) : identifiant `<scène>-<uid>-savant` ;
+ *   - Réseau de rumeurs (1x/séance), hors scène ;
+ *   - Lire les gens : posée par le client du MJ, avec le DD du moment ;
+ *     le MJ y écrit l'intention du PNJ.
+ */
+export const NOEUDS_QUESTION = ['savant', 'reseau-de-rumeurs', 'lire-les-gens'] as const;
+export const schemaQuestionMj = z.strictObject({
+  uid: schemaUid,
+  perso: z.string().min(1).max(100),
+  nom: z.string().min(1).max(40),
+  noeud: z.enum(NOEUDS_QUESTION),
+  scene: z.string().min(1).max(100).nullable(),
+  question: z.string().trim().min(1).max(300).nullable(),
+  /** Lire les gens : le DD effectif au moment du jet. */
+  dd: z.number().int().min(0).max(40).nullable(),
+  reponse: z.string().trim().min(1).max(500).nullable(),
+  creeLe: z.number().int().nonnegative(),
+  reponduLe: z.number().int().nonnegative().nullable(),
+});
+export type QuestionMj = z.infer<typeof schemaQuestionMj>;

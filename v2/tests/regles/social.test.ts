@@ -139,3 +139,12 @@ describe('réputation (S1)', () => {
     await assertFails(bob.set({ scores: {}, majLe: 1, note: 'x' }));
   });
 });
+
+describe('PNJ, S3', () => {
+  it('du peuple et secrets utilisés par Levier', async () => {
+    const bob = pour('bob').doc(`${TABLE}/pnj/selyne`);
+    await assertSucceeds(bob.set(pnj({ rencontre: true, cran: 'neutre', peuple: true, secrets: ['La dette'] })));
+    await assertFails(bob.set(pnj({ peuple: 'oui' })));
+    await assertFails(bob.set(pnj({ secrets: 'La dette' })));
+  });
+});

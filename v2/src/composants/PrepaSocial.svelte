@@ -6,6 +6,7 @@
     corrigerAttitudePnj,
     creerPnj,
     importerPnjDuLore,
+    marquerPeuplePnj,
     mensongeDecouvertPnj,
     RefusAttitude,
     rencontrerPnj,
@@ -30,6 +31,7 @@
     scoreDe,
   } from '../lib/pnj/attitude';
   import type { GesteAttitudeEnregistre } from '../lib/schemas/pnj';
+  import QuestionsMj from './QuestionsMj.svelte';
   import SceneMj from './SceneMj.svelte';
   import { session } from '../lib/session.svelte';
 
@@ -48,6 +50,9 @@
    * lançable depuis la fiche d'un PNJ rencontré (3a). Les scènes font
    * bouger l'attitude d'elles-mêmes ; un mensonge réussi peut être
    * découvert plus tard, depuis la fiche du PNJ (9a).
+   * Vécu en scène (lot S3) : les questions des joueurs (QuestionsMj) ;
+   * sur la fiche du PNJ, « du peuple » (Homme du peuple, 2a) et les secrets
+   * déjà utilisés par Levier (6a).
    */
 
   const pnj = suivrePnjMj(session.table);
@@ -138,6 +143,7 @@
 
 <div class="social">
   <SceneMj pnjs={pnj.etat.elements} pnjPropose={pnjPourScene} surPnjPris={() => (pnjPourScene = null)} />
+  <QuestionsMj />
   <section class="carte" aria-label="Réputation du groupe">
     <h2>Réputation du groupe</h2>
     <table>
@@ -211,6 +217,8 @@
           {@const r = repere(ouvert)}
           <h3>{ouvert.nom}</h3>
           <p class="aide">{nomFaction(ouvert.faction)}{ouvert.lore ? ' · fiche de lore liée' : ''}</p>
+          <label class="case"><input type="checkbox" checked={ouvert.peuple} disabled={occupe} onchange={(e) => agir(() => marquerPeuplePnj(ouvert.id, e.currentTarget.checked))} /> PNJ du peuple (Homme du peuple)</label>
+          {#if ouvert.secrets.length}<p class="aide">Secrets déjà utilisés (Levier) : {ouvert.secrets.join(' ; ')}</p>{/if}
           {#if !ouvert.rencontre || !ouvert.cran}
             <p>Pas encore rencontré : les joueurs ne le voient pas.</p>
             <p class="aide">À la rencontre : {NOMS_CRANS[cranDeDepart(ouvert.faction, rep)]}{ouvert.faction ? ' (réputation de sa faction)' : ''}.</p>
@@ -364,6 +372,11 @@
   .cran strong {
     font-size: 18px;
     color: var(--couleur-accent);
+  }
+  .case {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
   .motif {
     display: flex;

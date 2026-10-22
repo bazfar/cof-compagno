@@ -1,15 +1,16 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { agirEnScene, RefusScene } from '../lib/actions/scenes-hors-combat';
+  import { agirEnScene, poserQuestion, RefusScene, relancerEnScene, utiliserCapacite } from '../lib/actions/scenes-hors-combat';
   import { messageErreurJournal } from '../lib/actions/journal';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import type { CollectionSuivie, DocumentSuivi } from '../lib/firebase/suivre.svelte';
   import { suivreTable } from '../lib/magasins/carte.svelte';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
-  import { suivreActionsScene, suivreSceneHorsCombat } from '../lib/magasins/scenes-hors-combat.svelte';
+  import { suivreActionsScene, suivreMesQuestions, suivreSceneHorsCombat, suivreUtilisationsScene } from '../lib/magasins/scenes-hors-combat.svelte';
   import { NOMS_CRANS } from '../lib/pnj/attitude';
-  import { choixPossibles, cranScene, NOMS_TYPES, OPTIONS, type ChoixScene } from '../lib/scenes/hors-combat';
-  import type { ActionScene, SceneHorsCombat } from '../lib/schemas/scene-hors-combat';
+  import { aLeNoeud, choixPossibles, cranScene, NOMS_TYPES, OPTIONS, relancable, type ChoixScene } from '../lib/scenes/hors-combat';
+  import { dejaUtiliseCetteSeance, NARRATIFS, nomNoeud } from '../lib/scenes/vecu-en-scene';
+  import type { ActionScene, SceneHorsCombat, UtilisationVecu } from '../lib/schemas/scene-hors-combat';
   import { session } from '../lib/session.svelte';
 
   /*
@@ -24,37 +25,76 @@
    *   - On voit l'objectif, l'attitude du PNJ en ce moment de la scène, les
    *     réussites, les échecs si le MJ les montre (6a), et les jets de
    *     chacun. Jamais le DD.
+   * Vécu en scène (lot S3) : Lire les gens et Citer le précédent parmi les
+   * options ; la relance de Mémoire eidétique après un échec d'INT ou de
+   * CHA ; une question au MJ (Savant) ; les « Capacités du Vécu »
+   * narratives. Ce que Lire les gens révèle et les réponses du MJ ne
+   * s'affichent que chez le joueur concerné.
    */
 
   const table = suivreTable(session.table);
   const persos = suivrePersos(session.table);
+  const questions = suivreMesQuestions(session.table, session.uid);
   onDestroy(() => {
     table.arreter();
     persos.arreter();
+    questions.arreter();
   });
   const id = $derived(table.etat.donnees?.sceneHorsCombat ?? null);
 
-  let suivi = $state<{ s: DocumentSuivi<SceneHorsCombat>; a: CollectionSuivie<ActionScene> } | null>(null);
+  let suivi = $state<{ s: DocumentSuivi<SceneHorsCombat>; a: CollectionSuivie<ActionScene>; u: CollectionSuivie<UtilisationVecu> } | null>(null);
   $effect(() => {
     if (!id) return;
-    const x = { s: suivreSceneHorsCombat(session.table, id), a: suivreActionsScene(session.table, id) };
+    const x = { s: suivreSceneHorsCombat(session.table, id), a: suivreActionsScene(session.table, id), u: suivreUtilisationsScene(session.table, id) };
     suivi = x;
     return () => {
       x.s.arreter();
       x.a.arreter();
+      x.u.arreter();
       suivi = null;
     };
   });
+  const utilisations = $derived([...(suivi?.u.etat.elements ?? [])].sort((a, b) => a.creeLe - b.creeLe));
   const scene = $derived(suivi?.s.etat.donnees ?? null);
   const actions = $derived([...(suivi?.a.etat.elements ?? [])].sort((a, b) => a.tour - b.tour || a.creeLe - b.creeLe));
   const moi = $derived(scene?.appeles.find((a) => a.uid === session.uid) ?? null);
-  const monActe = $derived(scene && moi ? (actions.find((a) => a.uid === moi.uid && a.tour === scene.tour) ?? null) : null);
+  const monActe = $derived(scene && moi ? (actions.find((a) => a.uid === moi.uid && a.tour === scene.tour && !a.relance) ?? null) : null);
 
   // Bonus de chaque compétence, depuis la fiche du personnage appelé (Vécu compris).
   const fiche = $derived(moi ? (persos.etat.elements.find((p) => p.id === moi.perso) ?? null) : null);
   const mods = $derived(fiche ? new Map(vueFiche(fiche).competences.map((c) => [c.nom, c.mod])) : new Map<string, number>());
   const competences = $derived([...mods.keys()].sort((a, b) => a.localeCompare(b, 'fr')));
-  const choix = $derived(scene ? choixPossibles(scene) : []);
+  const choix = $derived(scene ? choixPossibles(scene, session.uid) : []);
+
+  // ---- Vécu en scène (S3) ----
+  const usages = $derived((fiche?.usages ?? {}) as Record<string, unknown>);
+  // Mémoire eidétique (8a) : mes échecs relançables, sans relance déjà faite, une fois par séance.
+  const aRelancer = $derived(
+    scene && moi && !dejaUtiliseCetteSeance(usages, 'memoire-eidetique', scene.seance)
+      ? actions.filter((a) => a.uid === moi.uid && relancable(scene, a) && !actions.some((r) => r.relance && r.tour === a.tour && r.uid === a.uid))
+      : [],
+  );
+  const capacites = $derived(scene && moi ? (scene.vecus[moi.uid] ?? []).filter((n) => n in NARRATIFS) : []);
+  const capaciteUtilisee = (n: string) =>
+    NARRATIFS[n] === 'scene' ? utilisations.some((u) => u.uid === session.uid && u.noeud === n) : NARRATIFS[n] === 'jour' ? dejaUtiliseCetteSeance(usages, n, scene?.seance) : false;
+  const mesQuestions = $derived(questions.etat.elements.filter((q) => q.scene === id));
+  const lecture = $derived(mesQuestions.find((q) => q.noeud === 'lire-les-gens') ?? null);
+  const savant = $derived(mesQuestions.find((q) => q.noeud === 'savant') ?? null);
+  let question = $state('');
+
+  async function vecu(f: () => Promise<unknown>) {
+    message = '';
+    occupe = true;
+    try {
+      await f();
+      return true;
+    } catch (e) {
+      message = e instanceof RefusScene ? e.message : messageErreurJournal(e);
+      return false;
+    } finally {
+      occupe = false;
+    }
+  }
   let competenceLibre = $state('Perception');
 
   let message = $state('');
@@ -74,7 +114,9 @@
   }
 
   const signe = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '+0');
-  const nomOption = (a: ActionScene) => (a.option in OPTIONS ? OPTIONS[a.option as keyof typeof OPTIONS].nom : a.option === 'passer' ? 'passe son tour' : a.competence);
+  const NOMS_VECU = { lire: 'Lire les gens', citer: 'Citer le précédent' } as const;
+  const nomOption = (a: ActionScene) =>
+    a.option in OPTIONS ? OPTIONS[a.option as keyof typeof OPTIONS].nom : a.option in NOMS_VECU ? NOMS_VECU[a.option as keyof typeof NOMS_VECU] : a.option === 'passer' ? 'passe son tour' : a.competence;
   const NOMS_RESULTATS = { reussite: 'réussite', echec: 'échec', passe: '' } as const;
 </script>
 
@@ -114,10 +156,41 @@
       <p class="aide">{monActe.resultat === null ? 'Le MJ tranche…' : 'Tu as joué ce tour : on attend les autres.'}</p>
     {/if}
 
+    {#each aRelancer as a (a.id)}
+      <button disabled={occupe} onclick={() => vecu(() => relancerEnScene(id!, scene, a, usages, scene.seance))}>Relancer (Mémoire eidétique) : {a.competence}</button>
+    {/each}
+    {#if lecture}
+      <p class="prive" data-testid="lecture">Lire les gens : il te faudra {lecture.dd}. {lecture.reponse ? `Intention : ${lecture.reponse}` : 'Le MJ te dit son intention…'}</p>
+    {/if}
+    {#if moi && aLeNoeud(scene, moi.uid, 'savant')}
+      {#if savant}
+        <p class="prive">Savant : {savant.question} — {savant.reponse ?? 'le MJ réfléchit…'}</p>
+      {:else}
+        <form class="savant" onsubmit={(e) => (e.preventDefault(), vecu(() => poserQuestion('savant', question, { perso: moi.perso, nom: moi.nom, usages, seance: scene.seance, scene: id })).then((ok) => ok && (question = '')))}>
+          <label>Savant : une question au MJ, un fait sûr <input maxlength="300" bind:value={question} /></label>
+          <button disabled={occupe || !question.trim()}>Poser au MJ</button>
+        </form>
+      {/if}
+    {/if}
+    {#if capacites.length}
+      <div class="capacites" role="group" aria-label="Capacités du Vécu">
+        {#each capacites as n (n)}
+          <button class="discret" disabled={occupe || scene.statut === 'close' || capaciteUtilisee(n)} onclick={() => vecu(() => utiliserCapacite(id!, scene, n, usages))}>Utiliser {nomNoeud(n)}</button>
+        {/each}
+      </div>
+    {/if}
+    {#if utilisations.length}
+      <p class="aide">Capacités utilisées : {utilisations.map((u) => `${u.nom} — ${nomNoeud(u.noeud)}`).join(' ; ')}</p>
+    {/if}
+
     {#if actions.length}
       <ul class="jets">
         {#each actions as a (a.id)}
-          <li>Tour {a.tour} · {a.nom} : {nomOption(a)}{a.de !== null ? ` — ${a.de + a.bonus}` : ''}{a.resultat && a.resultat !== 'passe' ? `, ${NOMS_RESULTATS[a.resultat]}` : a.resultat === null ? ', en cours…' : ''}</li>
+          <li>
+            Tour {a.tour} · {a.nom} : {a.relance ? 'relance, ' : ''}{nomOption(a)}{a.de !== null ? ` — ${a.de + a.bonus}` : ''}{a.resultat && a.resultat !== 'passe' ? `, ${NOMS_RESULTATS[a.resultat]}` : a.resultat === null ? ', en cours…' : ''}{a.note
+              ? ` (${a.note})`
+              : ''}{a.annule ? ', relancé' : ''}
+          </li>
         {/each}
       </ul>
     {/if}
@@ -160,6 +233,25 @@
     flex-direction: column;
     gap: 4px;
     width: 100%;
+  }
+  .prive {
+    font-size: 14px;
+    color: var(--couleur-or-texte);
+    border-left: 3px solid var(--couleur-or);
+    padding-left: 8px;
+  }
+  .savant,
+  .capacites {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: flex-end;
+  }
+  .savant label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
   }
   .jets {
     margin: 0;

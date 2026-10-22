@@ -48,8 +48,11 @@
   $effect(() => {
     const s = scene?.etat.donnees;
     const liste = actions?.etat.elements ?? [];
-    if (!id || !s || s.statut !== 'ouverte') return;
-    const duTour = liste.filter((a) => a.tour === s.tour);
+    if (!id || !s) return;
+    // Relances de Mémoire eidétique (S3, 8a) : même scène terminée, tant qu'elle n'est pas close.
+    if (s.statut !== 'close') for (const a of liste) if (a.relance && a.resultat === null) lancer(a.id, id, a.id);
+    if (s.statut !== 'ouverte') return;
+    const duTour = liste.filter((a) => a.tour === s.tour && !a.relance);
     for (const a of duTour) if (a.resultat === null) lancer(a.id, id, a.id);
     // Tous ont agi ou passé, mais le tour n'a pas tourné (le dernier a passé, par exemple).
     const faits = new Set(duTour.filter((a) => a.resultat !== null).map((a) => a.uid));

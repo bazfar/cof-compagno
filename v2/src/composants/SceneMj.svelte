@@ -1,18 +1,19 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { messageErreurPerso } from '../lib/actions/persos';
-  import { cloreScene, donnerVecuDeScene, ouvrirScene, RefusScene } from '../lib/actions/scenes-hors-combat';
+  import { cloreScene, donnerVecuDeScene, levierEnScene, ouvrirScene, RefusScene } from '../lib/actions/scenes-hors-combat';
   import type { AvecId, CollectionSuivie, DocumentSuivi } from '../lib/firebase/suivre.svelte';
   import { suivreTable } from '../lib/magasins/carte.svelte';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
-  import { suivreActionsScene, suivreSceneHorsCombat, suivreSceneHorsCombatMj } from '../lib/magasins/scenes-hors-combat.svelte';
+  import { suivreActionsScene, suivreSceneHorsCombat, suivreSceneHorsCombatMj, suivreUtilisationsScene } from '../lib/magasins/scenes-hors-combat.svelte';
   import { suivreSeances } from '../lib/magasins/seances.svelte';
   import { MOD_DD_ATTITUDE, NOMS_CRANS } from '../lib/pnj/attitude';
   import { constantes } from '../lib/regles/donnees';
-  import { contributeurs, cranScene, ddEffectif, DIFFICULTES, NOMS_TYPES, OPTIONS, toleresPourLeGroupe, type Difficulte } from '../lib/scenes/hors-combat';
+  import { aLeNoeud, contributeurs, cranScene, ddEffectif, DIFFICULTES, NOMS_TYPES, OPTIONS, toleresPourLeGroupe, type Difficulte } from '../lib/scenes/hors-combat';
+  import { nomNoeud } from '../lib/scenes/vecu-en-scene';
   import type { Pnj } from '../lib/schemas/pnj';
-  import type { ActionScene, Appele, SceneHorsCombat, SceneHorsCombatMj, TypeScene } from '../lib/schemas/scene-hors-combat';
+  import type { ActionScene, Appele, SceneHorsCombat, SceneHorsCombatMj, TypeScene, UtilisationVecu } from '../lib/schemas/scene-hors-combat';
   import { session } from '../lib/session.svelte';
 
   /*
@@ -28,6 +29,10 @@
    *   - Clore (8a) : l'issue proposée se confirme, ou la scène se clôt sans
    *     issue. Marquante gagnée (10a) : un cran de Vécu à ceux qui ont
    *     réussi. Puis « Nouvelle scène avec ce PNJ » (11a).
+   * Vécu en scène (lot S3) : cases « foule » (Orateur) et « autorité »
+   * (Citer le précédent) à l'ouverture ; Levier (±2 crans, un secret ne
+   * sert qu'une fois) ; les notes du Vécu sur les jets, les relances, les
+   * capacités utilisées.
    */
 
   let { pnjs, pnjPropose = null, surPnjPris }: { pnjs: readonly AvecId<Pnj>[]; pnjPropose?: string | null; surPnjPris?: () => void } = $props();
@@ -49,18 +54,25 @@
   let idCloture = $state<string | null>(null);
   const idMontre = $derived(idEnCours ?? idCloture);
 
-  let suivi = $state<{ s: DocumentSuivi<SceneHorsCombat>; mj: DocumentSuivi<SceneHorsCombatMj>; a: CollectionSuivie<ActionScene> } | null>(null);
+  let suivi = $state<{ s: DocumentSuivi<SceneHorsCombat>; mj: DocumentSuivi<SceneHorsCombatMj>; a: CollectionSuivie<ActionScene>; u: CollectionSuivie<UtilisationVecu> } | null>(null);
   $effect(() => {
     if (!idMontre) return;
-    const x = { s: suivreSceneHorsCombat(session.table, idMontre), mj: suivreSceneHorsCombatMj(session.table, idMontre), a: suivreActionsScene(session.table, idMontre) };
+    const x = {
+      s: suivreSceneHorsCombat(session.table, idMontre),
+      mj: suivreSceneHorsCombatMj(session.table, idMontre),
+      a: suivreActionsScene(session.table, idMontre),
+      u: suivreUtilisationsScene(session.table, idMontre),
+    };
     suivi = x;
     return () => {
       x.s.arreter();
       x.mj.arreter();
       x.a.arreter();
+      x.u.arreter();
       suivi = null;
     };
   });
+  const utilisations = $derived([...(suivi?.u.etat.elements ?? [])].sort((a, b) => a.creeLe - b.creeLe));
   const scene = $derived(suivi?.s.etat.donnees ?? null);
   const dd = $derived(suivi?.mj.etat.donnees?.dd ?? null);
   const actions = $derived([...(suivi?.a.etat.elements ?? [])].sort((a, b) => a.tour - b.tour || a.creeLe - b.creeLe));
@@ -80,6 +92,9 @@
   let competence = $state('Perception');
   let marquante = $state(false);
   let echecsVisibles = $state(true);
+  let foule = $state(false);
+  let autorite = $state(false);
+  let secret = $state('');
   let coches = $state<Record<string, boolean> | null>(null);
   let message = $state('');
   let occupe = $state(false);
@@ -143,6 +158,8 @@
           toleres: toleresAffiche,
           echecsVisibles,
           marquante,
+          foule: type === 'social' && foule,
+          autorite: type === 'social' && autorite,
           appeles,
         },
         seanceOuverte?.id,
@@ -151,6 +168,7 @@
     if (ok) {
       idCloture = null;
       objectif = '';
+      foule = autorite = false;
       ddSaisi = requisSaisi = toleresSaisi = null;
       coches = null;
     }
@@ -187,7 +205,18 @@
 
   const NOMS_RESULTATS = { reussite: 'réussite', echec: 'échec', passe: 'passe' } as const;
   const NOMS_ISSUES = { gagnee: 'gagnée', perdue: 'perdue', abandonnee: 'close sans issue' } as const;
-  const nomOption = (a: ActionScene) => (a.option in OPTIONS ? OPTIONS[a.option as keyof typeof OPTIONS].nom : a.option === 'passer' ? 'Passe' : a.competence);
+  const NOMS_VECU = { lire: 'Lire les gens', citer: 'Citer le précédent' } as const;
+  const nomOption = (a: ActionScene) =>
+    a.option in OPTIONS ? OPTIONS[a.option as keyof typeof OPTIONS].nom : a.option in NOMS_VECU ? NOMS_VECU[a.option as keyof typeof NOMS_VECU] : a.option === 'passer' ? 'Passe' : a.competence;
+  /** « Convaincre, 15 — réussite (Langue d'argent) », « … — échec, relancé ». */
+  const resume = (a: ActionScene) =>
+    a.resultat === 'passe'
+      ? `passe${a.note ? ` (${a.note})` : ''}`
+      : `${a.relance ? 'relance, ' : ''}${nomOption(a)}, ${a.de! + a.bonus} — ${a.resultat === null ? 'en cours…' : NOMS_RESULTATS[a.resultat]}${a.note ? ` (${a.note})` : ''}${a.annule ? ', relancé' : ''}`;
+  async function levier(sens: 1 | -1) {
+    if (!idEnCours) return;
+    if (await agir(() => levierEnScene(idEnCours!, sens, secret), `Levier : ${sens > 0 ? '+2' : '−2'} crans pour la scène.`)) secret = '';
+  }
   const signe = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '+0');
 </script>
 
@@ -204,6 +233,8 @@
       <span data-testid="scene-echecs">Échecs {scene.echecs} / {scene.toleres + 1}{scene.echecsVisibles ? '' : ' (cachés aux joueurs)'}</span>
       {#if scene.statut === 'ouverte'}<span>Tour {scene.tour}</span>{/if}
     </p>
+    {#if scene.peuple}<p class="aide">Homme du peuple : la scène a commencé un cran plus haut.</p>{/if}
+    {#if scene.foule || scene.autorite}<p class="aide">{[scene.foule ? 'Face à une foule' : '', scene.autorite ? 'face à une autorité' : ''].filter(Boolean).join(', ')}.</p>{/if}
     {#if cran}
       <p>Attitude en scène : <strong>{NOMS_CRANS[cran]}</strong>{#if dd !== null}<span class="aide">{' · '}DD effectif {ddEffectif(dd, scene)} (base {dd}, {signe(MOD_DD_ATTITUDE[cran])})</span>{/if}</p>
     {:else if dd !== null}
@@ -211,9 +242,9 @@
     {/if}
     <ul class="jets">
       {#each scene.appeles as ap (ap.uid)}
-        {@const a = actions.find((x) => x.uid === ap.uid && x.tour === scene.tour)}
+        {@const a = actions.find((x) => x.uid === ap.uid && x.tour === scene.tour && !x.relance)}
         {#if scene.statut === 'ouverte'}
-          <li>{ap.nom} : {a ? (a.resultat === null ? `${nomOption(a)}, ${a.de! + a.bonus} — en cours…` : a.resultat === 'passe' ? 'passe' : `${nomOption(a)}, ${a.de! + a.bonus} — ${NOMS_RESULTATS[a.resultat]}`) : 'à lui de jouer'}</li>
+          <li>{ap.nom} : {a ? resume(a) : 'à lui de jouer'}</li>
         {/if}
       {/each}
     </ul>
@@ -222,10 +253,20 @@
         <summary>Tous les jets</summary>
         <ul class="jets">
           {#each actions as a (a.id)}
-            <li>Tour {a.tour} · {a.nom} : {nomOption(a)}{a.de !== null ? `, ${a.de} ${signe(a.bonus)} = ${a.de + a.bonus}` : ''}{a.resultat && a.resultat !== 'passe' ? ` — ${NOMS_RESULTATS[a.resultat]}` : ''}</li>
+            <li>Tour {a.tour} · {a.nom} : {a.de !== null ? `${resume(a)} (${a.de} ${signe(a.bonus)})` : resume(a)}</li>
           {/each}
         </ul>
       </details>
+    {/if}
+    {#if utilisations.length}
+      <p class="aide" data-testid="scene-capacites">Capacités du Vécu : {utilisations.map((u) => `${u.nom} — ${nomNoeud(u.noeud)} (tour ${u.tour})`).join(' ; ')}</p>
+    {/if}
+    {#if scene.statut === 'ouverte' && scene.type === 'social' && scene.appelesUids.some((u) => aLeNoeud(scene, u, 'levier'))}
+      <div class="levier">
+        <label>Levier : le secret utilisé <input maxlength="120" bind:value={secret} placeholder="La dette envers le Roi" /></label>
+        <button disabled={occupe || !secret.trim()} onclick={() => levier(1)}>+2 crans</button>
+        <button class="discret" disabled={occupe || !secret.trim()} onclick={() => levier(-1)}>−2 crans</button>
+      </div>
     {/if}
 
     {#if scene.statut === 'terminee' && scene.issue}
@@ -308,6 +349,10 @@
       <div class="cases">
         <label><input type="checkbox" bind:checked={marquante} /> Scène marquante (un cran de Vécu si elle est gagnée)</label>
         <label><input type="checkbox" bind:checked={echecsVisibles} /> Les joueurs voient le compteur d'échecs</label>
+        {#if type === 'social'}
+          <label><input type="checkbox" bind:checked={foule} /> Face à une foule ou un groupe (Orateur)</label>
+          <label><input type="checkbox" bind:checked={autorite} /> Face à une autorité (Citer le précédent)</label>
+        {/if}
       </div>
       <fieldset>
         <legend>Appelés</legend>
@@ -383,6 +428,18 @@
   }
   .grille .large {
     grid-column: 1 / -1;
+  }
+  .levier {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .levier label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
   }
   .cases label,
   fieldset label {

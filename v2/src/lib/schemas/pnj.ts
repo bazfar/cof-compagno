@@ -34,6 +34,10 @@ export const schemaPnj = z
     tendance: z.enum(['hausse', 'baisse']).nullable(),
     /** Mensonges réussis en scène, pas encore découverts (S2, 9a). Absent des PNJ créés par S1 : 0. */
     mensonges: z.number().int().min(0).max(99).default(0),
+    /** Homme du peuple (S3, 2a) : un PNJ du peuple. */
+    peuple: z.boolean().default(false),
+    /** Levier (S3, 6a) : les secrets déjà utilisés contre lui, un par ligne. */
+    secrets: z.array(z.string().trim().min(1).max(120)).max(30).default([]),
     creeLe: z.number().int().nonnegative(),
     majLe: z.number().int().nonnegative(),
   })

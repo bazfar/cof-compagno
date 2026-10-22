@@ -39,7 +39,7 @@ const { session } = await import('../../src/lib/session.svelte');
 const { default: PrepaSocial } = await import('../../src/composants/PrepaSocial.svelte');
 const { default: RelationsJoueur } = await import('../../src/composants/RelationsJoueur.svelte');
 
-const pnj = (id: string, p: Record<string, unknown> = {}) => ({ id, nom: id, faction: null, lore: null, rencontre: false, cran: null, tendance: null, creeLe: 1, majLe: 1, ...p });
+const pnj = (id: string, p: Record<string, unknown> = {}) => ({ id, nom: id, faction: null, lore: null, rencontre: false, cran: null, tendance: null, mensonges: 0, peuple: false, secrets: [], creeLe: 1, majLe: 1, ...p });
 
 beforeEach(() => {
   session.table = 't1';

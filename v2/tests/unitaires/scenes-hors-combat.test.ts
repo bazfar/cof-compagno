@@ -85,11 +85,16 @@ const scene = (s: Partial<Scene> = {}): Scene => ({
   issue: null,
   creeLe: 1,
   closeLe: null,
+  peuple: 0,
+  foule: false,
+  autorite: false,
+  vecus: {},
+  usages: {},
   ...s,
 });
 const lieu = (s: Partial<Scene> = {}) => scene({ type: 'exploration', pnj: null, cible: 'Celliers du B0', depart: null, ...s });
-const action = (a: Partial<Action> = {}): Action => ({ uid: 'alice', perso: 'p-magnus', nom: 'Magnus', tour: 1, option: 'convaincre', competence: 'Persuasion', de: 10, bonus: 3, resultat: null, creeLe: 1, ...a });
-const pnj = (p: Partial<Pnj> = {}): Pnj => ({ nom: 'Aude Berlan', faction: null, lore: null, rencontre: true, cran: 'neutre', tendance: null, mensonges: 0, creeLe: 1, majLe: 1, ...p });
+const action = (a: Partial<Action> = {}): Action => ({ uid: 'alice', perso: 'p-magnus', nom: 'Magnus', tour: 1, option: 'convaincre', competence: 'Persuasion', de: 10, bonus: 3, resultat: null, creeLe: 1, relance: false, note: null, delta: null, annule: false, ...a });
+const pnj = (p: Partial<Pnj> = {}): Pnj => ({ nom: 'Aude Berlan', faction: null, lore: null, rencontre: true, cran: 'neutre', tendance: null, mensonges: 0, peuple: false, secrets: [], creeLe: 1, majLe: 1, ...p });
 
 beforeEach(() => {
   appels.length = 0;
@@ -220,7 +225,7 @@ describe('résoudre un jet (5a, 8a, 15a)', () => {
 
   it('passer : rien ne change', () => {
     const s = scene();
-    expect(H.resoudre(s, 13, action({ option: 'passer', de: null, competence: null, resultat: 'passe' }))).toEqual({ resultat: 'passe', scene: s });
+    expect(H.resoudre(s, 13, action({ option: 'passer', de: null, competence: null, resultat: 'passe' }))).toEqual({ resultat: 'passe', scene: s, note: null, delta: {}, revelation: null });
   });
 
   it('tour de table (7a) : le suivant s’ouvre quand chacun a agi ou passé', () => {
@@ -269,7 +274,7 @@ describe('clôture (8a, 9a, 10b, 13c)', () => {
 });
 
 describe('écritures', () => {
-  const brouillon = { type: 'social' as const, pnj: 'pnj-aude', cible: 'Aude Berlan', objectif: 'Savoir d’où vient la fiole', mode: 'individuel' as const, competence: null, dd: 13, requis: 3, toleres: 2, echecsVisibles: false, marquante: true, appeles: APPELES };
+  const brouillon = { type: 'social' as const, pnj: 'pnj-aude', cible: 'Aude Berlan', objectif: 'Savoir d’où vient la fiole', mode: 'individuel' as const, competence: null, dd: 13, requis: 3, toleres: 2, echecsVisibles: false, marquante: true, foule: false, autorite: false, appeles: APPELES };
 
   it('ouvrir : la scène (attitude de départ lue sur le PNJ), le DD à part, la table ; une seule à la fois', async () => {
     base.set('tables/t1', { sceneActive: null });
@@ -311,7 +316,7 @@ describe('écritures', () => {
     base.set(`${c}/actions/1-alice`, action({ de: 12 }));
     await S.resoudreAction('sh1', '1-alice');
     expect(appels.map((a) => [a.fn, a.chemin, a.donnees])).toEqual([
-      ['tx.update', `${c}/actions/1-alice`, { resultat: 'reussite' }],
+      ['tx.update', `${c}/actions/1-alice`, { resultat: 'reussite', note: null, delta: { reussites: 1, hausses: 1 } }],
       ['tx.set', c, scene({ reussites: 1, hausses: 1 })],
     ]);
     appels.length = 0;
