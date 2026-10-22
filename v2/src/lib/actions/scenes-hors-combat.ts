@@ -234,7 +234,10 @@ export async function relancerEnScene(idScene: string, s: SceneHorsCombat, origi
   if (!relancable(s, origine)) throw new RefusScene('Ce jet ne peut pas être relancé.');
   if (dejaUtiliseCetteSeance(usages, 'memoire-eidetique', seance)) throw new RefusScene('Mémoire eidétique a déjà servi cette séance.');
   const jet = await lancerEtNoter(`Scène : relance (${origine.competence})`.slice(0, 80), formuleTest(origine.bonus), moi.nom);
-  const a = schemaActionScene.parse({ ...origine, de: jet!.des[0]!, resultat: null, relance: true, note: null, delta: null, annule: false, creeLe: Date.now() });
+  // L'écran passe l'action telle que le magasin la rend, avec l'`id` du
+  // document en plus : le schéma est strict, il faut le retirer.
+  const { id: _id, ...sansId } = origine as ActionScene & { id?: string };
+  const a = schemaActionScene.parse({ ...sansId, de: jet!.des[0]!, resultat: null, relance: true, note: null, delta: null, annule: false, creeLe: Date.now() });
   await setDoc(doc(db, `${chemin(idScene)}/actions/${idAction(origine.tour, moi.uid)}-r`), a);
   await noterUsage(moi.perso, 'memoire-eidetique', seance);
   return a;

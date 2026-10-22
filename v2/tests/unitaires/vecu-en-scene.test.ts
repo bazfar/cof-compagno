@@ -281,6 +281,18 @@ describe('écritures', () => {
     await expect(S.relancerEnScene('sh1', s, { ...echec, competence: 'Perception' }, {}, 's14')).rejects.toThrow('pas être relancé');
   });
 
+  it('relancer : l’action vient du magasin avec son `id`, que le schéma strict refuserait', async () => {
+    session.uid = 'alice';
+    journal.de = 11;
+    const s = scene({ ...avec('memoire-eidetique'), seance: 's14' });
+    // L'écran passe un AvecId<ActionScene> : le `id` du document en plus.
+    const duMagasin = { ...action({ resultat: 'echec', delta: { echecs: 1 } }), id: '1-alice' };
+    await S.relancerEnScene('sh1', s, duMagasin, {}, 's14');
+    expect(appels[0]!.chemin).toBe(`${c}/actions/1-alice-r`);
+    expect(appels[0]!.donnees).toMatchObject({ de: 11, relance: true, resultat: null });
+    expect(appels[0]!.donnees).not.toHaveProperty('id');
+  });
+
   it('capacités du Vécu (10a) : une fois par scène, une fois par séance, ou libre ; seulement pour leur porteur', async () => {
     session.uid = 'alice';
     const s = scene({ ...avec('compagnon-oiseau', 'faconnage', 'dechiffrer'), seance: 's14' });
