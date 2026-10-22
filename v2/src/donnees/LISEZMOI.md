@@ -15,6 +15,7 @@ Ne les modifie pas à la main : la vérification (`npm run verifier`)
 | `armes-monstres.json`, `armures-monstres.json`, `equilibrage.json` | `data/armes_monstres.js`, `data/armures_monstres.js`, `data/equilibrage.js` |
 | `objets.json` | `data/loot.js` (et non `data/loot.json`, qui en est généré) |
 | `equipement-depart.json` | `data/equipement_depart.js` |
+| `reputation.json` | `data/reputation.js` (échelle et blocs de Libris, lot S1) |
 | `identifiants.json` | aucune : table figée, maintenue par l'import (voir plus bas) |
 | `scenes/*.json` (et les images `public/scenes/*.webp`) | `assets/battlemaps/*.dd2vtt` du catalogue `CARTES_BATTLEMAP` (`data/donnees.js`), par `npm run preparer-scenes` |
 

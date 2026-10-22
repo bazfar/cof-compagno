@@ -361,6 +361,55 @@ service cloud.firestore {
         && ficheLoreCommune(d)
         && d.lecteurs is list && d.lecteurs.size() >= 1 && d.lecteurs.size() <= 50;
     }
+    // ---- PNJ et réputation (lot S1, décisions du 22/10/2026) ----
+    // Les cinq blocs de Libris (src/donnees/reputation.json, tiré de la v1)
+    // et les six crans d'attitude (src/regles/attitude.ts). Un test
+    // vérifie que ces listes suivent les données.
+    function factionsReputation() {
+      return ['comptoir', 'serment_libris', 'garde_citoyenne', 'cercle_peuples', 'fils_libris'];
+    }
+    function cransAttitude() {
+      return ['hostile', 'mefiant', 'neutre', 'connaissance', 'favorable', 'allie'];
+    }
+    // Aligné sur schemaPnj (src/lib/schemas/pnj.ts).
+    function pnjValide(d) {
+      return d.keys().hasAll(['nom', 'faction', 'lore', 'rencontre', 'cran', 'tendance', 'creeLe', 'majLe'])
+        && d.keys().hasOnly(['nom', 'faction', 'lore', 'rencontre', 'cran', 'tendance', 'creeLe', 'majLe'])
+        && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 80
+        && (d.faction == null || d.faction in factionsReputation())
+        && (d.lore == null || (d.lore is string && d.lore.size() >= 1 && d.lore.size() <= 100))
+        && d.rencontre is bool
+        && ((d.rencontre == true && d.cran in cransAttitude()) || (d.rencontre == false && d.cran == null))
+        && (d.tendance == null || d.tendance in ['hausse', 'baisse'])
+        && d.creeLe is int && d.majLe is int;
+    }
+    // Aligné sur schemaGesteAttitude (src/lib/schemas/pnj.ts).
+    function gesteAttitudeValide(d) {
+      return d.keys().hasAll(['geste', 'avant', 'apres', 'motif', 'parUid', 'creeLe'])
+        && d.keys().hasOnly(['geste', 'avant', 'apres', 'motif', 'parUid', 'seance', 'creeLe'])
+        && d.geste in ['rencontre', 'service', 'correction']
+        && (d.avant == null || d.avant in cransAttitude())
+        && d.apres in cransAttitude()
+        && d.motif is string && d.motif.size() >= 1 && d.motif.size() <= 120
+        && d.parUid == request.auth.uid
+        && (!('seance' in d) || (d.seance is string && d.seance.size() <= 40))
+        && d.creeLe is int;
+    }
+    function scoreValide(s, plafond) {
+      return s is int && s >= -10 && s <= plafond;
+    }
+    // Aligné sur schemaReputationGroupe (src/lib/schemas/reputation.ts), plafonds de la v1.
+    function reputationValide(d) {
+      return d.keys().hasOnly(['scores', 'majLe']) && d.keys().hasAll(['scores', 'majLe'])
+        && d.scores is map
+        && d.scores.keys().hasOnly(factionsReputation())
+        && scoreValide(d.scores.get('comptoir', 0), 10)
+        && scoreValide(d.scores.get('serment_libris', 0), 10)
+        && scoreValide(d.scores.get('garde_citoyenne', 0), 10)
+        && scoreValide(d.scores.get('cercle_peuples', 0), 10)
+        && scoreValide(d.scores.get('fils_libris', 0), 5)
+        && d.majLe is int;
+    }
     // Aligné sur schemaEtatScene (src/lib/schemas/carte.ts).
     function etatSceneValide(d) {
       return d.keys().hasOnly(['portesOuvertes', 'exploration', 'explorationRaz'])
@@ -645,6 +694,28 @@ service cloud.firestore {
             && (request.auth.uid in resource.data.lecteurs || '*' in resource.data.lecteurs));
         allow create, update: if estMj(table) && ficheLoreJoueursValide(request.resource.data);
         allow delete: if estMj(table);
+      }
+
+      // PNJ (S1, 3a) : le MJ seul les écrit. Un joueur ne lit qu'un PNJ
+      // rencontré (6a, 7a) ; sa requête `rencontre == true` est prouvée par
+      // la règle. L'historique (motifs des changements d'attitude) reste au MJ.
+      match /pnj/{pnj} {
+        allow read: if estMj(table) || (estJoueur(table) && resource.data.rencontre == true);
+        allow create, update: if estMj(table) && pnjValide(request.resource.data);
+        allow delete: if estMj(table);
+        match /historique/{geste} {
+          allow read, delete: if estMj(table);
+          allow create: if estMj(table) && gesteAttitudeValide(request.resource.data);
+          allow update: if false;
+        }
+      }
+
+      // Réputation du groupe (S1, 5) : un seul document, lu de toute la
+      // table, écrit par le MJ, scores bornés à −10 et au plafond du bloc.
+      match /reputation/{document} {
+        allow read: if estMembre(table);
+        allow create, update: if estMj(table) && document == 'groupe' && reputationValide(request.resource.data);
+        allow delete: if false;
       }
 
       // Toute autre collection (combat…) est refusée par défaut :

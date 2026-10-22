@@ -15,6 +15,9 @@
    * jamais perdue, et la marque « nouveau » se met à jour même section
    * Personnage ouverte.
    *
+   * Section Relations (lot S1) : la réputation du groupe et les PNJ
+   * rencontrés, avec leur attitude.
+   *
    * Code perso (correctif du 19/10) : un joueur inscrit avant le correctif
    * est invité, en tête de colonne, à choisir un code pour se retrouver sur
    * un autre appareil.
@@ -32,13 +35,20 @@
   const butin = import('../composants/ButinJoueur.svelte');
   // Le lore (L2.7b), chargé à part lui aussi.
   const lore = import('../composants/LoreJoueur.svelte');
+  // Les relations (S1), chargées à la première visite seulement.
+  let relationsOuvertes = $state(false);
 
   let section = $state('perso');
   let nouvelles = $state(0);
   const sections = $derived([
     { id: 'perso', libelle: 'Personnage' },
     { id: 'lore', libelle: 'Lore', badge: nouvelles },
+    { id: 'relations', libelle: 'Relations' },
   ]);
+  $effect(() => {
+    if (section === 'relations') relationsOuvertes = true;
+  });
+  const relations = $derived(relationsOuvertes ? import('../composants/RelationsJoueur.svelte') : null);
 </script>
 
 <BarreHaut etiquette="Joueur" {sections} active={section} surSection={(id) => (section = id)} />
@@ -78,6 +88,15 @@
     {:catch e}
       <p role="alert">Lore indisponible : {String(e)}</p>
     {/await}
+  </div>
+  <div hidden={section !== 'relations'}>
+    {#if relations}
+      {#await relations then module}
+        <module.default />
+      {:catch e}
+        <p role="alert">Relations indisponibles : {String(e)}</p>
+      {/await}
+    {/if}
   </div>
 </main>
 

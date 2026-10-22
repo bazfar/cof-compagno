@@ -18,8 +18,9 @@
    * - Prépa combat (L3.5) : rencontres préparées (scène, monstres placés
    *   d'avance, jauge d'équilibrage, butin prévu), chargée à la première
    *   visite seulement.
-   * Prépa social (2.1) s'ajoutera à SECTIONS avec son lot, pas avant : pas
-   * d'onglet vide.
+   * - Prépa social (lot S1) : réputation du groupe et PNJ avec leur
+   *   attitude, chargée à la première visite seulement. Les scènes jouées
+   *   s'y ajouteront (S2).
    *
    * Changer de section masque les autres sans les démonter : la carte garde
    * ses abonnements, et le client du MJ continue d'enregistrer
@@ -29,6 +30,7 @@
   const SECTIONS = [
     { id: 'seance', libelle: 'Séance' },
     { id: 'prepa', libelle: 'Prépa combat' },
+    { id: 'social', libelle: 'Prépa social' },
     { id: 'donnees', libelle: 'Données' },
     { id: 'lore', libelle: 'Lore' },
   ];
@@ -46,6 +48,12 @@
     if (section === 'prepa') prepaOuverte = true;
   });
   const prepa = $derived(prepaOuverte ? import('../composants/PrepaCombat.svelte') : null);
+  // Prépa social (S1), chargée à la première visite, puis gardée montée.
+  let socialOuvert = $state(false);
+  $effect(() => {
+    if (section === 'social') socialOuvert = true;
+  });
+  const social = $derived(socialOuvert ? import('../composants/PrepaSocial.svelte') : null);
 
   // La battlemap (lot L5.3) est chargée à part : son code et les scènes ne
   // retardent pas l'ouverture du poste.
@@ -131,6 +139,17 @@
         <module.default />
       {:catch e}
         <p role="alert">Prépa combat indisponible : {String(e)}</p>
+      {/await}
+    {/if}
+  </div>
+  <div hidden={section !== 'social'}>
+    {#if social}
+      {#await social}
+        <p>Chargement de la prépa social…</p>
+      {:then module}
+        <module.default />
+      {:catch e}
+        <p role="alert">Prépa social indisponible : {String(e)}</p>
       {/await}
     {/if}
   </div>

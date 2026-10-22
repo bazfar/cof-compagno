@@ -120,3 +120,25 @@ export const rencontres = $state({ elements: [] as Record<string, unknown>[], pr
 export const magasinsRencontres = {
   suivreRencontres: () => ({ etat: rencontres, arreter: () => {} }),
 };
+
+/** PNJ et réputation (S1) : le test y pose les PNJ, la réputation et l'historique du PNJ ouvert. */
+export const pnjs = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+export const reputation = $state({ donnees: null as { scores: Record<string, number>; majLe: number } | null, pret: true, erreur: null as string | null });
+export const historiquePnj = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+
+export const magasinsPnj = {
+  suivrePnjMj: () => ({ etat: pnjs, arreter: () => {} }),
+  // Comme la requête des joueurs : les PNJ rencontrés seulement.
+  suivrePnjJoueur: () => ({
+    etat: {
+      get elements() {
+        return pnjs.elements.filter((p) => p.rencontre === true);
+      },
+      pret: true,
+      erreur: null,
+    },
+    arreter: () => {},
+  }),
+  suivreHistoriquePnj: () => ({ etat: historiquePnj, arreter: () => {} }),
+  suivreReputation: () => ({ etat: reputation, arreter: () => {} }),
+};

@@ -32,12 +32,14 @@ export interface CollectionSuivie<T> {
  *
  * `filtre.contient` (lot L2.7a) : les documents dont un champ liste contient
  * une valeur (lore : `lecteurs` contient l'uid du joueur, ou « * »).
+ *
+ * `filtre.egal` booléen (lot S1) : les PNJ rencontrés (`rencontre == true`).
  */
 export function suivreCollection<T>(
   db: Firestore,
   chemin: string,
   schema: z.ZodType<T>,
-  filtre?: { champ: string; egal: string } | { champ: string; contient: string },
+  filtre?: { champ: string; egal: string | boolean } | { champ: string; contient: string },
   tri?: { champ: string; sens: 'asc' | 'desc'; limite: number },
 ): CollectionSuivie<T> {
   const etat = $state<CollectionSuivie<T>['etat']>({ elements: [], pret: false, erreur: null });

@@ -36,6 +36,8 @@ la refonte les remplace.
 | `classes/magicien.ts` | La classe Magicien : création, réserve de PP, Voie de l'école, Voie élémentaire, Cataclysme (L4.4b1) ; Voie sauvage, Hémomancie, Virtuose, Saignée (L4.4b2) |
 | `etats.ts` | Le catalogue des états de la refonte (lot L4.2) |
 | `elements.ts` | Les sept éléments : effet générique sur un sort et dérapage (lot L4.2) |
+| `vecu.ts` | Les 33 nœuds de l'arbre du Vécu, les prédilections de classe, le Vécu des capacités v1 (lot L4.18) |
+| `attitude.ts` | Les six crans d'attitude d'un PNJ, leur modificateur de DD, le départ selon la réputation (lot S1) |
 
 Chaque action suit le schéma `src/lib/schemas/effets.ts` : ciblage, zone,
 résolution, persistance, effets typés, paliers en deltas, usage hors

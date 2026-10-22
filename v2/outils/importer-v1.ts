@@ -37,6 +37,7 @@ import {
 } from '../src/lib/schemas/regles.ts';
 import { schemaArmeMonstre, schemaArmureMonstre, schemaBestiaire, schemaEquilibrage } from '../src/lib/schemas/bestiaire.ts';
 import { schemaCatalogueObjets, schemaEquipementDepart } from '../src/lib/schemas/objets.ts';
+import { schemaReputationV1 } from '../src/lib/schemas/reputation.ts';
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const RACINE_V1 = resolve(ICI, '../..');
@@ -56,6 +57,8 @@ const FICHIERS_V1 = [
   'data/equilibrage.js',
   'data/loot.js',
   'data/equipement_depart.js',
+  // S1 (22/10/2026) : l'échelle de réputation et les cinq blocs de Libris.
+  'data/reputation.js',
 ];
 
 type Brut = any;
@@ -335,6 +338,9 @@ function importer() {
   );
   const equipementDepart = valider(schemaEquipementDepart, v1.EQUIPEMENT_DEPART, 'equipement-depart');
 
+  // ---------- Réputation (S1) ----------
+  const reputation = valider(schemaReputationV1, { echelle: v1.REPUTATION_ECHELLE, factions: v1.REPUTATION_FACTIONS_LIBERRA }, 'reputation');
+
   return {
     fichiers: {
       'classes.json': classes,
@@ -350,6 +356,7 @@ function importer() {
       'equilibrage.json': equilibrage,
       'objets.json': objets,
       'equipement-depart.json': equipementDepart,
+      'reputation.json': reputation,
       'identifiants.json': identifiants,
     } as Record<string, unknown>,
     nouvelles,
