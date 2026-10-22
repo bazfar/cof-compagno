@@ -69,6 +69,13 @@ import type { ActionSaisie, EffetSaisi } from '../../lib/schemas/effets';
  * Illumination noire (+4 initiative, +2 attaque, une esquive d'office par
  * tour, 3 + mod de SAG rounds ; ensuite désavantage 1d4 rounds). La Voix du
  * Vide v1 (R2) laisse la place au Don corrompu.
+ *
+ * Nécromancien (lot L4.17, décision 7a) : Étincelle chaotique (2d8 à 20
+ * cases, attaque magique), Vrille de réalité (rayon 2 à 7 cases, 4d6, une
+ * attaque magique par cible), Symbiose du chaos (+1d6 aux sorts ou +2 de
+ * réduction des dégâts, choix fixé à l'acquisition ; les lieux saints lui
+ * sont fermés), Avatar du chaos (+4 attaque magique, +2d6, dégâts
+ * physiques subis divisés par deux, 3 + mod d'INT rounds).
  */
 
 const surSoi = { type: 'soi', portee: 'soi' } as const;
@@ -180,6 +187,45 @@ export const ACTIONS_CHAOS: ActionSaisie[] = [
       { type: 'bonus', cible: 'DEF', valeur: 4, duree: avatar('CON'), vise: 'lanceur' },
       { type: 'bonus', cible: 'degats', valeur: '2d6', typeDegats: 'chaotique', duree: avatar('CON'), vise: 'lanceur' },
       { type: 'narratif', texte: 'Immunisé à la peur pendant l’Avatar ; au tour qui suit sa fin, il perd son déplacement.', vise: 'lanceur' },
+    ]),
+  }),
+
+  // ---- Nécromancien (L4.17, 7a) ----
+  chaos('necromancien.etincelle-chaotique', 'Étincelle chaotique', 'À l’attaque magique, 20 cases : 2d8 chaotiques.', 1, {
+    nature: 'capacite',
+    action: 'action',
+    ciblage: { type: 'creature', camp: 'ennemi', portee: 20 },
+    resolution: { jet: 'attaqueMagique' },
+    effets: [{ type: 'degats', des: '2d8', typeDegats: 'chaotique' }, plongee(1)],
+  }),
+  chaos('necromancien.vrille-de-realite', 'Vrille de réalité', 'Rayon 2 jusqu’à 7 cases, une attaque magique par cible : 4d6 chaotiques.', 3, {
+    nature: 'capacite',
+    action: 'action',
+    jetDeChaos: true,
+    ciblage: { type: 'point', portee: 7 },
+    zone: { forme: 'cercle', taille: 2, origine: 'point' },
+    resolution: { jet: 'attaqueMagique' },
+    effets: [{ type: 'degats', des: '4d6', typeDegats: 'chaotique', vise: 'zone' }, plongee(2)],
+  }),
+  chaos('necromancien.symbiose-du-chaos', 'Symbiose du chaos', 'Dès 5 de Corruption d’Âme, au choix fixé à l’acquisition : +1d6 aux dégâts de ses sorts, ou +2 de réduction des dégâts.', 4, {
+    nature: 'passif',
+    action: 'aucune',
+    corruptionAmeMin: 5,
+    ciblage: surSoi,
+    resolution: sansJet,
+    effets: [{ type: 'bonus', cible: 'degats', valeur: '1d6', typeDegats: 'chaotique', duree: 'permanente', vise: 'lanceur' }],
+    variantes: [{ id: 'reduction', nom: '+2 de réduction des dégâts', palier: 'I', delta: { remplaceEffets: [{ type: 'bonus', cible: 'reductionDegats', valeur: 2, duree: 'permanente', vise: 'lanceur' }] } }],
+  }),
+  chaos('necromancien.avatar-du-chaos', 'Avatar du chaos', 'Une fois par scénario, 3 + mod d’INT rounds : +4 en attaque magique, +2d6 chaotiques à ses sorts, dégâts physiques subis divisés par deux.', 5, {
+    nature: 'capacite',
+    action: 'action',
+    limite: '1x/scenario',
+    ciblage: surSoi,
+    resolution: sansJet,
+    effets: effetsDAvatar([
+      { type: 'bonus', cible: 'attaqueMagique', valeur: 4, duree: avatar('INT'), vise: 'lanceur' },
+      { type: 'bonus', cible: 'degats', valeur: '2d6', typeDegats: 'chaotique', duree: avatar('INT'), vise: 'lanceur' },
+      { type: 'etat', etat: 'avatar_du_chaos', duree: avatar('INT'), vise: 'lanceur' },
     ]),
   }),
 
@@ -520,6 +566,14 @@ function voieDuChaos(classe: string, description: string, r1: Rang, r3: Rang, r4
 }
 
 export const VOIES_CHAOS: VoieSaisie[] = [
+  voieDuChaos(
+    'necromancien',
+    'Il a puisé trop loin dans la Mer : ce qui en remonte n’est plus une âme, c’est le chaos lui-même.',
+    { nom: 'Étincelle chaotique', description: '2d8 chaotiques à 20 cases.', actions: ['chaos.necromancien.etincelle-chaotique'] },
+    { nom: 'Vrille de réalité', description: '4d6 chaotiques en zone.', actions: ['chaos.necromancien.vrille-de-realite'] },
+    { nom: 'Symbiose du chaos', description: '+1d6 aux sorts ou +2 de réduction.', actions: ['chaos.necromancien.symbiose-du-chaos'], contrepartie: 'les lieux saints lui sont fermés.' },
+    { nom: 'Avatar du chaos', description: 'L’Avatar du Nécromancien.', actions: ['chaos.necromancien.avatar-du-chaos'] },
+  ),
   voieDuChaos(
     'moine',
     'Une méditation qui a regardé trop loin : le Vide répond, et la main ne vise plus toujours qui elle veut.',

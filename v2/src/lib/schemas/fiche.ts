@@ -179,6 +179,8 @@ export const schemaRefonteFiche = z.strictObject({
     instinct: entier.nonnegative().nullable().optional(),
     forceNature: entier.nonnegative().nullable().optional(),
     ki: entier.nonnegative().nullable().optional(),
+    /** Âmes du Nécromancien (lot L4.17) : 0 à 3, 5 avec la Moisson ; absentes des autres classes. */
+    ames: entier.nonnegative().optional(),
     sacre: entier.nonnegative().nullable(),
     plongee: entier.nonnegative(),
     corruptionAme: entier.nonnegative(),

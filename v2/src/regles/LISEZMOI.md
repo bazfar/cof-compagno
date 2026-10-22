@@ -27,6 +27,8 @@ la refonte les remplace.
 | `ecoles/nature.ts` | La Voie des éléments naturels du Druide, son école : Enchevêtrement, Vague, Givre, Tremblement, Tempête (lot L4.15) |
 | `classes/druide.ts` | La classe Druide : Force de la nature, Voies des formes, du protecteur, du shaman (lot L4.15) |
 | `classes/moine.ts` | La classe Moine : Ki, mains nues, Voies des poings, de l'élévation, de l'ascétisme, des souffles (lot L4.16) |
+| `ecoles/outre-tombe.ts`, `ecoles/malediction.ts` | Les deux écoles du Nécromancien (lot L4.17) |
+| `classes/necromancien.ts` | La classe Nécromancien : Âmes, Voies du sang, des âmes, du seuil (lot L4.17) |
 | `classes/chaos.ts` | Les Voies du chaos du Guerrier, du Magicien, de l'Envoûteur, du Prêtre et du Barde, au gabarit commun (lot L4.9) |
 | `combinaisons.ts` | Les sept combinaisons signature de deux éléments (lot L4.10) |
 | `classes/envouteur.ts` | La classe Envoûteur : voies de l'esprit, de la transmutation, de la prescience, seconde école (lot L4.5) |

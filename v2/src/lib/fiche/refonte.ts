@@ -42,7 +42,7 @@ import { actionParId, actionsCommunes, classeParId, elementParId, voieParId } fr
  * (Envoûteur).
  */
 
-/** Classes v1 refondues, vers leur identifiant de la refonte (les cinq du groupe, puis le Chevalier au lot L4.13, décision 12a, le Chasseur au lot L4.14, le Druide au lot L4.15 et le Moine au lot L4.16 ; le Nécromancien suit). */
+/** Classes v1 refondues, vers leur identifiant de la refonte (les cinq du groupe, puis le Chevalier au lot L4.13, décision 12a, le Chasseur au lot L4.14, le Druide au lot L4.15, le Moine au lot L4.16 et le Nécromancien au lot L4.17 : les dix classes). */
 export const CLASSE_REFONTE: Readonly<Record<string, string>> = {
   guerrier: 'guerrier',
   chevalier: 'chevalier',
@@ -53,6 +53,7 @@ export const CLASSE_REFONTE: Readonly<Record<string, string>> = {
   pretre: 'pretre',
   barde: 'barde',
   moine: 'moine',
+  necromancien: 'necromancien',
 };
 
 /** Les règles de la refonte, telles que les lit le profil. */
@@ -135,6 +136,8 @@ export function jaugesPleines(classe: ClasseRefonte, niveau: number, corruptionA
     inspiration: res?.ressource === 'inspiration' ? max : null,
     ...autre,
     sacre: classe.reserveSacre ? classe.reserveSacre.base + Math.floor(niveau / classe.reserveSacre.diviseurNiveau) : null,
+    // Âmes du Nécromancien (lot L4.17) : on n'en a aucune avant d'en capturer.
+    ...(classe.reserveAmes ? { ames: 0 } : {}),
     plongee: 0,
     corruptionAme,
   };
@@ -318,6 +321,12 @@ export const NOMS_ECOLES: Readonly<Record<string, string>> = {
   jugement: 'Jugement',
   chant: 'Chant',
   nature: 'Éléments naturels',
+  // Écoles et voies du Nécromancien (lot L4.17).
+  'outre-tombe': 'Outre-tombe',
+  malediction: 'Malédiction',
+  sang: 'Sang',
+  ames: 'Âmes',
+  seuil: 'Seuil',
 };
 export const nomEcole = (id: string): string => NOMS_ECOLES[id] ?? id;
 export const nomElement = (id: string): string => elementParId.get(id)?.nom ?? id;

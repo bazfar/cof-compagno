@@ -244,6 +244,8 @@ const schemaEffetDegats = z.strictObject({
    * 1 à 4, 1d8 de 5 à 8, 1d10 de 9 à 12 (lib/effets/resolution.ts, deMineur).
    */
   progression: z.literal('mineur').optional(),
+  /** Les dégâts infligés soignent le lanceur : la moitié, ou tout (Voie du sang du Nécromancien, lot L4.17). */
+  draine: z.enum(['moitie', 'tout']).optional(),
   /** Crans de plus au dé d'un sort mineur (Gourdin du Druide : +1, lot L4.15) ; s'ajoutent à ceux de la Perfection. */
   crans: z.number().int().min(1).max(2).optional(),
   /** Dégâts doublés contre les démons et morts-vivants (Flamme sacrée, lot L4.6). */
@@ -268,6 +270,20 @@ const schemaEffetPvTemp = z.strictObject({
   parNiveau: z.number().int().min(1).max(10).optional(),
   plusMod: z.boolean().default(false),
   ...champMod,
+  ...champsCommuns,
+});
+
+/**
+ * Transfusion (Voie du seuil du Nécromancien, lot L4.17) : X PV passent d'un
+ * donneur à un receveur, X choisi au lancer (`Lancer.montant`), au plus
+ * `parNiveau` × niveau du lanceur. `depuis: 'lanceur'` : il les paie en PV,
+ * la cible les reçoit ; `depuis: 'cible'` : la cible les perd (dégâts
+ * nécrotiques), l'allié choisi les reçoit.
+ */
+const schemaEffetTransfusion = z.strictObject({
+  type: z.literal('transfusion'),
+  parNiveau: z.number().int().min(1).max(10),
+  depuis: z.enum(['lanceur', 'cible']),
   ...champsCommuns,
 });
 
@@ -434,6 +450,7 @@ const EFFETS_DE_BASE = [
   schemaEffetDegats,
   schemaEffetSoin,
   schemaEffetPvTemp,
+  schemaEffetTransfusion,
   schemaEffetEtat,
   schemaEffetRetraitEtat,
   schemaEffetDeplacement,
@@ -671,6 +688,8 @@ export const schemaAction = z
     attaquePar: schemaCarac.optional(),
     /** L'action demande une arme de ces familles, sans être une attaque spéciale (Lancer un couteau : une dague ; lot L4.8). */
     armes: z.array(schemaFamilleArme).min(1).optional(),
+    /** Un verbe payé en âmes au lieu de PP (Libération vengeresse du Nécromancien : 1 âme, lot L4.17). */
+    coutEnAmes: z.number().int().min(1).max(3).optional(),
     /** Seulement sous l'une de ces formes, des états du catalogue (attaques des formes du Druide, lot L4.15). */
     enForme: z.array(schemaId).min(1).optional(),
     /** Exige un élément au moins à ce rang (Serviteur : Initié ; Cataclysme : Maître). */

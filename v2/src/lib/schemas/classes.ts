@@ -167,6 +167,12 @@ export const schemaClasseRefonte = z.strictObject({
     })
     .refine((r) => (r.recharge === 'chaqueCombat') === (r.debutCombat !== undefined), { message: 'une ressource qui repart à chaque combat dit sa valeur de départ' })
     .optional(),
+  /**
+   * Âmes du Nécromancien (lot L4.17, décision 2a) : une ressource à part,
+   * de 0 à `max` (3), `moisson.max` (5) pour qui a l'action de Moisson ;
+   * une âme ne paie que ce qui la nomme.
+   */
+  reserveAmes: z.strictObject({ max: z.number().int().min(1).max(10), moisson: z.strictObject({ action: schemaId, max: z.number().int().min(1).max(10) }).optional() }).optional(),
   /** Dé des mains nues selon le niveau : chaque palier vaut dès son niveau (Moine : d6, d8 au niveau 5, 2d6 au niveau 9 ; lot L4.16). */
   mainsNues: z
     .array(z.strictObject({ niveau: z.number().int().min(1).max(20), des: schemaFormuleDes }))

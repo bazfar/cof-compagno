@@ -171,7 +171,8 @@ describe('création (10a) : une classe refondue crée une fiche de la refonte', 
     expect(C.choisirClasse(avec, 'barde').refonte).toBeNull();
     // Un bloc d'une autre classe (brouillon gardé avant un changement) ne compte pas.
     expect(K.refonteDuBrouillon({ ...avec, classe: 'enchanteur' })).toEqual(R.refonteVierge(classe('envouteur'), 1));
-    const necro = { ...C.brouillonVide(), classe: 'necromancien' };
+    // Depuis L4.17, les dix classes sont refondues : une classe inconnue tient lieu de classe non refondue.
+    const necro = { ...C.brouillonVide(), classe: 'inconnue' };
     expect(K.refonteDuBrouillon(necro)).toBeNull();
     expect(K.erreursCreationRefonte(necro)).toEqual(C.erreursCreation(necro));
     expect(() => K.gesteRefonte(necro, (_c, r) => r)).toThrow('pas encore passée à la refonte');
@@ -207,7 +208,7 @@ describe('création (10a) : une classe refondue crée une fiche de la refonte', 
   it('avertissements : ceux de la refonte (Polyvalence, points), pas ceux des voies v1', () => {
     const b = C.changerNiveau({ ...C.brouillonVide(), classe: 'guerrier', race: 'humain' }, 5);
     expect(K.avertissementsCreationRefonte(b)).toEqual(['Polyvalence : le rang offert reste à choisir.', '10 points de voie à dépenser.']);
-    expect(K.avertissementsCreationRefonte({ ...C.brouillonVide(), classe: 'necromancien' })).toEqual(C.avertissementsCreation({ ...C.brouillonVide(), classe: 'necromancien' }));
+    expect(K.avertissementsCreationRefonte({ ...C.brouillonVide(), classe: 'inconnue' })).toEqual(C.avertissementsCreation({ ...C.brouillonVide(), classe: 'inconnue' }));
   });
 
   it('reprise d’une fiche v1 en refonte : la Corruption d’Âme reprend la corruption majeure', () => {
@@ -508,7 +509,8 @@ describe('pour les écrans (L4.11b2)', () => {
     expect(R.etatRefonte({ ...v2, octrois: { ...v2.octrois, reconversion: true } })).toBe('reconversion');
     expect(R.etatRefonte(reelle('Karlach'))).toBe('aConvertir');
     expect(R.etatRefonte(reelle('Hyrma'))).toBe('aConvertir');
-    expect(R.etatRefonte(reelle('Hyrma', { classe: 'necromancien' }))).toBe('v1');
+    expect(R.etatRefonte(reelle('Hyrma', { classe: 'necromancien' }))).toBe('aConvertir');
+    expect(R.etatRefonte(reelle('Hyrma', { classe: 'inconnue' }))).toBe('v1');
   });
 
   it('verbes accordables : tous les verbes, par école puis rang ; noms des écoles et éléments', () => {

@@ -465,7 +465,7 @@ describe('refonte (L4.11b)', () => {
     ...patch,
   });
 
-  it('« Passer à la refonte » : pour une classe refondue, à qui peut modifier la fiche ; pas pour le Nécromancien', () => {
+  it('« Passer à la refonte » : à qui peut modifier la fiche, pour toutes les classes (le Nécromancien depuis L4.17)', () => {
     const vue = render(FicheVivante, { props: { fiche: reelle('Karlach', 'p-c'), modifiable: true } });
     expect(screen.getByRole('button', { name: 'Passer à la refonte' })).toBeTruthy();
     vue.unmount();
@@ -473,7 +473,7 @@ describe('refonte (L4.11b)', () => {
     expect(screen.queryByRole('button', { name: 'Passer à la refonte' })).toBeNull();
     lecture.unmount();
     render(FicheVivante, { props: { fiche: { ...reelle('Hyrma', 'p-h'), classe: 'necromancien' }, modifiable: true } });
-    expect(screen.queryByRole('button', { name: 'Passer à la refonte' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Passer à la refonte' })).toBeTruthy();
   });
 
   it('conversion : anciennes voies rappelées, voies refaites, confirmation, puis l’écriture', async () => {
@@ -595,7 +595,7 @@ describe('refonte (L4.11b)', () => {
     expect(badges('Converti')).toEqual(['refonte']);
     expect(badges('Rouvert')).toEqual(['conversion rouverte']);
     expect(badges('A convertir')).toEqual(['à convertir']);
-    expect(badges('Nécromancien')).toEqual([]);
+    expect(badges('Nécromancien')).toEqual(['à convertir']);
   });
 });
 

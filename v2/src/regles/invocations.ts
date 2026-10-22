@@ -155,6 +155,32 @@ export const INVOCATIONS: InvocationSaisie[] = [
       { nom: 'Meute', texte: 'Voie du limier, rang 4 : une réaction ; lui et le Chasseur au contact d’une même cible ont +2 en attaque contre elle.' },
     ],
   },
+  // ---- Morts-vivants du Nécromancien (lot L4.17, décision 3a) : des Repêchés, comme les serviteurs ----
+  {
+    id: 'zombie',
+    nom: 'Zombie',
+    description: 'Un cadavre récent relevé par le Nécromancien (Relever) : lent, il frappe au jet d’attaque magique de son maître.',
+    pv: { parNiveau: 2 },
+    def: { base: 10 },
+    deplacement: 3,
+    attaque: { des: '1d6', plusModMagie: true, typeDegats: 'physique' },
+    capacites: [{ nom: 'Repêché', texte: 'À 0 PV, son âme retourne à la Mer. Il dure jusqu’à la fin du combat.' }],
+    remousParRound: 1,
+  },
+  {
+    id: 'squelette',
+    nom: 'Squelette',
+    description: 'Des os relevés au palier II de Relever : il tire à l’arc, au jet d’attaque magique de son maître.',
+    pv: { parNiveau: 2 },
+    def: { base: 13 },
+    deplacement: 6,
+    attaque: { des: '1d6', plusModMagie: true, typeDegats: 'physique' },
+    capacites: [
+      { nom: 'Arc', texte: 'Son attaque porte à distance, jusqu’à 10 cases.' },
+      { nom: 'Repêché', texte: 'À 0 PV, son âme retourne à la Mer. Il dure jusqu’à la fin du combat.' },
+    ],
+    remousParRound: 1,
+  },
   {
     id: 'embrun',
     nom: 'Embrun',

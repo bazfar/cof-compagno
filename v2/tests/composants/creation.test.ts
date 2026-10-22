@@ -15,10 +15,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * des actions espionnées.
  *
  * L4.11b (décision 10a) : le Guerrier, le Magicien, l'Enchanteur, le
- * Prêtre et le Barde créent désormais une fiche de la refonte. Le parcours
- * v1 se teste avec le Nécromancien, pas encore refondu (le Chevalier l'est
- * depuis L4.13) ; celui de la refonte
- * a sa propre partie, plus bas.
+ * Prêtre et le Barde créent désormais une fiche de la refonte ; depuis
+ * L4.17, les dix classes le font, Nécromancien compris : l'assistant ne
+ * passe plus par le parcours v1 (voies v1), qui n'a plus de classe à
+ * servir. Le Nécromancien sert ici d'exemple de lanceur de la refonte.
  */
 
 const actions = vi.hoisted(() => ({
@@ -49,7 +49,7 @@ const { ficheDepuisV1 } = await import('../../src/lib/regles/fiche-document');
 const bouton = (nom: string | RegExp) => screen.getByRole('button', { name: nom });
 const etape = (nom: string) => fireEvent.click(bouton(new RegExp(`^${nom}`)));
 
-/** Nécromancien nain niveau 1 (classe pas encore refondue : parcours v1), rempli à la main comme le ferait un joueur. */
+/** Nécromancien nain niveau 1 de la refonte (L4.17) : école, sang, deux sorts mineurs, deux rangs. */
 async function remplirNecromancienNain(nom = 'Borin') {
   await fireEvent.input(screen.getByLabelText('Nom'), { target: { value: nom } });
   await fireEvent.click(bouton('Nain'));
@@ -57,8 +57,12 @@ async function remplirNecromancienNain(nom = 'Borin') {
   await etape('Caractéristiques');
   for (const c of ['FOR', 'FOR', 'FOR', 'CON', 'CON', 'CON']) await fireEvent.click(bouton(`Ajouter un point en ${c}`));
   await etape('Voies');
-  await fireEvent.click(bouton('Prendre necromancien.sang.1'));
-  await fireEvent.click(bouton('Prendre necromancien.outre-tombe.1'));
+  await fireEvent.click(bouton('Outre-tombe'));
+  await fireEvent.click(bouton('Sang'));
+  await fireEvent.click(screen.getByLabelText('Trait nécrotique'));
+  await fireEvent.click(screen.getByLabelText('Frisson'));
+  await fireEvent.click(bouton('Prendre necromancien.ecole rang 1'));
+  await fireEvent.click(bouton('Prendre necromancien.sang rang 1'));
 }
 
 /** Guerrier nain niveau 1 de la refonte : identité, caractéristiques, deux rangs de Soldat. */
@@ -92,7 +96,7 @@ describe('assistant de création', () => {
     const surCree = vi.fn();
     render(AssistantCreation, { props: { surCree, surAnnuler: () => {} } });
     await remplirNecromancienNain();
-    expect(screen.getByTestId('points-voie').textContent).toBe('0');
+    expect(screen.getByTestId('points-refonte').textContent).toBe('0');
 
     await etape('Récapitulatif');
     expect(screen.queryByLabelText('À compléter')).toBeNull();
@@ -102,9 +106,12 @@ describe('assistant de création', () => {
     const [id, fiche] = actions.creerPerso.mock.calls[0]!;
     expect(id).toBe('p-nouveau');
     expect(fiche).toMatchObject({
-      nom: 'Borin', proprietaireUid: 'alice', classe: 'necromancien', race: 'nain', niveau: 1, capacitesRace: [1],
-      capacites: [{ id: 'necromancien.sang.1' }, { id: 'necromancien.outre-tombe.1' }],
-      caracs: { FOR: 13, CON: 13 }, pvMax: 9, pvActuel: 9,
+      schemaVersion: 2, nom: 'Borin', proprietaireUid: 'alice', classe: 'necromancien', race: 'nain', niveau: 1, capacitesRace: [1],
+      caracs: { FOR: 13, CON: 13 },
+      refonte: {
+        classe: 'necromancien', ecole: 'outre-tombe', elementDepart: 'sang', mineurs: ['mineur.trait-necrotique', 'mineur.frisson'],
+        rangs: { 'necromancien.ecole': 1, 'necromancien.sang': 1 }, jauges: { ames: 0, plongee: 0, corruptionAme: 0 },
+      },
     });
     // Bug v1 corrigé : l'assistant repart d'un brouillon vide.
     expect(localStorage.getItem('cof2:creation:t1:alice')).not.toContain('Borin');
@@ -115,9 +122,9 @@ describe('assistant de création', () => {
   it('un geste refusé par les règles affiche la raison, sans rien changer', async () => {
     render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
     await remplirNecromancienNain();
-    await fireEvent.click(bouton('Prendre necromancien.sombre-magie.1'));
-    expect(screen.getByRole('alert').textContent).toBe('Pas assez de points de capacité.');
-    expect(screen.getByTestId('points-voie').textContent).toBe('0');
+    await fireEvent.click(bouton('Prendre necromancien.ames rang 1'));
+    expect(screen.getByRole('alert').textContent).toBe('Pas assez de points de voie.');
+    expect(screen.getByTestId('points-refonte').textContent).toBe('0');
   });
 
   it('« Créer » reste grisé tant que le brouillon est incomplet, et la liste dit pourquoi', async () => {
@@ -159,20 +166,6 @@ describe('assistant de création', () => {
     await fireEvent.click(bouton('Lancer les PV du niveau 3'));
     expect(screen.queryByRole('button', { name: /Lancer les PV/ })).toBeNull();
     expect(screen.getAllByText(/^Niveau [23] :/)).toHaveLength(2);
-  });
-
-  it('Polyvalence : le bouton « Offert » n’apparaît que pour un Humain niveau 5', async () => {
-    render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
-    await fireEvent.click(bouton('Humain'));
-    await fireEvent.click(bouton('Nécromancien'));
-    await etape('Voies');
-    expect(screen.queryByRole('button', { name: 'Prendre necromancien.sang.1 offert' })).toBeNull();
-    await etape('Identité');
-    await fireEvent.change(screen.getByLabelText('Niveau'), { target: { value: '5' } });
-    await etape('Voies');
-    await fireEvent.click(bouton('Prendre necromancien.sang.1 offert'));
-    expect(screen.getByTestId('points-voie').textContent).toBe('10');
-    expect(screen.queryByRole('button', { name: /offert$/ })).toBeNull();
   });
 });
 

@@ -376,6 +376,27 @@ export const ETATS: EtatSaisi[] = [
     formeAnimale: true,
   },
 
+  // ---- Nécromancien (lot L4.17) ----
+  {
+    id: 'maudit',
+    nom: 'Maudit',
+    categorie: 'malus',
+    regle: 'Malédiction profonde : soins reçus divisés par deux, −2 aux sauvegardes, jusqu’à la fin du combat.',
+    modificateurs: [{ cible: 'sauvegardes', valeur: -2 }],
+  },
+  {
+    id: 'moisson_d_ames',
+    nom: 'Moisson d’âmes',
+    categorie: 'physique',
+    regle: 'Toute créature qui meurt à 10 cases donne son âme au Nécromancien, sans jet ; son réceptacle en tient 5.',
+  },
+  {
+    id: 'avatar_du_chaos',
+    nom: 'Avatar du chaos',
+    categorie: 'physique',
+    regle: 'Dégâts physiques subis divisés par deux.',
+  },
+
   // ---- Moine (lot L4.16) ----
   {
     id: 'observe',

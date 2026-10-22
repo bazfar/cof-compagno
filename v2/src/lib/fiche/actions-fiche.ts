@@ -145,7 +145,7 @@ function sources(classe: ClasseRefonte, r: RefonteFiche, actions: ReadonlyMap<st
       for (const regle of rv.regles) {
         if (regle.type !== 'verbeDeLEcole') continue;
         const ecole = regle.ecole ?? (regle.quelle === 'seconde' ? secondeEcole(classe, { ecole: r.ecole ?? undefined }) : r.ecole);
-        const verbe = [...actions.values()].find((a) => a.nature === 'verbe' && a.ecole === ecole && a.rang === rv.rang);
+        const verbe = [...actions.values()].find((a) => (a.nature === 'verbe' || a.nature === 'passif') && a.ecole === ecole && a.rang === rv.rang);
         if (verbe && !m.has(verbe.id)) m.set(verbe.id, { voie, rang: rv.rang });
       }
     }
@@ -364,7 +364,7 @@ export function bonusDesPassifs(f: FicheV2, mods: ModsDuPerso, actions: Readonly
 
 // ------------------------------------------------------- Jauges (7a à 10a)
 
-export type CleJauge = JaugeDeClasse | 'sacre' | 'plongee' | 'corruptionAme';
+export type CleJauge = JaugeDeClasse | 'sacre' | 'ames' | 'plongee' | 'corruptionAme';
 
 export interface JaugeAffichee {
   cle: CleJauge;
@@ -376,7 +376,7 @@ export interface JaugeAffichee {
 
 const NOMS_JAUGES: Record<CleJauge, string> = {
   endurance: 'Endurance', honneur: 'Honneur', instinct: 'Instinct', inspiration: 'Inspiration', forceNature: 'Force de la nature', ki: 'Ki',
-  sacre: 'Sacré', plongee: 'Plongée', corruptionAme: 'Corruption d’Âme',
+  sacre: 'Sacré', ames: 'Âmes', plongee: 'Plongée', corruptionAme: 'Corruption d’Âme',
 };
 
 /** Jauges de la fiche : la ressource de classe et le Sacré, puis Plongée et Corruption d'Âme (7a). */
@@ -388,6 +388,13 @@ export function jaugesDeLaFiche(f: FicheV2): JaugeAffichee[] {
   for (const cle of [...JAUGES_DE_CLASSE, 'sacre'] as const) {
     const m = max?.[cle];
     if (m !== null && m !== undefined) l.push({ cle, nom: NOMS_JAUGES[cle], actuel: Math.min(j[cle] ?? m, m), max: m });
+  }
+  // Âmes (lot L4.17) : 3 au plus, 5 pour qui a la Moisson d'âmes (le plafond de 3 hors Moisson reste au joueur).
+  const ames = classe?.reserveAmes;
+  if (ames) {
+    const moisson = ames.moisson && profilDe(classe, f.refonte, contexteDe(f, classe)).actions.includes(ames.moisson.action);
+    const m = moisson ? ames.moisson!.max : ames.max;
+    l.push({ cle: 'ames', nom: NOMS_JAUGES.ames, actuel: Math.min(j.ames ?? 0, m), max: m });
   }
   l.push({ cle: 'plongee', nom: NOMS_JAUGES.plongee, actuel: j.plongee, max: null });
   l.push({ cle: 'corruptionAme', nom: NOMS_JAUGES.corruptionAme, actuel: j.corruptionAme, max: RUPTURE });

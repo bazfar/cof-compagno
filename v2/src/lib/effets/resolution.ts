@@ -260,6 +260,8 @@ export interface Lancer {
   premierRound?: boolean;
   /** Le combat se tient en milieu naturel, déclaré par le joueur (Symbiose protectrice du Druide, lot L4.15). */
   milieuNaturel?: boolean;
+  /** PV cédés par une Transfusion (Nécromancien, lot L4.17), choisis au lancer. */
+  montant?: number;
   /** Caractéristique choisie au lancer (élixirs : bonus `caracAuChoix`, lot L4.8). */
   caracChoisie?: Carac;
   alea?: () => number;
@@ -569,6 +571,15 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   let attaqueSpecialeDuCombat = false;
   let coupDouble = false;
   const ressourceDuBoost = action.ecole ? RESSOURCE_DU_BOOST[action.ecole] : undefined;
+  // Libération vengeresse (Nécromancien, lot L4.17) : des âmes au lieu de PP.
+  if (action.coutEnAmes) ressources.ame = (ressources.ame ?? 0) + action.coutEnAmes;
+  // Transfusion : X PV choisis au lancer, au plus N × niveau.
+  const transfusion = action.effets.find((e) => e.type === 'transfusion');
+  if (transfusion) {
+    const max = transfusion.parNiveau * (l.lanceur.niveau ?? 1);
+    if (!l.montant || !Number.isInteger(l.montant) || l.montant < 1 || l.montant > max) return { ok: false, raison: `${action.nom} : combien de PV (1 à ${max}) ?` };
+    if (transfusion.depuis === 'cible' && !l.allie) return { ok: false, raison: `${action.nom} : quel allié reçoit les PV ?` };
+  }
   if (l.boost && ressourceDuBoost) ressources[ressourceDuBoost] = (ressources[ressourceDuBoost] ?? 0) + 1;
   if (action.famille) {
     const permises = l.attaquesSpeciales;
@@ -628,8 +639,9 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   const sangSecond = !signature && l.secondElement?.id === 'sang';
   const sang = !signature && (l.element?.id === 'sang' || sangSecond) && (!mineur || affinite);
   // Paiement : le Pacte de sang paie les PP en PV ; la Saignée ne coûte que la moitié des PV actuels.
-  let pp = (saignee ? 0 : cout.pp) + (reserve?.type === 'jetsReserves' ? reserve.ppParDe * l.nombreDeDes! : 0);
-  let pvPaye = pvFixes;
+  let pp = (saignee || action.coutEnAmes ? 0 : cout.pp) + (reserve?.type === 'jetsReserves' ? reserve.ppParDe * l.nombreDeDes! : 0);
+  // Transfusion depuis le Nécromancien : il paie les PV qu'il cède.
+  let pvPaye = pvFixes + (transfusion?.depuis === 'lanceur' ? l.montant! : 0);
   if (hemo >= 1) {
     pvPaye += pp;
     pp = 0;
@@ -914,6 +926,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       if (montant !== avant) calcul.push(`Affaibli ${avant} → ${montant}`);
     }
     changements.push({ type: 'degats', cible: c.id, montant, typeDegats: typeDegats(e), calcul: calcul.join(', ') });
+    // Drain de la Voie du sang (lot L4.17) : la moitié, ou tout, revient au lanceur.
+    if (e.draine && montant > 0) changements.push({ type: 'soin', cible: l.lanceur.id, montant: e.draine === 'tout' ? montant : Math.floor(montant / 2) });
     if (indice === premierDegats && baseRebond === null) baseRebond = base;
   };
 
@@ -1044,6 +1058,16 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       ligne.effets.forEach((x, k) => appliquer({ ...x, ...(x.sinon !== undefined ? { sinon: base + x.sinon } : {}) } as Effet, base + k, c, { ...i, touche: undefined, sauveReussie: undefined }));
       return;
     }
+    // Transfusion (lot L4.17) : la cible reçoit les PV cédés par le lanceur, ou les perd au profit de l'allié choisi.
+    if (e.type === 'transfusion') {
+      const x = l.montant!;
+      if (e.depuis === 'lanceur') changements.push({ type: 'soin', cible: c.id, montant: x });
+      else {
+        changements.push({ type: 'degats', cible: c.id, montant: x, typeDegats: 'necrotique', calcul: `Transfusion (${x})` });
+        changements.push({ type: 'soin', cible: l.allie!.id, montant: x });
+      }
+      return;
+    }
     if (e.type === 'jetsReserves') {
       const valeurs = Array.from({ length: l.nombreDeDes ?? 0 }, () => lancerDes(e.des, alea).total);
       jets.push({ quoi: `${action.nom} : dés tirés d’avance`, des: valeurs, total: valeurs.length });
@@ -1088,6 +1112,13 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     // Terrain et invocation : une fois par lancer, sans cible (Rempart, Serviteur…).
     if (e.type === 'terrain' || e.type === 'invocation') {
       appliquer(e, indice, { ...l.lanceur, distance: 0 }, {});
+      return;
+    }
+    // Un effet sur le lanceur « si l'attaque touche » vaut une fois par cible touchée (Capture d'âme, Étreinte exsangue ; lot L4.17).
+    if (e.vise === 'lanceur' && e.condition === 'touche') {
+      l.cibles.forEach((c, p) => {
+        if (issuePour(c, p).touche) appliquer({ ...e, condition: undefined } as Effet, indice, { ...l.lanceur, distance: 0 }, {});
+      });
       return;
     }
     if (e.vise === 'lanceur' || e.vise === 'allie') {
@@ -1296,6 +1327,7 @@ function appliquerSimple(e: Effet, cible: string, out: Changement[], alea: () =>
       out.push({ type: 'tombe', cible });
       return;
     case 'tableD20':
+    case 'transfusion':
       return;
   }
 }

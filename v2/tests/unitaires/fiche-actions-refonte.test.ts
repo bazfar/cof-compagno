@@ -188,6 +188,31 @@ describe('Moine (lot L4.16)', () => {
   });
 });
 
+describe('Nécromancien (lot L4.17)', () => {
+  const necro = (rangs: Record<string, number>) =>
+    convertie('Hermione', 'necromancien', { ecole: 'outre-tombe', elementDepart: 'sang', rangs, mineurs: ['mineur.trait-necrotique', 'mineur.frisson'] }, { classe: 'necromancien' });
+
+  it('jauge des Âmes : 0 au départ, 3 au plus ; 5 avec la Moisson d’âmes', () => {
+    const f = necro({ 'necromancien.ecole': 1 });
+    expect(f.refonte.jauges.ames).toBe(0);
+    expect(A.jaugesDeLaFiche(f).find((j) => j.cle === 'ames')).toEqual({ cle: 'ames', nom: 'Âmes', actuel: 0, max: 3 });
+    const moisson = { ...convertie('Hermione', 'necromancien', { ecole: 'outre-tombe', elementDepart: 'sang', rangs: { 'necromancien.ames': 5 }, mineurs: ['mineur.frisson', 'mineur.preserver'] }, { classe: 'necromancien', niveau: 7 }) };
+    expect(A.jaugesDeLaFiche(moisson).find((j) => j.cle === 'ames')!.max).toBe(5);
+    expect(A.changerJauge(f, 'ames', 9).jauges.ames).toBe(3);
+    expect(A.jaugesDeLaFiche(convertie('Karlach', 'guerrier', {})).some((j) => j.cle === 'ames')).toBe(false);
+  });
+
+  it('école et voies nommées ; Renfort macabre listé comme passif de la Voie de l’école', () => {
+    const f = necro({ 'necromancien.ecole': 1, 'necromancien.sang': 1 });
+    const l = A.actionsDeLaFiche(f, mods());
+    expect(ligne(l, 'outre-tombe.relever')).toMatchObject({ ecole: 'Outre-tombe', cout: '2 PP', voie: 'necromancien.ecole' });
+    expect(ligne(l, 'sang.morsure-du-sang')).toMatchObject({ ecole: 'Sang', voie: 'necromancien.sang', degats: { formule: expect.stringMatching(/^1d6/) } });
+    expect(A.magieDeLaFiche(f)!.ecole).toEqual({ nom: 'Outre-tombe', maitrise: 'Adepte' });
+    const quatre = convertie('Hermione', 'necromancien', { ecole: 'outre-tombe', elementDepart: 'sang', rangs: { 'necromancien.ecole': 4 }, mineurs: ['mineur.frisson', 'mineur.preserver'] }, { classe: 'necromancien', niveau: 5 });
+    expect(ligne(A.actionsDeLaFiche(quatre, mods()), 'outre-tombe.renfort-macabre')).toMatchObject({ groupe: 'passif', voie: 'necromancien.ecole', rang: 4 });
+  });
+});
+
 describe('magie (6a)', () => {
   it('école et maîtrise, éléments, et les combinaisons ouvertes par un élément Maître', () => {
     const m = A.magieDeLaFiche(ky())!;

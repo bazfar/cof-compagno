@@ -34,10 +34,10 @@ const classe = (id: string) => classeParId.get(id)!;
 const choix = (id: string, patch: Partial<RefonteFiche>): RefonteFiche => ({ ...refonteVierge(classe(id), 1), ...patch });
 
 describe('classes et jauges', () => {
-  it('les cinq classes du groupe passent à la refonte, l’Enchanteur devient Envoûteur ; les autres attendent', () => {
-    expect(['guerrier', 'magicien', 'enchanteur', 'pretre', 'barde'].map((c) => classeRefonteDe(c)?.id)).toEqual(['guerrier', 'magicien', 'envouteur', 'pretre', 'barde']);
-    expect([classeRefonteDe('necromancien'), classeRefonteDe(null)]).toEqual([null, null]);
-    expect(classeRefonteDe('chevalier')?.id).toBe('chevalier'); // L4.13, décision 12a
+  it('les dix classes passent à la refonte (L4.17), l’Enchanteur devient Envoûteur ; une classe inconnue, non', () => {
+    const v1 = ['guerrier', 'chevalier', 'barde', 'chasseur', 'moine', 'druide', 'pretre', 'magicien', 'enchanteur', 'necromancien'];
+    expect(v1.map((c) => classeRefonteDe(c)?.id)).toEqual(['guerrier', 'chevalier', 'barde', 'chasseur', 'moine', 'druide', 'pretre', 'magicien', 'envouteur', 'necromancien']);
+    expect([classeRefonteDe('inconnue'), classeRefonteDe(null)]).toEqual([null, null]);
   });
 
   it('jauges pleines (9a) : Endurance 3 + niveau / 3, Inspiration 2 + niveau / 4, Sacré 2 + niveau / 3 ; Plongée 0', () => {
@@ -138,7 +138,7 @@ describe('conversion (1b, 4a, 8a, 9a, 12a)', () => {
   });
 
   it('refusée : classe pas encore refondue, choix invalides (budget, chaos fermé, autre classe)', () => {
-    expect(() => convertirFiche(reelle('Hyrma', { classe: 'necromancien' }), choix('guerrier', {}))).toThrow('pas encore passée à la refonte');
+    expect(() => convertirFiche(reelle('Hyrma', { classe: 'inconnue' }), choix('guerrier', {}))).toThrow('pas encore passée à la refonte');
     expect(() => convertirFiche(reelle('Karlach'), choix('guerrier', { rangs: { 'guerrier.soldat': 5 } }))).toThrow('8 points de voie pour 6 au niveau 3.');
     expect(() => convertirFiche(reelle('Karlach'), choix('guerrier', { rangs: { 'guerrier.chaos': 1 } }))).toThrow('accord du MJ');
     expect(() => convertirFiche(reelle('Karlach'), choix('barde', {}))).toThrow('autre classe');

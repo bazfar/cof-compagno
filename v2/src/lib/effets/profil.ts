@@ -233,9 +233,11 @@ export function profilMagique(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
         switch (regle.type) {
           case 'verbeDeLEcole': {
             const ecole = regle.ecole ?? (regle.quelle === 'seconde' ? secondeEcole(classe, c) : c.ecole);
-            const verbe = [...r.actions.values()].find((a) => a.nature === 'verbe' && a.ecole === ecole && a.rang === rv.rang);
+            // Une école peut avoir un passif à un rang (Renfort macabre, Outre-tombe 4 ; lot L4.17) : il rejoint les actions.
+            const verbe = [...r.actions.values()].find((a) => (a.nature === 'verbe' || a.nature === 'passif') && a.ecole === ecole && a.rang === rv.rang);
             // Paliers (validé) : selon le rang atteint dans CETTE voie, plafonnés au besoin (seconde école : II).
-            if (verbe) p.verbes.push({ id: verbe.id, palier: plafonner(palierAtteint(verbe, rang, true), regle.palierMax) });
+            if (verbe?.nature === 'passif') p.actions.push(verbe.id);
+            else if (verbe) p.verbes.push({ id: verbe.id, palier: plafonner(palierAtteint(verbe, rang, true), regle.palierMax) });
             break;
           }
           case 'maitriseEcole':

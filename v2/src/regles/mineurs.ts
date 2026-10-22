@@ -21,6 +21,9 @@ import type { ActionSaisie } from '../lib/schemas/effets';
  * allié). Choix du lot, à valider : portées de 6 cases ; le Bouclier de
  * terre dure jusqu'au prochain tour du Druide ; le Gourdin frappe au contact
  * à l'attaque magique (SAG), dégâts physiques.
+ * Sorts mineurs du Nécromancien (lot L4.17, décision 5a du 22/10/2026) :
+ * Trait nécrotique et Frisson en combat, à 10 cases ; Sentir la mort,
+ * Préserver et Main froide hors combat.
  */
 
 type Textes = [string, string, string];
@@ -286,4 +289,34 @@ export const MINEURS: ActionSaisie[] = [
   },
   simple('mineur.pousse', 'Pousse', 'La sève répond à sa main.', 'Faire pousser une plante, réparer du bois.'),
   simple('mineur.druidisme', 'Druidisme', 'Les petits secrets de la nature.', 'Prévoir le temps, éteindre une flamme, faire éclore une fleur.'),
+
+  // ---- Nécromancien (lot L4.17, décision 5a) ----
+  {
+    id: 'mineur.trait-necrotique',
+    nom: 'Trait nécrotique',
+    description: 'Un trait de mort, à volonté.',
+    nature: 'mineur',
+    rang: 0,
+    etiquettes: ['combat'],
+    action: 'action',
+    ciblage: { type: 'creature', camp: 'ennemi', portee: 10 },
+    resolution: { jet: 'attaqueMagique' },
+    effets: [{ type: 'degats', des: '1d6', typeDegats: 'necrotique', progression: 'mineur' }],
+    element: { application: 'ciblePrincipale' },
+  },
+  {
+    id: 'mineur.frisson',
+    nom: 'Frisson',
+    description: 'Un froid de tombe dans le dos de la cible.',
+    nature: 'mineur',
+    rang: 0,
+    etiquettes: ['combat'],
+    action: 'action',
+    ciblage: { type: 'creature', camp: 'ennemi', portee: 10 },
+    resolution: { jet: 'sauvegarde', sauvegarde: 'Volonte', siSauvegarde: 'annule' },
+    effets: [{ type: 'bonus', cible: 'attaque', valeur: -1, duree: 'prochainTour' }],
+  },
+  simple('mineur.sentir-la-mort', 'Sentir la mort', 'Il sent ce qui est mort, ou va l’être.', 'Savoir s’il y a un mort ou un mourant à 6 cases.'),
+  simple('mineur.preserver', 'Préserver', 'Un cadavre qui attend.', 'Un cadavre ne pourrit pas pendant une semaine.'),
+  simple('mineur.main-froide', 'Main froide', 'Le froid de la tombe au bout des doigts.', 'Un objet ou une boisson devient glacé.'),
 ];
