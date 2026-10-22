@@ -722,6 +722,10 @@ describe('Vécu (L4.18)', () => {
     expect(screen.queryByRole('button', { name: 'Prendre Mémoire eidétique' })).toBeNull();
     await fireEvent.click(screen.getByRole('button', { name: /^Mémoire eidétique/ }));
     expect(screen.getByText('Tier 2 : 2 points dans la branche Savoir (tu en as 1).')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^Prendre / })).toBeNull();
+    // L4.18b : un nœud se choisit dans l'arbre ; son détail porte « Prendre ».
+    await fireEvent.click(screen.getByRole('button', { name: 'Naturaliste' }));
+    expect(screen.getByRole('button', { name: 'Naturaliste' }).getAttribute('aria-pressed')).toBe('true');
     await fireEvent.click(screen.getByRole('button', { name: 'Prendre Naturaliste' }));
     expect(vecu.prendreNoeudVecu).toHaveBeenCalledWith('p-k', 'naturaliste');
   });
@@ -735,9 +739,15 @@ describe('Vécu (L4.18)', () => {
     await horsCombat();
     await fireEvent.click(screen.getByRole('button', { name: 'Accorder Endurci' }));
     expect(vecu.accorderVecuV1).toHaveBeenCalledWith('p-c', 'endurci');
+    await fireEvent.click(screen.getByRole('button', { name: 'Acrobate' }));
     await fireEvent.click(screen.getByRole('button', { name: 'Retirer Acrobate' }));
     expect(vecu.retirerNoeudVecu).toHaveBeenCalledWith('p-c', 'acrobate');
+    await fireEvent.click(screen.getByRole('button', { name: /^Premiers soins/ }));
+    expect(screen.getByRole('complementary', { name: 'Détail du nœud' }).textContent).toContain('offert');
     expect(screen.queryByRole('button', { name: 'Retirer Premiers soins' })).toBeNull();
+    // Un nœud que le joueur pourrait prendre : le MJ en voit le détail, sans « Prendre ».
+    await fireEvent.click(screen.getByRole('button', { name: 'Affable' }));
+    expect(screen.getByRole('complementary', { name: 'Détail du nœud' }).textContent).toContain('à prendre');
     expect(screen.queryByRole('button', { name: /^Prendre / })).toBeNull();
   });
 

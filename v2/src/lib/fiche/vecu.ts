@@ -160,3 +160,59 @@ export const NOMS_EFFETS: Record<NoeudVecu['effets'][number]['effet'], string> =
   optionScene: 'Option de scène',
   rituel: 'Rituel',
 };
+
+// ---------------------------------------------------------------- Dessin de l'arbre (L4.18b)
+
+export interface EtageVecu {
+  tier: number;
+  /** Points à avoir dans la branche pour ouvrir l'étage. */
+  seuil: number;
+  atteint: boolean;
+  noeuds: NoeudAffiche[];
+}
+
+export interface DispositionVecu {
+  /** Les trois branches, en colonnes : Social, Exploration, Savoir ; trois étages chacune. */
+  branches: { branche: Exclude<BrancheVecu, 'croisement'>; nom: string; points: number; etages: EtageVecu[] }[];
+  /** Les croisements, chacun entre ses deux branches (index de colonnes, du plus petit au plus grand). */
+  croisements: (NoeudAffiche & { entre: [number, number] })[];
+  /** Un trait par prérequis : du nœud requis vers celui qui le demande ; `acquis` quand les deux sont pris. */
+  liens: { de: string; vers: string; acquis: boolean }[];
+}
+
+const COLONNES = ['social', 'exploration', 'savoir'] as const;
+
+/**
+ * L'arbre disposé pour l'écran (décisions 1a à 4a du 22/10/2026, lot
+ * L4.18b) : une colonne par branche, trois étages (tier 1 à 3) avec leur
+ * seuil, les croisements entre leurs deux branches, et les traits des
+ * prérequis.
+ */
+export function dispositionVecu(v: Vecu): DispositionVecu {
+  const arbre = arbreVecu(v);
+  const colonneDe = (id: string) => COLONNES.indexOf(noeudVecuParId.get(id)?.branche as (typeof COLONNES)[number]);
+  const possedes = noeudsPossedes(v);
+  return {
+    branches: COLONNES.map((branche) => {
+      const b = arbre.find((x) => x.branche === branche)!;
+      return {
+        branche,
+        nom: b.nom,
+        points: b.points,
+        etages: [1, 2, 3].map((tier) => ({
+          tier,
+          seuil: SEUIL_DU_TIER[tier]!,
+          atteint: b.points >= SEUIL_DU_TIER[tier]!,
+          noeuds: b.noeuds.filter((n) => n.noeud.tier === tier),
+        })),
+      };
+    }),
+    croisements: arbre
+      .find((x) => x.branche === 'croisement')!
+      .noeuds.map((n) => {
+        const [a, b] = n.noeud.prerequis.map(colonneDe).sort((x, y) => x - y) as [number, number];
+        return { ...n, entre: [a, b] as [number, number] };
+      }),
+    liens: [...noeudVecuParId.values()].flatMap((n) => n.prerequis.map((de) => ({ de, vers: n.id, acquis: possedes.includes(de) && possedes.includes(n.id) }))),
+  };
+}

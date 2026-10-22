@@ -126,6 +126,44 @@ describe('l’arbre (3a)', () => {
   });
 });
 
+describe('l’arbre dessiné (L4.18b)', () => {
+  it('trois colonnes, Social, Exploration, Savoir ; trois étages avec leur seuil ; chaque nœud une fois, à sa place', () => {
+    const d = V.dispositionVecu(vecu());
+    expect(d.branches.map((b) => [b.branche, b.nom])).toEqual([['social', 'Social'], ['exploration', 'Exploration'], ['savoir', 'Savoir']]);
+    for (const b of d.branches) {
+      expect(b.etages.map((e) => [e.tier, e.seuil])).toEqual([[1, 0], [2, 2], [3, 4]]);
+      for (const e of b.etages) for (const n of e.noeuds) expect([n.noeud.branche, n.noeud.tier]).toEqual([b.branche, e.tier]);
+    }
+    const ids = [...d.branches.flatMap((b) => b.etages.flatMap((e) => e.noeuds.map((n) => n.noeud.id))), ...d.croisements.map((c) => c.noeud.id)];
+    expect(ids.length).toBe(33);
+    expect(new Set(ids)).toEqual(new Set(noeudVecuParId.keys()));
+  });
+
+  it('un étage s’allume quand la branche a son seuil (le nœud offert compte)', () => {
+    const allumes = (v: Vecu) => V.dispositionVecu(v).branches.map((b) => b.etages.map((e) => e.atteint));
+    expect(allumes(vecu())).toEqual([[true, false, false], [true, false, false], [true, false, false]]);
+    expect(allumes(vecu({ noeuds: ['affable'], noeudOffert: 'beau-parleur' }))).toEqual([[true, true, false], [true, false, false], [true, false, false]]);
+    expect(allumes(vecu({ noeuds: ['affable', 'beau-parleur', 'marchander', 'lire-les-gens', 'pisteur'] }))).toEqual([[true, true, true], [true, false, false], [true, false, false]]);
+  });
+
+  it('les croisements se placent entre leurs deux branches', () => {
+    const entre = Object.fromEntries(V.dispositionVecu(vecu()).croisements.map((c) => [c.noeud.id, c.entre]));
+    expect(entre).toEqual({ 'citer-le-precedent': [0, 2], filature: [0, 1], 'remedes-de-terrain': [1, 2] });
+  });
+
+  it('un trait par prérequis ; plein quand les deux nœuds sont pris', () => {
+    const total = [...noeudVecuParId.values()].reduce((s, n) => s + n.prerequis.length, 0);
+    const trait = (v: Vecu) => V.dispositionVecu(v).liens.find((l) => l.de === 'beau-parleur' && l.vers === 'eloquence');
+    expect(V.dispositionVecu(vecu()).liens).toHaveLength(total);
+    expect(trait(vecu())).toEqual({ de: 'beau-parleur', vers: 'eloquence', acquis: false });
+    expect(trait(vecu({ noeuds: ['beau-parleur'] }))!.acquis).toBe(false);
+    expect(trait(vecu({ noeuds: ['eloquence'] }))!.acquis).toBe(false);
+    expect(trait(vecu({ noeuds: ['affable', 'eloquence'], noeudOffert: 'beau-parleur' }))!.acquis).toBe(true);
+    // Les croisements aussi ont leurs deux traits (l'écran les écrit en toutes lettres).
+    expect(V.dispositionVecu(vecu()).liens.filter((l) => l.vers === 'filature').map((l) => l.de)).toEqual(['affable', 'pisteur']);
+  });
+});
+
 describe('la barre (2a)', () => {
   it('tous les 3 crans, un palier et un point ; un retrait ne descend jamais sous un palier', () => {
     let v = vecu();
