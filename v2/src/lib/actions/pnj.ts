@@ -3,6 +3,7 @@ import { db } from '../firebase/client';
 import {
   ajusterScore,
   corrigerCran,
+  decouvrirMensonge,
   factionParId,
   nouvelIdPnj,
   pnjDepuisLore,
@@ -33,7 +34,7 @@ export async function creerPnj(nom: string, faction: string | null): Promise<str
   if (faction && !factionParId.has(faction)) throw new RefusAttitude(`Faction inconnue : ${faction}.`);
   const id = nouvelIdPnj(nom);
   const maintenant = Date.now();
-  const p = schemaPnj.parse({ nom, faction, lore: null, rencontre: false, cran: null, tendance: null, creeLe: maintenant, majLe: maintenant });
+  const p = schemaPnj.parse({ nom, faction, lore: null, rencontre: false, cran: null, tendance: null, mensonges: 0, creeLe: maintenant, majLe: maintenant });
   await setDoc(refPnj(id), p);
   return id;
 }
@@ -90,6 +91,12 @@ export function rendreServicePnj(id: string, motif: string, seance?: string): Pr
 export function corrigerAttitudePnj(id: string, delta: 1 | -1, motif: string, seance?: string): Promise<Pnj> {
   if (!motif.trim()) throw new RefusAttitude('Dis pourquoi l’attitude change.');
   return geste(id, 'correction', motif, seance, (p) => corrigerCran(p, delta, Date.now()));
+}
+
+/** Un mensonge d'une scène passée est découvert (S2, 9a) : deux crans de moins, avec le motif. */
+export function mensongeDecouvertPnj(id: string, motif: string, seance?: string): Promise<Pnj> {
+  if (!motif.trim()) throw new RefusAttitude('Dis comment le mensonge a été découvert.');
+  return geste(id, 'mensonge', motif, seance, (p) => decouvrirMensonge(p, Date.now()));
 }
 
 /** Le MJ ajuste la réputation du groupe auprès d'une faction (bornée à −10 et au plafond). */

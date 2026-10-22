@@ -19,8 +19,9 @@
    *   d'avance, jauge d'équilibrage, butin prévu), chargée à la première
    *   visite seulement.
    * - Prépa social (lot S1) : réputation du groupe et PNJ avec leur
-   *   attitude, chargée à la première visite seulement. Les scènes jouées
-   *   s'y ajouteront (S2).
+   *   attitude, chargée à la première visite seulement ; en tête, la scène
+   *   hors combat (S2). Son arbitre, sans écran, est monté sur tout le
+   *   poste : les jets se résolvent même section Séance ouverte.
    *
    * Changer de section masque les autres sans les démonter : la carte garde
    * ses abonnements, et le client du MJ continue d'enregistrer
@@ -70,6 +71,9 @@
   const importLore = import('../composants/ImportLoreV1.svelte');
   // Import du bestiaire (L3.2), avec son schéma.
   const importBestiaire = import('../composants/ImportBestiaireV1.svelte');
+  // Arbitre des scènes hors combat (S2, 5a) : monté quelle que soit la
+  // section, il résout les jets dès qu'ils arrivent (le MJ seul lit le DD).
+  const arbitre = import('../composants/ArbitreScene.svelte');
   // Joueurs de la table (correctif du 19/10), chargés à part comme le groupe.
   const joueursMj = import('../composants/JoueursMj.svelte');
 
@@ -97,6 +101,11 @@
 </script>
 
 <BarreHaut etiquette="Poste MJ" sections={SECTIONS} active={section} surSection={(id) => (section = id)} />
+{#await arbitre then module}
+  <module.default />
+{:catch e}
+  <p role="alert">Arbitre des scènes indisponible : {String(e)}</p>
+{/await}
 <main>
   <div hidden={section !== 'seance'}>
     <div class="seance">

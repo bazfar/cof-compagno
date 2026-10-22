@@ -374,20 +374,21 @@ service cloud.firestore {
     // Aligné sur schemaPnj (src/lib/schemas/pnj.ts).
     function pnjValide(d) {
       return d.keys().hasAll(['nom', 'faction', 'lore', 'rencontre', 'cran', 'tendance', 'creeLe', 'majLe'])
-        && d.keys().hasOnly(['nom', 'faction', 'lore', 'rencontre', 'cran', 'tendance', 'creeLe', 'majLe'])
+        && d.keys().hasOnly(['nom', 'faction', 'lore', 'rencontre', 'cran', 'tendance', 'mensonges', 'creeLe', 'majLe'])
         && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 80
         && (d.faction == null || d.faction in factionsReputation())
         && (d.lore == null || (d.lore is string && d.lore.size() >= 1 && d.lore.size() <= 100))
         && d.rencontre is bool
         && ((d.rencontre == true && d.cran in cransAttitude()) || (d.rencontre == false && d.cran == null))
         && (d.tendance == null || d.tendance in ['hausse', 'baisse'])
+        && (!('mensonges' in d) || (d.mensonges is int && d.mensonges >= 0 && d.mensonges <= 99))
         && d.creeLe is int && d.majLe is int;
     }
     // Aligné sur schemaGesteAttitude (src/lib/schemas/pnj.ts).
     function gesteAttitudeValide(d) {
       return d.keys().hasAll(['geste', 'avant', 'apres', 'motif', 'parUid', 'creeLe'])
         && d.keys().hasOnly(['geste', 'avant', 'apres', 'motif', 'parUid', 'seance', 'creeLe'])
-        && d.geste in ['rencontre', 'service', 'correction']
+        && d.geste in ['rencontre', 'service', 'correction', 'scene', 'mensonge']
         && (d.avant == null || d.avant in cransAttitude())
         && d.apres in cransAttitude()
         && d.motif is string && d.motif.size() >= 1 && d.motif.size() <= 120
@@ -409,6 +410,57 @@ service cloud.firestore {
         && scoreValide(d.scores.get('cercle_peuples', 0), 10)
         && scoreValide(d.scores.get('fils_libris', 0), 5)
         && d.majLe is int;
+    }
+    // ---- Scènes hors combat (lot S2, décisions du 22/10/2026) ----
+    function entierEntre(n, min, max) {
+      return n is int && n >= min && n <= max;
+    }
+    // Aligné sur schemaSceneHorsCombat (src/lib/schemas/scene-hors-combat.ts).
+    // Pas de DD ici : il est dans scenesHorsCombatMj, lu du MJ seul (6a).
+    function sceneHorsCombatValide(d) {
+      return d.keys().hasAll(['type', 'pnj', 'cible', 'objectif', 'mode', 'competence', 'requis', 'toleres', 'echecsVisibles', 'marquante',
+          'appeles', 'appelesUids', 'tour', 'reussites', 'echecs', 'depart', 'hausses', 'baisses', 'menaces', 'temp', 'mensonges',
+          'seduction', 'statut', 'issue', 'creeLe', 'closeLe'])
+        && d.keys().hasOnly(['type', 'pnj', 'cible', 'objectif', 'mode', 'competence', 'requis', 'toleres', 'echecsVisibles', 'marquante',
+          'appeles', 'appelesUids', 'tour', 'reussites', 'echecs', 'depart', 'hausses', 'baisses', 'menaces', 'temp', 'mensonges',
+          'seduction', 'statut', 'issue', 'seance', 'creeLe', 'closeLe'])
+        && d.type in ['social', 'exploration', 'enquete']
+        && d.mode in ['individuel', 'groupe']
+        && d.cible is string && d.cible.size() >= 1 && d.cible.size() <= 80
+        && d.objectif is string && d.objectif.size() >= 1 && d.objectif.size() <= 200
+        && entierEntre(d.requis, 1, 12) && entierEntre(d.toleres, 0, 12)
+        && d.echecsVisibles is bool && d.marquante is bool
+        && d.appeles is list && d.appeles.size() >= 1 && d.appeles.size() <= 12
+        && d.appelesUids is list && d.appelesUids.size() == d.appeles.size()
+        && entierEntre(d.tour, 1, 99) && entierEntre(d.reussites, 0, 99) && entierEntre(d.echecs, 0, 99)
+        && (d.depart == null || d.depart in cransAttitude())
+        && entierEntre(d.hausses, 0, 99) && entierEntre(d.baisses, 0, 99) && entierEntre(d.menaces, 0, 99)
+        && entierEntre(d.temp, 0, 4) && entierEntre(d.mensonges, 0, 99)
+        && d.statut in ['ouverte', 'terminee', 'close']
+        && (d.issue == null || d.issue in ['gagnee', 'perdue', 'abandonnee'])
+        && d.creeLe is int && (d.closeLe == null || d.closeLe is int);
+    }
+    // Aligné sur schemaActionScene (src/lib/schemas/scene-hors-combat.ts).
+    function actionSceneValide(d) {
+      return d.keys().hasAll(['uid', 'perso', 'nom', 'tour', 'option', 'competence', 'de', 'bonus', 'resultat', 'creeLe'])
+        && d.keys().hasOnly(['uid', 'perso', 'nom', 'tour', 'option', 'competence', 'de', 'bonus', 'resultat', 'creeLe'])
+        && d.option in ['convaincre', 'menacer', 'tromper', 'seduire', 'competence', 'passer']
+        && entierEntre(d.tour, 1, 99)
+        && (d.de == null || entierEntre(d.de, 1, 20))
+        && entierEntre(d.bonus, -20, 40)
+        && (d.resultat == null || d.resultat in ['reussite', 'echec', 'passe'])
+        && d.creeLe is int;
+    }
+    // Un joueur appelé écrit son action du tour en cours, une seule (identifiant <tour>-<uid>).
+    // Le résultat reste au client du MJ, sauf « passe » quand il passe son tour.
+    function actionDuJoueur(table, scene, acte, d) {
+      let s = get(/databases/$(database)/documents/tables/$(table)/scenesHorsCombat/$(scene)).data;
+      return d.uid == request.auth.uid
+        && acte == string(d.tour) + '-' + request.auth.uid
+        && s.statut == 'ouverte' && s.tour == d.tour
+        && request.auth.uid in s.appelesUids
+        && ((d.option == 'passer' && d.de == null && d.resultat == 'passe')
+          || (d.option != 'passer' && d.de != null && d.resultat == null));
     }
     // Aligné sur schemaEtatScene (src/lib/schemas/carte.ts).
     function etatSceneValide(d) {
@@ -708,6 +760,28 @@ service cloud.firestore {
           allow create: if estMj(table) && gesteAttitudeValide(request.resource.data);
           allow update: if false;
         }
+      }
+
+      // Scènes hors combat (S2, 2b) : toute la table lit la scène et ses
+      // actions ; le MJ seul écrit la scène. Le DD est à part
+      // (scenesHorsCombatMj), lu du MJ seul : son client résout les jets (5a).
+      match /scenesHorsCombat/{scene} {
+        allow read: if estMembre(table);
+        allow create, update: if estMj(table) && sceneHorsCombatValide(request.resource.data);
+        allow delete: if estMj(table);
+        match /actions/{acte} {
+          allow read: if estMembre(table);
+          allow create: if estJoueur(table) && actionSceneValide(request.resource.data)
+            && actionDuJoueur(table, scene, acte, request.resource.data);
+          allow update: if estMj(table) && actionSceneValide(request.resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resultat']);
+          allow delete: if estMj(table);
+        }
+      }
+      match /scenesHorsCombatMj/{scene} {
+        allow read, delete: if estMj(table);
+        allow create, update: if estMj(table)
+          && request.resource.data.keys().hasOnly(['dd']) && entierEntre(request.resource.data.dd, 5, 30);
       }
 
       // Réputation du groupe (S1, 5) : un seul document, lu de toute la

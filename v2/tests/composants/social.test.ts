@@ -19,6 +19,7 @@ const actions = vi.hoisted(() => {
     rendreServicePnj: vi.fn(async (_id: string, _m: string, _s?: string) => ({})),
     corrigerAttitudePnj: vi.fn(async (_id: string, _d: 1 | -1, _m: string, _s?: string) => ({})),
     retirerPnj: vi.fn(async (_id: string, _p: unknown) => {}),
+    mensongeDecouvertPnj: vi.fn(async (_id: string, _m: string, _s?: string) => ({})),
   };
 });
 vi.mock('../../src/lib/actions/pnj', () => actions);
@@ -26,6 +27,12 @@ vi.mock('../../src/lib/actions/persos', () => ({ messageErreurPerso: (e: unknown
 vi.mock('../../src/lib/magasins/pnj.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPnj);
 vi.mock('../../src/lib/magasins/lore.svelte', async () => (await import('./faux-magasins.svelte')).magasinsLore);
 vi.mock('../../src/lib/magasins/carte.svelte', async () => (await import('./faux-magasins.svelte')).magasinsCarte);
+// La scène (S2), en tête de la prépa social.
+vi.mock('../../src/lib/actions/scenes-hors-combat', () => ({ RefusScene: class extends Error {}, ouvrirScene: vi.fn(), cloreScene: vi.fn(), donnerVecuDeScene: vi.fn() }));
+vi.mock('../../src/lib/magasins/scenes-hors-combat.svelte', async () => (await import('./faux-magasins.svelte')).magasinsScenes);
+vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPersos);
+vi.mock('../../src/lib/magasins/presents.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPresents);
+vi.mock('../../src/lib/magasins/seances.svelte', async () => (await import('./faux-magasins.svelte')).magasinsSeances);
 
 const { pnjs, reputation, historiquePnj, loreMj, table } = await import('./faux-magasins.svelte');
 const { session } = await import('../../src/lib/session.svelte');
@@ -101,6 +108,22 @@ describe('prépa social (MJ)', () => {
     expect((within(fiche).getByRole('button', { name: 'Un cran de plus' }) as HTMLButtonElement).disabled).toBe(true);
     await fireEvent.click(service);
     expect(actions.rendreServicePnj).toHaveBeenCalledWith('aude', 'Dette payée', 's0014');
+  });
+
+  it('S2 : depuis la fiche d’un PNJ rencontré, ouvrir une scène avec lui ; un mensonge découvert, avec motif, tant qu’il en reste', async () => {
+    pnjs.elements = [pnj('aude', { nom: 'Aude Berlan', rencontre: true, cran: 'connaissance', mensonges: 1 }), pnj('rurik', { nom: 'Rurik', rencontre: true, cran: 'neutre' })];
+    render(PrepaSocial);
+    await fireEvent.click(screen.getByRole('button', { name: /^Aude Berlan/ }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Ouvrir une scène avec Aude Berlan' }));
+    expect((within(screen.getByRole('region', { name: 'Scène' })).getByLabelText('PNJ') as HTMLSelectElement).value).toBe('aude');
+    const fiche = screen.getByRole('complementary', { name: 'Fiche du PNJ' });
+    const bouton = within(fiche).getByRole('button', { name: 'Mensonge découvert (1 en cours)' }) as HTMLButtonElement;
+    expect(bouton.disabled).toBe(true);
+    await fireEvent.input(within(fiche).getByLabelText('Motif'), { target: { value: 'Elle a vérifié au Comptoir' } });
+    await fireEvent.click(bouton);
+    expect(actions.mensongeDecouvertPnj).toHaveBeenCalledWith('aude', 'Elle a vérifié au Comptoir', 's0014');
+    await fireEvent.click(screen.getByRole('button', { name: /^Rurik/ }));
+    expect(screen.queryByRole('button', { name: /^Mensonge découvert/ })).toBeNull();
   });
 
   it('chercher et filtrer : rencontrés, pas encore rencontrés', async () => {

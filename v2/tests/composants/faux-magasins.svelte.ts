@@ -5,7 +5,7 @@
 
 /** Document de la table : le test y change la scène montrée. */
 export const table = $state({
-  donnees: { sceneActive: null } as { sceneActive: string | null; seanceOuverte?: { id: string; numero: number } | null },
+  donnees: { sceneActive: null } as { sceneActive: string | null; seanceOuverte?: { id: string; numero: number } | null; sceneHorsCombat?: string | null },
   pret: true,
   erreur: null as string | null,
 });
@@ -141,4 +141,15 @@ export const magasinsPnj = {
   }),
   suivreHistoriquePnj: () => ({ etat: historiquePnj, arreter: () => {} }),
   suivreReputation: () => ({ etat: reputation, arreter: () => {} }),
+};
+
+/** Scène hors combat (S2) : la scène montrée (table.donnees.sceneHorsCombat), son DD et ses actions. */
+export const sceneHc = $state({ donnees: null as Record<string, unknown> | null, pret: true, erreur: null as string | null });
+export const sceneHcMj = $state({ donnees: null as { dd: number } | null, pret: true, erreur: null as string | null });
+export const actionsScene = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+
+export const magasinsScenes = {
+  suivreSceneHorsCombat: () => ({ etat: sceneHc, arreter: () => {} }),
+  suivreSceneHorsCombatMj: () => ({ etat: sceneHcMj, arreter: () => {} }),
+  suivreActionsScene: () => ({ etat: actionsScene, arreter: () => {} }),
 };

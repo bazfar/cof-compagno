@@ -57,7 +57,7 @@ const { schemaReputationV1 } = await import('../../src/lib/schemas/reputation');
 type Pnj = import('../../src/lib/schemas/pnj').Pnj;
 type ReputationGroupe = import('../../src/lib/schemas/reputation').ReputationGroupe;
 
-const pnj = (p: Partial<Pnj> = {}): Pnj => ({ nom: 'Aude Berlan', faction: null, lore: null, rencontre: false, cran: null, tendance: null, creeLe: 1, majLe: 1, ...p });
+const pnj = (p: Partial<Pnj> = {}): Pnj => ({ nom: 'Aude Berlan', faction: null, lore: null, rencontre: false, cran: null, tendance: null, mensonges: 0, creeLe: 1, majLe: 1, ...p });
 const rep = (scores: Record<string, number>): ReputationGroupe => ({ scores, majLe: 1 });
 const vu = (cran: Pnj['cran'], p: Partial<Pnj> = {}) => pnj({ rencontre: true, cran, ...p });
 
@@ -209,6 +209,14 @@ describe('écritures', () => {
     appels.length = 0;
     await expect(P.corrigerAttitudePnj('pnj-selyne', 1, 'Flatterie')).rejects.toThrow('service rendu');
     expect(appels).toEqual([]);
+  });
+
+  it('S2 : un mensonge découvert, deux crans de moins, motif obligatoire, dans l’historique', async () => {
+    base.set(chemin, vu('connaissance', { nom: 'Selyne', mensonges: 2 }));
+    expect(() => P.mensongeDecouvertPnj('pnj-selyne', '')).toThrow('Dis comment');
+    const p = await P.mensongeDecouvertPnj('pnj-selyne', 'Le sceau était faux', 's0015');
+    expect([p.cran, p.mensonges, p.tendance]).toEqual(['mefiant', 1, 'baisse']);
+    expect(appels[1]!.donnees).toMatchObject({ geste: 'mensonge', avant: 'connaissance', apres: 'mefiant', motif: 'Le sceau était faux', seance: 's0015' });
   });
 
   it('un PNJ disparu est refusé', async () => {

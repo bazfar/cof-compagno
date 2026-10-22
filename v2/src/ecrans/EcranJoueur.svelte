@@ -15,6 +15,10 @@
    * jamais perdue, et la marque « nouveau » se met à jour même section
    * Personnage ouverte.
    *
+   * Scène hors combat (lot S2, décision 3a) : pendant une scène, sa carte
+   * s'ouvre en haut de la colonne de droite ; dans les autres sections, en
+   * haut de la page. Les appelés y agissent.
+   *
    * Section Relations (lot S1) : la réputation du groupe et les PNJ
    * rencontrés, avec leur attitude.
    *
@@ -35,6 +39,8 @@
   const butin = import('../composants/ButinJoueur.svelte');
   // Le lore (L2.7b), chargé à part lui aussi.
   const lore = import('../composants/LoreJoueur.svelte');
+  // La scène hors combat (S2), chargée à part : elle lit la fiche pour les bonus.
+  const scene = import('../composants/SceneJoueur.svelte');
   // Les relations (S1), chargées à la première visite seulement.
   let relationsOuvertes = $state(false);
 
@@ -53,6 +59,13 @@
 
 <BarreHaut etiquette="Joueur" {sections} active={section} surSection={(id) => (section = id)} />
 <main>
+  {#if section !== 'perso'}
+    <div class="scene-haut">
+      {#await scene then module}
+        <module.default />
+      {/await}
+    </div>
+  {/if}
   <div hidden={section !== 'perso'}>
     <div class="personnage">
       <div class="fiche">
@@ -66,6 +79,11 @@
         {/await}
       </div>
       <aside class="table" aria-label="Table">
+        {#if section === 'perso'}
+          {#await scene then module}
+            <module.default />
+          {/await}
+        {/if}
         {#await carte}
           <p>Chargement de la battlemap…</p>
         {:then module}
@@ -111,6 +129,13 @@
     grid-template-columns: minmax(0, 1fr) 420px;
     gap: 20px;
     align-items: start;
+  }
+  .scene-haut {
+    max-width: 640px;
+    margin-bottom: 16px;
+  }
+  .scene-haut:empty {
+    display: none;
   }
   .fiche,
   .table {

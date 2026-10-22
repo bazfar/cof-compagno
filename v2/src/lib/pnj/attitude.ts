@@ -86,6 +86,13 @@ export function corrigerCran(p: Pnj, delta: 1 | -1, maintenant: number): Pnj {
   return { ...p, cran: CRANS_ATTITUDE[r]!, tendance: delta > 0 ? 'hausse' : 'baisse', majLe: maintenant };
 }
 
+/** Un mensonge réussi en scène est découvert (S2, 9a) : deux crans de moins (table 8a). */
+export function decouvrirMensonge(p: Pnj, maintenant: number): Pnj {
+  if (!p.rencontre || !p.cran) throw new RefusAttitude(`${p.nom} n’est pas encore rencontré.`);
+  if (p.mensonges < 1) throw new RefusAttitude(`Aucun mensonge à découvrir auprès de ${p.nom}.`);
+  return { ...p, cran: CRANS_ATTITUDE[Math.max(0, rang(p.cran) - 2)]!, tendance: 'baisse', mensonges: p.mensonges - 1, majLe: maintenant };
+}
+
 /** Ce que les joueurs voient d'un PNJ rencontré (14b, 18a). */
 export interface RepereAttitude {
   cran: string;
@@ -140,7 +147,7 @@ export function pnjDepuisLore(fiches: readonly FicheLorePourPnj[], existants: Re
     .filter((f) => f.source?.startsWith('v1:pnj:') && !existants.has(f.id))
     .map((f) => ({
       id: f.id,
-      pnj: { nom: f.titre.slice(0, 80), faction: factionDuLore(f.etiquettes[0]), lore: f.id, rencontre: false, cran: null, tendance: null, creeLe: maintenant, majLe: maintenant },
+      pnj: { nom: f.titre.slice(0, 80), faction: factionDuLore(f.etiquettes[0]), lore: f.id, rencontre: false, cran: null, tendance: null, mensonges: 0, creeLe: maintenant, majLe: maintenant },
     }));
 }
 

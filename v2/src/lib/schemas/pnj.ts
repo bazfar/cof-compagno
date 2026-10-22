@@ -32,6 +32,8 @@ export const schemaPnj = z
     cran: schemaCran.nullable(),
     /** Sens du dernier changement de cran (18a) ; null avant tout changement. */
     tendance: z.enum(['hausse', 'baisse']).nullable(),
+    /** Mensonges réussis en scène, pas encore découverts (S2, 9a). Absent des PNJ créés par S1 : 0. */
+    mensonges: z.number().int().min(0).max(99).default(0),
     creeLe: z.number().int().nonnegative(),
     majLe: z.number().int().nonnegative(),
   })
@@ -40,7 +42,8 @@ export const schemaPnj = z
   });
 export type Pnj = z.infer<typeof schemaPnj>;
 
-export const GESTES_ATTITUDE = ['rencontre', 'service', 'correction'] as const;
+/** `scene` et `mensonge` : clôture d'une scène et mensonge découvert (lot S2). */
+export const GESTES_ATTITUDE = ['rencontre', 'service', 'correction', 'scene', 'mensonge'] as const;
 export type GesteAttitude = (typeof GESTES_ATTITUDE)[number];
 
 export const schemaGesteAttitude = z.strictObject({

@@ -95,6 +95,10 @@ describe('PNJ (S1)', () => {
     await assertFails(bob.set(pnj({ tendance: 'stable' })));
     await assertFails(bob.set(pnj({ nom: '' })));
     await assertSucceeds(bob.set(pnj({ faction: null, lore: null })));
+    // S2 : le compteur de mensonges, facultatif (les PNJ de S1 n'en ont pas).
+    await assertSucceeds(bob.set(pnj({ rencontre: true, cran: 'neutre', mensonges: 2 })));
+    await assertFails(bob.set(pnj({ rencontre: true, cran: 'neutre', mensonges: -1 })));
+    await assertFails(bob.set(pnj({ rencontre: true, cran: 'neutre', mensonges: 'deux' })));
   });
 
   it('historique : le MJ seul, à son nom, sans réécriture', async () => {
@@ -103,7 +107,9 @@ describe('PNJ (S1)', () => {
     await assertSucceeds(pour('bob').doc(`${h}/g1`).set(geste('bob', { seance: 's0014' })));
     await assertFails(pour('bob').doc(`${h}/g2`).set(geste('alice')));
     await assertFails(pour('bob').doc(`${h}/g3`).set(geste('bob', { motif: '' })));
-    await assertFails(pour('bob').doc(`${h}/g4`).set(geste('bob', { geste: 'scene' })));
+    await assertFails(pour('bob').doc(`${h}/g4`).set(geste('bob', { geste: 'combat' })));
+    await assertSucceeds(pour('bob').doc(`${h}/g6`).set(geste('bob', { geste: 'scene' })));
+    await assertSucceeds(pour('bob').doc(`${h}/g7`).set(geste('bob', { geste: 'mensonge' })));
     await assertFails(pour('bob').doc(`${h}/g1`).set(geste('bob', { motif: 'Autre chose' })));
     await assertFails(pour('alice').doc(`${h}/g1`).get());
     await assertFails(pour('alice').doc(`${h}/g5`).set(geste('alice')));

@@ -6,6 +6,7 @@
     corrigerAttitudePnj,
     creerPnj,
     importerPnjDuLore,
+    mensongeDecouvertPnj,
     RefusAttitude,
     rencontrerPnj,
     rendreServicePnj,
@@ -29,6 +30,7 @@
     scoreDe,
   } from '../lib/pnj/attitude';
   import type { GesteAttitudeEnregistre } from '../lib/schemas/pnj';
+  import SceneMj from './SceneMj.svelte';
   import { session } from '../lib/session.svelte';
 
   /*
@@ -42,7 +44,10 @@
    *     faction (16a) ou Neutre (4a). Ensuite : service rendu (17a, seul
    *     chemin vers Allié) et corrections d'un cran, chacun avec son motif,
    *     gardé dans l'historique du PNJ.
-   * Les scènes jouées (S2) feront bouger l'attitude d'elles-mêmes.
+   * Scène (lot S2) : en tête, la scène en cours ou à ouvrir (SceneMj),
+   * lançable depuis la fiche d'un PNJ rencontré (3a). Les scènes font
+   * bouger l'attitude d'elles-mêmes ; un mensonge réussi peut être
+   * découvert plus tard, depuis la fiche du PNJ (9a).
    */
 
   const pnj = suivrePnjMj(session.table);
@@ -93,7 +98,7 @@
   });
   const historique = $derived(suiviHistorique?.etat.elements ?? []);
 
-  const NOMS_GESTES = { rencontre: 'Rencontre', service: 'Service rendu', correction: 'Correction' } as const;
+  const NOMS_GESTES = { rencontre: 'Rencontre', service: 'Service rendu', correction: 'Correction', scene: 'Scène', mensonge: 'Mensonge découvert' } as const;
   const date = (t: number) => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   const signe = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
 
@@ -125,12 +130,14 @@
     if (!p || !confirm(`Retirer ${p.nom} ?`)) return;
     if (await agir(() => retirerPnj(id, p), 'PNJ retiré.')) choisi = null;
   }
+  let pnjPourScene = $state<string | null>(null);
   async function avecMotif(f: (m: string) => Promise<unknown>) {
     if (await agir(() => f(motif))) motif = '';
   }
 </script>
 
 <div class="social">
+  <SceneMj pnjs={pnj.etat.elements} pnjPropose={pnjPourScene} surPnjPris={() => (pnjPourScene = null)} />
   <section class="carte" aria-label="Réputation du groupe">
     <h2>Réputation du groupe</h2>
     <table>
@@ -221,6 +228,10 @@
               <button class="discret" disabled={occupe || !motif.trim() || ouvert.cran === 'favorable' || ouvert.cran === 'allie'} onclick={() => avecMotif((m) => corrigerAttitudePnj(ouvert.id, 1, m, seance))}>Un cran de plus</button>
             </div>
             <p class="aide">Allié ne s'obtient que par un service rendu.</p>
+            {#if ouvert.mensonges > 0}
+              <button class="discret" disabled={occupe || !motif.trim()} onclick={() => avecMotif((m) => mensongeDecouvertPnj(ouvert.id, m, seance))}>Mensonge découvert ({ouvert.mensonges} en cours)</button>
+            {/if}
+            <button onclick={() => (pnjPourScene = ouvert.id)}>Ouvrir une scène avec {ouvert.nom}</button>
           {/if}
           {#if historique.length}
             <h4>Historique</h4>
