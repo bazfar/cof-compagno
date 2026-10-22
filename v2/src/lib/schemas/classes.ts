@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { schemaCarac, schemaId } from './commun.ts';
+import { schemaCarac, schemaFormuleDes, schemaId } from './commun.ts';
 import { schemaElement, schemaFamilleArme, schemaLimite, schemaMaitrise, schemaRessource } from './effets.ts';
 
 /*
@@ -72,6 +72,8 @@ export const CAPACITES_DE_VOIE = [
    */
   'donCorrompu',
   'eclatChaotique',
+  /** Voie des souffles du Moine (lot L4.16, décision 9a) : un coup à mains nues qui porte un élément gagne +1d6 de cet élément. */
+  'maitriseDuSouffle',
 ] as const;
 export type CapaciteDeVoie = (typeof CAPACITES_DE_VOIE)[number];
 
@@ -147,8 +149,14 @@ export const schemaClasseRefonte = z.strictObject({
       ressource: schemaRessource,
       base: z.number().int().min(0),
       diviseurNiveau: z.number().int().min(1),
-      /** `jamais` : pleine à la création, elle ne remonte que par ses gains (Inspiration du Barde, lot L4.8). */
-      recharge: z.enum(['reposCourt', 'reposLong', 'jamais']),
+      /**
+       * `jamais` : pleine à la création, elle ne remonte que par ses gains (Inspiration du Barde, lot L4.8) ;
+       * `chaqueCombat` : elle repart à `debutCombat` à chaque combat (Ki du Moine, lot L4.16).
+       */
+      recharge: z.enum(['reposCourt', 'reposLong', 'jamais', 'chaqueCombat']),
+      debutCombat: z.number().int().min(0).max(5).optional(),
+      /** Gain par coup qui touche, et plafond par round (Ki : +1, 2 par round, décision 1a du 22/10/2026). Le combat (L6) l'applique. */
+      parTouche: z.strictObject({ montant: z.number().int().min(1).max(3), parRound: z.number().int().min(1).max(5) }).optional(),
       parDegatsSubis: z.number().int().min(0).max(3).default(0),
       /**
        * +1 sur un 20 naturel (Inspiration) : le sien, ou aussi celui de tout
@@ -157,6 +165,13 @@ export const schemaClasseRefonte = z.strictObject({
        */
       parVingtNaturel: z.enum(['lui', 'luiEtAlliesQuiLEntendent']).optional(),
     })
+    .refine((r) => (r.recharge === 'chaqueCombat') === (r.debutCombat !== undefined), { message: 'une ressource qui repart à chaque combat dit sa valeur de départ' })
+    .optional(),
+  /** Dé des mains nues selon le niveau : chaque palier vaut dès son niveau (Moine : d6, d8 au niveau 5, 2d6 au niveau 9 ; lot L4.16). */
+  mainsNues: z
+    .array(z.strictObject({ niveau: z.number().int().min(1).max(20), des: schemaFormuleDes }))
+    .min(1)
+    .refine((p) => p[0]!.niveau === 1 && p.every((x, i) => i === 0 || x.niveau > p[i - 1]!.niveau), { message: 'des paliers croissants, dès le niveau 1' })
     .optional(),
   /**
    * Attaques spéciales d'arme (lot L4.7) : les familles permises et leur

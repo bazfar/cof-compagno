@@ -506,12 +506,21 @@ export const schemaResolution = z
     consentant: z.literal(true).optional(),
     /** DD fixe, à la place de celui du lanceur (test de CON d'un élixir : 12 à 20, v1 ; lot L4.8). */
     ddFixe: z.number().int().min(5).max(30).optional(),
+    /**
+     * Après une attaque qui touche, la cible sauvegarde contre 10 + mod de la
+     * caractéristique de classe ; les effets `sauvegardeRatee` n'ont lieu que
+     * sur un échec (techniques du Moine, décision 4a du 22/10/2026 ; lot L4.16).
+     */
+    sauvegardeSurTouche: schemaSauvegarde.optional(),
   })
   .refine((r) => (r.jet === 'sauvegarde') === (r.sauvegarde !== undefined), {
     message: 'une sauvegarde est nommée si et seulement si le jet est une sauvegarde',
   })
   .refine((r) => (r.jet === 'sauvegarde') === (r.siSauvegarde !== undefined), {
     message: 'siSauvegarde est donné si et seulement si le jet est une sauvegarde',
+  })
+  .refine((r) => !r.sauvegardeSurTouche || r.jet === 'attaque' || r.jet === 'attaqueMagique', {
+    message: 'une sauvegarde après la touche suit une attaque',
   });
 
 export const schemaPersistance = z.strictObject({
@@ -726,8 +735,8 @@ export const schemaAction = z
       if (e.vise === 'zone' && !a.zone) ko('un effet sur la zone demande une zone', ['effets', i, 'vise']);
       if (e.type === 'degats' && e.attenuation && !(typeof a.ciblage.portee === 'number' && a.ciblage.portee > e.attenuation.pleinsJusqua))
         ko('une atténuation demande une portée en cases au-delà des dégâts pleins', ['effets', i, 'attenuation']);
-      if ((e.condition === 'sauvegardeRatee' || e.condition === 'sauvegardeReussie') && a.resolution.jet !== 'sauvegarde')
-        ko('une condition de sauvegarde demande un jet de sauvegarde', ['effets', i, 'condition']);
+      if ((e.condition === 'sauvegardeRatee' || e.condition === 'sauvegardeReussie') && a.resolution.jet !== 'sauvegarde' && !a.resolution.sauvegardeSurTouche)
+        ko('une condition de sauvegarde demande un jet de sauvegarde, ou une sauvegarde après la touche', ['effets', i, 'condition']);
     });
   });
 export type Action = z.infer<typeof schemaAction>;

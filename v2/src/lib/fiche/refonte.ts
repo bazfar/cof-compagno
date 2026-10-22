@@ -42,7 +42,7 @@ import { actionParId, actionsCommunes, classeParId, elementParId, voieParId } fr
  * (Envoûteur).
  */
 
-/** Classes v1 refondues, vers leur identifiant de la refonte (les cinq du groupe, puis le Chevalier au lot L4.13, décision 12a, le Chasseur au lot L4.14 et le Druide au lot L4.15 ; les autres suivent). */
+/** Classes v1 refondues, vers leur identifiant de la refonte (les cinq du groupe, puis le Chevalier au lot L4.13, décision 12a, le Chasseur au lot L4.14, le Druide au lot L4.15 et le Moine au lot L4.16 ; le Nécromancien suit). */
 export const CLASSE_REFONTE: Readonly<Record<string, string>> = {
   guerrier: 'guerrier',
   chevalier: 'chevalier',
@@ -52,6 +52,7 @@ export const CLASSE_REFONTE: Readonly<Record<string, string>> = {
   enchanteur: 'envouteur',
   pretre: 'pretre',
   barde: 'barde',
+  moine: 'moine',
 };
 
 /** Les règles de la refonte, telles que les lit le profil. */
@@ -139,7 +140,14 @@ export function jaugesPleines(classe: ClasseRefonte, niveau: number, corruptionA
   };
 }
 
-/** Un bloc `refonte` vide pour cette classe : aucun rang, jauges pleines. */
+/** Jauges d'un personnage neuf ou converti : pleines, sauf une ressource qui repart à chaque combat (Ki du Moine : 1, lot L4.16). */
+export function jaugesDeDepart(classe: ClasseRefonte, niveau: number, corruptionAme: number): RefonteFiche['jauges'] {
+  const j = jaugesPleines(classe, niveau, corruptionAme);
+  const res = classe.ressourceDeClasse;
+  return res?.debutCombat !== undefined ? { ...j, [res.ressource]: res.debutCombat } : j;
+}
+
+/** Un bloc `refonte` vide pour cette classe : aucun rang, jauges de départ. */
 export function refonteVierge(classe: ClasseRefonte, niveau: number, corruptionAme = 0): RefonteFiche {
   return {
     classe: classe.id,
@@ -153,7 +161,7 @@ export function refonteVierge(classe: ClasseRefonte, niveau: number, corruptionA
     mineurPalierII: null,
     caracEnPlus: null,
     variantes: {},
-    jauges: jaugesPleines(classe, niveau, corruptionAme),
+    jauges: jaugesDeDepart(classe, niveau, corruptionAme),
   };
 }
 
@@ -405,7 +413,7 @@ export function convertirFiche(lue: FicheV1, r: RefonteFiche): FicheV2 {
   if (erreurs.length) throw new RefusCreation(erreurs.join(' '));
   const communs: Record<string, unknown> = { ...v1 };
   for (const k of [...CHAMPS_V1_RETIRES, 'schemaVersion']) delete communs[k];
-  const refonte: RefonteFiche = { ...r, jauges: jaugesPleines(classe, v1.niveau, v1.corruptionMajeure) };
+  const refonte: RefonteFiche = { ...r, jauges: jaugesDeDepart(classe, v1.niveau, v1.corruptionMajeure) };
   return schemaFicheV2.parse(versFirestore({ ...communs, schemaVersion: VERSION_FICHE_REFONTE, refonte, octrois }, v1.nom));
 }
 

@@ -141,6 +141,8 @@ export interface LanceurEnJeu extends Combattant {
 export interface ModificateursDeVoie {
   /** Coup de maître hors de la Voie du maître d'armes (Tir fatal du Chasseur, lot L4.14) : le choix passe par `maitreDArmes.coupDeMaitre`. */
   coupDeMaitre?: boolean;
+  /** Maîtrise du souffle (Moine, lot L4.16) : un coup à mains nues qui porte un élément gagne +1d6 de cet élément. */
+  maitriseDuSouffle?: boolean;
   sauvage?: {
     rang: number;
     /** Instinct chaotique (rang 2) : le meilleur de deux jets. */
@@ -508,6 +510,9 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   if (l.variante !== undefined && !l.action.variantes.some((v) => v.id === l.variante && (v.palier === cout.palierLance || v.palier === 'I')))
     return { ok: false, raison: `${l.action.id} n'a pas de variante ${l.variante} au palier ${cout.palierLance}` };
   let action = actionAuPalier(l.action, cout.palierLance, l.variante);
+  // Maîtrise du souffle (Moine, lot L4.16, 9a) : un coup à mains nues qui porte un élément gagne +1d6 de cet élément.
+  if (v.maitriseDuSouffle && l.element && !estSort && action.armes?.includes('mainsNues'))
+    action = { ...action, effets: [...action.effets, { type: 'degats', des: '1d6', plusMod: false, typeDegats: l.element.id, vise: 'cible' }] };
   const reserve = action.effets.find((e) => e.type === 'jetsReserves');
   if (reserve && (!l.nombreDeDes || l.nombreDeDes < 1 || !Number.isInteger(l.nombreDeDes))) return { ok: false, raison: `${action.id} : combien de dés ?` };
   if (l.boost) {
@@ -601,7 +606,9 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   }
   // DD : celui du lanceur ; un effet porté par l'arme se sauve contre 10 + le mod de sa caractéristique.
   const dd =
-    action.resolution.ddFixe ?? (aLArme && l.arme?.modCarac !== undefined ? ddSort(l.arme.modCarac) : ddSort(l.lanceur.modMagie, l.ecole ?? 'adepte'));
+    action.resolution.ddFixe ??
+    // Techniques du Moine (lot L4.16, 4a) : la sauvegarde après la touche se fait contre 10 + mod de SAG, pas celui de l'arme.
+    (aLArme && l.arme?.modCarac !== undefined && !action.resolution.sauvegardeSurTouche ? ddSort(l.arme.modCarac) : ddSort(l.lanceur.modMagie, l.ecole ?? 'adepte'));
   const jets: JetNote[] = [];
   const changements: Changement[] = [];
   const fiche = l.element ? cat.elements.get(l.element.id) : undefined;
@@ -611,8 +618,9 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   if (l.secondElement && !fiche2) return { ok: false, raison: `élément inconnu : ${l.secondElement.id}` };
   if (l.secondElement && l.secondElement.id === l.element?.id) return { ok: false, raison: 'une combinaison prend deux éléments différents' };
   const paire = l.element && l.secondElement ? [l.element.id, l.secondElement.id].sort().join('+') : null;
-  const signature = paire ? cat.combinaisons?.find((x) => [...x.elements].sort().join('+') === paire) : undefined;
-  const combinaisonReduite = !!l.secondElement && l.secondElement.maitrise !== 'maitre';
+  // Un souffle du Moine (lot L4.16, 9a) n'est pas un sort : deux éléments donnent leurs deux effets génériques, pleins, sans signature.
+  const signature = paire && estSort ? cat.combinaisons?.find((x) => [...x.elements].sort().join('+') === paire) : undefined;
+  const combinaisonReduite = !!l.secondElement && l.secondElement.maitrise !== 'maitre' && estSort;
   const mineur = action.nature === 'mineur';
   // Affinité (Virtuose 2) : un sort mineur porte l'effet complet d'un élément au moins Adepte.
   const affinite = mineur && !!v.virtuose?.affinite && !!l.element && MAITRISES.indexOf(l.element.maitrise) >= MAITRISES.indexOf('adepte');
@@ -670,7 +678,8 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
 
   // 3. Dérapage de l'élément.
   let derape = false; // élément raté : le sort entier échoue (1b)
-  const seuilElement = l.element && (!mineur || affinite) ? seuilEchec(l.element.maitrise) : 0;
+  // Les souffles du Moine (lot L4.16, 8a) portent un élément sans jet de maîtrise : ce ne sont pas des sorts.
+  const seuilElement = l.element && estSort && (!mineur || affinite) ? seuilEchec(l.element.maitrise) : 0;
   let ficheDerapee = fiche;
   if (seuilElement) {
     const j = d20(alea, 0);
@@ -678,7 +687,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
     jets.push({ quoi: 'maîtrise de l’élément', des: j.des, total: j.garde, contre: seuilElement, reussi: !derape });
   }
   // Second élément d'une combinaison : il dérape à son rang (Initié 1–4, Non maîtrisé 1–10).
-  const seuilSecond = l.secondElement && !derape ? seuilEchec(l.secondElement.maitrise) : 0;
+  const seuilSecond = l.secondElement && estSort && !derape ? seuilEchec(l.secondElement.maitrise) : 0;
   if (seuilSecond) {
     const j = d20(alea, 0);
     derape = j.garde <= seuilSecond;
@@ -772,6 +781,9 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
       const touche = critique || total >= def;
       if (touche) aTouche = true;
       jets.push({ quoi: nomJet, cible: c.id, des: j.des, total, contre: def, reussi: touche, ...(critique ? { critique: true as const } : {}) });
+      // Techniques du Moine (lot L4.16, 4a) : touchée, la cible sauvegarde contre l'état.
+      const apres = action.resolution.sauvegardeSurTouche;
+      if (touche && apres) return { touche, critique, sauveReussie: sauve(c, apres, `sauvegarde de ${apres}`) };
       return { touche, critique };
     }
     // Un allié consentant accepte l'effet sans sauvegarder (Portail, lot L4.4a).

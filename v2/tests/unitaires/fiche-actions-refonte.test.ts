@@ -61,11 +61,18 @@ describe('attaques spéciales et arme en main (décision du 21/10/2026)', () => 
   const KARLACH = { rangs: { 'guerrier.maitre-d-armes': 1 } };
   const arme = (id: string, nom: string) => ({ id, nom, type: 'arme' as const, porte: false, degats: '1d8', typedegats: 'physique' as const, enchantement: 0, deuxMains: false, prixPo: 1, description: '' });
 
-  it('sans arme en main, aucune attaque spéciale ; l’attaque commune reste', () => {
+  it('sans arme en main, pas d’attaque spéciale d’arme ; les communes et les mains nues restent', () => {
     const f = convertie('Karlach', 'guerrier', KARLACH, { equipement: {} });
     const ids = A.actionsDeLaFiche(f, mods()).map((a) => a.id);
-    expect(ids).toContain('arme.attaque');
-    expect(ids.filter((id) => id.startsWith('arme.')).sort()).toEqual(['arme.attaque', 'arme.opportunite']);
+    // Les mains nues ne s'équipent pas : leur spéciale reste, les autres non.
+    expect(ids.filter((id) => id.startsWith('arme.')).sort()).toEqual(['arme.attaque', 'arme.frappe-nerveuse', 'arme.opportunite']);
+  });
+
+  it('les mains nues ne s’équipent pas : leurs actions restent (le Moine, L4.16)', () => {
+    const f = convertie('Vhorgar', 'moine', { elementDepart: 'psionique', rangs: { 'moine.poings': 1 } }, { classe: 'moine', equipement: {} });
+    const ids = A.actionsDeLaFiche(f, mods()).map((a) => a.id);
+    expect(ids).toContain('moine.mains-nues');
+    expect(ids).toContain('moine.frappe-nerveuse');
   });
 
   it('seule l’attaque spéciale de la famille portée paraît', () => {
@@ -152,6 +159,32 @@ describe('Druide (lot L4.15)', () => {
     expect(ligne(l, 'arme.coup-assommant').cout).toBe('2 Force de la nature');
     expect(A.magieDeLaFiche(f)!.elements.map((e) => [e.id, e.maitrise])).toEqual([['eau', 'Adepte']]);
     expect(A.jaugesDeLaFiche(f)[0]).toMatchObject({ cle: 'forceNature', actuel: 4, max: 4 });
+  });
+});
+
+describe('Moine (lot L4.16)', () => {
+  const moine = () => convertie('Vhorgar', 'moine', { elementDepart: 'psionique', rangs: { 'moine.poings': 1, 'moine.elevation': 1 } }, { classe: 'moine' });
+
+  it('mains nues au dé de son niveau + FOR ; techniques à mains nues et en Ki ; Ki à 1 en partant, remis à 1 en fin de combat', () => {
+    const f = moine();
+    const l = A.actionsDeLaFiche(f, mods());
+    expect(ligne(l, 'moine.mains-nues')).toMatchObject({ attaque: { formule: '1d20+2' }, degats: { formule: '1d6+3' } });
+    expect(ligne(l, 'moine.frappe-nerveuse')).toMatchObject({ cout: '1 Ki', degats: { formule: '1d6+3' } });
+    expect(A.jaugesDeLaFiche(f)[0]).toMatchObject({ cle: 'ki', actuel: 1, max: 2 });
+    const plein = { ...f, refonte: { ...f.refonte, jauges: { ...f.refonte.jauges, ki: 2, plongee: 3 } } };
+    expect(A.finDuCombat(plein)).toMatchObject({ ki: 1, plongee: 0 });
+    expect(A.finDuCombat(convertie('Karlach', 'guerrier', {}))).toMatchObject({ endurance: 4 });
+  });
+
+  it('Défense du corps libre : + mod de SAG en DEF, sans armure seulement', () => {
+    const f = convertie('Vhorgar', 'moine', { elementDepart: 'psionique', rangs: { 'moine.elevation': 2 } }, { classe: 'moine' });
+    expect(A.bonusDesPassifs(f, mods()).DEF).toBe(3);
+    expect(A.bonusDesPassifs(f, mods({ armure: true })).DEF).toBe(0);
+  });
+
+  it('montée : le Ki garde sa valeur, seul son maximum monte', () => {
+    expect(M.jaugesMontees(classe('moine'), 2, { ...moine().refonte.jauges, ki: 1 }).ki).toBe(1);
+    expect(M.jaugesMontees(classe('moine'), 2, { ...moine().refonte.jauges, ki: 2 }).ki).toBe(2);
   });
 });
 

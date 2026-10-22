@@ -130,7 +130,7 @@ const DECLENCHEURS: Record<NonNullable<Action['declencheur']>, string> = {
 };
 const DISTANCE = new Set(['arc', 'arbalete', 'armeAFeu', 'tromblon']);
 /** Passifs qui ne valent que sans armure (Vêtements sacrés : narratif « Seulement sans armure »). */
-const SANS_ARMURE = new Set(['pretre.vetements-sacres']);
+const SANS_ARMURE = new Set(['pretre.vetements-sacres', 'moine.defense-du-corps-libre']);
 
 const signe = (n: number) => (n > 0 ? `+${n}` : n < 0 ? String(n) : '');
 /** Une formule que le journal sait lancer (« XdY », « XdY+Z »), sinon null. */
@@ -159,7 +159,8 @@ function sources(classe: ClasseRefonte, r: RefonteFiche, actions: ReadonlyMap<st
  * la fiche qu'avec l'arme correspondante équipée.
  */
 function famillesEquipees(f: FicheV2): ReadonlySet<string> {
-  const familles = new Set<string>();
+  // Les mains nues ne s'équipent pas : on les a toujours (le Moine, L4.16).
+  const familles = new Set<string>(['mainsNues']);
   for (const o of Object.values(f.equipement)) {
     const famille = o?.id ? FAMILLE_DES_ARMES[o.id] : undefined;
     if (famille) familles.add(famille);
@@ -203,7 +204,7 @@ function coutVerbeHorsCombat(a: Action, palier: Palier, maitrise: Maitrise): str
 }
 
 /** Jets du clic (15b) : l'attaque, puis les dégâts du premier effet de dégâts à dés fixes. */
-function jetsDe(a: Action, nom: string, ctx: ContexteRefonte, mods: ModsDuPerso, crans: number): Pick<ActionAffichee, 'attaque' | 'degats'> {
+function jetsDe(a: Action, nom: string, ctx: ContexteRefonte, mods: ModsDuPerso, crans: number, deMainsNues: string | null): Pick<ActionAffichee, 'attaque' | 'degats'> {
   const j = a.resolution.jet;
   let attaque: JetAction | null = null;
   if (j === 'attaqueMagique') attaque = { libelle: `${nom} : attaque magique`, formule: `1d20${signe(mods.attaqueMagique)}` };
@@ -213,6 +214,11 @@ function jetsDe(a: Action, nom: string, ctx: ContexteRefonte, mods: ModsDuPerso,
   }
   const d = a.effets.find((e) => e.type === 'degats');
   let degats: JetAction | null = null;
+  // Mains nues du Moine (lot L4.16) : le dé de son niveau, + mod de FOR (v1).
+  if (d && d.type === 'degats' && d.des === 'arme' && deMainsNues && a.armes?.length === 1 && a.armes[0] === 'mainsNues') {
+    const formule = lancable(`${deMainsNues}${signe(mods.mod('FOR'))}`);
+    if (formule) degats = { libelle: `${nom} : dégâts`, formule };
+  }
   if (d && d.type === 'degats' && d.des !== 'arme') {
     const des = d.progression === 'mineur' ? deMineur(ctx.niveau, crans + (d.crans ?? 0)) : d.des;
     const bonus = d.mod ? mods.mod(d.mod) : d.plusMod ? ctx.modMagie : 0;
@@ -284,7 +290,7 @@ export function actionsDeLaFiche(f: FicheV2, mods: ModsDuPerso, actions: Readonl
       horsCombat: horsCombatAuPalier(brute, palier),
       condition: conditionDe(a),
       dd: sauvegarde,
-      ...jetsDe(a, a.nom, ctx, mods, crans),
+      ...jetsDe(a, a.nom, ctx, mods, crans, p.deMainsNues),
     });
   }
   return trierActions(lignes, 'type', classe);
@@ -417,7 +423,9 @@ export function changerJauge(f: FicheV2, cle: CleJauge, valeur: number): { jauge
 
 /** Fin du combat (9a) : la Plongée revient à 0. */
 export function finDuCombat(f: FicheV2): RefonteFiche['jauges'] {
-  return { ...f.refonte.jauges, plongee: 0 };
+  // Le Ki du Moine repart à 1 (lot L4.16, décision 1a).
+  const res = classeDeLaRefonte(f.refonte.classe)?.ressourceDeClasse;
+  return { ...f.refonte.jauges, plongee: 0, ...(res?.debutCombat !== undefined ? { [res.ressource]: res.debutCombat } : {}) };
 }
 
 /** Réserve de PP et PV en plus (Pacte de sang) de la refonte (11a). */

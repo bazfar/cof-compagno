@@ -376,6 +376,27 @@ export const ETATS: EtatSaisi[] = [
     formeAnimale: true,
   },
 
+  // ---- Moine (lot L4.16) ----
+  {
+    id: 'observe',
+    nom: 'Observé',
+    categorie: 'malus',
+    regle: 'Le Moine qui l’a observé (Précision instinctive) a +2 à sa prochaine attaque contre lui.',
+    parSource: true,
+  },
+  {
+    id: 'avatar_des_elements',
+    nom: 'Avatar des éléments',
+    categorie: 'physique',
+    regle: 'Chaque coup à mains nues porte deux éléments au choix, sans Ki ; immunisé à Repoussé et Renversé.',
+  },
+  {
+    id: 'illumination_noire',
+    nom: 'Illumination noire',
+    categorie: 'physique',
+    regle: 'Une fois par tour, il esquive d’office une attaque. À la fin : désavantage à tous ses jets pendant 1d4 rounds.',
+  },
+
   // ---- Perception ----
   {
     id: 'dissimule',

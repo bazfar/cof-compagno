@@ -136,6 +136,7 @@ describe('profil magique', () => {
       textes: [],
       verbesHorsVoie: [],
       ressourceDeClasse: null,
+      deMainsNues: null,
       attaquesSpeciales: null,
       attaques: [],
       caracs: {},

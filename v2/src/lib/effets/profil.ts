@@ -104,6 +104,8 @@ export interface ProfilMagique {
   verbesHorsVoie: { id: string; maitrise: 'nonMaitrise' | 'initie' }[];
   /** Ressource martiale et sa réserve (Endurance du Guerrier : 3 + niveau / 3). */
   ressourceDeClasse: { ressource: string; max: number } | null;
+  /** Dé des mains nues au niveau du personnage (Moine, lot L4.16) ; null : le dé ordinaire des mains nues. */
+  deMainsNues: string | null;
   /** Attaques spéciales permises et leur coût, Maniement expert compris : ce que le moteur reçoit (lancer.attaquesSpeciales). */
   attaquesSpeciales: AttaquesSpecialesEnJeu | null;
   /** Attaques d'arme ouvertes : actions communes, puis attaques spéciales des familles permises. */
@@ -215,6 +217,7 @@ export function profilMagique(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
     ressourceDeClasse: classe.ressourceDeClasse
       ? { ressource: classe.ressourceDeClasse.ressource, max: classe.ressourceDeClasse.base + Math.floor(c.niveau / classe.ressourceDeClasse.diviseurNiveau) }
       : null,
+    deMainsNues: classe.mainsNues ? classe.mainsNues.filter((x) => x.niveau <= c.niveau).at(-1)!.des : null,
     attaquesSpeciales: classe.attaquesSpeciales ? { familles: classe.attaquesSpeciales.familles, cout: classe.attaquesSpeciales.cout } : null,
     attaques: [],
     caracs: {},
@@ -261,6 +264,8 @@ export function profilMagique(classe: ClasseRefonte, c: ChoixDePersonnage, r: Re
             // d'une autre voie (Bouclier du Chevalier, Gâchette du Chasseur, lots L4.13-14) ne baisse que
             // le coût : il n'ouvre ni Précision létale, ni Coup double, ni Coup de maître.
             if (regle.nom === 'maniementExpert' && id === 'guerrier.maitre-d-armes') p.voie.maitreDArmes = { rang };
+            // Maîtrise du souffle (Voie des souffles du Moine, lot L4.16) : +1d6 de l'élément aux coups à mains nues.
+            if (regle.nom === 'maitriseDuSouffle') p.voie.maitriseDuSouffle = true;
             // Tir fatal (Gâchette 5 du Chasseur, lot L4.14) : le Coup de maître seul.
             if (regle.nom === 'coupDeMaitre' && id !== 'guerrier.maitre-d-armes') p.voie.coupDeMaitre = true;
             // Voie du chaos (lot L4.9) : son rang (Don corrompu dès 2), et l'Éclat chaotique de l'Envoûteur.

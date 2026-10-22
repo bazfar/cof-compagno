@@ -259,8 +259,14 @@ export function apercuMontee(m: MonteeRefonte): MonteeRefonteAppliquee | null {
 export function jaugesMontees(classe: ClasseRefonte, niveau: number, j: RefonteFiche['jauges']): RefonteFiche['jauges'] {
   const avant = R.jaugesPleines(classe, niveau, 0);
   const apres = R.jaugesPleines(classe, niveau + 1, 0);
+  // Une ressource qui repart à chaque combat (Ki du Moine, lot L4.16) ne gagne rien à la montée : seul son maximum monte.
+  const debut = classe.ressourceDeClasse?.debutCombat !== undefined ? classe.ressourceDeClasse.ressource : null;
   const monte = (k: JaugeDeClasse | 'sacre') =>
-    apres[k] === null || apres[k] === undefined ? null : Math.max(0, Math.min(apres[k]!, (j[k] ?? avant[k] ?? 0) + apres[k]! - (avant[k] ?? 0)));
+    apres[k] === null || apres[k] === undefined
+      ? null
+      : k === debut
+        ? Math.min(apres[k]!, j[k] ?? classe.ressourceDeClasse!.debutCombat!)
+        : Math.max(0, Math.min(apres[k]!, (j[k] ?? avant[k] ?? 0) + apres[k]! - (avant[k] ?? 0)));
   const r = { ...j, endurance: monte('endurance'), inspiration: monte('inspiration'), sacre: monte('sacre') };
   // Ressources ajoutées au lot L4.13 (Honneur…) : seulement pour leur classe.
   for (const k of JAUGES_DE_CLASSE) if (k !== 'endurance' && k !== 'inspiration' && apres[k] !== undefined) r[k] = monte(k);

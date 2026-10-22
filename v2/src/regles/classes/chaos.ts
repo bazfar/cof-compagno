@@ -60,6 +60,15 @@ import type { ActionSaisie, EffetSaisi } from '../../lib/schemas/effets';
  * sans poussée ; les 2d8 de la Forme du chaos sauvage sont physiques, sans
  * mod (règle des dégâts du chaos) ; ses +4 PV temporaires v1 disparaissent
  * (le cadre ne les garde pas).
+ *
+ * Moine (lot L4.16, décision 10a) : Méditation interdite (+1d6 ou +2 en
+ * attaque ; Volonté DD 10, sinon l'attaque vise la créature la plus
+ * proche), Vision fracturée (+2d6 chaotiques ; Volonté DD 12, même
+ * risque), Esprit fendu (avantage contre la peur et le charme ;
+ * hallucinations hors combat, méfiance des ordres monastiques),
+ * Illumination noire (+4 initiative, +2 attaque, une esquive d'office par
+ * tour, 3 + mod de SAG rounds ; ensuite désavantage 1d4 rounds). La Voix du
+ * Vide v1 (R2) laisse la place au Don corrompu.
  */
 
 const surSoi = { type: 'soi', portee: 'soi' } as const;
@@ -171,6 +180,67 @@ export const ACTIONS_CHAOS: ActionSaisie[] = [
       { type: 'bonus', cible: 'DEF', valeur: 4, duree: avatar('CON'), vise: 'lanceur' },
       { type: 'bonus', cible: 'degats', valeur: '2d6', typeDegats: 'chaotique', duree: avatar('CON'), vise: 'lanceur' },
       { type: 'narratif', texte: 'Immunisé à la peur pendant l’Avatar ; au tour qui suit sa fin, il perd son déplacement.', vise: 'lanceur' },
+    ]),
+  }),
+
+  // ---- Moine (L4.16, 10a) ----
+  chaos('moine.meditation-interdite', 'Méditation interdite', 'Une fois par tour : +1d6 à sa prochaine frappe, ou +2 en attaque ; Volonté DD 10, sinon l’attaque vise la créature la plus proche, allié compris.', 1, {
+    nature: 'capacite',
+    action: 'gratuite',
+    limite: '1x/round',
+    ciblage: surSoi,
+    resolution: { jet: 'sauvegarde', sauvegarde: 'Volonte', siSauvegarde: 'rien', ddFixe: 10 },
+    effets: [
+      { type: 'bonus', cible: 'degats', valeur: '1d6', typeDegats: 'chaotique', consomme: 'prochaineFrappe', duree: 'prochainTour', vise: 'lanceur' },
+      { type: 'narratif', texte: 'Cette attaque vise la créature la plus proche, allié compris.', condition: 'sauvegardeRatee' },
+      plongee(1),
+    ],
+    variantes: [
+      {
+        id: 'attaque',
+        nom: '+2 en attaque',
+        palier: 'I',
+        delta: {
+          remplaceEffets: [
+            { type: 'bonus', cible: 'attaque', valeur: 2, duree: 'prochainTour', vise: 'lanceur' },
+            { type: 'narratif', texte: 'Cette attaque vise la créature la plus proche, allié compris.', condition: 'sauvegardeRatee' },
+            plongee(1),
+          ],
+        },
+      },
+    ],
+  }),
+  chaos('moine.vision-fracturee', 'Vision fracturée', 'Sa prochaine frappe : +2d6 chaotiques ; Volonté DD 12, sinon elle vise la créature la plus proche, allié compris.', 3, {
+    nature: 'capacite',
+    action: 'gratuite',
+    limite: '1x/round',
+    jetDeChaos: true,
+    ciblage: surSoi,
+    resolution: { jet: 'sauvegarde', sauvegarde: 'Volonte', siSauvegarde: 'rien', ddFixe: 12 },
+    effets: [
+      { type: 'bonus', cible: 'degats', valeur: '2d6', typeDegats: 'chaotique', consomme: 'prochaineFrappe', duree: 'prochainTour', vise: 'lanceur' },
+      { type: 'narratif', texte: 'Cette attaque vise la créature la plus proche, allié compris.', condition: 'sauvegardeRatee' },
+      plongee(2),
+    ],
+  }),
+  chaos('moine.esprit-fendu', 'Esprit fendu', 'Dès 5 de Corruption d’Âme : avantage contre la peur et le charme.', 4, {
+    nature: 'passif',
+    action: 'aucune',
+    corruptionAmeMin: 5,
+    ciblage: surSoi,
+    resolution: sansJet,
+    effets: [{ type: 'narratif', texte: 'Avantage à ses jets contre la peur et le charme.', vise: 'lanceur' }],
+  }),
+  chaos('moine.illumination-noire', 'Illumination noire', 'Une fois par scénario, 3 + mod de SAG rounds : +4 en initiative, +2 en attaque, une esquive d’office par tour ; ensuite, désavantage 1d4 rounds.', 5, {
+    nature: 'capacite',
+    action: 'action',
+    limite: '1x/scenario',
+    ciblage: surSoi,
+    resolution: sansJet,
+    effets: effetsDAvatar([
+      { type: 'bonus', cible: 'initiative', valeur: 4, duree: avatar('SAG'), vise: 'lanceur' },
+      { type: 'bonus', cible: 'attaque', valeur: 2, duree: avatar('SAG'), vise: 'lanceur' },
+      { type: 'etat', etat: 'illumination_noire', duree: avatar('SAG'), vise: 'lanceur' },
     ]),
   }),
 
@@ -450,6 +520,19 @@ function voieDuChaos(classe: string, description: string, r1: Rang, r3: Rang, r4
 }
 
 export const VOIES_CHAOS: VoieSaisie[] = [
+  voieDuChaos(
+    'moine',
+    'Une méditation qui a regardé trop loin : le Vide répond, et la main ne vise plus toujours qui elle veut.',
+    { nom: 'Méditation interdite', description: '+1d6 ou +2 en attaque, au risque d’un coup égaré.', actions: ['chaos.moine.meditation-interdite'] },
+    { nom: 'Vision fracturée', description: '+2d6 chaotiques, au risque d’un coup égaré.', actions: ['chaos.moine.vision-fracturee'] },
+    {
+      nom: 'Esprit fendu',
+      description: 'Avantage contre la peur et le charme.',
+      actions: ['chaos.moine.esprit-fendu'],
+      contrepartie: 'il a des hallucinations hors combat ; les ordres monastiques se méfient de lui.',
+    },
+    { nom: 'Illumination noire', description: 'L’Avatar du Moine.', actions: ['chaos.moine.illumination-noire'] },
+  ),
   voieDuChaos(
     'druide',
     'La nature corrompue : la bête et la ronce prennent le pas sur le gardien.',
