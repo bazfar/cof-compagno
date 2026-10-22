@@ -596,6 +596,24 @@ describe('refonte (L4.11b)', () => {
     expect(caseChaos.checked).toBe(true);
   });
 
+  it('grimoire (G1, 1a) : le MJ l’ouvre depuis la fiche d’un lanceur ; pas pour un guerrier ni pour le joueur', async () => {
+    const k = RF.convertirFiche(reelle('Kylhian', 'p-k'), { ...RF.refonteVierge(classeParId.get('magicien')!, 4), ecole: 'evocation', elementDepart: 'feu', rangs: { 'magicien.ecole': 2 } });
+    const joueur = render(FicheVivante, { props: { fiche: { ...k, id: 'p-k' }, modifiable: true } });
+    expect(screen.queryByRole('button', { name: 'Grimoire' })).toBeNull();
+    joueur.unmount();
+    const guerrier = render(FicheVivante, { props: { fiche: karlachV2(), modifiable: true, mj: true } });
+    expect(screen.queryByRole('button', { name: 'Grimoire' })).toBeNull();
+    guerrier.unmount();
+    render(FicheVivante, { props: { fiche: { ...k, id: 'p-k' }, modifiable: true, mj: true } });
+    const bouton = screen.getByRole('button', { name: 'Grimoire' });
+    expect(bouton.getAttribute('aria-expanded')).toBe('false');
+    await fireEvent.click(bouton);
+    expect(screen.getByRole('region', { name: 'Grimoire' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Fermer le grimoire' }).getAttribute('aria-expanded')).toBe('true');
+    await fireEvent.click(screen.getByRole('button', { name: 'Fermer le grimoire' }));
+    expect(screen.queryByRole('region', { name: 'Grimoire' })).toBeNull();
+  });
+
   it('vue du groupe : le MJ voit où en est chaque personnage avec la refonte', () => {
     session.uid = 'mj';
     const f = karlachV2();

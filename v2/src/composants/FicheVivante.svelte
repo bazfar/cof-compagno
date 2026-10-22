@@ -9,6 +9,7 @@
   import { modifierJauges } from '../lib/actions/refonte';
   import { changerJauge, finDuCombat, type CleJauge } from '../lib/fiche/actions-fiche';
   import { classeDeLaRefonte, etatRefonte } from '../lib/fiche/refonte';
+  import { grimoireDeLaFiche } from '../lib/fiche/grimoire';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import { formuleTest, texteJet } from '../lib/regles/des';
   import * as E from '../lib/regles/equipement';
@@ -24,6 +25,7 @@
   import MonteeNiveau from './MonteeNiveau.svelte';
   import MonteeRefonte from './MonteeRefonte.svelte';
   import OctroisMj from './OctroisMj.svelte';
+  import Grimoire from './Grimoire.svelte';
   import Portrait from './Portrait.svelte';
 
   /*
@@ -103,6 +105,9 @@
   let correction = $state(false);
   let conversion = $state(false);
   let octrois = $state(false);
+  // Grimoire (lot G1, 1a) : le MJ le lit depuis la fiche d'un joueur.
+  let grimoireOuvert = $state(false);
+  const aUnGrimoire = $derived(fiche.schemaVersion === 2 && grimoireDeLaFiche(fiche) !== null);
   const refonte = $derived(etatRefonte(fiche));
 
   const vue = $derived(vueFiche(fiche));
@@ -271,6 +276,7 @@
         <p>{vue.titre} · dé de vie d{vue.deVie}</p>
         {#if mj && !correction}<button class="petit discret" onclick={() => { message = ''; correction = true; }}>Corriger la fiche</button>{/if}
         {#if mj && fiche.schemaVersion === 2 && !octrois}<button class="petit discret" onclick={() => { message = ''; octrois = true; }}>Octrois de la refonte</button>{/if}
+        {#if mj && aUnGrimoire}<button class="petit discret" aria-expanded={grimoireOuvert} onclick={() => (grimoireOuvert = !grimoireOuvert)}>{grimoireOuvert ? 'Fermer le grimoire' : 'Grimoire'}</button>{/if}
         {#if modifiable && !conversion && (refonte === 'aConvertir' || refonte === 'reconversion')}
           <button class="petit" onclick={() => { message = ''; montee = false; conversion = true; }}>{refonte === 'aConvertir' ? 'Passer à la refonte' : 'Refaire mes voies'}</button>
         {/if}
@@ -363,6 +369,9 @@
   {/if}
   {#if octrois && fiche.schemaVersion === 2}
     <OctroisMj {fiche} surFin={(m) => { octrois = false; message = m; }} />
+  {/if}
+  {#if grimoireOuvert && fiche.schemaVersion === 2}
+    <Grimoire {fiche} />
   {/if}
   {#if conversion}
     <ConversionRefonte {fiche} surFin={(m) => { conversion = false; message = m; }} />

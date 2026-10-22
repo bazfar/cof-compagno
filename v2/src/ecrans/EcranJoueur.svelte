@@ -19,6 +19,9 @@
    * s'ouvre en haut de la colonne de droite ; dans les autres sections, en
    * haut de la page. Les appelés y agissent.
    *
+   * Section Grimoire (lot G1) : la page de magie du personnage joué,
+   * seulement s'il a des sorts.
+   *
    * Section Relations (lot S1) : la réputation du groupe et les PNJ
    * rencontrés, avec leur attitude.
    *
@@ -39,6 +42,9 @@
   const butin = import('../composants/ButinJoueur.svelte');
   // Le lore (L2.7b), chargé à part lui aussi.
   const lore = import('../composants/LoreJoueur.svelte');
+  // Le grimoire (G1), chargé à part : il embarque les règles de la magie.
+  const grimoire = import('../composants/GrimoireJoueur.svelte');
+  let avecGrimoire = $state(false);
   // La scène hors combat (S2), chargée à part : elle lit la fiche pour les bonus.
   const scene = import('../composants/SceneJoueur.svelte');
   // Les relations (S1), chargées à la première visite seulement.
@@ -48,6 +54,7 @@
   let nouvelles = $state(0);
   const sections = $derived([
     { id: 'perso', libelle: 'Personnage' },
+    ...(avecGrimoire ? [{ id: 'grimoire', libelle: 'Grimoire' }] : []),
     { id: 'lore', libelle: 'Lore', badge: nouvelles },
     { id: 'relations', libelle: 'Relations' },
   ]);
@@ -105,6 +112,13 @@
       <module.default surNouveautes={(n: number) => (nouvelles = n)} />
     {:catch e}
       <p role="alert">Lore indisponible : {String(e)}</p>
+    {/await}
+  </div>
+  <div hidden={section !== 'grimoire'}>
+    {#await grimoire then module}
+      <module.default surDisponible={(oui: boolean) => (avecGrimoire = oui)} />
+    {:catch e}
+      <p role="alert">Grimoire indisponible : {String(e)}</p>
     {/await}
   </div>
   <div hidden={section !== 'relations'}>
