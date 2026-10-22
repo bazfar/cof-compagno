@@ -14,6 +14,9 @@
    * Version compacte (L2.6) : toujours visible à côté de la carte, elle ne
    * montre que les derniers jets ; « Voir les N derniers » déplie la liste
    * entière (les 40 que suit le magasin), sur place.
+   *
+   * Sorts hors combat (lot G2a, 9a) : une ligne de sort dit le palier, les
+   * PP et l'intention, et le d20 du jet d'échec s'il y en a eu un.
    */
 
   let { compact = false }: { compact?: boolean } = $props();
@@ -64,7 +67,11 @@
           <span class="aide">{heure(j.creeLe)}</span>
           <strong>{j.perso ?? j.auteurNom}</strong>
           <span>{j.libelle}</span>
-          <span class="resultat">{texteJet(j.formule, { des: j.des, faces: 0, bonus: j.bonus, total: j.total })}</span>
+          {#if j.sort}
+            <span class="resultat">{j.sort.pp} PP · « {j.sort.intention} »{j.des.length ? ` · d20 : ${j.des[0]}` : ''}</span>
+          {:else}
+            <span class="resultat">{texteJet(j.formule, { des: j.des, faces: 0, bonus: j.bonus, total: j.total })}</span>
+          {/if}
         </li>
       {/each}
     </ol>

@@ -276,15 +276,27 @@ service cloud.firestore {
     }
     // Aligné sur schemaJetJournal (src/lib/schemas/journal.ts).
     function jetValide(d) {
-      return d.keys().hasOnly(['auteurUid', 'auteurNom', 'perso', 'libelle', 'formule', 'des', 'bonus', 'total', 'creeLe'])
+      return d.keys().hasOnly(['auteurUid', 'auteurNom', 'perso', 'libelle', 'formule', 'des', 'bonus', 'total', 'creeLe', 'sort'])
         && d.keys().hasAll(['auteurUid', 'auteurNom', 'libelle', 'formule', 'des', 'bonus', 'total', 'creeLe'])
         && d.auteurUid == request.auth.uid
         && nomValide(d.auteurNom)
         && (!('perso' in d) || nomValide(d.perso))
         && d.libelle is string && d.libelle.size() >= 1 && d.libelle.size() <= 80
         && d.formule is string && d.formule.size() >= 1 && d.formule.size() <= 40
-        && d.des is list && d.des.size() >= 1 && d.des.size() <= 100
-        && d.bonus is int && d.total is int && d.creeLe is int;
+        && d.des is list && d.des.size() >= ('sort' in d ? 0 : 1) && d.des.size() <= 100
+        && d.bonus is int && d.total is int && d.creeLe is int
+        && (!('sort' in d) || sortJournalValide(d.sort));
+    }
+    // Sort lancé hors combat (G2a, 9a), aligné sur schemaSortJournal (src/lib/schemas/journal.ts).
+    function sortJournalValide(s) {
+      return s is map
+        && s.keys().hasOnly(['nom', 'palier', 'pp', 'intention', 'issue'])
+        && s.keys().hasAll(['nom', 'palier', 'pp', 'intention', 'issue'])
+        && s.nom is string && s.nom.size() >= 1 && s.nom.size() <= 60
+        && s.palier in ['I', 'II', 'III']
+        && entierEntre(s.pp, 0, 20)
+        && s.intention is string && s.intention.size() >= 1 && s.intention.size() <= 120
+        && s.issue in ['lance', 'rate'];
     }
     // Personnage joué d'un joueur (joueurs/{uid}.persoActif), '' s'il n'en a pas.
     function persoJoueDe(table, uid) {
@@ -507,6 +519,27 @@ service cloud.firestore {
         && (d.reponse == null || (d.reponse is string && d.reponse.size() >= 1 && d.reponse.size() <= 500))
         && (d.dd == null || entierEntre(d.dd, 0, 40))
         && d.creeLe is int;
+    }
+    // Aligné sur schemaDemandeSort (src/lib/schemas/sort-hors-combat.ts, lot G2a).
+    function demandeSortValide(d) {
+      return d.keys().hasOnly(['uid', 'perso', 'nom', 'sort', 'nomSort', 'palier', 'pp', 'echec', 'sauvegarde', 'dd', 'intention', 'textes', 'statut', 'motif', 'de', 'resistance', 'creeLe', 'majLe'])
+        && d.keys().hasAll(['uid', 'perso', 'nom', 'sort', 'nomSort', 'palier', 'pp', 'echec', 'sauvegarde', 'dd', 'intention', 'textes', 'statut', 'motif', 'de', 'resistance', 'creeLe', 'majLe'])
+        && d.perso is string && d.perso.size() >= 1 && d.perso.size() <= 100
+        && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 40
+        && d.sort is string && d.sort.size() >= 1 && d.sort.size() <= 60
+        && d.nomSort is string && d.nomSort.size() >= 1 && d.nomSort.size() <= 60
+        && d.palier in ['I', 'II', 'III']
+        && entierEntre(d.pp, 0, 20) && entierEntre(d.echec, 0, 20)
+        && ((d.sauvegarde == null && d.dd == null) || (d.sauvegarde in ['FOR', 'DEX', 'CON', 'Volonte'] && entierEntre(d.dd, 5, 40)))
+        && d.intention is string && d.intention.size() >= 1 && d.intention.size() <= 120
+        && d.textes is list && d.textes.size() >= 1 && d.textes.size() <= 3
+        && d.statut in ['attente', 'acceptee', 'refusee', 'lancee', 'ratee']
+        && (d.motif == null || (d.motif is string && d.motif.size() >= 1 && d.motif.size() <= 120))
+        && (d.de == null || entierEntre(d.de, 1, 20))
+        && (d.resistance == null || (d.resistance is map
+          && d.resistance.keys().hasOnly(['de', 'bonus', 'reussie']) && d.resistance.keys().hasAll(['de', 'bonus', 'reussie'])
+          && entierEntre(d.resistance.de, 1, 20) && entierEntre(d.resistance.bonus, -10, 30) && d.resistance.reussie is bool))
+        && d.creeLe is int && d.majLe is int;
     }
     // Aligné sur schemaEtatScene (src/lib/schemas/carte.ts).
     function etatSceneValide(d) {
@@ -834,6 +867,37 @@ service cloud.firestore {
           allow update: if false;
           allow delete: if estMj(table);
         }
+      }
+
+      // Sorts lancés hors combat (G2a, 5b, 15b, 14b) : lus du MJ et du
+      // joueur qui les demande (requête joueur : uid == le sien).
+      //   - le joueur demande, pour un de ses personnages, en attente ;
+      //   - le MJ accepte ou refuse (statut, motif) ;
+      //   - le joueur lance un sort accepté (statut lancee ou ratee, d20) ;
+      //   - le MJ note la sauvegarde de la cible d'un sort lancé.
+      match /sortsHorsCombat/{demande} {
+        allow read: if estMj(table) || (estJoueur(table) && resource.data.uid == request.auth.uid);
+        allow create: if estJoueur(table) && demandeSortValide(request.resource.data)
+          && request.resource.data.uid == request.auth.uid
+          && proprietaireDuPerso(table, request.resource.data.perso)
+          && request.resource.data.statut == 'attente'
+          && request.resource.data.motif == null
+          && request.resource.data.de == null
+          && request.resource.data.resistance == null;
+        allow update: if demandeSortValide(request.resource.data)
+          && ((estMj(table) && resource.data.statut == 'attente'
+              && request.resource.data.statut in ['acceptee', 'refusee']
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['statut', 'motif', 'majLe']))
+            || (estMj(table) && resource.data.statut == 'lancee' && resource.data.sauvegarde != null
+              && resource.data.resistance == null && request.resource.data.resistance != null
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resistance', 'majLe']))
+            || (estJoueur(table) && resource.data.uid == request.auth.uid
+              && resource.data.statut == 'acceptee'
+              && request.resource.data.statut in ['lancee', 'ratee']
+              && (request.resource.data.de != null) == (resource.data.echec > 0)
+              && (request.resource.data.statut == 'ratee') == (request.resource.data.de != null && request.resource.data.de <= resource.data.echec)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['statut', 'de', 'majLe'])));
+        allow delete: if estMj(table);
       }
 
       // Questions au MJ (S3, 1a et 9a) : lues du MJ et de qui les a posées

@@ -28,13 +28,15 @@
    * l'exploration (il en est le seul écrivain, voir CarteTable).
    */
 
-  const SECTIONS = [
+  // Sorts hors combat à traiter (G2a, 16a) : leur nombre suit « Prépa social ».
+  let sortsATraiter = $state(0);
+  const SECTIONS = $derived([
     { id: 'seance', libelle: 'Séance' },
     { id: 'prepa', libelle: 'Prépa combat' },
-    { id: 'social', libelle: 'Prépa social' },
+    { id: 'social', libelle: sortsATraiter ? `Prépa social (${sortsATraiter})` : 'Prépa social' },
     { id: 'donnees', libelle: 'Données' },
     { id: 'lore', libelle: 'Lore' },
-  ];
+  ]);
   let section = $state('seance');
   // Le lore n'est chargé qu'à la première visite, puis gardé monté.
   let loreOuvert = $state(false);
@@ -74,6 +76,8 @@
   // Arbitre des scènes hors combat (S2, 5a) : monté quelle que soit la
   // section, il résout les jets dès qu'ils arrivent (le MJ seul lit le DD).
   const arbitre = import('../composants/ArbitreScene.svelte');
+  // Compteur des sorts hors combat (G2a, 16a), sans écran, comme l'arbitre.
+  const compteurSorts = import('../composants/CompteurSortsMj.svelte');
   // Joueurs de la table (correctif du 19/10), chargés à part comme le groupe.
   const joueursMj = import('../composants/JoueursMj.svelte');
 
@@ -101,6 +105,9 @@
 </script>
 
 <BarreHaut etiquette="Poste MJ" sections={SECTIONS} active={section} surSection={(id) => (section = id)} />
+{#await compteurSorts then module}
+  <module.default surNombre={(n: number) => (sortsATraiter = n)} />
+{/await}
 {#await arbitre then module}
   <module.default />
 {:catch e}

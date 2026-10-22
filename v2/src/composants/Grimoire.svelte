@@ -1,8 +1,11 @@
 <script lang="ts">
   import { coutAvecElement, grimoireDeLaFiche, maitriseDuVerbe, maitriseElement, type VerbeGrimoire } from '../lib/fiche/grimoire';
+  import { sortsLancables } from '../lib/fiche/sorts-hors-combat';
   import { texteElement } from '../lib/fiche/texte-sort';
   import type { FicheV2 } from '../lib/schemas/fiche';
   import type { Element, Palier } from '../lib/schemas/effets';
+  import DemandeSort from './DemandeSort.svelte';
+  import MesSorts from './MesSorts.svelte';
 
   /*
    * La page de magie (lot G1, décisions de Thomas du 22/10/2026), d'après
@@ -13,11 +16,18 @@
    *     droite l'usage hors combat (7 : chaque palier ouvre des possibilités,
    *     le joueur et le MJ apprécient le reste) ;
    *   - coût réel détaillé, DD, aperçu avec un élément et la surcharge.
-   * En lecture : lancer en combat viendra avec L6 (4a), l'usage hors combat
-   * avec le lot G2.
+   * Lancer en combat viendra avec L6 (4a).
+   *
+   * Usage hors combat (lot G2a) : avec `lancer` (le joueur, sur son propre
+   * personnage), chaque sort qui a un usage hors combat se demande au MJ
+   * (DemandeSort) et les demandes se suivent en tête (MesSorts). Le MJ, qui
+   * ouvre le grimoire depuis la fiche, le lit sans rien lancer.
    */
 
-  let { fiche }: { fiche: FicheV2 } = $props();
+  let { fiche, lancer }: { fiche: FicheV2 & { id?: string }; lancer?: { seance: string | undefined } } = $props();
+  const lanceur = $derived(lancer && fiche.id ? { fiche: fiche as FicheV2 & { id: string }, seance: lancer.seance } : null);
+  const lancables = $derived(lanceur ? sortsLancables(lanceur.fiche) : []);
+  const lancable = (id: string) => lancables.find((s) => s.id === id) ?? null;
 
   const g = $derived(grimoireDeLaFiche(fiche));
   const ONGLETS = $derived(
@@ -69,6 +79,7 @@
       <h2>Grimoire · {fiche.nom}</h2>
       {#if g.reservePP}<span class="reserve">Réserve : {fiche.ppActuel ?? g.reservePP} / {g.reservePP} PP</span>{/if}
     </header>
+    {#if lanceur}<MesSorts perso={lanceur.fiche.id} seance={lanceur.seance} />{/if}
     <div class="onglets" role="tablist" aria-label="Grimoire">
       {#each ONGLETS as o (o.id)}
         <button role="tab" aria-selected={ongletActif === o.id} onclick={() => (onglet = o.id)}>{o.nom}</button>
@@ -155,6 +166,9 @@
               </ol>
               {#if verbe.appris && verbe.coutHorsCombat !== null}<p class="aide">{verbe.coutHorsCombat} PP hors combat, au palier {verbe.palierAtteint}.</p>{/if}
               <p class="aide">Chaque palier ouvre ces possibilités ; le reste s'apprécie entre le joueur et le MJ.</p>
+              {#if lanceur && lancable(verbe.id)}
+                {#key verbe.id}<DemandeSort fiche={lanceur.fiche} sort={lancable(verbe.id)!} seance={lanceur.seance} />{/key}
+              {/if}
             {:else}
               <p class="aide">Pas d'usage hors combat.</p>
             {/if}
@@ -173,6 +187,7 @@
               {#each v.paliers[0]!.combat as l, i (i)}<li>{l}</li>{/each}
             </ul>
             {#if v.paliers[0]!.horsCombat}<p class="hc">Hors combat : {v.paliers[0]!.horsCombat}</p>{/if}
+            {#if lanceur && lancable(v.id)}<DemandeSort fiche={lanceur.fiche} sort={lancable(v.id)!} seance={lanceur.seance} />{/if}
           </article>
         {/each}
       </div>
@@ -186,6 +201,7 @@
               {#each m.combat as l, i (i)}<li>{l}</li>{/each}
             </ul>
             {#if m.horsCombat}<p class="hc">Hors combat : {m.horsCombat}</p>{/if}
+            {#if lanceur && lancable(m.id)}<DemandeSort fiche={lanceur.fiche} sort={lancable(m.id)!} seance={lanceur.seance} />{/if}
           </article>
         {/each}
       </div>

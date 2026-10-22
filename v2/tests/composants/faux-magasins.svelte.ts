@@ -169,3 +169,21 @@ export const magasinsScenes = {
     arreter: () => {},
   }),
 };
+
+// Sorts hors combat (lot G2a).
+export const demandesSorts = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+
+export const magasinsSorts = {
+  suivreDemandesSortsMj: () => ({ etat: demandesSorts, arreter: () => {} }),
+  // Comme la requête du joueur : ses demandes seulement.
+  suivreMesDemandesSorts: (_t: string, uid: string) => ({
+    etat: {
+      get elements() {
+        return demandesSorts.elements.filter((d) => d.uid === uid);
+      },
+      pret: true,
+      erreur: null,
+    },
+    arreter: () => {},
+  }),
+};

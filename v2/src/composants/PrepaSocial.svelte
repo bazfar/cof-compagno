@@ -31,6 +31,7 @@
     scoreDe,
   } from '../lib/pnj/attitude';
   import type { GesteAttitudeEnregistre } from '../lib/schemas/pnj';
+  import DemandesSortsMj from './DemandesSortsMj.svelte';
   import QuestionsMj from './QuestionsMj.svelte';
   import SceneMj from './SceneMj.svelte';
   import { session } from '../lib/session.svelte';
@@ -53,6 +54,8 @@
    * Vécu en scène (lot S3) : les questions des joueurs (QuestionsMj) ;
    * sur la fiche du PNJ, « du peuple » (Homme du peuple, 2a) et les secrets
    * déjà utilisés par Levier (6a).
+   * Sorts hors combat (lot G2a, 16a) : les demandes des joueurs, sous les
+   * questions (DemandesSortsMj).
    */
 
   const pnj = suivrePnjMj(session.table);
@@ -144,6 +147,7 @@
 <div class="social">
   <SceneMj pnjs={pnj.etat.elements} pnjPropose={pnjPourScene} surPnjPris={() => (pnjPourScene = null)} />
   <QuestionsMj />
+  <DemandesSortsMj />
   <section class="carte" aria-label="Réputation du groupe">
     <h2>Réputation du groupe</h2>
     <table>

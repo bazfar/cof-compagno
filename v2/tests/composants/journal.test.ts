@@ -38,6 +38,18 @@ describe('journal de dés', () => {
     expect(lignes[1]!.textContent).toContain('2d6 → 2 + 5 = 7');
   });
 
+  it('G2a (9a) : un sort lancé hors combat dit ses PP, l’intention et le d20 du jet d’échec', () => {
+    jets.elements = [
+      { id: 'j2', auteurUid: 'alice', auteurNom: 'Alice', perso: 'Kylhian', libelle: 'Leurre I, hors combat : raté', formule: '1d20 (échec sur 1 à 10)', des: [7], bonus: 0, total: 7, creeLe: 2, sort: { nom: 'Leurre', palier: 'I', pp: 1, intention: 'Une silhouette', issue: 'rate' } },
+      { id: 'j1', auteurUid: 'alice', auteurNom: 'Alice', perso: 'Kylhian', libelle: 'Lumière I, hors combat', formule: 'sort', des: [], bonus: 0, total: 0, creeLe: 1, sort: { nom: 'Lumière', palier: 'I', pp: 0, intention: 'Éclairer la crypte', issue: 'lance' } },
+    ];
+    render(JournalDes);
+    const resultats = within(screen.getByRole('list', { name: 'Derniers jets' }))
+      .getAllByRole('listitem')
+      .map((l) => l.querySelector('.resultat')?.textContent);
+    expect(resultats).toEqual(['1 PP · « Une silhouette » · d20 : 7', '0 PP · « Éclairer la crypte »']);
+  });
+
   it('lanceur libre : formule et motif ; dé rapide ; formule illisible expliquée', async () => {
     render(JournalDes);
     expect(screen.getByText('Aucun jet pour l\'instant.')).toBeTruthy();

@@ -10,16 +10,32 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * surcharge ; la section du joueur n'apparaît que s'il a des sorts (1a).
  */
 
+const sorts = vi.hoisted(() => {
+  class RefusSort extends Error {}
+  return {
+    RefusSort,
+    demanderSort: vi.fn(async (_f: unknown, _s: string, _p: string, _i: string, _se?: string) => 'd-n'),
+    repondreDemandeSort: vi.fn(async (_id: string, _oui: boolean, _m: string) => {}),
+    lancerSort: vi.fn(async (_id: string, _se?: string) => ({})),
+    resisterSort: vi.fn(async (_d: unknown, _b: number) => true),
+  };
+});
+vi.mock('../../src/lib/actions/sorts-hors-combat', () => sorts);
+vi.mock('../../src/lib/actions/journal', () => ({ messageErreurJournal: (e: unknown) => String(e) }));
 vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPersos);
 vi.mock('../../src/lib/magasins/presents.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPresents);
+vi.mock('../../src/lib/magasins/carte.svelte', async () => (await import('./faux-magasins.svelte')).magasinsCarte);
+vi.mock('../../src/lib/magasins/sorts-hors-combat.svelte', async () => (await import('./faux-magasins.svelte')).magasinsSorts);
 
-const { joueurs, persos } = await import('./faux-magasins.svelte');
+const { joueurs, persos, table, demandesSorts } = await import('./faux-magasins.svelte');
 const { session } = await import('../../src/lib/session.svelte');
 const { ficheDepuisV1 } = await import('../../src/lib/regles/fiche-document');
 const RF = await import('../../src/lib/fiche/refonte');
 const { classeParId } = await import('../../src/regles');
 const { default: Grimoire } = await import('../../src/composants/Grimoire.svelte');
 const { default: GrimoireJoueur } = await import('../../src/composants/GrimoireJoueur.svelte');
+const { default: DemandesSortsMj } = await import('../../src/composants/DemandesSortsMj.svelte');
+const { default: CompteurSortsMj } = await import('../../src/composants/CompteurSortsMj.svelte');
 type FicheV2 = import('../../src/lib/schemas/fiche').FicheV2;
 type RefonteFiche = import('../../src/lib/schemas/fiche').RefonteFiche;
 
@@ -41,6 +57,9 @@ beforeEach(() => {
   session.uid = 'alice';
   persos.elements = [];
   joueurs.elements = [];
+  demandesSorts.elements = [];
+  table.donnees = { sceneActive: null, seanceOuverte: { id: 's1', numero: 1 } };
+  Object.values(sorts).forEach((f) => typeof f === 'function' && 'mockClear' in f && f.mockClear());
 });
 
 describe('Grimoire', () => {
@@ -143,6 +162,16 @@ describe('GrimoireJoueur (1a, 2a)', () => {
     await waitFor(() => expect(surDisponible).toHaveBeenLastCalledWith(true));
   });
 
+  it('le joueur demande ses sorts depuis son grimoire, avec la séance ouverte (G2a)', async () => {
+    persos.elements = [{ ...kylhian(), proprietaireUid: 'alice' }];
+    joueurs.elements = [{ id: 'alice', nom: 'Alice', rejointLe: 1, persoActif: 'p-k' }];
+    render(GrimoireJoueur, { props: {} });
+    const form = within(screen.getByRole('form', { name: 'Lancer Missile hors combat' }));
+    await fireEvent.input(form.getByLabelText('Ce que tu veux faire'), { target: { value: 'Couper la corde du pont' } });
+    await fireEvent.click(form.getByRole('button', { name: 'Demander au MJ' }));
+    await waitFor(() => expect(sorts.demanderSort).toHaveBeenCalledWith(expect.objectContaining({ id: 'p-k' }), 'evocation.missile', 'II', 'Couper la corde du pont', 's1'));
+  });
+
   it('un guerrier, une fiche v1 ou le personnage d’un autre : pas de section', async () => {
     for (const [perso, proprio] of [[karlach(), 'alice'], [{ ...ficheDepuisV1(FICHES.find((f: { nom: string }) => f.nom.startsWith('Kylhian')), 'alice', 1).fiche, id: 'p-k' }, 'alice'], [kylhian(), 'bob']] as const) {
       const surDisponible = vi.fn();
@@ -153,5 +182,144 @@ describe('GrimoireJoueur (1a, 2a)', () => {
       await waitFor(() => expect(surDisponible).toHaveBeenLastCalledWith(false));
       vue.unmount();
     }
+  });
+});
+
+const demande = (d: Record<string, unknown> = {}) => ({
+  id: 'd1', uid: 'alice', perso: 'p-k', nom: 'Kylhian', sort: 'illusion.leurre', nomSort: 'Leurre', palier: 'I', pp: 1, echec: 10, sauvegarde: 'Volonte', dd: 13,
+  intention: 'Une silhouette au bout du couloir', textes: ['Un bruit ou une silhouette immobile : compte une réussite en infiltration.'],
+  statut: 'attente', motif: null, de: null, resistance: null, creeLe: 1, majLe: 1, ...d,
+});
+
+describe('demander un sort hors combat (G2a : 1a, 2b, 3a, 4a)', () => {
+  const lanceur = (patch: Record<string, unknown> = {}) => render(Grimoire, { props: { fiche: { ...kylhian(), ...patch }, lancer: { seance: 's1' } } });
+
+  it('le verbe choisi : palier au plus celui atteint, coût, intention, puis la demande', async () => {
+    lanceur();
+    const form = within(screen.getByRole('form', { name: 'Lancer Missile hors combat' }));
+    const palier = form.getByLabelText('Palier') as HTMLSelectElement;
+    expect([...palier.options].map((o) => o.textContent)).toEqual(['I · 1 PP', 'II · 1 PP']);
+    expect(palier.value).toBe('II');
+    const bouton = form.getByRole('button', { name: 'Demander au MJ' }) as HTMLButtonElement;
+    expect(bouton.disabled).toBe(true);
+    await fireEvent.change(palier, { target: { value: 'I' } });
+    await fireEvent.input(form.getByLabelText('Ce que tu veux faire'), { target: { value: 'Briser le cadenas' } });
+    expect(bouton.disabled).toBe(false);
+    await fireEvent.click(bouton);
+    await waitFor(() => expect(sorts.demanderSort).toHaveBeenCalledWith(expect.objectContaining({ id: 'p-k' }), 'evocation.missile', 'I', 'Briser le cadenas', 's1'));
+    expect(await form.findByRole('status')).toBeTruthy();
+  });
+
+  it('le DD et la sauvegarde ; un refus de l’action s’affiche', async () => {
+    sorts.demanderSort.mockRejectedValueOnce(new sorts.RefusSort('Il te faut 2 PP.'));
+    lanceur();
+    await fireEvent.click(screen.getByRole('button', { name: 'Choc · II' }));
+    const form = within(screen.getByRole('form', { name: 'Lancer Choc hors combat' }));
+    expect(form.getByText(/sauvegarde de la cible \(DD \d+\)/)).toBeTruthy();
+    await fireEvent.input(form.getByLabelText('Ce que tu veux faire'), { target: { value: 'Enfoncer la porte' } });
+    await fireEvent.click(form.getByRole('button', { name: 'Demander au MJ' }));
+    expect((await form.findByRole('alert')).textContent).toBe('Il te faut 2 PP.');
+  });
+
+  it('PP manquants : bouton grisé ; un mineur reste possible à 0 PP', async () => {
+    lanceur({ ppActuel: 0 });
+    const form = within(screen.getByRole('form', { name: 'Lancer Missile hors combat' }));
+    expect(form.getByText('Il te faut 1 PP (tu en as 0).')).toBeTruthy();
+    await fireEvent.input(form.getByLabelText('Ce que tu veux faire'), { target: { value: 'x' } });
+    expect((form.getByRole('button', { name: 'Demander au MJ' }) as HTMLButtonElement).disabled).toBe(true);
+    await fireEvent.click(screen.getByRole('tab', { name: 'Sorts mineurs' }));
+    const lum = within(screen.getByRole('form', { name: 'Lancer Lumière hors combat' }));
+    expect(lum.queryByLabelText('Palier')).toBeNull();
+    await fireEvent.input(lum.getByLabelText('Ce que tu veux faire'), { target: { value: 'Éclairer la crypte' } });
+    expect((lum.getByRole('button', { name: 'Demander au MJ' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('par grimoire : le risque d’échec ; pas de demande pour un verbe non appris ni sans usage hors combat', async () => {
+    lanceur();
+    await fireEvent.click(screen.getByRole('button', { name: 'Nova' }));
+    expect(screen.queryByRole('form', { name: /hors combat/ })).toBeNull();
+    await fireEvent.click(screen.getByRole('tab', { name: 'Écoles par grimoire' }));
+    expect(within(screen.getByRole('form', { name: 'Lancer Leurre hors combat' })).getByText(/échec sur 1 à 10 au d20/)).toBeTruthy();
+    await fireEvent.click(screen.getByRole('tab', { name: 'Sorts mineurs' }));
+    expect(screen.queryByRole('form', { name: 'Lancer Trait arcanique hors combat' })).toBeNull();
+  });
+
+  it('le MJ, qui lit le grimoire depuis la fiche, ne demande rien', () => {
+    render(Grimoire, { props: { fiche: kylhian() } });
+    expect(screen.queryByRole('form', { name: /hors combat/ })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Mes sorts hors combat' })).toBeNull();
+  });
+});
+
+describe('mes sorts hors combat (5b, 15b, 14b)', () => {
+  it('chaque état ; « Lancer » sur un sort accepté', async () => {
+    demandesSorts.elements = [
+      demande({ id: 'a', creeLe: 6 }),
+      demande({ id: 'b', statut: 'refusee', motif: 'Personne ne regarde', creeLe: 5 }),
+      demande({ id: 'c', statut: 'acceptee', creeLe: 4 }),
+      demande({ id: 'd', statut: 'ratee', de: 3, creeLe: 3 }),
+      demande({ id: 'e', statut: 'lancee', de: 15, creeLe: 2 }),
+      demande({ id: 'f', statut: 'lancee', de: 15, resistance: { de: 18, bonus: 0, reussie: true }, creeLe: 1 }),
+      demande({ id: 'g', uid: 'bob', creeLe: 7 }),
+      demande({ id: 'h', perso: 'p-autre', creeLe: 8 }),
+    ];
+    render(Grimoire, { props: { fiche: kylhian(), lancer: { seance: 's1' } } });
+    const liste = within(screen.getByRole('region', { name: 'Mes sorts hors combat' }));
+    expect(liste.getAllByRole('listitem').map((l) => l.querySelector('.aide')!.textContent)).toEqual([
+      'En attente du MJ.',
+      'Refusé : Personne ne regarde.',
+      'Accepté.',
+      'Raté (d20 : 3) : les PP sont dépensés.',
+      'Lancé (d20 : 15). Sauvegarde de la cible : au MJ.',
+      'Lancé (d20 : 15). La cible a résisté.',
+    ]);
+    await fireEvent.click(liste.getByRole('button', { name: 'Lancer (−1 PP)' }));
+    expect(sorts.lancerSort).toHaveBeenCalledWith('c', 's1');
+  });
+});
+
+describe('le MJ et les sorts hors combat (5b, 14b, 16a)', () => {
+  it('rien à montrer sans demande', () => {
+    render(DemandesSortsMj);
+    expect(screen.queryByRole('region', { name: 'Sorts hors combat' })).toBeNull();
+  });
+
+  it('une demande : intention, possibilités du palier, coût ; accepter avec un motif, refuser', async () => {
+    demandesSorts.elements = [demande(), demande({ id: 'd2', nom: 'Magnus', creeLe: 2 })];
+    render(DemandesSortsMj);
+    const d = within(screen.getByRole('article', { name: 'Demande de Kylhian' }));
+    expect(d.getByText(/« Une silhouette au bout du couloir »/)).toBeTruthy();
+    expect(d.getByText(/Un bruit ou une silhouette immobile/)).toBeTruthy();
+    expect(d.getByText('1 PP · échec sur 1 à 10 au d20 · sauvegarde de Volonté, DD 13')).toBeTruthy();
+    await fireEvent.input(d.getByLabelText('Motif pour Kylhian'), { target: { value: 'Il fait nuit' } });
+    await fireEvent.click(d.getByRole('button', { name: 'Accepter' }));
+    await waitFor(() => expect(sorts.repondreDemandeSort).toHaveBeenCalledWith('d1', true, 'Il fait nuit'));
+    await fireEvent.click(within(screen.getByRole('article', { name: 'Demande de Magnus' })).getByRole('button', { name: 'Refuser' }));
+    await waitFor(() => expect(sorts.repondreDemandeSort).toHaveBeenLastCalledWith('d2', false, ''));
+  });
+
+  it('un sort lancé à sauvegarde : le MJ donne le bonus de la cible et lance ; les sorts traités sont repliés', async () => {
+    demandesSorts.elements = [
+      demande({ statut: 'lancee', de: 15 }),
+      demande({ id: 'd2', statut: 'lancee', de: 15, resistance: { de: 4, bonus: 0, reussie: false } }),
+      demande({ id: 'd3', statut: 'refusee', motif: 'Non' }),
+      demande({ id: 'd4', statut: 'acceptee' }),
+    ];
+    render(DemandesSortsMj);
+    const s = within(screen.getByRole('article', { name: 'Sauvegarde contre Leurre' }));
+    expect(s.getByText(/sauvegarde de Volonté contre DD 13/)).toBeTruthy();
+    await fireEvent.input(s.getByLabelText('Bonus de la cible'), { target: { value: '4' } });
+    await fireEvent.click(s.getByRole('button', { name: 'Lancer la sauvegarde' }));
+    await waitFor(() => expect(sorts.resisterSort).toHaveBeenCalledWith(expect.objectContaining({ id: 'd1' }), 4));
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    const faits = screen.getByText('Derniers sorts').closest('details')!;
+    expect([...faits.querySelectorAll('li')].map((l) => l.textContent?.split(' : ').pop())).toEqual(['refusé (Non)', 'lancé, la cible n’a pas résisté']);
+  });
+
+  it('le compteur : demandes en attente et sauvegardes à lancer', async () => {
+    const surNombre = vi.fn();
+    demandesSorts.elements = [demande(), demande({ id: 'b', statut: 'lancee', de: 12 }), demande({ id: 'c', statut: 'acceptee' }), demande({ id: 'd', statut: 'refusee' })];
+    render(CompteurSortsMj, { props: { surNombre } });
+    await waitFor(() => expect(surNombre).toHaveBeenLastCalledWith(2));
   });
 });
