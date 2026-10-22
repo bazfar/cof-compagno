@@ -2,6 +2,7 @@ import { choixRequis } from '../effets/profil.ts';
 import { LIMITE_NOTES, progressionVierge, schemaFicheV1, VERSION_FICHE, type Fiche, type FicheV1, type FicheV2, type ObjetFiche } from '../schemas/fiche.ts';
 import { actionParId, classeParId as classeRefonteParId, voieParId as voieRefonteParId } from '../../regles/index.ts';
 import { ficheV1VersCalcul } from './conversion-v1.ts';
+import { bonusCompetencesVecu } from '../fiche/vecu.ts';
 import type { FicheCalcul } from './fiche-calcul.ts';
 
 /*
@@ -194,7 +195,8 @@ export function ficheCalculDepuisFiche(f: Fiche): FicheCalcul {
     voiesHorsProfil: v1?.voiesHorsProfil ?? [],
     dons: f.dons,
     donsChoix: f.donsChoix,
-    bonusCompetences: f.bonusCompetences,
+    // Vécu (lot L4.18, décision 6a) : les bonus de compétence des nœuds s'ajoutent à ceux de la fiche.
+    bonusCompetences: avecLeVecu(f.bonusCompetences, bonusCompetencesVecu(f.vecu)),
     pvMax: f.pvMax,
     pvActuel: f.pvActuel,
     pvHistorique: f.pvHistorique,
@@ -213,6 +215,12 @@ export function ficheCalculDepuisFiche(f: Fiche): FicheCalcul {
     grimoireSortsPrepares: v1?.grimoireSortsPrepares ?? [],
     cercleSpecialisation: v1?.cercleSpecialisation ?? null,
   };
+}
+
+function avecLeVecu(fiche: Record<string, number>, vecu: Record<string, number>): Record<string, number> {
+  const b = { ...fiche };
+  for (const [k, v] of Object.entries(vecu)) b[k] = (b[k] ?? 0) + v;
+  return b;
 }
 
 /** Caractéristiques d'une fiche de la refonte, Spécimen d'élite compris (14a) : seulement si une voie prise le donne. */

@@ -16,6 +16,7 @@
   import { SLOTS_EQUIPEMENT, type Slot } from '../lib/regles/fiche-calcul';
   import { LIMITE_NOTES, type Fiche } from '../lib/schemas/fiche';
   import ActionsRefonte from './ActionsRefonte.svelte';
+  import ArbreVecu from './ArbreVecu.svelte';
   import ConversionRefonte from './ConversionRefonte.svelte';
   import CorrectionFiche from './CorrectionFiche.svelte';
   import MonteeNiveau from './MonteeNiveau.svelte';
@@ -73,6 +74,9 @@
    * modifier la fiche, « Fin du combat » remet la Plongée à 0) ; les
    * annonces de Corruption d'Âme et de paliers de mutation s'affichent dans
    * le message de la fiche.
+   *
+   * Vécu (L4.18) : l'onglet Capacités, partie hors combat, porte l'arbre
+   * du Vécu (ArbreVecu), pour toutes les fiches.
    *
    * Dons (L3.3) : `destinataires` (les personnages joués des autres
    * joueurs, fournis par MesPersonnages) ajoute « Donner… » sous chaque
@@ -454,8 +458,9 @@
         </ul>
         {#if vue.donsManquants}<p class="alerte">{vue.donsManquants} don(s) à choisir (montée de niveau, L2.5).</p>{/if}
       {/if}
-    {:else if voiesMontrees.length === 0}
-      <p class="aide">Aucune capacité hors combat pour l'instant. L'arbre du Vécu arrive avec la 2.1.</p>
+    {:else}
+      <!-- L4.18 : l'arbre du Vécu, pour toutes les fiches. -->
+      <ArbreVecu {fiche} {modifiable} {mj} />
     {/if}
   {:else if onglet === 'Actions' && vue.refonte}
     <ActionsRefonte

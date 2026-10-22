@@ -51,6 +51,19 @@ const refonte = vi.hoisted(() => ({
   modifierJauges: vi.fn(async (_id: string, _j: unknown) => {}),
 }));
 vi.mock('../../src/lib/actions/refonte', () => refonte);
+// Vécu (L4.18) : crans du MJ, nœuds du joueur, nœud offert, nœuds de la v1.
+const vecu = vi.hoisted(() => {
+  class RefusVecu extends Error {}
+  return {
+    RefusVecu,
+    donnerCranVecu: vi.fn(async (_id: string, _d: 1 | -1, _l: string, _s?: string) => ({}) as unknown),
+    prendreNoeudVecu: vi.fn(async (_id: string, _n: string) => ({}) as unknown),
+    poserNoeudOffert: vi.fn(async (_id: string, _n: string) => ({}) as unknown),
+    retirerNoeudVecu: vi.fn(async (_id: string, _n: string) => ({}) as unknown),
+    accorderVecuV1: vi.fn(async (_id: string, _n: string) => ({}) as unknown),
+  };
+});
+vi.mock('../../src/lib/actions/vecu', () => vecu);
 vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPersos);
 vi.mock('../../src/lib/magasins/presents.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPresents);
 // Séance ouverte et présents (L3.1).
@@ -155,11 +168,14 @@ describe('fiche vivante', () => {
     expect(screen.queryByRole('heading', { name: 'Dons' })).toBeNull();
   });
 
-  it('L2.6 : sans voie hors combat, la section le dit', async () => {
+  it('L2.6 puis L4.18 : hors combat, l’arbre du Vécu ; en lecture seule, ni choix ni nœud offert posé', async () => {
+    vecu.poserNoeudOffert.mockClear();
     render(FicheVivante, { props: { fiche: reelle('Kylhian', 'p-k'), modifiable: false } });
     await fireEvent.click(screen.getByRole('tab', { name: 'Capacités' }));
     await fireEvent.click(screen.getByRole('button', { name: 'Hors combat' }));
-    expect(screen.getByText(/Aucune capacité hors combat pour l'instant/)).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Arbre du Vécu' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^Prendre / })).toBeNull();
+    expect(vecu.poserNoeudOffert).not.toHaveBeenCalled();
   });
 
   it('lecture seule : ni bouton −/+, ni champ modifiable, ni portrait à changer', async () => {
@@ -564,7 +580,7 @@ describe('refonte (L4.11b)', () => {
     expect(zone.getByRole('button', { name: `Retirer ${RF.nomAction('evocation.missile')}` })).toBeTruthy();
     await fireEvent.click(zone.getByRole('button', { name: 'Enregistrer' }));
     await waitFor(() =>
-      expect(refonte.modifierOctrois).toHaveBeenCalledWith('p-c', { chaos: true, elements: { glace: 'initie' }, verbes: [{ id: 'evocation.missile', maitrise: 'initie' }], reconversion: false }),
+      expect(refonte.modifierOctrois).toHaveBeenCalledWith('p-c', { chaos: true, elements: { glace: 'initie' }, verbes: [{ id: 'evocation.missile', maitrise: 'initie' }], reconversion: false, vecuV1: ['endurci'] }),
     );
   });
 
@@ -679,5 +695,63 @@ describe('fiche de la refonte : jauges et actions (L4.12)', () => {
     await fireEvent.click(screen.getByRole('tab', { name: 'Actions' }));
     expect(screen.queryByRole('button', { name: /^Lancer / })).toBeNull();
     expect(screen.getByRole('region', { name: 'Magie' })).toBeTruthy();
+  });
+});
+
+describe('Vécu (L4.18)', () => {
+  const horsCombat = async () => {
+    await fireEvent.click(screen.getByRole('tab', { name: 'Capacités' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Hors combat' }));
+  };
+  const avecVecu = (v: Record<string, unknown>) => ({ ...reelle('Kylhian', 'p-k'), vecu: { crans: 1, paliers: 1, points: 1, noeuds: [], noeudOffert: 'erudit', ...v } });
+
+  it('le joueur reçoit à l’ouverture le nœud offert par sa classe (4a) : Érudit pour un Magicien', async () => {
+    vecu.poserNoeudOffert.mockClear();
+    render(FicheVivante, { props: { fiche: reelle('Kylhian', 'p-k'), modifiable: true } });
+    await horsCombat();
+    await waitFor(() => expect(vecu.poserNoeudOffert).toHaveBeenCalledWith('p-k', 'erudit'));
+    expect(vecu.poserNoeudOffert).toHaveBeenCalledTimes(1);
+  });
+
+  it('barre, points et nœuds prenables ; un tier 2 trop tôt dit pourquoi ; « Prendre » écrit le nœud', async () => {
+    vecu.prendreNoeudVecu.mockClear();
+    render(FicheVivante, { props: { fiche: avecVecu({}), modifiable: true } });
+    await horsCombat();
+    expect(screen.getByTestId('vecu-crans').textContent).toBe('1 / 3 crans');
+    expect(screen.getByTestId('vecu-points').textContent).toBe('1 point à dépenser');
+    expect(screen.queryByRole('button', { name: 'Prendre Mémoire eidétique' })).toBeNull();
+    await fireEvent.click(screen.getByRole('button', { name: /^Mémoire eidétique/ }));
+    expect(screen.getByText('Tier 2 : 2 points dans la branche Savoir (tu en as 1).')).toBeTruthy();
+    await fireEvent.click(screen.getByRole('button', { name: 'Prendre Naturaliste' }));
+    expect(vecu.prendreNoeudVecu).toHaveBeenCalledWith('p-k', 'naturaliste');
+  });
+
+  it('le MJ retire un nœud choisi et accorde le Vécu de la v1 ; le nœud offert ne se retire pas', async () => {
+    vecu.retirerNoeudVecu.mockClear();
+    const f = { ...RF.convertirFiche(reelle('Karlach', 'p-c'), { ...RF.refonteVierge(classeParId.get('guerrier')!, 3), rangs: { 'guerrier.soldat': 3, 'guerrier.peuple': 2 } }), id: 'p-c' };
+    // Un point à dépenser : le MJ ne choisit pas pour le joueur, il n'a pas de « Prendre ».
+    const fiche = { ...f, vecu: { ...f.vecu, points: 1, noeuds: ['acrobate'] } };
+    render(FicheVivante, { props: { fiche, modifiable: true, mj: true } });
+    await horsCombat();
+    await fireEvent.click(screen.getByRole('button', { name: 'Accorder Endurci' }));
+    expect(vecu.accorderVecuV1).toHaveBeenCalledWith('p-c', 'endurci');
+    await fireEvent.click(screen.getByRole('button', { name: 'Retirer Acrobate' }));
+    expect(vecu.retirerNoeudVecu).toHaveBeenCalledWith('p-c', 'acrobate');
+    expect(screen.queryByRole('button', { name: 'Retirer Premiers soins' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Prendre / })).toBeNull();
+  });
+
+  it('vue du groupe : le MJ donne et retire des crans de Vécu, avec le motif et la séance', async () => {
+    session.uid = 'mj';
+    table.donnees = { sceneActive: null, seanceOuverte: { id: 's0014', numero: 14 } };
+    const karlach = reelle('Karlach', 'p-c');
+    persos.elements = [karlach];
+    render(GroupeMj);
+    await fireEvent.input(screen.getByLabelText('Motif du cran'), { target: { value: 'Le marchand convaincu' } });
+    await fireEvent.click(screen.getByRole('button', { name: `Donner un cran de Vécu à ${karlach.nom}` }));
+    expect(vecu.donnerCranVecu).toHaveBeenLastCalledWith('p-c', 1, 'Le marchand convaincu', 's0014');
+    await fireEvent.click(screen.getByRole('button', { name: `Retirer un cran de Vécu à ${karlach.nom}` }));
+    expect(vecu.donnerCranVecu).toHaveBeenLastCalledWith('p-c', -1, 'Le marchand convaincu', 's0014');
+    expect(screen.getByTestId('vecu-p-c').textContent).toBe('0 / 3');
   });
 });

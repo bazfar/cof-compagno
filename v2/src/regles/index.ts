@@ -30,6 +30,8 @@ import { INVOCATIONS } from './invocations';
 import { ELEMENTS_REFONTE } from './elements';
 import { ETATS } from './etats';
 import { EVOCATION } from './ecoles/evocation';
+import { schemaNoeudVecu, type NoeudVecu } from '../lib/schemas/vecu';
+import { NOEUDS_VECU, PREDILECTIONS_VECU, VECU_DES_CAPACITES_V1 } from './vecu';
 
 /*
  * Règles de la 2.0, écrites à la main (lot L4, décidé le 20/10/2026 : la
@@ -155,5 +157,21 @@ export function referencesManquantes(): string[] {
   return manque;
 }
 
-const manquantes = referencesManquantes();
+/** Arbre du Vécu (lot L4.18). */
+export const noeudVecuParId: ReadonlyMap<string, NoeudVecu> = indexer(NOEUDS_VECU, (s) => schemaNoeudVecu.parse(s), 'Nœud du Vécu');
+export { PREDILECTIONS_VECU, VECU_DES_CAPACITES_V1 };
+
+/** Ce que l'arbre du Vécu cite et qui n'existe pas : prérequis, nœuds offerts (tier 1), nœuds de la v1. */
+export function referencesVecuManquantes(): string[] {
+  const manque: string[] = [];
+  for (const n of noeudVecuParId.values()) for (const p of n.prerequis) if (!noeudVecuParId.has(p)) manque.push(`prérequis ${p} (${n.id})`);
+  for (const [k, id] of Object.entries(PREDILECTIONS_VECU)) {
+    if (!classeParId.has(k)) manque.push(`classe ${k} (prédilection)`);
+    if (noeudVecuParId.get(id)?.tier !== 1) manque.push(`nœud offert de tier 1 ${id} (${k})`);
+  }
+  for (const [k, id] of Object.entries(VECU_DES_CAPACITES_V1)) if (!noeudVecuParId.has(id)) manque.push(`nœud ${id} (capacité v1 ${k})`);
+  return manque;
+}
+
+const manquantes = [...referencesManquantes(), ...referencesVecuManquantes()];
 if (manquantes.length) throw new Error(`Références manquantes : ${manquantes.join(', ')}`);

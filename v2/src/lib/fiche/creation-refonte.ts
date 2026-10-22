@@ -68,7 +68,9 @@ export function ficheV2DepuisBrouillon(b: C.Brouillon, proprietaireUid: string, 
   if (!classe) throw new C.RefusCreation('Cette classe n’est pas encore passée à la refonte.');
   const erreurs = erreursCreationRefonte(b);
   if (erreurs.length) throw new C.RefusCreation(erreurs.join(' '));
-  const v1 = C.ficheDepuisBrouillon(sansChoixV1(b), proprietaireUid, creeLe);
+  // Reprise d'une fiche v1 (lot L4.18, 5a) : ses capacités hors combat appellent des nœuds du Vécu, que le MJ accordera.
+  const anciennes = (b.reprise?.anciens.capacites ?? []).map((c) => ({ id: `${c.voie}.${c.rang}` }));
+  const v1 = { ...C.ficheDepuisBrouillon(sansChoixV1(b), proprietaireUid, creeLe), ...(anciennes.length ? { capacites: anciennes } : {}) };
   const converti = convertirFiche(v1, refonteDuBrouillon(b)!);
   // L4.12 : le Spécimen d'élite (14a) compte dans les PV — jets de PV recalculés avec le mod de CON
   // effectif, comme à la montée (décision 2a) —, et les PP sont la réserve de la refonte (11a).

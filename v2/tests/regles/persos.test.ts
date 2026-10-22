@@ -84,6 +84,20 @@ describe('fiches de personnage (L2.1)', () => {
     await assertFails(alice().doc(`${TABLE}/persos/p1`).update({ 'vecu.points': 5 }));
   });
 
+  it('Vécu (L4.18, 8a) : un point par nœud, aucun nœud retiré, le nœud offert posé une fois', async () => {
+    await poser('p1', fiche('alice', { vecu: { crans: 0, paliers: 2, points: 1, noeuds: ['affable'], noeudOffert: null } }));
+    // Un nœud sans payer, ou deux pour un point : refusé.
+    await assertFails(alice().doc(`${TABLE}/persos/p1`).update({ 'vecu.noeuds': ['affable', 'pisteur'] }));
+    await assertFails(alice().doc(`${TABLE}/persos/p1`).update({ 'vecu.points': 0, 'vecu.noeuds': ['affable', 'pisteur', 'acrobate'] }));
+    // Retirer un nœud pour en prendre un autre : refusé (seul le MJ retire).
+    await assertFails(alice().doc(`${TABLE}/persos/p1`).update({ 'vecu.points': 0, 'vecu.noeuds': ['pisteur', 'acrobate'] }));
+    await assertSucceeds(alice().doc(`${TABLE}/persos/p1`).update({ 'vecu.noeudOffert': 'erudit' }));
+    await assertFails(alice().doc(`${TABLE}/persos/p1`).update({ 'vecu.noeudOffert': 'affable' }));
+    await assertSucceeds(alice().doc(`${TABLE}/persos/p1`).update({ 'vecu.points': 0, 'vecu.noeuds': ['affable', 'pisteur'] }));
+    // Le MJ retire et accorde.
+    await assertSucceeds(bob().doc(`${TABLE}/persos/p1`).update({ 'vecu.points': 1, 'vecu.noeuds': ['pisteur'] }));
+  });
+
   it('le MJ fait tout : crans, changement de propriétaire, suppression', async () => {
     await poser('p1', fiche('alice'));
     await assertSucceeds(bob().doc(`${TABLE}/persos/p1`).update({ progression: { crans: 2 } }));

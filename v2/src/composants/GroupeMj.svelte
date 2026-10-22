@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte';
   import { messageErreurPerso, modifierPV } from '../lib/actions/persos';
   import { donnerCran, RefusCran } from '../lib/actions/progression';
+  import { donnerCranVecu, RefusVecu } from '../lib/actions/vecu';
   import { barreNiveau } from '../lib/regles/progression';
   import { suivreTable } from '../lib/magasins/carte.svelte';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
@@ -30,6 +31,11 @@
    * de s'empiler sous le tableau. Échap ou « Fermer » le referme ; Échap
    * est ignoré pendant une saisie, pour ne jamais perdre ce qu'on tape
    * (le champ n'est écrit qu'à sa sortie).
+   *
+   * Vécu (L4.18, décision 2a du 22/10/2026) : sous les crans de niveau, les
+   * crans de Vécu du personnage (+1 ou −1, avec le même motif, et la séance
+   * ouverte) ; tous les 3 crans, un palier et un point. Le Vécu avance par
+   * joueur : pas de « +1 aux présents ».
    *
    * Séances (L3.1) : « +1 cran aux présents » donne un cran au personnage
    * joué de chaque présent coché par le MJ (cadrage : crans de niveau aux
@@ -97,6 +103,15 @@
   async function cran(id: string, delta: 1 | -1) {
     info = '';
     message = (await unCran(id, delta)) ?? '';
+  }
+  async function cranVecu(id: string, delta: 1 | -1) {
+    info = '';
+    message = '';
+    try {
+      await donnerCranVecu(id, delta, motif, seanceOuverte?.id);
+    } catch (e) {
+      message = e instanceof RefusVecu ? e.message : messageErreurPerso(e);
+    }
   }
   async function cranATous() {
     info = '';
@@ -171,6 +186,14 @@
                 <span data-testid={`crans-${fiche.id}`} class:pleine={barre.pleine}>{barre.crans} / {barre.requis}</span>
                 <button class="mini" aria-label={`Donner un cran à ${fiche.nom}`} onclick={() => cran(fiche.id, 1)}>+</button>
               {/if}
+            </span>
+          </div>
+          <div class="ligne-infos">
+            <span class="aide">Vécu : palier {fiche.vecu.paliers}, {fiche.vecu.points} pt</span>
+            <span class="crans">
+              <button class="mini" aria-label={`Retirer un cran de Vécu à ${fiche.nom}`} onclick={() => cranVecu(fiche.id, -1)}>−</button>
+              <span data-testid={`vecu-${fiche.id}`}>{fiche.vecu.crans} / 3</span>
+              <button class="mini" aria-label={`Donner un cran de Vécu à ${fiche.nom}`} onclick={() => cranVecu(fiche.id, 1)}>+</button>
             </span>
           </div>
         </li>

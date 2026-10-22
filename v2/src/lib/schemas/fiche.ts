@@ -57,6 +57,15 @@ const entier = z.number().int();
 const schemaEtatActif = z.looseObject({ idEtat: z.string() });
 
 /** Champs communs aux deux versions de la fiche. */
+/** Arbre de Vécu : crans et paliers (MJ), points et nœuds choisis (joueur) ; lot L4.18 : `crans` compte ceux du palier en cours. */
+export const schemaVecu = z.strictObject({
+  crans: entier.nonnegative(),
+  paliers: entier.nonnegative(),
+  points: entier.nonnegative(),
+  noeuds: z.array(z.string()),
+  noeudOffert: z.string().nullable(),
+});
+
 const champsCommuns = {
   /** uid du joueur à qui appartient le personnage (un joueur peut en avoir plusieurs, décision 2a). */
   proprietaireUid: z.string().min(1),
@@ -103,13 +112,7 @@ const champsCommuns = {
   /** Crans vers le niveau suivant (MJ seul). */
   progression: z.strictObject({ crans: entier.nonnegative() }),
   /** Arbre de Vécu : crans et paliers (MJ), points et nœuds choisis (joueur). */
-  vecu: z.strictObject({
-    crans: entier.nonnegative(),
-    paliers: entier.nonnegative(),
-    points: entier.nonnegative(),
-    noeuds: z.array(z.string()),
-    noeudOffert: z.string().nullable(),
-  }),
+  vecu: schemaVecu,
   /** Dernière utilisation de chaque nœud limité (rencontre, séance ou repos), par identifiant de nœud. */
   usages: z.record(z.string(), z.looseObject({})),
 
@@ -200,6 +203,12 @@ export const schemaOctrois = z.strictObject({
   elements: z.partialRecord(schemaElement, schemaMaitrise),
   verbes: z.array(z.strictObject({ id: schemaId, maitrise: z.enum(['nonMaitrise', 'initie']) })),
   reconversion: z.boolean(),
+  /**
+   * Nœuds du Vécu que les capacités v1 hors combat appellent (lot L4.18,
+   * décision 5a) : notés à la conversion, le MJ les accorde un à un (un
+   * palier et le nœud). Absent des fiches converties avant.
+   */
+  vecuV1: z.array(schemaId).max(20).optional(),
 });
 
 /** Fiche v2 : la refonte, sans les champs propres à la v1. */

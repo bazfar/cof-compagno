@@ -76,9 +76,10 @@ describe('crans de progression (L2.5)', () => {
     await assertSucceeds(groupe('bob'));
   });
 
-  it('forme refusée : barre du Vécu (2.1), delta de 2, auteur usurpé', async () => {
+  it('forme refusée : barre inconnue, delta de 2, auteur usurpé ; la barre du Vécu passe (L4.18)', async () => {
     const chemin = `${TABLE}/persos/p1/jalons`;
-    await assertFails(pour('bob').doc(`${chemin}/j1`).set(cran('bob', { barre: 'vecu' })));
+    await assertSucceeds(pour('bob').doc(`${chemin}/j0`).set(cran('bob', { barre: 'vecu' })));
+    await assertFails(pour('bob').doc(`${chemin}/j1`).set(cran('bob', { barre: 'metier' })));
     await assertFails(pour('bob').doc(`${chemin}/j1`).set(cran('bob', { delta: 2 })));
     await assertFails(pour('bob').doc(`${chemin}/j1`).set(cran('alice')));
   });

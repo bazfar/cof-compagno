@@ -222,6 +222,12 @@ describe('création (10a) : une classe refondue crée une fiche de la refonte', 
     expect(f.refonte.jauges.corruptionAme).toBe(2);
     expect(f.piecesOr).toBe(3);
     expect(f.refonte.jauges.inspiration).toBe(2);
+    // Vécu (L4.18) : le nœud offert du Barde ; sans capacité v1 hors combat, rien à accorder.
+    expect(f.vecu.noeudOffert).toBe('marchander');
+    expect(f.octrois.vecuV1).toBeUndefined();
+    // Avec l'Acrobate de la v1 (Spectacle 1) : le MJ aura Acrobate à accorder.
+    const avecV1 = { ...reprise, anciens: { ...reprise.anciens, capacites: [{ voie: 'barde.spectacle', rang: 1 }] } };
+    expect(K.ficheV2DepuisBrouillon({ ...b, reprise: { ...avecV1, report } }, 'alice', 1).octrois.vecuV1).toEqual(['acrobate']);
   });
 });
 

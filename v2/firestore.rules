@@ -94,8 +94,9 @@ service cloud.firestore {
     // Ce que le MJ accorde (schemaOctrois) : le joueur ne l'écrit pas, sauf à
     // sa conversion et pour refermer une reconversion (refonteParJoueur).
     function octroisValides(o) {
-      return o is map && o.keys().hasOnly(['chaos', 'elements', 'verbes', 'reconversion'])
-        && o.chaos is bool && o.elements is map && o.verbes is list && o.verbes.size() <= 30 && o.reconversion is bool;
+      return o is map && o.keys().hasOnly(['chaos', 'elements', 'verbes', 'reconversion', 'vecuV1'])
+        && o.chaos is bool && o.elements is map && o.verbes is list && o.verbes.size() <= 30 && o.reconversion is bool
+        && (!('vecuV1' in o) || (o.vecuV1 is list && o.vecuV1.size() <= 20));
     }
     function octroisVierges(o) {
       return o.chaos == false && o.elements.size() == 0 && o.verbes.size() == 0 && o.reconversion == false;
@@ -146,7 +147,7 @@ service cloud.firestore {
     function jalonValide(d) {
       return d.keys().hasOnly(['barre', 'delta', 'libelle', 'parUid', 'seance', 'creeLe'])
         && d.keys().hasAll(['barre', 'delta', 'libelle', 'parUid', 'creeLe'])
-        && d.barre == 'niveau'
+        && (d.barre == 'niveau' || d.barre == 'vecu')
         && (d.delta == 1 || d.delta == -1)
         && d.libelle is string && d.libelle.size() <= 80
         && d.parUid == request.auth.uid
@@ -323,8 +324,14 @@ service cloud.firestore {
     }
     // Vécu modifié par son joueur : il choisit ses nœuds et dépense ses
     // points, sans toucher aux crans ni aux paliers, que donne le MJ.
+    // Lot L4.18 (décision 8a) : chaque nœud ajouté coûte un point, et aucun
+    // n'est retiré (seul le MJ en retire) ; le nœud offert se pose une fois.
+    // Les tiers et prérequis sont vérifiés par l'app (lib/fiche/vecu.ts).
     function vecuChoisiParJoueur(apres, avant) {
-      return apres.crans == avant.crans && apres.paliers == avant.paliers && apres.points <= avant.points;
+      return apres.crans == avant.crans && apres.paliers == avant.paliers && apres.points <= avant.points
+        && apres.noeuds.size() - avant.noeuds.size() == avant.points - apres.points
+        && apres.noeuds.hasAll(avant.noeuds)
+        && (apres.noeudOffert == avant.noeudOffert || avant.noeudOffert == null);
     }
     // ---- Lore partagé (L2.7a) ----
     // Aligné sur schemaFicheLoreMj / schemaFicheLoreJoueurs

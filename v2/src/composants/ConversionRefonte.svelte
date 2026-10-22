@@ -3,6 +3,7 @@
   import { convertirPerso, refaireVoiesPerso } from '../lib/actions/refonte';
   import type { AvecId } from '../lib/firebase/suivre.svelte';
   import * as RF from '../lib/fiche/refonte';
+  import { nomNoeud, vecuDesCapacitesV1 } from '../lib/fiche/vecu';
   import { RefusCreation } from '../lib/regles/creation';
   import { voieParId } from '../lib/regles/donnees';
   import { octroisVierges, type Fiche, type RefonteFiche } from '../lib/schemas/fiche';
@@ -44,6 +45,9 @@
         })
       : [],
   );
+
+  /** Vécu (L4.18, 5a) : les nœuds que les capacités v1 hors combat appellent. */
+  const vecuV1 = $derived(v1 ? vecuDesCapacitesV1(v1.capacites).map(nomNoeud) : []);
 
   function geste(g: RF.GesteRefonte) {
     if (!classe || !r || !ctx) return;
@@ -93,6 +97,7 @@
       </p>
       {#if anciennes.length}<p class="anciennes"><strong>Tes voies en v1 :</strong> {anciennes.join(' ; ')}</p>{/if}
       {#if octrois.chaos}<p class="aide">Tu avais la Voie du chaos en v1 : elle t'est ouverte.</p>{/if}
+      {#if vecuV1.length}<p class="aide">Vécu (L4.18) : tes capacités hors combat de la v1 deviennent {vecuV1.join(', ')} ; le MJ te les accordera, un palier chacune.</p>{/if}
     {:else}
       <p class="aide">Le MJ a rouvert ta conversion : refais tes voies une fois, tes jauges sont gardées.</p>
     {/if}

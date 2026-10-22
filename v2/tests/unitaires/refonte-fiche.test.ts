@@ -109,7 +109,9 @@ describe('conversion (1b, 4a, 8a, 9a, 12a)', () => {
       nom: k.nom, niveau: k.niveau, pvMax: k.pvMax, caracs: k.caracs, equipement: k.equipement, piecesOr: k.piecesOr, capacitesRace: k.capacitesRace, dons: k.dons,
     });
     expect(v2.refonte.jauges).toEqual({ endurance: 4, inspiration: null, sacre: null, plongee: 0, corruptionAme: 1 });
-    expect(v2.octrois).toEqual(octroisVierges());
+    // Vécu (L4.18) : Endurance de fer (Élite 2 en v1) appelle Endurci, que le MJ accordera ; Premiers soins est offert au Guerrier.
+    expect(v2.octrois).toEqual({ ...octroisVierges(), vecuV1: ['endurci'] });
+    expect(v2.vecu.noeudOffert).toBe('premiers-soins');
     // Les calculs de la fiche lisent la Corruption d'Âme et la Plongée à la place des corruptions v1, sans voie v1.
     expect(ficheCalculDepuisFiche(v2)).toMatchObject({ corruptionMajeure: 1, corruptionCombat: 0, capacites: [], voiesHorsProfil: [], grimoireSortsConnus: [] });
     expect(vueFiche(v2).corruptionMajeure).toBe(1);

@@ -6,6 +6,7 @@ import type { ClasseRefonte } from '../schemas/classes.ts';
 import { ELEMENTS, MAITRISES, type Action, type Element, type Maitrise } from '../schemas/effets.ts';
 import { JAUGES_DE_CLASSE, octroisVierges, schemaFicheV2, VERSION_FICHE_REFONTE, type Fiche, type FicheV1, type FicheV2, type Octrois, type RefonteFiche } from '../schemas/fiche.ts';
 import { actionParId, actionsCommunes, classeParId, elementParId, voieParId } from '../../regles/index.ts';
+import { noeudOffertDe, vecuDesCapacitesV1 } from './vecu.ts';
 
 /*
  * La refonte sur la fiche (lot L4.11a), en fonctions pures : les choix
@@ -423,7 +424,11 @@ export function convertirFiche(lue: FicheV1, r: RefonteFiche): FicheV2 {
   const communs: Record<string, unknown> = { ...v1 };
   for (const k of [...CHAMPS_V1_RETIRES, 'schemaVersion']) delete communs[k];
   const refonte: RefonteFiche = { ...r, jauges: jaugesDeDepart(classe, v1.niveau, v1.corruptionMajeure) };
-  return schemaFicheV2.parse(versFirestore({ ...communs, schemaVersion: VERSION_FICHE_REFONTE, refonte, octrois }, v1.nom));
+  // Vécu (lot L4.18) : le nœud offert par la classe (4a), et les nœuds que les capacités v1 hors combat appellent, que le MJ accordera (5a).
+  const vecu = { ...v1.vecu, noeudOffert: v1.vecu.noeudOffert ?? noeudOffertDe(classe.id) };
+  const vecuV1 = vecuDesCapacitesV1(v1.capacites);
+  const avecV1 = vecuV1.length ? { ...octrois, vecuV1 } : octrois;
+  return schemaFicheV2.parse(versFirestore({ ...communs, vecu, schemaVersion: VERSION_FICHE_REFONTE, refonte, octrois: avecV1 }, v1.nom));
 }
 
 /** Refaire ses voies quand le MJ a rouvert la conversion (5a) : jauges et octrois gardés, la reconversion refermée. */
