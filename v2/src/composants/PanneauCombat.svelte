@@ -4,7 +4,7 @@
   import { ajusterPvMonstre, RefusCombat } from '../lib/actions/combat';
   import { messageErreurJournal } from '../lib/actions/journal';
   import { attaquesDuMonstre, horsDePortee, type AttaqueMonstre, type CarteDuCombat } from '../lib/combat/attaque';
-  import { ciblable, etatsPosables, regleEtat, texteEtat } from '../lib/combat/etats';
+  import { ciblable, defenseVisee, etatsPosables, regleEtat, texteEtat } from '../lib/combat/etats';
   import { etatPj } from '../lib/combat/mort';
   import { actionsDuTour, ordreCombat } from '../lib/combat/ordre';
   import { vueFiche } from '../lib/fiche/vue-fiche';
@@ -75,6 +75,9 @@
       .map(({ c, f }) => ({ c, v: vueFiche(f!) })),
   );
   const signe = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
+  // La DEF du monstre et la CA des PJ sont montrées telles que le jet les
+  // visera : modifiées par leurs états (Exposé −2…), comme `jetAttaque`.
+  const defMontre = $derived(montre?.def == null ? null : defenseVisee(montre.def, montre.etats));
 
   // ---- Attaques du monstre (L6.2, 6a) ----
   const listeArmes = $derived(new Map((armes.etat.donnees?.liste ?? []).map((a) => [a.id, a])));
@@ -185,7 +188,7 @@
           {#if montre.aTerre}<span class="aide">à terre</span>{/if}
         </div>
         <div class="pastilles">
-          <span>DEF {montre.def}</span>
+          <span>DEF {defMontre}</span>
           <span>Init {signe(montre.modInit)}</span>
           {#if montre.armure}<span>Armure {montre.armure}</span>{/if}
           {#if montre.resistances.physique !== 1}<span>Physique ×{String(montre.resistances.physique).replace('.', ',')}</span>{/if}
@@ -197,7 +200,7 @@
             <label class="choix"
               >Cible
               <select value={ciblePj?.c.id ?? ''} onchange={(e) => (cibleChoisie = e.currentTarget.value)}>
-                {#each ciblesPj as { c, v } (c.id)}<option value={c.id}>{c.nom} · CA {v.stats.ca} · {v.pv.actuel}/{v.pv.max} PV</option>{/each}
+                {#each ciblesPj as { c, v } (c.id)}<option value={c.id}>{c.nom} · CA {defenseVisee(v.stats.ca, c.etats)} · {v.pv.actuel}/{v.pv.max} PV</option>{/each}
               </select>
             </label>
           {/if}

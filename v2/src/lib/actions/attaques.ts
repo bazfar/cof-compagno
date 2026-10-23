@@ -9,6 +9,7 @@ import {
   consommerCharge,
   contactSeulement,
   d20Attaque,
+  defenseVisee,
   degatsParTour,
   ETATS_V1_VERS_REFONTE,
   etatDuCatalogue,
@@ -109,7 +110,7 @@ function jetAttaque(
   for (const id of av.consommes) etatsAttaquant = retirerEtat(etatsAttaquant, id);
   const d = d20Attaque(alea, av.avantage);
   const bonus = a.bonus + modificateur(attaquant.etats, ['attaque', a.mode === 'contact' ? 'attaqueContact' : 'attaqueDistance']);
-  const def = defBase + modificateur(cible.etats, ['DEF']);
+  const def = defenseVisee(defBase, cible.etats);
   const issue = { ...resoudreAttaque(d.garde, bonus, def, a.seuilCritique), ...(d.des.length > 1 ? { des: d.des } : {}) };
   return { issue, leurre: null, etatsAttaquant, etatsCible };
 }

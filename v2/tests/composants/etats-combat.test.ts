@@ -65,6 +65,7 @@ const { session } = await import('../../src/lib/session.svelte');
 const { ficheDepuisV1 } = await import('../../src/lib/regles/fiche-document');
 const F = await import('../../src/lib/fiche/refonte');
 const { objetParId } = await import('../../src/lib/regles/donnees');
+const { vueFiche } = await import('../../src/lib/fiche/vue-fiche');
 const { classeParId } = await import('../../src/regles');
 const { default: BarreCombat } = await import('../../src/composants/BarreCombat.svelte');
 const { default: PanneauCombat } = await import('../../src/composants/PanneauCombat.svelte');
@@ -224,6 +225,22 @@ describe('le MJ (L6.3)', () => {
     combattants.elements = [goule(), pj('p1', { nom: 'Kargash' }), pj('p2', { nom: 'Hermione', uid: 'bob', etats: [etat('banni')] })];
     render(PanneauCombat);
     expect([...(screen.getByLabelText('Cible') as HTMLSelectElement).options].map((o) => o.textContent?.split(' · ')[0])).toEqual(['Kargash']);
+    bestiaire.elements = [];
+    armesBestiaire.donnees = null;
+  });
+
+  it('la DEF du monstre et la CA des PJ sont montrées telles que le jet les visera : l’Exposé les baisse de 2', () => {
+    const { armesBestiaire, bestiaire } = faux;
+    bestiaire.elements = [{ id: 'goule', nom: 'Goule', init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
+    armesBestiaire.donnees = { liste: [{ id: 'griffes', nom: 'Griffes', type: 'arme', degats: '1d6', portee: 'contact', typedegats: 'physique' }] };
+    const kargash = v1('Kargash', 'p1', 'alice');
+    persos.elements = [kargash];
+    combatDoc.donnees = combat({ actif: 'm-r1-a' });
+    combattants.elements = [goule({ etats: [etat('expose')] }), pj('p1', { nom: 'Kargash', etats: [etat('expose')] })];
+    render(PanneauCombat);
+    expect(screen.getByText('DEF 11')).toBeTruthy(); // 13 − 2
+    const ca = vueFiche(kargash).stats.ca - 2;
+    expect((screen.getByLabelText('Cible') as HTMLSelectElement).options[0]!.textContent).toMatch(new RegExp(`^Kargash · CA ${ca} ·`));
     bestiaire.elements = [];
     armesBestiaire.donnees = null;
   });

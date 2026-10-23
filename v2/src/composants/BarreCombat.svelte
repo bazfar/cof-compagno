@@ -4,7 +4,7 @@
   import { lancerEtNoter, messageErreurJournal } from '../lib/actions/journal';
   import { formuleDegats, horsDePortee, type CarteDuCombat } from '../lib/combat/attaque';
   import { attaquesDuPj, NOMS_TYPES_DEGATS, TYPES_DEGATS_SUBIS, type AttaquePj, type TypeDegatsSubis } from '../lib/combat/attaques-pj';
-  import { ciblable, contactSeulement, etatsPosables, modificateur, peutAgir, regleEtat, texteEtat } from '../lib/combat/etats';
+  import { ciblable, contactSeulement, defenseVisee, etatsPosables, peutAgir, regleEtat, texteEtat } from '../lib/combat/etats';
   import { etatPj } from '../lib/combat/mort';
   import { attaquesSpecialesDuPj, type AttaqueSpeciale } from '../lib/combat/speciales';
   import { actionsDuTour } from '../lib/combat/ordre';
@@ -76,7 +76,7 @@
   // La DEF montrée au choix de la cible est celle que le jet visera :
   // celle du monstre modifiée par ses états (Exposé −2…), comme
   // `jetAttaque` la calcule.
-  const defVisee = (c: Combattant) => (c.def === null ? null : c.def + modificateur(c.etats, ['DEF']));
+  const defVisee = (c: Combattant) => (c.def === null ? null : defenseVisee(c.def, c.etats));
   let cibleChoisie = $state('');
   const cible = $derived(monstres.find((c) => c.id === cibleChoisie) ?? monstres[0] ?? null);
   const refusPortee = (a: AttaquePj) =>

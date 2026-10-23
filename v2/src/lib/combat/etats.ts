@@ -76,6 +76,15 @@ export function modificateur(etats: readonly EtatCombat[], cibles: readonly stri
 }
 
 /**
+ * La défense qu'un jet d'attaque visera : la sienne, modifiée par ses
+ * états (Exposé −2…). `jetAttaque` l'appelle, les écrans aussi, pour que
+ * la valeur montrée soit celle du jet.
+ */
+export function defenseVisee(base: number, etats: readonly EtatCombat[]): number {
+  return base + modificateur(etats, ['DEF']);
+}
+
+/**
  * Avantage de l'attaquant (6a du 20/10 : 2d20) : +1 avantage, −1
  * désavantage, 0 s'ils s'annulent. `consommes` : les états « prochaine
  * attaque » de l'attaquant, qui tombent avec ce jet.
