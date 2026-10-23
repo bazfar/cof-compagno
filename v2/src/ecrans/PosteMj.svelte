@@ -1,6 +1,7 @@
 <script lang="ts">
   import BarreHaut from '../composants/BarreHaut.svelte';
   import JournalDes from '../composants/JournalDes.svelte';
+  import type { CarteDuCombat } from '../lib/combat/attaque';
 
   /*
    * Poste MJ (mise en page L2.6, maquette validée le 18/10), en sections
@@ -91,6 +92,8 @@
   });
   const combatMj = $derived(combatOuvert ? import('../composants/CombatMj.svelte') : null);
   const panneauCombat = $derived(combatOuvert ? import('../composants/PanneauCombat.svelte') : null);
+  // La carte montrée, pour les portées des attaques de monstre (L6.2, 4a).
+  let carteCombat = $state<CarteDuCombat | null>(null);
   // Joueurs de la table (correctif du 19/10), chargés à part comme le groupe.
   const joueursMj = import('../composants/JoueursMj.svelte');
 
@@ -142,7 +145,7 @@
         {#await carte}
           <p>Chargement de la battlemap…</p>
         {:then module}
-          <module.default role="mj" />
+          <module.default role="mj" surCarte={(c: CarteDuCombat | null) => (carteCombat = c)} />
         {:catch e}
           <p role="alert">Battlemap indisponible : {String(e)}</p>
         {/await}
@@ -150,7 +153,7 @@
       <aside class="cote" aria-label="Combattant" hidden={section !== 'combat'}>
         {#if panneauCombat}
           {#await panneauCombat then module}
-            <module.default />
+            <module.default carte={carteCombat} />
           {/await}
         {/if}
       </aside>

@@ -28,6 +28,7 @@ const d20 = (alea: () => number) => 1 + Math.floor(alea() * 20);
 
 function nouveauCombattant(b: BrouillonCombattant, de: number | null, maintenant: number): Combattant {
   if (b.genre === 'monstre' && (b.pvMax === null || b.pvMax < 1)) throw new RefusCombat(`Donne les PV de ${b.nom}.`);
+  if (b.genre === 'monstre' && b.def === null) throw new RefusCombat(`Donne la DEF de ${b.nom}.`);
   return schemaCombattant.parse({
     genre: b.genre,
     nom: b.nom,
@@ -41,6 +42,12 @@ function nouveauCombattant(b: BrouillonCombattant, de: number | null, maintenant
     pvMax: b.genre === 'monstre' ? b.pvMax : null,
     aTerre: false,
     mvtBase: b.mvtBase,
+    def: b.genre === 'monstre' ? b.def : null,
+    armure: b.genre === 'monstre' ? b.armure : 0,
+    resistances: b.genre === 'monstre' ? b.resistances : { physique: 1, magique: 1 },
+    mortSucces: 0,
+    mortEchecs: 0,
+    mort: false,
     tourActions: 0,
     principale: false,
     secondaire: false,
@@ -80,6 +87,7 @@ export async function demarrerCombat(
     round: 1,
     tour: 1,
     actif: premierActif(combattants),
+    porteesLibres: false,
     creeLe: maintenant,
     closLe: null,
   });
@@ -173,6 +181,11 @@ export async function ajusterPvMonstre(idCombat: string, scene: string, c: AvecI
   await updateDoc(refCombattant(idCombat, c.id), { pv, aTerre });
   if (aTerre !== c.aTerre) await marquerMort(scene, c.id, aTerre);
   return pv;
+}
+
+/** MJ : laisse attaquer hors de portée, ou non (L6.2, 4a). */
+export async function basculerPortees(idCombat: string, libres: boolean): Promise<void> {
+  await updateDoc(refCombat(idCombat), { porteesLibres: libres });
 }
 
 /** MJ : clôt le combat (11a). Les monstres morts restent sur la carte, marqués morts. */

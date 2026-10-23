@@ -89,3 +89,15 @@ export function distanceJetons(jetons: readonly JetonCarte[], idA: string, idB: 
   const b = jetons.find((j) => j.id === idB);
   return a && b ? distanceCases(a, b) : null;
 }
+
+/**
+ * Ligne de vue d'une case à l'autre (lot L6.2, décision 4a du 23/10/2026) :
+ * le segment de centre à centre ne croise ni mur, ni obstacle, ni porte
+ * fermée (les mêmes obstacles que la vision et les sorts en ligne). Une
+ * attaque à distance la demande ; une attaque au contact, non.
+ */
+export function ligneDeVue(scene: SceneCalcul, a: Case, b: Case, segs = segmentsBloquants(scene)): boolean {
+  const p0 = centre(a);
+  const p1 = centre(b);
+  return !segs.some(([c, d]) => intersectionSegments(p0, p1, c, d) !== null);
+}

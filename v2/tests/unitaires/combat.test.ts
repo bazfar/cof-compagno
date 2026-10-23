@@ -64,13 +64,13 @@ type Combat = import('../../src/lib/schemas/combat').Combat;
 
 const pj = (id: string, c: Partial<Combattant> = {}): Combattant & { id: string } => ({
   id: `pj-${id}`, genre: 'pj', nom: id, perso: id, uid: `u-${id}`, monstre: null, modInit: 1, initiative: null, de: null, pv: null, pvMax: null, aTerre: false,
-  mvtBase: 5, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+  mvtBase: 5, def: null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
 });
 const monstre = (id: string, c: Partial<Combattant> = {}): Combattant & { id: string } => ({
   id: `m-r1-${id}`, genre: 'monstre', nom: id, perso: null, uid: null, monstre: 'goule', modInit: 3, initiative: null, de: null, pv: 14, pvMax: 14, aTerre: false,
-  mvtBase: 5, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+  mvtBase: 5, def: 13, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
 });
-const combat = (c: Partial<Combat> = {}): Combat => ({ nom: 'Les goules', scene: 'cave', rencontre: 'r1', statut: 'encours', round: 1, tour: 1, actif: null, creeLe: 1, closLe: null, ...c });
+const combat = (c: Partial<Combat> = {}): Combat => ({ nom: 'Les goules', scene: 'cave', rencontre: 'r1', statut: 'encours', round: 1, tour: 1, actif: null, porteesLibres: false, creeLe: 1, closLe: null, ...c });
 const avecInit = (c: Combattant & { id: string }, de: number) => ({ ...c, de, initiative: de + c.modInit });
 const C = 'tables/t1/combats';
 
@@ -112,8 +112,8 @@ describe('l’ordre et la main (5a, 6a)', () => {
     expect(O.premierActif([pj('S'), pj('H')])).toBeNull();
   });
 
-  it('à terre : le monstre à 0 PV, le PJ à 0 PV sur sa fiche', () => {
-    const t = O.aTerreDuCombat([monstre('A', { aTerre: true }), monstre('B'), pj('S'), pj('H'), pj('K')], new Map([['S', 0], ['H', 5]]));
+  it('à terre : le monstre à 0 PV, le PJ mort ; un PJ Mourant garde son tour (L6.2, 7a)', () => {
+    const t = O.aTerreDuCombat([monstre('A', { aTerre: true }), monstre('B'), pj('S', { mortEchecs: 3, mort: true }), pj('H', { mortEchecs: 2 }), pj('K')]);
     expect([...t].sort()).toEqual(['m-r1-A', 'pj-S']);
   });
 });
@@ -144,7 +144,7 @@ describe('les actions du tour (7a)', () => {
 
 describe('qui entre dans le combat (4a)', () => {
   const fiches = new Map([['shy', { nom: 'Shyrion', uid: 'alice', modInit: 1, dons: ['mobile'] }]]);
-  const bestiaire = new Map([['goule', { init: 3, pv: 14 }]]);
+  const bestiaire = new Map([['goule', { init: 3, pv: 14, def: 12, armure: 1, resistances: { magique: 0.5 } }]]);
   const rencontre = { id: 'r1', monstres: [{ cle: 'a', monstre: 'goule', nom: 'Goule A', cx: 1, cy: 1 }] };
   const jetons = [
     { id: 'pj-shy', genre: 'pj', nom: 'Shyrion' },
@@ -155,20 +155,22 @@ describe('qui entre dans le combat (4a)', () => {
     { id: 'x', genre: 'libre', nom: 'Coffre' },
   ];
 
-  it('les PJ posés avec leur fiche, les monstres vivants avec le bestiaire de la rencontre ; un monstre posé à la main attend ses PV', () => {
+  const neutre = { physique: 1, magique: 1 };
+  it('les PJ posés avec leur fiche, les monstres vivants avec le bestiaire de la rencontre (DEF, armure, résistances : L6.2) ; un monstre posé à la main attend ses PV et sa DEF', () => {
     const b = D.brouillonDuCombat(jetons, fiches, rencontre, bestiaire);
     expect(b).toEqual([
-      { id: 'pj-shy', genre: 'pj', nom: 'Shyrion', perso: 'shy', uid: 'alice', monstre: null, modInit: 1, pvMax: null, mvtBase: 6 },
-      { id: 'm-r1-a', genre: 'monstre', nom: 'Goule A', perso: null, uid: null, monstre: 'goule', modInit: 3, pvMax: 14, mvtBase: 5 },
-      { id: 'm-libre', genre: 'monstre', nom: 'Gobelin', perso: null, uid: null, monstre: null, modInit: 0, pvMax: null, mvtBase: 5 },
+      { id: 'pj-shy', genre: 'pj', nom: 'Shyrion', perso: 'shy', uid: 'alice', monstre: null, modInit: 1, pvMax: null, def: null, armure: 0, resistances: neutre, mvtBase: 6 },
+      { id: 'm-r1-a', genre: 'monstre', nom: 'Goule A', perso: null, uid: null, monstre: 'goule', modInit: 3, pvMax: 14, def: 12, armure: 1, resistances: { physique: 1, magique: 0.5 }, mvtBase: 5 },
+      { id: 'm-libre', genre: 'monstre', nom: 'Gobelin', perso: null, uid: null, monstre: null, modInit: 0, pvMax: null, def: null, armure: 0, resistances: neutre, mvtBase: 5 },
     ]);
-    expect(D.brouillonDuCombat(jetons, fiches, null, bestiaire).find((c) => c.id === 'm-r1-a')).toMatchObject({ monstre: null, pvMax: null });
+    expect(D.brouillonDuCombat(jetons, fiches, null, bestiaire).find((c) => c.id === 'm-r1-a')).toMatchObject({ monstre: null, pvMax: null, def: null });
   });
 
   it('ce qui manque pour démarrer', () => {
     const b = D.brouillonDuCombat(jetons, fiches, rencontre, bestiaire);
     expect(D.manquePourDemarrer(b)).toBe('Donne les PV de Gobelin.');
-    expect(D.manquePourDemarrer(b.map((c) => (c.id === 'm-libre' ? { ...c, pvMax: 7 } : c)))).toBeNull();
+    expect(D.manquePourDemarrer(b.map((c) => (c.id === 'm-libre' ? { ...c, pvMax: 7 } : c)))).toBe('Donne la DEF de Gobelin.');
+    expect(D.manquePourDemarrer(b.map((c) => (c.id === 'm-libre' ? { ...c, pvMax: 7, def: 0 } : c)))).toBeNull();
     expect(D.manquePourDemarrer(b.filter((c) => c.genre === 'monstre'))).toMatch(/Aucun PJ/);
     expect(D.manquePourDemarrer(b.filter((c) => c.genre === 'pj'))).toMatch(/Aucun monstre/);
   });
@@ -213,8 +215,8 @@ describe('schéma du combattant', () => {
 
 describe('écritures', () => {
   const brouillon = [
-    { id: 'pj-shy', genre: 'pj' as const, nom: 'Shyrion', perso: 'shy', uid: 'alice', monstre: null, modInit: 1, pvMax: null, mvtBase: 5 },
-    { id: 'm-r1-a', genre: 'monstre' as const, nom: 'Goule A', perso: null, uid: null, monstre: 'goule', modInit: 3, pvMax: 14, mvtBase: 5 },
+    { id: 'pj-shy', genre: 'pj' as const, nom: 'Shyrion', perso: 'shy', uid: 'alice', monstre: null, modInit: 1, pvMax: null, def: null, armure: 0, resistances: { physique: 1, magique: 1 }, mvtBase: 5 },
+    { id: 'm-r1-a', genre: 'monstre' as const, nom: 'Goule A', perso: null, uid: null, monstre: 'goule', modInit: 3, pvMax: 14, def: 12, armure: 2, resistances: { physique: 0.5, magique: 1 }, mvtBase: 5 },
   ];
 
   it('démarrer : le combat, ses combattants, la table ; les monstres lancent leur initiative au journal, la main au premier', async () => {
@@ -228,15 +230,18 @@ describe('écritures', () => {
     ]);
     expect(appels[0]!.donnees).toMatchObject({ nom: 'Les goules', scene: 'cave', rencontre: 'r1', statut: 'encours', round: 1, tour: 1, actif: 'm-r1-a' });
     expect(appels[1]!.donnees).toMatchObject({ initiative: null, de: null, pv: null });
-    expect(appels[2]!.donnees).toMatchObject({ initiative: 14, de: 11, pv: 14, pvMax: 14, aTerre: false });
+    expect(appels[0]!.donnees).toMatchObject({ porteesLibres: false });
+    expect(appels[1]!.donnees).toMatchObject({ def: null, armure: 0, mortSucces: 0, mortEchecs: 0, mort: false });
+    expect(appels[2]!.donnees).toMatchObject({ initiative: 14, de: 11, pv: 14, pvMax: 14, aTerre: false, def: 12, armure: 2, resistances: { physique: 0.5, magique: 1 } });
     expect(appels[3]!.donnees).toEqual({ combat: id });
     expect(journal.noterJet).toHaveBeenCalledTimes(1);
     expect(journal.noterJet).toHaveBeenCalledWith('Initiative', '1d20+3', { des: [11], faces: 20, bonus: 3, total: 14 }, 'Goule A');
   });
 
-  it('démarrer : refusé si un combat est en cours, ou un monstre sans PV', async () => {
+  it('démarrer : refusé si un combat est en cours, ou un monstre sans PV ou sans DEF', async () => {
     await expect(A.demarrerCombat({ nom: 'x', scene: 'cave', rencontre: null, combattants: brouillon }, 'c0')).rejects.toThrow('déjà en cours');
     await expect(A.demarrerCombat({ nom: 'x', scene: 'cave', rencontre: null, combattants: [{ ...brouillon[1]!, pvMax: null }] }, null)).rejects.toThrow('Donne les PV');
+    await expect(A.demarrerCombat({ nom: 'x', scene: 'cave', rencontre: null, combattants: [{ ...brouillon[1]!, def: null }] }, null)).rejects.toThrow('Donne la DEF');
     expect(appels).toEqual([]);
   });
 

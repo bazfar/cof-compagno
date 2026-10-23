@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { idJetonPerso } from '../lib/battlemap/jetons-pj';
+  import type { CarteDuCombat } from '../lib/combat/attaque';
   import { aTerreDuCombat } from '../lib/combat/ordre';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import type { CollectionSuivie, DocumentSuivi } from '../lib/firebase/suivre.svelte';
@@ -21,6 +22,9 @@
    * Personnage de l'écran joueur : `surEnCombat` dit à l'écran si son
    * personnage joué est dans le combat en cours, pour qu'il range la
    * disposition ordinaire.
+   *
+   * Lot L6.2 : la barre reçoit le combat, son combattant, les fiches des PJ
+   * (relever un allié) et la carte (portées, 4a).
    */
 
   let { surEnCombat }: { surEnCombat?: (oui: boolean) => void } = $props();
@@ -54,15 +58,18 @@
 
   const pvParPerso = $derived(new Map(persos.etat.elements.map((p) => [p.id, vueFiche(p).pv])));
   const pvPj = $derived(new Map(combattants.filter((c) => c.perso && pvParPerso.has(c.perso)).map((c) => [c.id, pvParPerso.get(c.perso!)!])));
-  const aTerre = $derived(aTerreDuCombat(combattants, new Map([...pvParPerso].map(([id, pv]) => [id, pv.actuel]))));
+  const aTerre = $derived(aTerreDuCombat(combattants));
+  const moi = $derived(persoActif ? (combattants.find((c) => c.id === idJetonPerso(persoActif)) ?? null) : null);
+  const fiches = $derived(new Map(persos.etat.elements.map((p) => [p.id, p])));
+  let carte = $state<CarteDuCombat | null>(null);
 </script>
 
 {#if enCombat && combat && idCombat}
   <div class="combat">
     <OrdreCombat role="joueur" {idCombat} {combat} {combattants} {aTerre} {pvPj} />
     <div class="centre">
-      <CarteTable role="joueur" hauteur="560px" />
-      {#if fiche}<BarreCombat {fiche} />{/if}
+      <CarteTable role="joueur" hauteur="560px" surCarte={(c) => (carte = c)} />
+      {#if fiche && moi}<BarreCombat {fiche} {idCombat} {combat} {moi} {combattants} {fiches} {carte} />{/if}
     </div>
   </div>
 {/if}

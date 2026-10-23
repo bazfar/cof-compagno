@@ -22,8 +22,8 @@ export function messageErreurJournal(erreur: unknown): string {
   return erreur instanceof Error ? erreur.message : String(erreur);
 }
 
-/** Note un jet déjà lancé (potion, PV de montée de niveau…). */
-export async function noterJet(libelle: string, formule: string, jet: Jet, perso?: string): Promise<void> {
+/** Note un jet déjà lancé (potion, PV de montée de niveau…), et son détail en combat (L6.2). */
+export async function noterJet(libelle: string, formule: string, jet: Jet, perso?: string, detail?: string): Promise<void> {
   const doc = schemaJetJournal.parse({
     auteurUid: session.uid,
     auteurNom: session.nom,
@@ -34,6 +34,7 @@ export async function noterJet(libelle: string, formule: string, jet: Jet, perso
     bonus: jet.bonus,
     total: jet.total,
     creeLe: Date.now(),
+    ...(detail ? { detail: detail.slice(0, 200) } : {}),
   });
   await addDoc(collection(db, `tables/${session.table}/journal`), doc);
 }

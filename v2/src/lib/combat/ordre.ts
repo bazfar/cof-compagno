@@ -37,7 +37,7 @@ export function ordreCombat<T extends Pick<Combattant, 'genre' | 'nom' | 'initia
   });
 }
 
-/** Peut jouer : une initiative, et pas à terre (`aTerre` : monstre à 0 PV, PJ à 0 PV sur sa fiche). */
+/** Peut jouer : une initiative, et pas à terre (`aTerre` : monstre à 0 PV, PJ mort ; L6.2). */
 const peutJouer = (c: AvecId<Pick<Combattant, 'initiative'>>, aTerre: ReadonlySet<string>) => c.initiative !== null && !aTerre.has(c.id);
 
 /** Le premier à jouer, ou null si personne n'a encore d'initiative. */
@@ -81,7 +81,11 @@ export function detailInitiative(de: number, mod: number): string {
   return `d20 ${de} ${mod >= 0 ? '+' : '−'} ${Math.abs(mod)}`;
 }
 
-/** Ceux dont le tour est sauté (6a) : les monstres à 0 PV, les PJ à 0 PV sur leur fiche (`pvPj` : PV actuels par personnage). */
-export function aTerreDuCombat(combattants: readonly AvecId<Pick<Combattant, 'genre' | 'aTerre' | 'perso'>>[], pvPj: ReadonlyMap<string, number>): Set<string> {
-  return new Set(combattants.filter((c) => (c.genre === 'monstre' ? c.aTerre : c.perso !== null && (pvPj.get(c.perso) ?? 1) <= 0)).map((c) => c.id));
+/**
+ * Ceux dont le tour est sauté (6a) : les monstres à 0 PV, les PJ morts.
+ * Lot L6.2 (7a) : un PJ à 0 PV est Mourant et garde son tour, pour ses jets
+ * de mort ; seul le troisième échec le sort de l'ordre (v1 : _estKO).
+ */
+export function aTerreDuCombat(combattants: readonly AvecId<Pick<Combattant, 'genre' | 'aTerre' | 'mort'>>[]): Set<string> {
+  return new Set(combattants.filter((c) => (c.genre === 'monstre' ? c.aTerre : c.mort)).map((c) => c.id));
 }

@@ -146,6 +146,13 @@ describe('journal de dés commun', () => {
     expect(appels).toEqual([]);
     await noterJet('Jet libre', '1d6', { des: [4], faces: 6, bonus: 0, total: 4 });
     expect(appels[0]!.donnees).not.toHaveProperty('perso');
+    expect(appels[0]!.donnees).not.toHaveProperty('detail');
+  });
+
+  it('L6.2 (10a) : le détail d’un jet de combat, tronqué à 200 signes', async () => {
+    await noterJet('Rapière sur Goule', '1d20+4', { des: [9], faces: 20, bonus: 4, total: 13 }, 'Kargash', 'd20 9 +4 = 13 contre DEF 13 : touché');
+    await noterJet('Dégâts subis (physique)', '7', { des: [], faces: 0, bonus: 7, total: 6 }, 'Kargash', 'x'.repeat(250));
+    expect(appels.map((a) => (a.donnees as { detail?: string }).detail)).toEqual(['d20 9 +4 = 13 contre DEF 13 : touché', 'x'.repeat(200)]);
   });
 
   it('jet aligné sur jetValide', () => {

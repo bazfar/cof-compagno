@@ -11,9 +11,16 @@ import { z } from 'zod';
  *     combattant, d'identifiant celui de son jeton sur la scène (un PJ
  *     `pj-<perso>`, un monstre de rencontre `m-<rencontre>-<clé>`). Le
  *     joueur y écrit son initiative et ses actions du tour ; le MJ, tout.
- * Les PV des monstres y sont en chiffres, vus de toute la table (3b) ; leur
- * DEF, leurs attaques et leurs sauvegardes restent dans le bestiaire, que le
- * MJ seul lit. Les PV, PP et états d'un PJ restent sur sa fiche.
+ * Les PV des monstres y sont en chiffres, vus de toute la table (3b) ; leurs
+ * attaques et leurs sauvegardes restent dans le bestiaire, que le MJ seul
+ * lit. Les PV, PP et états d'un PJ restent sur sa fiche.
+ *
+ * Lot L6.2 (décisions de Thomas du 23/10/2026) : le joueur résout son
+ * attaque sur son client (1b), contre la DEF du monstre, et inflige ses
+ * dégâts après l'armure et les résistances du monstre (10a). La DEF,
+ * l'armure et les résistances sont donc recopiées du bestiaire sur le
+ * combattant au démarrage, lisibles de toute la table. Un PJ à 0 PV est
+ * Mourant (7a) : ses jets de mort sont comptés ici, le temps du combat.
  *
  * Actions du tour (7a) : elles valent pour le tour `tourActions` ; quand le
  * combat passe au tour suivant, celles d'un autre tour comptent comme
@@ -34,6 +41,8 @@ export const schemaCombat = z.strictObject({
   tour: z.number().int().min(1).max(99999),
   /** Combattant qui joue (identifiant de son jeton), ou null tant que personne n'a d'initiative. */
   actif: z.string().min(1).max(150).nullable(),
+  /** Le MJ laisse attaquer hors de portée (L6.2, 4a : il passe outre). */
+  porteesLibres: z.boolean(),
   creeLe: z.number().int().nonnegative(),
   closLe: z.number().int().nonnegative().nullable(),
 });
@@ -63,6 +72,19 @@ export const schemaCombattant = z
     aTerre: z.boolean(),
     /** Cases par tour (5, +1 avec le don Mobile), avant le Sprint. */
     mvtBase: z.number().int().min(0).max(20),
+    // ---- Défense du monstre (L6.2, 1b et 10a) ; null et neutres pour un PJ, qui les a sur sa fiche ----
+    /** DEF du monstre ; null pour un PJ (sa CA est calculée de sa fiche). */
+    def: z.number().int().min(-10).max(99).nullable(),
+    /** Réduction des dégâts de son armure (bestiaire : armureId), retirée avant les résistances. */
+    armure: z.number().int().min(0).max(99),
+    /** Multiplicateurs de dégâts, appliqués après l'armure (v1 : ×0,5 résiste, ×1,5 vulnérable ; 1 neutre). */
+    resistances: z.strictObject({ physique: z.number().min(0).max(5), magique: z.number().min(0).max(5) }),
+    // ---- Mourant (L6.2, 7a) : PJ à 0 PV sur sa fiche ----
+    /** Jets de mort réussis et ratés depuis qu'il est tombé : 3 réussites, il se relève à 1 PV ; 3 échecs, il meurt. */
+    mortSucces: z.number().int().min(0).max(3),
+    mortEchecs: z.number().int().min(0).max(3),
+    /** Mort au combat : son tour est sauté. */
+    mort: z.boolean(),
     // ---- Actions du tour (7a), valables pour le tour `tourActions` du combat ----
     tourActions: z.number().int().min(0).max(99999),
     principale: z.boolean(),
@@ -78,6 +100,9 @@ export const schemaCombattant = z
     if (pj !== (c.perso !== null) || pj !== (c.uid !== null)) ctx.addIssue({ code: 'custom', message: 'un PJ a son personnage et son joueur, un monstre non', path: ['perso'] });
     if (pj && (c.pv !== null || c.pvMax !== null || c.monstre !== null)) ctx.addIssue({ code: 'custom', message: 'les PV d’un PJ sont sur sa fiche', path: ['pv'] });
     if (!pj && (c.pv === null || c.pvMax === null)) ctx.addIssue({ code: 'custom', message: 'un monstre a ses PV', path: ['pv'] });
+    if (pj !== (c.def === null)) ctx.addIssue({ code: 'custom', message: 'un monstre a sa DEF, un PJ a sa CA sur sa fiche', path: ['def'] });
+    if (!pj && (c.mortSucces || c.mortEchecs || c.mort)) ctx.addIssue({ code: 'custom', message: 'seul un PJ fait des jets de mort', path: ['mort'] });
+    if (c.mort && c.mortEchecs < 3) ctx.addIssue({ code: 'custom', message: 'la mort vient au troisième échec', path: ['mort'] });
     if ((c.initiative === null) !== (c.de === null)) ctx.addIssue({ code: 'custom', message: 'l’initiative et son d20 vont ensemble', path: ['de'] });
     if (c.sprint && !c.principale) ctx.addIssue({ code: 'custom', message: 'le Sprint prend l’action principale', path: ['sprint'] });
   });

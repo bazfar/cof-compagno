@@ -50,6 +50,19 @@ describe('journal de dés', () => {
     expect(resultats).toEqual(['1 PP · « Une silhouette » · d20 : 7', '0 PP · « Éclairer la crypte »']);
   });
 
+  it('L6.2 (10a) : un jet de combat dit son détail ; des dégâts subis sans dé n’ont que lui', () => {
+    jets.elements = [
+      { id: 'j2', auteurUid: 'alice', auteurNom: 'Alice', perso: 'Hyrma', libelle: 'Dégâts subis (physique)', formule: '7', des: [], bonus: 7, total: 6, creeLe: 2, detail: '7 − 1 (armure) = 6 → 22/28 PV' },
+      { id: 'j1', auteurUid: 'alice', auteurNom: 'Alice', perso: 'Hyrma', libelle: 'Lance sur Goule A', formule: '1d20+3', des: [11], bonus: 3, total: 14, creeLe: 1, detail: 'd20 11 +3 = 14 contre DEF 13 : touché' },
+    ];
+    render(JournalDes);
+    const lignes = within(screen.getByRole('list', { name: 'Derniers jets' })).getAllByRole('listitem');
+    expect(lignes.map((l) => [l.querySelector('.resultat')?.textContent ?? null, l.querySelector('.detail')?.textContent])).toEqual([
+      [null, '7 − 1 (armure) = 6 → 22/28 PV'],
+      ['1d20+3 → 11 + 3 = 14', 'd20 11 +3 = 14 contre DEF 13 : touché'],
+    ]);
+  });
+
   it('lanceur libre : formule et motif ; dé rapide ; formule illisible expliquée', async () => {
     render(JournalDes);
     expect(screen.getByText('Aucun jet pour l\'instant.')).toBeTruthy();

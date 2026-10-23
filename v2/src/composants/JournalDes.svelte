@@ -17,6 +17,10 @@
    *
    * Sorts hors combat (lot G2a, 9a) : une ligne de sort dit le palier, les
    * PP et l'intention, et le d20 du jet d'échec s'il y en a eu un.
+   *
+   * Combat (lot L6.2, 10a) : une ligne d'attaque ou de dégâts dit son détail
+   * (DEF visée et issue, armure et résistances retirées, PV restants) ; des
+   * dégâts subis sans dé n'ont que lui.
    */
 
   let { compact = false }: { compact?: boolean } = $props();
@@ -69,9 +73,10 @@
           <span>{j.libelle}</span>
           {#if j.sort}
             <span class="resultat">{j.sort.pp} PP · « {j.sort.intention} »{j.des.length ? ` · d20 : ${j.des[0]}` : ''}</span>
-          {:else}
+          {:else if j.des.length}
             <span class="resultat">{texteJet(j.formule, { des: j.des, faces: 0, bonus: j.bonus, total: j.total })}</span>
           {/if}
+          {#if j.detail}<span class="detail">{j.detail}</span>{/if}
         </li>
       {/each}
     </ol>
@@ -126,6 +131,11 @@
     border-radius: var(--rayon);
     background: var(--couleur-surface-claire);
     border: 1px solid var(--couleur-bordure-douce);
+  }
+  .detail {
+    flex-basis: 100%;
+    font-size: 13px;
+    color: var(--couleur-encre-douce);
   }
   li.moi {
     border-color: var(--couleur-accent-clair);

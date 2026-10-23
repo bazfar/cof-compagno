@@ -28,6 +28,7 @@
   import { suivreDessins, suivreEtatScene, suivreImageScene, suivreJetons, suivreScenesImportees, suivreTable } from '../lib/magasins/carte.svelte';
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
   import { noterAction } from '../lib/actions/combat';
+  import type { CarteDuCombat } from '../lib/combat/attaque';
   import { combatSurCarte } from '../lib/combat/carte';
   import { suivreCombat, suivreCombattants } from '../lib/magasins/combat.svelte';
   import type { Combat, Combattant } from '../lib/schemas/combat';
@@ -54,11 +55,15 @@
    * ne déplace son jeton qu'à son tour, dans la limite des cases qui lui
    * restent, qui se décomptent (7a, 8a) ; les PV des monstres s'affichent
    * en chiffres (3b). Le MJ déplace tout, sans compter.
+   *
+   * Lot L6.2 (4a) : la carte rend à l'écran qui la monte sa scène calculée
+   * et ses jetons (`surCarte`), d'où les attaques vérifient leur portée.
    */
 
   // Hauteur de la zone de carte (L2.6) : grande au poste MJ, réduite dans la
   // colonne de droite du joueur hors combat, où la fiche prime.
-  let { role, hauteur = '72vh' }: { role: Role; hauteur?: string } = $props();
+  // Combat (L6.2, 4a) : la scène calculée et ses jetons, pour vérifier les portées d'attaque.
+  let { role, hauteur = '72vh', surCarte }: { role: Role; hauteur?: string; surCarte?: (c: CarteDuCombat | null) => void } = $props();
 
   const COULEURS_PJ = ['#2980b9', '#27ae60', '#8e44ad', '#d35400', '#16a085', '#b8924a'];
   const COULEUR_MONSTRE = '#c0392b';
@@ -183,6 +188,10 @@
   const proprietaires = $derived(new Map((jetonsSuivis?.etat.elements ?? []).map((j) => [j.id, j.proprietaire])));
   const mesJetons = $derived(new Set(jetons.filter((j) => proprietaires.get(j.id) === session.uid).map((j) => j.id)));
   const miens = $derived(new Set([...mesJetons].filter((id) => !enCombat.bloques.has(id))));
+  $effect(() => {
+    if (!surCarte) return;
+    surCarte(geometrie ? { scene: sceneCalcul(geometrie, etatDepuisDessins(dessins, etatScene?.portesOuvertes ?? {})), jetons } : null);
+  });
   let selection = $state<string | null>(null);
   const selectionne = $derived(jetons.find((j) => j.id === selection) ?? null);
 

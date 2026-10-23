@@ -33,8 +33,14 @@ export const schemaJetJournal = z
     total: z.number().int(),
     creeLe: z.number().int().nonnegative(),
     sort: schemaSortJournal.optional(),
+    /**
+     * Le détail d'un jet de combat (lot L6.2, 10a) : la DEF visée et
+     * l'issue, l'armure et les résistances retirées, les PV qui restent.
+     * Des dégâts subis sans dé (8a) n'ont que ce détail.
+     */
+    detail: z.string().min(1).max(200).optional(),
   })
   .superRefine((j, ctx) => {
-    if (!j.sort && j.des.length === 0) ctx.addIssue({ code: 'custom', message: 'un jet a au moins un dé', path: ['des'] });
+    if (!j.sort && !j.detail && j.des.length === 0) ctx.addIssue({ code: 'custom', message: 'un jet a au moins un dé', path: ['des'] });
   });
 export type JetJournal = z.infer<typeof schemaJetJournal>;

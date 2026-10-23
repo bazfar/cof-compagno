@@ -216,6 +216,17 @@ describe('CarteTable : en combat (L6.1 : 3b, 7a, 8a)', () => {
     expect(mj.dataset.budget).toBe('');
   });
 
+  it('L6.2 (4a) : la carte rend à l’écran qui la monte sa scène calculée et ses jetons', async () => {
+    session.uid = 'alice';
+    const surCarte = vi.fn();
+    render(CarteTable, { props: { role: 'joueur', surCarte } });
+    poser('pj-p1');
+    await screen.findByTestId('battlemap');
+    await waitFor(() => expect(surCarte).toHaveBeenLastCalledWith(expect.objectContaining({ scene: expect.objectContaining({ colonnes: expect.any(Number) }) })));
+    const { jetons } = surCarte.mock.lastCall![0] as { jetons: { id: string; cx: number; cy: number }[] };
+    expect(jetons.map((j) => [j.id, j.cx, j.cy])).toEqual([['pj-p1', 1, 1], ['m-r1-a', 5, 5]]);
+  });
+
   it('combat clos : la carte redevient libre', async () => {
     session.uid = 'alice';
     render(CarteTable, { props: { role: 'joueur' } });

@@ -11,6 +11,10 @@ import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
  * Règles du combat (lot L6.1, décisions du 23/10/2026), contre
  * l'émulateur. Table « t1 » : Bob est MJ ; Alice joue Kargash (pj-p1),
  * Carol joue Hermione (pj-p2). Combat c1 sur la scène « cave ».
+ *
+ * Lot L6.2 : le joueur qui a la main blesse un monstre (1b, 2a), fait son
+ * jet de mort (7a), relève un allié (7a) ; le journal porte le détail
+ * d'un jet de combat (10a) ; le MJ libère les portées (4a).
  */
 const TABLE = 'tables/t1';
 const C = `${TABLE}/combats/c1`;
@@ -24,14 +28,23 @@ beforeAll(async () => {
 });
 
 const combat = (extra: Record<string, unknown> = {}) => ({
-  nom: 'Les goules', scene: 'cave', rencontre: null, statut: 'encours', round: 1, tour: 3, actif: 'pj-p1', creeLe: 1, closLe: null, ...extra,
+  nom: 'Les goules', scene: 'cave', rencontre: null, statut: 'encours', round: 1, tour: 3, actif: 'pj-p1', porteesLibres: false, creeLe: 1, closLe: null, ...extra,
 });
 const combattant = (extra: Record<string, unknown> = {}) => ({
   genre: 'pj', nom: 'Kargash', perso: 'p1', uid: 'alice', monstre: null, modInit: 2, initiative: 14, de: 12, pv: null, pvMax: null, aTerre: false,
-  mvtBase: 5, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...extra,
+  mvtBase: 5, def: null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false,
+  tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...extra,
 });
 const goule = (extra: Record<string, unknown> = {}) =>
-  combattant({ genre: 'monstre', nom: 'Goule', perso: null, uid: null, monstre: 'goule', modInit: 3, pv: 14, pvMax: 14, ...extra });
+  combattant({ genre: 'monstre', nom: 'Goule', perso: null, uid: null, monstre: 'goule', modInit: 3, pv: 14, pvMax: 14, def: 13, armure: 1, resistances: { physique: 0.5, magique: 1 }, ...extra });
+/** Fiche minimale valide (comme tests/regles/persos.test.ts). */
+const fiche = (proprietaireUid: string, extra: Record<string, unknown> = {}) => ({
+  schemaVersion: 1, proprietaireUid, creeLe: 1, nom: 'Hermione', niveau: 3, classe: 'pretre', race: 'humain',
+  caracs: { FOR: 10 }, capacites: [], pvMax: 14, pvActuel: 0, equipement: {}, inventaire: {},
+  piecesOr: 5, piecesArgent: 0, piecesBronze: 0, modules: {},
+  progression: { crans: 0 }, vecu: { crans: 0, paliers: 0, points: 0, noeuds: [], noeudOffert: null }, usages: {},
+  ...extra,
+});
 
 beforeEach(async () => {
   await env.clearFirestore();
@@ -48,6 +61,8 @@ beforeEach(async () => {
     await db.doc(`${C}/combattants/m-r1-a`).set(goule());
     await db.doc(`${TABLE}/scenes/cave/jetons/pj-p1`).set({ genre: 'pj', nom: 'Kargash', couleur: '#2980b9', cx: 1, cy: 1, proprietaire: 'alice', creeLe: 1 });
     await db.doc(`${TABLE}/scenes/cave/jetons/pj-p2`).set({ genre: 'pj', nom: 'Hermione', couleur: '#27ae60', cx: 2, cy: 1, proprietaire: 'carol', creeLe: 1 });
+    await db.doc(`${TABLE}/persos/p1`).set(fiche('alice', { nom: 'Kargash', pvActuel: 20, pvMax: 20 }));
+    await db.doc(`${TABLE}/persos/p2`).set(fiche('carol'));
   });
 });
 
@@ -73,6 +88,13 @@ describe('combat (L6.1)', () => {
     await assertSucceeds(pour('bob').doc(`${C}/combattants/m-r1-b`).set(goule()));
     await assertFails(pour('bob').doc(`${C}/combattants/m-r1-c`).set(goule({ pv: null })));
     await assertFails(pour('bob').doc(`${C}/combattants/pj-p3`).set(combattant({ pv: 3, pvMax: 3 })));
+    // L6.2 : la DEF du monstre, pas du PJ ; les jets de mort d'un PJ seulement ; la mort au troisième échec.
+    await assertFails(pour('bob').doc(`${C}/combattants/m-r1-d`).set(goule({ def: null })));
+    await assertFails(pour('bob').doc(`${C}/combattants/pj-p4`).set(combattant({ def: 12 })));
+    await assertFails(pour('bob').doc(`${C}/combattants/m-r1-e`).set(goule({ mortSucces: 1 })));
+    await assertFails(pour('bob').doc(`${C}/combattants/pj-p5`).set(combattant({ mortEchecs: 2, mort: true })));
+    await assertFails(pour('bob').doc(`${C}/combattants/m-r1-f`).set(goule({ resistances: { physique: 0.5 } })));
+    await assertFails(pour('bob').doc(`${TABLE}/combats/c4`).set(combat({ porteesLibres: 'oui' })));
     await assertSucceeds(pour('bob').doc(C).update({ statut: 'clos', actif: null, closLe: 9 }));
   });
 
@@ -115,5 +137,75 @@ describe('combat (L6.1)', () => {
     await assertSucceeds(pour('bob').doc(`${TABLE}/scenes/cave/jetons/pj-p2`).update({ cx: 3, cy: 3 }));
     await poser(TABLE, { sceneActive: 'cave', combat: null });
     await assertSucceeds(pour('carol').doc(`${TABLE}/scenes/cave/jetons/pj-p2`).update({ cx: 4, cy: 4 }));
+  });
+});
+
+describe('attaques et dégâts (L6.2)', () => {
+  it('1b, 2a : le joueur qui a la main ôte des PV à un monstre, à terre à 0 ; pas d’autre champ, jamais vers le haut', async () => {
+    const g = pour('alice').doc(`${C}/combattants/m-r1-a`);
+    await assertFails(g.update({ pv: 15 }));
+    await assertFails(g.update({ pv: 9, def: 5 }));
+    await assertFails(g.update({ pv: 0, aTerre: false }));
+    await assertFails(g.update({ pv: -1, aTerre: false }));
+    await assertSucceeds(g.update({ pv: 9 }));
+    await assertFails(pour('carol').doc(`${C}/combattants/m-r1-a`).update({ pv: 5 }));
+    await assertSucceeds(g.update({ pv: 0, aTerre: true }));
+    // Pas un PJ : ses PV sont sur sa fiche.
+    await assertFails(pour('alice').doc(`${C}/combattants/pj-p2`).update({ aTerre: true }));
+    // Plus la main : plus de coups.
+    await poser(`${C}/combattants/m-r1-a`, goule());
+    await poser(C, combat({ actif: 'm-r1-a' }));
+    await assertFails(pour('alice').doc(`${C}/combattants/m-r1-a`).update({ pv: 9 }));
+  });
+
+  it('7a : le jet de mort, à son tour, avec l’action principale : une réussite ou un échec de plus ; la troisième réussite remet à zéro, le troisième échec tue', async () => {
+    const alice = pour('alice').doc(`${C}/combattants/pj-p1`);
+    await assertFails(alice.update({ tourActions: 3, mortSucces: 1 }));
+    await assertFails(alice.update({ tourActions: 3, principale: true, mortSucces: 2 }));
+    await assertFails(alice.update({ tourActions: 3, principale: true, mortSucces: 1, mortEchecs: 1 }));
+    await assertSucceeds(alice.update({ tourActions: 3, principale: true, mortSucces: 1 }));
+    await poser(`${C}/combattants/pj-p1`, combattant({ mortSucces: 2, mortEchecs: 2 }));
+    await assertFails(alice.update({ tourActions: 3, principale: true, mortEchecs: 3 }));
+    await assertSucceeds(alice.update({ tourActions: 3, principale: true, mortEchecs: 3, mort: true }));
+    await poser(`${C}/combattants/pj-p1`, combattant({ mortSucces: 2, mortEchecs: 2 }));
+    await assertSucceeds(alice.update({ tourActions: 3, principale: true, mortSucces: 0, mortEchecs: 0 }));
+    await poser(`${C}/combattants/pj-p1`, combattant({ mortSucces: 1, mortEchecs: 2 }));
+    await assertFails(alice.update({ tourActions: 3, principale: true, mortSucces: 0, mortEchecs: 0 }));
+    // Le MJ remet les jets à zéro.
+    await assertSucceeds(pour('bob').doc(`${C}/combattants/pj-p1`).update({ mortSucces: 0, mortEchecs: 0, mort: false }));
+  });
+
+  it('7a : le joueur qui a la main relève un allié Mourant à 1 PV, rien d’autre ; pas un mort, pas sans la main', async () => {
+    const hermione = pour('alice').doc(`${TABLE}/persos/p2`);
+    await assertFails(hermione.update({ pvActuel: 5 }));
+    await assertFails(hermione.update({ pvActuel: 1, nom: 'x' }));
+    await assertSucceeds(hermione.update({ pvActuel: 1 }));
+    await poser(`${TABLE}/persos/p2`, fiche('carol'));
+    await poser(`${C}/combattants/pj-p2`, combattant({ nom: 'Hermione', perso: 'p2', uid: 'carol', mortEchecs: 3, mort: true }));
+    await assertFails(hermione.update({ pvActuel: 1 }));
+    await poser(`${C}/combattants/pj-p2`, combattant({ nom: 'Hermione', perso: 'p2', uid: 'carol' }));
+    await poser(C, combat({ actif: 'm-r1-a' }));
+    await assertFails(hermione.update({ pvActuel: 1 }));
+    // Debout : rien à relever.
+    await poser(C, combat());
+    await poser(`${TABLE}/persos/p2`, fiche('carol', { pvActuel: 3 }));
+    await assertFails(hermione.update({ pvActuel: 1 }));
+    // Hors combat : non plus.
+    await poser(`${TABLE}/persos/p2`, fiche('carol'));
+    await poser(TABLE, { sceneActive: 'cave', combat: null });
+    await assertFails(hermione.update({ pvActuel: 1 }));
+  });
+
+  it('10a : le journal porte le détail d’un jet de combat ; des dégâts subis sans dé, avec leur détail', async () => {
+    const jet = (extra: Record<string, unknown> = {}) => ({ auteurUid: 'alice', auteurNom: 'Alice', perso: 'Kargash', libelle: 'Dégâts subis (physique)', formule: '7', des: [], bonus: 7, total: 6, creeLe: 1, ...extra });
+    await assertFails(pour('alice').doc(`${TABLE}/journal/a`).set(jet()));
+    await assertSucceeds(pour('alice').doc(`${TABLE}/journal/a`).set(jet({ detail: '7 − 1 (armure) = 6' })));
+    await assertFails(pour('alice').doc(`${TABLE}/journal/b`).set(jet({ detail: 'x'.repeat(201) })));
+    await assertFails(pour('alice').doc(`${TABLE}/journal/c`).set(jet({ detail: 3 })));
+  });
+
+  it('4a : le MJ seul libère les portées', async () => {
+    await assertFails(pour('alice').doc(C).update({ porteesLibres: true }));
+    await assertSucceeds(pour('bob').doc(C).update({ porteesLibres: true }));
   });
 });

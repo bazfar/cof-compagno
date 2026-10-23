@@ -276,16 +276,18 @@ service cloud.firestore {
     }
     // Aligné sur schemaJetJournal (src/lib/schemas/journal.ts).
     function jetValide(d) {
-      return d.keys().hasOnly(['auteurUid', 'auteurNom', 'perso', 'libelle', 'formule', 'des', 'bonus', 'total', 'creeLe', 'sort'])
+      return d.keys().hasOnly(['auteurUid', 'auteurNom', 'perso', 'libelle', 'formule', 'des', 'bonus', 'total', 'creeLe', 'sort', 'detail'])
         && d.keys().hasAll(['auteurUid', 'auteurNom', 'libelle', 'formule', 'des', 'bonus', 'total', 'creeLe'])
         && d.auteurUid == request.auth.uid
         && nomValide(d.auteurNom)
         && (!('perso' in d) || nomValide(d.perso))
         && d.libelle is string && d.libelle.size() >= 1 && d.libelle.size() <= 80
         && d.formule is string && d.formule.size() >= 1 && d.formule.size() <= 40
-        && d.des is list && d.des.size() >= ('sort' in d ? 0 : 1) && d.des.size() <= 100
+        && d.des is list && d.des.size() >= ('sort' in d || 'detail' in d ? 0 : 1) && d.des.size() <= 100
         && d.bonus is int && d.total is int && d.creeLe is int
-        && (!('sort' in d) || sortJournalValide(d.sort));
+        && (!('sort' in d) || sortJournalValide(d.sort))
+        // Détail d'un jet de combat (L6.2, 10a), aligné sur schemaJetJournal.
+        && (!('detail' in d) || (d.detail is string && d.detail.size() >= 1 && d.detail.size() <= 200));
     }
     // Sort lancé hors combat (G2a, 9a), aligné sur schemaSortJournal (src/lib/schemas/journal.ts).
     function sortJournalValide(s) {
@@ -554,8 +556,9 @@ service cloud.firestore {
     }
     // Combat (lot L6.1), aligné sur schemaCombat (src/lib/schemas/combat.ts).
     function combatValide(d) {
-      return d.keys().hasOnly(['nom', 'scene', 'rencontre', 'statut', 'round', 'tour', 'actif', 'creeLe', 'closLe'])
-        && d.keys().hasAll(['nom', 'scene', 'rencontre', 'statut', 'round', 'tour', 'actif', 'creeLe', 'closLe'])
+      return d.keys().hasOnly(['nom', 'scene', 'rencontre', 'statut', 'round', 'tour', 'actif', 'porteesLibres', 'creeLe', 'closLe'])
+        && d.keys().hasAll(['nom', 'scene', 'rencontre', 'statut', 'round', 'tour', 'actif', 'porteesLibres', 'creeLe', 'closLe'])
+        && d.porteesLibres is bool
         && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 80
         && d.scene is string && d.scene.size() >= 1 && d.scene.size() <= 100
         && (d.rencontre == null || (d.rencontre is string && d.rencontre.size() <= 100))
@@ -566,8 +569,8 @@ service cloud.firestore {
     }
     // Aligné sur schemaCombattant (src/lib/schemas/combat.ts).
     function combattantValide(d) {
-      return d.keys().hasOnly(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe'])
-        && d.keys().hasAll(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe'])
+      return d.keys().hasOnly(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'def', 'armure', 'resistances', 'mortSucces', 'mortEchecs', 'mort', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe'])
+        && d.keys().hasAll(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'def', 'armure', 'resistances', 'mortSucces', 'mortEchecs', 'mort', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe'])
         && d.genre in ['pj', 'monstre']
         && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 40
         && ((d.genre == 'pj' && d.perso is string && d.uid is string && d.pv == null && d.pvMax == null && d.monstre == null)
@@ -577,7 +580,39 @@ service cloud.firestore {
         && d.aTerre is bool && entierEntre(d.mvtBase, 0, 20)
         && entierEntre(d.tourActions, 0, 99999) && d.principale is bool && d.secondaire is bool
         && entierEntre(d.mvt, 0, 40) && d.sprint is bool && (!d.sprint || d.principale)
+        // L6.2 : défense du monstre (1b, 10a) et jets de mort du PJ (7a).
+        && ((d.genre == 'pj' && d.def == null) || (d.genre == 'monstre' && entierEntre(d.def, -10, 99)))
+        && entierEntre(d.armure, 0, 99)
+        && d.resistances is map && d.resistances.keys().hasOnly(['physique', 'magique']) && d.resistances.keys().hasAll(['physique', 'magique'])
+        && d.resistances.physique is number && d.resistances.physique >= 0 && d.resistances.physique <= 5
+        && d.resistances.magique is number && d.resistances.magique >= 0 && d.resistances.magique <= 5
+        && entierEntre(d.mortSucces, 0, 3) && entierEntre(d.mortEchecs, 0, 3) && d.mort is bool
+        && (d.genre == 'pj' || (d.mortSucces == 0 && d.mortEchecs == 0 && !d.mort))
+        && (!d.mort || d.mortEchecs == 3)
         && d.creeLe is int;
+    }
+    // Un jet de mort (L6.2, 7a) : une réussite ou un échec de plus ; la troisième réussite remet tout à zéro, le troisième échec tue.
+    function jetDeMortValide(n, o) {
+      return (n.mortSucces == o.mortSucces + 1 && n.mortEchecs == o.mortEchecs && !n.mort)
+        || (n.mortSucces == 0 && n.mortEchecs == 0 && o.mortSucces == 2 && !n.mort)
+        || (n.mortEchecs == o.mortEchecs + 1 && n.mortSucces == o.mortSucces && n.mort == (n.mortEchecs == 3));
+    }
+    // Le joueur qui a la main dans le combat en cours (L6.2) : son combattant actif est à lui.
+    function aLaMain(table, combat) {
+      let c = get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)).data;
+      return c.statut == 'encours' && c.actif != null
+        && get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)/combattants/$(c.actif)).data.uid == request.auth.uid;
+    }
+    // Relever un allié Mourant (L6.2, 7a) : le joueur qui a la main dans le combat en cours le remet à 1 PV, rien d'autre.
+    function releveParAllie(table, perso) {
+      let combat = get(/databases/$(database)/documents/tables/$(table)).data.get('combat', null);
+      let allie = /databases/$(database)/documents/tables/$(table)/combats/$(combat)/combattants/$('pj-' + perso);
+      return combat != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pvActuel'])
+        && resource.data.pvActuel != null && resource.data.pvActuel <= 0
+        && request.resource.data.pvActuel == 1
+        && exists(allie) && get(allie).data.mort == false
+        && aLaMain(table, combat);
     }
     // Pendant un combat (L6.1, 8a), le jeton d'un combattant ne bouge qu'à son tour (le MJ, toujours).
     function jetonBougeable(table, jeton) {
@@ -756,7 +791,8 @@ service cloud.firestore {
                 || refonteParJoueur(request.resource.data, resource.data))
               && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['niveau', 'progression'])
                 || monteeValide(request.resource.data, resource.data))
-              && vecuChoisiParJoueur(request.resource.data.vecu, resource.data.vecu)));
+              && vecuChoisiParJoueur(request.resource.data.vecu, resource.data.vecu))
+            || (estJoueur(table) && releveParAllie(table, perso)));
         allow delete: if estMj(table);
 
         // Portrait (L2.3, décision 6a) : un document à part, lu par toute la
@@ -952,10 +988,20 @@ service cloud.firestore {
                 && ((resource.data.initiative == null
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['initiative', 'de'])
                     && request.resource.data.initiative == request.resource.data.de + resource.data.modInit)
-                  || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tourActions', 'principale', 'secondaire', 'mvt', 'sprint'])
+                  || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'mortSucces', 'mortEchecs', 'mort'])
                     && get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)).data.actif == combattant
                     && request.resource.data.tourActions == get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)).data.tour
-                    && request.resource.data.mvt <= request.resource.data.mvtBase + (request.resource.data.sprint ? 2 : 0)))));
+                    && request.resource.data.mvt <= request.resource.data.mvtBase + (request.resource.data.sprint ? 2 : 0)
+                    // Jet de mort (L6.2, 7a) : il prend l'action principale.
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['mortSucces', 'mortEchecs', 'mort'])
+                      || (request.resource.data.principale && jetDeMortValide(request.resource.data, resource.data))))))
+              // L6.2 (1b, 2a) : le joueur qui a la main blesse un monstre ; ses PV ne font que baisser, à terre à 0.
+              || (estJoueur(table)
+                && resource.data.genre == 'monstre'
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pv', 'aTerre'])
+                && request.resource.data.pv < resource.data.pv && request.resource.data.pv >= 0
+                && request.resource.data.aTerre == (request.resource.data.pv == 0)
+                && aLaMain(table, combat)));
         }
       }
 

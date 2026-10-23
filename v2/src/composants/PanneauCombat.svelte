@@ -1,11 +1,14 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
+  import { attaqueDeMonstre } from '../lib/actions/attaques';
   import { ajusterPvMonstre, RefusCombat } from '../lib/actions/combat';
   import { messageErreurJournal } from '../lib/actions/journal';
-  import { ordreCombat } from '../lib/combat/ordre';
+  import { attaquesDuMonstre, horsDePortee, type AttaqueMonstre, type CarteDuCombat } from '../lib/combat/attaque';
+  import { etatPj } from '../lib/combat/mort';
+  import { actionsDuTour, ordreCombat } from '../lib/combat/ordre';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import type { CollectionSuivie, DocumentSuivi } from '../lib/firebase/suivre.svelte';
-  import { suivreBestiaire } from '../lib/magasins/bestiaire.svelte';
+  import { suivreArmesMonstres, suivreBestiaire } from '../lib/magasins/bestiaire.svelte';
   import { suivreTable } from '../lib/magasins/carte.svelte';
   import { suivreCombat, suivreCombattants } from '../lib/magasins/combat.svelte';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
@@ -17,19 +20,28 @@
    * combattant qui joue, ou celui que le MJ choisit.
    *   - Un monstre : ses PV en chiffres, réglés à la main (à 0, il est à
    *     terre et son jeton marqué mort) ; sa DEF, son initiative et ses
-   *     attaques, lues dans le bestiaire (le MJ seul les voit) ; attaques et
-   *     états arrivent avec L6.2 et L6.3.
+   *     attaques, lues dans le bestiaire (le MJ seul les voit) ; les états
+   *     arrivent avec L6.3.
    *   - Un PJ : PV, PP et CA de sa fiche.
    * Dessous, les PJ du combat en un coup d'œil.
+   *
+   * Lot L6.2 (6a, 4a, 10a) : le MJ attaque un PJ avec une attaque du
+   * monstre choisi : d20 + bonus contre la CA de la fiche, puis, touché,
+   * les dégâts de l'arme après la réduction du PJ, d'un clic, au journal.
+   * Hors de portée, le bouton le dit ; le MJ peut passer outre.
    */
+
+  let { carte = null }: { carte?: CarteDuCombat | null } = $props();
 
   const table = suivreTable(session.table);
   const persos = suivrePersos(session.table);
   const bestiaire = suivreBestiaire(session.table);
+  const armes = suivreArmesMonstres(session.table);
   onDestroy(() => {
     table.arreter();
     persos.arreter();
     bestiaire.arreter();
+    armes.arreter();
   });
   const idCombat = $derived(table.etat.donnees?.combat ?? null);
   let suivi = $state<{ c: DocumentSuivi<Combat>; m: CollectionSuivie<Combattant> } | null>(null);
@@ -58,6 +70,36 @@
       .map(({ c, f }) => ({ c, v: vueFiche(f!) })),
   );
   const signe = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
+
+  // ---- Attaques du monstre (L6.2, 6a) ----
+  const listeArmes = $derived(new Map((armes.etat.donnees?.liste ?? []).map((a) => [a.id, a])));
+  const attaquesMonstre = $derived(modele ? attaquesDuMonstre(modele.attaques, listeArmes) : []);
+  const ciblesPj = $derived(pjs.filter(({ c, v }) => etatPj(v.pv.actuel, c) !== 'mort'));
+  let cibleChoisie = $state('');
+  const ciblePj = $derived(ciblesPj.find((x) => x.c.id === cibleChoisie) ?? ciblesPj[0] ?? null);
+  let outrePortee = $state(false);
+  const principalePrise = $derived(!!montre && !!combat && actionsDuTour(montre, combat.tour).principale);
+  const refusPortee = (a: AttaqueMonstre) => (montre && ciblePj && !outrePortee ? horsDePortee(carte?.scene ?? null, carte?.jetons ?? [], montre.id, ciblePj.c.id, a.portee) : null);
+  let resultat = $state('');
+  async function attaquerPj(a: AttaqueMonstre) {
+    const cible = ciblePj;
+    const f = cible?.c.perso ? persos.etat.elements.find((p) => p.id === cible.c.perso) : undefined;
+    if (!montre || !combat || !idCombat || !cible || !f) return;
+    message = '';
+    resultat = '';
+    occupe = true;
+    try {
+      const r = await attaqueDeMonstre(idCombat, combat, montre, a, cible.c, f);
+      resultat =
+        r.net === null
+          ? `${a.nom} : raté (${r.issue.echecCritique ? '1 naturel' : `${r.issue.total} contre CA ${r.issue.def}`}).`
+          : `${a.nom} : ${r.issue.critique ? 'critique' : 'touché'}, ${r.net} dégâts → ${f.nom} ${r.pv} PV${r.pv <= 0 ? ', Mourant' : ''}.`;
+    } catch (e) {
+      message = e instanceof RefusCombat ? e.message : messageErreurJournal(e);
+    } finally {
+      occupe = false;
+    }
+  }
 
   let montant = $state(1);
   let message = $state('');
@@ -97,17 +139,37 @@
           <button aria-label="Rendre des PV" disabled={occupe} onclick={() => pv(1)}>+</button>
           {#if montre.aTerre}<span class="aide">à terre</span>{/if}
         </div>
+        <div class="pastilles">
+          <span>DEF {montre.def}</span>
+          <span>Init {signe(montre.modInit)}</span>
+          {#if montre.armure}<span>Armure {montre.armure}</span>{/if}
+          {#if montre.resistances.physique !== 1}<span>Physique ×{String(montre.resistances.physique).replace('.', ',')}</span>{/if}
+          {#if montre.resistances.magique !== 1}<span>Magie ×{String(montre.resistances.magique).replace('.', ',')}</span>{/if}
+        </div>
         {#if modele}
-          <div class="pastilles">
-            <span>DEF {modele.def}</span>
-            <span>Init {signe(modele.init)}</span>
-          </div>
-          <h3>Attaques · L6.2</h3>
+          <h3>Attaques</h3>
+          {#if ciblesPj.length}
+            <label class="choix"
+              >Cible
+              <select value={ciblePj?.c.id ?? ''} onchange={(e) => (cibleChoisie = e.currentTarget.value)}>
+                {#each ciblesPj as { c, v } (c.id)}<option value={c.id}>{c.nom} · CA {v.stats.ca} · {v.pv.actuel}/{v.pv.max} PV</option>{/each}
+              </select>
+            </label>
+          {/if}
           <div class="attaques">
-            {#each modele.attaques as a, i (i)}<button disabled>{a.nom} {signe(a.bonusAttaque)}</button>{/each}
+            {#each attaquesMonstre as a, i (i)}
+              {@const refus = refusPortee(a)}
+              <button disabled={occupe || !ciblePj || principalePrise || !!refus} onclick={() => attaquerPj(a)}>{a.nom} {signe(a.bonus)} · {a.formule}</button>
+              {#if refus}<span class="aide">{refus}</span>{/if}
+            {:else}
+              <p class="aide">Aucune attaque dont l'arme est dans la liste des armes.</p>
+            {/each}
           </div>
+          <label class="case"><input type="checkbox" bind:checked={outrePortee} /> Passer outre la portée</label>
+          {#if principalePrise}<p class="aide">Action principale prise ce tour.</p>{/if}
+          {#if resultat}<p role="status">{resultat}</p>{/if}
         {:else}
-          <p class="aide">Monstre posé à la main : pas de fiche de bestiaire.</p>
+          <p class="aide">Monstre posé à la main : pas de fiche de bestiaire, ses attaques se jouent au journal.</p>
         {/if}
         <h3>États · L6.3</h3>
         <p class="aide">Poser un état arrive avec L6.3.</p>
@@ -126,7 +188,14 @@
       <h2>Les PJ</h2>
       <ul>
         {#each pjs as { c, v } (c.id)}
-          <li><span>{c.nom}</span><span>{v.pv.actuel}/{v.pv.max} PV{v.pp ? ` · ${v.pp.actuel}/${v.pp.max} PP` : ''}{c.initiative === null ? ' · initiative à lancer' : ''}</span></li>
+          {@const e = etatPj(v.pv.actuel, c)}
+          <li>
+            <span>{c.nom}</span><span
+              >{e === 'mort' ? 'mort' : e === 'mourant' ? `Mourant ${c.mortSucces}✓ ${c.mortEchecs}✗` : `${v.pv.actuel}/${v.pv.max} PV`}{v.pp ? ` · ${v.pp.actuel}/${v.pp.max} PP` : ''}{c.initiative === null
+                ? ' · initiative à lancer'
+                : ''}</span
+            >
+          </li>
         {/each}
       </ul>
     </section>
@@ -213,6 +282,12 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+  }
+  .case {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
   }
   ul {
     list-style: none;

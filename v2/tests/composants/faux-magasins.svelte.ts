@@ -196,3 +196,6 @@ export const magasinsCombat = {
   suivreCombat: () => ({ etat: combatDoc, arreter: () => {} }),
   suivreCombattants: () => ({ etat: combattants, arreter: () => {} }),
 };
+
+/** La carte que la fausse CarteTable rend à l'écran qui la monte (L6.2, portées). */
+export const carteFaux: { valeur: unknown } = { valeur: null };

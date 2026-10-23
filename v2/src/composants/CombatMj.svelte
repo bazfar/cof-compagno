@@ -1,12 +1,15 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { ajouterCombattant, cloreCombat, demarrerCombat, donnerLaMain, RefusCombat } from '../lib/actions/combat';
+  import { remettreJetsDeMort } from '../lib/actions/attaques';
+  import { marquerMort } from '../lib/actions/carte';
+  import { ajouterCombattant, basculerPortees, cloreCombat, demarrerCombat, donnerLaMain, RefusCombat } from '../lib/actions/combat';
   import { messageErreurJournal } from '../lib/actions/journal';
   import { brouillonDuCombat, manquePourDemarrer, type BrouillonCombattant, type FichePourCombat, type MonstrePourCombat } from '../lib/combat/demarrage';
+  import { jetsDeMortARemettre } from '../lib/combat/mort';
   import { aTerreDuCombat, premierActif } from '../lib/combat/ordre';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import type { CollectionSuivie, DocumentSuivi } from '../lib/firebase/suivre.svelte';
-  import { suivreBestiaire } from '../lib/magasins/bestiaire.svelte';
+  import { suivreArmuresMonstres, suivreBestiaire } from '../lib/magasins/bestiaire.svelte';
   import { suivreJetons, suivreTable } from '../lib/magasins/carte.svelte';
   import { suivreCombat, suivreCombattants } from '../lib/magasins/combat.svelte';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
@@ -27,17 +30,27 @@
    *     combattant qui arrive (9a), la clôture (11a).
    * Personne n'a encore la main (aucune initiative au démarrage) : dès que
    * quelqu'un en a une, le client du MJ la lui donne.
+   *
+   * Lot L6.2 (décisions de Thomas du 23/10/2026) :
+   *   - les monstres entrent avec leur DEF, leur armure et leurs
+   *     résistances (1b, 10a) ; un monstre posé à la main attend sa DEF ;
+   *   - « Portées libres » : le MJ laisse attaquer hors de portée (4a) ;
+   *   - le client du MJ tient ce que les joueurs n'écrivent pas : le jeton
+   *     d'un monstre tombé sous leurs coups est marqué mort, et les jets de
+   *     mort d'un PJ relevé ou soigné repartent de zéro (7a).
    */
 
   const table = suivreTable(session.table);
   const persos = suivrePersos(session.table);
   const rencontres = suivreRencontres(session.table);
   const bestiaire = suivreBestiaire(session.table);
+  const armures = suivreArmuresMonstres(session.table);
   onDestroy(() => {
     table.arreter();
     persos.arreter();
     rencontres.arreter();
     bestiaire.arreter();
+    armures.arreter();
   });
   const idScene = $derived(table.etat.donnees?.sceneActive ?? null);
   const idCombat = $derived(table.etat.donnees?.combat ?? null);
@@ -70,10 +83,15 @@
   const fiches = $derived(
     new Map<string, FichePourCombat>(persos.etat.elements.map((p) => [p.id, { nom: p.nom, uid: p.proprietaireUid, modInit: vueFiche(p).stats.initiative, dons: p.dons }])),
   );
-  const modeles = $derived(new Map<string, MonstrePourCombat>(bestiaire.etat.elements.map((m) => [m.id, { init: m.init, pv: m.pv }])));
+  const reductions = $derived(new Map((armures.etat.donnees?.liste ?? []).map((a) => [a.id, a.reduction])));
+  const modeles = $derived(
+    new Map<string, MonstrePourCombat>(
+      bestiaire.etat.elements.map((m) => [m.id, { init: m.init, pv: m.pv, def: m.def, armure: m.armureId ? (reductions.get(m.armureId) ?? 0) : 0, resistances: m.resistances }]),
+    ),
+  );
   const pvParPerso = $derived(new Map(persos.etat.elements.map((p) => [p.id, vueFiche(p).pv])));
   const pvPj = $derived(new Map(combattants.filter((c) => c.perso && pvParPerso.has(c.perso)).map((c) => [c.id, pvParPerso.get(c.perso!)!])));
-  const aTerre = $derived(aTerreDuCombat(combattants, new Map([...pvParPerso].map(([id, pv]) => [id, pv.actuel]))));
+  const aTerre = $derived(aTerreDuCombat(combattants));
 
   // ---- Démarrer (4a) ----
   const rencontresIci = $derived(rencontres.etat.elements.filter((r) => r.scene === idScene && r.statut === 'lancee').sort((a, b) => (b.lanceeLe ?? 0) - (a.lanceeLe ?? 0)));
@@ -81,7 +99,11 @@
   const rencontre = $derived(rencontreChoisie === '' ? null : (rencontresIci.find((r) => r.id === rencontreChoisie) ?? rencontresIci[0] ?? null));
   let nomSaisi = $state<string | null>(null);
   let pvSaisis = $state<Record<string, number>>({});
-  const avecPv = (b: BrouillonCombattant[]) => b.map((c) => (c.genre === 'monstre' && pvSaisis[c.id] ? { ...c, pvMax: pvSaisis[c.id]! } : c));
+  let defSaisies = $state<Record<string, number>>({});
+  const avecPv = (b: BrouillonCombattant[]) =>
+    b.map((c) =>
+      c.genre !== 'monstre' ? c : { ...c, ...(pvSaisis[c.id] ? { pvMax: pvSaisis[c.id]! } : {}), ...(defSaisies[c.id] !== undefined ? { def: defSaisies[c.id]! } : {}) },
+    );
   const brouillon = $derived(avecPv(brouillonDuCombat(jetonsSuivis?.etat.elements ?? [], fiches, rencontre, modeles)));
   const manque = $derived(idScene ? manquePourDemarrer(brouillon) : 'Montre d’abord une scène à la table.');
 
@@ -90,6 +112,7 @@
   const absents = $derived(idCombat ? brouillonDuCombat(jetonsSuivis?.etat.elements ?? [], fiches, rencontreDuCombat, modeles).filter((b) => !combattants.some((c) => c.id === b.id)) : []);
   let arrivant = $state('');
   let pvArrivant = $state<number | null>(null);
+  let defArrivant = $state<number | null>(null);
   const brouillonArrivant = $derived(absents.find((b) => b.id === arrivant) ?? null);
 
   let message = $state('');
@@ -113,6 +136,7 @@
     const ok = await agir(() => demarrerCombat({ nom: nomSaisi ?? rencontre?.nom ?? 'Combat', scene, rencontre: rencontre?.id ?? null, combattants: brouillon }, idCombat));
     if (ok) {
       pvSaisis = {};
+      defSaisies = {};
       nomSaisi = null;
     }
   }
@@ -120,9 +144,11 @@
     const b = brouillonArrivant;
     if (!b || !idCombat) return;
     const id = idCombat;
-    if (await agir(() => ajouterCombattant(id, b.genre === 'monstre' && pvArrivant ? { ...b, pvMax: pvArrivant } : b))) {
+    const complet = b.genre !== 'monstre' ? b : { ...b, ...(pvArrivant ? { pvMax: pvArrivant } : {}), ...(defArrivant !== null ? { def: defArrivant } : {}) };
+    if (await agir(() => ajouterCombattant(id, complet))) {
       arrivant = '';
       pvArrivant = null;
+      defArrivant = null;
     }
   }
   async function clore() {
@@ -139,6 +165,32 @@
     if (!premier || mainDonnee === `${combat.tour}-${premier}`) return;
     mainDonnee = `${combat.tour}-${premier}`;
     agir(() => donnerLaMain(idCombat, combat, premier));
+  });
+
+  // L6.2 : un monstre tombé sous les coups d'un joueur (ou relevé) — son jeton suit.
+  const jetonsMarques = new Set<string>();
+  $effect(() => {
+    if (!combat || combat.statut !== 'encours' || !idScene || idScene !== combat.scene) return;
+    const scene = idScene;
+    for (const c of combattants) {
+      const j = jetonsSuivis?.etat.elements.find((x) => x.id === c.id);
+      if (c.genre !== 'monstre' || !j || !!j.mort === c.aTerre || jetonsMarques.has(`${c.id}:${c.aTerre}`)) continue;
+      jetonsMarques.add(`${c.id}:${c.aTerre}`);
+      jetonsMarques.delete(`${c.id}:${!c.aTerre}`);
+      agir(() => marquerMort(scene, c.id, c.aTerre));
+    }
+  });
+  // L6.2 (7a) : un PJ relevé ou soigné repart de zéro jet de mort.
+  const jetsRemis = new Set<string>();
+  $effect(() => {
+    if (!combat || !idCombat || combat.statut !== 'encours') return;
+    const id = idCombat;
+    for (const c of combattants) {
+      const cle = `${c.id}:${c.mortSucces}:${c.mortEchecs}:${c.mort}`;
+      if (!jetsDeMortARemettre(c, c.perso ? pvParPerso.get(c.perso)?.actuel : undefined) || jetsRemis.has(cle)) continue;
+      jetsRemis.add(cle);
+      agir(() => remettreJetsDeMort(id, c));
+    }
   });
 </script>
 
@@ -161,10 +213,22 @@
             {#if brouillonArrivant?.genre === 'monstre' && brouillonArrivant.pvMax === null}
               <label>PV <input type="number" min="1" max="9999" bind:value={pvArrivant} /></label>
             {/if}
-            <button class="petit" disabled={occupe || !brouillonArrivant || (brouillonArrivant.genre === 'monstre' && brouillonArrivant.pvMax === null && !pvArrivant)}>Ajouter</button>
+            {#if brouillonArrivant?.genre === 'monstre' && brouillonArrivant.def === null}
+              <label>DEF <input type="number" min="-10" max="99" bind:value={defArrivant} /></label>
+            {/if}
+            <button
+              class="petit"
+              disabled={occupe ||
+                !brouillonArrivant ||
+                (brouillonArrivant.genre === 'monstre' && ((brouillonArrivant.pvMax === null && !pvArrivant) || (brouillonArrivant.def === null && defArrivant === null)))}>Ajouter</button
+            >
           </form>
         </details>
       {/if}
+      <label class="case"
+        ><input type="checkbox" checked={combat.porteesLibres} disabled={occupe} onchange={(e) => agir(() => basculerPortees(idCombat, e.currentTarget.checked))} /> Portées libres : les joueurs
+        attaquent hors de portée</label
+      >
       <button class="discret" disabled={occupe} onclick={clore}>Clore le combat</button>
     </section>
     <OrdreCombat role="mj" {idCombat} {combat} {combattants} {aTerre} {pvPj} />
@@ -185,7 +249,7 @@
       </label>
       <label>Nom <input maxlength="80" value={nomSaisi ?? rencontre?.nom ?? 'Combat'} oninput={(e) => (nomSaisi = e.currentTarget.value)} /></label>
       <table>
-        <thead><tr><th>Combattant</th><th>Init.</th><th>PV</th></tr></thead>
+        <thead><tr><th>Combattant</th><th>Init.</th><th>PV</th><th>DEF</th></tr></thead>
         <tbody>
           {#each brouillon as c (c.id)}
             <tr>
@@ -202,6 +266,24 @@
                     aria-label="PV de {c.nom}"
                     value={c.pvMax ?? ''}
                     oninput={(e) => (pvSaisis = { ...pvSaisis, [c.id]: Number(e.currentTarget.value) || 0 })}
+                  />
+                {/if}
+              </td>
+              <td>
+                {#if c.genre === 'pj'}
+                  <span class="aide">sa CA</span>
+                {:else}
+                  <input
+                    type="number"
+                    min="-10"
+                    max="99"
+                    aria-label="DEF de {c.nom}"
+                    value={c.def ?? ''}
+                    oninput={(e) => {
+                      const v = e.currentTarget.value;
+                      const { [c.id]: _retire, ...reste } = defSaisies;
+                      defSaisies = v === '' ? reste : { ...reste, [c.id]: Number(v) };
+                    }}
                   />
                 {/if}
               </td>
@@ -253,7 +335,12 @@
     border-bottom: 1px solid var(--couleur-bordure-douce);
   }
   td input {
-    width: 72px;
+    width: 64px;
+  }
+  .case {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
   }
   form {
     display: flex;

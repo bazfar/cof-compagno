@@ -16,6 +16,8 @@
    *     l'action principale : 7a) et « Finir mon tour » ;
    *   - le MJ lance l'initiative d'un PJ absent, finit le tour de celui qui
    *     joue et donne la main à qui il veut (6a).
+   * Lot L6.2 (7a) : un PJ à 0 PV est dit Mourant et garde sa place ; mort,
+   * il est barré et sauté.
    */
 
   let {
@@ -30,7 +32,7 @@
     idCombat: string;
     combat: Combat;
     combattants: readonly AvecId<Combattant>[];
-    /** Ceux dont le tour est sauté (monstres à 0 PV, PJ à 0 PV sur leur fiche). */
+    /** Ceux dont le tour est sauté (monstres à 0 PV, PJ morts). */
     aTerre: ReadonlySet<string>;
     /** PV des PJ, lus sur leur fiche, par identifiant de combattant. */
     pvPj: ReadonlyMap<string, { actuel: number; max: number }>;
@@ -70,7 +72,9 @@
         <span class="init">{c.initiative ?? '—'}</span>
         <span class="nom">{c.nom}{c.id === combat.actif ? (c.uid === session.uid && role === 'joueur' ? ' · à toi' : ' · joue') : ''}</span>
         {#if terre}
-          <span class="pv">à terre</span>
+          <span class="pv">{c.genre === 'pj' ? 'mort' : 'à terre'}</span>
+        {:else if pv && c.genre === 'pj' && pv.actuel <= 0}
+          <span class="pv mourant">Mourant {c.mortSucces}✓ {c.mortEchecs}✗</span>
         {:else if pv}
           <span class="pv">{pv.actuel}/{pv.max}</span>
         {/if}
@@ -162,6 +166,10 @@
   }
   .pv {
     font-size: 13px;
+  }
+  .mourant {
+    color: var(--couleur-danger);
+    font-weight: 700;
   }
   li button {
     width: 100%;
