@@ -581,7 +581,10 @@ service cloud.firestore {
     }
     // Pendant un combat (L6.1, 8a), le jeton d'un combattant ne bouge qu'à son tour (le MJ, toujours).
     function jetonBougeable(table, jeton) {
-      let combat = get(/databases/$(database)/documents/tables/$(table)).data.get('combat', null);
+      // Le document de la table peut ne pas exister alors que ses
+      // sous-collections sont là : `get` rendrait null et `.data` lèverait,
+      // refusant tout déplacement. On le garde par `exists`, comme ailleurs.
+      let combat = exists(/databases/$(database)/documents/tables/$(table)) ? get(/databases/$(database)/documents/tables/$(table)).data.get('combat', null) : null;
       return combat == null
         || !exists(/databases/$(database)/documents/tables/$(table)/combats/$(combat)/combattants/$(jeton))
         || get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)).data.actif == jeton;
