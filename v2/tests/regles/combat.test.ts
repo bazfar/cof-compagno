@@ -15,6 +15,11 @@ import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
  * Lot L6.2 : le joueur qui a la main blesse un monstre (1b, 2a), fait son
  * jet de mort (7a), relève un allié (7a) ; le journal porte le détail
  * d'un jet de combat (10a) ; le MJ libère les portées (4a).
+ *
+ * Lot L6.3 : le joueur qui a la main pose et retire des états sur
+ * n'importe quel combattant (4b), tient ses usages et sa visée, repousse
+ * d'une case le jeton d'un combattant (12a) et blesse un allié dans une
+ * collision.
  */
 const TABLE = 'tables/t1';
 const C = `${TABLE}/combats/c1`;
@@ -32,7 +37,7 @@ const combat = (extra: Record<string, unknown> = {}) => ({
 });
 const combattant = (extra: Record<string, unknown> = {}) => ({
   genre: 'pj', nom: 'Kargash', perso: 'p1', uid: 'alice', monstre: null, modInit: 2, initiative: 14, de: 12, pv: null, pvMax: null, aTerre: false,
-  mvtBase: 5, def: null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false,
+  mvtBase: 5, def: null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false,
   tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...extra,
 });
 const goule = (extra: Record<string, unknown> = {}) =>
@@ -207,5 +212,44 @@ describe('attaques et dégâts (L6.2)', () => {
   it('4a : le MJ seul libère les portées', async () => {
     await assertFails(pour('alice').doc(C).update({ porteesLibres: true }));
     await assertSucceeds(pour('bob').doc(C).update({ porteesLibres: true }));
+  });
+});
+
+describe('états, ressources, poussées (L6.3)', () => {
+  const etat = (id: string) => ({ id, rounds: 1, cumul: 1, charges: null, des: null, source: 'Kargash' });
+
+  it('4b : le joueur qui a la main pose un état sur un monstre et sur un allié ; sans la main, non ; rien d’autre', async () => {
+    await assertSucceeds(pour('alice').doc(`${C}/combattants/m-r1-a`).update({ etats: [etat('etourdi')] }));
+    await assertSucceeds(pour('alice').doc(`${C}/combattants/pj-p2`).update({ etats: [etat('protege')] }));
+    await assertFails(pour('alice').doc(`${C}/combattants/pj-p2`).update({ etats: [], usages: { x: 1 } }));
+    await assertFails(pour('carol').doc(`${C}/combattants/m-r1-a`).update({ etats: [] }));
+    await assertFails(pour('bob').doc(`${C}/combattants/m-r1-a`).update({ etats: Array.from({ length: 21 }, () => etat('x')) }));
+  });
+
+  it('ses usages, son gain par touche et sa visée, à son tour', async () => {
+    const alice = pour('alice').doc(`${C}/combattants/pj-p1`);
+    await assertSucceeds(alice.update({ tourActions: 3, principale: true, usages: { attaqueSpeciale: 1 }, gainTouche: { round: 1, montant: 1 }, visee: true }));
+    await assertFails(alice.update({ tourActions: 3, debutTour: 3 }));
+    await assertFails(alice.update({ tourActions: 3, gainTouche: { round: 1, montant: 1, x: 1 } }));
+    await assertSucceeds(pour('bob').doc(`${C}/combattants/pj-p1`).update({ debutTour: 3 }));
+  });
+
+  it('12a : il repousse d’une case le jeton d’un combattant ; pas de deux ; sans la main, non', async () => {
+    await poser(`${TABLE}/scenes/cave/jetons/m-r1-a`, { genre: 'monstre', nom: 'Goule', couleur: '#c0392b', cx: 5, cy: 5, proprietaire: null, creeLe: 1 });
+    const g = pour('alice').doc(`${TABLE}/scenes/cave/jetons/m-r1-a`);
+    await assertFails(g.update({ cx: 7, cy: 5 }));
+    await assertFails(g.update({ cx: 6, cy: 6, nom: 'x' }));
+    await assertSucceeds(g.update({ cx: 6, cy: 6 }));
+    await assertFails(pour('carol').doc(`${TABLE}/scenes/cave/jetons/m-r1-a`).update({ cx: 5, cy: 5 }));
+  });
+
+  it('collision : il ôte des PV à un allié du combat, jamais vers le haut ; sans la main, non', async () => {
+    await poser(`${TABLE}/persos/p2`, fiche('carol', { pvActuel: 10 }));
+    const h = pour('alice').doc(`${TABLE}/persos/p2`);
+    await assertFails(h.update({ pvActuel: 12 }));
+    await assertFails(h.update({ pvActuel: 7, nom: 'x' }));
+    await assertSucceeds(h.update({ pvActuel: 7 }));
+    await poser(C, combat({ actif: 'm-r1-a' }));
+    await assertFails(h.update({ pvActuel: 5 }));
   });
 });

@@ -1,13 +1,34 @@
 import { doc, runTransaction, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/client';
-import { degatsSurMonstre, formuleDegats, lancerDegats, resoudreAttaque, texteAttaque, type AttaqueMonstre, type DegatsAppliques, type IssueAttaque, type TypeDegats } from '../combat/attaque';
+import { degatsSurMonstre, formuleDegats, lancerDegats, resoudreAttaque, texteAttaque, type AttaqueMonstre, type CarteDuCombat, type DegatsAppliques, type IssueAttaque, type TypeDegats } from '../combat/attaque';
 import { degatsSurPj, type TypeDegatsSubis } from '../combat/attaques-pj';
+import {
+  affaibli,
+  avantageAttaque,
+  ciblable,
+  consommerCharge,
+  contactSeulement,
+  d20Attaque,
+  degatsParTour,
+  ETATS_V1_VERS_REFONTE,
+  etatDuCatalogue,
+  leurre,
+  modificateur,
+  peutAgir,
+  poserEtat,
+  retirerEtat,
+  rompre,
+} from '../combat/etats';
 import { etatPj, jetDeMort, texteJetDeMort, type IssueJetDeMort } from '../combat/mort';
 import { actionsDuTour } from '../combat/ordre';
+import { DEGATS_COLLISION_DECOR, DEGATS_COLLISION_JETON, pousser } from '../combat/poussee';
+import { champsJauges, gainParDegatsSubis, gainParTouche, gainParVingtNaturel, payer, type Jauges } from '../combat/ressources';
+import type { AttaqueSpeciale } from '../combat/speciales';
+import { appliquerAffaibli } from '../effets/resolution';
 import { vueFiche } from '../fiche/vue-fiche';
 import { formuleTest, type Jet } from '../regles/des';
 import { RefusEquipement, utiliser } from '../regles/equipement';
-import { schemaCombattant, type Combat, type Combattant } from '../schemas/combat';
+import { schemaCombattant, type Combat, type Combattant, type EtatCombat } from '../schemas/combat';
 import type { Fiche } from '../schemas/fiche';
 import { session } from '../session.svelte';
 import { RefusCombat } from './combat';
@@ -32,13 +53,25 @@ import { champsDuChangement } from './persos';
  *   - 10a : chaque jet arrive au journal avec son détail.
  * Le jeton d'un monstre tombé par la main d'un joueur est marqué mort par
  * le client du MJ (CombatMj), seul à écrire les jetons d'un autre.
+ *
+ * Lot L6.3 (décisions de Thomas du 23/10/2026) : les états jouent dans
+ * chaque attaque (modificateurs, avantage, Double, Aveuglé, rupture, 6a) ;
+ * l'attaque d'un monstre pose son état à la touche (8) ; les ressources de
+ * classe se paient et se gagnent (9a) ; les attaques spéciales posent leur
+ * état ou repoussent, collision comprise (11a, 12a) ; Précision et Décharge
+ * (13a) ; le MJ joue les dégâts de début de tour ; le MJ et le joueur
+ * posent et retirent des états à la main (4b).
  */
 
 type AvecId<T> = T & { id: string };
 
 const refCombattant = (idCombat: string, c: string) => doc(db, `tables/${session.table}/combats/${idCombat}/combattants/${c}`);
 const refPerso = (id: string) => doc(db, `tables/${session.table}/persos/${id}`);
+const refJeton = (scene: string, id: string) => doc(db, `tables/${session.table}/scenes/${scene}/jetons/${id}`);
 const d20 = (alea: () => number) => 1 + Math.floor(alea() * 20);
+const memes = (a: readonly EtatCombat[], b: readonly EtatCombat[]) => JSON.stringify(a) === JSON.stringify(b);
+/** Les gains de ressource d'une fiche ne s'écrivent que par son joueur ou le MJ. */
+const peutEcrireJauges = (f: Fiche) => session.etape === 'mj' || f.proprietaireUid === session.uid;
 
 /** L'action principale du tour, refusée si elle est déjà prise (5a, 7a). */
 function principaleLibre(combat: Pick<Combat, 'tour'>, c: Combattant, quoi: string): Pick<Combattant, 'principale' | 'secondaire' | 'mvt' | 'sprint'> {
@@ -49,26 +82,117 @@ function principaleLibre(combat: Pick<Combat, 'tour'>, c: Combattant, quoi: stri
 
 const avecPrincipale = (combat: Pick<Combat, 'tour'>, a: Pick<Combattant, 'principale' | 'secondaire' | 'mvt' | 'sprint'>) => ({ tourActions: combat.tour, ...a, principale: true });
 
+/** Ce que les états de l'attaquant lui interdisent (6a, 7b) : agir, viser loin. */
+function peutAttaquer(attaquant: Combattant, mode: 'contact' | 'distance'): void {
+  const agit = peutAgir(attaquant.etats);
+  if (agit !== 'oui') throw new RefusCombat(agit === 'non' ? `${attaquant.nom} ne peut pas agir ce tour.` : `${attaquant.nom} ne peut que se déplacer ce tour.`);
+  if (mode === 'distance' && contactSeulement(attaquant.etats)) throw new RefusCombat(`${attaquant.nom} n’attaque qu’au contact.`);
+}
+
+/**
+ * Le jet d'attaque, états compris (6a) : bonus et DEF modifiés, avantage ou
+ * désavantage, Double qui fait rater d'office ; les états rompus ou
+ * consommés de part et d'autre.
+ */
+function jetAttaque(
+  attaquant: Combattant,
+  cible: Combattant,
+  a: { bonus: number; seuilCritique: number; mode: 'contact' | 'distance' },
+  defBase: number,
+  alea: () => number,
+): { issue: IssueAttaque | null; leurre: string | null; etatsAttaquant: EtatCombat[]; etatsCible: EtatCombat[] } {
+  let etatsAttaquant = rompre(attaquant.etats, 'sesAttaques');
+  let etatsCible = rompre(cible.etats, 'estAttaque');
+  const l = leurre(cible.etats);
+  if (l) return { issue: null, leurre: l.id, etatsAttaquant, etatsCible: consommerCharge(etatsCible, l.id) };
+  const av = avantageAttaque(attaquant.etats, cible.etats);
+  for (const id of av.consommes) etatsAttaquant = retirerEtat(etatsAttaquant, id);
+  const d = d20Attaque(alea, av.avantage);
+  const bonus = a.bonus + modificateur(attaquant.etats, ['attaque', a.mode === 'contact' ? 'attaqueContact' : 'attaqueDistance']);
+  const def = defBase + modificateur(cible.etats, ['DEF']);
+  const issue = { ...resoudreAttaque(d.garde, bonus, def, a.seuilCritique), ...(d.des.length > 1 ? { des: d.des } : {}) };
+  return { issue, leurre: null, etatsAttaquant, etatsCible };
+}
+
+/** L'attaque d'arme jouée par le joueur : la normale (L6.2) ou une spéciale (L6.3). */
+export interface AttaqueJouee {
+  nom: string;
+  bonus: number;
+  seuilCritique: number;
+  mode: 'contact' | 'distance';
+}
+
 /**
  * Le joueur attaque un monstre (1b, 3a, 5a) : d20 + bonus contre sa DEF,
  * au journal ; l'action principale est prise. Rend l'issue : touché, le
- * joueur lance ensuite ses dégâts (2a).
+ * joueur lance ensuite ses dégâts (2a). Lot L6.3 : `speciale` paie son coût
+ * (9a, 10a) et, touché, pose son état ou repousse (11a, 12a) ; un coup qui
+ * touche rapporte la ressource « par touche » (Ki), un 20 naturel la sienne
+ * (Inspiration).
  */
 export async function attaquer(
   idCombat: string,
-  combat: Pick<Combat, 'tour'>,
+  combat: Pick<Combat, 'tour' | 'round' | 'scene'>,
   attaquant: AvecId<Combattant>,
   cible: AvecId<Combattant>,
-  a: { nom: string; bonus: number; seuilCritique: number },
-  perso: string,
+  a: AttaqueJouee,
+  fiche: AvecId<Fiche>,
   alea: () => number = Math.random,
+  speciale: { s: AttaqueSpeciale; estoc?: 'etat' | 'repousse'; carte?: CarteDuCombat | null; fiches?: ReadonlyMap<string, AvecId<Fiche>>; combattants?: readonly AvecId<Combattant>[] } | null = null,
 ): Promise<IssueAttaque> {
   if (cible.genre !== 'monstre' || cible.def === null) throw new RefusCombat('On attaque un monstre.');
   if (cible.aTerre) throw new RefusCombat(`${cible.nom} est déjà à terre.`);
+  if (!ciblable(cible.etats)) throw new RefusCombat(`${cible.nom} ne peut pas être pris pour cible.`);
+  peutAttaquer(attaquant, a.mode);
   const actions = principaleLibre(combat, attaquant, 'attaque');
-  const issue = resoudreAttaque(d20(alea), a.bonus, cible.def, a.seuilCritique);
-  await updateDoc(refCombattant(idCombat, attaquant.id), avecPrincipale(combat, actions));
-  await noterJet(`${a.nom} sur ${cible.nom}`, formuleTest(a.bonus), { des: [issue.de], faces: 20, bonus: a.bonus, total: issue.total }, perso, texteAttaque(issue));
+  // Le coût d'une spéciale (9a, 10a) : sa ressource, ou son usage du combat.
+  let jauges: Jauges = {};
+  let usages = attaquant.usages;
+  if (speciale) {
+    const c = speciale.s.cout;
+    if (c === 'unParCombat') {
+      if (attaquant.usages.attaqueSpeciale) throw new RefusCombat('L’attaque spéciale du combat est déjà faite.');
+      usages = { ...usages, attaqueSpeciale: combat.round };
+    } else {
+      const p = payer(fiche, c.ressource, c.montant);
+      if (typeof p === 'string') throw new RefusCombat(p);
+      jauges = p;
+    }
+  }
+  const j = jetAttaque(attaquant, cible, a, cible.def, alea);
+  const libelle = `${speciale ? speciale.s.nom : a.nom} sur ${cible.nom}`;
+  const moi: Record<string, unknown> = { ...avecPrincipale(combat, actions) };
+  if (!memes(j.etatsAttaquant, attaquant.etats)) moi.etats = j.etatsAttaquant;
+  if (usages !== attaquant.usages) moi.usages = usages;
+  let etatsCible = j.etatsCible;
+  const issue = j.issue ?? { de: 0, bonus: a.bonus, total: 0, def: cible.def, touche: false, critique: false, echecCritique: false };
+  // Gains de ressource (9a) : par touche (Ki, plafonné au round), sur un 20 naturel (Inspiration).
+  if (issue.touche) {
+    const g = gainParTouche(fiche, attaquant, combat.round);
+    if (g) {
+      jauges = { ...jauges, ...g.jauges };
+      moi.gainTouche = g.gainTouche;
+    }
+  }
+  if (j.issue) jauges = { ...jauges, ...gainParVingtNaturel(fiche, j.issue.de) };
+  // L'état de la spéciale, touché (11a ; Coup d'estoc : au choix, 12a).
+  let pousse = false;
+  if (speciale && issue.touche) {
+    const e = speciale.s.effet;
+    if (e.type === 'etat' || (e.type === 'estoc' && speciale.estoc !== 'repousse')) etatsCible = poserEtat(etatsCible, e.etat, e.rounds, fiche.nom);
+    if (e.type === 'repousse' || (e.type === 'estoc' && speciale.estoc === 'repousse')) pousse = true;
+  }
+  const lot = writeBatch(db);
+  lot.update(refCombattant(idCombat, attaquant.id), moi);
+  if (!memes(etatsCible, cible.etats)) lot.update(refCombattant(idCombat, cible.id), { etats: etatsCible });
+  if (Object.keys(jauges).length) lot.update(refPerso(fiche.id), champsJauges(jauges));
+  await lot.commit();
+  if (j.leurre) {
+    await noterJet(libelle, formuleTest(a.bonus), { des: [], faces: 0, bonus: a.bonus, total: 0 }, fiche.nom, `${etatDuCatalogue(j.leurre)?.nom ?? j.leurre} : l’attaque rate d’office.`);
+    return issue;
+  }
+  await noterJet(libelle, formuleTest(issue.bonus), { des: issue.des ?? [issue.de], faces: 20, bonus: issue.bonus, total: issue.total }, fiche.nom, texteAttaque(issue));
+  if (pousse && speciale?.carte) await repousser(idCombat, combat.scene, attaquant, cible, speciale.carte, speciale.combattants ?? [], speciale.fiches ?? new Map(), fiche.nom, alea);
   return issue;
 }
 
@@ -76,7 +200,9 @@ export async function attaquer(
  * Les dégâts sur un monstre (2a, 3a, 10a) : la formule de l'arme, ses dés
  * doublés sur un critique ; l'armure puis la résistance du monstre ; ses
  * PV lus et écrits dans une transaction (deux coups au même moment ne
- * s'écrasent pas).
+ * s'écrasent pas). Lot L6.3 : les états de l'attaquant (+ dégâts,
+ * Affaibli) et sa Précision ; les dégâts rompent les états de la cible
+ * que les dégâts rompent (Endormi).
  */
 export async function infligerDegats(
   idCombat: string,
@@ -84,30 +210,164 @@ export async function infligerDegats(
   d: { nom: string; formule: string; typeDegats: TypeDegats; critique: boolean },
   perso: string,
   alea: () => number = Math.random,
+  attaquant: AvecId<Combattant> | null = null,
 ): Promise<{ jet: Jet; degats: DegatsAppliques; pv: number }> {
-  const formule = formuleDegats(d.formule, d.critique);
+  const plus = attaquant ? modificateur(attaquant.etats, ['degats']) : 0;
+  const visee = attaquant?.visee ? (d.critique ? '+1d10' : '+1d6') : '';
+  const formule = `${formuleDegats(d.formule, d.critique)}${visee}${plus ? (plus > 0 ? `+${plus}` : plus) : ''}`;
   const jet = lancerDegats(formule, alea);
   if (!jet) throw new RefusCombat(`Formule de dégâts illisible : « ${formule} ».`);
+  const faible = attaquant ? affaibli(attaquant.etats) : null;
   const r = await runTransaction(db, async (tx) => {
     const lu = await tx.get(refCombattant(idCombat, cible.id));
     if (!lu.exists()) throw new RefusCombat(`${cible.nom} n’est plus dans le combat.`);
     const c = schemaCombattant.parse(lu.data());
     if (c.pv === null) throw new RefusCombat('On blesse un monstre.'); // un PJ n'a pas de PV ici : ils sont sur sa fiche
-    const degats = degatsSurMonstre(jet.total, c, d.typeDegats);
-    const pv = Math.max(0, c.pv - degats.net);
-    tx.update(refCombattant(idCombat, cible.id), { pv, aTerre: pv <= 0 });
+    const brut = degatsSurMonstre(jet.total, c, d.typeDegats);
+    const net = faible ? appliquerAffaibli(brut.net, faible.pourcent, faible.minimum) : brut.net;
+    const degats = { ...brut, net, detail: net !== brut.net ? `${brut.detail}, affaibli : ${net}` : brut.detail };
+    const pv = Math.max(0, c.pv - net);
+    const etats = net > 0 ? rompre(c.etats, 'degatsSubis') : c.etats;
+    tx.update(refCombattant(idCombat, cible.id), { pv, aTerre: pv <= 0, ...(memes(etats, c.etats) ? {} : { etats }) });
+    if (attaquant?.visee) tx.update(refCombattant(idCombat, attaquant.id), { visee: false });
     return { degats, pv, pvMax: c.pvMax! };
   });
   const suite = r.pv <= 0 ? `${cible.nom} tombe` : `${cible.nom} ${r.pv}/${r.pvMax} PV`;
-  await noterJet(`Dégâts ${d.nom} sur ${cible.nom}${d.critique ? ' (critique)' : ''}`, formule, jet, perso, `${r.degats.detail} → ${suite}`);
+  await noterJet(`Dégâts ${d.nom} sur ${cible.nom}${d.critique ? ' (critique)' : ''}`, formule.slice(0, 40), jet, perso, `${r.degats.detail} → ${suite}`);
   return { jet, degats: r.degats, pv: r.pv };
+}
+
+/**
+ * Blesser un combattant hors d'une attaque (collision, dégâts de début de
+ * tour) : un monstre, ses PV en transaction (armure et résistance) ; un PJ,
+ * sa fiche (sa réduction), son gain « par dégâts subis » si on peut
+ * l'écrire. Les états que les dégâts rompent tombent. Au journal.
+ */
+export async function blesser(
+  idCombat: string,
+  c: AvecId<Combattant>,
+  fiche: AvecId<Fiche> | null,
+  jet: Jet,
+  formule: string,
+  type: TypeDegats,
+  libelle: string,
+  auteur: string,
+): Promise<number> {
+  if (c.genre === 'monstre') {
+    const r = await runTransaction(db, async (tx) => {
+      const lu = await tx.get(refCombattant(idCombat, c.id));
+      if (!lu.exists()) throw new RefusCombat(`${c.nom} n’est plus dans le combat.`);
+      const m = schemaCombattant.parse(lu.data());
+      const d = degatsSurMonstre(jet.total, m, type);
+      const pv = Math.max(0, (m.pv ?? 0) - d.net);
+      const etats = d.net > 0 ? rompre(m.etats, 'degatsSubis') : m.etats;
+      tx.update(refCombattant(idCombat, c.id), { pv, aTerre: pv <= 0, ...(memes(etats, m.etats) ? {} : { etats }) });
+      return { d, pv, pvMax: m.pvMax! };
+    });
+    await noterJet(libelle, formule, jet, auteur, `${r.d.detail} → ${c.nom} ${r.pv <= 0 ? 'tombe' : `${r.pv}/${r.pvMax} PV`}`);
+    return r.d.net;
+  }
+  if (!fiche) throw new RefusCombat(`La fiche de ${c.nom} manque.`);
+  const vue = vueFiche(fiche);
+  const d = degatsSurPj(fiche, jet.total, type);
+  const pv = Math.max(0, vue.pv.actuel - d.net);
+  const lot = writeBatch(db);
+  const gain = peutEcrireJauges(fiche) ? gainParDegatsSubis(fiche, d.net) : {};
+  lot.update(refPerso(fiche.id), { pvActuel: pv, ...champsJauges(gain) });
+  const etats = d.net > 0 ? rompre(c.etats, 'degatsSubis') : c.etats;
+  if (!memes(etats, c.etats)) lot.update(refCombattant(idCombat, c.id), { etats });
+  await lot.commit();
+  await noterJet(libelle, formule, jet, auteur, `${d.detail} → ${fiche.nom} ${pv}/${vue.pv.max} PV${pv <= 0 ? ', Mourant' : ''}`);
+  return d.net;
+}
+
+/**
+ * Repousser d'une case (12a) : le jeton de la cible recule dans l'axe de
+ * l'attaquant ; une case prise, c'est la collision : 1d4 à chacun contre un
+ * jeton, 1d6 au poussé contre le décor.
+ */
+export async function repousser(
+  idCombat: string,
+  scene: string,
+  attaquant: AvecId<Combattant>,
+  cible: AvecId<Combattant>,
+  carte: CarteDuCombat,
+  combattants: readonly AvecId<Combattant>[],
+  fiches: ReadonlyMap<string, AvecId<Fiche>>,
+  auteur: string,
+  alea: () => number = Math.random,
+): Promise<'pousse' | 'jeton' | 'decor' | null> {
+  const p = pousser(carte.scene, carte.jetons, attaquant.id, cible.id);
+  if (!p) return null;
+  if ('vers' in p) {
+    await updateDoc(refJeton(scene, cible.id), { cx: p.vers.cx, cy: p.vers.cy });
+    return 'pousse';
+  }
+  const ficheDe = (c: AvecId<Combattant>) => (c.perso ? (fiches.get(c.perso) ?? null) : null);
+  const formule = p.collision === 'jeton' ? DEGATS_COLLISION_JETON : DEGATS_COLLISION_DECOR;
+  await blesser(idCombat, cible, ficheDe(cible), lancerDegats(formule, alea)!, formule, 'physique', `Collision : ${cible.nom} ${p.collision === 'jeton' ? 'heurte un jeton' : 'heurte le décor'}`, auteur);
+  const autre = p.collision === 'jeton' ? combattants.find((c) => c.id === p.avec) : undefined;
+  if (autre) await blesser(idCombat, autre, ficheDe(autre), lancerDegats(formule, alea)!, formule, 'physique', `Collision : ${autre.nom} est heurté`, auteur);
+  return p.collision;
+}
+
+/** Précision (13a) : il vise, l'action principale et le coût de la spéciale ; sa prochaine attaque gagne +1d6 (+1d10 sur un critique). */
+export async function viser(idCombat: string, combat: Pick<Combat, 'tour' | 'round'>, c: AvecId<Combattant>, s: AttaqueSpeciale, fiche: AvecId<Fiche>): Promise<void> {
+  peutAttaquer(c, 'distance');
+  const actions = principaleLibre(combat, c, 'visée');
+  const lot = writeBatch(db);
+  const moi: Record<string, unknown> = { ...avecPrincipale(combat, actions), visee: true };
+  if (s.cout === 'unParCombat') {
+    if (c.usages.attaqueSpeciale) throw new RefusCombat('L’attaque spéciale du combat est déjà faite.');
+    moi.usages = { ...c.usages, attaqueSpeciale: combat.round };
+  } else {
+    const p = payer(fiche, s.cout.ressource, s.cout.montant);
+    if (typeof p === 'string') throw new RefusCombat(p);
+    lot.update(refPerso(fiche.id), champsJauges(p));
+  }
+  lot.update(refCombattant(idCombat, c.id), moi);
+  await lot.commit();
+  await noterJet('Précision', '0', { des: [], faces: 0, bonus: 0, total: 0 }, fiche.nom, `${fiche.nom} vise : sa prochaine attaque gagne +1d6 aux dégâts (+1d10 sur un critique).`);
+}
+
+/** Décharge (13a) : trois balles de 1d4, trois cibles au plus, un jet par balle ; les dégâts de chaque balle qui touche sont appliqués d'office. */
+export async function decharger(
+  idCombat: string,
+  combat: Pick<Combat, 'tour' | 'round' | 'scene'>,
+  attaquant: AvecId<Combattant>,
+  cibles: readonly AvecId<Combattant>[],
+  s: AttaqueSpeciale,
+  fiche: AvecId<Fiche>,
+  alea: () => number = Math.random,
+): Promise<number> {
+  if (!cibles.length || cibles.length > 3) throw new RefusCombat('Une à trois cibles.');
+  const [premiere, ...autres] = cibles;
+  const issue = await attaquer(idCombat, combat, attaquant, premiere!, { ...s.arme, nom: s.nom, mode: s.arme.mode }, fiche, alea, { s });
+  let touches = 0;
+  const balle = async (c: AvecId<Combattant>, i: IssueAttaque) => {
+    if (!i.touche) return;
+    touches++;
+    await infligerDegats(idCombat, c, { nom: 'Décharge', formule: '1d4', typeDegats: 'physique', critique: i.critique }, fiche.nom, alea);
+  };
+  await balle(premiere!, issue);
+  for (const c of autres) {
+    if (c.genre !== 'monstre' || c.def === null || c.aTerre) continue;
+    const j = jetAttaque(attaquant, c, { ...s.arme, mode: s.arme.mode }, c.def, alea);
+    if (!j.issue) continue;
+    if (!memes(j.etatsCible, c.etats)) await updateDoc(refCombattant(idCombat, c.id), { etats: j.etatsCible });
+    await noterJet(`Décharge sur ${c.nom}`, formuleTest(j.issue.bonus), { des: j.issue.des ?? [j.issue.de], faces: 20, bonus: j.issue.bonus, total: j.issue.total }, fiche.nom, texteAttaque(j.issue));
+    await balle(c, j.issue);
+  }
+  return touches;
 }
 
 /**
  * MJ : un monstre attaque un PJ (6a), d'un clic : d20 + bonus contre la CA
  * de la fiche ; touché, les dégâts de l'arme du monstre (dés doublés sur
  * un critique), moins la réduction du PJ, ôtés de ses PV. L'action
- * principale du monstre est prise.
+ * principale du monstre est prise. Lot L6.3 : les états des deux côtés
+ * (6a) ; l'état de l'attaque posé à la touche, sans sauvegarde (8) ; le
+ * gain « par dégâts subis » du PJ (9a).
  */
 export async function attaqueDeMonstre(
   idCombat: string,
@@ -117,34 +377,111 @@ export async function attaqueDeMonstre(
   cible: AvecId<Combattant>,
   fiche: AvecId<Fiche>,
   alea: () => number = Math.random,
-): Promise<{ issue: IssueAttaque; net: number | null; pv: number }> {
+): Promise<{ issue: IssueAttaque; net: number | null; pv: number; etat: string | null }> {
   if (monstre.genre !== 'monstre') throw new RefusCombat('Seul un monstre attaque depuis ce panneau.');
   if (cible.genre !== 'pj' || cible.perso !== fiche.id) throw new RefusCombat('On attaque un PJ du combat.');
+  if (!ciblable(cible.etats)) throw new RefusCombat(`${cible.nom} ne peut pas être pris pour cible.`);
+  peutAttaquer(monstre, a.portee.vue ? 'distance' : 'contact');
   const actions = principaleLibre(combat, monstre, 'attaque');
   const vue = vueFiche(fiche);
-  const issue = resoudreAttaque(d20(alea), a.bonus, vue.stats.ca, a.seuilCritique);
-  await updateDoc(refCombattant(idCombat, monstre.id), avecPrincipale(combat, actions));
-  await noterJet(`${a.nom} sur ${fiche.nom}`, formuleTest(a.bonus), { des: [issue.de], faces: 20, bonus: a.bonus, total: issue.total }, monstre.nom, texteAttaque(issue, 'CA'));
-  if (!issue.touche) return { issue, net: null, pv: vue.pv.actuel };
-  const formule = formuleDegats(a.formule, issue.critique);
+  const j = jetAttaque(monstre, cible, { ...a, mode: a.portee.vue ? 'distance' : 'contact' }, vue.stats.ca, alea);
+  const issue = j.issue ?? { de: 0, bonus: a.bonus, total: 0, def: vue.stats.ca, touche: false, critique: false, echecCritique: false };
+  // L'état de l'attaque (8), traduit du bestiaire (1a) ; inconnu, il est dit au journal.
+  let etatsCible = j.etatsCible;
+  let etat: string | null = null;
+  let etatInconnu: string | null = null;
+  if (issue.touche && a.etatSurTouche) {
+    const id = etatDuCatalogue(a.etatSurTouche.id) ? a.etatSurTouche.id : ETATS_V1_VERS_REFONTE[a.etatSurTouche.id];
+    if (id && etatDuCatalogue(id)) {
+      etatsCible = poserEtat(etatsCible, id, a.etatSurTouche.duree, monstre.nom, { des: a.etatSurTouche.formuleDot ?? null });
+      etat = id;
+    } else etatInconnu = a.etatSurTouche.id;
+  }
+  const lot = writeBatch(db);
+  lot.update(refCombattant(idCombat, monstre.id), { ...avecPrincipale(combat, actions), ...(memes(j.etatsAttaquant, monstre.etats) ? {} : { etats: j.etatsAttaquant }) });
+  await lot.commit();
+  const t = j.leurre ? `${etatDuCatalogue(j.leurre)?.nom ?? j.leurre} : l’attaque rate d’office.` : texteAttaque(issue, 'CA');
+  await noterJet(`${a.nom} sur ${fiche.nom}`, formuleTest(issue.bonus), { des: j.leurre ? [] : (issue.des ?? [issue.de]), faces: 20, bonus: issue.bonus, total: issue.total }, monstre.nom, t);
+  if (!issue.touche) {
+    if (!memes(etatsCible, cible.etats)) await updateDoc(refCombattant(idCombat, cible.id), { etats: etatsCible });
+    return { issue, net: null, pv: vue.pv.actuel, etat: null };
+  }
+  const plus = modificateur(monstre.etats, ['degats']);
+  const formule = `${formuleDegats(a.formule, issue.critique)}${plus ? (plus > 0 ? `+${plus}` : plus) : ''}`;
   const jet = lancerDegats(formule, alea);
   if (!jet) throw new RefusCombat(`Formule de dégâts illisible : « ${formule} ».`);
-  const d = degatsSurPj(fiche, jet.total, a.typeDegats);
-  const pv = Math.max(0, vue.pv.actuel - d.net);
-  await updateDoc(refPerso(fiche.id), { pvActuel: pv });
-  await noterJet(`Dégâts ${a.nom} sur ${fiche.nom}${issue.critique ? ' (critique)' : ''}`, formule, jet, monstre.nom, `${d.detail} → ${fiche.nom} ${pv}/${vue.pv.max} PV${pv <= 0 ? ', Mourant' : ''}`);
-  return { issue, net: d.net, pv };
+  const brut = degatsSurPj(fiche, jet.total, a.typeDegats);
+  const faible = affaibli(monstre.etats);
+  const net = faible ? appliquerAffaibli(brut.net, faible.pourcent, faible.minimum) : brut.net;
+  const pv = Math.max(0, vue.pv.actuel - net);
+  if (net > 0) etatsCible = rompre(etatsCible, 'degatsSubis');
+  if (etat && !etatsCible.some((e) => e.id === etat)) etatsCible = poserEtat(etatsCible, etat, a.etatSurTouche!.duree, monstre.nom, { des: a.etatSurTouche!.formuleDot ?? null });
+  const lot2 = writeBatch(db);
+  lot2.update(refPerso(fiche.id), { pvActuel: pv, ...champsJauges(gainParDegatsSubis(fiche, net)) });
+  if (!memes(etatsCible, cible.etats)) lot2.update(refCombattant(idCombat, cible.id), { etats: etatsCible });
+  await lot2.commit();
+  const suite = [etat ? `${etatDuCatalogue(etat)!.nom} ${a.etatSurTouche!.duree} round${a.etatSurTouche!.duree > 1 ? 's' : ''}` : '', etatInconnu ? `état « ${etatInconnu} » inconnu de la refonte, au MJ` : '']
+    .filter(Boolean)
+    .join(' ; ');
+  await noterJet(
+    `Dégâts ${a.nom} sur ${fiche.nom}${issue.critique ? ' (critique)' : ''}`,
+    formule.slice(0, 40),
+    jet,
+    monstre.nom,
+    `${brut.detail}${net !== brut.net ? `, affaibli : ${net}` : ''} → ${fiche.nom} ${pv}/${vue.pv.max} PV${pv <= 0 ? ', Mourant' : ''}${suite ? ` ; ${suite}` : ''}`,
+  );
+  return { issue, net, pv, etat };
 }
 
-/** « Subir des dégâts » (8a, 10a) : un montant et un type, après réduction, ôtés des PV de la fiche ; au journal. */
-export async function subirDegats(fiche: AvecId<Fiche>, brut: number, type: TypeDegatsSubis): Promise<{ net: number; pv: number }> {
+/**
+ * « Subir des dégâts » (8a, 10a) : un montant et un type, après réduction,
+ * ôtés des PV de la fiche ; au journal. Lot L6.3 : le gain « par dégâts
+ * subis » (9a) ; en combat, les états que les dégâts rompent tombent.
+ */
+export async function subirDegats(fiche: AvecId<Fiche>, brut: number, type: TypeDegatsSubis, enCombat: { idCombat: string; c: AvecId<Combattant> } | null = null): Promise<{ net: number; pv: number }> {
   if (!Number.isFinite(brut) || brut < 0 || brut > 9999) throw new RefusCombat('Donne un nombre de dégâts.');
   const vue = vueFiche(fiche);
   const d = degatsSurPj(fiche, brut, type);
   const pv = Math.max(0, vue.pv.actuel - d.net);
-  await updateDoc(refPerso(fiche.id), { pvActuel: pv });
+  const lot = writeBatch(db);
+  lot.update(refPerso(fiche.id), { pvActuel: pv, ...champsJauges(gainParDegatsSubis(fiche, d.net)) });
+  if (enCombat && d.net > 0) {
+    const etats = rompre(enCombat.c.etats, 'degatsSubis');
+    if (!memes(etats, enCombat.c.etats)) lot.update(refCombattant(enCombat.idCombat, enCombat.c.id), { etats });
+  }
+  await lot.commit();
   await noterJet(`Dégâts subis (${type})`, String(d.brut), { des: [], faces: 0, bonus: d.brut, total: d.net }, fiche.nom, `${d.detail} → ${pv}/${vue.pv.max} PV${pv <= 0 ? ', Mourant' : ''}`);
   return { net: d.net, pv };
+}
+
+/**
+ * Début de tour (6a) : le client du MJ, quand la main arrive à un
+ * combattant, joue ses dégâts par tour (Saignement, Brûlure…), au journal,
+ * une fois par tour.
+ */
+export async function debutDeTour(idCombat: string, combat: Pick<Combat, 'tour'>, c: AvecId<Combattant>, fiche: AvecId<Fiche> | null, alea: () => number = Math.random): Promise<number> {
+  await updateDoc(refCombattant(idCombat, c.id), { debutTour: combat.tour });
+  let total = 0;
+  for (const d of degatsParTour(c.etats)) {
+    const jet = lancerDegats(d.des, alea);
+    if (!jet) continue;
+    total += await blesser(idCombat, c, fiche, jet, d.des, d.typeDegats === 'magique' ? 'magique' : 'physique', `${d.nom} : début du tour de ${c.nom}`, c.nom);
+  }
+  return total;
+}
+
+/** Poser un état à la main (4b) : le MJ sur qui il veut ; le joueur, à son tour, sur la cible de son choix. Au journal. */
+export async function poserEtatSur(idCombat: string, c: AvecId<Combattant>, id: string, rounds: number | null, auteur: string): Promise<void> {
+  const d = etatDuCatalogue(id);
+  if (!d) throw new RefusCombat(`État inconnu : ${id}`);
+  if (rounds !== null && (!Number.isInteger(rounds) || rounds < 1 || rounds > 99)) throw new RefusCombat('Une durée de 1 à 99 rounds.');
+  await updateDoc(refCombattant(idCombat, c.id), { etats: poserEtat(c.etats, id, rounds, auteur) });
+  await noterJet(`${d.nom} sur ${c.nom}`, '0', { des: [], faces: 0, bonus: 0, total: 0 }, auteur, `${auteur} pose ${d.nom} sur ${c.nom}${rounds ? `, ${rounds} round${rounds > 1 ? 's' : ''}` : ''}.`);
+}
+
+/** Retirer un état (MJ ; le joueur, à son tour). */
+export async function retirerEtatDe(idCombat: string, c: AvecId<Combattant>, id: string): Promise<void> {
+  await updateDoc(refCombattant(idCombat, c.id), { etats: retirerEtat(c.etats, id) });
 }
 
 /**

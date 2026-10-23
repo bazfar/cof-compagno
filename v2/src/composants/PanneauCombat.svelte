@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { attaqueDeMonstre } from '../lib/actions/attaques';
+  import { attaqueDeMonstre, poserEtatSur, retirerEtatDe } from '../lib/actions/attaques';
   import { ajusterPvMonstre, RefusCombat } from '../lib/actions/combat';
   import { messageErreurJournal } from '../lib/actions/journal';
   import { attaquesDuMonstre, horsDePortee, type AttaqueMonstre, type CarteDuCombat } from '../lib/combat/attaque';
+  import { ciblable, etatsPosables, regleEtat, texteEtat } from '../lib/combat/etats';
   import { etatPj } from '../lib/combat/mort';
   import { actionsDuTour, ordreCombat } from '../lib/combat/ordre';
   import { vueFiche } from '../lib/fiche/vue-fiche';
@@ -29,6 +30,10 @@
    * monstre choisi : d20 + bonus contre la CA de la fiche, puis, touché,
    * les dégâts de l'arme après la réduction du PJ, d'un clic, au journal.
    * Hors de portée, le bouton le dit ; le MJ peut passer outre.
+   *
+   * Lot L6.3 (4b, 14a) : les états du combattant choisi, avec leur règle ;
+   * le MJ en pose (état, durée) et en retire. L'état d'une attaque de
+   * monstre est posé à la touche (8).
    */
 
   let { carte = null }: { carte?: CarteDuCombat | null } = $props();
@@ -74,13 +79,29 @@
   // ---- Attaques du monstre (L6.2, 6a) ----
   const listeArmes = $derived(new Map((armes.etat.donnees?.liste ?? []).map((a) => [a.id, a])));
   const attaquesMonstre = $derived(modele ? attaquesDuMonstre(modele.attaques, listeArmes) : []);
-  const ciblesPj = $derived(pjs.filter(({ c, v }) => etatPj(v.pv.actuel, c) !== 'mort'));
+  const ciblesPj = $derived(pjs.filter(({ c, v }) => etatPj(v.pv.actuel, c) !== 'mort' && ciblable(c.etats)));
   let cibleChoisie = $state('');
   const ciblePj = $derived(ciblesPj.find((x) => x.c.id === cibleChoisie) ?? ciblesPj[0] ?? null);
   let outrePortee = $state(false);
   const principalePrise = $derived(!!montre && !!combat && actionsDuTour(montre, combat.tour).principale);
   const refusPortee = (a: AttaqueMonstre) => (montre && ciblePj && !outrePortee ? horsDePortee(carte?.scene ?? null, carte?.jetons ?? [], montre.id, ciblePj.c.id, a.portee) : null);
   let resultat = $state('');
+  // ---- États (L6.3, 4b) ----
+  const posables = etatsPosables();
+  let poseEtat = $state('');
+  let poseRounds = $state<number | null>(1);
+  async function etatAgir(f: () => Promise<unknown>) {
+    message = '';
+    occupe = true;
+    try {
+      await f();
+      poseEtat = '';
+    } catch (e) {
+      message = e instanceof RefusCombat ? e.message : messageErreurJournal(e);
+    } finally {
+      occupe = false;
+    }
+  }
   async function attaquerPj(a: AttaqueMonstre) {
     const cible = ciblePj;
     const f = cible?.c.perso ? persos.etat.elements.find((p) => p.id === cible.c.perso) : undefined;
@@ -93,7 +114,7 @@
       resultat =
         r.net === null
           ? `${a.nom} : raté (${r.issue.echecCritique ? '1 naturel' : `${r.issue.total} contre CA ${r.issue.def}`}).`
-          : `${a.nom} : ${r.issue.critique ? 'critique' : 'touché'}, ${r.net} dégâts → ${f.nom} ${r.pv} PV${r.pv <= 0 ? ', Mourant' : ''}.`;
+          : `${a.nom} : ${r.issue.critique ? 'critique' : 'touché'}, ${r.net} dégâts → ${f.nom} ${r.pv} PV${r.pv <= 0 ? ', Mourant' : ''}${r.etat ? `, ${texteEtat({ id: r.etat, rounds: a.etatSurTouche?.duree ?? null, cumul: 1, charges: null, des: null, source: null })}` : ''}.`;
     } catch (e) {
       message = e instanceof RefusCombat ? e.message : messageErreurJournal(e);
     } finally {
@@ -117,6 +138,30 @@
     }
   }
 </script>
+
+{#snippet etatsDe(c: (typeof combattants)[number])}
+  <h3>États</h3>
+  {#if c.etats.length}
+    <ul class="etats" aria-label="États de {c.nom}">
+      {#each c.etats as e (e.id)}
+        <li title={regleEtat(e.id)}>
+          <span><strong>{texteEtat(e)}</strong>{e.source ? ` · ${e.source}` : ''}</span>
+          <button class="petit discret" aria-label="Retirer {texteEtat(e)}" disabled={occupe} onclick={() => etatAgir(() => retirerEtatDe(idCombat!, c, e.id))}>Retirer</button>
+        </li>
+      {/each}
+    </ul>
+  {:else}
+    <p class="aide">Aucun état.</p>
+  {/if}
+  <form class="poser" onsubmit={(e) => (e.preventDefault(), poseEtat && etatAgir(() => poserEtatSur(idCombat!, c, poseEtat, poseRounds, 'MJ')))}>
+    <select aria-label="État à poser" bind:value={poseEtat}>
+      <option value="">Poser un état…</option>
+      {#each posables as p (p.id)}<option value={p.id}>{p.nom}</option>{/each}
+    </select>
+    <input type="number" min="1" max="99" aria-label="Rounds" placeholder="∞" bind:value={poseRounds} />
+    <button class="petit" disabled={occupe || !poseEtat}>Poser</button>
+  </form>
+{/snippet}
 
 {#if combat && combat.statut === 'encours' && montre}
   <div class="colonne">
@@ -171,8 +216,7 @@
         {:else}
           <p class="aide">Monstre posé à la main : pas de fiche de bestiaire, ses attaques se jouent au journal.</p>
         {/if}
-        <h3>États · L6.3</h3>
-        <p class="aide">Poser un état arrive avec L6.3.</p>
+        {@render etatsDe(montre)}
       {:else if vue}
         <div class="pastilles">
           <span>PV {vue.pv.actuel}/{vue.pv.max}</span>
@@ -180,6 +224,7 @@
           <span>CA {vue.stats.ca}</span>
           <span>Init {signe(vue.stats.initiative)}</span>
         </div>
+        {@render etatsDe(montre)}
       {/if}
       {#if message}<p class="erreur" role="alert">{message}</p>{/if}
     </section>
@@ -282,6 +327,32 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+  }
+  .etats {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+  }
+  .etats li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+  }
+  .poser {
+    display: flex;
+    gap: 6px;
+  }
+  .poser select {
+    flex: 1;
+    min-width: 0;
+  }
+  .poser input {
+    width: 56px;
   }
   .case {
     display: flex;

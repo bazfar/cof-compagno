@@ -1,5 +1,7 @@
 import { collection, doc, runTransaction, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/client';
+import { finDeTour, rompre } from '../combat/etats';
+import { champsJauges, type Jauges } from '../combat/ressources';
 import { actionsDuTour, deplacementRestant, mainSuivante, premierActif } from '../combat/ordre';
 import type { BrouillonCombattant } from '../combat/demarrage';
 import { formuleTest } from '../regles/des';
@@ -23,6 +25,7 @@ export class RefusCombat extends Error {}
 type AvecId<T> = T & { id: string };
 
 const refCombat = (id: string) => doc(db, `tables/${session.table}/combats/${id}`);
+const refPerso = (id: string) => doc(db, `tables/${session.table}/persos/${id}`);
 const refCombattant = (id: string, c: string) => doc(db, `tables/${session.table}/combats/${id}/combattants/${c}`);
 const d20 = (alea: () => number) => 1 + Math.floor(alea() * 20);
 
@@ -48,6 +51,11 @@ function nouveauCombattant(b: BrouillonCombattant, de: number | null, maintenant
     mortSucces: 0,
     mortEchecs: 0,
     mort: false,
+    etats: [],
+    usages: {},
+    gainTouche: { round: 0, montant: 0 },
+    debutTour: 0,
+    visee: false,
     tourActions: 0,
     principale: false,
     secondaire: false,
@@ -72,6 +80,7 @@ export async function demarrerCombat(
   b: { nom: string; scene: string; rencontre: string | null; combattants: readonly BrouillonCombattant[] },
   combatEnCours: string | null,
   alea: () => number = Math.random,
+  remises: readonly { perso: string; jauges: Jauges }[] = [],
 ): Promise<string> {
   if (combatEnCours) throw new RefusCombat('Un combat est déjà en cours : clos-le d’abord.');
   if (!b.combattants.length) throw new RefusCombat('Personne à faire combattre.');
@@ -95,6 +104,8 @@ export async function demarrerCombat(
   lot.set(ref, combat);
   for (const { id, ...c } of combattants) lot.set(refCombattant(ref.id, id), c);
   lot.set(doc(db, 'tables', session.table), { combat: ref.id }, { merge: true });
+  // L6.3 (9a) : une ressource qui repart à chaque combat reprend sa valeur de départ (Ki).
+  for (const r of remises) if (Object.keys(r.jauges).length) lot.update(refPerso(r.perso), champsJauges(r.jauges));
   await lot.commit();
   await noterInitiatives(jets);
   return ref.id;
@@ -132,8 +143,15 @@ export async function finirTour(idCombat: string, actifAttendu: string | null, c
     const c = schemaCombat.parse(lu.data());
     if (c.statut !== 'encours') throw new RefusCombat('Le combat est clos.');
     if (c.actif !== actifAttendu) throw new RefusCombat('La main a déjà changé.');
+    // L6.3 (5a) : les états de celui qui finit son tour perdent un round.
+    const lu2 = c.actif ? await tx.get(refCombattant(idCombat, c.actif)) : null;
     const s = mainSuivante(combattants, c.actif, c.round, aTerre);
     const apres = { ...c, actif: s.actif, round: s.round, tour: c.tour + 1 };
+    if (lu2?.exists()) {
+      const etats = schemaCombattant.parse(lu2.data()).etats;
+      const restes = finDeTour(etats);
+      if (JSON.stringify(restes) !== JSON.stringify(etats)) tx.update(refCombattant(idCombat, c.actif!), { etats: restes });
+    }
     tx.update(refCombat(idCombat), { actif: apres.actif, round: apres.round, tour: apres.tour });
     return apres;
   });
@@ -170,7 +188,8 @@ export async function noterAction(
     if (quoi.cases > restant) throw new RefusCombat(`Il ne te reste que ${restant} case${restant > 1 ? 's' : ''}.`);
     n.mvt = Math.min(40, a.mvt + Math.max(0, Math.round(quoi.cases)));
   }
-  await updateDoc(refCombattant(idCombat, c.id), { tourActions: combat.tour, ...n });
+  const etats = 'cases' in quoi && quoi.cases > 0 ? rompre(c.etats, 'actionMouvement') : c.etats;
+  await updateDoc(refCombattant(idCombat, c.id), { tourActions: combat.tour, ...n, ...(etats.length !== c.etats.length ? { etats } : {}) });
 }
 
 /** MJ : règle les PV d'un monstre ; à 0 il est à terre, son jeton marqué mort (et l'inverse). */
@@ -188,9 +207,10 @@ export async function basculerPortees(idCombat: string, libres: boolean): Promis
   await updateDoc(refCombat(idCombat), { porteesLibres: libres });
 }
 
-/** MJ : clôt le combat (11a). Les monstres morts restent sur la carte, marqués morts. */
-export async function cloreCombat(idCombat: string): Promise<void> {
+/** MJ : clôt le combat (11a). Les monstres morts restent sur la carte, marqués morts. L6.3 (9a) : la Plongée revient à 0. */
+export async function cloreCombat(idCombat: string, remises: readonly { perso: string; jauges: Jauges }[] = []): Promise<void> {
   const lot = writeBatch(db);
+  for (const r of remises) if (Object.keys(r.jauges).length) lot.update(refPerso(r.perso), champsJauges(r.jauges));
   lot.update(refCombat(idCombat), { statut: 'clos', actif: null, closLe: Date.now() });
   lot.set(doc(db, 'tables', session.table), { combat: null }, { merge: true });
   await lot.commit();

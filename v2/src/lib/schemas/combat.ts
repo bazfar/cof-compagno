@@ -48,6 +48,24 @@ export const schemaCombat = z.strictObject({
 });
 export type Combat = z.infer<typeof schemaCombat>;
 
+/**
+ * Un état posé pendant le combat (L6.3, catalogue de la refonte : 1a).
+ * `rounds` : ce qui reste, décompté à la fin du tour du porteur (5a) ; null
+ * tant que personne ne le retire. `cumul` : poses d'un état cumulable
+ * (Ivresse). `charges` : Double. `des` : dégâts par tour donnés par la
+ * source (une attaque de monstre), à la place de ceux de l'état.
+ */
+export const schemaEtatCombat = z.strictObject({
+  id: z.string().min(1).max(60),
+  rounds: z.number().int().min(1).max(99).nullable(),
+  cumul: z.number().int().min(1).max(20),
+  charges: z.number().int().min(1).max(20).nullable(),
+  des: z.string().min(1).max(20).nullable(),
+  /** Qui l'a posé (nom), pour le dire. */
+  source: z.string().min(1).max(40).nullable(),
+});
+export type EtatCombat = z.infer<typeof schemaEtatCombat>;
+
 export const GENRES_COMBATTANT = ['pj', 'monstre'] as const;
 export type GenreCombattant = (typeof GENRES_COMBATTANT)[number];
 
@@ -85,6 +103,16 @@ export const schemaCombattant = z
     mortEchecs: z.number().int().min(0).max(3),
     /** Mort au combat : son tour est sauté. */
     mort: z.boolean(),
+    // ---- États et ressources (L6.3) ----
+    etats: z.array(schemaEtatCombat).max(20),
+    /** Usages limités : action → round de son dernier usage (« 1×/combat » : présent ; « 1×/round » : ce round). */
+    usages: z.record(z.string().min(1).max(60), z.number().int().min(1).max(999)),
+    /** Ressource gagnée par touche ce round (Ki : 2 au plus par round). */
+    gainTouche: z.strictObject({ round: z.number().int().min(0).max(999), montant: z.number().int().min(0).max(10) }),
+    /** Tour du combat où son début de tour a été joué (dégâts par tour) ; 0 : jamais. */
+    debutTour: z.number().int().min(0).max(99999),
+    /** Précision (arme à feu) : il a visé ; sa prochaine attaque gagne +1d6 aux dégâts, +1d10 sur un critique. */
+    visee: z.boolean(),
     // ---- Actions du tour (7a), valables pour le tour `tourActions` du combat ----
     tourActions: z.number().int().min(0).max(99999),
     principale: z.boolean(),

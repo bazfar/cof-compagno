@@ -1,11 +1,13 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { remettreJetsDeMort } from '../lib/actions/attaques';
+  import { debutDeTour, remettreJetsDeMort } from '../lib/actions/attaques';
   import { marquerMort } from '../lib/actions/carte';
   import { ajouterCombattant, basculerPortees, cloreCombat, demarrerCombat, donnerLaMain, RefusCombat } from '../lib/actions/combat';
   import { messageErreurJournal } from '../lib/actions/journal';
   import { brouillonDuCombat, manquePourDemarrer, type BrouillonCombattant, type FichePourCombat, type MonstrePourCombat } from '../lib/combat/demarrage';
+  import { degatsParTour } from '../lib/combat/etats';
   import { jetsDeMortARemettre } from '../lib/combat/mort';
+  import { jaugesALaFinDuCombat, jaugesAuDebutDuCombat } from '../lib/combat/ressources';
   import { aTerreDuCombat, premierActif } from '../lib/combat/ordre';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import type { CollectionSuivie, DocumentSuivi } from '../lib/firebase/suivre.svelte';
@@ -38,6 +40,11 @@
    *   - le client du MJ tient ce que les joueurs n'écrivent pas : le jeton
    *     d'un monstre tombé sous leurs coups est marqué mort, et les jets de
    *     mort d'un PJ relevé ou soigné repartent de zéro (7a).
+   *
+   * Lot L6.3 (décisions de Thomas du 23/10/2026) : au démarrage, une
+   * ressource qui repart à chaque combat reprend sa valeur (Ki) ; à la
+   * clôture, la Plongée revient à 0 (9a). Quand la main arrive à un
+   * combattant, le client du MJ joue ses dégâts par tour, une fois (6a).
    */
 
   const table = suivreTable(session.table);
@@ -133,7 +140,8 @@
   async function demarrer() {
     if (!idScene) return;
     const scene = idScene;
-    const ok = await agir(() => demarrerCombat({ nom: nomSaisi ?? rencontre?.nom ?? 'Combat', scene, rencontre: rencontre?.id ?? null, combattants: brouillon }, idCombat));
+    const remises = persos.etat.elements.filter((p) => brouillon.some((b) => b.perso === p.id)).map((p) => ({ perso: p.id, jauges: jaugesAuDebutDuCombat(p) }));
+    const ok = await agir(() => demarrerCombat({ nom: nomSaisi ?? rencontre?.nom ?? 'Combat', scene, rencontre: rencontre?.id ?? null, combattants: brouillon }, idCombat, Math.random, remises));
     if (ok) {
       pvSaisis = {};
       defSaisies = {};
@@ -154,7 +162,8 @@
   async function clore() {
     if (!idCombat || !confirm('Clore le combat ? L’ordre d’initiative sera effacé.')) return;
     const id = idCombat;
-    await agir(() => cloreCombat(id));
+    const remises = persos.etat.elements.filter((p) => combattants.some((c) => c.perso === p.id)).map((p) => ({ perso: p.id, jauges: jaugesALaFinDuCombat(p) }));
+    await agir(() => cloreCombat(id, remises));
   }
 
   // Personne n'a la main : dès qu'un combattant a une initiative, le client du MJ la lui donne.
@@ -179,6 +188,18 @@
       jetonsMarques.delete(`${c.id}:${!c.aTerre}`);
       agir(() => marquerMort(scene, c.id, c.aTerre));
     }
+  });
+  // L6.3 (6a) : la main arrive à un combattant : ses dégâts par tour, une fois par tour.
+  const debutsJoues = new Set<string>();
+  $effect(() => {
+    if (!combat || !idCombat || combat.statut !== 'encours' || !combat.actif) return;
+    const c = combattants.find((x) => x.id === combat.actif);
+    const cle = `${combat.tour}:${combat.actif}`;
+    if (!c || c.debutTour === combat.tour || !degatsParTour(c.etats).length || debutsJoues.has(cle)) return;
+    debutsJoues.add(cle);
+    const fiche = c.perso ? (persos.etat.elements.find((p) => p.id === c.perso) ?? null) : null;
+    const id = idCombat;
+    agir(() => debutDeTour(id, combat, c, fiche));
   });
   // L6.2 (7a) : un PJ relevé ou soigné repart de zéro jet de mort.
   const jetsRemis = new Set<string>();

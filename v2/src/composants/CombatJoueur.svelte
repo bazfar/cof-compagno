@@ -11,6 +11,7 @@
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
   import type { Combat, Combattant } from '../lib/schemas/combat';
   import { session } from '../lib/session.svelte';
+  import BandeauCombat from './BandeauCombat.svelte';
   import BarreCombat from './BarreCombat.svelte';
   import CarteTable from './CarteTable.svelte';
   import OrdreCombat from './OrdreCombat.svelte';
@@ -25,6 +26,8 @@
    *
    * Lot L6.2 : la barre reçoit le combat, son combattant, les fiches des PJ
    * (relever un allié) et la carte (portées, 4a).
+   * Lot L6.3 : le bandeau des combattants, leurs PV et leurs états, au-dessus
+   * de la carte (C).
    */
 
   let { surEnCombat }: { surEnCombat?: (oui: boolean) => void } = $props();
@@ -68,6 +71,7 @@
   <div class="combat">
     <OrdreCombat role="joueur" {idCombat} {combat} {combattants} {aTerre} {pvPj} />
     <div class="centre">
+      <BandeauCombat />
       <CarteTable role="joueur" hauteur="560px" surCarte={(c) => (carte = c)} />
       {#if fiche && moi}<BarreCombat {fiche} {idCombat} {combat} {moi} {combattants} {fiches} {carte} />{/if}
     </div>

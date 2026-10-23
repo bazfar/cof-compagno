@@ -569,8 +569,13 @@ service cloud.firestore {
     }
     // Aligné sur schemaCombattant (src/lib/schemas/combat.ts).
     function combattantValide(d) {
-      return d.keys().hasOnly(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'def', 'armure', 'resistances', 'mortSucces', 'mortEchecs', 'mort', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe'])
-        && d.keys().hasAll(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'def', 'armure', 'resistances', 'mortSucces', 'mortEchecs', 'mort', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe'])
+      return d.keys().hasOnly(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'def', 'armure', 'resistances', 'mortSucces', 'mortEchecs', 'mort', 'etats', 'usages', 'gainTouche', 'debutTour', 'visee', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe'])
+        && d.keys().hasAll(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'def', 'armure', 'resistances', 'mortSucces', 'mortEchecs', 'mort', 'etats', 'usages', 'gainTouche', 'debutTour', 'visee', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe'])
+        // L6.3 : états, usages, gain par touche, début de tour, visée (aligné sur schemaCombattant).
+        && d.etats is list && d.etats.size() <= 20
+        && d.usages is map && d.usages.size() <= 50
+        && d.gainTouche is map && d.gainTouche.keys().hasOnly(['round', 'montant']) && entierEntre(d.gainTouche.round, 0, 999) && entierEntre(d.gainTouche.montant, 0, 10)
+        && entierEntre(d.debutTour, 0, 99999) && d.visee is bool
         && d.genre in ['pj', 'monstre']
         && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 40
         && ((d.genre == 'pj' && d.perso is string && d.uid is string && d.pv == null && d.pvMax == null && d.monstre == null)
@@ -602,6 +607,26 @@ service cloud.firestore {
       let c = get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)).data;
       return c.statut == 'encours' && c.actif != null
         && get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)/combattants/$(c.actif)).data.uid == request.auth.uid;
+    }
+    // L6.3 (12a) : le joueur qui a la main pousse d'une case le jeton d'un combattant du combat en cours.
+    function jetonRepousse(table, jeton) {
+      let combat = get(/databases/$(database)/documents/tables/$(table)).data.get('combat', null);
+      return combat != null
+        && exists(/databases/$(database)/documents/tables/$(table)/combats/$(combat)/combattants/$(jeton))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cx', 'cy'])
+        && request.resource.data.cx - resource.data.cx <= 1 && resource.data.cx - request.resource.data.cx <= 1
+        && request.resource.data.cy - resource.data.cy <= 1 && resource.data.cy - request.resource.data.cy <= 1
+        && aLaMain(table, combat);
+    }
+    // L6.3 (12a) : le joueur qui a la main blesse un allié du combat (collision) : ses PV ne font que baisser.
+    function degatsParAllie(table, perso) {
+      let combat = get(/databases/$(database)/documents/tables/$(table)).data.get('combat', null);
+      return combat != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pvActuel'])
+        && resource.data.pvActuel != null && request.resource.data.pvActuel is int
+        && request.resource.data.pvActuel < resource.data.pvActuel && request.resource.data.pvActuel >= 0
+        && exists(/databases/$(database)/documents/tables/$(table)/combats/$(combat)/combattants/$('pj-' + perso))
+        && aLaMain(table, combat);
     }
     // Relever un allié Mourant (L6.2, 7a) : le joueur qui a la main dans le combat en cours le remet à 1 PV, rien d'autre.
     function releveParAllie(table, perso) {
@@ -718,7 +743,9 @@ service cloud.firestore {
               || (estJoueur(table)
                 && resource.data.proprietaire == request.auth.uid
                 && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cx', 'cy'])
-                && jetonBougeable(table, jeton)));
+                && jetonBougeable(table, jeton))
+              // L6.3 (12a) : le joueur qui a la main repousse d'une case le jeton d'un combattant.
+              || (estJoueur(table) && jetonRepousse(table, jeton)));
           allow delete: if estMj(table)
             || (estJoueur(table) && resource.data.proprietaire == request.auth.uid);
         }
@@ -792,7 +819,7 @@ service cloud.firestore {
               && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['niveau', 'progression'])
                 || monteeValide(request.resource.data, resource.data))
               && vecuChoisiParJoueur(request.resource.data.vecu, resource.data.vecu))
-            || (estJoueur(table) && releveParAllie(table, perso)));
+            || (estJoueur(table) && (releveParAllie(table, perso) || degatsParAllie(table, perso))));
         allow delete: if estMj(table);
 
         // Portrait (L2.3, décision 6a) : un document à part, lu par toute la
@@ -988,7 +1015,7 @@ service cloud.firestore {
                 && ((resource.data.initiative == null
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['initiative', 'de'])
                     && request.resource.data.initiative == request.resource.data.de + resource.data.modInit)
-                  || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'mortSucces', 'mortEchecs', 'mort'])
+                  || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'mortSucces', 'mortEchecs', 'mort', 'etats', 'usages', 'gainTouche', 'visee'])
                     && get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)).data.actif == combattant
                     && request.resource.data.tourActions == get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)).data.tour
                     && request.resource.data.mvt <= request.resource.data.mvtBase + (request.resource.data.sprint ? 2 : 0)
@@ -996,11 +1023,13 @@ service cloud.firestore {
                     && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['mortSucces', 'mortEchecs', 'mort'])
                       || (request.resource.data.principale && jetDeMortValide(request.resource.data, resource.data))))))
               // L6.2 (1b, 2a) : le joueur qui a la main blesse un monstre ; ses PV ne font que baisser, à terre à 0.
+              // L6.3 (4b, 6a) : il pose, retire ou rompt les états de n'importe quel combattant.
               || (estJoueur(table)
-                && resource.data.genre == 'monstre'
-                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pv', 'aTerre'])
-                && request.resource.data.pv < resource.data.pv && request.resource.data.pv >= 0
-                && request.resource.data.aTerre == (request.resource.data.pv == 0)
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pv', 'aTerre', 'etats'])
+                && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['pv', 'aTerre'])
+                  || (resource.data.genre == 'monstre'
+                    && request.resource.data.pv < resource.data.pv && request.resource.data.pv >= 0
+                    && request.resource.data.aTerre == (request.resource.data.pv == 0)))
                 && aLaMain(table, combat)));
         }
       }

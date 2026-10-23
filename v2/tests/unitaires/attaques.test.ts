@@ -67,11 +67,11 @@ const FICHES = JSON.parse(readFileSync('tests/fixtures/fiches-v1.json', 'utf8'))
 const reelle = (nom: string, id = 'p1'): Fiche & { id: string } => ({ ...ficheDepuisV1(FICHES.find((f: { nom: string }) => f.nom.startsWith(nom)), 'alice', 1).fiche, id });
 const pj = (id: string, c: Partial<Combattant> = {}): Combattant & { id: string } => ({
   id: `pj-${id}`, genre: 'pj', nom: id, perso: id, uid: `u-${id}`, monstre: null, modInit: 1, initiative: 10, de: 9, pv: null, pvMax: null, aTerre: false,
-  mvtBase: 5, def: null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+  mvtBase: 5, def: null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
 });
 const monstre = (id: string, c: Partial<Combattant> = {}): Combattant & { id: string } => ({
   id: `m-r1-${id}`, genre: 'monstre', nom: id, perso: null, uid: null, monstre: 'goule', modInit: 3, initiative: 15, de: 12, pv: 14, pvMax: 14, aTerre: false,
-  mvtBase: 5, def: 13, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+  mvtBase: 5, def: 13, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
 });
 /** Un aléa qui rend ces dés, dans l'ordre (sur des faces de `faces`). */
 const des = (faces: number, ...v: number[]) => {
@@ -87,7 +87,7 @@ const suite = (...v: [number, number][]) => {
   };
 };
 const C = 'tables/t1/combats/c1/combattants';
-const combat = { tour: 6 };
+const combat = { tour: 6, round: 2, scene: 'cave' };
 
 beforeEach(() => {
   appels.length = 0;
@@ -212,8 +212,8 @@ describe('les attaques d’un monstre (6a)', () => {
         armes,
       ),
     ).toEqual([
-      { nom: 'Griffes', bonus: 4, formule: '1d6+2', typeDegats: 'physique', portee: T.PORTEE_CONTACT, seuilCritique: 20 },
-      { nom: 'Tir', bonus: 3, formule: '1d8-1', typeDegats: 'magique', portee: { min: 0, max: 12, vue: true }, seuilCritique: 18 },
+      { nom: 'Griffes', bonus: 4, formule: '1d6+2', typeDegats: 'physique', portee: T.PORTEE_CONTACT, seuilCritique: 20, etatSurTouche: null },
+      { nom: 'Tir', bonus: 3, formule: '1d8-1', typeDegats: 'magique', portee: { min: 0, max: 12, vue: true }, seuilCritique: 18, etatSurTouche: null },
     ]);
   });
 });
@@ -333,24 +333,24 @@ describe('écritures', () => {
   const k = () => reelle('Kargash');
 
   it('attaquer (1b, 5a) : d20 + bonus contre la DEF, l’action principale prise, au journal', async () => {
-    const a = { nom: 'Rapière', bonus: 4, seuilCritique: 20 };
-    const i = await X.attaquer('c1', combat, pj('p1'), monstre('A'), a, 'Kargash', des(20, 9));
+    const a = { nom: 'Rapière', bonus: 4, seuilCritique: 20, mode: 'contact' as const };
+    const i = await X.attaquer('c1', combat, pj('p1'), monstre('A'), a, k(), des(20, 9));
     expect(i).toMatchObject({ de: 9, total: 13, touche: true, critique: false });
-    expect(appels).toEqual([{ fn: 'updateDoc', chemin: `${C}/pj-p1`, donnees: { tourActions: 6, principale: true, secondaire: false, mvt: 0, sprint: false } }]);
-    expect(journal.noterJet).toHaveBeenCalledWith('Rapière sur A', '1d20+4', { des: [9], faces: 20, bonus: 4, total: 13 }, 'Kargash', 'd20 9 +4 = 13 contre DEF 13 : touché');
+    expect(appels).toEqual([{ fn: 'lot.update', chemin: `${C}/pj-p1`, donnees: { tourActions: 6, principale: true, secondaire: false, mvt: 0, sprint: false } }]);
+    expect(journal.noterJet).toHaveBeenCalledWith('Rapière sur A', '1d20+4', { des: [9], faces: 20, bonus: 4, total: 13 }, k().nom, 'd20 9 +4 = 13 contre DEF 13 : touché');
     // Les actions déjà notées ce tour sont gardées.
     appels.length = 0;
-    await X.attaquer('c1', combat, pj('p1', { tourActions: 6, secondaire: true, mvt: 3 }), monstre('A'), a, 'Kargash', des(20, 1));
+    await X.attaquer('c1', combat, pj('p1', { tourActions: 6, secondaire: true, mvt: 3 }), monstre('A'), a, k(), des(20, 1));
     expect(appels[0]!.donnees).toEqual({ tourActions: 6, principale: true, secondaire: true, mvt: 3, sprint: false });
   });
 
   it('attaquer : refusé si l’action principale est prise, la cible à terre ou pas un monstre', async () => {
-    const a = { nom: 'Rapière', bonus: 4, seuilCritique: 20 };
-    await expect(X.attaquer('c1', combat, pj('p1', { tourActions: 6, principale: true }), monstre('A'), a, 'K')).rejects.toThrow('action principale est déjà prise');
-    await expect(X.attaquer('c1', combat, pj('p1'), monstre('A', { aTerre: true, pv: 0 }), a, 'K')).rejects.toThrow('déjà à terre');
-    await expect(X.attaquer('c1', combat, pj('p1'), pj('p2'), a, 'K')).rejects.toThrow('On attaque un monstre');
+    const a = { nom: 'Rapière', bonus: 4, seuilCritique: 20, mode: 'contact' as const };
+    await expect(X.attaquer('c1', combat, pj('p1', { tourActions: 6, principale: true }), monstre('A'), a, k())).rejects.toThrow('action principale est déjà prise');
+    await expect(X.attaquer('c1', combat, pj('p1'), monstre('A', { aTerre: true, pv: 0 }), a, k())).rejects.toThrow('déjà à terre');
+    await expect(X.attaquer('c1', combat, pj('p1'), pj('p2'), a, k())).rejects.toThrow('On attaque un monstre');
     // Une principale d'un autre tour ne compte pas.
-    await X.attaquer('c1', combat, pj('p1', { tourActions: 5, principale: true }), monstre('A'), a, 'K', des(20, 2));
+    await X.attaquer('c1', combat, pj('p1', { tourActions: 5, principale: true }), monstre('A'), a, k(), des(20, 2));
     expect(appels).toHaveLength(1);
   });
 
@@ -375,14 +375,14 @@ describe('écritures', () => {
     await expect(X.infligerDegats('c1', pj('p2'), { nom: 'x', formule: '1d4', typeDegats: 'physique', critique: false }, 'K')).rejects.toThrow('On blesse un monstre');
   });
 
-  const griffes = { nom: 'Griffes', bonus: 4, formule: '1d6+2', typeDegats: 'physique' as const, portee: T.PORTEE_CONTACT, seuilCritique: 20 };
+  const griffes = { nom: 'Griffes', bonus: 4, formule: '1d6+2', typeDegats: 'physique' as const, portee: T.PORTEE_CONTACT, seuilCritique: 20, etatSurTouche: null };
 
   it('attaque de monstre (6a) : contre la CA de la fiche ; raté, rien d’autre que l’action et le journal', async () => {
     const f = k();
     const ca = vueFiche(f).stats.ca;
     const r = await X.attaqueDeMonstre('c1', combat, monstre('A'), griffes, pj('p1'), f, des(20, ca - 4 - 1));
     expect(r.net).toBeNull();
-    expect(appels).toEqual([{ fn: 'updateDoc', chemin: `${C}/m-r1-A`, donnees: { tourActions: 6, principale: true, secondaire: false, mvt: 0, sprint: false } }]);
+    expect(appels).toEqual([{ fn: 'lot.update', chemin: `${C}/m-r1-A`, donnees: { tourActions: 6, principale: true, secondaire: false, mvt: 0, sprint: false } }]);
     expect(journal.noterJet).toHaveBeenCalledTimes(1);
     expect(journal.noterJet.mock.calls[0]![4]).toBe(`d20 ${ca - 5} +4 = ${ca - 1} contre CA ${ca} : raté`);
   });
@@ -394,7 +394,7 @@ describe('écritures', () => {
     const r = await X.attaqueDeMonstre('c1', combat, monstre('A'), griffes, pj('p1', { perso: 'p1' }), h, alea);
     // 2d6+2 = 12, − 1 d'armure = 11.
     expect(r).toMatchObject({ issue: { critique: true }, net: 11, pv: Math.max(0, v.pv.actuel - 11) });
-    expect(appels[1]).toEqual({ fn: 'updateDoc', chemin: 'tables/t1/persos/p1', donnees: { pvActuel: Math.max(0, v.pv.actuel - 11) } });
+    expect(appels[1]).toEqual({ fn: 'lot.update', chemin: 'tables/t1/persos/p1', donnees: { pvActuel: Math.max(0, v.pv.actuel - 11) } });
     expect(journal.noterJet.mock.calls[1]!.slice(0, 2)).toEqual(['Dégâts Griffes sur Hyrma (critique)', '2d6+2']);
     expect(journal.noterJet.mock.calls[1]![4]).toBe(`12 − 1 (armure) = 11 → Hyrma ${v.pv.actuel - 11}/${v.pv.max} PV`);
     appels.length = 0;
@@ -418,7 +418,7 @@ describe('écritures', () => {
     const h = reelle('Hyrma');
     const v = vueFiche(h);
     expect(await X.subirDegats(h, 7, 'physique')).toEqual({ net: 6, pv: v.pv.actuel - 6 });
-    expect(appels).toEqual([{ fn: 'updateDoc', chemin: 'tables/t1/persos/p1', donnees: { pvActuel: v.pv.actuel - 6 } }]);
+    expect(appels).toEqual([{ fn: 'lot.update', chemin: 'tables/t1/persos/p1', donnees: { pvActuel: v.pv.actuel - 6 } }]);
     expect(journal.noterJet).toHaveBeenCalledWith('Dégâts subis (physique)', '7', { des: [], faces: 0, bonus: 7, total: 6 }, 'Hyrma', `7 − 1 (armure) = 6 → ${v.pv.actuel - 6}/${v.pv.max} PV`);
     expect((await X.subirDegats(h, 999, 'magique')).pv).toBe(0);
     expect(journal.noterJet.mock.calls[1]![4]).toMatch(/, Mourant$/);

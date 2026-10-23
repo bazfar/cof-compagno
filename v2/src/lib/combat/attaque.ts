@@ -55,7 +55,9 @@ export const SEUIL_CRITIQUE = 20;
 export const SEUIL_PRECISION_LETALE = 19;
 
 export interface IssueAttaque {
+  /** Le d20 gardé ; `des` : les deux d20 d'un avantage ou d'un désavantage (L6.3), sinon le seul. */
   de: number;
+  des?: number[];
   bonus: number;
   total: number;
   def: number;
@@ -78,7 +80,8 @@ const signe = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
 /** « d20 17 +5 = 22 contre DEF 14 : touché, critique » (journal, 10a). */
 export function texteAttaque(i: IssueAttaque, contre = 'DEF'): string {
   const issue = i.critique ? 'touché, critique' : i.echecCritique ? 'raté (1 naturel)' : i.touche ? 'touché' : 'raté';
-  return `d20 ${i.de} ${signe(i.bonus)} = ${i.total} contre ${contre} ${i.def} : ${issue}`;
+  const d20 = i.des && i.des.length > 1 ? `2d20 (${i.des.join(', ')}) garde ${i.de}` : `d20 ${i.de}`;
+  return `${d20} ${signe(i.bonus)} = ${i.total} contre ${contre} ${i.def} : ${issue}`;
 }
 
 /** Formule des dégâts : celle de l'arme, ses dés doublés sur un critique (3a), ses bonus une fois. */
@@ -134,17 +137,19 @@ export interface AttaqueMonstre {
   typeDegats: TypeDegats;
   portee: Portee;
   seuilCritique: number;
+  /** L'état que l'attaque pose si elle touche (L6.3, 8 : sans sauvegarde) : son identifiant au bestiaire, ses rounds, ses dégâts par tour. */
+  etatSurTouche: { id: string; duree: number; formuleDot?: string } | null;
 }
 
 /** Les attaques d'un monstre ; une attaque dont l'arme manque à la liste est laissée de côté (pas devinée). */
 export function attaquesDuMonstre(
-  attaques: readonly { nom: string; armeId: string; bonusAttaque: number; bonusDegats?: number }[],
+  attaques: readonly { nom: string; armeId: string; bonusAttaque: number; bonusDegats?: number; etatSurTouche?: { id: string; duree: number; formuleDot?: string } }[],
   armes: ReadonlyMap<string, Pick<ArmeMonstre, 'degats' | 'portee' | 'typedegats' | 'critMin'>>,
 ): AttaqueMonstre[] {
   return attaques.flatMap((a) => {
     const arme = armes.get(a.armeId);
     if (!arme) return [];
-    return [{ nom: a.nom, bonus: a.bonusAttaque, formule: a.bonusDegats ? `${arme.degats}${a.bonusDegats > 0 ? '+' : ''}${a.bonusDegats}` : arme.degats, typeDegats: arme.typedegats, portee: CASES_PORTEE_MONSTRE[arme.portee], seuilCritique: arme.critMin ?? SEUIL_CRITIQUE }];
+    return [{ nom: a.nom, bonus: a.bonusAttaque, formule: a.bonusDegats ? `${arme.degats}${a.bonusDegats > 0 ? '+' : ''}${a.bonusDegats}` : arme.degats, typeDegats: arme.typedegats, portee: CASES_PORTEE_MONSTRE[arme.portee], seuilCritique: arme.critMin ?? SEUIL_CRITIQUE, etatSurTouche: a.etatSurTouche ?? null }];
   });
 }
 

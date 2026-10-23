@@ -170,7 +170,7 @@ describe('CarteTable : jetons de PJ reliés aux personnages (L2.3)', () => {
 describe('CarteTable : en combat (L6.1 : 3b, 7a, 8a)', () => {
   const combattant = (id: string, c: Record<string, unknown> = {}) => ({
     id, genre: 'pj', nom: id, perso: id.slice(3), uid: 'alice', monstre: null, modInit: 1, initiative: 10, de: 9, pv: null, pvMax: null, aTerre: false,
-    mvtBase: 5, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+    mvtBase: 5, etats: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
   });
   const poser = (actif: string) => {
     jetonsScene.elements = [

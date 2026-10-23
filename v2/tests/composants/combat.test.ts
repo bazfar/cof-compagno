@@ -40,6 +40,11 @@ const attaques = vi.hoisted(() => ({
   releverAllie: vi.fn(async (..._a: unknown[]) => {}),
   boirePotion: vi.fn(async (..._a: unknown[]) => 6),
   remettreJetsDeMort: vi.fn(async (..._a: unknown[]) => {}),
+  viser: vi.fn(async (..._a: unknown[]) => {}),
+  decharger: vi.fn(async (..._a: unknown[]) => 1),
+  poserEtatSur: vi.fn(async (..._a: unknown[]) => {}),
+  retirerEtatDe: vi.fn(async (..._a: unknown[]) => {}),
+  debutDeTour: vi.fn(async (..._a: unknown[]) => 0),
 }));
 vi.mock('../../src/lib/actions/attaques', () => attaques);
 const actionsCarte = vi.hoisted(() => ({ marquerMort: vi.fn(async (..._a: unknown[]) => {}) }));
@@ -52,6 +57,7 @@ vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./fau
 vi.mock('../../src/lib/magasins/presents.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPresents);
 vi.mock('../../src/lib/magasins/bestiaire.svelte', async () => (await import('./faux-magasins.svelte')).magasinsBestiaire);
 vi.mock('../../src/lib/magasins/rencontres.svelte', async () => (await import('./faux-magasins.svelte')).magasinsRencontres);
+vi.mock('../../src/lib/magasins/portraits-jetons.svelte', () => ({ suivrePortraitsJetons: () => ({ images: {}, suivre: () => {}, arreter: () => {} }) }));
 vi.mock('../../src/composants/CarteTable.svelte', async () => ({ default: (await import('./FauxCarteTable.svelte')).default }));
 
 const { table, jetonsScene, joueurs, persos, bestiaire, armesBestiaire, armuresBestiaire, rencontres, combatDoc, combattants } = await import('./faux-magasins.svelte');
@@ -71,11 +77,11 @@ const FICHES = JSON.parse(readFileSync('tests/fixtures/fiches-v1.json', 'utf8'))
 const reelle = (nom: string, id: string, uid: string) => ({ ...ficheDepuisV1(FICHES.find((f: { nom: string }) => f.nom.startsWith(nom)), uid, 1).fiche, id });
 const pj = (id: string, c: Partial<Combattant> = {}) => ({
   id: `pj-${id}`, genre: 'pj' as const, nom: id, perso: id, uid: `u-${id}`, monstre: null, modInit: 1, initiative: null as number | null, de: null as number | null, pv: null, pvMax: null, aTerre: false,
-  mvtBase: 5, def: null as number | null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+  mvtBase: 5, def: null as number | null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
 });
 const monstre = (id: string, c: Partial<Combattant> = {}) => ({
   id: `m-r1-${id}`, genre: 'monstre' as const, nom: id, perso: null, uid: null, monstre: 'goule', modInit: 3, initiative: null as number | null, de: null as number | null, pv: 14, pvMax: 14, aTerre: false,
-  mvtBase: 5, def: 13 as number | null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+  mvtBase: 5, def: 13 as number | null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
 });
 const combat = (c: Record<string, unknown> = {}) => ({ nom: 'Les goules du cellier', scene: 'cave', rencontre: 'r1', statut: 'encours' as const, round: 2, tour: 6, actif: null as string | null, porteesLibres: false, creeLe: 1, closLe: null, ...c });
 
@@ -237,7 +243,7 @@ describe('section Combat du MJ (4a, 9a, 11a)', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
     await waitFor(() => expect(actions.ajouterCombattant).toHaveBeenCalledWith('c1', expect.objectContaining({ id: 'm-x', pvMax: 5, def: 10 })));
     await fireEvent.click(screen.getByRole('button', { name: 'Clore le combat' }));
-    await waitFor(() => expect(actions.cloreCombat).toHaveBeenCalledWith('c1'));
+    await waitFor(() => expect(actions.cloreCombat).toHaveBeenCalledWith('c1', expect.any(Array)));
   });
 });
 
@@ -315,7 +321,7 @@ describe('le joueur en combat', () => {
     const force = v.caracs.find((c) => c.code === 'FOR')!;
     await fireEvent.click(screen.getByRole('button', { name: new RegExp(`^Test de ${force.nom}`) }));
     expect(journal.lancerEtNoter).toHaveBeenCalledWith(`Test de ${force.nom}`, expect.stringMatching(/^1d20/), f.nom);
-    expect((screen.getByRole('button', { name: 'Attaques spéciales · L6.3' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByText('Attaques spéciales')).toBeNull(); // une fiche v1 n'en a pas (L6.3, 3)
     expect(screen.getByText('Sorts et capacités · L6.4')).toBeTruthy();
   });
 });
@@ -340,10 +346,10 @@ describe('attaques et dégâts (L6.2)', () => {
     const cible = screen.getByLabelText('Cible') as HTMLSelectElement;
     expect([...cible.options].map((o) => o.textContent)).toEqual(['Goule A · DEF 13']); // la goule B, à terre, n'y est pas
     await fireEvent.click(screen.getByRole('button', { name: new RegExp(`^Contact · ${a.nom}`) }));
-    expect(attaques.attaquer).toHaveBeenCalledWith('c1', expect.objectContaining({ tour: 6 }), expect.objectContaining({ id: 'pj-p1' }), expect.objectContaining({ id: 'm-r1-a' }), a, k().nom);
+    expect(attaques.attaquer).toHaveBeenCalledWith('c1', expect.objectContaining({ tour: 6 }), expect.objectContaining({ id: 'pj-p1' }), expect.objectContaining({ id: 'm-r1-a' }), { nom: a.nom, bonus: a.bonus, seuilCritique: a.seuilCritique, mode: a.mode }, expect.objectContaining({ id: 'p1' }), expect.any(Function), null);
     await screen.findByText('Critique ! d20 20 : Goule A est touché.');
     await fireEvent.click(screen.getByRole('button', { name: /^Lancer les dégâts .* \(critique\)$/ }));
-    expect(attaques.infligerDegats).toHaveBeenCalledWith('c1', expect.objectContaining({ id: 'm-r1-a' }), { nom: a.nom, formule: a.formule, typeDegats: a.typeDegats, critique: true }, k().nom);
+    expect(attaques.infligerDegats).toHaveBeenCalledWith('c1', expect.objectContaining({ id: 'm-r1-a' }), { nom: a.nom, formule: a.formule, typeDegats: a.typeDegats, critique: true }, k().nom, expect.any(Function), expect.objectContaining({ id: 'pj-p1' }));
     await screen.findByText('7 dégâts (7) : Goule A à 2 PV.');
     expect(screen.queryByRole('button', { name: /^Lancer les dégâts/ })).toBeNull();
   });
@@ -415,7 +421,7 @@ describe('attaques et dégâts (L6.2)', () => {
     await fireEvent.input(screen.getByLabelText('Dégâts bruts'), { target: { value: '7' } });
     await fireEvent.change(screen.getByLabelText('Type de dégâts'), { target: { value: 'magique' } });
     await fireEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
-    expect(attaques.subirDegats).toHaveBeenCalledWith(f, 7, 'magique');
+    expect(attaques.subirDegats).toHaveBeenCalledWith(f, 7, 'magique', { idCombat: 'c1', c: expect.objectContaining({ id: 'pj-p1' }) });
     await screen.findByText('5 dégâts subis : 15 PV.');
   });
 
@@ -447,7 +453,7 @@ describe('attaques et dégâts (L6.2)', () => {
       'c1',
       expect.objectContaining({ tour: 6 }),
       expect.objectContaining({ id: 'm-r1-a' }),
-      { nom: 'Griffes', bonus: 4, formule: '1d6+2', typeDegats: 'physique', portee: { min: 0, max: 1, vue: false }, seuilCritique: 20 },
+      { nom: 'Griffes', bonus: 4, formule: '1d6+2', typeDegats: 'physique', portee: { min: 0, max: 1, vue: false }, seuilCritique: 20, etatSurTouche: null },
       expect.objectContaining({ id: 'pj-p1' }),
       expect.objectContaining({ id: 'p1' }),
     );

@@ -1,4 +1,5 @@
 import type { Combattant } from '../schemas/combat.ts';
+import { deplacementPermis } from './etats.ts';
 
 /*
  * L'ordre et le tour d'un combat (lot L6.1, décisions de Thomas du
@@ -70,10 +71,17 @@ export function actionsDuTour(c: Pick<Combattant, 'tourActions' | 'principale' |
   return c.tourActions === tour ? { principale: c.principale, secondaire: c.secondaire, mvt: c.mvt, sprint: c.sprint } : { principale: false, secondaire: false, mvt: 0, sprint: false };
 }
 
-/** Cases qui restent ce tour : la base, le Sprint, moins ce qui est parcouru. */
-export function deplacementRestant(c: Pick<Combattant, 'mvtBase' | 'tourActions' | 'principale' | 'secondaire' | 'mvt' | 'sprint'>, tour: number): number {
+/**
+ * Cases qui restent ce tour : la base, le Sprint, moins ce qui est
+ * parcouru. Lot L6.3 (6a) : un état peut réduire le déplacement de moitié
+ * (arrondie au supérieur) ou à rien.
+ */
+export function deplacementRestant(c: Pick<Combattant, 'mvtBase' | 'tourActions' | 'principale' | 'secondaire' | 'mvt' | 'sprint' | 'etats'>, tour: number): number {
   const a = actionsDuTour(c, tour);
-  return Math.max(0, c.mvtBase + (a.sprint ? BONUS_SPRINT : 0) - a.mvt);
+  const total = c.mvtBase + (a.sprint ? BONUS_SPRINT : 0);
+  const permis = deplacementPermis(c.etats);
+  const plafond = permis === 'nul' ? 0 : permis === 'moitie' ? Math.ceil(total / 2) : total;
+  return Math.max(0, plafond - a.mvt);
 }
 
 /** Initiative d'un d20 et d'un modificateur, et son détail pour l'affichage (v1 : _detailJet). */

@@ -1,10 +1,12 @@
 <script lang="ts">
-  import { attaquer, boirePotion, infligerDegats, lancerJetDeMort, releverAllie, subirDegats } from '../lib/actions/attaques';
+  import { attaquer, boirePotion, decharger, infligerDegats, lancerJetDeMort, poserEtatSur, releverAllie, retirerEtatDe, subirDegats, viser } from '../lib/actions/attaques';
   import { RefusCombat } from '../lib/actions/combat';
   import { lancerEtNoter, messageErreurJournal } from '../lib/actions/journal';
   import { formuleDegats, horsDePortee, type CarteDuCombat } from '../lib/combat/attaque';
   import { attaquesDuPj, NOMS_TYPES_DEGATS, TYPES_DEGATS_SUBIS, type AttaquePj, type TypeDegatsSubis } from '../lib/combat/attaques-pj';
+  import { ciblable, contactSeulement, etatsPosables, peutAgir, regleEtat, texteEtat } from '../lib/combat/etats';
   import { etatPj } from '../lib/combat/mort';
+  import { attaquesSpecialesDuPj, type AttaqueSpeciale } from '../lib/combat/speciales';
   import { actionsDuTour } from '../lib/combat/ordre';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import type { AvecId } from '../lib/firebase/suivre.svelte';
@@ -29,7 +31,16 @@
    *     son tour ; un allié Mourant se relève d'ici (action principale) ;
    *   - objets (9a) : boire une potion, l'action secondaire ;
    *   - « Subir des dégâts » (8a) : un montant et un type, après réduction.
-   * Les sorts (L6.4) et les attaques spéciales (L6.3) le disent.
+   * Les sorts (L6.4) le disent.
+   *
+   * Lot L6.3 (décisions de Thomas du 23/10/2026) :
+   *   - ses jauges de classe et ses états, avec leur règle (14a) ; un état
+   *     qui l'empêche d'agir le dit, et il passe lui-même (7b) ;
+   *   - les attaques spéciales de ses armes, avec leur coût (11a) ; Coup
+   *     d'estoc au choix : Déséquilibrer ou Repousser (12a) ; Précision et
+   *     Décharge (13a) ;
+   *   - à son tour, il pose un état à la main sur qui il veut, ou en
+   *     retire un (4b, D).
    */
 
   let {
@@ -58,10 +69,18 @@
   const monTour = $derived(combat.statut === 'encours' && combat.actif === moi.id);
   const actions = $derived(actionsDuTour(moi, combat.tour));
   const attaques = $derived(attaquesDuPj(fiche));
-  const monstres = $derived(combattants.filter((c) => c.genre === 'monstre' && !c.aTerre));
+  const speciales = $derived(attaquesSpecialesDuPj(fiche));
+  const agit = $derived(peutAgir(moi.etats));
+  const aveugle = $derived(contactSeulement(moi.etats));
+  const monstres = $derived(combattants.filter((c) => c.genre === 'monstre' && !c.aTerre && ciblable(c.etats)));
   let cibleChoisie = $state('');
   const cible = $derived(monstres.find((c) => c.id === cibleChoisie) ?? monstres[0] ?? null);
-  const refusPortee = (a: AttaquePj) => (cible && !combat.porteesLibres ? horsDePortee(carte?.scene ?? null, carte?.jetons ?? [], moi.id, cible.id, a.portee) : null);
+  const refusPortee = (a: AttaquePj) =>
+    a.mode === 'distance' && aveugle ? 'il n’attaque qu’au contact' : cible && !combat.porteesLibres ? horsDePortee(carte?.scene ?? null, carte?.jetons ?? [], moi.id, cible.id, a.portee) : null;
+  const jauges = $derived(vue.refonte?.jauges.filter((j) => j.cle !== 'corruptionAme') ?? []);
+  const coutDe = (s: AttaqueSpeciale) => (s.cout === 'unParCombat' ? '1×/combat' : `${s.cout.montant} ${jauges.find((j) => j.cle === (s.cout as { ressource: string }).ressource)?.nom ?? (s.cout as { ressource: string }).ressource}`);
+  const specialeFaite = $derived(!!moi.usages.attaqueSpeciale);
+  let cibles3 = $state<string[]>([]);
   const mourants = $derived(
     combattants.filter((c) => c.genre === 'pj' && c.id !== moi.id && c.perso && fiches.has(c.perso) && etatPj(vueFiche(fiches.get(c.perso)!).pv.actuel, c) === 'mourant'),
   );
@@ -71,7 +90,7 @@
   let erreur = $state('');
   let occupe = $state(false);
   /** Une attaque qui a touché : ses dégâts restent à lancer (2a). */
-  let aLancer = $state<{ a: AttaquePj; cible: AvecId<Combattant>; critique: boolean } | null>(null);
+  let aLancer = $state<{ a: Pick<AttaquePj, 'nom' | 'formule' | 'typeDegats'>; cible: AvecId<Combattant>; critique: boolean } | null>(null);
 
   async function agir(f: () => Promise<string | void>) {
     message = '';
@@ -88,20 +107,30 @@
 
   const tester = (carac: string, mod: number) => agir(async () => void (await lancerEtNoter(`Test de ${carac}`, formuleTest(mod), fiche.nom)));
 
-  function attaquerAvec(a: AttaquePj) {
+  const texteIssue = (i: { de: number; total: number; def: number; touche: boolean; critique: boolean; echecCritique: boolean }, nom: string) =>
+    i.critique ? `Critique ! d20 ${i.de} : ${nom} est touché.` : i.touche ? `Touché : ${i.total} contre DEF ${i.def}.` : i.echecCritique ? 'Raté : 1 naturel.' : i.de === 0 ? 'Raté d’office.' : `Raté : ${i.total} contre DEF ${i.def}.`;
+  function attaquerAvec(a: AttaquePj, s: AttaqueSpeciale | null = null, estoc?: 'etat' | 'repousse') {
     const c = cible;
     if (!c) return;
     return agir(async () => {
-      const i = await attaquer(idCombat, combat, moi, c, a, fiche.nom);
-      if (i.touche) aLancer = { a, cible: c, critique: i.critique };
-      return i.critique ? `Critique ! d20 ${i.de} : ${c.nom} est touché.` : i.touche ? `Touché : ${i.total} contre DEF ${i.def}.` : i.echecCritique ? 'Raté : 1 naturel.' : `Raté : ${i.total} contre DEF ${i.def}.`;
+      const i = await attaquer(idCombat, combat, moi, c, { nom: a.nom, bonus: a.bonus, seuilCritique: a.seuilCritique, mode: a.mode }, fiche, Math.random, s ? { s, estoc, carte, fiches, combattants } : null);
+      if (i.touche && a.formule) aLancer = { a, cible: c, critique: i.critique };
+      return texteIssue(i, c.nom);
     });
+  }
+  function jouerSpeciale(s: AttaqueSpeciale, estoc?: 'etat' | 'repousse') {
+    if (s.effet.type === 'precision') return agir(async () => (await viser(idCombat, combat, moi, s, fiche), 'Tu vises : ta prochaine attaque gagne +1d6.'));
+    if (s.effet.type === 'decharge') {
+      const choisies = monstres.filter((m) => cibles3.includes(m.id)).slice(0, 3);
+      return agir(async () => `Décharge : ${await decharger(idCombat, combat, moi, choisies.length ? choisies : cible ? [cible] : [], s, fiche)} balle(s) au but.`);
+    }
+    return attaquerAvec(s.arme, s, estoc);
   }
   function lancerDegats() {
     const x = aLancer;
     if (!x) return;
     return agir(async () => {
-      const r = await infligerDegats(idCombat, x.cible, { nom: x.a.nom, formule: x.a.formule, typeDegats: x.a.typeDegats, critique: x.critique }, fiche.nom);
+      const r = await infligerDegats(idCombat, x.cible, { nom: x.a.nom, formule: x.a.formule, typeDegats: x.a.typeDegats, critique: x.critique }, fiche.nom, Math.random, moi);
       aLancer = null;
       return `${r.degats.net} dégâts (${r.degats.detail}) : ${r.pv <= 0 ? `${x.cible.nom} tombe.` : `${x.cible.nom} à ${r.pv} PV.`}`;
     });
@@ -114,10 +143,24 @@
     const b = brut;
     if (b === null) return;
     return agir(async () => {
-      const r = await subirDegats(fiche, b, typeSubi);
+      const r = await subirDegats(fiche, b, typeSubi, { idCombat, c: moi });
       brut = null;
       subir = false;
       return `${r.net} dégâts subis : ${r.pv} PV.`;
+    });
+  }
+
+  // ---- Poser un état à la main (4b, D) ----
+  const posables = etatsPosables();
+  let poseSur = $state('');
+  let poseEtat = $state('');
+  let poseRounds = $state<number | null>(1);
+  function poser() {
+    const c = combattants.find((x) => x.id === (poseSur || cible?.id));
+    if (!c || !poseEtat) return;
+    return agir(async () => {
+      await poserEtatSur(idCombat, c, poseEtat, poseRounds, fiche.nom);
+      poseEtat = '';
     });
   }
 </script>
@@ -133,7 +176,19 @@
       <span>CA {vue.stats.ca}</span>
       <span>Init {signe(vue.stats.initiative)}</span>
       {#if vue.pp}<span>PP {vue.pp.actuel}/{vue.pp.max}</span>{/if}
+      {#each jauges as j (j.cle)}<span>{j.nom} {j.actuel}{j.max !== null ? `/${j.max}` : ''}</span>{/each}
     </div>
+    {#if moi.etats.length}
+      <ul class="etats" aria-label="Mes états">
+        {#each moi.etats as e (e.id)}
+          <li title={regleEtat(e.id)}>
+            <strong>{texteEtat(e)}</strong> <span class="aide">{regleEtat(e.id)}</span>
+            {#if monTour}<button class="lien" aria-label="Retirer {texteEtat(e)}" disabled={occupe} onclick={() => agir(() => retirerEtatDe(idCombat, moi, e.id))}>retirer</button>{/if}
+          </li>
+        {/each}
+      </ul>
+    {/if}
+    {#if agit !== 'oui' && etat === 'debout'}<p class="alerte" role="status">{agit === 'non' ? 'Tu ne peux pas agir ce tour : finis ton tour.' : 'Tu ne peux que te déplacer ce tour.'}</p>{/if}
     {#if etat === 'mourant'}<p class="alerte" role="status">Mourant · {moi.mortSucces}/3 réussites, {moi.mortEchecs}/3 échecs</p>{/if}
     {#if etat === 'mort'}<p class="alerte" role="status">{fiche.nom} est mort.</p>{/if}
   </div>
@@ -161,7 +216,7 @@
       <div class="boutons">
         {#each attaques as a (a.mode)}
           {@const refus = refusPortee(a)}
-          <button disabled={occupe || !monTour || actions.principale || !cible || !!refus || !!aLancer} title={refus ?? undefined} onclick={() => attaquerAvec(a)}
+          <button disabled={occupe || !monTour || actions.principale || agit !== 'oui' || !cible || !!refus || !!aLancer} title={refus ?? undefined} onclick={() => attaquerAvec(a)}
             >{a.mode === 'contact' ? 'Contact' : 'Distance'} · {a.nom} {signe(a.bonus)}</button
           >
           {#if refus && monTour}<span class="aide">{a.nom} : {refus}.</span>{/if}
@@ -169,15 +224,69 @@
           <span class="aide">Aucune arme équipée.</span>
         {/each}
         {#if vue.stats.attaque.magique !== null}<button disabled>Magique {signe(vue.stats.attaque.magique)} · L6.4</button>{/if}
-        <button disabled>Attaques spéciales · L6.3</button>
       </div>
+      {#if speciales.length}
+        <h3>Attaques spéciales</h3>
+        <div class="boutons">
+          {#each speciales as s (s.id)}
+            {@const refus = s.effet.type === 'precision' ? null : refusPortee(s.arme)}
+            {@const bloque = occupe || !monTour || actions.principale || agit !== 'oui' || (s.effet.type !== 'precision' && !cible) || !!refus || !!aLancer || (s.cout === 'unParCombat' && specialeFaite)}
+            {#if s.effet.type === 'estoc'}
+              <button disabled={bloque} title={s.description} onclick={() => jouerSpeciale(s, 'etat')}>{s.nom} · Déséquilibrer · {coutDe(s)}</button>
+              <button disabled={bloque} title={s.description} onclick={() => jouerSpeciale(s, 'repousse')}>{s.nom} · Repousser · {coutDe(s)}</button>
+            {:else}
+              <button disabled={bloque} title={s.description} onclick={() => jouerSpeciale(s)}>{s.nom} · {coutDe(s)}</button>
+            {/if}
+            {#if refus && monTour}<span class="aide">{s.nom} : {refus}.</span>{/if}
+            {#if s.effet.type === 'decharge'}
+              <fieldset class="cibles3">
+                <legend>Cibles de la Décharge (3 au plus)</legend>
+                {#each monstres as m (m.id)}
+                  <label
+                    ><input
+                      type="checkbox"
+                      checked={cibles3.includes(m.id)}
+                      disabled={!cibles3.includes(m.id) && cibles3.length >= 3}
+                      onchange={(e) => (cibles3 = e.currentTarget.checked ? [...cibles3, m.id] : cibles3.filter((x) => x !== m.id))}
+                    />
+                    {m.nom}</label
+                  >
+                {/each}
+              </fieldset>
+            {/if}
+          {/each}
+        </div>
+        {#if specialeFaite && speciales.some((s) => s.cout === 'unParCombat')}<p class="aide">Attaque spéciale du combat faite.</p>{/if}
+        {#if moi.visee}<p class="aide">Tu as visé : ta prochaine attaque gagne +1d6 aux dégâts.</p>{/if}
+      {/if}
       {#if aLancer}
-        <button class="degats" disabled={occupe} onclick={lancerDegats}>Lancer les dégâts {formuleDegats(aLancer.a.formule, aLancer.critique)}{aLancer.critique ? ' (critique)' : ''}</button>
+        <button class="degats" disabled={occupe} onclick={lancerDegats}
+          >Lancer les dégâts {formuleDegats(aLancer.a.formule, aLancer.critique)}{moi.visee ? (aLancer.critique ? '+1d10' : '+1d6') : ''}{aLancer.critique ? ' (critique)' : ''}</button
+        >
       {/if}
       {#if monTour && actions.principale && !aLancer}<p class="aide">Action principale prise ce tour.</p>{/if}
       {#each mourants as m (m.id)}
         <button disabled={occupe || !monTour || actions.principale} onclick={() => agir(async () => void (await releverAllie(idCombat, combat, moi, m, fiches.get(m.perso!)!, fiche.nom)))}>Relever {m.nom}</button>
       {/each}
+    </div>
+  {/if}
+
+  {#if monTour && etat !== 'mort'}
+    <div class="bloc">
+      <h3>Poser un état</h3>
+      <form class="poser" onsubmit={(e) => (e.preventDefault(), poser())}>
+        <select aria-label="Sur qui" bind:value={poseSur}>
+          <option value="">{cible?.nom ?? '—'}</option>
+          {#each combattants.filter((c) => c.id !== cible?.id) as c (c.id)}<option value={c.id}>{c.nom}</option>{/each}
+        </select>
+        <select aria-label="État à poser" bind:value={poseEtat}>
+          <option value="">État…</option>
+          {#each posables as p (p.id)}<option value={p.id} title={p.regle}>{p.nom}</option>{/each}
+        </select>
+        <input type="number" min="1" max="99" aria-label="Rounds" bind:value={poseRounds} />
+        <button class="petit" disabled={occupe || !poseEtat}>Poser</button>
+      </form>
+      <p class="aide">Pour l’état qu’une de tes capacités pose ; le MJ peut le retirer.</p>
     </div>
   {/if}
 
@@ -311,6 +420,40 @@
   .degats {
     background: var(--couleur-danger);
     color: var(--couleur-sur-accent);
+  }
+  .etats {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+  }
+  .lien {
+    background: none;
+    border: none;
+    padding: 0;
+    min-height: 0;
+    color: var(--couleur-accent);
+    text-decoration: underline;
+    font-size: 12px;
+  }
+  .cibles3 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    font-size: 13px;
+    border: 1px solid var(--couleur-bordure-douce);
+    border-radius: 8px;
+  }
+  .poser {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .poser input {
+    width: 64px;
   }
   .subir {
     display: flex;

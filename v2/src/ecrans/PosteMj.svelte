@@ -92,6 +92,8 @@
   });
   const combatMj = $derived(combatOuvert ? import('../composants/CombatMj.svelte') : null);
   const panneauCombat = $derived(combatOuvert ? import('../composants/PanneauCombat.svelte') : null);
+  // Le bandeau des combattants, au-dessus de la carte (L6.3, C).
+  const bandeauCombat = $derived(combatOuvert ? import('../composants/BandeauCombat.svelte') : null);
   // La carte montrée, pour les portées des attaques de monstre (L6.2, 4a).
   let carteCombat = $state<CarteDuCombat | null>(null);
   // Joueurs de la table (correctif du 19/10), chargés à part comme le groupe.
@@ -142,6 +144,11 @@
         {/if}
       </div>
       <div class="centre">
+        {#if bandeauCombat && section === 'combat'}
+          {#await bandeauCombat then module}
+            <module.default />
+          {/await}
+        {/if}
         {#await carte}
           <p>Chargement de la battlemap…</p>
         {:then module}

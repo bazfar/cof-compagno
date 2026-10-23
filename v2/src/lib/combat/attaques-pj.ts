@@ -1,6 +1,7 @@
 import { CalculsPersonnage } from '../regles/calculs.ts';
 import type { ObjetPorte } from '../regles/fiche-calcul.ts';
 import { ficheCalculDepuisFiche } from '../regles/fiche-document.ts';
+import { classeDeLaRefonte, contexteDe, profilDe } from '../fiche/refonte.ts';
 import type { Fiche } from '../schemas/fiche.ts';
 import { PORTEE_CONTACT, SEUIL_CRITIQUE, SEUIL_PRECISION_LETALE, type Portee, type TypeDegats } from './attaque.ts';
 
@@ -59,7 +60,11 @@ export function attaquesDuPj(f: Fiche): AttaquePj[] {
   const r: AttaquePj[] = [];
   const contact = c.armeContactEquipee();
   const formuleContact = contact ? formuleArme(contact) : null;
-  const poings = c.degatsPoings();
+  // Mains nues de la refonte (Moine, lot L4.16 ; L6.3) : le dé de son niveau, + mod de FOR (v1).
+  const classe = f.schemaVersion === 2 ? classeDeLaRefonte(f.refonte.classe) : undefined;
+  const deMainsNues = f.schemaVersion === 2 && classe ? profilDe(classe, f.refonte, contexteDe(f, classe)).deMainsNues : null;
+  const modFor = c.mod('FOR');
+  const poings = c.degatsPoings() ?? (deMainsNues ? `${deMainsNues}${modFor > 0 ? `+${modFor}` : modFor < 0 ? modFor : ''}` : null);
   if (contact && formuleContact)
     r.push({ mode: 'contact', nom: String(contact.nom ?? 'Arme'), bonus: c.bonusAttaque('contact') ?? 0, formule: formuleContact, typeDegats: contact.typedegats === 'magique' ? 'magique' : 'physique', portee: porteeArme(contact, PORTEE_CONTACT, false), seuilCritique });
   else if (poings) r.push({ mode: 'contact', nom: 'Poings', bonus: c.bonusAttaque('contact') ?? 0, formule: poings, typeDegats: 'physique', portee: PORTEE_CONTACT, seuilCritique });
