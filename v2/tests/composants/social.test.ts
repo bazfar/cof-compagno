@@ -33,6 +33,8 @@ vi.mock('../../src/lib/magasins/scenes-hors-combat.svelte', async () => (await i
 vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPersos);
 vi.mock('../../src/lib/magasins/presents.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPresents);
 vi.mock('../../src/lib/magasins/seances.svelte', async () => (await import('./faux-magasins.svelte')).magasinsSeances);
+// Sorts hors combat (G2a, G2b) : la liste du MJ et la carte de scène les lisent.
+vi.mock('../../src/lib/magasins/sorts-hors-combat.svelte', async () => (await import('./faux-magasins.svelte')).magasinsSorts);
 
 const { pnjs, reputation, historiquePnj, loreMj, table } = await import('./faux-magasins.svelte');
 const { session } = await import('../../src/lib/session.svelte');

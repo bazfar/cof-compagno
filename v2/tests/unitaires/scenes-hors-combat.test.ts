@@ -93,7 +93,7 @@ const scene = (s: Partial<Scene> = {}): Scene => ({
   ...s,
 });
 const lieu = (s: Partial<Scene> = {}) => scene({ type: 'exploration', pnj: null, cible: 'Celliers du B0', depart: null, ...s });
-const action = (a: Partial<Action> = {}): Action => ({ uid: 'alice', perso: 'p-magnus', nom: 'Magnus', tour: 1, option: 'convaincre', competence: 'Persuasion', de: 10, bonus: 3, resultat: null, creeLe: 1, relance: false, note: null, delta: null, annule: false, ...a });
+const action = (a: Partial<Action> = {}): Action => ({ uid: 'alice', perso: 'p-magnus', nom: 'Magnus', tour: 1, option: 'convaincre', competence: 'Persuasion', de: 10, bonus: 3, resultat: null, creeLe: 1, relance: false, note: null, delta: null, annule: false, sort: null, ...a });
 const pnj = (p: Partial<Pnj> = {}): Pnj => ({ nom: 'Aude Berlan', faction: null, lore: null, rencontre: true, cran: 'neutre', tendance: null, mensonges: 0, peuple: false, secrets: [], creeLe: 1, majLe: 1, ...p });
 
 beforeEach(() => {

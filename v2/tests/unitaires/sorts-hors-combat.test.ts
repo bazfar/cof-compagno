@@ -77,7 +77,7 @@ const sort = (id: string) => L.sortsLancables(kylhian()).find((s) => s.id === id
 const demande = (patch: Partial<DemandeSort> = {}): DemandeSort => ({
   uid: 'alice', perso: 'p-k', nom: 'Kylhian', sort: 'illusion.leurre', nomSort: 'Leurre', palier: 'I', pp: 1, echec: 10, sauvegarde: 'Volonte', dd: 13,
   intention: 'Une silhouette au bout du couloir', textes: ['Un bruit ou une silhouette immobile : compte une réussite en infiltration.'],
-  statut: 'acceptee', motif: null, de: null, resistance: null, creeLe: 1, majLe: 1, ...patch,
+  statut: 'acceptee', motif: null, de: null, resistance: null, scene: null, action: null, bonus: null, creeLe: 1, majLe: 1, ...patch,
 });
 const DEMANDE = 'tables/t1/sortsHorsCombat/d1';
 const PERSO = 'tables/t1/persos/p-k';
@@ -208,8 +208,8 @@ describe('demander (1a, 2b)', () => {
 
 describe('le MJ répond (5b)', () => {
   it('accepte ou refuse, avec ou sans motif', async () => {
-    await A.repondreDemandeSort('d1', true, '  ');
-    await A.repondreDemandeSort('d1', false, ' Pas de lumière ici ');
+    await A.repondreDemandeSort({ ...demande(), id: 'd1' }, true, '  ');
+    await A.repondreDemandeSort({ ...demande(), id: 'd1' }, false, ' Pas de lumière ici ');
     expect(appels.map((a) => [a.fn, a.chemin, (a.donnees as Record<string, unknown>).statut, (a.donnees as Record<string, unknown>).motif])).toEqual([
       ['updateDoc', DEMANDE, 'acceptee', null],
       ['updateDoc', DEMANDE, 'refusee', 'Pas de lumière ici'],

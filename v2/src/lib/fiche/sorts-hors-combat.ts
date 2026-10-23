@@ -126,3 +126,31 @@ export function cibleResiste(de: number, bonus: number, dd: number): boolean {
 export function aTraiter(d: Pick<DemandeSort, 'statut' | 'sauvegarde' | 'resistance'>): boolean {
   return d.statut === 'attente' || (d.statut === 'lancee' && d.sauvegarde !== null && d.resistance === null);
 }
+
+// ---- Lot G2b : un sort joint à l'action du tour ----
+
+/** Ce qu'un sort fait au jet du tour, une fois tranché (13a, 14b, 7b). */
+export interface EffetEnScene {
+  /** Jet d'échec raté (7b) : l'action compte comme un échec de la scène, quel que soit le d20. */
+  rate: boolean;
+  /** Bonus au jet : celui que le MJ a accordé, 0 si la cible a résisté. */
+  bonus: number;
+  /** Ce que la carte de scène note sur le jet. */
+  note: string;
+}
+
+/**
+ * Le sort est-il tranché, et que fait-il au jet ? null tant qu'il attend :
+ * l'accord du MJ, le lancement par le client du joueur (4b) ou la
+ * sauvegarde de la cible (14b). Un sort refusé ne résout rien : le client
+ * du MJ défait l'action, que le joueur rejoue (2b).
+ */
+export function effetEnScene(d: Pick<DemandeSort, 'statut' | 'nomSort' | 'palier' | 'bonus' | 'sauvegarde' | 'resistance'>): EffetEnScene | null {
+  const nom = `${d.nomSort} ${d.palier}`;
+  if (d.statut === 'ratee') return { rate: true, bonus: 0, note: `${nom} raté` };
+  if (d.statut !== 'lancee') return null;
+  if (d.sauvegarde !== null && d.resistance === null) return null;
+  if (d.resistance?.reussie) return { rate: false, bonus: 0, note: `${nom}, la cible résiste` };
+  const bonus = d.bonus ?? 0;
+  return { rate: false, bonus, note: `${nom} +${bonus}` };
+}

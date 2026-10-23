@@ -2,13 +2,18 @@
   import { onDestroy } from 'svelte';
   import { agirEnScene, poserQuestion, RefusScene, relancerEnScene, utiliserCapacite } from '../lib/actions/scenes-hors-combat';
   import { messageErreurJournal } from '../lib/actions/journal';
+  import { lancerSort, RefusSort } from '../lib/actions/sorts-hors-combat';
+  import { ppDisponibles, sortsLancables } from '../lib/fiche/sorts-hors-combat';
+  import { suivreMesDemandesSorts } from '../lib/magasins/sorts-hors-combat.svelte';
+  import type { Palier } from '../lib/schemas/effets';
+  import { BONUS_PALIER } from '../lib/schemas/sort-hors-combat';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import type { CollectionSuivie, DocumentSuivi } from '../lib/firebase/suivre.svelte';
   import { suivreTable } from '../lib/magasins/carte.svelte';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
   import { suivreActionsScene, suivreMesQuestions, suivreSceneHorsCombat, suivreUtilisationsScene } from '../lib/magasins/scenes-hors-combat.svelte';
   import { NOMS_CRANS } from '../lib/pnj/attitude';
-  import { aLeNoeud, choixPossibles, cranScene, NOMS_TYPES, OPTIONS, relancable, type ChoixScene } from '../lib/scenes/hors-combat';
+  import { aLeNoeud, choixPossibles, cranScene, idAction, NOMS_TYPES, OPTIONS, OPTIONS_AVEC_SORT, relancable, type ChoixScene } from '../lib/scenes/hors-combat';
   import { dejaUtiliseCetteSeance, NARRATIFS, nomNoeud } from '../lib/scenes/vecu-en-scene';
   import type { ActionScene, SceneHorsCombat, UtilisationVecu } from '../lib/schemas/scene-hors-combat';
   import { session } from '../lib/session.svelte';
@@ -30,15 +35,23 @@
    * CHA ; une question au MJ (Savant) ; les « Capacités du Vécu »
    * narratives. Ce que Lire les gens révèle et les réponses du MJ ne
    * s'affichent que chez le joueur concerné.
+   * Sorts en scène (lot G2b, décisions de Thomas du 22/10/2026) : un sort
+   * peut appuyer une option sociale ou une compétence (7a), avec une ligne
+   * d'intention (1a) ; le d20 part comme d'habitude, le jet attend que le
+   * MJ tranche le sort. Accordé, ce client le lance de lui-même (4b : PP
+   * payés, jet d'échec) ; refusé, l'action est défaite et le joueur rejoue
+   * son tour (2b).
    */
 
   const table = suivreTable(session.table);
   const persos = suivrePersos(session.table);
   const questions = suivreMesQuestions(session.table, session.uid);
+  const demandes = suivreMesDemandesSorts(session.table, session.uid);
   onDestroy(() => {
     table.arreter();
     persos.arreter();
     questions.arreter();
+    demandes.arreter();
   });
   const id = $derived(table.etat.donnees?.sceneHorsCombat ?? null);
 
@@ -97,6 +110,35 @@
   }
   let competenceLibre = $state('Perception');
 
+  // ---- Sorts en scène (G2b) ----
+  const ficheV2 = $derived(fiche && fiche.schemaVersion === 2 ? fiche : null);
+  const lancables = $derived(ficheV2 ? sortsLancables(ficheV2) : []);
+  const dispo = $derived(ficheV2 ? ppDisponibles(ficheV2) : 0);
+  let sortChoisi = $state('');
+  let intentionSort = $state('');
+  const sortJoint = $derived.by(() => {
+    if (!sortChoisi || !ficheV2) return null;
+    const [sort, palier] = sortChoisi.split('|') as [string, Palier];
+    return { fiche: ficheV2, sort, palier, intention: intentionSort };
+  });
+  const mesSorts = $derived(demandes.etat.elements.filter((d) => d.scene === id));
+  const sortDuTour = $derived(monActe?.sort ? (mesSorts.find((d) => d.id === monActe.sort) ?? null) : null);
+  const sortRefuse = $derived(scene && moi && !monActe ? (mesSorts.find((d) => d.action === idAction(scene.tour, moi.uid) && d.statut === 'refusee') ?? null) : null);
+  // 4b : un sort accordé se lance de lui-même depuis ce client, une fois.
+  const lances = new Set<string>();
+  $effect(() => {
+    for (const d of mesSorts)
+      if (d.statut === 'acceptee' && !lances.has(d.id)) {
+        lances.add(d.id);
+        lancerSort(d.id, scene?.seance).catch((e: unknown) => {
+          lances.delete(d.id);
+          message = e instanceof RefusSort ? e.message : messageErreurJournal(e);
+        });
+      }
+  });
+  const attenteSort = (d: { statut: string; sauvegarde: unknown; resistance: unknown }) =>
+    d.statut === 'attente' ? 'Ton sort attend l’accord du MJ…' : d.statut === 'acceptee' ? 'Sort accordé : lancement…' : d.statut === 'lancee' && d.sauvegarde !== null && d.resistance === null ? 'La cible fait sa sauvegarde…' : 'Le MJ tranche…';
+
   let message = $state('');
   let occupe = $state(false);
   async function jouer(c: ChoixScene | null) {
@@ -104,8 +146,11 @@
     const competence = c ? (c.competence ?? competenceLibre) : null;
     message = '';
     occupe = true;
+    const avecSort = c && sortJoint && OPTIONS_AVEC_SORT.includes(c.option) ? sortJoint : null;
     try {
-      await agirEnScene(id, scene, c ? c.option : 'passer', competence, competence ? (mods.get(competence) ?? 0) : 0);
+      await agirEnScene(id, scene, c ? c.option : 'passer', competence, competence ? (mods.get(competence) ?? 0) : 0, avecSort);
+      sortChoisi = '';
+      intentionSort = '';
     } catch (e) {
       message = e instanceof RefusScene ? e.message : messageErreurJournal(e);
     } finally {
@@ -135,7 +180,24 @@
     {#if scene.statut !== 'ouverte'}
       <p class="aide">Scène terminée : le MJ conclut.</p>
     {:else if moi && !monActe}
+      {#if sortRefuse}<p class="prive">Le MJ a refusé ton sort{sortRefuse.motif ? ` : ${sortRefuse.motif}` : ''}. Rejoue ton tour.</p>{/if}
       <div class="choix" role="group" aria-label="Ton action">
+        {#if lancables.length}
+          <label
+            >Un sort pour appuyer ton jet (facultatif)
+            <select bind:value={sortChoisi}>
+              <option value="">Aucun</option>
+              {#each lancables as s (s.id)}
+                {#each s.paliers as p (p.palier)}
+                  <option value="{s.id}|{p.palier}" disabled={p.pp > dispo}>{s.nom} {p.palier} · {p.pp} PP · bonus +{BONUS_PALIER[p.palier]}{s.echec ? ` · échec sur 1 à ${s.echec}` : ''}</option>
+                {/each}
+              {/each}
+            </select>
+          </label>
+          {#if sortChoisi}
+            <label>Ce que fait le sort <input maxlength="120" placeholder="Le charme rend le garde bienveillant…" bind:value={intentionSort} /></label>
+          {/if}
+        {/if}
         {#if scene.type !== 'social' && scene.mode === 'individuel'}
           <label
             >Compétence
@@ -146,14 +208,15 @@
         {/if}
         {#each choix as c (c.option)}
           {@const comp = c.competence ?? competenceLibre}
-          <button disabled={occupe || c.refus !== null} title={c.refus ?? ''} onclick={() => jouer(c)}>
+          {@const refusSort = sortChoisi ? (!OPTIONS_AVEC_SORT.includes(c.option) ? 'Un sort n’appuie pas cette option.' : !intentionSort.trim() ? 'Dis ce que fait le sort.' : null) : null}
+          <button disabled={occupe || c.refus !== null || refusSort !== null} title={c.refus ?? refusSort ?? ''} onclick={() => jouer(c)}>
             {c.option === 'competence' ? `Lancer ${comp}` : `${c.nom} · ${comp}`} {signe(mods.get(comp) ?? 0)}
           </button>
         {/each}
-        <button class="discret" disabled={occupe} onclick={() => jouer(null)}>Passer mon tour</button>
+        <button class="discret" disabled={occupe || !!sortChoisi} onclick={() => jouer(null)}>Passer mon tour</button>
       </div>
     {:else if moi && monActe}
-      <p class="aide">{monActe.resultat === null ? 'Le MJ tranche…' : 'Tu as joué ce tour : on attend les autres.'}</p>
+      <p class="aide">{monActe.resultat === null ? (sortDuTour ? attenteSort(sortDuTour) : 'Le MJ tranche…') : 'Tu as joué ce tour : on attend les autres.'}</p>
     {/if}
 
     {#each aRelancer as a (a.id)}

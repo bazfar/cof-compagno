@@ -4,7 +4,7 @@ import { ppDisponibles, sortRate, cibleResiste, sortsLancables, type SortLancabl
 import { CLE_HORS_SEANCE, dejaUtiliseCetteSeance } from '../scenes/vecu-en-scene';
 import { schemaFiche, type FicheV2 } from '../schemas/fiche';
 import { schemaJetJournal } from '../schemas/journal';
-import { schemaDemandeSort, type DemandeSort } from '../schemas/sort-hors-combat';
+import { BONUS_PALIER, schemaDemandeSort, type DemandeSort } from '../schemas/sort-hors-combat';
 import type { Palier } from '../schemas/effets';
 import { session } from '../session.svelte';
 import { lancerEtNoter } from './journal';
@@ -14,6 +14,10 @@ import { lancerEtNoter } from './journal';
  * 22/10/2026) : le joueur demande (1a, 2b), le MJ accepte ou refuse (5b),
  * le joueur lance et paie (15b, 6a), le MJ lance la sauvegarde de la
  * cible (14b). Voir src/lib/schemas/sort-hors-combat.ts.
+ *
+ * En scène (lot G2b) : la demande appuie l'action du tour (`enScene`) ; le
+ * MJ fixe le bonus en acceptant (13a) ; un refus défait l'action, que le
+ * joueur rejoue (2b).
  */
 
 export class RefusSort extends Error {}
@@ -22,8 +26,19 @@ const refDemande = (id: string) => doc(db, `tables/${session.table}/sortsHorsCom
 const refPerso = (id: string) => doc(db, `tables/${session.table}/persos/${id}`);
 const d20 = (alea: () => number) => 1 + Math.floor(alea() * 20);
 
-/** Le joueur demande au MJ de lancer un sort hors combat. Rend l'identifiant de la demande. */
-export async function demanderSort(fiche: FicheV2 & { id: string }, sort: string, palier: Palier, intention: string, seance: string | undefined): Promise<string> {
+/**
+ * Le joueur demande au MJ de lancer un sort hors combat, ou, avec
+ * `enScene`, pour appuyer son action du tour (G2b). Rend l'identifiant de
+ * la demande.
+ */
+export async function demanderSort(
+  fiche: FicheV2 & { id: string },
+  sort: string,
+  palier: Palier,
+  intention: string,
+  seance: string | undefined,
+  enScene: { scene: string; action: string } | null = null,
+): Promise<string> {
   if (!intention.trim()) throw new RefusSort('Dis en une ligne ce que tu veux faire.');
   const s: SortLancable | undefined = sortsLancables(fiche).find((x) => x.id === sort);
   const p = s?.paliers.find((x) => x.palier === palier);
@@ -48,6 +63,9 @@ export async function demanderSort(fiche: FicheV2 & { id: string }, sort: string
     motif: null,
     de: null,
     resistance: null,
+    scene: enScene?.scene ?? null,
+    action: enScene?.action ?? null,
+    bonus: null,
     creeLe: maintenant,
     majLe: maintenant,
   });
@@ -56,10 +74,28 @@ export async function demanderSort(fiche: FicheV2 & { id: string }, sort: string
   return ref.id;
 }
 
-/** Le MJ accepte ou refuse une demande en attente (5b), avec un motif possible. */
-export async function repondreDemandeSort(id: string, accepte: boolean, motif: string): Promise<void> {
-  const m = motif.trim().slice(0, 120);
-  await updateDoc(refDemande(id), { statut: accepte ? 'acceptee' : 'refusee', motif: m || null, majLe: Date.now() });
+/**
+ * Le MJ accepte ou refuse une demande en attente (5b), avec un motif
+ * possible. En scène (G2b) : il accorde un bonus de 0 à celui du palier
+ * (13a) ; un refus défait l'action du tour, que le joueur rejoue (2b).
+ */
+export async function repondreDemandeSort(d: Pick<DemandeSort, 'scene' | 'action' | 'palier'> & { id: string }, accepte: boolean, motif: string, bonus = 0): Promise<void> {
+  const m = motif.trim().slice(0, 120) || null;
+  const maintenant = Date.now();
+  if (d.scene === null || d.action === null) {
+    await updateDoc(refDemande(d.id), { statut: accepte ? 'acceptee' : 'refusee', motif: m, majLe: maintenant });
+    return;
+  }
+  if (!accepte) {
+    const { scene, action } = d;
+    await runTransaction(db, async (tx) => {
+      tx.update(refDemande(d.id), { statut: 'refusee', motif: m, majLe: maintenant });
+      tx.delete(doc(db, `tables/${session.table}/scenesHorsCombat/${scene}/actions/${action}`));
+    });
+    return;
+  }
+  const b = Math.max(0, Math.min(BONUS_PALIER[d.palier], Math.round(bonus)));
+  await updateDoc(refDemande(d.id), { statut: 'acceptee', motif: m, bonus: b, majLe: maintenant });
 }
 
 /**
@@ -92,7 +128,7 @@ export async function lancerSort(id: string, seance: string | undefined, alea: (
       auteurUid: session.uid,
       auteurNom: session.nom,
       perso: d.nom,
-      libelle: `${d.nomSort} ${d.palier}, hors combat${rate ? ' : raté' : ''}`.slice(0, 80),
+      libelle: `${d.nomSort} ${d.palier}, ${d.scene ? 'en scène' : 'hors combat'}${rate ? ' : raté' : ''}`.slice(0, 80),
       formule: de === null ? 'sort' : `1d20 (échec sur 1 à ${d.echec})`,
       des: de === null ? [] : [de],
       bonus: 0,

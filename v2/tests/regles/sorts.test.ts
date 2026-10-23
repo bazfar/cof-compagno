@@ -109,6 +109,21 @@ describe('sorts hors combat (G2a)', () => {
     await assertFails(d('bob').update({ resistance: { de: 4, bonus: 0, reussie: false }, majLe: 2 }));
   });
 
+  it('G2b : en scène, la demande porte scène et action ; le MJ fixe un bonus au plus celui du palier', async () => {
+    await assertSucceeds(d('alice', 'd2').set(demande({ scene: 'sh1', action: '1-alice', bonus: null })));
+    await assertFails(d('alice', 'd3').set(demande({ scene: 'sh1', action: null, bonus: null })));
+    await assertFails(d('alice', 'd4').set(demande({ scene: 'sh1', action: '1-alice', bonus: 1 })));
+    await poser({ scene: 'sh1', action: '1-alice', bonus: null });
+    await assertFails(d('bob').update({ statut: 'acceptee', majLe: 2 }));
+    await assertFails(d('bob').update({ statut: 'acceptee', bonus: 2, majLe: 2 }));
+    await assertSucceeds(d('bob').update({ statut: 'acceptee', bonus: 1, majLe: 2 }));
+    await poser({ scene: 'sh1', action: '1-alice', bonus: null });
+    await assertSucceeds(d('bob').update({ statut: 'refusee', motif: 'Non', majLe: 2 }));
+    // Hors scène, pas de bonus.
+    await poser({});
+    await assertFails(d('bob').update({ statut: 'acceptee', bonus: 1, majLe: 2 }));
+  });
+
   it('journal : un sort peut n’avoir aucun dé ; un jet sans dé ni sort est refusé', async () => {
     const j = pour('alice').collection(`${TABLE}/journal`);
     await assertSucceeds(j.add(sortJournal()));

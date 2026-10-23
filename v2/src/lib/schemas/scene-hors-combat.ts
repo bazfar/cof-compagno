@@ -126,6 +126,9 @@ export const schemaActionScene = z
     delta: z.record(z.string().max(20), z.number().int()).nullable().default(null),
     /** Échec remplacé par une relance. */
     annule: z.boolean().default(false),
+    // ---- Lot G2b ----
+    /** La demande de sort jointe à l'action (tables/{t}/sortsHorsCombat/{id}) : le jet attend qu'elle soit tranchée. */
+    sort: z.string().min(1).max(100).nullable().default(null),
   })
   .superRefine((a, ctx) => {
     const passe = a.option === 'passer';

@@ -462,7 +462,8 @@ service cloud.firestore {
     // Aligné sur schemaActionScene (src/lib/schemas/scene-hors-combat.ts).
     function actionSceneValide(d) {
       return d.keys().hasAll(['uid', 'perso', 'nom', 'tour', 'option', 'competence', 'de', 'bonus', 'resultat', 'creeLe'])
-        && d.keys().hasOnly(['uid', 'perso', 'nom', 'tour', 'option', 'competence', 'de', 'bonus', 'resultat', 'creeLe', 'relance', 'note', 'delta', 'annule'])
+        && d.keys().hasOnly(['uid', 'perso', 'nom', 'tour', 'option', 'competence', 'de', 'bonus', 'resultat', 'creeLe', 'relance', 'note', 'delta', 'annule', 'sort'])
+        && (!('sort' in d) || d.sort == null || (d.sort is string && d.sort.size() >= 1 && d.sort.size() <= 100))
         && d.option in ['convaincre', 'menacer', 'tromper', 'seduire', 'competence', 'lire', 'citer', 'passer']
         && (!('relance' in d) || d.relance is bool)
         && (!('note' in d) || d.note == null || (d.note is string && d.note.size() <= 60))
@@ -473,6 +474,10 @@ service cloud.firestore {
         && entierEntre(d.bonus, -20, 40)
         && (d.resultat == null || d.resultat in ['reussite', 'echec', 'passe'])
         && d.creeLe is int;
+    }
+    // G2b : la demande jointe à une action, à ce joueur, pour cette scène et cette action, en attente.
+    function sortJointValide(s, scene, acte) {
+      return s.uid == request.auth.uid && s.get('scene', null) == scene && s.get('action', null) == acte && s.statut == 'attente';
     }
     // Un joueur appelé écrit son action du tour en cours, une seule (identifiant <tour>-<uid>).
     // Le résultat reste au client du MJ, sauf « passe » quand il passe son tour.
@@ -522,7 +527,7 @@ service cloud.firestore {
     }
     // Aligné sur schemaDemandeSort (src/lib/schemas/sort-hors-combat.ts, lot G2a).
     function demandeSortValide(d) {
-      return d.keys().hasOnly(['uid', 'perso', 'nom', 'sort', 'nomSort', 'palier', 'pp', 'echec', 'sauvegarde', 'dd', 'intention', 'textes', 'statut', 'motif', 'de', 'resistance', 'creeLe', 'majLe'])
+      return d.keys().hasOnly(['uid', 'perso', 'nom', 'sort', 'nomSort', 'palier', 'pp', 'echec', 'sauvegarde', 'dd', 'intention', 'textes', 'statut', 'motif', 'de', 'resistance', 'creeLe', 'majLe', 'scene', 'action', 'bonus'])
         && d.keys().hasAll(['uid', 'perso', 'nom', 'sort', 'nomSort', 'palier', 'pp', 'echec', 'sauvegarde', 'dd', 'intention', 'textes', 'statut', 'motif', 'de', 'resistance', 'creeLe', 'majLe'])
         && d.perso is string && d.perso.size() >= 1 && d.perso.size() <= 100
         && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 40
@@ -539,7 +544,13 @@ service cloud.firestore {
         && (d.resistance == null || (d.resistance is map
           && d.resistance.keys().hasOnly(['de', 'bonus', 'reussie']) && d.resistance.keys().hasAll(['de', 'bonus', 'reussie'])
           && entierEntre(d.resistance.de, 1, 20) && entierEntre(d.resistance.bonus, -10, 30) && d.resistance.reussie is bool))
-        && d.creeLe is int && d.majLe is int;
+        && d.creeLe is int && d.majLe is int
+        // G2b : en scène, la demande appuie une action ; le MJ y fixe le bonus (13a : au plus celui du palier).
+        && ((d.get('scene', null) == null) == (d.get('action', null) == null))
+        && (d.get('scene', null) == null || (d.scene is string && d.scene.size() >= 1 && d.scene.size() <= 100
+          && d.action is string && d.action.size() >= 1 && d.action.size() <= 100))
+        && (d.get('bonus', null) == null || (d.get('scene', null) != null
+          && entierEntre(d.bonus, 0, d.palier == 'I' ? 1 : d.palier == 'II' ? 2 : 3)));
     }
     // Aligné sur schemaEtatScene (src/lib/schemas/carte.ts).
     function etatSceneValide(d) {
@@ -852,7 +863,11 @@ service cloud.firestore {
           allow read: if estMembre(table);
           allow create: if estJoueur(table) && actionSceneValide(request.resource.data)
             && (actionDuJoueur(table, scene, acte, request.resource.data)
-              || relanceDuJoueur(table, scene, acte, request.resource.data));
+              || relanceDuJoueur(table, scene, acte, request.resource.data))
+            // G2b : un sort joint est une demande du joueur pour cette scène et cette action, en attente.
+            && (request.resource.data.get('sort', null) == null
+              || (request.resource.data.option in ['convaincre', 'menacer', 'tromper', 'seduire', 'competence']
+                && sortJointValide(get(/databases/$(database)/documents/tables/$(table)/sortsHorsCombat/$(request.resource.data.sort)).data, scene, acte)));
           allow update: if estMj(table) && actionSceneValide(request.resource.data)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resultat', 'note', 'delta', 'annule']);
           allow delete: if estMj(table);
@@ -883,11 +898,14 @@ service cloud.firestore {
           && request.resource.data.statut == 'attente'
           && request.resource.data.motif == null
           && request.resource.data.de == null
-          && request.resource.data.resistance == null;
+          && request.resource.data.resistance == null
+          && request.resource.data.get('bonus', null) == null;
         allow update: if demandeSortValide(request.resource.data)
           && ((estMj(table) && resource.data.statut == 'attente'
               && request.resource.data.statut in ['acceptee', 'refusee']
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['statut', 'motif', 'majLe']))
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['statut', 'motif', 'bonus', 'majLe'])
+              && (request.resource.data.statut == 'refusee' || resource.data.get('scene', null) == null
+                || request.resource.data.get('bonus', null) != null))
             || (estMj(table) && resource.data.statut == 'lancee' && resource.data.sauvegarde != null
               && resource.data.resistance == null && request.resource.data.resistance != null
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resistance', 'majLe']))

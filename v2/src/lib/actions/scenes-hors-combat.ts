@@ -2,9 +2,12 @@ import { collection, doc, FieldPath, runTransaction, setDoc, updateDoc } from 'f
 import { db } from '../firebase/client';
 import { formuleTest } from '../regles/des';
 import { noeudsPossedes } from '../fiche/vecu';
-import { aLeNoeud, apresLeTour, contributeurs, defaireJet, idAction, manquePourOuvrir, OPTIONS, pnjApresScene, RefusScene, relancable, resoudre } from '../scenes/hors-combat';
+import { effetEnScene } from '../fiche/sorts-hors-combat';
+import { aLeNoeud, apresLeTour, contributeurs, defaireJet, idAction, manquePourOuvrir, OPTIONS, OPTIONS_AVEC_SORT, pnjApresScene, RefusScene, relancable, resoudre } from '../scenes/hors-combat';
 import { CLE_HORS_SEANCE, dejaUtiliseCetteSeance, NARRATIFS, noeudsEnScene, nomNoeud } from '../scenes/vecu-en-scene';
-import { schemaVecu } from '../schemas/fiche';
+import { schemaVecu, type FicheV2 } from '../schemas/fiche';
+import type { Palier } from '../schemas/effets';
+import { schemaDemandeSort } from '../schemas/sort-hors-combat';
 import { schemaGesteAttitude, schemaPnj } from '../schemas/pnj';
 import {
   schemaActionScene,
@@ -20,6 +23,7 @@ import {
 } from '../schemas/scene-hors-combat';
 import { session } from '../session.svelte';
 import { lancerEtNoter } from './journal';
+import { demanderSort } from './sorts-hors-combat';
 import { donnerCranVecu } from './vecu';
 
 /*
@@ -128,14 +132,27 @@ export async function ouvrirScene(b: BrouillonScene, seance?: string): Promise<s
   return id;
 }
 
+/** Un sort joint à l'action du tour (lot G2b). */
+export interface SortJoint {
+  fiche: FicheV2 & { id: string };
+  sort: string;
+  palier: Palier;
+  intention: string;
+}
+
 /**
  * Le joueur agit (4b, 7a) : il lance son d20 au journal, au nom de son
  * personnage, puis écrit son action du tour. Passer n'écrit qu'une action.
+ * G2b (1a, 7a) : un sort peut appuyer une option sociale ou une compétence ;
+ * sa demande part au MJ d'abord, et le jet attend qu'elle soit tranchée.
  */
-export async function agirEnScene(idScene: string, s: SceneHorsCombat, option: OptionScene, competence: string | null, bonus: number): Promise<ActionScene> {
+export async function agirEnScene(idScene: string, s: SceneHorsCombat, option: OptionScene, competence: string | null, bonus: number, sort: SortJoint | null = null): Promise<ActionScene> {
   const moi = s.appeles.find((a) => a.uid === session.uid);
   if (!moi) throw new RefusScene('Tu n’es pas appelé dans cette scène.');
   if (s.statut !== 'ouverte') throw new RefusScene('La scène n’attend plus de jet.');
+  if (sort && !OPTIONS_AVEC_SORT.includes(option)) throw new RefusScene('Un sort n’appuie qu’une option sociale ou une compétence.');
+  if (sort && sort.fiche.id !== moi.perso) throw new RefusScene('Le sort vient du personnage appelé.');
+  const demande = sort ? await demanderSort(sort.fiche, sort.sort, sort.palier, sort.intention, s.seance, { scene: idScene, action: idAction(s.tour, moi.uid) }) : null;
   let de: number | null = null;
   if (option !== 'passer') {
     if (!competence) throw new RefusScene('Choisis une compétence.');
@@ -154,6 +171,7 @@ export async function agirEnScene(idScene: string, s: SceneHorsCombat, option: O
     bonus,
     resultat: option === 'passer' ? 'passe' : null,
     creeLe: Date.now(),
+    sort: demande,
   });
   await setDoc(doc(db, `${chemin(idScene)}/actions/${idAction(s.tour, moi.uid)}`), a);
   return a;
@@ -167,6 +185,8 @@ export async function agirEnScene(idScene: string, s: SceneHorsCombat, option: O
  * Lire les gens réussi laisse au joueur seul une révélation (le DD du
  * moment), que le MJ complète de l'intention du PNJ ; une relance (8a)
  * défait l'échec qu'elle remplace.
+ * G2b : une action qui porte un sort attend qu'il soit tranché (accord du
+ * MJ, lancement, sauvegarde de la cible) ; son effet entre dans le jet.
  */
 export async function resoudreAction(idScene: string, idActe: string): Promise<void> {
   await runTransaction(db, async (tx) => {
@@ -176,6 +196,12 @@ export async function resoudreAction(idScene: string, idActe: string): Promise<v
     let s = schemaSceneHorsCombat.parse(lu.data());
     const a = schemaActionScene.parse(luActe.data());
     const dd = schemaSceneHorsCombatMj.parse(luMj.data()).dd;
+    let sort = null;
+    if (a.sort && a.resultat === null) {
+      const luSort = await tx.get(doc(db, `tables/${session.table}/sortsHorsCombat/${a.sort}`));
+      sort = luSort.exists() ? effetEnScene(schemaDemandeSort.parse(luSort.data())) : null;
+      if (!sort) return;
+    }
     if (a.relance) {
       if (a.resultat !== null || s.statut === 'close') return;
       const refOrigine = doc(db, `${chemin(idScene)}/actions/${idAction(a.tour, a.uid)}`);
@@ -202,7 +228,7 @@ export async function resoudreAction(idScene: string, idActe: string): Promise<v
     let apres = s;
     let resultat = a.resultat;
     if (resultat === null) {
-      const r = resoudre(s, dd, a);
+      const r = resoudre(s, dd, a, sort);
       apres = r.scene;
       resultat = r.resultat;
       tx.update(refActe, { resultat, note: r.note, delta: r.delta });

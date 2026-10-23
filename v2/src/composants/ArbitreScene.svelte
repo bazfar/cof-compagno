@@ -3,7 +3,9 @@
   import { resoudreAction } from '../lib/actions/scenes-hors-combat';
   import type { CollectionSuivie, DocumentSuivi } from '../lib/firebase/suivre.svelte';
   import { suivreTable } from '../lib/magasins/carte.svelte';
+  import { effetEnScene } from '../lib/fiche/sorts-hors-combat';
   import { suivreActionsScene, suivreSceneHorsCombat } from '../lib/magasins/scenes-hors-combat.svelte';
+  import { suivreDemandesSortsMj } from '../lib/magasins/sorts-hors-combat.svelte';
   import type { ActionScene, SceneHorsCombat } from '../lib/schemas/scene-hors-combat';
   import { session } from '../lib/session.svelte';
 
@@ -13,10 +15,21 @@
    * jet dès qu'il arrive (le client du MJ est le seul à lire le DD) et
    * ouvre le tour suivant quand chacun a agi ou passé. Écran du MJ fermé :
    * les jets attendent.
+   * Sorts en scène (lot G2b) : une action qui porte un sort n'est résolue
+   * qu'une fois le sort tranché (accordé, lancé, sauvegarde faite).
    */
 
   const table = suivreTable(session.table);
-  onDestroy(() => table.arreter());
+  const demandes = suivreDemandesSortsMj(session.table);
+  onDestroy(() => {
+    table.arreter();
+    demandes.arreter();
+  });
+  const sortTranche = (idSort: string | null) => {
+    if (!idSort) return true;
+    const d = demandes.etat.elements.find((x) => x.id === idSort);
+    return !!d && effetEnScene(d) !== null;
+  };
   const id = $derived(table.etat.donnees?.sceneHorsCombat ?? null);
 
   let scene = $state<DocumentSuivi<SceneHorsCombat> | null>(null);
@@ -53,7 +66,7 @@
     if (s.statut !== 'close') for (const a of liste) if (a.relance && a.resultat === null) lancer(a.id, id, a.id);
     if (s.statut !== 'ouverte') return;
     const duTour = liste.filter((a) => a.tour === s.tour && !a.relance);
-    for (const a of duTour) if (a.resultat === null) lancer(a.id, id, a.id);
+    for (const a of duTour) if (a.resultat === null && sortTranche(a.sort)) lancer(a.id, id, a.id);
     // Tous ont agi ou passé, mais le tour n'a pas tourné (le dernier a passé, par exemple).
     const faits = new Set(duTour.filter((a) => a.resultat !== null).map((a) => a.uid));
     if (duTour.length && s.appelesUids.every((u) => faits.has(u))) lancer(`tour-${s.tour}`, id, duTour[0]!.id);

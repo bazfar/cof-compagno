@@ -15,7 +15,7 @@ const actions = vi.hoisted(() => {
   return {
     RefusScene,
     ouvrirScene: vi.fn(async (_b: unknown, _s?: string) => 'sh1'),
-    agirEnScene: vi.fn(async (_id: string, _s: unknown, _o: string, _c: string | null, _b: number) => ({})),
+    agirEnScene: vi.fn(async (_id: string, _s: unknown, _o: string, _c: string | null, _b: number, _sort?: unknown) => ({})),
     resoudreAction: vi.fn(async (_id: string, _a: string) => {}),
     cloreScene: vi.fn(async (_id: string, _i: string) => ({})),
     donnerVecuDeScene: vi.fn(async (_s: unknown, _a: unknown, p: string[]) => p.length),
@@ -28,6 +28,19 @@ const actions = vi.hoisted(() => {
   };
 });
 vi.mock('../../src/lib/actions/scenes-hors-combat', () => actions);
+// Sorts en scène (lot G2b).
+const sorts = vi.hoisted(() => {
+  class RefusSort extends Error {}
+  return {
+    RefusSort,
+    demanderSort: vi.fn(async () => 'd-n'),
+    repondreDemandeSort: vi.fn(async (_d: unknown, _oui: boolean, _m: string, _b?: number) => {}),
+    lancerSort: vi.fn(async (_id: string, _se?: string) => ({})),
+    resisterSort: vi.fn(async (_d: unknown, _b: number) => true),
+  };
+});
+vi.mock('../../src/lib/actions/sorts-hors-combat', () => sorts);
+vi.mock('../../src/lib/magasins/sorts-hors-combat.svelte', async () => (await import('./faux-magasins.svelte')).magasinsSorts);
 vi.mock('../../src/lib/actions/persos', () => ({ messageErreurPerso: (e: unknown) => String(e) }));
 vi.mock('../../src/lib/actions/journal', () => ({ messageErreurJournal: (e: unknown) => String(e) }));
 vi.mock('../../src/lib/magasins/scenes-hors-combat.svelte', async () => (await import('./faux-magasins.svelte')).magasinsScenes);
@@ -36,7 +49,9 @@ vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./fau
 vi.mock('../../src/lib/magasins/presents.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPresents);
 vi.mock('../../src/lib/magasins/seances.svelte', async () => (await import('./faux-magasins.svelte')).magasinsSeances);
 
-const { table, joueurs, persos, seances, sceneHc, sceneHcMj, actionsScene, utilisationsScene, questionsMj } = await import('./faux-magasins.svelte');
+const { table, joueurs, persos, seances, sceneHc, sceneHcMj, actionsScene, utilisationsScene, questionsMj, demandesSorts } = await import('./faux-magasins.svelte');
+const RF = await import('../../src/lib/fiche/refonte');
+const { classeParId } = await import('../../src/regles');
 const { session } = await import('../../src/lib/session.svelte');
 const { ficheDepuisV1 } = await import('../../src/lib/regles/fiche-document');
 const { vueFiche } = await import('../../src/lib/fiche/vue-fiche');
@@ -75,6 +90,8 @@ beforeEach(() => {
   actionsScene.elements = [];
   utilisationsScene.elements = [];
   questionsMj.elements = [];
+  demandesSorts.elements = [];
+  Object.values(sorts).forEach((f) => typeof f === 'function' && 'mockClear' in f && f.mockClear());
 });
 
 describe('scène, côté MJ', () => {
@@ -180,9 +197,9 @@ describe('scène, côté joueur', () => {
     expect(screen.getByTestId('scene-attitude').textContent).toBe('Méfiant');
     expect(document.body.textContent).not.toMatch(/DD/);
     await fireEvent.click(within(groupe).getByRole('button', { name: /^Convaincre/ }));
-    expect(actions.agirEnScene).toHaveBeenCalledWith('sh1', expect.objectContaining({ tour: 1 }), 'convaincre', 'Persuasion', mods.get('Persuasion'));
+    expect(actions.agirEnScene).toHaveBeenCalledWith('sh1', expect.objectContaining({ tour: 1 }), 'convaincre', 'Persuasion', mods.get('Persuasion'), null);
     await fireEvent.click(within(groupe).getByRole('button', { name: 'Passer mon tour' }));
-    expect(actions.agirEnScene).toHaveBeenLastCalledWith('sh1', expect.anything(), 'passer', null, 0);
+    expect(actions.agirEnScene).toHaveBeenLastCalledWith('sh1', expect.anything(), 'passer', null, 0, null);
   });
 
   it('exploration individuelle : n’importe quelle compétence (4b) ; compteur d’échecs caché si le MJ le veut', async () => {
@@ -368,5 +385,128 @@ describe('Vécu en scène (S3)', () => {
     render(RumeursVecu, { props: { fiche: { ...avecRumeurs, usages: { 'reseau-de-rumeurs': { seance: 's0014' } } } as never } });
     expect(screen.getByText('Déjà utilisé cette séance.')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Poser au MJ' })).toBeNull();
+  });
+});
+
+describe('sorts en scène (G2b)', () => {
+  /** Magnus en envoûteur de la refonte (Illusion, Enchantement en seconde école), joué par Alice. */
+  const magnus = () => {
+    const v1 = { ...reelle('Magnus', 'p-magnus', 'alice'), niveau: 5 };
+    const { id: _id, ...sansId } = v1;
+    const f = RF.convertirFiche(sansId as never, { ...RF.refonteVierge(classeParId.get('envouteur')!, 5), ecole: 'illusion', elementDepart: 'psionique', rangs: { 'envouteur.ecole': 4, 'envouteur.seconde-ecole': 2 } } as never);
+    return { ...f, ppActuel: 1, id: 'p-magnus' };
+  };
+  const demande = (d: Record<string, unknown> = {}) => ({
+    id: 'd1', uid: 'alice', perso: 'p-magnus', nom: 'Magnus Bane', sort: 'enchantement.charme', nomSort: 'Charme', palier: 'II', pp: 2, echec: 0, sauvegarde: 'Volonte', dd: 14,
+    intention: 'Le garde me trouve sympathique', textes: ['Un sourire de trop.', 'Un ami de passage.'], statut: 'attente', motif: null, de: null, resistance: null,
+    scene: 'sh1', action: '1-alice', bonus: null, creeLe: 1, majLe: 1, ...d,
+  });
+
+  describe('côté joueur', () => {
+    beforeEach(() => {
+      persos.elements = [magnus(), reelle('Kargash', 'p-kargash', 'bob')];
+      table.donnees = { ...table.donnees, sceneHorsCombat: 'sh1' };
+      session.uid = 'alice';
+      sceneHc.donnees = scene();
+    });
+
+    it('un sort pour appuyer le jet : paliers, PP, bonus ; l’intention d’abord ; il part avec l’option', async () => {
+      render(SceneJoueur);
+      const groupe = within(screen.getByRole('group', { name: 'Ton action' }));
+      const choix = groupe.getByLabelText('Un sort pour appuyer ton jet (facultatif)') as HTMLSelectElement;
+      const leurre = [...choix.options].filter((o) => o.value.startsWith('illusion.leurre'));
+      expect(leurre.map((o) => [o.textContent, o.disabled])).toEqual([
+        ['Leurre I · 1 PP · bonus +1', false],
+        ['Leurre II · 1 PP · bonus +2', false],
+      ]);
+      // 1 PP restant : un palier à 2 PP est grisé.
+      expect([...choix.options].some((o) => o.disabled)).toBe(true);
+      await fireEvent.change(choix, { target: { value: 'illusion.leurre|II' } });
+      const convaincre = groupe.getByRole('button', { name: /^Convaincre/ }) as HTMLButtonElement;
+      expect(convaincre.disabled).toBe(true);
+      expect((groupe.getByRole('button', { name: 'Passer mon tour' }) as HTMLButtonElement).disabled).toBe(true);
+      await fireEvent.input(groupe.getByLabelText('Ce que fait le sort'), { target: { value: 'Une silhouette distrait le garde' } });
+      expect(convaincre.disabled).toBe(false);
+      await fireEvent.click(convaincre);
+      expect(actions.agirEnScene).toHaveBeenCalledWith('sh1', expect.anything(), 'convaincre', 'Persuasion', expect.any(Number), {
+        fiche: expect.objectContaining({ id: 'p-magnus' }),
+        sort: 'illusion.leurre',
+        palier: 'II',
+        intention: 'Une silhouette distrait le garde',
+      });
+    });
+
+    it('4b : un sort accordé se lance de lui-même, une fois ; pas un sort en attente ni d’une autre scène', async () => {
+      demandesSorts.elements = [demande({ statut: 'acceptee', bonus: 2 }), demande({ id: 'd2' }), demande({ id: 'd3', statut: 'acceptee', scene: 'sh0', action: '1-alice' })];
+      sceneHc.donnees = scene({ seance: 's0014' });
+      render(SceneJoueur);
+      await waitFor(() => expect(sorts.lancerSort).toHaveBeenCalledWith('d1', 's0014'));
+      // La liste bouge avant que le lancement soit lu : pas de second lancement.
+      demandesSorts.elements = [...demandesSorts.elements, demande({ id: 'd4', action: '2-alice' })];
+      await new Promise((r) => setTimeout(r, 20));
+      expect(sorts.lancerSort).toHaveBeenCalledTimes(1);
+    });
+
+    it('le jet attend : l’accord du MJ, puis la sauvegarde de la cible', async () => {
+      actionsScene.elements = [action({ sort: 'd1' })];
+      demandesSorts.elements = [demande()];
+      const vue = render(SceneJoueur);
+      expect(screen.getByText('Ton sort attend l’accord du MJ…')).toBeTruthy();
+      vue.unmount();
+      demandesSorts.elements = [demande({ statut: 'lancee', bonus: 2 })];
+      render(SceneJoueur);
+      expect(screen.getByText('La cible fait sa sauvegarde…')).toBeTruthy();
+    });
+
+    it('2b : refusé, le joueur rejoue son tour', () => {
+      demandesSorts.elements = [demande({ statut: 'refusee', motif: 'Le garde est sourd' })];
+      render(SceneJoueur);
+      expect(screen.getByText('Le MJ a refusé ton sort : Le garde est sourd. Rejoue ton tour.')).toBeTruthy();
+      expect(screen.getByRole('group', { name: 'Ton action' })).toBeTruthy();
+    });
+  });
+
+  describe('côté MJ', () => {
+    beforeEach(() => {
+      table.donnees = { ...table.donnees, sceneHorsCombat: 'sh1' };
+      sceneHc.donnees = scene();
+      sceneHcMj.donnees = { dd: 13 };
+    });
+
+    it('le sort du tour : bonus au jet de 0 au palier, accorder ou refuser ; pas ceux d’une autre scène', async () => {
+      actionsScene.elements = [action({ sort: 'd1' })];
+      demandesSorts.elements = [demande(), demande({ id: 'd9', nom: 'Kargash', scene: 'sh0' })];
+      render(SceneMj, { props: { pnjs: PNJ } });
+      expect(screen.getByText(/sort à trancher…/)).toBeTruthy();
+      expect(screen.queryByRole('article', { name: 'Demande de Kargash' })).toBeNull();
+      const d = within(screen.getByRole('article', { name: 'Demande de Magnus Bane' }));
+      expect(d.getByText(/pour appuyer son jet/)).toBeTruthy();
+      const bonus = d.getByLabelText('Bonus au jet') as HTMLSelectElement;
+      expect([...bonus.options].map((o) => o.textContent)).toEqual(['+2', '+1', '+0']);
+      await fireEvent.change(bonus, { target: { value: '1' } });
+      await fireEvent.click(d.getByRole('button', { name: 'Accepter' }));
+      await waitFor(() => expect(sorts.repondreDemandeSort).toHaveBeenCalledWith(expect.objectContaining({ id: 'd1' }), true, '', 1));
+      await fireEvent.click(d.getByRole('button', { name: 'Refuser (il rejoue son tour)' }));
+      await waitFor(() => expect(sorts.repondreDemandeSort).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'd1' }), false, ''));
+    });
+
+    it('14b : la sauvegarde de la cible se lance dans la carte de scène', async () => {
+      demandesSorts.elements = [demande({ statut: 'lancee', bonus: 2 })];
+      render(SceneMj, { props: { pnjs: PNJ } });
+      const s = within(screen.getByRole('article', { name: 'Sauvegarde contre Charme' }));
+      await fireEvent.input(s.getByLabelText('Bonus de la cible'), { target: { value: '3' } });
+      await fireEvent.click(s.getByRole('button', { name: 'Lancer la sauvegarde' }));
+      await waitFor(() => expect(sorts.resisterSort).toHaveBeenCalledWith(expect.objectContaining({ id: 'd1' }), 3));
+    });
+
+    it('l’arbitre attend que le sort soit tranché', async () => {
+      actionsScene.elements = [action({ sort: 'd1' })];
+      demandesSorts.elements = [demande({ statut: 'acceptee', bonus: 2 })];
+      render(ArbitreScene);
+      await new Promise((r) => setTimeout(r, 20));
+      expect(actions.resoudreAction).not.toHaveBeenCalled();
+      demandesSorts.elements = [demande({ statut: 'lancee', bonus: 2, resistance: { de: 5, bonus: 0, reussie: false } })];
+      await waitFor(() => expect(actions.resoudreAction).toHaveBeenCalledWith('sh1', '1-alice'));
+    });
   });
 });

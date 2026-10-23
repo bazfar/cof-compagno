@@ -10,7 +10,8 @@
    * Les sorts hors combat demandés par le joueur (lot G2a) : en attente,
    * refusés (avec le motif), acceptés à lancer (15b : le joueur paie et lance
    * le jet d'échec), lancés ou ratés, et ce que la sauvegarde de la cible a
-   * donné (14b).
+   * donné (14b). Un sort joint à une action de scène (G2b) se lance depuis
+   * la carte de scène, de lui-même (4b).
    */
 
   let { perso, seance }: { perso: string; seance: string | undefined } = $props();
@@ -64,10 +65,10 @@
     <ul>
       {#each miennes as d (d.id)}
         <li class:attente={d.statut === 'attente' || d.statut === 'acceptee'}>
-          <strong>{d.nomSort} {d.palier}</strong> · {d.pp} PP · « {d.intention} »
+          <strong>{d.nomSort} {d.palier}</strong> · {d.pp} PP{d.scene ? ' · en scène' : ''} · « {d.intention} »
           <span class="aide">{etat(d)}</span>
           {#if d.statut === 'acceptee'}
-            <button class="petit" disabled={occupe} onclick={() => lancer(d.id)}>Lancer (−{d.pp} PP)</button>
+            {#if d.scene}<span class="aide">Ta carte de scène le lance.</span>{:else}<button class="petit" disabled={occupe} onclick={() => lancer(d.id)}>Lancer (−{d.pp} PP)</button>{/if}
           {/if}
         </li>
       {/each}

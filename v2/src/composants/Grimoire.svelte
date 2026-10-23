@@ -24,7 +24,7 @@
    * ouvre le grimoire depuis la fiche, le lit sans rien lancer.
    */
 
-  let { fiche, lancer }: { fiche: FicheV2 & { id?: string }; lancer?: { seance: string | undefined } } = $props();
+  let { fiche, lancer }: { fiche: FicheV2 & { id?: string }; lancer?: { seance: string | undefined; enScene?: boolean } } = $props();
   const lanceur = $derived(lancer && fiche.id ? { fiche: fiche as FicheV2 & { id: string }, seance: lancer.seance } : null);
   const lancables = $derived(lanceur ? sortsLancables(lanceur.fiche) : []);
   const lancable = (id: string) => lancables.find((s) => s.id === id) ?? null;
@@ -80,6 +80,7 @@
       {#if g.reservePP}<span class="reserve">Réserve : {fiche.ppActuel ?? g.reservePP} / {g.reservePP} PP</span>{/if}
     </header>
     {#if lanceur}<MesSorts perso={lanceur.fiche.id} seance={lanceur.seance} />{/if}
+    {#if lancer?.enScene}<p class="note-scene" role="note">Une scène est en cours : pour appuyer ton jet, joins le sort à ton action dans la carte de scène. Demandé d'ici, il reste hors scène.</p>{/if}
     <div class="onglets" role="tablist" aria-label="Grimoire">
       {#each ONGLETS as o (o.id)}
         <button role="tab" aria-selected={ongletActif === o.id} onclick={() => (onglet = o.id)}>{o.nom}</button>
@@ -229,6 +230,13 @@
 {/if}
 
 <style>
+  .note-scene {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: var(--couleur-or-texte);
+    border-left: 3px solid var(--couleur-or);
+    padding-left: 8px;
+  }
   .grimoire {
     display: flex;
     flex-direction: column;

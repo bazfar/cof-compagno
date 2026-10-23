@@ -8,6 +8,9 @@
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
   import { suivreActionsScene, suivreSceneHorsCombat, suivreSceneHorsCombatMj, suivreUtilisationsScene } from '../lib/magasins/scenes-hors-combat.svelte';
   import { suivreSeances } from '../lib/magasins/seances.svelte';
+  import { suivreDemandesSortsMj } from '../lib/magasins/sorts-hors-combat.svelte';
+  import { aTraiter } from '../lib/fiche/sorts-hors-combat';
+  import DemandeSortMj from './DemandeSortMj.svelte';
   import { MOD_DD_ATTITUDE, NOMS_CRANS } from '../lib/pnj/attitude';
   import { constantes } from '../lib/regles/donnees';
   import { aLeNoeud, contributeurs, cranScene, ddEffectif, DIFFICULTES, NOMS_TYPES, OPTIONS, toleresPourLeGroupe, type Difficulte } from '../lib/scenes/hors-combat';
@@ -33,6 +36,9 @@
    * (Citer le précédent) à l'ouverture ; Levier (±2 crans, un secret ne
    * sert qu'une fois) ; les notes du Vécu sur les jets, les relances, les
    * capacités utilisées.
+   * Sorts en scène (lot G2b) : les sorts joints aux actions du tour
+   * s'accordent ici, avec le bonus au jet (13a), ou se refusent (le joueur
+   * rejoue, 2b) ; la sauvegarde de la cible se lance ici aussi (14b).
    */
 
   let { pnjs, pnjPropose = null, surPnjPris }: { pnjs: readonly AvecId<Pnj>[]; pnjPropose?: string | null; surPnjPris?: () => void } = $props();
@@ -41,11 +47,13 @@
   const joueurs = suivreJoueurs(session.table);
   const persos = suivrePersos(session.table);
   const seances = suivreSeances(session.table);
+  const demandes = suivreDemandesSortsMj(session.table);
   onDestroy(() => {
     table.arreter();
     joueurs.arreter();
     persos.arreter();
     seances.arreter();
+    demandes.arreter();
   });
 
   const idEnCours = $derived(table.etat.donnees?.sceneHorsCombat ?? null);
@@ -73,6 +81,7 @@
     };
   });
   const utilisations = $derived([...(suivi?.u.etat.elements ?? [])].sort((a, b) => a.creeLe - b.creeLe));
+  const sortsATrancher = $derived(demandes.etat.elements.filter((d) => d.scene !== null && d.scene === idMontre && aTraiter(d)).sort((a, b) => a.creeLe - b.creeLe));
   const scene = $derived(suivi?.s.etat.donnees ?? null);
   const dd = $derived(suivi?.mj.etat.donnees?.dd ?? null);
   const actions = $derived([...(suivi?.a.etat.elements ?? [])].sort((a, b) => a.tour - b.tour || a.creeLe - b.creeLe));
@@ -212,7 +221,7 @@
   const resume = (a: ActionScene) =>
     a.resultat === 'passe'
       ? `passe${a.note ? ` (${a.note})` : ''}`
-      : `${a.relance ? 'relance, ' : ''}${nomOption(a)}, ${a.de! + a.bonus} — ${a.resultat === null ? 'en cours…' : NOMS_RESULTATS[a.resultat]}${a.note ? ` (${a.note})` : ''}${a.annule ? ', relancé' : ''}`;
+      : `${a.relance ? 'relance, ' : ''}${nomOption(a)}, ${a.de! + a.bonus} — ${a.resultat === null ? (a.sort ? 'sort à trancher…' : 'en cours…') : NOMS_RESULTATS[a.resultat]}${a.note ? ` (${a.note})` : ''}${a.annule ? ', relancé' : ''}`;
   async function levier(sens: 1 | -1) {
     if (!idEnCours) return;
     if (await agir(() => levierEnScene(idEnCours!, sens, secret), `Levier : ${sens > 0 ? '+2' : '−2'} crans pour la scène.`)) secret = '';
@@ -248,6 +257,7 @@
         {/if}
       {/each}
     </ul>
+    {#each sortsATrancher as d (d.id)}<DemandeSortMj {d} />{/each}
     {#if actions.some((a) => a.tour < scene.tour || scene.statut !== 'ouverte')}
       <details>
         <summary>Tous les jets</summary>

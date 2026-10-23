@@ -19,7 +19,15 @@ import { PALIERS, schemaSauvegarde } from './effets';
  *      le DD (14b). Sinon, le MJ apprécie (7).
  * Rien n'a d'effet automatique : chaque palier ouvre des possibilités, le
  * reste s'apprécie entre le joueur et le MJ (7).
+ *
+ * En scène (lot G2b, décisions de Thomas du 22/10/2026) : la même demande,
+ * jointe à l'action du tour (`scene`, `action`). Le MJ y fixe le bonus au
+ * jet, de 0 au bonus du palier (13a) ; un refus défait l'action, que le
+ * joueur rejoue (2b) ; le client du joueur lance dès l'accord (4b).
  */
+
+/** 13a : le bonus au jet d'un sort en scène selon son palier. Le MJ peut le baisser jusqu'à 0. */
+export const BONUS_PALIER = { I: 1, II: 2, III: 3 } as const;
 
 export const STATUTS_SORT = ['attente', 'acceptee', 'refusee', 'lancee', 'ratee'] as const;
 export type StatutSort = (typeof STATUTS_SORT)[number];
@@ -53,6 +61,12 @@ export const schemaDemandeSort = z
     /** Le d20 du jet d'échec, s'il y en a eu un. */
     de: z.number().int().min(1).max(20).nullable(),
     resistance: schemaResistance.nullable(),
+    // ---- Lot G2b : en scène ----
+    /** La scène et l'action du tour (`<tour>-<uid>`) que le sort appuie, ou null hors scène. */
+    scene: z.string().min(1).max(100).nullable().default(null),
+    action: z.string().min(1).max(100).nullable().default(null),
+    /** Bonus au jet accordé par le MJ en acceptant (13a : 0 au bonus du palier), en scène seulement. */
+    bonus: z.number().int().min(0).max(3).nullable().default(null),
     creeLe: z.number().int().nonnegative(),
     majLe: z.number().int().nonnegative(),
   })
@@ -60,5 +74,7 @@ export const schemaDemandeSort = z
     if ((d.sauvegarde === null) !== (d.dd === null)) ctx.addIssue({ code: 'custom', message: 'une sauvegarde a un DD, et seulement elle', path: ['dd'] });
     if (d.resistance && (d.statut !== 'lancee' || d.sauvegarde === null)) ctx.addIssue({ code: 'custom', message: 'la cible ne résiste qu’à un sort lancé qui a une sauvegarde', path: ['resistance'] });
     if (d.de !== null && d.statut !== 'lancee' && d.statut !== 'ratee') ctx.addIssue({ code: 'custom', message: 'le jet d’échec part au lancement', path: ['de'] });
+    if ((d.scene === null) !== (d.action === null)) ctx.addIssue({ code: 'custom', message: 'en scène, la demande appuie une action', path: ['action'] });
+    if (d.bonus !== null && (d.scene === null || d.bonus > BONUS_PALIER[d.palier])) ctx.addIssue({ code: 'custom', message: 'un bonus en scène, au plus celui du palier', path: ['bonus'] });
   });
 export type DemandeSort = z.infer<typeof schemaDemandeSort>;

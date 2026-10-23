@@ -111,6 +111,16 @@ export function bonusSeduction(s: SceneHorsCombat, uid: string, option: OptionSc
   return s.seduction && s.seduction !== uid && option in OPTIONS ? 1 : 0;
 }
 
+/** Le sort joint à une action, une fois tranché (lot G2b ; voir effetEnScene). */
+export interface SortAuJet {
+  rate: boolean;
+  bonus: number;
+  note: string;
+}
+
+/** 7a (G2b) : les options qui peuvent porter un sort. Pas Passer, Lire les gens ni Citer le précédent. */
+export const OPTIONS_AVEC_SORT: readonly OptionScene[] = ['convaincre', 'menacer', 'tromper', 'seduire', 'competence'];
+
 /** Ce que résoudre un jet rend au client du MJ. */
 export interface Resolution {
   resultat: 'reussite' | 'echec' | 'passe';
@@ -141,8 +151,11 @@ function issueDe(n: SceneHorsCombat): SceneHorsCombat {
  * qu'après le jet, sans encore passer au tour suivant (voir `apresLeTour`).
  * Une relance (8a) peut viser un tour passé : son échec a déjà été défait
  * (`defaireJet`).
+ * Sort joint (lot G2b) : tranché, il ajoute son bonus au jet (13a) ; raté au
+ * jet d'échec, l'action compte comme un échec de la scène, sans toucher à
+ * l'attitude (7b).
  */
-export function resoudre(s: SceneHorsCombat, dd: number, a: ActionScene): Resolution {
+export function resoudre(s: SceneHorsCombat, dd: number, a: ActionScene, sort: SortAuJet | null = null): Resolution {
   if (s.statut !== 'ouverte') throw new RefusScene('La scène n’attend plus de jet.');
   if ((a.relance ? a.tour > s.tour : a.tour !== s.tour) || !s.appelesUids.includes(a.uid)) throw new RefusScene('Ce jet n’est pas attendu.');
   const rien: Resolution = { resultat: 'passe', scene: s, note: null, delta: {}, revelation: null };
@@ -160,10 +173,14 @@ export function resoudre(s: SceneHorsCombat, dd: number, a: ActionScene): Resolu
   if (a.option === 'citer' && (s.type !== 'social' || !s.autorite || !aLeNoeud(s, a.uid, 'citer-le-precedent') || (aUtilise(s, a.uid, 'citer-le-precedent') && !a.relance)))
     return { ...rien, note: 'Citer le précédent indisponible' };
 
-  const plus = sociale ? bonusSeduction(s, a.uid, a.option) : 0;
+  if (sort?.rate) {
+    const n = issueDe({ ...s, echecs: s.echecs + 1 });
+    return { resultat: 'echec', scene: n, note: sort.note.slice(0, 60), delta: difference(s, n), revelation: null };
+  }
+  const plus = (sociale ? bonusSeduction(s, a.uid, a.option) : 0) + (sort?.bonus ?? 0);
   let reussi = a.de === 20 || (a.de !== 1 && a.de + a.bonus + plus >= ddJet);
-  let note: string | null = a.option === 'citer' ? 'Citer le précédent' : null;
-  let n: SceneHorsCombat = { ...s, seduction: plus ? null : s.seduction };
+  let note: string | null = a.option === 'citer' ? 'Citer le précédent' : sort ? sort.note : null;
+  let n: SceneHorsCombat = { ...s, seduction: sociale && bonusSeduction(s, a.uid, a.option) ? null : s.seduction };
   if (a.option === 'citer') n.usages = avecUsage(n, a.uid, 'citer-le-precedent');
   // Langue d'argent (4a) : le premier jet social de la scène raté de 2 ou moins devient une réussite.
   if (!reussi && sociale && a.de !== 1 && aLeNoeud(s, a.uid, 'langue-d-argent') && !aUtilise(s, a.uid, 'langue-d-argent') && a.de + a.bonus + plus >= ddJet - 2) {
@@ -193,7 +210,7 @@ export function resoudre(s: SceneHorsCombat, dd: number, a: ActionScene): Resolu
     if (sociale && a.de === 1) n.baisses += 1;
   }
   n = issueDe(n);
-  return { resultat: reussi ? 'reussite' : 'echec', scene: n, note, delta: difference(s, n), revelation: null };
+  return { resultat: reussi ? 'reussite' : 'echec', scene: n, note: note ? note.slice(0, 60) : null, delta: difference(s, n), revelation: null };
 }
 
 /** Défait ce qu'un échec avait changé (8a), avant de résoudre sa relance ; la scène peut se rouvrir. */

@@ -15,7 +15,7 @@ const sorts = vi.hoisted(() => {
   return {
     RefusSort,
     demanderSort: vi.fn(async (_f: unknown, _s: string, _p: string, _i: string, _se?: string) => 'd-n'),
-    repondreDemandeSort: vi.fn(async (_id: string, _oui: boolean, _m: string) => {}),
+    repondreDemandeSort: vi.fn(async (_d: unknown, _oui: boolean, _m: string, _b?: number) => {}),
     lancerSort: vi.fn(async (_id: string, _se?: string) => ({})),
     resisterSort: vi.fn(async (_d: unknown, _b: number) => true),
   };
@@ -26,8 +26,9 @@ vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./fau
 vi.mock('../../src/lib/magasins/presents.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPresents);
 vi.mock('../../src/lib/magasins/carte.svelte', async () => (await import('./faux-magasins.svelte')).magasinsCarte);
 vi.mock('../../src/lib/magasins/sorts-hors-combat.svelte', async () => (await import('./faux-magasins.svelte')).magasinsSorts);
+vi.mock('../../src/lib/magasins/scenes-hors-combat.svelte', async () => (await import('./faux-magasins.svelte')).magasinsScenes);
 
-const { joueurs, persos, table, demandesSorts } = await import('./faux-magasins.svelte');
+const { joueurs, persos, table, demandesSorts, sceneHc } = await import('./faux-magasins.svelte');
 const { session } = await import('../../src/lib/session.svelte');
 const { ficheDepuisV1 } = await import('../../src/lib/regles/fiche-document');
 const RF = await import('../../src/lib/fiche/refonte');
@@ -58,7 +59,8 @@ beforeEach(() => {
   persos.elements = [];
   joueurs.elements = [];
   demandesSorts.elements = [];
-  table.donnees = { sceneActive: null, seanceOuverte: { id: 's1', numero: 1 } };
+  table.donnees = { sceneActive: null, seanceOuverte: { id: 's1', numero: 1 }, sceneHorsCombat: null };
+  sceneHc.donnees = null;
   Object.values(sorts).forEach((f) => typeof f === 'function' && 'mockClear' in f && f.mockClear());
 });
 
@@ -172,6 +174,20 @@ describe('GrimoireJoueur (1a, 2a)', () => {
     await waitFor(() => expect(sorts.demanderSort).toHaveBeenCalledWith(expect.objectContaining({ id: 'p-k' }), 'evocation.missile', 'II', 'Couper la corde du pont', 's1'));
   });
 
+  it('G2b (8b) : appelé dans une scène ouverte, il peut demander d’ici, avec un mot vers la carte de scène', async () => {
+    persos.elements = [{ ...kylhian(), proprietaireUid: 'alice' }];
+    joueurs.elements = [{ id: 'alice', nom: 'Alice', rejointLe: 1, persoActif: 'p-k' }];
+    table.donnees = { ...table.donnees, sceneHorsCombat: 'sh1' };
+    sceneHc.donnees = { statut: 'ouverte', appelesUids: ['alice'] } as never;
+    const vue = render(GrimoireJoueur, { props: {} });
+    expect(screen.getByRole('note').textContent).toMatch(/joins le sort à ton action dans la carte de scène/);
+    expect(screen.getByRole('form', { name: 'Lancer Missile hors combat' })).toBeTruthy();
+    vue.unmount();
+    sceneHc.donnees = { statut: 'ouverte', appelesUids: ['bob'] } as never;
+    render(GrimoireJoueur, { props: {} });
+    expect(screen.queryByRole('note')).toBeNull();
+  });
+
   it('un guerrier, une fiche v1 ou le personnage d’un autre : pas de section', async () => {
     for (const [perso, proprio] of [[karlach(), 'alice'], [{ ...ficheDepuisV1(FICHES.find((f: { nom: string }) => f.nom.startsWith('Kylhian')), 'alice', 1).fiche, id: 'p-k' }, 'alice'], [kylhian(), 'bob']] as const) {
       const surDisponible = vi.fn();
@@ -188,7 +204,7 @@ describe('GrimoireJoueur (1a, 2a)', () => {
 const demande = (d: Record<string, unknown> = {}) => ({
   id: 'd1', uid: 'alice', perso: 'p-k', nom: 'Kylhian', sort: 'illusion.leurre', nomSort: 'Leurre', palier: 'I', pp: 1, echec: 10, sauvegarde: 'Volonte', dd: 13,
   intention: 'Une silhouette au bout du couloir', textes: ['Un bruit ou une silhouette immobile : compte une réussite en infiltration.'],
-  statut: 'attente', motif: null, de: null, resistance: null, creeLe: 1, majLe: 1, ...d,
+  statut: 'attente', motif: null, de: null, resistance: null, scene: null, action: null, bonus: null, creeLe: 1, majLe: 1, ...d,
 });
 
 describe('demander un sort hors combat (G2a : 1a, 2b, 3a, 4a)', () => {
@@ -278,6 +294,17 @@ describe('mes sorts hors combat (5b, 15b, 14b)', () => {
   });
 });
 
+describe('mes sorts : en scène (G2b)', () => {
+  it('un sort accordé en scène se lance depuis la carte de scène, sans bouton ici', () => {
+    demandesSorts.elements = [demande({ statut: 'acceptee', scene: 'sh1', action: '1-alice', bonus: 1 })];
+    render(Grimoire, { props: { fiche: kylhian(), lancer: { seance: 's1' } } });
+    const liste = within(screen.getByRole('region', { name: 'Mes sorts hors combat' }));
+    expect(liste.getByText(/· en scène ·/)).toBeTruthy();
+    expect(liste.getByText('Ta carte de scène le lance.')).toBeTruthy();
+    expect(liste.queryByRole('button')).toBeNull();
+  });
+});
+
 describe('le MJ et les sorts hors combat (5b, 14b, 16a)', () => {
   it('rien à montrer sans demande', () => {
     render(DemandesSortsMj);
@@ -293,9 +320,9 @@ describe('le MJ et les sorts hors combat (5b, 14b, 16a)', () => {
     expect(d.getByText('1 PP · échec sur 1 à 10 au d20 · sauvegarde de Volonté, DD 13')).toBeTruthy();
     await fireEvent.input(d.getByLabelText('Motif pour Kylhian'), { target: { value: 'Il fait nuit' } });
     await fireEvent.click(d.getByRole('button', { name: 'Accepter' }));
-    await waitFor(() => expect(sorts.repondreDemandeSort).toHaveBeenCalledWith('d1', true, 'Il fait nuit'));
+    await waitFor(() => expect(sorts.repondreDemandeSort).toHaveBeenCalledWith(expect.objectContaining({ id: 'd1' }), true, 'Il fait nuit', 0));
     await fireEvent.click(within(screen.getByRole('article', { name: 'Demande de Magnus' })).getByRole('button', { name: 'Refuser' }));
-    await waitFor(() => expect(sorts.repondreDemandeSort).toHaveBeenLastCalledWith('d2', false, ''));
+    await waitFor(() => expect(sorts.repondreDemandeSort).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'd2' }), false, ''));
   });
 
   it('un sort lancé à sauvegarde : le MJ donne le bonus de la cible et lance ; les sorts traités sont repliés', async () => {
@@ -314,6 +341,15 @@ describe('le MJ et les sorts hors combat (5b, 14b, 16a)', () => {
     expect(screen.getAllByRole('article')).toHaveLength(1);
     const faits = screen.getByText('Derniers sorts').closest('details')!;
     expect([...faits.querySelectorAll('li')].map((l) => l.textContent?.split(' : ').pop())).toEqual(['refusé (Non)', 'lancé, la cible n’a pas résisté']);
+  });
+
+  it('G2b : un sort de la scène en cours se tranche dans la carte de scène, pas ici', () => {
+    table.donnees = { ...table.donnees, sceneHorsCombat: 'sh1' };
+    demandesSorts.elements = [demande({ scene: 'sh1', action: '1-alice' }), demande({ id: 'd2', nom: 'Magnus', scene: 'sh0', action: '1-bob' }), demande({ id: 'd3', nom: 'Hermione' })];
+    render(DemandesSortsMj);
+    expect(screen.queryByRole('article', { name: 'Demande de Kylhian' })).toBeNull();
+    expect(screen.getByRole('article', { name: 'Demande de Magnus' })).toBeTruthy();
+    expect(screen.getByRole('article', { name: 'Demande de Hermione' })).toBeTruthy();
   });
 
   it('le compteur : demandes en attente et sauvegardes à lancer', async () => {

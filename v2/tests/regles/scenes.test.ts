@@ -86,6 +86,30 @@ describe('scènes hors combat (S2)', () => {
     await assertFails(pour('bob').doc(`${actes}/1-alice`).update({ de: 20 }));
   });
 
+  it('G2b : un sort joint est une demande d’Alice pour cette scène et cette action, en attente ; pas sur Passer', async () => {
+    const demande = (extra: Record<string, unknown> = {}) => ({
+      uid: 'alice', perso: 'p-magnus', nom: 'Magnus', sort: 'enchantement.charme', nomSort: 'Charme', palier: 'II', pp: 2, echec: 0, sauvegarde: null, dd: null,
+      intention: 'Un ami de passage', textes: ['x'], statut: 'attente', motif: null, de: null, resistance: null, scene: 'sh1', action: '1-alice', bonus: null, creeLe: 1, majLe: 1, ...extra,
+    });
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await db.doc(`${TABLE}/sortsHorsCombat/ok`).set(demande());
+      await db.doc(`${TABLE}/sortsHorsCombat/autre-action`).set(demande({ action: '2-alice' }));
+      await db.doc(`${TABLE}/sortsHorsCombat/de-carol`).set(demande({ uid: 'carol' }));
+      await db.doc(`${TABLE}/sortsHorsCombat/acceptee`).set(demande({ statut: 'acceptee', bonus: 2 }));
+    });
+    const alice = pour('alice').doc(`${actes}/1-alice`);
+    await assertFails(alice.set(action({ sort: 'autre-action' })));
+    await assertFails(alice.set(action({ sort: 'de-carol' })));
+    await assertFails(alice.set(action({ sort: 'acceptee' })));
+    await assertFails(alice.set(action({ sort: 'inconnue' })));
+    await assertFails(alice.set(action({ option: 'passer', competence: null, de: null, resultat: 'passe', sort: 'ok' })));
+    await assertSucceeds(alice.set(action({ sort: 'ok' })));
+    // Refusé (2b) : le MJ défait l'action, Alice rejoue.
+    await assertSucceeds(pour('bob').doc(`${actes}/1-alice`).delete());
+    await assertSucceeds(alice.set(action()));
+  });
+
   it('passer ; une non-appelée ne joue pas ; une scène terminée n’attend plus de jet', async () => {
     await assertFails(pour('alice').doc(`${actes}/1-alice`).set(action({ option: 'passer', competence: null, de: null, resultat: null })));
     await assertSucceeds(pour('alice').doc(`${actes}/1-alice`).set(action({ option: 'passer', competence: null, de: null, resultat: 'passe' })));
