@@ -20,6 +20,10 @@ import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
  * n'importe quel combattant (4b), tient ses usages et sa visée, repousse
  * d'une case le jeton d'un combattant (12a) et blesse un allié dans une
  * collision.
+ *
+ * Lot L6.4a : les sauvegardes du monstre (8a), les PV et bonus temporaires
+ * (11a, 12a) ; le sort du joueur qui a la main déplace un jeton de 20 cases
+ * au plus (10a) et soigne un allié (ses PV montent).
  */
 const TABLE = 'tables/t1';
 const C = `${TABLE}/combats/c1`;
@@ -37,7 +41,7 @@ const combat = (extra: Record<string, unknown> = {}) => ({
 });
 const combattant = (extra: Record<string, unknown> = {}) => ({
   genre: 'pj', nom: 'Kargash', perso: 'p1', uid: 'alice', monstre: null, modInit: 2, initiative: 14, de: 12, pv: null, pvMax: null, aTerre: false,
-  mvtBase: 5, def: null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false,
+  mvtBase: 5, def: null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [],
   tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...extra,
 });
 const goule = (extra: Record<string, unknown> = {}) =>
@@ -237,22 +241,74 @@ describe('états, ressources, poussées (L6.3)', () => {
     await assertSucceeds(pour('bob').doc(`${C}/combattants/pj-p1`).update({ debutTour: 3 }));
   });
 
-  it('12a : il repousse d’une case le jeton d’un combattant ; pas de deux ; sans la main, non', async () => {
+  it('12a : il repousse d’une case le jeton d’un combattant (L6.4a : un sort, jusqu’à 20) ; sans la main, non', async () => {
     await poser(`${TABLE}/scenes/cave/jetons/m-r1-a`, { genre: 'monstre', nom: 'Goule', couleur: '#c0392b', cx: 5, cy: 5, proprietaire: null, creeLe: 1 });
     const g = pour('alice').doc(`${TABLE}/scenes/cave/jetons/m-r1-a`);
-    await assertFails(g.update({ cx: 7, cy: 5 }));
+    await assertFails(g.update({ cx: 26, cy: 5 }));
     await assertFails(g.update({ cx: 6, cy: 6, nom: 'x' }));
     await assertSucceeds(g.update({ cx: 6, cy: 6 }));
     await assertFails(pour('carol').doc(`${TABLE}/scenes/cave/jetons/m-r1-a`).update({ cx: 5, cy: 5 }));
   });
 
-  it('collision : il ôte des PV à un allié du combat, jamais vers le haut ; sans la main, non', async () => {
+  it('collision : il ôte des PV à un allié du combat (L6.4a : un soin les monte) ; sans la main, non', async () => {
     await poser(`${TABLE}/persos/p2`, fiche('carol', { pvActuel: 10 }));
     const h = pour('alice').doc(`${TABLE}/persos/p2`);
-    await assertFails(h.update({ pvActuel: 12 }));
+    await assertFails(h.update({ pvActuel: 10 }));
     await assertFails(h.update({ pvActuel: 7, nom: 'x' }));
     await assertSucceeds(h.update({ pvActuel: 7 }));
     await poser(C, combat({ actif: 'm-r1-a' }));
     await assertFails(h.update({ pvActuel: 5 }));
+  });
+});
+
+describe('sorts en combat (L6.4a)', () => {
+  const sauv = { FOR: 1, DEX: 2, CON: 1, Volonte: 0 };
+  const bonus = { sur: 'DEF', valeur: 2, rounds: 2, consomme: false, typeDegats: null, source: 'Kargash' };
+
+  it('8a : un monstre porte ses sauvegardes, un PJ non ; le MJ les corrige, un joueur non ; la forme est vérifiée', async () => {
+    const bob = pour('bob');
+    await assertSucceeds(bob.doc(`${C}/combattants/m-r1-b`).set(goule({ sauvegardes: sauv, boss: true, demonOuMortVivant: true })));
+    await assertFails(bob.doc(`${C}/combattants/m-r1-c`).set(goule({ sauvegardes: { ...sauv, x: 1 } })));
+    await assertFails(bob.doc(`${C}/combattants/m-r1-c`).set(goule({ sauvegardes: { ...sauv, FOR: 41 } })));
+    await assertFails(bob.doc(`${C}/combattants/m-r1-c`).set(goule({ sauvegardes: { FOR: 1, DEX: 1, CON: 1 } })));
+    await assertFails(bob.doc(`${C}/combattants/pj-p3`).set(combattant({ perso: 'p3', sauvegardes: sauv })));
+    await assertFails(bob.doc(`${C}/combattants/pj-p3`).set(combattant({ perso: 'p3', boss: true })));
+    await assertFails(bob.doc(`${C}/combattants/m-r1-c`).set(goule({ pvTemp: 1000 })));
+    await assertFails(bob.doc(`${C}/combattants/m-r1-c`).set(goule({ bonus: Array.from({ length: 21 }, () => bonus) })));
+    await assertFails(bob.doc(`${C}/combattants/m-r1-c`).set(goule({ boss: 'oui' })));
+    await assertSucceeds(bob.doc(`${C}/combattants/m-r1-a`).update({ sauvegardes: { ...sauv, Volonte: 3 } }));
+    await assertFails(pour('alice').doc(`${C}/combattants/m-r1-a`).update({ sauvegardes: sauv }));
+  });
+
+  it('11a, 12a : le joueur qui a la main donne ou ôte PV temporaires et bonus à n’importe quel combattant ; les siens à son tour ; sans la main, non', async () => {
+    await assertSucceeds(pour('alice').doc(`${C}/combattants/m-r1-a`).update({ pvTemp: 0, bonus: [bonus], pv: 10, aTerre: false }));
+    await assertSucceeds(pour('alice').doc(`${C}/combattants/pj-p2`).update({ pvTemp: 5, bonus: [bonus] }));
+    await assertSucceeds(pour('alice').doc(`${C}/combattants/pj-p1`).update({ tourActions: 3, principale: true, pvTemp: 4, bonus: [bonus] }));
+    await assertFails(pour('alice').doc(`${C}/combattants/pj-p2`).update({ pvTemp: 5, sauvegardes: null, nom: 'x' }));
+    await assertFails(pour('carol').doc(`${C}/combattants/m-r1-a`).update({ bonus: [] }));
+    await assertFails(pour('carol').doc(`${C}/combattants/pj-p2`).update({ pvTemp: 3 }));
+  });
+
+  it('10a : son sort déplace le jeton d’un combattant de 20 cases au plus ; pas un autre champ ; sans la main, non', async () => {
+    await poser(`${TABLE}/scenes/cave/jetons/m-r1-a`, { genre: 'monstre', nom: 'Goule', couleur: '#c0392b', cx: 5, cy: 5, proprietaire: null, creeLe: 1 });
+    const g = pour('alice').doc(`${TABLE}/scenes/cave/jetons/m-r1-a`);
+    await assertSucceeds(g.update({ cx: 25, cy: 5 }));
+    await assertFails(g.update({ cx: 25, cy: 26 }));
+    await assertFails(g.update({ cx: 4, cy: 5, couleur: '#000000' }));
+    await assertSucceeds(pour('alice').doc(`${TABLE}/scenes/cave/jetons/pj-p2`).update({ cx: 8, cy: 1 }));
+    await assertFails(pour('carol').doc(`${TABLE}/scenes/cave/jetons/m-r1-a`).update({ cx: 6, cy: 5 }));
+    await poser(`${TABLE}/scenes/cave/jetons/x`, { genre: 'libre', nom: 'Coffre', couleur: '#888888', cx: 1, cy: 1, proprietaire: null, creeLe: 1 });
+    await assertFails(pour('alice').doc(`${TABLE}/scenes/cave/jetons/x`).update({ cx: 2, cy: 1 }));
+  });
+
+  it('10a : son sort soigne un allié du combat (ses PV montent) ; pas un autre champ ; sans la main, non ; pas hors du combat', async () => {
+    await poser(`${TABLE}/persos/p2`, fiche('carol', { pvActuel: 4 }));
+    const h = pour('alice').doc(`${TABLE}/persos/p2`);
+    await assertSucceeds(h.update({ pvActuel: 9 }));
+    await assertFails(h.update({ pvActuel: 9 }));
+    await assertFails(h.update({ pvActuel: 12, nom: 'x' }));
+    await assertFails(pour('carol').doc(`${TABLE}/persos/p1`).update({ pvActuel: 25 }));
+    await poser(`${TABLE}/persos/p3`, fiche('dave', { pvActuel: 2 }));
+    await assertFails(pour('alice').doc(`${TABLE}/persos/p3`).update({ pvActuel: 5 }));
   });
 });

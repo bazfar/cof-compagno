@@ -8,12 +8,18 @@
   import { etatPj } from '../lib/combat/mort';
   import { attaquesSpecialesDuPj, type AttaqueSpeciale } from '../lib/combat/speciales';
   import { actionsDuTour } from '../lib/combat/ordre';
+  import { lancerSortEnCombat, placerParSort, type APlacer } from '../lib/actions/sorts-combat';
+  import { texteBonus } from '../lib/combat/bonus';
+  import { arriveePermise } from '../lib/combat/poussee';
+  import { apercu, campPermis, ciblageDe, coutAffiche, palierLance, sortsDeCombat, surchargeable, viseeComplete, type CiblageSort, type Visee } from '../lib/combat/sorts';
+  import { viseeCarte } from '../lib/combat/visee.svelte';
+  import type { Palier } from '../lib/schemas/effets';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import type { AvecId } from '../lib/firebase/suivre.svelte';
   import { formuleTest } from '../lib/regles/des';
   import { formuleSoin } from '../lib/regles/equipement';
   import type { Combat, Combattant } from '../lib/schemas/combat';
-  import type { Fiche } from '../lib/schemas/fiche';
+  import type { Fiche, FicheV2 } from '../lib/schemas/fiche';
 
   /*
    * La barre du joueur en combat (lot L6.1), sous la carte, d'après la
@@ -41,6 +47,15 @@
    *     Décharge (13a) ;
    *   - à son tour, il pose un état à la main sur qui il veut, ou en
    *     retire un (4b, D).
+   *
+   * Lot L6.4a (décisions de Thomas du 23/10/2026) : le bloc « Sorts et
+   * capacités » (13a) liste ses verbes, sorts mineurs et capacités
+   * actives (3a), avec palier, surcharge, élément et coût de combat (4a) ;
+   * « Viser sur la carte » ouvre la visée (6a : un jeton, ou une case pour
+   * un point, une ligne ou un cône ; la zone et les jetons pris se
+   * montrent au survol) ; « Lancer » résout (2a) et le journal dit la
+   * suite. Un sort qui téléporte fait cliquer la case d'arrivée (10a). Ses
+   * PV temporaires et ses bonus du combat s'affichent (11a, 12a).
    */
 
   let {
@@ -76,7 +91,7 @@
   // La DEF montrée au choix de la cible est celle que le jet visera :
   // celle du monstre modifiée par ses états (Exposé −2…), comme
   // `jetAttaque` la calcule.
-  const defVisee = (c: Combattant) => (c.def === null ? null : defenseVisee(c.def, c.etats));
+  const defVisee = (c: Combattant) => (c.def === null ? null : defenseVisee(c.def, c.etats, c.bonus));
   let cibleChoisie = $state('');
   const cible = $derived(monstres.find((c) => c.id === cibleChoisie) ?? monstres[0] ?? null);
   const refusPortee = (a: AttaquePj) =>
@@ -167,6 +182,94 @@
       poseEtat = '';
     });
   }
+
+  // ---- Sorts et capacités (L6.4a) ----
+  const sorts = $derived(sortsDeCombat(fiche));
+  let sortChoisi = $state('');
+  const sort = $derived(sorts.find((x) => x.id === sortChoisi) ?? sorts[0] ?? null);
+  let palierChoisi = $state<Palier | ''>('');
+  const palier: Palier = $derived(sort ? (sort.paliers.includes(palierChoisi as Palier) ? (palierChoisi as Palier) : (sort.paliers.at(-1) ?? 'I')) : 'I');
+  let surchargeVoulue = $state(false);
+  const surcharge = $derived(!!sort && surchargeVoulue && surchargeable(sort.id, palier));
+  let elementChoisi = $state('');
+  const element = $derived(sort ? (sort.elements.find((e) => e.id === elementChoisi) ?? (sort.elementRequis ? (sort.elements[0] ?? null) : null)) : null);
+  const coutSort = $derived(sort ? coutAffiche(sort, palier, surcharge, element?.maitrise ?? null) : null);
+  const ciblage = $derived(sort ? ciblageDe(sort.id, palierLance(sort.id, palier, surcharge), attaques[0]?.portee?.max ?? 1) : null);
+  let visee = $state<Visee>({ cibles: [], point: null });
+  let viseEnCours = $state(false);
+  let aPlacer = $state<APlacer[]>([]);
+  const cleSort = $derived(`${sort?.id}|${palier}|${surcharge}`);
+  $effect(() => {
+    void cleSort;
+    visee = { cibles: [], point: null };
+    viseEnCours = false;
+  });
+  const nomDe = (id: string) => combattants.find((c) => c.id === id)?.nom ?? id;
+  const typeTexte = { principale: 'action', secondaire: 'action mineure', gratuite: 'gratuite' } as const;
+  function texteCiblage(c: CiblageSort): string {
+    const camp = c.camp === 'ennemi' ? ' ennemie' : c.camp === 'allie' ? ' alliée' : '';
+    const qui = c.type === 'soi' ? 'Soi' : c.type === 'aucun' ? 'Sans cible' : c.type === 'point' ? `Une case, à ${c.portee} cases au plus` : `${c.nbCibles > 1 ? `${c.nbCibles} créatures` : 'Une créature'}${camp}, ${c.portee <= 1 ? 'au contact' : `à ${c.portee} cases`}`;
+    const formes = { carre: 'carré', cercle: 'cercle', ligne: 'ligne', cone: 'cône' } as const;
+    const zone = c.zone ? ` · zone : ${formes[c.zone.forme]} de ${c.zone.taille}${c.zone.origine === 'lanceur' && (c.zone.forme === 'carre' || c.zone.forme === 'cercle') ? ' autour de toi' : ''}` : '';
+    return `${qui}${zone}`;
+  }
+  const jetonSur = (k: { cx: number; cy: number }) => carte?.jetons.find((j) => j.cx === k.cx && j.cy === k.cy && !j.mort)?.id ?? null;
+  /** La visée si on cliquait cette case (le survol de la carte). */
+  function essai(c: CiblageSort, v: Visee, k: { cx: number; cy: number }, jeton: string | null): Visee {
+    if (c.clicCase) return { ...v, point: k };
+    const x = jeton ? combattants.find((m) => m.id === jeton) : undefined;
+    if (c.type === 'creature' && x && campPermis(x, c.camp)) return { ...v, cibles: [...v.cibles, x.id].slice(-c.nbCibles) };
+    return v;
+  }
+  // La visée ouverte sur la carte (6a) ; à la fermeture, la carte reprend ses gestes.
+  $effect(() => {
+    const c = ciblage;
+    const v = visee;
+    const k = carte;
+    if (!viseEnCours || !c || !k) return;
+    const voir = (x: Visee) => {
+      const a = apercu(k.scene, k.jetons, moi.id, c, x, combat.porteesLibres);
+      return { cases: a.cases, jetons: a.touches, refus: a.refus };
+    };
+    viseeCarte.v = {
+      apercu: (survol) => voir(essai(c, v, survol, jetonSur(survol))),
+      choisir: (k2, jeton) => (visee = essai(c, v, k2, jeton ?? jetonSur(k2))),
+      fixe: v.cibles.length || v.point ? voir(v) : { cases: [], jetons: [] },
+    };
+    return () => (viseeCarte.v = null);
+  });
+  // Placer un jeton qu'un sort téléporte (10a) : la case d'arrivée, d'un clic.
+  $effect(() => {
+    const p = aPlacer[0];
+    const k = carte;
+    if (!p || !k) return;
+    viseeCarte.v = {
+      apercu: (survol) => ({ cases: [survol], jetons: [p.cible], refus: arriveePermise(k.scene, k.jetons, p.cible, survol, p.cases) }),
+      choisir: (k2) =>
+        void agir(async () => {
+          await placerParSort(combat.scene, k, p, k2);
+          aPlacer = aPlacer.slice(1);
+          return `${p.nom} est placé.`;
+        }),
+      fixe: { cases: [], jetons: [p.cible] },
+    };
+    return () => (viseeCarte.v = null);
+  });
+  const dejaServi = $derived(
+    !!sort && ((sort.limite === '1x/round' && moi.usages[sort.id] === combat.round) || (sort.limite !== 'volonte' && sort.limite !== '1x/round' && !!moi.usages[sort.id])),
+  );
+  const actionPrise = $derived(!!sort && ((sort.typeAction === 'principale' && actions.principale) || (sort.typeAction === 'secondaire' && actions.secondaire)));
+  function lancerLeSort() {
+    const s = sort;
+    if (!s || fiche.schemaVersion !== 2) return;
+    return agir(async () => {
+      const r = await lancerSortEnCombat(idCombat, combat, moi, fiche as AvecId<FicheV2>, { sort: s.id, palier, surcharge, element: element?.id ?? null, visee }, carte, combattants, fiches);
+      visee = { cibles: [], point: null };
+      viseEnCours = false;
+      aPlacer = r.aPlacer;
+      return `${r.texte}${r.aPlacer.length ? ` Clique sur la carte la case d’arrivée de ${r.aPlacer[0]!.nom} (${r.aPlacer[0]!.cases} cases au plus).` : ''}`;
+    });
+  }
 </script>
 
 <section class="carte barre" aria-label="Mon personnage en combat">
@@ -181,7 +284,13 @@
       <span>Init {signe(vue.stats.initiative)}</span>
       {#if vue.pp}<span>PP {vue.pp.actuel}/{vue.pp.max}</span>{/if}
       {#each jauges as j (j.cle)}<span>{j.nom} {j.actuel}{j.max !== null ? `/${j.max}` : ''}</span>{/each}
+      {#if moi.pvTemp}<span>PV temp. {moi.pvTemp}</span>{/if}
     </div>
+    {#if moi.bonus.length}
+      <ul class="etats" aria-label="Mes bonus">
+        {#each moi.bonus as b, i (i)}<li><strong>{texteBonus(b)}</strong>{b.source ? ` · ${b.source}` : ''}</li>{/each}
+      </ul>
+    {/if}
     {#if moi.etats.length}
       <ul class="etats" aria-label="Mes états">
         {#each moi.etats as e (e.id)}
@@ -227,7 +336,6 @@
         {:else}
           <span class="aide">Aucune arme équipée.</span>
         {/each}
-        {#if vue.stats.attaque.magique !== null}<button disabled>Magique {signe(vue.stats.attaque.magique)} · L6.4</button>{/if}
       </div>
       {#if speciales.length}
         <h3>Attaques spéciales</h3>
@@ -303,9 +411,57 @@
     </div>
   </div>
 
-  <div class="bloc">
-    <h3>Sorts et capacités · L6.4</h3>
-    <div class="boutons"><button disabled>Bientôt depuis cette barre</button></div>
+  <div class="bloc sorts">
+    <h3>Sorts et capacités</h3>
+    {#if sort && ciblage}
+      <label class="cible"
+        >Sort ou capacité
+        <select value={sort.id} onchange={(e) => ((sortChoisi = e.currentTarget.value), (palierChoisi = ''), (elementChoisi = ''), (surchargeVoulue = false))}>
+          {#each sorts as x (x.id)}<option value={x.id}>{x.nom}{x.grimoire ? ' (grimoire)' : ''} · {typeTexte[x.typeAction]}</option>{/each}
+        </select>
+      </label>
+      <p class="aide">{sort.description}</p>
+      <div class="reglages">
+        {#if sort.paliers.length > 1}
+          <select aria-label="Palier" value={palier} onchange={(e) => (palierChoisi = e.currentTarget.value as Palier)}>
+            {#each sort.paliers as p (p)}<option value={p}>Palier {p}</option>{/each}
+          </select>
+        {/if}
+        {#if surchargeable(sort.id, palier)}<label><input type="checkbox" bind:checked={surchargeVoulue} /> Surcharge</label>{/if}
+        {#if sort.elements.length}
+          <select aria-label="Élément" value={element?.id ?? ''} onchange={(e) => (elementChoisi = e.currentTarget.value)}>
+            {#if !sort.elementRequis}<option value="">Sans élément</option>{/if}
+            {#each sort.elements as el (el.id)}<option value={el.id}>{el.nom}</option>{/each}
+          </select>
+        {/if}
+        <span class="cout" data-testid="cout-sort">{coutSort && 'texte' in coutSort ? coutSort.texte : (coutSort?.refus ?? '')}</span>
+        {#if sort.limite !== 'volonte'}<span class="aide">{sort.limite.replace('1x', '1×')}</span>{/if}
+      </div>
+      <p class="aide">{texteCiblage(ciblage)}</p>
+      {#if sort.manuel}<p class="aide">Au MJ : {sort.manuel}</p>{/if}
+      <div class="boutons">
+        {#if ciblage.type === 'creature' || ciblage.clicCase}
+          <button aria-pressed={viseEnCours} disabled={!monTour || !carte} onclick={() => (viseEnCours = !viseEnCours)}>{viseEnCours ? 'Fermer la visée' : 'Viser sur la carte'}</button>
+        {/if}
+        <button
+          class="lancer"
+          disabled={occupe || !monTour || agit !== 'oui' || actionPrise || dejaServi || !coutSort || 'refus' in coutSort || !viseeComplete(ciblage, visee) || aPlacer.length > 0}
+          onclick={lancerLeSort}>Lancer {sort.nom}</button
+        >
+      </div>
+      {#if viseEnCours}<p class="aide" role="status">{ciblage.clicCase ? 'Clique la case visée sur la carte.' : `Clique ${ciblage.nbCibles > 1 ? `jusqu’à ${ciblage.nbCibles} cibles` : 'ta cible'} sur la carte.`}</p>{/if}
+      {#if visee.cibles.length || visee.point}
+        <p class="aide" data-testid="visee"
+          >Visée : {[...visee.cibles.map(nomDe), visee.point ? `case ${visee.point.cx + 1}, ${visee.point.cy + 1}` : ''].filter(Boolean).join(', ')}
+          <button class="lien" onclick={() => (visee = { cibles: [], point: null })}>effacer</button></p
+        >
+      {/if}
+      {#if monTour && actionPrise}<p class="aide">{sort.typeAction === 'principale' ? 'Action principale' : 'Action secondaire'} prise ce tour.</p>{/if}
+      {#if dejaServi}<p class="aide">{sort.nom} a déjà servi.</p>{/if}
+      {#if aPlacer.length}<p class="alerte" role="status">Place {aPlacer[0]!.nom} : clique la case d’arrivée ({aPlacer[0]!.cases} cases au plus).</p>{/if}
+    {:else}
+      <p class="aide">{fiche.schemaVersion === 2 ? 'Aucun sort ni capacité à lancer.' : 'Les sorts se lancent depuis une fiche de la refonte.'}</p>
+    {/if}
   </div>
 
   <div class="bloc">
@@ -466,6 +622,29 @@
   }
   .subir input {
     width: 90px;
+  }
+  .sorts {
+    flex-basis: 340px;
+  }
+  .reglages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    align-items: center;
+    font-size: 13px;
+  }
+  .reglages label {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+  }
+  .cout {
+    font-weight: 700;
+  }
+  .lancer {
+    background: var(--couleur-accent);
+    color: var(--couleur-sur-accent);
   }
   .message {
     width: 100%;

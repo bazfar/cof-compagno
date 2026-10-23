@@ -1,5 +1,6 @@
 import { etatParId, etatsRefonte } from '../../regles/index.ts';
-import type { EtatCombat } from '../schemas/combat.ts';
+import { bonusFixe } from './bonus.ts';
+import type { BonusCombat, EtatCombat } from '../schemas/combat.ts';
 import type { EtatRefonte } from '../schemas/etats.ts';
 
 /*
@@ -77,11 +78,13 @@ export function modificateur(etats: readonly EtatCombat[], cibles: readonly stri
 
 /**
  * La défense qu'un jet d'attaque visera : la sienne, modifiée par ses
- * états (Exposé −2…). `jetAttaque` l'appelle, les écrans aussi, pour que
- * la valeur montrée soit celle du jet.
+ * états (Exposé −2…) et ses bonus temporaires de DEF. Les écrans la
+ * montrent pour que la valeur lue soit celle du jet ; le bonus propre au
+ * contact ou à la distance, que `jetAttaque` ajoute selon le mode de
+ * l'attaque, n'en fait pas partie.
  */
-export function defenseVisee(base: number, etats: readonly EtatCombat[]): number {
-  return base + modificateur(etats, ['DEF']);
+export function defenseVisee(base: number, etats: readonly EtatCombat[], bonus: readonly BonusCombat[] = []): number {
+  return base + modificateur(etats, ['DEF']) + bonusFixe(bonus, ['DEF']);
 }
 
 /**

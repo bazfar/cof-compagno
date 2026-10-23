@@ -77,11 +77,11 @@ const FICHES = JSON.parse(readFileSync('tests/fixtures/fiches-v1.json', 'utf8'))
 const reelle = (nom: string, id: string, uid: string) => ({ ...ficheDepuisV1(FICHES.find((f: { nom: string }) => f.nom.startsWith(nom)), uid, 1).fiche, id });
 const pj = (id: string, c: Partial<Combattant> = {}) => ({
   id: `pj-${id}`, genre: 'pj' as const, nom: id, perso: id, uid: `u-${id}`, monstre: null, modInit: 1, initiative: null as number | null, de: null as number | null, pv: null, pvMax: null, aTerre: false,
-  mvtBase: 5, def: null as number | null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+  mvtBase: 5, def: null as number | null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
 });
 const monstre = (id: string, c: Partial<Combattant> = {}) => ({
   id: `m-r1-${id}`, genre: 'monstre' as const, nom: id, perso: null, uid: null, monstre: 'goule', modInit: 3, initiative: null as number | null, de: null as number | null, pv: 14, pvMax: 14, aTerre: false,
-  mvtBase: 5, def: 13 as number | null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+  mvtBase: 5, def: 13 as number | null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
 });
 const combat = (c: Record<string, unknown> = {}) => ({ nom: 'Les goules du cellier', scene: 'cave', rencontre: 'r1', statut: 'encours' as const, round: 2, tour: 6, actif: null as string | null, porteesLibres: false, creeLe: 1, closLe: null, ...c });
 
@@ -176,7 +176,7 @@ describe('section Combat du MJ (4a, 9a, 11a)', () => {
       { id: 'm-x', genre: 'monstre', nom: 'Rat', couleur: '#c0392b', cx: 6, cy: 5, proprietaire: null, creeLe: 1 },
     ];
     rencontres.elements = [{ id: 'r1', nom: 'Les goules du cellier', scene: 'cave', statut: 'lancee', lanceeLe: 5, monstres: [{ cle: 'a', monstre: 'goule', nom: 'Goule A', cx: 5, cy: 5 }], butin: [], creeLe: 1 }];
-    bestiaire.elements = [{ id: 'goule', nom: 'Goule', init: 3, pv: 14, def: 13, armureId: 'cuir', attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
+    bestiaire.elements = [{ id: 'goule', nom: 'Goule', race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, armureId: 'cuir', attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
     armuresBestiaire.donnees = { liste: [{ id: 'cuir', nom: 'Cuir épais', reduction: 2, naturelle: true }] };
   };
 
@@ -252,7 +252,7 @@ describe('panneau du combattant (3b)', () => {
     table.donnees = { sceneActive: 'cave', combat: 'c1' };
     combatDoc.donnees = combat({ actif: 'm-r1-a' });
     persos.elements = [reelle('Kargash', 'p1', 'alice')];
-    bestiaire.elements = [{ id: 'goule', nom: 'Goule', init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
+    bestiaire.elements = [{ id: 'goule', nom: 'Goule', race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
     combattants.elements = [monstre('a', { nom: 'Goule A', initiative: 15, de: 12, pv: 9 }), pj('p1', { nom: 'Kargash', perso: 'p1', uid: 'alice', initiative: 11, de: 10 })];
   });
 
@@ -313,7 +313,7 @@ describe('le joueur en combat', () => {
     expect(screen.queryByTestId('carte-table')).toBeNull();
   });
 
-  it('la barre : identité et PV ; jets de carac au journal ; le reste grisé avec son lot', async () => {
+  it('la barre : identité et PV ; jets de carac au journal ; les sorts d’une fiche v1 attendent sa conversion (L6.4a)', async () => {
     const f = k();
     render(BarreCombat, { props: { fiche: f, idCombat: 'c1', combat: combat({ actif: 'm-r1-a' }), moi: pj('p1', { perso: 'p1', uid: 'alice' }), combattants: [], fiches: new Map(), carte: null } });
     const v = vueFiche(f);
@@ -322,7 +322,8 @@ describe('le joueur en combat', () => {
     await fireEvent.click(screen.getByRole('button', { name: new RegExp(`^Test de ${force.nom}`) }));
     expect(journal.lancerEtNoter).toHaveBeenCalledWith(`Test de ${force.nom}`, expect.stringMatching(/^1d20/), f.nom);
     expect(screen.queryByText('Attaques spéciales')).toBeNull(); // une fiche v1 n'en a pas (L6.3, 3)
-    expect(screen.getByText('Sorts et capacités · L6.4')).toBeTruthy();
+    expect(screen.getByText('Sorts et capacités')).toBeTruthy();
+    expect(screen.getByText('Les sorts se lancent depuis une fiche de la refonte.')).toBeTruthy();
   });
 });
 
@@ -434,7 +435,7 @@ describe('attaques et dégâts (L6.2)', () => {
     table.donnees = { sceneActive: 'cave', combat: 'c1' };
     combatDoc.donnees = combat({ actif: 'm-r1-a' });
     persos.elements = [k()];
-    bestiaire.elements = [{ id: 'goule', nom: 'Goule', init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, bonusDegats: 2, effetSpecial: null }] }];
+    bestiaire.elements = [{ id: 'goule', nom: 'Goule', race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, bonusDegats: 2, effetSpecial: null }] }];
     armesBestiaire.donnees = { liste: [{ id: 'griffes', nom: 'Griffes', type: 'arme', degats: '1d6', portee: 'contact', typedegats: 'physique' }] };
     persos.elements = [k(), { ...reelle('Hermione', 'p2', 'bob'), pvActuel: 0 }];
     combattants.elements = [goule(), moi(), pj('p2', { nom: 'Hermione', perso: 'p2', uid: 'bob', mortEchecs: 3, mort: true })];
@@ -464,7 +465,7 @@ describe('attaques et dégâts (L6.2)', () => {
     table.donnees = { sceneActive: 'cave', combat: 'c1' };
     combatDoc.donnees = combat({ actif: 'm-r1-a' });
     persos.elements = [{ ...k(), pvActuel: 0 }];
-    bestiaire.elements = [{ id: 'goule', nom: 'Goule', init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
+    bestiaire.elements = [{ id: 'goule', nom: 'Goule', race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
     armesBestiaire.donnees = { liste: [{ id: 'griffes', nom: 'Griffes', type: 'arme', degats: '1d6', portee: 'contact', typedegats: 'physique' }] };
     combattants.elements = [goule({ tourActions: 6, principale: true }), moi({ mortSucces: 2 })];
     render(PanneauCombat);

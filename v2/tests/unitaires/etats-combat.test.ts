@@ -80,12 +80,12 @@ const v2 = (nom: string, classe: string, choix: Partial<RefonteFiche> = {}, id =
 const neutre = { physique: 1, magique: 1 };
 const pj = (id: string, c: Partial<Combattant> = {}): Combattant & { id: string } => ({
   id: `pj-${id}`, genre: 'pj', nom: id, perso: id, uid: `u-${id}`, monstre: null, modInit: 1, initiative: 10, de: 9, pv: null, pvMax: null, aTerre: false,
-  mvtBase: 5, def: null, armure: 0, resistances: neutre, mortSucces: 0, mortEchecs: 0, mort: false, etats: [], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false,
+  mvtBase: 5, def: null, armure: 0, resistances: neutre, mortSucces: 0, mortEchecs: 0, mort: false, etats: [], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [],
   tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
 });
 const monstre = (id: string, c: Partial<Combattant> = {}): Combattant & { id: string } => ({
   id: `m-r1-${id}`, genre: 'monstre', nom: id, perso: null, uid: null, monstre: 'goule', modInit: 3, initiative: 15, de: 12, pv: 14, pvMax: 14, aTerre: false,
-  mvtBase: 5, def: 13, armure: 0, resistances: neutre, mortSucces: 0, mortEchecs: 0, mort: false, etats: [], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false,
+  mvtBase: 5, def: 13, armure: 0, resistances: neutre, mortSucces: 0, mortEchecs: 0, mort: false, etats: [], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [],
   tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
 });
 const etat = (id: string, c: Partial<EtatCombat> = {}): EtatCombat => ({ id, rounds: 1, cumul: 1, charges: null, des: null, source: null, ...c });
@@ -494,7 +494,7 @@ describe('écritures (L6.3)', () => {
 
   it('9a : au démarrage, le Ki reprend sa valeur ; à la clôture, la Plongée revient à 0', async () => {
     session.etape = 'mj';
-    const brouillon = [{ id: 'pj-p1', genre: 'pj' as const, nom: 'M', perso: 'p1', uid: 'alice', monstre: null, modInit: 1, pvMax: null, def: null, armure: 0, resistances: neutre, mvtBase: 5 }];
+    const brouillon = [{ id: 'pj-p1', genre: 'pj' as const, nom: 'M', perso: 'p1', uid: 'alice', monstre: null, modInit: 1, pvMax: null, def: null, armure: 0, resistances: neutre, mvtBase: 5, sauvegardes: null, boss: false, demonOuMortVivant: false }];
     await A.demarrerCombat({ nom: 'x', scene: 'cave', rencontre: null, combattants: brouillon }, null, () => 0.5, [{ perso: 'p1', jauges: { ki: 1 } }, { perso: 'p2', jauges: {} }]);
     expect(appels.filter((x) => x.chemin.startsWith('tables/t1/persos'))).toEqual([{ fn: 'lot.update', chemin: 'tables/t1/persos/p1', donnees: { 'refonte.jauges.ki': 1 } }]);
     appels.length = 0;

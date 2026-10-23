@@ -1,11 +1,12 @@
 import { collection, doc, runTransaction, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/client';
+import { finDeTourBonus } from '../combat/bonus';
 import { finDeTour, rompre } from '../combat/etats';
 import { champsJauges, type Jauges } from '../combat/ressources';
 import { actionsDuTour, deplacementRestant, mainSuivante, premierActif } from '../combat/ordre';
 import type { BrouillonCombattant } from '../combat/demarrage';
 import { formuleTest } from '../regles/des';
-import { schemaCombat, schemaCombattant, type Combat, type Combattant } from '../schemas/combat';
+import { schemaCombat, schemaCombattant, schemaSauvegardesCombat, type Combat, type Combattant, type SauvegardesCombat } from '../schemas/combat';
 import { session } from '../session.svelte';
 import { marquerMort } from './carte';
 import { lancerEtNoter, noterJet } from './journal';
@@ -56,6 +57,11 @@ function nouveauCombattant(b: BrouillonCombattant, de: number | null, maintenant
     gainTouche: { round: 0, montant: 0 },
     debutTour: 0,
     visee: false,
+    sauvegardes: b.genre === 'monstre' ? b.sauvegardes : null,
+    boss: b.genre === 'monstre' && b.boss,
+    demonOuMortVivant: b.genre === 'monstre' && b.demonOuMortVivant,
+    pvTemp: 0,
+    bonus: [],
     tourActions: 0,
     principale: false,
     secondaire: false,
@@ -147,14 +153,27 @@ export async function finirTour(idCombat: string, actifAttendu: string | null, c
     const lu2 = c.actif ? await tx.get(refCombattant(idCombat, c.actif)) : null;
     const s = mainSuivante(combattants, c.actif, c.round, aTerre);
     const apres = { ...c, actif: s.actif, round: s.round, tour: c.tour + 1 };
+    // L6.4a (12a) : ses bonus temporaires aussi.
     if (lu2?.exists()) {
-      const etats = schemaCombattant.parse(lu2.data()).etats;
-      const restes = finDeTour(etats);
-      if (JSON.stringify(restes) !== JSON.stringify(etats)) tx.update(refCombattant(idCombat, c.actif!), { etats: restes });
+      const m = schemaCombattant.parse(lu2.data());
+      const etats = finDeTour(m.etats);
+      const bonus = finDeTourBonus(m.bonus);
+      const maj: Record<string, unknown> = {};
+      if (JSON.stringify(etats) !== JSON.stringify(m.etats)) maj.etats = etats;
+      if (JSON.stringify(bonus) !== JSON.stringify(m.bonus)) maj.bonus = bonus;
+      if (Object.keys(maj).length) tx.update(refCombattant(idCombat, c.actif!), maj);
     }
     tx.update(refCombat(idCombat), { actif: apres.actif, round: apres.round, tour: apres.tour });
     return apres;
   });
+}
+
+/** MJ : corrige les sauvegardes d'un monstre (L6.4a, 8a). */
+export async function corrigerSauvegardes(idCombat: string, c: AvecId<Combattant>, s: SauvegardesCombat): Promise<void> {
+  if (c.genre !== 'monstre') throw new RefusCombat('Les sauvegardes d’un PJ sont sur sa fiche.');
+  const ok = schemaSauvegardesCombat.safeParse(s);
+  if (!ok.success) throw new RefusCombat('Des sauvegardes de −10 à +40.');
+  await updateDoc(refCombattant(idCombat, c.id), { sauvegardes: ok.data });
 }
 
 /** MJ : donne la main à un combattant (oubli, retour en arrière : 6a). Le round ne change pas. */

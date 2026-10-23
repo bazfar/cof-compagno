@@ -8,6 +8,7 @@
   import { jetonsVisiblesDesPJ, segmentsBloquants, visionsDesPJ, type VisionJeton } from '../lib/battlemap/visibilite';
   import { deplacer, ecranVersCase, ecranVersScene, vueAjustee, zoomer, type Vue } from '../lib/battlemap/vue';
   import type { GeometrieScene } from '../lib/schemas/scene';
+  import type { ViseeCarte } from '../lib/combat/visee.svelte';
 
   /*
    * La battlemap à l'écran (lot L5.2). Composant d'affichage : il reçoit
@@ -23,6 +24,10 @@
    * Avec un outil de dessin du MJ (L5.4) : cliquer-glisser trace, un
    * simple clic efface l'élément du même outil le plus proche (comme en v1).
    * La molette zoome toujours ; pour déplacer la vue, on repose l'outil.
+   *
+   * Avec une visée de sort (L6.4a, 6a) : le survol montre les cases de la
+   * zone et les jetons pris ; un clic rend la case (et son jeton) à la
+   * visée, sans sélectionner ni glisser.
    */
 
   let {
@@ -47,6 +52,7 @@
     surGomme,
     actif = null,
     budget = null,
+    visee = null,
   }: {
     geometrie: GeometrieScene;
     /** Adresse de l'image de la scène. */
@@ -78,6 +84,8 @@
     actif?: string | null;
     /** Combat (L6.1, 7a) : ce jeton ne parcourt pas plus de `cases` cases ; elles se dessinent autour de lui. */
     budget?: { id: string; cases: number } | null;
+    /** Visée d'un sort (L6.4a) : le clic lui revient. */
+    visee?: ViseeCarte | null;
   } = $props();
 
   let canvas = $state<HTMLCanvasElement | undefined>();
@@ -168,6 +176,7 @@
       trace: trace && outil ? { a: trace.a, b: trace.b, type: outil.type, force: outil.force } : null,
       actif,
       portee: porteeDessinee,
+      visee: viseeDessinee,
     };
     const c = canvas;
     cancelAnimationFrame(demande);
@@ -190,6 +199,17 @@
     const j = jetons.find((x) => x.id === budget.id);
     if (!j) return null;
     return glisser?.id === j.id ? { cx: glisser.depart.cx, cy: glisser.depart.cy, cases: budget.cases } : { cx: j.cx, cy: j.cy, cases: budget.cases };
+  });
+
+  // Visée d'un sort (L6.4a) : ce qui est choisi, et ce que le survol prendrait.
+  const viseeDessinee = $derived.by(() => {
+    if (!visee) return null;
+    const a = survol ? visee.apercu(survol) : null;
+    return {
+      cases: [...visee.fixe.cases, ...(a?.cases ?? [])],
+      jetons: [...new Set([...visee.fixe.jetons, ...(a?.jetons ?? [])])],
+      refus: !!a?.refus,
+    };
   });
 
   // ---------- Gestes ----------
@@ -217,6 +237,11 @@
     }
     const pt = ecranVersScene(vue, ex, ey);
     const jeton = jetonSousPointeur(dessines, pt);
+    if (visee) {
+      const c = ecranVersCase(vue, ex, ey, geometrie);
+      if (c) visee.choisir(c, jeton?.id ?? null);
+      return;
+    }
     if (jeton) {
       surSelection?.(jeton.id);
       if (peutDeplacer(role, jeton, miens)) {
@@ -312,6 +337,7 @@
     style:width="{largeur}px"
     style:height="{hauteur}px"
     class:glisse={glisser !== null}
+    class:vise={visee !== null}
     onpointerdown={surAppui}
     onpointermove={surMouvement}
     onpointerup={surRelache}
@@ -341,6 +367,9 @@
   }
   canvas.glisse {
     cursor: grabbing;
+  }
+  canvas.vise {
+    cursor: crosshair;
   }
   .chargement {
     position: absolute;

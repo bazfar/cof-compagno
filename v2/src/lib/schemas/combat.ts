@@ -22,6 +22,12 @@ import { z } from 'zod';
  * combattant au démarrage, lisibles de toute la table. Un PJ à 0 PV est
  * Mourant (7a) : ses jets de mort sont comptés ici, le temps du combat.
  *
+ * Lot L6.4a (décisions de Thomas du 23/10/2026) : le joueur lance ses
+ * sorts et capacités sur son client (2a) ; la cible sauvegarde avec les
+ * sauvegardes recopiées du bestiaire sur le monstre au démarrage (8a, 9a),
+ * que le MJ corrige ; les PV temporaires (11a) et les bonus temporaires
+ * (12a) vivent sur le combattant, le temps du combat.
+ *
  * Actions du tour (7a) : elles valent pour le tour `tourActions` ; quand le
  * combat passe au tour suivant, celles d'un autre tour comptent comme
  * neuves, sans que personne n'ait à les remettre à zéro.
@@ -65,6 +71,33 @@ export const schemaEtatCombat = z.strictObject({
   source: z.string().min(1).max(40).nullable(),
 });
 export type EtatCombat = z.infer<typeof schemaEtatCombat>;
+
+/**
+ * Un bonus temporaire (L6.4a, 12a) : ce qu'un sort ou une capacité ajoute
+ * (« +2 en DEF 3 rounds », « +1d6 aux dégâts de la prochaine frappe »).
+ * `sur` : la cible du bonus (schemaCibleBonus) ; `valeur` : un nombre ou
+ * une formule de dés ; `rounds` : décompté comme un état, à la fin du tour
+ * du porteur, null jusqu'à la fin du combat ; `consomme` : il tombe avec la
+ * prochaine frappe.
+ */
+export const schemaBonusCombat = z.strictObject({
+  sur: z.string().min(1).max(40),
+  valeur: z.union([z.number().int().min(-99).max(99), z.string().min(1).max(20)]),
+  rounds: z.number().int().min(1).max(99).nullable(),
+  consomme: z.boolean(),
+  typeDegats: z.string().min(1).max(20).nullable(),
+  source: z.string().min(1).max(40).nullable(),
+});
+export type BonusCombat = z.infer<typeof schemaBonusCombat>;
+
+/** Les sauvegardes de la refonte (FOR, DEX, CON, Volonté), en bonus au d20. */
+export const schemaSauvegardesCombat = z.strictObject({
+  FOR: z.number().int().min(-10).max(40),
+  DEX: z.number().int().min(-10).max(40),
+  CON: z.number().int().min(-10).max(40),
+  Volonte: z.number().int().min(-10).max(40),
+});
+export type SauvegardesCombat = z.infer<typeof schemaSauvegardesCombat>;
 
 export const GENRES_COMBATTANT = ['pj', 'monstre'] as const;
 export type GenreCombattant = (typeof GENRES_COMBATTANT)[number];
@@ -113,6 +146,17 @@ export const schemaCombattant = z
     debutTour: z.number().int().min(0).max(99999),
     /** Précision (arme à feu) : il a visé ; sa prochaine attaque gagne +1d6 aux dégâts, +1d10 sur un critique. */
     visee: z.boolean(),
+    // ---- Sorts (L6.4a) ----
+    /** Monstre : ses sauvegardes, dérivées du bestiaire au démarrage (8a, 9a) ; null : PJ (sa fiche), ou monstre posé à la main (+0). */
+    sauvegardes: schemaSauvegardesCombat.nullable(),
+    /** Monstre boss (immunités du moteur : Sommeil, Ordre, Domination). */
+    boss: z.boolean(),
+    /** Démon ou mort-vivant (bestiaire : race), que certains sorts visent. */
+    demonOuMortVivant: z.boolean(),
+    /** PV temporaires (11a) : absorbés avant les PV ; ils s'en vont avec le combat. */
+    pvTemp: z.number().int().min(0).max(999),
+    /** Bonus temporaires (12a), comptés dans les jets comme les modificateurs d'état. */
+    bonus: z.array(schemaBonusCombat).max(20),
     // ---- Actions du tour (7a), valables pour le tour `tourActions` du combat ----
     tourActions: z.number().int().min(0).max(99999),
     principale: z.boolean(),
@@ -129,6 +173,7 @@ export const schemaCombattant = z
     if (pj && (c.pv !== null || c.pvMax !== null || c.monstre !== null)) ctx.addIssue({ code: 'custom', message: 'les PV d’un PJ sont sur sa fiche', path: ['pv'] });
     if (!pj && (c.pv === null || c.pvMax === null)) ctx.addIssue({ code: 'custom', message: 'un monstre a ses PV', path: ['pv'] });
     if (pj !== (c.def === null)) ctx.addIssue({ code: 'custom', message: 'un monstre a sa DEF, un PJ a sa CA sur sa fiche', path: ['def'] });
+    if (pj && (c.sauvegardes !== null || c.boss || c.demonOuMortVivant)) ctx.addIssue({ code: 'custom', message: 'les sauvegardes d’un PJ sont sur sa fiche', path: ['sauvegardes'] });
     if (!pj && (c.mortSucces || c.mortEchecs || c.mort)) ctx.addIssue({ code: 'custom', message: 'seul un PJ fait des jets de mort', path: ['mort'] });
     if (c.mort && c.mortEchecs < 3) ctx.addIssue({ code: 'custom', message: 'la mort vient au troisième échec', path: ['mort'] });
     if ((c.initiative === null) !== (c.de === null)) ctx.addIssue({ code: 'custom', message: 'l’initiative et son d20 vont ensemble', path: ['de'] });

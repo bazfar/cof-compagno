@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
+  import { texteBonus } from '../lib/combat/bonus';
   import { regleEtat, texteEtat } from '../lib/combat/etats';
   import { aTerreDuCombat, ordreCombat } from '../lib/combat/ordre';
   import { vueFiche } from '../lib/fiche/vue-fiche';
@@ -19,6 +20,9 @@
    * les rounds qui restent ; la règle au survol). Le combattant qui joue
    * est encadré d'or ; un combattant à terre ou mort est grisé. Les jetons
    * de la carte gardent leur taille, sans marque.
+   *
+   * Lot L6.4a (11a, 12a) : ses PV temporaires (« +5 ») et ses bonus du
+   * combat, en pastilles à part.
    */
 
   const table = suivreTable(session.table);
@@ -63,11 +67,16 @@
           <div class="pv" title="{pv.actuel}/{pv.max} PV">
             <div class="plein" style:width="{Math.max(0, Math.min(1, pv.actuel / pv.max)) * 100}%"></div>
           </div>
-          <span class="chiffres">{pv.actuel}/{pv.max}</span>
+          <span class="chiffres">{pv.actuel}/{pv.max}{c.pvTemp ? ` +${c.pvTemp}` : ''}</span>
         {/if}
         {#if c.etats.length}
           <ul class="etats" aria-label="États de {c.nom}">
             {#each c.etats as e (e.id)}<li title={regleEtat(e.id)}>{texteEtat(e)}</li>{/each}
+          </ul>
+        {/if}
+        {#if c.bonus.length}
+          <ul class="etats bonus" aria-label="Bonus de {c.nom}">
+            {#each c.bonus as b, i (i)}<li title={b.source ?? ''}>{texteBonus(b)}</li>{/each}
           </ul>
         {/if}
       </li>
@@ -161,6 +170,9 @@
     flex-wrap: wrap;
     justify-content: center;
     gap: 2px;
+  }
+  .bonus li {
+    background: var(--couleur-accent);
   }
   .etats li {
     font-size: 10px;

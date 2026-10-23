@@ -81,7 +81,7 @@ const v2 = (nom: string, classe: string, choix: Record<string, unknown> = {}, id
   return { ...F.convertirFiche(f as never, { ...F.refonteVierge(classeParId.get(classe)!, f.niveau), ...choix }), id };
 };
 const neutre = { physique: 1, magique: 1 };
-const base = { modInit: 1, de: 10, pv: null as number | null, pvMax: null as number | null, aTerre: false, mvtBase: 5, def: null as number | null, armure: 0, resistances: neutre, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as EtatCombat[], usages: {} as Record<string, number>, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, monstre: null as string | null };
+const base = { modInit: 1, de: 10, pv: null as number | null, pvMax: null as number | null, aTerre: false, mvtBase: 5, def: null as number | null, armure: 0, resistances: neutre, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as EtatCombat[], usages: {} as Record<string, number>, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, monstre: null as string | null };
 const pj = (id: string, c: Partial<Combattant> = {}) => ({ ...base, id: `pj-${id}`, genre: 'pj' as const, nom: id, perso: id, uid: 'alice', initiative: 11 as number | null, ...c });
 const goule = (c: Partial<Combattant & { id: string }> = {}) => ({ ...base, id: 'm-r1-a', genre: 'monstre' as const, nom: 'Goule A', perso: null, uid: null, monstre: 'goule', modInit: 3, initiative: 15 as number | null, pv: 9, pvMax: 14, def: 13, ...c });
 const etat = (id: string, c: Partial<EtatCombat> = {}): EtatCombat => ({ id, rounds: 1, cumul: 1, charges: null, des: null, source: null, ...c });
@@ -194,9 +194,12 @@ describe('la barre du joueur (L6.3)', () => {
     expect(screen.queryByLabelText('État à poser')).toBeNull();
   });
 
-  it('la DEF montrée au choix de la cible est celle que le jet visera : l’Exposé la baisse de 2', () => {
-    barre({ combattants: [pj('p1', { nom: 'Karlach' }), goule({ etats: [etat('expose', { rounds: 2 })] })] });
+  it('la DEF montrée au choix de la cible est celle que le jet visera : l’Exposé la baisse de 2, un bonus temporaire la monte', () => {
+    const vue = barre({ combattants: [pj('p1', { nom: 'Karlach' }), goule({ etats: [etat('expose', { rounds: 2 })] })] });
     expect([...(screen.getByLabelText('Cible') as HTMLSelectElement).options].map((o) => o.textContent)).toEqual(['Goule A · DEF 11']);
+    vue.unmount();
+    barre({ combattants: [pj('p1', { nom: 'Karlach' }), goule({ etats: [etat('expose', { rounds: 2 })], bonus: [{ sur: 'DEF', valeur: 3, rounds: 2, consomme: false, typeDegats: null, source: 'Bénédiction' }] })] });
+    expect([...(screen.getByLabelText('Cible') as HTMLSelectElement).options].map((o) => o.textContent)).toEqual(['Goule A · DEF 14']);
   });
 });
 
@@ -218,7 +221,7 @@ describe('le MJ (L6.3)', () => {
 
   it('le panneau : un PJ que nul ne peut cibler n’est pas proposé aux attaques du monstre', () => {
     const { armesBestiaire, bestiaire } = faux;
-    bestiaire.elements = [{ id: 'goule', nom: 'Goule', init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
+    bestiaire.elements = [{ id: 'goule', nom: 'Goule', race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
     armesBestiaire.donnees = { liste: [{ id: 'griffes', nom: 'Griffes', type: 'arme', degats: '1d6', portee: 'contact', typedegats: 'physique' }] };
     persos.elements = [v1('Kargash', 'p1', 'alice'), v1('Hermione', 'p2', 'bob')];
     combatDoc.donnees = combat({ actif: 'm-r1-a' });

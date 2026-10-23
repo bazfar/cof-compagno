@@ -64,11 +64,11 @@ type Combat = import('../../src/lib/schemas/combat').Combat;
 
 const pj = (id: string, c: Partial<Combattant> = {}): Combattant & { id: string } => ({
   id: `pj-${id}`, genre: 'pj', nom: id, perso: id, uid: `u-${id}`, monstre: null, modInit: 1, initiative: null, de: null, pv: null, pvMax: null, aTerre: false,
-  mvtBase: 5, def: null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+  mvtBase: 5, def: null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
 });
 const monstre = (id: string, c: Partial<Combattant> = {}): Combattant & { id: string } => ({
   id: `m-r1-${id}`, genre: 'monstre', nom: id, perso: null, uid: null, monstre: 'goule', modInit: 3, initiative: null, de: null, pv: 14, pvMax: 14, aTerre: false,
-  mvtBase: 5, def: 13, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+  mvtBase: 5, def: 13, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
 });
 const combat = (c: Partial<Combat> = {}): Combat => ({ nom: 'Les goules', scene: 'cave', rencontre: 'r1', statut: 'encours', round: 1, tour: 1, actif: null, porteesLibres: false, creeLe: 1, closLe: null, ...c });
 const avecInit = (c: Combattant & { id: string }, de: number) => ({ ...c, de, initiative: de + c.modInit });
@@ -144,7 +144,7 @@ describe('les actions du tour (7a)', () => {
 
 describe('qui entre dans le combat (4a)', () => {
   const fiches = new Map([['shy', { nom: 'Shyrion', uid: 'alice', modInit: 1, dons: ['mobile'] }]]);
-  const bestiaire = new Map([['goule', { init: 3, pv: 14, def: 12, armure: 1, resistances: { magique: 0.5 } }]]);
+  const bestiaire = new Map([['goule', { init: 3, pv: 14, def: 12, armure: 1, resistances: { magique: 0.5 }, sauvegardes: { FOR: 2, DEX: 3, CON: 2, Volonte: 1 }, boss: true, demonOuMortVivant: true }]]);
   const rencontre = { id: 'r1', monstres: [{ cle: 'a', monstre: 'goule', nom: 'Goule A', cx: 1, cy: 1 }] };
   const jetons = [
     { id: 'pj-shy', genre: 'pj', nom: 'Shyrion' },
@@ -159,9 +159,9 @@ describe('qui entre dans le combat (4a)', () => {
   it('les PJ posés avec leur fiche, les monstres vivants avec le bestiaire de la rencontre (DEF, armure, résistances : L6.2) ; un monstre posé à la main attend ses PV et sa DEF', () => {
     const b = D.brouillonDuCombat(jetons, fiches, rencontre, bestiaire);
     expect(b).toEqual([
-      { id: 'pj-shy', genre: 'pj', nom: 'Shyrion', perso: 'shy', uid: 'alice', monstre: null, modInit: 1, pvMax: null, def: null, armure: 0, resistances: neutre, mvtBase: 6 },
-      { id: 'm-r1-a', genre: 'monstre', nom: 'Goule A', perso: null, uid: null, monstre: 'goule', modInit: 3, pvMax: 14, def: 12, armure: 1, resistances: { physique: 1, magique: 0.5 }, mvtBase: 5 },
-      { id: 'm-libre', genre: 'monstre', nom: 'Gobelin', perso: null, uid: null, monstre: null, modInit: 0, pvMax: null, def: null, armure: 0, resistances: neutre, mvtBase: 5 },
+      { id: 'pj-shy', genre: 'pj', nom: 'Shyrion', perso: 'shy', uid: 'alice', monstre: null, modInit: 1, pvMax: null, def: null, armure: 0, resistances: neutre, mvtBase: 6, sauvegardes: null, boss: false, demonOuMortVivant: false },
+      { id: 'm-r1-a', genre: 'monstre', nom: 'Goule A', perso: null, uid: null, monstre: 'goule', modInit: 3, pvMax: 14, def: 12, armure: 1, resistances: { physique: 1, magique: 0.5 }, mvtBase: 5, sauvegardes: { FOR: 2, DEX: 3, CON: 2, Volonte: 1 }, boss: true, demonOuMortVivant: true },
+      { id: 'm-libre', genre: 'monstre', nom: 'Gobelin', perso: null, uid: null, monstre: null, modInit: 0, pvMax: null, def: null, armure: 0, resistances: neutre, mvtBase: 5, sauvegardes: null, boss: false, demonOuMortVivant: false },
     ]);
     expect(D.brouillonDuCombat(jetons, fiches, null, bestiaire).find((c) => c.id === 'm-r1-a')).toMatchObject({ monstre: null, pvMax: null, def: null });
   });
@@ -215,8 +215,8 @@ describe('schéma du combattant', () => {
 
 describe('écritures', () => {
   const brouillon = [
-    { id: 'pj-shy', genre: 'pj' as const, nom: 'Shyrion', perso: 'shy', uid: 'alice', monstre: null, modInit: 1, pvMax: null, def: null, armure: 0, resistances: { physique: 1, magique: 1 }, mvtBase: 5 },
-    { id: 'm-r1-a', genre: 'monstre' as const, nom: 'Goule A', perso: null, uid: null, monstre: 'goule', modInit: 3, pvMax: 14, def: 12, armure: 2, resistances: { physique: 0.5, magique: 1 }, mvtBase: 5 },
+    { id: 'pj-shy', genre: 'pj' as const, nom: 'Shyrion', perso: 'shy', uid: 'alice', monstre: null, modInit: 1, pvMax: null, def: null, armure: 0, resistances: { physique: 1, magique: 1 }, mvtBase: 5, sauvegardes: null, boss: false, demonOuMortVivant: false },
+    { id: 'm-r1-a', genre: 'monstre' as const, nom: 'Goule A', perso: null, uid: null, monstre: 'goule', modInit: 3, pvMax: 14, def: 12, armure: 2, resistances: { physique: 0.5, magique: 1 }, mvtBase: 5, sauvegardes: { FOR: 1, DEX: 3, CON: 1, Volonte: 2 }, boss: false, demonOuMortVivant: true },
   ];
 
   it('démarrer : le combat, ses combattants, la table ; les monstres lancent leur initiative au journal, la main au premier', async () => {

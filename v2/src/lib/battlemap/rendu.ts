@@ -63,6 +63,8 @@ export interface Dessin {
   actif?: string | null;
   /** Combat (L6.1) : cases encore atteignables du jeton qui joue, autour de sa case de départ. */
   portee?: { cx: number; cy: number; cases: number } | null;
+  /** Visée d'un sort (L6.4a) : cases de la zone, jetons pris ; `refus` : hors de portée ou de vue. */
+  visee?: { cases: readonly Case[]; jetons: readonly string[]; refus: boolean } | null;
 }
 
 const COULEURS = {
@@ -77,6 +79,9 @@ const COULEURS = {
   selection: '#e8c36a',
   actif: '#b8924a',
   portee: 'rgba(232, 195, 106, 0.16)',
+  zone: 'rgba(155, 89, 182, 0.35)',
+  zoneRefus: 'rgba(192, 57, 43, 0.35)',
+  vise: '#c39bd3',
   mort: '#6f6a73',
   bordPJ: '#fbf6ea',
   bordAutre: '#2b2436',
@@ -309,9 +314,24 @@ export function dessiner(ctx: CanvasRenderingContext2D, d: Dessin): void {
     ctx.setLineDash([]);
   }
 
+  // Visée d'un sort (L6.4a) : la zone, en violet (rouge si hors de portée).
+  if (d.visee) {
+    ctx.fillStyle = d.visee.refus ? COULEURS.zoneRefus : COULEURS.zone;
+    for (const c of d.visee.cases) ctx.fillRect(c.cx, c.cy, 1, 1);
+  }
+
   for (const j of d.jetons) {
     const pos = d.glisser?.id === j.id ? d.glisser.case : j;
     dessinerJeton(ctx, j, pos.cx, pos.cy, d.selection === j.id, vue.echelle, !!d.pvChiffres || !!j.pvChiffres);
+    if (d.visee?.jetons.includes(j.id)) {
+      ctx.beginPath();
+      ctx.arc(pos.cx + 0.5, pos.cy + 0.5, RAYON_JETON + 0.12, 0, Math.PI * 2);
+      ctx.strokeStyle = d.visee.refus ? '#e74c3c' : COULEURS.vise;
+      ctx.lineWidth = Math.max(4 / vue.echelle, 0.09);
+      ctx.setLineDash([trait(5), trait(3)]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
     if (d.actif === j.id) {
       ctx.beginPath();
       ctx.arc(pos.cx + 0.5, pos.cy + 0.5, RAYON_JETON + 0.16, 0, Math.PI * 2);

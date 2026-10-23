@@ -30,6 +30,7 @@
   import { noterAction } from '../lib/actions/combat';
   import type { CarteDuCombat } from '../lib/combat/attaque';
   import { combatSurCarte } from '../lib/combat/carte';
+  import { viseeCarte } from '../lib/combat/visee.svelte';
   import { suivreCombat, suivreCombattants } from '../lib/magasins/combat.svelte';
   import type { Combat, Combattant } from '../lib/schemas/combat';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
@@ -58,6 +59,9 @@
    *
    * Lot L6.2 (4a) : la carte rend à l'écran qui la monte sa scène calculée
    * et ses jetons (`surCarte`), d'où les attaques vérifient leur portée.
+   *
+   * Lot L6.4a (6a) : la visée d'un sort ouverte par la barre du joueur
+   * passe à la battlemap (lib/combat/visee.svelte.ts), côté joueur.
    */
 
   // Hauteur de la zone de carte (L2.6) : grande au poste MJ, réduite dans la
@@ -453,6 +457,7 @@
         {surGomme}
         actif={enCombat.actif}
         budget={enCombat.budget}
+        visee={role === 'joueur' ? viseeCarte.v : null}
       />
     {:else}
       <p class="vide">Chargement de la scène…</p>

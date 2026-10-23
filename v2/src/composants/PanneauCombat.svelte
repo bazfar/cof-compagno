@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { attaqueDeMonstre, poserEtatSur, retirerEtatDe } from '../lib/actions/attaques';
-  import { ajusterPvMonstre, RefusCombat } from '../lib/actions/combat';
+  import { ajusterPvMonstre, corrigerSauvegardes, RefusCombat } from '../lib/actions/combat';
+  import { texteBonus } from '../lib/combat/bonus';
   import { messageErreurJournal } from '../lib/actions/journal';
   import { attaquesDuMonstre, horsDePortee, type AttaqueMonstre, type CarteDuCombat } from '../lib/combat/attaque';
   import { ciblable, defenseVisee, etatsPosables, regleEtat, texteEtat } from '../lib/combat/etats';
@@ -34,6 +35,10 @@
    * Lot L6.3 (4b, 14a) : les états du combattant choisi, avec leur règle ;
    * le MJ en pose (état, durée) et en retire. L'état d'une attaque de
    * monstre est posé à la touche (8).
+   *
+   * Lot L6.4a (8a, 11a, 12a) : les sauvegardes du monstre, dérivées du
+   * bestiaire au démarrage, que le MJ corrige ; les PV temporaires et les
+   * bonus du combat de chacun.
    */
 
   let { carte = null }: { carte?: CarteDuCombat | null } = $props();
@@ -77,7 +82,7 @@
   const signe = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
   // La DEF du monstre et la CA des PJ sont montrées telles que le jet les
   // visera : modifiées par leurs états (Exposé −2…), comme `jetAttaque`.
-  const defMontre = $derived(montre?.def == null ? null : defenseVisee(montre.def, montre.etats));
+  const defMontre = $derived(montre?.def == null ? null : defenseVisee(montre.def, montre.etats, montre.bonus));
 
   // ---- Attaques du monstre (L6.2, 6a) ----
   const listeArmes = $derived(new Map((armes.etat.donnees?.liste ?? []).map((a) => [a.id, a])));
@@ -125,6 +130,13 @@
     }
   }
 
+  // ---- Sauvegardes du monstre (L6.4a, 8a) ----
+  let sauv = $state<{ FOR: number; DEX: number; CON: number; Volonte: number } | null>(null);
+  $effect(() => {
+    sauv = montre?.genre === 'monstre' ? { ...(montre.sauvegardes ?? { FOR: 0, DEX: 0, CON: 0, Volonte: 0 }) } : null;
+  });
+  const NOMS_SAUV = [['FOR', 'FOR'], ['DEX', 'DEX'], ['CON', 'CON'], ['Volonte', 'Vol.']] as const;
+
   let montant = $state(1);
   let message = $state('');
   let occupe = $state(false);
@@ -143,6 +155,12 @@
 </script>
 
 {#snippet etatsDe(c: (typeof combattants)[number])}
+  {#if c.bonus.length}
+    <h3>Bonus</h3>
+    <ul class="etats" aria-label="Bonus de {c.nom}">
+      {#each c.bonus as b, i (i)}<li><span><strong>{texteBonus(b)}</strong>{b.source ? ` · ${b.source}` : ''}</span></li>{/each}
+    </ul>
+  {/if}
   <h3>États</h3>
   {#if c.etats.length}
     <ul class="etats" aria-label="États de {c.nom}">
@@ -193,14 +211,24 @@
           {#if montre.armure}<span>Armure {montre.armure}</span>{/if}
           {#if montre.resistances.physique !== 1}<span>Physique ×{String(montre.resistances.physique).replace('.', ',')}</span>{/if}
           {#if montre.resistances.magique !== 1}<span>Magie ×{String(montre.resistances.magique).replace('.', ',')}</span>{/if}
+          {#if montre.pvTemp}<span>PV temp. {montre.pvTemp}</span>{/if}
         </div>
+        {#if sauv}
+          <form class="sauvegardes" aria-label="Sauvegardes" onsubmit={(e) => (e.preventDefault(), sauv && etatAgir(() => corrigerSauvegardes(idCombat!, montre, sauv!)))}>
+            <span class="aide">{montre.sauvegardes ? 'Sauvegardes' : 'Sauvegardes à donner (+0)'}</span>
+            {#each NOMS_SAUV as [k, n] (k)}
+              <label>{n} <input type="number" min="-10" max="40" aria-label="Sauvegarde {n}" bind:value={sauv[k]} /></label>
+            {/each}
+            <button class="petit" disabled={occupe}>Corriger</button>
+          </form>
+        {/if}
         {#if modele}
           <h3>Attaques</h3>
           {#if ciblesPj.length}
             <label class="choix"
               >Cible
               <select value={ciblePj?.c.id ?? ''} onchange={(e) => (cibleChoisie = e.currentTarget.value)}>
-                {#each ciblesPj as { c, v } (c.id)}<option value={c.id}>{c.nom} · CA {defenseVisee(v.stats.ca, c.etats)} · {v.pv.actuel}/{v.pv.max} PV</option>{/each}
+                {#each ciblesPj as { c, v } (c.id)}<option value={c.id}>{c.nom} · CA {defenseVisee(v.stats.ca, c.etats, c.bonus)} · {v.pv.actuel}/{v.pv.max} PV</option>{/each}
               </select>
             </label>
           {/if}
@@ -226,6 +254,7 @@
           {#if vue.pp}<span>PP {vue.pp.actuel}/{vue.pp.max}</span>{/if}
           <span>CA {vue.stats.ca}</span>
           <span>Init {signe(vue.stats.initiative)}</span>
+          {#if montre.pvTemp}<span>PV temp. {montre.pvTemp}</span>{/if}
         </div>
         {@render etatsDe(montre)}
       {/if}
@@ -349,6 +378,16 @@
   .poser {
     display: flex;
     gap: 6px;
+  }
+  .sauvegardes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    font-size: 13px;
+  }
+  .sauvegardes input {
+    width: 52px;
   }
   .poser select {
     flex: 1;

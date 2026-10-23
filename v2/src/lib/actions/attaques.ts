@@ -9,7 +9,6 @@ import {
   consommerCharge,
   contactSeulement,
   d20Attaque,
-  defenseVisee,
   degatsParTour,
   ETATS_V1_VERS_REFONTE,
   etatDuCatalogue,
@@ -25,6 +24,7 @@ import { actionsDuTour } from '../combat/ordre';
 import { DEGATS_COLLISION_DECOR, DEGATS_COLLISION_JETON, pousser } from '../combat/poussee';
 import { champsJauges, gainParDegatsSubis, gainParTouche, gainParVingtNaturel, payer, type Jauges } from '../combat/ressources';
 import type { AttaqueSpeciale } from '../combat/speciales';
+import { absorber, bonusDes, bonusFixe, consommerBonus } from '../combat/bonus';
 import { appliquerAffaibli } from '../effets/resolution';
 import { vueFiche } from '../fiche/vue-fiche';
 import { formuleTest, type Jet } from '../regles/des';
@@ -62,6 +62,10 @@ import { champsDuChangement } from './persos';
  * état ou repoussent, collision comprise (11a, 12a) ; Précision et Décharge
  * (13a) ; le MJ joue les dégâts de début de tour ; le MJ et le joueur
  * posent et retirent des états à la main (4b).
+ *
+ * Lot L6.4a (11a, 12a) : les bonus temporaires comptent dans les jets et
+ * les dégâts (« prochaine frappe » : ils tombent avec elle) ; les PV
+ * temporaires absorbent les dégâts avant les PV.
  */
 
 type AvecId<T> = T & { id: string };
@@ -109,8 +113,9 @@ function jetAttaque(
   const av = avantageAttaque(attaquant.etats, cible.etats);
   for (const id of av.consommes) etatsAttaquant = retirerEtat(etatsAttaquant, id);
   const d = d20Attaque(alea, av.avantage);
-  const bonus = a.bonus + modificateur(attaquant.etats, ['attaque', a.mode === 'contact' ? 'attaqueContact' : 'attaqueDistance']);
-  const def = defenseVisee(defBase, cible.etats);
+  const surAttaque = ['attaque', a.mode === 'contact' ? 'attaqueContact' : 'attaqueDistance'];
+  const bonus = a.bonus + modificateur(attaquant.etats, surAttaque) + bonusFixe(attaquant.bonus, [...surAttaque, 'tests']);
+  const def = defBase + modificateur(cible.etats, ['DEF']) + bonusFixe(cible.bonus, ['DEF', a.mode === 'contact' ? 'DEFContact' : 'DEFDistance']);
   const issue = { ...resoudreAttaque(d.garde, bonus, def, a.seuilCritique), ...(d.des.length > 1 ? { des: d.des } : {}) };
   return { issue, leurre: null, etatsAttaquant, etatsCible };
 }
@@ -213,9 +218,10 @@ export async function infligerDegats(
   alea: () => number = Math.random,
   attaquant: AvecId<Combattant> | null = null,
 ): Promise<{ jet: Jet; degats: DegatsAppliques; pv: number }> {
-  const plus = attaquant ? modificateur(attaquant.etats, ['degats']) : 0;
+  const plus = attaquant ? modificateur(attaquant.etats, ['degats']) + bonusFixe(attaquant.bonus, ['degats']) : 0;
   const visee = attaquant?.visee ? (d.critique ? '+1d10' : '+1d6') : '';
-  const formule = `${formuleDegats(d.formule, d.critique)}${visee}${plus ? (plus > 0 ? `+${plus}` : plus) : ''}`;
+  const desEnPlus = attaquant ? bonusDes(attaquant.bonus, ['degats']).map((x) => `+${x}`).join('') : '';
+  const formule = `${formuleDegats(d.formule, d.critique)}${visee}${desEnPlus}${plus ? (plus > 0 ? `+${plus}` : plus) : ''}`;
   const jet = lancerDegats(formule, alea);
   if (!jet) throw new RefusCombat(`Formule de dégâts illisible : « ${formule} ».`);
   const faible = attaquant ? affaibli(attaquant.etats) : null;
@@ -226,11 +232,16 @@ export async function infligerDegats(
     if (c.pv === null) throw new RefusCombat('On blesse un monstre.'); // un PJ n'a pas de PV ici : ils sont sur sa fiche
     const brut = degatsSurMonstre(jet.total, c, d.typeDegats);
     const net = faible ? appliquerAffaibli(brut.net, faible.pourcent, faible.minimum) : brut.net;
-    const degats = { ...brut, net, detail: net !== brut.net ? `${brut.detail}, affaibli : ${net}` : brut.detail };
-    const pv = Math.max(0, c.pv - net);
+    const t = absorber(c.pvTemp, net);
+    const degats = { ...brut, net, detail: `${net !== brut.net ? `${brut.detail}, affaibli : ${net}` : brut.detail}${t.pvTemp !== c.pvTemp ? `, ${c.pvTemp - t.pvTemp} sur les PV temporaires` : ''}` };
+    const pv = Math.max(0, c.pv - t.reste);
     const etats = net > 0 ? rompre(c.etats, 'degatsSubis') : c.etats;
-    tx.update(refCombattant(idCombat, cible.id), { pv, aTerre: pv <= 0, ...(memes(etats, c.etats) ? {} : { etats }) });
-    if (attaquant?.visee) tx.update(refCombattant(idCombat, attaquant.id), { visee: false });
+    tx.update(refCombattant(idCombat, cible.id), { pv, aTerre: pv <= 0, ...(memes(etats, c.etats) ? {} : { etats }), ...(t.pvTemp !== c.pvTemp ? { pvTemp: t.pvTemp } : {}) });
+    const restants = attaquant ? consommerBonus(attaquant.bonus, ['degats']) : [];
+    const moi: Record<string, unknown> = {};
+    if (attaquant?.visee) moi.visee = false;
+    if (attaquant && restants.length !== attaquant.bonus.length) moi.bonus = restants;
+    if (attaquant && Object.keys(moi).length) tx.update(refCombattant(idCombat, attaquant.id), moi);
     return { degats, pv, pvMax: c.pvMax! };
   });
   const suite = r.pv <= 0 ? `${cible.nom} tombe` : `${cible.nom} ${r.pv}/${r.pvMax} PV`;
@@ -260,9 +271,10 @@ export async function blesser(
       if (!lu.exists()) throw new RefusCombat(`${c.nom} n’est plus dans le combat.`);
       const m = schemaCombattant.parse(lu.data());
       const d = degatsSurMonstre(jet.total, m, type);
-      const pv = Math.max(0, (m.pv ?? 0) - d.net);
+      const t = absorber(m.pvTemp, d.net);
+      const pv = Math.max(0, (m.pv ?? 0) - t.reste);
       const etats = d.net > 0 ? rompre(m.etats, 'degatsSubis') : m.etats;
-      tx.update(refCombattant(idCombat, c.id), { pv, aTerre: pv <= 0, ...(memes(etats, m.etats) ? {} : { etats }) });
+      tx.update(refCombattant(idCombat, c.id), { pv, aTerre: pv <= 0, ...(memes(etats, m.etats) ? {} : { etats }), ...(t.pvTemp !== m.pvTemp ? { pvTemp: t.pvTemp } : {}) });
       return { d, pv, pvMax: m.pvMax! };
     });
     await noterJet(libelle, formule, jet, auteur, `${r.d.detail} → ${c.nom} ${r.pv <= 0 ? 'tombe' : `${r.pv}/${r.pvMax} PV`}`);
@@ -271,12 +283,15 @@ export async function blesser(
   if (!fiche) throw new RefusCombat(`La fiche de ${c.nom} manque.`);
   const vue = vueFiche(fiche);
   const d = degatsSurPj(fiche, jet.total, type);
-  const pv = Math.max(0, vue.pv.actuel - d.net);
+  const t = absorber(c.pvTemp, d.net);
+  const pv = Math.max(0, vue.pv.actuel - t.reste);
   const lot = writeBatch(db);
   const gain = peutEcrireJauges(fiche) ? gainParDegatsSubis(fiche, d.net) : {};
-  lot.update(refPerso(fiche.id), { pvActuel: pv, ...champsJauges(gain) });
+  if (pv !== vue.pv.actuel || Object.keys(gain).length) lot.update(refPerso(fiche.id), { pvActuel: pv, ...champsJauges(gain) });
   const etats = d.net > 0 ? rompre(c.etats, 'degatsSubis') : c.etats;
-  if (!memes(etats, c.etats)) lot.update(refCombattant(idCombat, c.id), { etats });
+  const maj: Record<string, unknown> = memes(etats, c.etats) ? {} : { etats };
+  if (t.pvTemp !== c.pvTemp) maj.pvTemp = t.pvTemp;
+  if (Object.keys(maj).length) lot.update(refCombattant(idCombat, c.id), maj);
   await lot.commit();
   await noterJet(libelle, formule, jet, auteur, `${d.detail} → ${fiche.nom} ${pv}/${vue.pv.max} PV${pv <= 0 ? ', Mourant' : ''}`);
   return d.net;
@@ -407,19 +422,24 @@ export async function attaqueDeMonstre(
     if (!memes(etatsCible, cible.etats)) await updateDoc(refCombattant(idCombat, cible.id), { etats: etatsCible });
     return { issue, net: null, pv: vue.pv.actuel, etat: null };
   }
-  const plus = modificateur(monstre.etats, ['degats']);
-  const formule = `${formuleDegats(a.formule, issue.critique)}${plus ? (plus > 0 ? `+${plus}` : plus) : ''}`;
+  const plus = modificateur(monstre.etats, ['degats']) + bonusFixe(monstre.bonus, ['degats']);
+  const formule = `${formuleDegats(a.formule, issue.critique)}${bonusDes(monstre.bonus, ['degats']).map((x) => `+${x}`).join('')}${plus ? (plus > 0 ? `+${plus}` : plus) : ''}`;
   const jet = lancerDegats(formule, alea);
   if (!jet) throw new RefusCombat(`Formule de dégâts illisible : « ${formule} ».`);
   const brut = degatsSurPj(fiche, jet.total, a.typeDegats);
   const faible = affaibli(monstre.etats);
   const net = faible ? appliquerAffaibli(brut.net, faible.pourcent, faible.minimum) : brut.net;
-  const pv = Math.max(0, vue.pv.actuel - net);
+  const absorbe = absorber(cible.pvTemp, net);
+  const pv = Math.max(0, vue.pv.actuel - absorbe.reste);
   if (net > 0) etatsCible = rompre(etatsCible, 'degatsSubis');
   if (etat && !etatsCible.some((e) => e.id === etat)) etatsCible = poserEtat(etatsCible, etat, a.etatSurTouche!.duree, monstre.nom, { des: a.etatSurTouche!.formuleDot ?? null });
   const lot2 = writeBatch(db);
   lot2.update(refPerso(fiche.id), { pvActuel: pv, ...champsJauges(gainParDegatsSubis(fiche, net)) });
-  if (!memes(etatsCible, cible.etats)) lot2.update(refCombattant(idCombat, cible.id), { etats: etatsCible });
+  const majCible: Record<string, unknown> = memes(etatsCible, cible.etats) ? {} : { etats: etatsCible };
+  if (absorbe.pvTemp !== cible.pvTemp) majCible.pvTemp = absorbe.pvTemp;
+  if (Object.keys(majCible).length) lot2.update(refCombattant(idCombat, cible.id), majCible);
+  const restants = consommerBonus(monstre.bonus, ['degats']);
+  if (restants.length !== monstre.bonus.length) lot2.update(refCombattant(idCombat, monstre.id), { bonus: restants });
   await lot2.commit();
   const suite = [etat ? `${etatDuCatalogue(etat)!.nom} ${a.etatSurTouche!.duree} round${a.etatSurTouche!.duree > 1 ? 's' : ''}` : '', etatInconnu ? `état « ${etatInconnu} » inconnu de la refonte, au MJ` : '']
     .filter(Boolean)
@@ -429,7 +449,7 @@ export async function attaqueDeMonstre(
     formule.slice(0, 40),
     jet,
     monstre.nom,
-    `${brut.detail}${net !== brut.net ? `, affaibli : ${net}` : ''} → ${fiche.nom} ${pv}/${vue.pv.max} PV${pv <= 0 ? ', Mourant' : ''}${suite ? ` ; ${suite}` : ''}`,
+    `${brut.detail}${net !== brut.net ? `, affaibli : ${net}` : ''}${absorbe.pvTemp !== cible.pvTemp ? `, ${cible.pvTemp - absorbe.pvTemp} sur les PV temporaires` : ''} → ${fiche.nom} ${pv}/${vue.pv.max} PV${pv <= 0 ? ', Mourant' : ''}${suite ? ` ; ${suite}` : ''}`,
   );
   return { issue, net, pv, etat };
 }
@@ -443,12 +463,15 @@ export async function subirDegats(fiche: AvecId<Fiche>, brut: number, type: Type
   if (!Number.isFinite(brut) || brut < 0 || brut > 9999) throw new RefusCombat('Donne un nombre de dégâts.');
   const vue = vueFiche(fiche);
   const d = degatsSurPj(fiche, brut, type);
-  const pv = Math.max(0, vue.pv.actuel - d.net);
+  const t = absorber(enCombat?.c.pvTemp ?? 0, d.net);
+  const pv = Math.max(0, vue.pv.actuel - t.reste);
   const lot = writeBatch(db);
   lot.update(refPerso(fiche.id), { pvActuel: pv, ...champsJauges(gainParDegatsSubis(fiche, d.net)) });
   if (enCombat && d.net > 0) {
     const etats = rompre(enCombat.c.etats, 'degatsSubis');
-    if (!memes(etats, enCombat.c.etats)) lot.update(refCombattant(enCombat.idCombat, enCombat.c.id), { etats });
+    const maj: Record<string, unknown> = memes(etats, enCombat.c.etats) ? {} : { etats };
+    if (t.pvTemp !== enCombat.c.pvTemp) maj.pvTemp = t.pvTemp;
+    if (Object.keys(maj).length) lot.update(refCombattant(enCombat.idCombat, enCombat.c.id), maj);
   }
   await lot.commit();
   await noterJet(`Dégâts subis (${type})`, String(d.brut), { des: [], faces: 0, bonus: d.brut, total: d.net }, fiche.nom, `${d.detail} → ${pv}/${vue.pv.max} PV${pv <= 0 ? ', Mourant' : ''}`);

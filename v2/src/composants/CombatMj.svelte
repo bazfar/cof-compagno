@@ -4,7 +4,7 @@
   import { marquerMort } from '../lib/actions/carte';
   import { ajouterCombattant, basculerPortees, cloreCombat, demarrerCombat, donnerLaMain, RefusCombat } from '../lib/actions/combat';
   import { messageErreurJournal } from '../lib/actions/journal';
-  import { brouillonDuCombat, manquePourDemarrer, type BrouillonCombattant, type FichePourCombat, type MonstrePourCombat } from '../lib/combat/demarrage';
+  import { brouillonDuCombat, manquePourDemarrer, monstrePourCombat, type BrouillonCombattant, type FichePourCombat, type MonstrePourCombat } from '../lib/combat/demarrage';
   import { degatsParTour } from '../lib/combat/etats';
   import { jetsDeMortARemettre } from '../lib/combat/mort';
   import { jaugesALaFinDuCombat, jaugesAuDebutDuCombat } from '../lib/combat/ressources';
@@ -93,7 +93,7 @@
   const reductions = $derived(new Map((armures.etat.donnees?.liste ?? []).map((a) => [a.id, a.reduction])));
   const modeles = $derived(
     new Map<string, MonstrePourCombat>(
-      bestiaire.etat.elements.map((m) => [m.id, { init: m.init, pv: m.pv, def: m.def, armure: m.armureId ? (reductions.get(m.armureId) ?? 0) : 0, resistances: m.resistances }]),
+      bestiaire.etat.elements.map((m) => [m.id, monstrePourCombat(m, reductions)]),
     ),
   );
   const pvParPerso = $derived(new Map(persos.etat.elements.map((p) => [p.id, vueFiche(p).pv])));
