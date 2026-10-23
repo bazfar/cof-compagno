@@ -192,6 +192,11 @@ describe('la barre du joueur (L6.3)', () => {
     barre({ combat: combat({ actif: 'm-r1-a' }) });
     expect(screen.queryByLabelText('État à poser')).toBeNull();
   });
+
+  it('la DEF montrée au choix de la cible est celle que le jet visera : l’Exposé la baisse de 2', () => {
+    barre({ combattants: [pj('p1', { nom: 'Karlach' }), goule({ etats: [etat('expose', { rounds: 2 })] })] });
+    expect([...(screen.getByLabelText('Cible') as HTMLSelectElement).options].map((o) => o.textContent)).toEqual(['Goule A · DEF 11']);
+  });
 });
 
 describe('le MJ (L6.3)', () => {

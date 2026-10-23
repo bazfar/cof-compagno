@@ -4,7 +4,7 @@
   import { lancerEtNoter, messageErreurJournal } from '../lib/actions/journal';
   import { formuleDegats, horsDePortee, type CarteDuCombat } from '../lib/combat/attaque';
   import { attaquesDuPj, NOMS_TYPES_DEGATS, TYPES_DEGATS_SUBIS, type AttaquePj, type TypeDegatsSubis } from '../lib/combat/attaques-pj';
-  import { ciblable, contactSeulement, etatsPosables, peutAgir, regleEtat, texteEtat } from '../lib/combat/etats';
+  import { ciblable, contactSeulement, etatsPosables, modificateur, peutAgir, regleEtat, texteEtat } from '../lib/combat/etats';
   import { etatPj } from '../lib/combat/mort';
   import { attaquesSpecialesDuPj, type AttaqueSpeciale } from '../lib/combat/speciales';
   import { actionsDuTour } from '../lib/combat/ordre';
@@ -73,6 +73,10 @@
   const agit = $derived(peutAgir(moi.etats));
   const aveugle = $derived(contactSeulement(moi.etats));
   const monstres = $derived(combattants.filter((c) => c.genre === 'monstre' && !c.aTerre && ciblable(c.etats)));
+  // La DEF montrée au choix de la cible est celle que le jet visera :
+  // celle du monstre modifiée par ses états (Exposé −2…), comme
+  // `jetAttaque` la calcule.
+  const defVisee = (c: Combattant) => (c.def === null ? null : c.def + modificateur(c.etats, ['DEF']));
   let cibleChoisie = $state('');
   const cible = $derived(monstres.find((c) => c.id === cibleChoisie) ?? monstres[0] ?? null);
   const refusPortee = (a: AttaquePj) =>
@@ -209,7 +213,7 @@
         <label class="cible"
           >Cible
           <select value={cible?.id ?? ''} onchange={(e) => (cibleChoisie = e.currentTarget.value)}>
-            {#each monstres as m (m.id)}<option value={m.id}>{m.nom} · DEF {m.def}</option>{/each}
+            {#each monstres as m (m.id)}<option value={m.id}>{m.nom} · DEF {defVisee(m)}</option>{/each}
           </select>
         </label>
       {/if}
