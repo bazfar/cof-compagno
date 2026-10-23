@@ -27,6 +27,10 @@
   import { estSceneImportee, geometrieImportee, sourceScene } from '../lib/battlemap/import-image';
   import { suivreDessins, suivreEtatScene, suivreImageScene, suivreJetons, suivreScenesImportees, suivreTable } from '../lib/magasins/carte.svelte';
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
+  import { noterAction } from '../lib/actions/combat';
+  import { combatSurCarte } from '../lib/combat/carte';
+  import { suivreCombat, suivreCombattants } from '../lib/magasins/combat.svelte';
+  import type { Combat, Combattant } from '../lib/schemas/combat';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
   import { suivrePortraitsJetons } from '../lib/magasins/portraits-jetons.svelte';
   import type { Dessin, EtatSceneDoc, ImageScene, Jeton } from '../lib/schemas/carte';
@@ -45,6 +49,11 @@
    * Firestore, fusionné par OU. Un seul écrivain évite que chaque joueur
    * réécrive le même document à chaque pas. L'affichage montre l'union de
    * ce qui est enregistré et de ce que ce client a vu.
+   *
+   * Combat (lot L6.1) : le combattant qui joue est cerclé d'or ; un joueur
+   * ne déplace son jeton qu'à son tour, dans la limite des cases qui lui
+   * restent, qui se décomptent (7a, 8a) ; les PV des monstres s'affichent
+   * en chiffres (3b). Le MJ déplace tout, sans compter.
    */
 
   // Hauteur de la zone de carte (L2.6) : grande au poste MJ, réduite dans la
@@ -150,10 +159,30 @@
     enrichirJetons(
       (jetonsSuivis?.etat.elements ?? []).map((j) => ({ id: j.id, genre: j.genre, nom: j.nom, couleur: j.couleur, cx: j.cx, cy: j.cy, mort: j.mort })),
       infosPersos,
-    ),
+    ).map((j) => {
+      const pv = enCombat.pvMonstres.get(j.id);
+      return pv ? { ...j, pv, pvChiffres: true } : j;
+    }),
   );
+
+  // ---------- Combat (L6.1) ----------
+  const idCombat = $derived(table.etat.donnees?.combat ?? null);
+  let combatSuivi = $state<{ c: DocumentSuivi<Combat>; m: CollectionSuivie<Combattant> } | null>(null);
+  $effect(() => {
+    if (!idCombat) return;
+    const x = { c: suivreCombat(session.table, idCombat), m: suivreCombattants(session.table, idCombat) };
+    combatSuivi = x;
+    return () => {
+      x.c.arreter();
+      x.m.arreter();
+      combatSuivi = null;
+    };
+  });
+  const combattants = $derived(combatSuivi?.m.etat.elements ?? []);
+  const enCombat = $derived(combatSurCarte(combatSuivi?.c.etat.donnees ?? null, combattants, idScene, role, session.uid));
   const proprietaires = $derived(new Map((jetonsSuivis?.etat.elements ?? []).map((j) => [j.id, j.proprietaire])));
-  const miens = $derived(new Set(jetons.filter((j) => proprietaires.get(j.id) === session.uid).map((j) => j.id)));
+  const mesJetons = $derived(new Set(jetons.filter((j) => proprietaires.get(j.id) === session.uid).map((j) => j.id)));
+  const miens = $derived(new Set([...mesJetons].filter((id) => !enCombat.bloques.has(id))));
   let selection = $state<string | null>(null);
   const selectionne = $derived(jetons.find((j) => j.id === selection) ?? null);
 
@@ -208,8 +237,13 @@
     p.catch(signaler);
   };
 
-  function surDeplacement(id: string, vers: Case) {
-    if (idScene) agir(deplacerJeton(idScene, id, vers));
+  function surDeplacement(id: string, vers: Case, cases?: number) {
+    if (!idScene) return;
+    agir(deplacerJeton(idScene, id, vers));
+    // Combat (7a) : les cases parcourues à son tour se décomptent.
+    const c = combattants.find((x) => x.id === id);
+    const cb = combatSuivi?.c.etat.donnees;
+    if (cases !== undefined && c && cb && idCombat) agir(noterAction(idCombat, cb, c, { cases }));
   }
 
   function surPorte(idPorte: string) {
@@ -408,6 +442,8 @@
         {mursDeForce}
         {surTrace}
         {surGomme}
+        actif={enCombat.actif}
+        budget={enCombat.budget}
       />
     {:else}
       <p class="vide">Chargement de la scène…</p>

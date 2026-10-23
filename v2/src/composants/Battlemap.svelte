@@ -3,7 +3,7 @@
   import type { GrilleExploration } from '../lib/battlemap/exploration';
   import { aimanter, bornerPoint, estUnTrace, type TypeDessin } from '../lib/battlemap/dessins';
   import { sceneCalcul, type Case, type EtatScene, type Point, type SceneCalcul } from '../lib/battlemap/geometrie';
-  import { jetonsADessiner, jetonSousPointeur, pasDeGlisser, peutDeplacer, porteSousPointeur, type Role } from '../lib/battlemap/interactions';
+  import { jetonsADessiner, jetonSousPointeur, pasDeGlisser, pasDeGlisserBorne, peutDeplacer, porteSousPointeur, type Role } from '../lib/battlemap/interactions';
   import { dessiner, peindreExploration, type JetonAffiche } from '../lib/battlemap/rendu';
   import { jetonsVisiblesDesPJ, segmentsBloquants, visionsDesPJ, type VisionJeton } from '../lib/battlemap/visibilite';
   import { deplacer, ecranVersCase, ecranVersScene, vueAjustee, zoomer, type Vue } from '../lib/battlemap/vue';
@@ -45,6 +45,8 @@
     mursDeForce = [],
     surTrace,
     surGomme,
+    actif = null,
+    budget = null,
   }: {
     geometrie: GeometrieScene;
     /** Adresse de l'image de la scène. */
@@ -61,7 +63,8 @@
     afficherMurs?: boolean;
     afficherGrille?: boolean;
     selection?: string | null;
-    surDeplacement: (id: string, vers: Case) => void;
+    /** `cases` : ce que le glisser a coûté, quand le jeton avait un budget (combat, L6.1). */
+    surDeplacement: (id: string, vers: Case, cases?: number) => void;
     surPorte: (idPorte: string) => void;
     surSelection?: (id: string | null) => void;
     /** Appelé quand la vision des PJ change (pour marquer l'exploration). */
@@ -71,6 +74,10 @@
     mursDeForce?: readonly { a: Point; b: Point; tours: number }[];
     surTrace?: (type: TypeDessin, a: Point, b: Point, force: boolean) => void;
     surGomme?: (type: TypeDessin, pt: Point, force: boolean) => void;
+    /** Combat (L6.1) : le combattant qui joue, cerclé d'or. */
+    actif?: string | null;
+    /** Combat (L6.1, 7a) : ce jeton ne parcourt pas plus de `cases` cases ; elles se dessinent autour de lui. */
+    budget?: { id: string; cases: number } | null;
   } = $props();
 
   let canvas = $state<HTMLCanvasElement | undefined>();
@@ -79,7 +86,7 @@
   let vue = $state<Vue | null>(null);
   let imageChargee = $state<HTMLImageElement | null>(null);
   let survol = $state<Case | null>(null);
-  let glisser = $state<{ id: string; depart: Case; case: Case } | null>(null);
+  let glisser = $state<{ id: string; depart: Case; case: Case; cout: number } | null>(null);
   // `clic` : point exact du clic (non aimanté), pour la gomme.
   let trace = $state<{ a: Point; b: Point; clic: Point } | null>(null);
 
@@ -159,6 +166,8 @@
       glisser: glisser ? { id: glisser.id, case: glisser.case } : null,
       mursDeForce,
       trace: trace && outil ? { a: trace.a, b: trace.b, type: outil.type, force: outil.force } : null,
+      actif,
+      portee: porteeDessinee,
     };
     const c = canvas;
     cancelAnimationFrame(demande);
@@ -173,6 +182,14 @@
       if (ctx) dessiner(ctx, etatDessin);
     });
     return () => cancelAnimationFrame(demande);
+  });
+
+  // Combat (L6.1) : les cases encore atteignables, depuis la case du jeton (ou celle du glisser).
+  const porteeDessinee = $derived.by(() => {
+    if (!budget) return null;
+    const j = jetons.find((x) => x.id === budget.id);
+    if (!j) return null;
+    return glisser?.id === j.id ? { cx: glisser.depart.cx, cy: glisser.depart.cy, cases: budget.cases } : { cx: j.cx, cy: j.cy, cases: budget.cases };
   });
 
   // ---------- Gestes ----------
@@ -203,7 +220,7 @@
     if (jeton) {
       surSelection?.(jeton.id);
       if (peutDeplacer(role, jeton, miens)) {
-        glisser = { id: jeton.id, depart: { cx: jeton.cx, cy: jeton.cy }, case: { cx: jeton.cx, cy: jeton.cy } };
+        glisser = { id: jeton.id, depart: { cx: jeton.cx, cy: jeton.cy }, case: { cx: jeton.cx, cy: jeton.cy }, cout: 0 };
         canvas!.setPointerCapture(ev.pointerId);
       }
       return;
@@ -227,7 +244,12 @@
     if (glisser) {
       const visee = ecranVersCase(vue, ex, ey, geometrie);
       const jeton = jetons.find((j) => j.id === glisser!.id);
-      if (visee && jeton) glisser = { ...glisser, case: pasDeGlisser(scene, jetons, jeton, glisser.case, visee).case };
+      if (visee && jeton) {
+        if (budget?.id === jeton.id) {
+          const p = pasDeGlisserBorne(scene, jetons, jeton, glisser.case, visee, budget.cases - glisser.cout);
+          glisser = { ...glisser, case: p.case, cout: glisser.cout + p.cout };
+        } else glisser = { ...glisser, case: pasDeGlisser(scene, jetons, jeton, glisser.case, visee).case };
+      }
       return;
     }
     if (deplacementVue) {
@@ -252,9 +274,12 @@
     }
     trace = null;
     if (glisser) {
-      const { id, depart, case: arrivee } = glisser;
+      const { id, depart, case: arrivee, cout } = glisser;
       glisser = null;
-      if (arrivee.cx !== depart.cx || arrivee.cy !== depart.cy) surDeplacement(id, arrivee);
+      if (arrivee.cx !== depart.cx || arrivee.cy !== depart.cy) {
+        if (budget?.id === id) surDeplacement(id, arrivee, cout);
+        else surDeplacement(id, arrivee);
+      }
     } else if (deplacementVue && !deplacementVue.bouge) {
       surSelection?.(null); // clic dans le vide : désélection
     }

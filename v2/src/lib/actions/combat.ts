@@ -1,0 +1,184 @@
+import { collection, doc, runTransaction, updateDoc, writeBatch } from 'firebase/firestore';
+import { db } from '../firebase/client';
+import { actionsDuTour, deplacementRestant, mainSuivante, premierActif } from '../combat/ordre';
+import type { BrouillonCombattant } from '../combat/demarrage';
+import { formuleTest } from '../regles/des';
+import { schemaCombat, schemaCombattant, type Combat, type Combattant } from '../schemas/combat';
+import { session } from '../session.svelte';
+import { marquerMort } from './carte';
+import { lancerEtNoter, noterJet } from './journal';
+
+/*
+ * Écritures du combat (lot L6.1, décisions de Thomas du 23/10/2026).
+ *   - Le MJ démarre (4a), ajoute un combattant (9a), donne la main (6a),
+ *     règle les PV d'un monstre et clôt (11a). Au démarrage et à l'ajout,
+ *     son client lance l'initiative des monstres (5a), notée au journal.
+ *   - Le joueur lance son initiative, note ses actions du tour (7a) et
+ *     finit son tour quand c'est à lui (6a). Les règles Firestore le
+ *     vérifient.
+ */
+
+export class RefusCombat extends Error {}
+
+type AvecId<T> = T & { id: string };
+
+const refCombat = (id: string) => doc(db, `tables/${session.table}/combats/${id}`);
+const refCombattant = (id: string, c: string) => doc(db, `tables/${session.table}/combats/${id}/combattants/${c}`);
+const d20 = (alea: () => number) => 1 + Math.floor(alea() * 20);
+
+function nouveauCombattant(b: BrouillonCombattant, de: number | null, maintenant: number): Combattant {
+  if (b.genre === 'monstre' && (b.pvMax === null || b.pvMax < 1)) throw new RefusCombat(`Donne les PV de ${b.nom}.`);
+  return schemaCombattant.parse({
+    genre: b.genre,
+    nom: b.nom,
+    perso: b.perso,
+    uid: b.uid,
+    monstre: b.monstre,
+    modInit: b.modInit,
+    initiative: de === null ? null : de + b.modInit,
+    de,
+    pv: b.genre === 'monstre' ? b.pvMax : null,
+    pvMax: b.genre === 'monstre' ? b.pvMax : null,
+    aTerre: false,
+    mvtBase: b.mvtBase,
+    tourActions: 0,
+    principale: false,
+    secondaire: false,
+    mvt: 0,
+    sprint: false,
+    creeLe: maintenant,
+  });
+}
+
+/** Les jets d'initiative des monstres, au journal (5a). */
+async function noterInitiatives(combattants: readonly (BrouillonCombattant & { de: number | null })[]): Promise<void> {
+  for (const c of combattants)
+    if (c.de !== null) await noterJet('Initiative', formuleTest(c.modInit), { des: [c.de], faces: 20, bonus: c.modInit, total: c.de + c.modInit }, c.nom);
+}
+
+/**
+ * MJ : démarre un combat sur la scène (4a), depuis une rencontre ou libre.
+ * Les monstres lancent leur initiative ; les PJ attendent la leur en bas de
+ * l'ordre. La main va au premier qui a une initiative. Rend l'identifiant.
+ */
+export async function demarrerCombat(
+  b: { nom: string; scene: string; rencontre: string | null; combattants: readonly BrouillonCombattant[] },
+  combatEnCours: string | null,
+  alea: () => number = Math.random,
+): Promise<string> {
+  if (combatEnCours) throw new RefusCombat('Un combat est déjà en cours : clos-le d’abord.');
+  if (!b.combattants.length) throw new RefusCombat('Personne à faire combattre.');
+  const maintenant = Date.now();
+  const jets = b.combattants.map((c) => ({ ...c, de: c.genre === 'monstre' ? d20(alea) : null }));
+  const combattants = jets.map((c) => ({ id: c.id, ...nouveauCombattant(c, c.de, maintenant) }));
+  const ref = doc(collection(db, `tables/${session.table}/combats`));
+  const combat = schemaCombat.parse({
+    nom: b.nom.trim().slice(0, 80) || 'Combat',
+    scene: b.scene,
+    rencontre: b.rencontre,
+    statut: 'encours',
+    round: 1,
+    tour: 1,
+    actif: premierActif(combattants),
+    creeLe: maintenant,
+    closLe: null,
+  });
+  const lot = writeBatch(db);
+  lot.set(ref, combat);
+  for (const { id, ...c } of combattants) lot.set(refCombattant(ref.id, id), c);
+  lot.set(doc(db, 'tables', session.table), { combat: ref.id }, { merge: true });
+  await lot.commit();
+  await noterInitiatives(jets);
+  return ref.id;
+}
+
+/** MJ : un combattant arrive en cours de combat (9a). Un monstre lance son initiative et prend sa place. */
+export async function ajouterCombattant(idCombat: string, b: BrouillonCombattant, alea: () => number = Math.random): Promise<void> {
+  const de = b.genre === 'monstre' ? d20(alea) : null;
+  const c = nouveauCombattant(b, de, Date.now());
+  const lot = writeBatch(db);
+  lot.set(refCombattant(idCombat, b.id), c);
+  await lot.commit();
+  await noterInitiatives([{ ...b, de }]);
+}
+
+/** Le joueur (ou le MJ pour lui) lance l'initiative d'un combattant qui ne l'a pas encore (5a). */
+export async function lancerInitiative(idCombat: string, c: AvecId<Combattant>): Promise<number> {
+  if (c.initiative !== null) throw new RefusCombat(`${c.nom} a déjà son initiative.`);
+  const jet = await lancerEtNoter('Initiative', formuleTest(c.modInit), c.nom);
+  const de = jet!.des[0]!;
+  await updateDoc(refCombattant(idCombat, c.id), { initiative: de + c.modInit, de });
+  return de + c.modInit;
+}
+
+/**
+ * Finir le tour (6a) : le joueur qui joue, ou le MJ. La main passe au
+ * suivant qui peut jouer ; un nouveau round s'ouvre en repartant de la
+ * tête. `aTerre` : ceux dont le tour est sauté (monstres à 0 PV, PJ à
+ * 0 PV sur leur fiche).
+ */
+export async function finirTour(idCombat: string, actifAttendu: string | null, combattants: readonly AvecId<Combattant>[], aTerre: ReadonlySet<string>): Promise<Combat> {
+  return runTransaction(db, async (tx) => {
+    const lu = await tx.get(refCombat(idCombat));
+    if (!lu.exists()) throw new RefusCombat('Ce combat n’existe plus.');
+    const c = schemaCombat.parse(lu.data());
+    if (c.statut !== 'encours') throw new RefusCombat('Le combat est clos.');
+    if (c.actif !== actifAttendu) throw new RefusCombat('La main a déjà changé.');
+    const s = mainSuivante(combattants, c.actif, c.round, aTerre);
+    const apres = { ...c, actif: s.actif, round: s.round, tour: c.tour + 1 };
+    tx.update(refCombat(idCombat), { actif: apres.actif, round: apres.round, tour: apres.tour });
+    return apres;
+  });
+}
+
+/** MJ : donne la main à un combattant (oubli, retour en arrière : 6a). Le round ne change pas. */
+export async function donnerLaMain(idCombat: string, combat: Combat, id: string): Promise<void> {
+  await updateDoc(refCombat(idCombat), { actif: id, tour: combat.tour + 1 });
+}
+
+/**
+ * Note une action du tour (7a) : principale, secondaire, Sprint (+2 cases,
+ * prend l'action principale), ou des cases parcourues. Le joueur pour son
+ * combattant, à son tour ; le MJ pour tous.
+ */
+export async function noterAction(
+  idCombat: string,
+  combat: Pick<Combat, 'tour'>,
+  c: AvecId<Combattant>,
+  quoi: { principale: boolean } | { secondaire: boolean } | { sprint: true } | { cases: number },
+): Promise<void> {
+  const a = actionsDuTour(c, combat.tour);
+  const n = { ...a };
+  if ('principale' in quoi) {
+    if (!quoi.principale && a.sprint) throw new RefusCombat('Le Sprint a pris l’action principale.');
+    n.principale = quoi.principale;
+  } else if ('secondaire' in quoi) n.secondaire = quoi.secondaire;
+  else if ('sprint' in quoi) {
+    if (a.principale) throw new RefusCombat('L’action principale est déjà prise : plus de Sprint ce tour.');
+    n.principale = true;
+    n.sprint = true;
+  } else {
+    const restant = deplacementRestant(c, combat.tour);
+    if (quoi.cases > restant) throw new RefusCombat(`Il ne te reste que ${restant} case${restant > 1 ? 's' : ''}.`);
+    n.mvt = Math.min(40, a.mvt + Math.max(0, Math.round(quoi.cases)));
+  }
+  await updateDoc(refCombattant(idCombat, c.id), { tourActions: combat.tour, ...n });
+}
+
+/** MJ : règle les PV d'un monstre ; à 0 il est à terre, son jeton marqué mort (et l'inverse). */
+export async function ajusterPvMonstre(idCombat: string, scene: string, c: AvecId<Combattant>, delta: number): Promise<number> {
+  if (c.genre !== 'monstre' || c.pv === null || c.pvMax === null) throw new RefusCombat('Les PV d’un PJ se règlent sur sa fiche.');
+  const pv = Math.max(0, Math.min(c.pvMax, c.pv + Math.round(delta)));
+  const aTerre = pv <= 0;
+  await updateDoc(refCombattant(idCombat, c.id), { pv, aTerre });
+  if (aTerre !== c.aTerre) await marquerMort(scene, c.id, aTerre);
+  return pv;
+}
+
+/** MJ : clôt le combat (11a). Les monstres morts restent sur la carte, marqués morts. */
+export async function cloreCombat(idCombat: string): Promise<void> {
+  const lot = writeBatch(db);
+  lot.update(refCombat(idCombat), { statut: 'clos', actif: null, closLe: Date.now() });
+  lot.set(doc(db, 'tables', session.table), { combat: null }, { merge: true });
+  await lot.commit();
+}

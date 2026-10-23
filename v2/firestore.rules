@@ -552,6 +552,40 @@ service cloud.firestore {
         && (d.get('bonus', null) == null || (d.get('scene', null) != null
           && entierEntre(d.bonus, 0, d.palier == 'I' ? 1 : d.palier == 'II' ? 2 : 3)));
     }
+    // Combat (lot L6.1), aligné sur schemaCombat (src/lib/schemas/combat.ts).
+    function combatValide(d) {
+      return d.keys().hasOnly(['nom', 'scene', 'rencontre', 'statut', 'round', 'tour', 'actif', 'creeLe', 'closLe'])
+        && d.keys().hasAll(['nom', 'scene', 'rencontre', 'statut', 'round', 'tour', 'actif', 'creeLe', 'closLe'])
+        && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 80
+        && d.scene is string && d.scene.size() >= 1 && d.scene.size() <= 100
+        && (d.rencontre == null || (d.rencontre is string && d.rencontre.size() <= 100))
+        && d.statut in ['encours', 'clos']
+        && entierEntre(d.round, 1, 999) && entierEntre(d.tour, 1, 99999)
+        && (d.actif == null || (d.actif is string && d.actif.size() <= 150))
+        && d.creeLe is int && (d.closLe == null || d.closLe is int);
+    }
+    // Aligné sur schemaCombattant (src/lib/schemas/combat.ts).
+    function combattantValide(d) {
+      return d.keys().hasOnly(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe'])
+        && d.keys().hasAll(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe'])
+        && d.genre in ['pj', 'monstre']
+        && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 40
+        && ((d.genre == 'pj' && d.perso is string && d.uid is string && d.pv == null && d.pvMax == null && d.monstre == null)
+          || (d.genre == 'monstre' && d.perso == null && d.uid == null && entierEntre(d.pv, -999, 9999) && entierEntre(d.pvMax, 1, 9999)))
+        && entierEntre(d.modInit, -10, 40)
+        && ((d.initiative == null && d.de == null) || (entierEntre(d.initiative, -9, 60) && entierEntre(d.de, 1, 20)))
+        && d.aTerre is bool && entierEntre(d.mvtBase, 0, 20)
+        && entierEntre(d.tourActions, 0, 99999) && d.principale is bool && d.secondaire is bool
+        && entierEntre(d.mvt, 0, 40) && d.sprint is bool && (!d.sprint || d.principale)
+        && d.creeLe is int;
+    }
+    // Pendant un combat (L6.1, 8a), le jeton d'un combattant ne bouge qu'à son tour (le MJ, toujours).
+    function jetonBougeable(table, jeton) {
+      let combat = get(/databases/$(database)/documents/tables/$(table)).data.get('combat', null);
+      return combat == null
+        || !exists(/databases/$(database)/documents/tables/$(table)/combats/$(combat)/combattants/$(jeton))
+        || get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)).data.actif == jeton;
+    }
     // Aligné sur schemaEtatScene (src/lib/schemas/carte.ts).
     function etatSceneValide(d) {
       return d.keys().hasOnly(['portesOuvertes', 'exploration', 'explorationRaz'])
@@ -645,7 +679,8 @@ service cloud.firestore {
             && (estMj(table)
               || (estJoueur(table)
                 && resource.data.proprietaire == request.auth.uid
-                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cx', 'cy'])));
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cx', 'cy'])
+                && jetonBougeable(table, jeton)));
           allow delete: if estMj(table)
             || (estJoueur(table) && resource.data.proprietaire == request.auth.uid);
         }
@@ -881,6 +916,43 @@ service cloud.firestore {
             && get(/databases/$(database)/documents/tables/$(table)/scenesHorsCombat/$(scene)).data.statut != 'close';
           allow update: if false;
           allow delete: if estMj(table);
+        }
+      }
+
+      // Combat (lot L6.1) : toute la table le lit. Le MJ l'écrit ; le joueur
+      // qui a la main la passe (« Finir mon tour », 6a) : tour + 1, round
+      // inchangé ou + 1, rien d'autre.
+      match /combats/{combat} {
+        allow read: if estMembre(table);
+        allow create: if estMj(table) && combatValide(request.resource.data);
+        allow delete: if estMj(table);
+        allow update: if combatValide(request.resource.data)
+          && (estMj(table)
+            || (estJoueur(table)
+              && resource.data.statut == 'encours'
+              && resource.data.actif != null
+              && get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)/combattants/$(resource.data.actif)).data.uid == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['actif', 'round', 'tour'])
+              && request.resource.data.tour == resource.data.tour + 1
+              && request.resource.data.round in [resource.data.round, resource.data.round + 1]));
+
+        // Un combattant par jeton. Le joueur y lance son initiative (une fois)
+        // et note ses actions du tour, à son tour seulement (7a).
+        match /combattants/{combattant} {
+          allow read: if estMembre(table);
+          allow create: if estMj(table) && combattantValide(request.resource.data);
+          allow delete: if estMj(table);
+          allow update: if combattantValide(request.resource.data)
+            && (estMj(table)
+              || (estJoueur(table)
+                && resource.data.uid == request.auth.uid
+                && ((resource.data.initiative == null
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['initiative', 'de'])
+                    && request.resource.data.initiative == request.resource.data.de + resource.data.modInit)
+                  || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tourActions', 'principale', 'secondaire', 'mvt', 'sprint'])
+                    && get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)).data.actif == combattant
+                    && request.resource.data.tourActions == get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)).data.tour
+                    && request.resource.data.mvt <= request.resource.data.mvtBase + (request.resource.data.sprint ? 2 : 0)))));
         }
       }
 

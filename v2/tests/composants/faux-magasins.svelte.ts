@@ -5,7 +5,7 @@
 
 /** Document de la table : le test y change la scène montrée. */
 export const table = $state({
-  donnees: { sceneActive: null } as { sceneActive: string | null; seanceOuverte?: { id: string; numero: number } | null; sceneHorsCombat?: string | null },
+  donnees: { sceneActive: null } as { sceneActive: string | null; seanceOuverte?: { id: string; numero: number } | null; sceneHorsCombat?: string | null; combat?: string | null },
   pret: true,
   erreur: null as string | null,
 });
@@ -186,4 +186,13 @@ export const magasinsSorts = {
     },
     arreter: () => {},
   }),
+};
+
+// Combat (lot L6.1).
+export const combatDoc = $state({ donnees: null as Record<string, unknown> | null, pret: true, erreur: null as string | null });
+export const combattants = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+
+export const magasinsCombat = {
+  suivreCombat: () => ({ etat: combatDoc, arreter: () => {} }),
+  suivreCombattants: () => ({ etat: combattants, arreter: () => {} }),
 };

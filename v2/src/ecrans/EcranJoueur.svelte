@@ -29,8 +29,10 @@
    * est invité, en tête de colonne, à choisir un code pour se retrouver sur
    * un autre appareil.
    *
-   * En combat (L6), la fiche se repliera et la barre d'actions de la v1
-   * prendra place sous la carte, agrandie.
+   * En combat (lot L6.1, maquette 2.0) : quand son personnage joué est
+   * dans le combat en cours, la section Personnage montre l'initiative, la
+   * carte agrandie et la barre de son personnage dessous ; la fiche se
+   * replie (masquée, pas démontée : une saisie en cours n'est pas perdue).
    */
 
   // La battlemap (lot L5.3) est chargée à part, comme côté MJ.
@@ -47,6 +49,9 @@
   let avecGrimoire = $state(false);
   // La scène hors combat (S2), chargée à part : elle lit la fiche pour les bonus.
   const scene = import('../composants/SceneJoueur.svelte');
+  // Le combat (L6.1), chargé à part : il embarque la carte et la fiche.
+  const combat = import('../composants/CombatJoueur.svelte');
+  let enCombat = $state(false);
   // Les relations (S1), chargées à la première visite seulement.
   let relationsOuvertes = $state(false);
 
@@ -74,7 +79,12 @@
     </div>
   {/if}
   <div hidden={section !== 'perso'}>
-    <div class="personnage">
+    {#await combat then module}
+      <module.default surEnCombat={(oui: boolean) => (enCombat = oui)} />
+    {:catch e}
+      <p role="alert">Combat indisponible : {String(e)}</p>
+    {/await}
+    <div class="personnage" hidden={enCombat}>
       <div class="fiche">
         <ProtegerJoueur />
         {#await personnages}
@@ -137,6 +147,9 @@
     max-width: 1680px;
     margin: 0 auto;
     padding: 20px 32px;
+  }
+  .personnage[hidden] {
+    display: none;
   }
   .personnage {
     display: grid;

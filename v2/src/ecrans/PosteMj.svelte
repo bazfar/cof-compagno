@@ -23,6 +23,11 @@
    *   hors combat (S2). Son arbitre, sans écran, est monté sur tout le
    *   poste : les jets se résolvent même section Séance ouverte.
    *
+   * - Combat (lot L6.1, décision 10b) : une section à part. La carte y est
+   *   la même que celle de la séance (un seul exemplaire monté, pour que
+   *   l'exploration n'ait qu'un écrivain) ; à gauche l'initiative et les
+   *   commandes du combat, à droite le combattant qui joue.
+   *
    * Changer de section masque les autres sans les démonter : la carte garde
    * ses abonnements, et le client du MJ continue d'enregistrer
    * l'exploration (il en est le seul écrivain, voir CarteTable).
@@ -32,6 +37,7 @@
   let sortsATraiter = $state(0);
   const SECTIONS = $derived([
     { id: 'seance', libelle: 'Séance' },
+    { id: 'combat', libelle: 'Combat' },
     { id: 'prepa', libelle: 'Prépa combat' },
     { id: 'social', libelle: sortsATraiter ? `Prépa social (${sortsATraiter})` : 'Prépa social' },
     { id: 'donnees', libelle: 'Données' },
@@ -78,6 +84,13 @@
   const arbitre = import('../composants/ArbitreScene.svelte');
   // Compteur des sorts hors combat (G2a, 16a), sans écran, comme l'arbitre.
   const compteurSorts = import('../composants/CompteurSortsMj.svelte');
+  // Combat (L6.1), chargé à la première visite, puis gardé monté.
+  let combatOuvert = $state(false);
+  $effect(() => {
+    if (section === 'combat') combatOuvert = true;
+  });
+  const combatMj = $derived(combatOuvert ? import('../composants/CombatMj.svelte') : null);
+  const panneauCombat = $derived(combatOuvert ? import('../composants/PanneauCombat.svelte') : null);
   // Joueurs de la table (correctif du 19/10), chargés à part comme le groupe.
   const joueursMj = import('../composants/JoueursMj.svelte');
 
@@ -114,8 +127,17 @@
   <p role="alert">Arbitre des scènes indisponible : {String(e)}</p>
 {/await}
 <main>
-  <div hidden={section !== 'seance'}>
-    <div class="seance">
+  <div hidden={section !== 'seance' && section !== 'combat'}>
+    <div class="seance" class:en-combat={section === 'combat'}>
+      <div class="gauche" hidden={section !== 'combat'}>
+        {#if combatMj}
+          {#await combatMj then module}
+            <module.default />
+          {:catch e}
+            <p role="alert">Combat indisponible : {String(e)}</p>
+          {/await}
+        {/if}
+      </div>
       <div class="centre">
         {#await carte}
           <p>Chargement de la battlemap…</p>
@@ -125,7 +147,14 @@
           <p role="alert">Battlemap indisponible : {String(e)}</p>
         {/await}
       </div>
-      <aside class="cote" aria-label="Groupe et progression">
+      <aside class="cote" aria-label="Combattant" hidden={section !== 'combat'}>
+        {#if panneauCombat}
+          {#await panneauCombat then module}
+            <module.default />
+          {/await}
+        {/if}
+      </aside>
+      <aside class="cote" aria-label="Groupe et progression" hidden={section !== 'seance'}>
         {#await seance then module}
           <module.default />
         {:catch e}
@@ -255,6 +284,13 @@
     gap: 20px;
     align-items: start;
   }
+  .seance.en-combat {
+    grid-template-columns: 260px minmax(0, 1fr) 320px;
+  }
+  .seance [hidden] {
+    display: none;
+  }
+  .gauche,
   .centre,
   .cote {
     min-width: 0;
@@ -293,7 +329,8 @@
     gap: 20px;
   }
   @media (max-width: 1100px) {
-    .seance {
+    .seance,
+    .seance.en-combat {
       grid-template-columns: minmax(0, 1fr);
     }
   }

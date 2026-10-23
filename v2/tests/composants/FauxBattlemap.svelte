@@ -16,7 +16,25 @@
     exploration,
     jetons = [],
     surVisions,
-  }: { geometrie: GeometrieScene; exploration: GrilleExploration | null; jetons?: readonly JetonAffiche[]; surVisions?: (v: VisionJeton[]) => void } = $props();
+    miens = new Set<string>(),
+    actif = null,
+    budget = null,
+    surDeplacement,
+  }: {
+    geometrie: GeometrieScene;
+    exploration: GrilleExploration | null;
+    jetons?: readonly JetonAffiche[];
+    surVisions?: (v: VisionJeton[]) => void;
+    miens?: ReadonlySet<string>;
+    actif?: string | null;
+    budget?: { id: string; cases: number } | null;
+    surDeplacement?: (id: string, vers: { cx: number; cy: number }, cases?: number) => void;
+  } = $props();
+
+  // Combat (L6.1) : simule le glisser du jeton qui a un budget, de 2 cases.
+  function glisser() {
+    if (budget) surDeplacement?.(budget.id, { cx: 4, cy: 4 }, 2);
+  }
 
   function voir() {
     surVisions?.(visionsDesPJ(sceneCalcul(geometrie), [{ id: 'a', genre: 'pj', cx: 2, cy: 2 }]));
@@ -28,6 +46,10 @@
   data-scene={geometrie.id}
   data-exploration={exploration ? `${exploration.largeur}x${exploration.hauteur}` : 'aucune'}
   data-vu={exploration ? String(exploration.estExploree(4, 4)) : 'aucune'}
-  data-jetons={jetons.map((j) => `${j.id}=${j.nom}${j.pv ? ` ${j.pv.actuel}/${j.pv.max}` : ''}`).join('|')}
+  data-jetons={jetons.map((j) => `${j.id}=${j.nom}${j.pv ? ` ${j.pv.actuel}/${j.pv.max}${j.pvChiffres ? '#' : ''}` : ''}`).join('|')}
+  data-miens={[...miens].sort().join('|')}
+  data-actif={actif ?? ''}
+  data-budget={budget ? `${budget.id}:${budget.cases}` : ''}
 ></div>
+<button onclick={glisser}>glisser</button>
 <button onclick={voir}>voir</button>

@@ -1,5 +1,5 @@
 import { caseOccupee, obstacleDeplacement, type Obstacle } from './deplacement.ts';
-import { distancePointSegment, type Case, type JetonCarte, type Point, type Porte, type SceneCalcul } from './geometrie.ts';
+import { distanceCases, distancePointSegment, type Case, type JetonCarte, type Point, type Porte, type SceneCalcul } from './geometrie.ts';
 
 /*
  * Ce que fait un geste sur la carte (lot L5.2), sans DOM : quel jeton ou
@@ -82,6 +82,26 @@ export function pasDeGlisser(
   const autres = jetons.filter((j) => j.id !== jeton.id);
   if (caseOccupee(autres, visee.cx, visee.cy)) return { case: actuelle, arret: 'occupant' };
   return { case: visee, arret: null };
+}
+
+/**
+ * Pas d'un glisser en combat (lot L6.1, 7a) : comme `pasDeGlisser`, mais
+ * le jeton ne dépense pas plus de cases qu'il ne lui en reste. `restant` :
+ * cases encore disponibles à ce pas. Rend la case atteinte et ce qu'elle a
+ * coûté (distance en cases, une diagonale compte pour une).
+ */
+export function pasDeGlisserBorne(
+  scene: SceneCalcul,
+  jetons: readonly JetonCarte[],
+  jeton: JetonCarte,
+  actuelle: Case,
+  visee: Case,
+  restant: number,
+): { case: Case; cout: number; arret: Obstacle | 'epuise' | null } {
+  const p = pasDeGlisser(scene, jetons, jeton, actuelle, visee);
+  const cout = distanceCases(actuelle, p.case);
+  if (cout > restant) return { case: actuelle, cout: 0, arret: 'epuise' };
+  return { case: p.case, cout, arret: p.arret };
 }
 
 /** Initiales d'un nom, pour le jeton (v1 : initiales). */

@@ -28,6 +28,8 @@ export interface JetonAffiche extends JetonCarte {
   pv?: { actuel: number; max: number };
   /** Portrait du personnage (L2.3), à la place des initiales. */
   portrait?: CanvasImageSource | null;
+  /** PV chiffrés pour tous (monstre en combat, décision 3b de L6.1). */
+  pvChiffres?: boolean;
 }
 
 export interface Dessin {
@@ -57,6 +59,10 @@ export interface Dessin {
   mursDeForce: readonly { a: Point; b: Point; tours: number }[];
   /** Tracé en cours d'un outil du MJ (L5.4). */
   trace: { a: Point; b: Point; type: 'mur' | 'obstacle' | 'porte'; force: boolean } | null;
+  /** Combat (L6.1) : le combattant qui joue, cerclé d'or. */
+  actif?: string | null;
+  /** Combat (L6.1) : cases encore atteignables du jeton qui joue, autour de sa case de départ. */
+  portee?: { cx: number; cy: number; cases: number } | null;
 }
 
 const COULEURS = {
@@ -69,6 +75,8 @@ const COULEURS = {
   grille: 'rgba(255, 255, 255, 0.18)',
   survol: 'rgba(255, 255, 255, 0.25)',
   selection: '#e8c36a',
+  actif: '#b8924a',
+  portee: 'rgba(232, 195, 106, 0.16)',
   mort: '#6f6a73',
   bordPJ: '#fbf6ea',
   bordAutre: '#2b2436',
@@ -287,9 +295,30 @@ export function dessiner(ctx: CanvasRenderingContext2D, d: Dessin): void {
     ctx.fillRect(d.survol.cx, d.survol.cy, 1, 1);
   }
 
+  // Combat (L6.1) : les cases encore atteignables, carré autour du départ (distance en cases).
+  if (d.portee && d.portee.cases > 0) {
+    const p = d.portee;
+    const x0 = Math.max(0, p.cx - p.cases), y0 = Math.max(0, p.cy - p.cases);
+    const x1 = Math.min(scene.colonnes, p.cx + p.cases + 1), y1 = Math.min(scene.lignes, p.cy + p.cases + 1);
+    ctx.fillStyle = COULEURS.portee;
+    ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.strokeStyle = COULEURS.selection;
+    ctx.lineWidth = trait(2);
+    ctx.setLineDash([trait(6), trait(4)]);
+    ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.setLineDash([]);
+  }
+
   for (const j of d.jetons) {
     const pos = d.glisser?.id === j.id ? d.glisser.case : j;
-    dessinerJeton(ctx, j, pos.cx, pos.cy, d.selection === j.id, vue.echelle, !!d.pvChiffres);
+    dessinerJeton(ctx, j, pos.cx, pos.cy, d.selection === j.id, vue.echelle, !!d.pvChiffres || !!j.pvChiffres);
+    if (d.actif === j.id) {
+      ctx.beginPath();
+      ctx.arc(pos.cx + 0.5, pos.cy + 0.5, RAYON_JETON + 0.16, 0, Math.PI * 2);
+      ctx.strokeStyle = COULEURS.actif;
+      ctx.lineWidth = Math.max(4 / vue.echelle, 0.09);
+      ctx.stroke();
+    }
   }
 
   if (d.trace) {

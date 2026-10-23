@@ -67,6 +67,8 @@ export const schemaTable = z.looseObject({
   seanceOuverte: schemaSeanceOuverte.nullable().optional(),
   /** Scène hors combat en cours (lot S2) : null ou absent quand aucune n'est ouverte. */
   sceneHorsCombat: z.string().min(1).max(100).nullable().optional(),
+  /** Combat en cours (lot L6.1) : null ou absent hors combat. */
+  combat: z.string().min(1).max(100).nullable().optional(),
 });
 export type TableDoc = z.infer<typeof schemaTable>;
 
