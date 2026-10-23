@@ -191,10 +191,13 @@ describe('attaques et dégâts (L6.2)', () => {
     await poser(`${C}/combattants/pj-p2`, combattant({ nom: 'Hermione', perso: 'p2', uid: 'carol' }));
     await poser(C, combat({ actif: 'm-r1-a' }));
     await assertFails(hermione.update({ pvActuel: 1 }));
-    // Debout : rien à relever.
+    // Debout : on ne le relève pas (pas de hausse), mais la collision d'un
+    // allié le blesse (L6.3, 12a) : ses PV ne font que baisser, jamais sous 0.
     await poser(C, combat());
     await poser(`${TABLE}/persos/p2`, fiche('carol', { pvActuel: 3 }));
-    await assertFails(hermione.update({ pvActuel: 1 }));
+    await assertFails(hermione.update({ pvActuel: 5 }));
+    await assertFails(hermione.update({ pvActuel: -1 }));
+    await assertSucceeds(hermione.update({ pvActuel: 1 }));
     // Hors combat : non plus.
     await poser(`${TABLE}/persos/p2`, fiche('carol'));
     await poser(TABLE, { sceneActive: 'cave', combat: null });
