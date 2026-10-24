@@ -184,9 +184,12 @@ describe('attaques et dégâts (L6.2)', () => {
     await assertSucceeds(pour('bob').doc(`${C}/combattants/pj-p1`).update({ mortSucces: 0, mortEchecs: 0, mort: false }));
   });
 
-  it('7a : le joueur qui a la main relève un allié Mourant à 1 PV, rien d’autre ; pas un mort, pas sans la main', async () => {
+  it('7a : le joueur qui a la main relève un allié Mourant à 1 PV ; pas un autre champ, pas un mort, pas sans la main', async () => {
     const hermione = pour('alice').doc(`${TABLE}/persos/p2`);
-    await assertFails(hermione.update({ pvActuel: 5 }));
+    // L6.4a (10a) : un soin fait monter les PV d'un allié du combat, donc
+    // la hausse n'est plus réservée au relèvement à 1 PV.
+    await assertSucceeds(hermione.update({ pvActuel: 5 }));
+    await poser(`${TABLE}/persos/p2`, fiche('carol'));
     await assertFails(hermione.update({ pvActuel: 1, nom: 'x' }));
     await assertSucceeds(hermione.update({ pvActuel: 1 }));
     await poser(`${TABLE}/persos/p2`, fiche('carol'));
@@ -195,11 +198,11 @@ describe('attaques et dégâts (L6.2)', () => {
     await poser(`${C}/combattants/pj-p2`, combattant({ nom: 'Hermione', perso: 'p2', uid: 'carol' }));
     await poser(C, combat({ actif: 'm-r1-a' }));
     await assertFails(hermione.update({ pvActuel: 1 }));
-    // Debout : on ne le relève pas (pas de hausse), mais la collision d'un
-    // allié le blesse (L6.3, 12a) : ses PV ne font que baisser, jamais sous 0.
+    // Debout : la collision d'un allié le blesse (L6.3, 12a) et un soin le
+    // remonte (L6.4a, 10a) ; jamais sous 0.
     await poser(C, combat());
     await poser(`${TABLE}/persos/p2`, fiche('carol', { pvActuel: 3 }));
-    await assertFails(hermione.update({ pvActuel: 5 }));
+    await assertSucceeds(hermione.update({ pvActuel: 5 }));
     await assertFails(hermione.update({ pvActuel: -1 }));
     await assertSucceeds(hermione.update({ pvActuel: 1 }));
     // Hors combat : non plus.
