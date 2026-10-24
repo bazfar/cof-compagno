@@ -30,7 +30,12 @@
   import { noterAction } from '../lib/actions/combat';
   import type { CarteDuCombat } from '../lib/combat/attaque';
   import { combatSurCarte } from '../lib/combat/carte';
-  import { viseeCarte } from '../lib/combat/visee.svelte';
+  import { viseeCarte, type ViseeCarte } from '../lib/combat/visee.svelte';
+  import { casesDe, couleurDe, solDesZones, texteZone, type ZoneActive } from '../lib/combat/zones-sol';
+  import { apresDeplacement, idCase, peindreCase, type ReglageCase } from '../lib/actions/zones';
+  import { suivreZonesCombat, suivreZonesScene } from '../lib/magasins/zones.svelte';
+  import { etatsPosables } from '../lib/combat/etats';
+  import type { ZoneSol } from '../lib/schemas/zones';
   import { suivreCombat, suivreCombattants } from '../lib/magasins/combat.svelte';
   import type { Combat, Combattant } from '../lib/schemas/combat';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
@@ -62,6 +67,17 @@
    *
    * Lot L6.4a (6a) : la visée d'un sort ouverte par la barre du joueur
    * passe à la battlemap (lib/combat/visee.svelte.ts), côté joueur.
+   *
+   * Lot L6.4b1 (décisions de Thomas du 24/10/2026) :
+   *   - 1a, 3a, 4a : l'outil « Cases » du MJ peint une case d'un clic
+   *     (infranchissable, difficile, dangereuse, spéciale), cachée ou non ;
+   *     un second clic l'efface ;
+   *   - les zones au sol (cases du MJ, zones de sort, pièges) se dessinent
+   *     (16a) et changent le sol : murs des terrains bloquants, cases
+   *     infranchissables et difficiles (1a, 2a) ;
+   *   - 7a : le jeton qu'on déplace déclenche les zones du combat où il
+   *     entre ou finit son pas ; les cases du MJ, cachées comprises, sont
+   *     déclenchées par le client du MJ, qui voit bouger tous les jetons.
    */
 
   // Hauteur de la zone de carte (L2.6) : grande au poste MJ, réduite dans la
@@ -111,6 +127,7 @@
   let jetonsSuivis = $state<CollectionSuivie<Jeton> | null>(null);
   let etatSuivi = $state<DocumentSuivi<EtatSceneDoc> | null>(null);
   let dessinsSuivis = $state<CollectionSuivie<Dessin> | null>(null);
+  let zonesSceneSuivies = $state<CollectionSuivie<ZoneSol> | null>(null);
 
   $effect(() => {
     const id = idScene;
@@ -128,9 +145,11 @@
     const j = suivreJetons(session.table, id);
     const e = suivreEtatScene(session.table, id);
     const d = suivreDessins(session.table, id);
+    const zs = suivreZonesScene(session.table, id, role === 'mj');
     jetonsSuivis = j;
     etatSuivi = e;
     dessinsSuivis = d;
+    zonesSceneSuivies = zs;
     return () => {
       actif = false;
       img?.arreter();
@@ -138,9 +157,11 @@
       j.arreter();
       e.arreter();
       d.arreter();
+      zs.arreter();
       jetonsSuivis = null;
       etatSuivi = null;
       dessinsSuivis = null;
+      zonesSceneSuivies = null;
     };
   });
 
@@ -150,6 +171,7 @@
       id: d.id, type: d.type, a: [d.ax, d.ay] as Point, b: [d.bx, d.by] as Point, ouverte: d.ouverte, tours: d.tours ?? null,
     })),
   );
+  const etatScene = $derived(etatSuivi?.etat.donnees ?? null);
   const mursDeForce = $derived(dessins.filter((d) => d.type === 'mur' && d.tours).map((d) => ({ a: d.a, b: d.b, tours: d.tours as number })));
 
   // ---------- Jetons ----------
@@ -176,17 +198,32 @@
 
   // ---------- Combat (L6.1) ----------
   const idCombat = $derived(table.etat.donnees?.combat ?? null);
-  let combatSuivi = $state<{ c: DocumentSuivi<Combat>; m: CollectionSuivie<Combattant> } | null>(null);
+  let combatSuivi = $state<{ c: DocumentSuivi<Combat>; m: CollectionSuivie<Combattant>; z: CollectionSuivie<ZoneSol> } | null>(null);
   $effect(() => {
     if (!idCombat) return;
-    const x = { c: suivreCombat(session.table, idCombat), m: suivreCombattants(session.table, idCombat) };
+    const x = { c: suivreCombat(session.table, idCombat), m: suivreCombattants(session.table, idCombat), z: suivreZonesCombat(session.table, idCombat) };
     combatSuivi = x;
     return () => {
       x.c.arreter();
       x.m.arreter();
+      x.z.arreter();
       combatSuivi = null;
     };
   });
+  // ---------- Zones au sol (L6.4b1) ----------
+  const zonesScene: ZoneActive[] = $derived(zonesSceneSuivies?.etat.elements ?? []);
+  const zonesCombat: ZoneActive[] = $derived(combatSuivi && combatSuivi.c.etat.donnees?.scene === idScene ? combatSuivi.z.etat.elements : []);
+  const zones = $derived([...zonesScene, ...zonesCombat]);
+  const sol = $derived(solDesZones(zones, jetons));
+  const etatCarte = $derived({
+    ...etatDepuisDessins(dessins, etatScene?.portesOuvertes ?? {}),
+    mursDeZones: sol.murs,
+    infranchissables: sol.infranchissables,
+    difficiles: sol.difficiles,
+  });
+  const zonesDessinees = $derived(
+    zones.map((z) => ({ cases: casesDe(z, jetons), couleur: couleurDe(z), texte: z.texte ? `${texteZone(z)} — ${z.texte}` : texteZone(z), cachee: z.cachee })),
+  );
   const combattants = $derived(combatSuivi?.m.etat.elements ?? []);
   const enCombat = $derived(combatSurCarte(combatSuivi?.c.etat.donnees ?? null, combattants, idScene, role, session.uid));
   const proprietaires = $derived(new Map((jetonsSuivis?.etat.elements ?? []).map((j) => [j.id, j.proprietaire])));
@@ -194,13 +231,12 @@
   const miens = $derived(new Set([...mesJetons].filter((id) => !enCombat.bloques.has(id))));
   $effect(() => {
     if (!surCarte) return;
-    surCarte(geometrie ? { scene: sceneCalcul(geometrie, etatDepuisDessins(dessins, etatScene?.portesOuvertes ?? {})), jetons } : null);
+    surCarte(geometrie ? { scene: sceneCalcul(geometrie, etatCarte), jetons, zones, idsZonesCombat: new Set(zonesCombat.map((z) => z.id)) } : null);
   });
   let selection = $state<string | null>(null);
   const selectionne = $derived(jetons.find((j) => j.id === selection) ?? null);
 
   // ---------- Exploration ----------
-  const etatScene = $derived(etatSuivi?.etat.donnees ?? null);
   let locale: GrilleExploration | null = null; // ce que ce client a vu (non réactif)
   let revisionLocale = $state(0);
   let repere: RepereExploration | null = null;
@@ -257,7 +293,27 @@
     const c = combattants.find((x) => x.id === id);
     const cb = combatSuivi?.c.etat.donnees;
     if (cases !== undefined && c && cb && idCombat) agir(noterAction(idCombat, cb, c, { cases }));
+    // L6.4b1 (7a) : les zones du combat où il entre, ou finit son pas.
+    const de = jetons.find((j) => j.id === id);
+    if (c && cb && idCombat && de && zonesCombat.length)
+      agir(apresDeplacement({ lieu: { combat: idCombat }, zones: zonesCombat, jetons, combat: { id: idCombat, tour: cb.tour }, combattants, fiches, auteur: c.nom }, { id, de, vers }));
   }
+
+  // L6.4b1 (4a, 7a) : le client du MJ voit bouger tous les jetons et déclenche les cases du MJ, cachées comprises.
+  const positions = new Map<string, Case>();
+  $effect(() => {
+    const js = jetons;
+    if (role !== 'mj' || !idScene) return;
+    const scene = idScene;
+    const cb = combatSuivi?.c.etat.donnees ?? null;
+    for (const j of js) {
+      const avant = positions.get(j.id);
+      positions.set(j.id, { cx: j.cx, cy: j.cy });
+      if (!avant || (avant.cx === j.cx && avant.cy === j.cy) || !zonesScene.length) continue;
+      const enCombat = cb && cb.statut === 'encours' && cb.scene === scene && idCombat ? { id: idCombat, tour: cb.tour } : null;
+      agir(apresDeplacement({ lieu: { scene }, zones: zonesScene, jetons: js, combat: enCombat, combattants: enCombat ? combattants : [], fiches, auteur: 'MJ' }, { id: j.id, de: avant, vers: j }));
+    }
+  });
 
   function surPorte(idPorte: string) {
     if (!idScene || !geometrie) return;
@@ -317,12 +373,12 @@
   let importOuvert = $state(false); // MJ : panneau d'import d'image (L5.5)
 
   // ---------- Outils de dessin du MJ (L5.4) ----------
-  type ChoixOutil = 'aucun' | TypeDessin | 'force';
+  type ChoixOutil = 'aucun' | TypeDessin | 'force' | 'cases';
   let choixOutil = $state<ChoixOutil>('aucun');
   let toursForce = $state(3);
   let aimant = $state(true);
   const outil = $derived(
-    role === 'mj' && !apercuJoueur && choixOutil !== 'aucun'
+    role === 'mj' && !apercuJoueur && choixOutil !== 'aucun' && choixOutil !== 'cases'
       ? { type: (choixOutil === 'force' ? 'mur' : choixOutil) as TypeDessin, force: choixOutil === 'force', aimant }
       : null,
   );
@@ -343,6 +399,39 @@
     agir(effacerDessin(idScene, cible.id));
   }
   const roleAffiche: Role = $derived(role === 'mj' && !apercuJoueur ? 'mj' : 'joueur');
+
+  // ---------- Cases du MJ (L6.4b1 : 1a, 3a, 4a) ----------
+  const etatsCase = etatsPosables();
+  let caseNature = $state<ReglageCase['nature']>('infranchissable');
+  let caseCachee = $state(false);
+  let caseFormule = $state('1d6');
+  let caseType = $state<'physique' | 'magique'>('physique');
+  let caseSauvegarde = $state<'' | 'FOR' | 'DEX' | 'CON' | 'Volonte'>('DEX');
+  let caseDd = $state(12);
+  let caseEtat = $state('');
+  let caseRounds = $state<number | null>(1);
+  let caseTexte = $state('');
+  const reglage = $derived<ReglageCase>({
+    nature: caseNature,
+    cachee: caseCachee,
+    texte: caseNature === 'speciale' ? caseTexte : null,
+    danger:
+      caseNature === 'dangereuse'
+        ? { formule: caseFormule.trim(), typeDegats: caseType, sauvegarde: caseSauvegarde || null, dd: caseSauvegarde ? caseDd : null, etat: caseEtat || null, rounds: caseEtat ? caseRounds : null }
+        : null,
+  });
+  const peinture: ViseeCarte | null = $derived(
+    role === 'mj' && !apercuJoueur && choixOutil === 'cases' && idScene
+      ? {
+          apercu: (c) => ({ cases: [c], jetons: [], refus: null }),
+          choisir: (c) => {
+            const existe = zonesScene.some((z) => z.id === idCase(c));
+            agir(peindreCase(idScene, c, existe ? null : reglage));
+          },
+          fixe: { cases: [], jetons: [] },
+        }
+      : null,
+  );
 </script>
 
 <section class="carte-table" aria-label="Battlemap">
@@ -399,8 +488,43 @@
             <option value="obstacle">Obstacle (bloque la vue)</option>
             <option value="porte">Porte ou fenêtre</option>
             <option value="force">Mur de force</option>
+            <option value="cases">Cases (sol)</option>
           </select>
         </label>
+        {#if choixOutil === 'cases'}
+          <label>Case
+            <select bind:value={caseNature}>
+              <option value="infranchissable">Infranchissable</option>
+              <option value="difficile">Difficile (2 cases)</option>
+              <option value="dangereuse">Dangereuse</option>
+              <option value="speciale">Spéciale</option>
+            </select>
+          </label>
+          {#if caseNature === 'dangereuse'}
+            <input class="formule" bind:value={caseFormule} aria-label="Dégâts de la case" maxlength="20" />
+            <select bind:value={caseType} aria-label="Type de dégâts de la case">
+              <option value="physique">Physique</option>
+              <option value="magique">Magique</option>
+            </select>
+            <select bind:value={caseSauvegarde} aria-label="Sauvegarde de la case">
+              <option value="">Sans sauvegarde</option>
+              <option value="FOR">FOR</option>
+              <option value="DEX">DEX</option>
+              <option value="CON">CON</option>
+              <option value="Volonte">Volonté</option>
+            </select>
+            {#if caseSauvegarde}<label>DD <input class="tours" type="number" min="5" max="30" bind:value={caseDd} /></label>{/if}
+            <select bind:value={caseEtat} aria-label="État de la case">
+              <option value="">Sans état</option>
+              {#each etatsCase as e (e.id)}<option value={e.id}>{e.nom}</option>{/each}
+            </select>
+            {#if caseEtat}<label>Rounds <input class="tours" type="number" min="1" max="99" bind:value={caseRounds} /></label>{/if}
+          {:else if caseNature === 'speciale'}
+            <input class="nom" bind:value={caseTexte} aria-label="Texte de la case" maxlength="200" placeholder="Ce qu’elle fait" />
+          {/if}
+          <label><input type="checkbox" bind:checked={caseCachee} /> Cachée</label>
+          <span class="aide">Clic : peindre la case · clic sur une case peinte : l’effacer</span>
+        {/if}
         {#if choixOutil === 'force'}
           <label>Tours <input class="tours" type="number" min="1" max="100" bind:value={toursForce} /></label>
         {/if}
@@ -438,7 +562,7 @@
       <Battlemap
         {geometrie}
         {image}
-        etat={etatDepuisDessins(dessins, etatScene?.portesOuvertes ?? {})}
+        etat={etatCarte}
         {jetons}
         role={roleAffiche}
         {miens}
@@ -457,7 +581,8 @@
         {surGomme}
         actif={enCombat.actif}
         budget={enCombat.budget}
-        visee={role === 'joueur' ? viseeCarte.v : null}
+        visee={role === 'joueur' ? viseeCarte.v : peinture}
+        zones={zonesDessinees}
       />
     {:else}
       <p class="vide">Chargement de la scène…</p>
@@ -486,6 +611,9 @@
   }
   .nom {
     width: 140px;
+  }
+  .formule {
+    width: 80px;
   }
   .tours {
     width: 64px;

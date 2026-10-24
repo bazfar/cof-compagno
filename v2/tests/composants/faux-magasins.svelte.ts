@@ -199,3 +199,16 @@ export const magasinsCombat = {
 
 /** La carte que la fausse CarteTable rend à l'écran qui la monte (L6.2, portées). */
 export const carteFaux: { valeur: unknown } = { valeur: null };
+
+// Zones au sol (lot L6.4b1) : cases du MJ de la scène, zones du combat.
+export const zonesScene = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+export const zonesCombat = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+/** Ce que les écrans ont demandé : le MJ lit toutes les cases, le joueur les visibles. */
+export const suiviZones = { mj: [] as boolean[] };
+export const magasinsZones = {
+  suivreZonesScene: (_t: string, _s: string, mj: boolean) => {
+    suiviZones.mj.push(mj);
+    return { etat: zonesScene, arreter: () => {} };
+  },
+  suivreZonesCombat: () => ({ etat: zonesCombat, arreter: () => {} }),
+};

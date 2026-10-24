@@ -1,5 +1,5 @@
 import { etatParId } from '../../regles/index.ts';
-import type { Changement } from '../effets/resolution.ts';
+import type { Changement, JetNote } from '../effets/resolution.ts';
 import { vueFiche } from '../fiche/vue-fiche.ts';
 import type { BonusCombat, Combattant, EtatCombat } from '../schemas/combat.ts';
 import type { Fiche } from '../schemas/fiche.ts';
@@ -65,7 +65,8 @@ function retirerN(etats: readonly EtatCombat[], n: number): EtatCombat[] {
 export function appliquerChangements(
   changements: readonly Changement[],
   lus: ReadonlyMap<string, Lu>,
-  lanceur: { id: string; nom: string; fiche: Fiche & { id: string } },
+  /** `fiche` : celle du lanceur, s'il peut l'écrire (ses ressources) ; null quand une zone rejoue le sort d'un autre (L6.4b1). */
+  lanceur: { id: string; nom: string; fiche: (Fiche & { id: string }) | null },
   depart: {
     /** PV de fiche de départ, par personnage, quand le coût en a déjà ôté (sang). */
     pv?: ReadonlyMap<string, number>;
@@ -122,7 +123,7 @@ export function appliquerChangements(
           const d = degatsSurPj(lu.fiche, ch.montant, type);
           net = d.net;
           detail = d.detail;
-          if (lu.fiche.id === lanceur.fiche.id) Object.assign(jauges, gainParDegatsSubis(lu.fiche, d.net));
+          if (lu.fiche.id === lanceur.fiche?.id) Object.assign(jauges, gainParDegatsSubis(lu.fiche, d.net));
         } else {
           const d = degatsSurMonstre(ch.montant, lu.c, type);
           net = d.net;
@@ -197,7 +198,7 @@ export function appliquerChangements(
         deplacements.push({ cible: ch.cible, sens: ch.sens, cases: ch.cases });
         break;
       case 'ressource': {
-        if (ch.cible !== lanceur.id) {
+        if (ch.cible !== lanceur.id || !lanceur.fiche) {
           auMj.push(`${ch.ressource} de ${lu.c.nom} : au MJ`);
           continue;
         }
@@ -236,6 +237,13 @@ export function appliquerChangements(
     if (Object.keys(m).length) combattants.set(id, m);
     if (lu.c.genre === 'pj' && lu.fiche && s.pv !== (pvDepart.get(lu.fiche.id) ?? vueFiche(lu.fiche).pv.actuel)) fiches.set(lu.fiche.id, { pvActuel: s.pv });
   }
-  if (Object.keys(jauges).length) fiches.set(lanceur.fiche.id, { ...(fiches.get(lanceur.fiche.id) ?? {}), ...champsJauges(jauges) });
+  if (lanceur.fiche && Object.keys(jauges).length) fiches.set(lanceur.fiche.id, { ...(fiches.get(lanceur.fiche.id) ?? {}), ...champsJauges(jauges) });
   return { combattants, fiches, deplacements, lignes, auMj };
+}
+
+/** « sauvegarde de DEX 14 contre DD 13 : réussie » ; « attaque magique 17 contre DEF 12 : touché ». */
+export function texteJet(j: JetNote): string {
+  const des = j.des.length > 1 ? ` (${j.des.join(', ')})` : '';
+  const issue = j.reussi === undefined ? '' : j.quoi.startsWith('attaque') ? (j.reussi ? (j.critique ? ' : critique' : ' : touché') : ' : raté') : j.reussi ? ' : réussi' : ' : raté';
+  return `${j.quoi} ${j.total}${des}${j.contre !== undefined ? ` contre ${j.quoi.startsWith('attaque') ? 'DEF' : j.quoi.startsWith('maîtrise') ? 'échec sur' : 'DD'} ${j.contre}` : ''}${issue}`;
 }

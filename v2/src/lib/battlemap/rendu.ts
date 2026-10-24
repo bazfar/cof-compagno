@@ -32,6 +32,15 @@ export interface JetonAffiche extends JetonCarte {
   pvChiffres?: boolean;
 }
 
+/** Une zone au sol à dessiner (L6.4b1, 16a). */
+export interface ZoneDessinee {
+  cases: readonly Case[];
+  couleur: 'degats' | 'benefique' | 'controle' | 'infranchissable' | 'speciale';
+  texte: string;
+  /** Cachée aux joueurs : le MJ la voit en pointillés. */
+  cachee: boolean;
+}
+
 export interface Dessin {
   /** Taille du canvas en pixels d'écran (CSS). */
   largeur: number;
@@ -65,6 +74,8 @@ export interface Dessin {
   portee?: { cx: number; cy: number; cases: number } | null;
   /** Visée d'un sort (L6.4a) : cases de la zone, jetons pris ; `refus` : hors de portée ou de vue. */
   visee?: { cases: readonly Case[]; jetons: readonly string[]; refus: boolean } | null;
+  /** Zones au sol (L6.4b1). */
+  zones?: readonly ZoneDessinee[];
 }
 
 const COULEURS = {
@@ -80,6 +91,13 @@ const COULEURS = {
   actif: '#b8924a',
   portee: 'rgba(232, 195, 106, 0.16)',
   zone: 'rgba(155, 89, 182, 0.35)',
+  sol: {
+    degats: 'rgba(192, 57, 43, 0.32)',
+    benefique: 'rgba(232, 195, 106, 0.32)',
+    controle: 'rgba(142, 68, 173, 0.28)',
+    infranchissable: 'rgba(20, 16, 26, 0.55)',
+    speciale: 'rgba(41, 128, 185, 0.3)',
+  } as const,
   zoneRefus: 'rgba(192, 57, 43, 0.35)',
   vise: '#c39bd3',
   mort: '#6f6a73',
@@ -311,6 +329,26 @@ export function dessiner(ctx: CanvasRenderingContext2D, d: Dessin): void {
     ctx.lineWidth = trait(2);
     ctx.setLineDash([trait(6), trait(4)]);
     ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.setLineDash([]);
+  }
+
+  // Zones au sol (L6.4b1, 16a) : une couleur par sorte ; hachures pour l'infranchissable ; pointillés si cachée (MJ).
+  for (const z of d.zones ?? []) {
+    ctx.fillStyle = COULEURS.sol[z.couleur];
+    for (const c of z.cases) ctx.fillRect(c.cx, c.cy, 1, 1);
+    ctx.strokeStyle = z.couleur === 'infranchissable' ? 'rgba(255, 255, 255, 0.35)' : COULEURS.sol[z.couleur].replace(/[\d.]+\)$/, '0.9)');
+    ctx.lineWidth = trait(z.cachee ? 1.5 : 1);
+    ctx.setLineDash(z.cachee ? [trait(4), trait(3)] : []);
+    for (const c of z.cases) {
+      ctx.strokeRect(c.cx + 0.03, c.cy + 0.03, 0.94, 0.94);
+      if (z.couleur === 'infranchissable') {
+        ctx.beginPath();
+        ctx.moveTo(c.cx, c.cy + 1); ctx.lineTo(c.cx + 1, c.cy);
+        ctx.moveTo(c.cx, c.cy + 0.5); ctx.lineTo(c.cx + 0.5, c.cy);
+        ctx.moveTo(c.cx + 0.5, c.cy + 1); ctx.lineTo(c.cx + 1, c.cy + 0.5);
+        ctx.stroke();
+      }
+    }
     ctx.setLineDash([]);
   }
 

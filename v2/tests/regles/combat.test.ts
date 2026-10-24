@@ -24,6 +24,10 @@ import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
  * Lot L6.4a : les sauvegardes du monstre (8a), les PV et bonus temporaires
  * (11a, 12a) ; le sort du joueur qui a la main déplace un jeton de 20 cases
  * au plus (10a) et soigne un allié (ses PV montent).
+ *
+ * Lot L6.4b1 : les cases du MJ (le MJ seul les écrit ; le joueur ne lit
+ * que les visibles), les zones du combat (le joueur qui a la main les
+ * pose, les déclenche, les retire).
  */
 const TABLE = 'tables/t1';
 const C = `${TABLE}/combats/c1`;
@@ -313,5 +317,47 @@ describe('sorts en combat (L6.4a)', () => {
     await assertFails(pour('carol').doc(`${TABLE}/persos/p1`).update({ pvActuel: 25 }));
     await poser(`${TABLE}/persos/p3`, fiche('dave', { pvActuel: 2 }));
     await assertFails(pour('alice').doc(`${TABLE}/persos/p3`).update({ pvActuel: 5 }));
+  });
+});
+
+describe('zones au sol (L6.4b1)', () => {
+  const zone = (extra: Record<string, unknown> = {}) => ({
+    nom: 'Givre', nature: 'glissant', cases: [{ dx: 0, dy: 0 }], ancre: { cx: 3, cy: 3 }, lanceur: 'pj-p1', camp: 'pj', filtre: 'tous', quand: 'entree', sort: null, danger: null, dd: 13, texte: null,
+    usageUnique: false, cachee: false, rounds: 2, declenchements: {}, creeLe: 1, ...extra,
+  });
+  const caseMj = (extra: Record<string, unknown> = {}) => zone({ nom: 'Case dangereuse', nature: 'dangereuse', lanceur: null, camp: null, danger: { formule: '1d6', typeDegats: 'physique', sauvegarde: null, dd: null, etat: null, rounds: null }, dd: null, rounds: null, ...extra });
+
+  it('1a, 4a : le MJ peint les cases ; un joueur ne lit que celles qui ne sont pas cachées, et n’écrit rien', async () => {
+    const S = `${TABLE}/scenes/cave/zones`;
+    await assertSucceeds(pour('bob').doc(`${S}/c-3-3`).set(caseMj({ cachee: true })));
+    await assertSucceeds(pour('bob').doc(`${S}/c-4-4`).set(caseMj()));
+    await assertFails(pour('bob').doc(`${S}/c-5-5`).set(caseMj({ x: 1 })));
+    await assertFails(pour('bob').doc(`${S}/c-5-5`).set(caseMj({ cases: [] })));
+    await assertFails(pour('bob').doc(`${S}/c-5-5`).set(caseMj({ ancre: null })));
+    await assertFails(pour('alice').doc(`${S}/c-6-6`).set(caseMj()));
+    await assertFails(pour('alice').doc(`${S}/c-3-3`).get());
+    await assertSucceeds(pour('alice').doc(`${S}/c-4-4`).get());
+    await assertSucceeds(pour('alice').collection(S).where('cachee', '==', false).get());
+    await assertFails(pour('alice').collection(S).get());
+    await assertFails(pour('alice').doc(`${S}/c-4-4`).update({ declenchements: { 'pj-p1': 3 } }));
+    await assertFails(pour('alice').doc(`${S}/c-4-4`).delete());
+    await assertSucceeds(pour('bob').doc(`${S}/c-4-4`).delete());
+  });
+
+  it('5a, 7a, 9a : le joueur qui a la main pose, déclenche et retire les zones du combat ; sans la main, non ; le MJ, toujours', async () => {
+    const Z = `${C}/zones`;
+    await assertSucceeds(pour('alice').doc(`${Z}/z1`).set(zone()));
+    await assertSucceeds(pour('alice').doc(`${Z}/z1`).update({ declenchements: { 'm-r1-a': 3 }, cachee: false }));
+    await assertSucceeds(pour('alice').doc(`${Z}/z1`).update({ rounds: 1 }));
+    await assertFails(pour('alice').doc(`${Z}/z1`).update({ rounds: 0 }));
+    await assertFails(pour('alice').doc(`${Z}/z2`).set(zone({ nature: 'lave' })));
+    await assertFails(pour('carol').doc(`${Z}/z2`).set(zone()));
+    await assertFails(pour('carol').doc(`${Z}/z1`).delete());
+    await assertSucceeds(pour('carol').doc(`${Z}/z1`).get());
+    await assertSucceeds(pour('alice').doc(`${Z}/z1`).delete());
+    await assertSucceeds(pour('bob').doc(`${Z}/z3`).set(zone({ lanceur: 'm-r1-a', camp: 'monstre' })));
+    await poser(C, combat({ actif: 'm-r1-a' }));
+    await assertFails(pour('alice').doc(`${Z}/z3`).update({ rounds: 1 }));
+    await assertSucceeds(pour('bob').doc(`${Z}/z3`).delete());
   });
 });

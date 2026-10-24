@@ -1,3 +1,4 @@
+import type { ZoneActive } from './zones-sol.ts';
 import { distanceCases, type JetonCarte, type SceneCalcul } from '../battlemap/geometrie.ts';
 import { ligneDeVue } from '../battlemap/ciblage.ts';
 import { doublerDes } from '../effets/resolution.ts';
@@ -184,4 +185,8 @@ export function lancerDegats(formule: string, alea: () => number = Math.random):
 export interface CarteDuCombat {
   scene: SceneCalcul;
   jetons: readonly JetonCarte[];
+  /** Zones au sol (L6.4b1) : celles du combat et les cases du MJ que ce client voit. */
+  zones?: readonly ZoneActive[];
+  /** Où vivent ces zones : celles du combat, puis celles de la scène. */
+  idsZonesCombat?: ReadonlySet<string>;
 }

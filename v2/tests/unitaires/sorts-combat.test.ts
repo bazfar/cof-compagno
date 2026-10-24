@@ -34,11 +34,19 @@ vi.mock('firebase/firestore', () => {
         },
       };
     },
+    getDocs: async (q: { chemin: string; w?: { champ: string; v: unknown } }) => ({
+      docs: [...base.entries()]
+        .filter(([k, d]) => k.startsWith(`${q.chemin}/`) && !k.slice(q.chemin.length + 1).includes('/') && (!q.w || d[q.w.champ] === q.w.v))
+        .map(([k, d]) => ({ id: k.split('/').pop(), data: () => d })),
+    }),
+    query: (c: { chemin: string }, w?: { champ: string; v: unknown }) => ({ ...c, w }),
+    where: (champ: string, _op: string, v: unknown) => ({ champ, v }),
     runTransaction: async (_db: unknown, f: (tx: unknown) => Promise<unknown>) => {
       const ecritures: typeof appels = [];
       const tx = {
         get: async (r: { chemin: string }) => lu(r.chemin),
         update: (r: { chemin: string }, donnees: unknown) => ecritures.push({ fn: 'tx.update', chemin: r.chemin, donnees }),
+        delete: (r: { chemin: string }) => ecritures.push({ fn: 'tx.delete', chemin: r.chemin }),
       };
       const r = await f(tx);
       appels.push(...ecritures);
@@ -596,6 +604,10 @@ describe('les changements écrits (10a, 11a, 12a)', () => {
     const g = v2('Karlach', 'guerrier', {}, 'p1');
     const borne = CH.appliquerChangements([{ type: 'ressource', cible: 'pj-p1', ressource: 'endurance', montant: 50 }], new Map([lu(pj('p1'), g)]), { id: 'pj-p1', nom: 'K', fiche: g });
     expect(borne.fiches.get('p1')).toEqual({ 'refonte.jauges.endurance': vueFiche(g).refonte!.jauges.find((j) => j.cle === 'endurance')!.max });
+    // L6.4b1 : une zone rejouée n'a pas la fiche de son lanceur ; sa ressource va au MJ.
+    const sansFiche = CH.appliquerChangements([{ type: 'ressource', cible: 'pj-p1', ressource: 'endurance', montant: 1 }], new Map([lu(pj('p1'), g)]), { id: 'pj-p1', nom: 'K', fiche: null });
+    expect(sansFiche.auMj).toEqual(['endurance de p1 : au MJ']);
+    expect(sansFiche.fiches.size).toBe(0);
   });
 
   it('les PV et jauges de départ : le coût déjà payé', () => {

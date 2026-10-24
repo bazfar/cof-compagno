@@ -1,6 +1,7 @@
-import { collection, doc, runTransaction, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDocs, query, runTransaction, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/client';
 import { finDeTourBonus } from '../combat/bonus';
+import { finDeTourZones } from '../combat/zones-sol';
 import { finDeTour, rompre } from '../combat/etats';
 import { champsJauges, type Jauges } from '../combat/ressources';
 import { actionsDuTour, deplacementRestant, mainSuivante, premierActif } from '../combat/ordre';
@@ -28,6 +29,7 @@ type AvecId<T> = T & { id: string };
 const refCombat = (id: string) => doc(db, `tables/${session.table}/combats/${id}`);
 const refPerso = (id: string) => doc(db, `tables/${session.table}/persos/${id}`);
 const refCombattant = (id: string, c: string) => doc(db, `tables/${session.table}/combats/${id}/combattants/${c}`);
+const refZone = (id: string, z: string) => doc(db, `tables/${session.table}/combats/${id}/zones/${z}`);
 const d20 = (alea: () => number) => 1 + Math.floor(alea() * 20);
 
 function nouveauCombattant(b: BrouillonCombattant, de: number | null, maintenant: number): Combattant {
@@ -143,6 +145,15 @@ export async function lancerInitiative(idCombat: string, c: AvecId<Combattant>):
  * 0 PV sur leur fiche).
  */
 export async function finirTour(idCombat: string, actifAttendu: string | null, combattants: readonly AvecId<Combattant>[], aTerre: ReadonlySet<string>): Promise<Combat> {
+  // L6.4b1 (9a) : les zones de celui qui finit son tour perdent un round.
+  const zones = actifAttendu
+    ? (await getDocs(query(collection(db, `tables/${session.table}/combats/${idCombat}/zones`), where('lanceur', '==', actifAttendu)))).docs.map((d) => ({
+        id: d.id,
+        lanceur: actifAttendu,
+        rounds: (d.data() as { rounds?: number | null }).rounds ?? null,
+      }))
+    : [];
+  const decompte = finDeTourZones(zones, actifAttendu ?? '');
   return runTransaction(db, async (tx) => {
     const lu = await tx.get(refCombat(idCombat));
     if (!lu.exists()) throw new RefusCombat('Ce combat n’existe plus.');
@@ -163,6 +174,8 @@ export async function finirTour(idCombat: string, actifAttendu: string | null, c
       if (JSON.stringify(bonus) !== JSON.stringify(m.bonus)) maj.bonus = bonus;
       if (Object.keys(maj).length) tx.update(refCombattant(idCombat, c.actif!), maj);
     }
+    for (const z of decompte.maj) tx.update(refZone(idCombat, z.id), { rounds: z.rounds });
+    for (const id of decompte.retirer) tx.delete(refZone(idCombat, id));
     tx.update(refCombat(idCombat), { actif: apres.actif, round: apres.round, tour: apres.tour });
     return apres;
   });

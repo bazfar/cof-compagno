@@ -4,7 +4,7 @@
   import { aimanter, bornerPoint, estUnTrace, type TypeDessin } from '../lib/battlemap/dessins';
   import { sceneCalcul, type Case, type EtatScene, type Point, type SceneCalcul } from '../lib/battlemap/geometrie';
   import { jetonsADessiner, jetonSousPointeur, pasDeGlisser, pasDeGlisserBorne, peutDeplacer, porteSousPointeur, type Role } from '../lib/battlemap/interactions';
-  import { dessiner, peindreExploration, type JetonAffiche } from '../lib/battlemap/rendu';
+  import { dessiner, peindreExploration, type JetonAffiche, type ZoneDessinee } from '../lib/battlemap/rendu';
   import { jetonsVisiblesDesPJ, segmentsBloquants, visionsDesPJ, type VisionJeton } from '../lib/battlemap/visibilite';
   import { deplacer, ecranVersCase, ecranVersScene, vueAjustee, zoomer, type Vue } from '../lib/battlemap/vue';
   import type { GeometrieScene } from '../lib/schemas/scene';
@@ -28,6 +28,9 @@
    * Avec une visée de sort (L6.4a, 6a) : le survol montre les cases de la
    * zone et les jetons pris ; un clic rend la case (et son jeton) à la
    * visée, sans sélectionner ni glisser.
+   *
+   * Zones au sol (L6.4b1, 16a) : dessinées en couleur, leur nom et leurs
+   * rounds au survol d'une de leurs cases.
    */
 
   let {
@@ -53,6 +56,7 @@
     actif = null,
     budget = null,
     visee = null,
+    zones = [],
   }: {
     geometrie: GeometrieScene;
     /** Adresse de l'image de la scène. */
@@ -86,6 +90,8 @@
     budget?: { id: string; cases: number } | null;
     /** Visée d'un sort (L6.4a) : le clic lui revient. */
     visee?: ViseeCarte | null;
+    /** Zones au sol (L6.4b1) : cases, couleur, texte du survol ; `cachee` : le MJ seul la voit. */
+    zones?: readonly ZoneDessinee[];
   } = $props();
 
   let canvas = $state<HTMLCanvasElement | undefined>();
@@ -177,6 +183,7 @@
       actif,
       portee: porteeDessinee,
       visee: viseeDessinee,
+      zones,
     };
     const c = canvas;
     cancelAnimationFrame(demande);
@@ -211,6 +218,9 @@
       refus: !!a?.refus,
     };
   });
+
+  // Zones au sol (16a) : ce que dit la case survolée.
+  const texteSurvol = $derived(survol ? zones.filter((z) => z.cases.some((c) => c.cx === survol!.cx && c.cy === survol!.cy)).map((z) => z.texte) : []);
 
   // ---------- Gestes ----------
   let deplacementVue: { x: number; y: number; bouge: boolean } | null = null;
@@ -345,6 +355,9 @@
     onpointerleave={() => { if (!glisser && !deplacementVue) survol = null; }}
     ondblclick={recadrer}
   ></canvas>
+  {#if texteSurvol.length}
+    <p class="survol-zone" role="status">{texteSurvol.join(' · ')}</p>
+  {/if}
   {#if !imageChargee}
     <p class="chargement">Chargement de la scène…</p>
   {/if}
@@ -370,6 +383,19 @@
   }
   canvas.vise {
     cursor: crosshair;
+  }
+  .survol-zone {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    margin: 0;
+    max-width: calc(100% - 16px);
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: rgba(27, 22, 34, 0.85);
+    color: #fff;
+    font-size: 13px;
+    pointer-events: none;
   }
   .chargement {
     position: absolute;

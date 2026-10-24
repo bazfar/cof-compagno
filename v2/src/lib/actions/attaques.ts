@@ -34,6 +34,7 @@ import type { Fiche } from '../schemas/fiche';
 import { session } from '../session.svelte';
 import { RefusCombat } from './combat';
 import { noterJet } from './journal';
+import { apresDeplacement } from './zones';
 import { champsDuChangement } from './persos';
 
 /*
@@ -102,7 +103,7 @@ function peutAttaquer(attaquant: Combattant, mode: 'contact' | 'distance'): void
 function jetAttaque(
   attaquant: Combattant,
   cible: Combattant,
-  a: { bonus: number; seuilCritique: number; mode: 'contact' | 'distance' },
+  a: { bonus: number; seuilCritique: number; mode: 'contact' | 'distance'; defEnPlus?: number },
   defBase: number,
   alea: () => number,
 ): { issue: IssueAttaque | null; leurre: string | null; etatsAttaquant: EtatCombat[]; etatsCible: EtatCombat[] } {
@@ -115,7 +116,8 @@ function jetAttaque(
   const d = d20Attaque(alea, av.avantage);
   const surAttaque = ['attaque', a.mode === 'contact' ? 'attaqueContact' : 'attaqueDistance'];
   const bonus = a.bonus + modificateur(attaquant.etats, surAttaque) + bonusFixe(attaquant.bonus, [...surAttaque, 'tests']);
-  const def = defBase + modificateur(cible.etats, ['DEF']) + bonusFixe(cible.bonus, ['DEF', a.mode === 'contact' ? 'DEFContact' : 'DEFDistance']);
+  // L6.4b1 (11a) : `defEnPlus`, la couverture d'un terrain contre une attaque à distance.
+  const def = defBase + modificateur(cible.etats, ['DEF']) + bonusFixe(cible.bonus, ['DEF', a.mode === 'contact' ? 'DEFContact' : 'DEFDistance']) + (a.defEnPlus ?? 0);
   const issue = { ...resoudreAttaque(d.garde, bonus, def, a.seuilCritique), ...(d.des.length > 1 ? { des: d.des } : {}) };
   return { issue, leurre: null, etatsAttaquant, etatsCible };
 }
@@ -126,6 +128,8 @@ export interface AttaqueJouee {
   bonus: number;
   seuilCritique: number;
   mode: 'contact' | 'distance';
+  /** DEF en plus de la cible : sa couverture (L6.4b1, 11a). */
+  defEnPlus?: number;
 }
 
 /**
@@ -198,7 +202,7 @@ export async function attaquer(
     return issue;
   }
   await noterJet(libelle, formuleTest(issue.bonus), { des: issue.des ?? [issue.de], faces: 20, bonus: issue.bonus, total: issue.total }, fiche.nom, texteAttaque(issue));
-  if (pousse && speciale?.carte) await repousser(idCombat, combat.scene, attaquant, cible, speciale.carte, speciale.combattants ?? [], speciale.fiches ?? new Map(), fiche.nom, alea);
+  if (pousse && speciale?.carte) await repousser(idCombat, combat.scene, attaquant, cible, speciale.carte, speciale.combattants ?? [], speciale.fiches ?? new Map(), fiche.nom, alea, combat);
   return issue;
 }
 
@@ -312,11 +316,20 @@ export async function repousser(
   fiches: ReadonlyMap<string, AvecId<Fiche>>,
   auteur: string,
   alea: () => number = Math.random,
+  combat: Pick<Combat, 'tour'> | null = null,
 ): Promise<'pousse' | 'jeton' | 'decor' | null> {
   const p = pousser(carte.scene, carte.jetons, attaquant.id, cible.id);
   if (!p) return null;
   if ('vers' in p) {
     await updateDoc(refJeton(scene, cible.id), { cx: p.vers.cx, cy: p.vers.cy });
+    // L6.4b1 (7a) : repoussé dans une zone du combat, il la déclenche.
+    const de = carte.jetons.find((j) => j.id === cible.id);
+    if (de && carte.zones?.length && combat)
+      await apresDeplacement(
+        { lieu: { combat: idCombat }, zones: carte.zones.filter((z) => !carte.idsZonesCombat || carte.idsZonesCombat.has(z.id)), jetons: carte.jetons, combat: { id: idCombat, tour: combat.tour }, combattants, fiches, auteur },
+        { id: cible.id, de, vers: p.vers },
+        alea,
+      );
     return 'pousse';
   }
   const ficheDe = (c: AvecId<Combattant>) => (c.perso ? (fiches.get(c.perso) ?? null) : null);
@@ -389,7 +402,7 @@ export async function attaqueDeMonstre(
   idCombat: string,
   combat: Pick<Combat, 'tour'>,
   monstre: AvecId<Combattant>,
-  a: AttaqueMonstre,
+  a: AttaqueMonstre & { defEnPlus?: number },
   cible: AvecId<Combattant>,
   fiche: AvecId<Fiche>,
   alea: () => number = Math.random,

@@ -50,6 +50,9 @@ export interface SceneCalcul {
   obstacles: Segment[];
   /** Portes du .dd2vtt + portes dessinées, avec leur état courant. */
   portes: Porte[];
+  /** Cases des zones au sol (L6.4b1, 1a, 2a), « cx,cy » : un PJ n'y entre pas ; y entrer coûte 2 cases. */
+  infranchissables?: ReadonlySet<string>;
+  difficiles?: ReadonlySet<string>;
 }
 
 /** Ce qui change en cours de partie (Firestore, L5.3). */
@@ -59,6 +62,10 @@ export interface EtatScene {
   mursManuels?: readonly Segment[];
   obstaclesManuels?: readonly Segment[];
   portesManuelles?: readonly Porte[];
+  /** Zones au sol (L6.4b1) : leurs murs (terrain bloquant) s'ajoutent aux murs dessinés. */
+  mursDeZones?: readonly Segment[];
+  infranchissables?: ReadonlySet<string>;
+  difficiles?: ReadonlySet<string>;
 }
 
 /** Aplatit des polylignes en segments consécutifs (v1 : _segmentsDepuisPolylignes). */
@@ -77,12 +84,14 @@ export function sceneCalcul(geo: GeometrieScene, etat: EtatScene = {}): SceneCal
     lignes: geo.lignes,
     // L'ordre des segments ne change aucun résultat : à distance égale,
     // deux segments donnent le même point d'impact.
-    murs: [...segmentsDepuisPolylignes(geo.murs), ...(etat.mursManuels ?? [])],
+    murs: [...segmentsDepuisPolylignes(geo.murs), ...(etat.mursManuels ?? []), ...(etat.mursDeZones ?? [])],
     obstacles: [...segmentsDepuisPolylignes(geo.obstacles), ...(etat.obstaclesManuels ?? [])],
     portes: [
       ...geo.portes.map((p) => ({ ...p, ouverte: ouvertes[p.id] ?? p.ouverte })),
       ...(etat.portesManuelles ?? []).map((p) => ({ ...p, ouverte: ouvertes[p.id] ?? p.ouverte })),
     ],
+    ...(etat.infranchissables?.size ? { infranchissables: etat.infranchissables } : {}),
+    ...(etat.difficiles?.size ? { difficiles: etat.difficiles } : {}),
   };
 }
 

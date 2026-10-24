@@ -13,6 +13,7 @@
   import { arriveePermise } from '../lib/combat/poussee';
   import { apercu, campPermis, ciblageDe, coutAffiche, palierLance, sortsDeCombat, surchargeable, viseeComplete, type CiblageSort, type Visee } from '../lib/combat/sorts';
   import { viseeCarte } from '../lib/combat/visee.svelte';
+  import { couverture, protegeParSanctuaire } from '../lib/combat/zones-sol';
   import type { Palier } from '../lib/schemas/effets';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import type { AvecId } from '../lib/firebase/suivre.svelte';
@@ -56,6 +57,10 @@
    * montrent au survol) ; « Lancer » résout (2a) et le journal dit la
    * suite. Un sort qui téléporte fait cliquer la case d'arrivée (10a). Ses
    * PV temporaires et ses bonus du combat s'affichent (11a, 12a).
+   *
+   * Lot L6.4b1 (11a) : une cible dans un sanctuaire où il n'est pas ne se
+   * vise pas ; la couverture d'une cible ajoute 2 à sa DEF contre une
+   * attaque à distance.
    */
 
   let {
@@ -94,8 +99,18 @@
   const defVisee = (c: Combattant) => (c.def === null ? null : defenseVisee(c.def, c.etats, c.bonus));
   let cibleChoisie = $state('');
   const cible = $derived(monstres.find((c) => c.id === cibleChoisie) ?? monstres[0] ?? null);
+  // L6.4b1 (11a) : une cible dans un sanctuaire où il n'est pas ne se vise pas.
+  const sanctuaire = $derived(!!cible && !!carte?.zones && protegeParSanctuaire(carte.zones, carte.jetons, moi.id, cible.id));
   const refusPortee = (a: AttaquePj) =>
-    a.mode === 'distance' && aveugle ? 'il n’attaque qu’au contact' : cible && !combat.porteesLibres ? horsDePortee(carte?.scene ?? null, carte?.jetons ?? [], moi.id, cible.id, a.portee) : null;
+    a.mode === 'distance' && aveugle
+      ? 'il n’attaque qu’au contact'
+      : sanctuaire
+        ? 'la cible est dans un sanctuaire'
+        : cible && !combat.porteesLibres
+          ? horsDePortee(carte?.scene ?? null, carte?.jetons ?? [], moi.id, cible.id, a.portee)
+          : null;
+  /** Couverture de la cible contre une attaque à distance (L6.4b1, 11a). */
+  const defEnPlus = (a: Pick<AttaquePj, 'mode'>, c: AvecId<Combattant>) => (a.mode === 'distance' && carte?.zones ? couverture(carte.zones, carte.jetons, c.id) : 0);
   const jauges = $derived(vue.refonte?.jauges.filter((j) => j.cle !== 'corruptionAme') ?? []);
   const coutDe = (s: AttaqueSpeciale) => (s.cout === 'unParCombat' ? '1×/combat' : `${s.cout.montant} ${jauges.find((j) => j.cle === (s.cout as { ressource: string }).ressource)?.nom ?? (s.cout as { ressource: string }).ressource}`);
   const specialeFaite = $derived(!!moi.usages.attaqueSpeciale);
@@ -132,7 +147,7 @@
     const c = cible;
     if (!c) return;
     return agir(async () => {
-      const i = await attaquer(idCombat, combat, moi, c, { nom: a.nom, bonus: a.bonus, seuilCritique: a.seuilCritique, mode: a.mode }, fiche, Math.random, s ? { s, estoc, carte, fiches, combattants } : null);
+      const i = await attaquer(idCombat, combat, moi, c, { nom: a.nom, bonus: a.bonus, seuilCritique: a.seuilCritique, mode: a.mode, defEnPlus: defEnPlus(a, c) }, fiche, Math.random, s ? { s, estoc, carte, fiches, combattants } : null);
       if (i.touche && a.formule) aLancer = { a, cible: c, critique: i.critique };
       return texteIssue(i, c.nom);
     });
@@ -228,7 +243,7 @@
     const k = carte;
     if (!viseEnCours || !c || !k) return;
     const voir = (x: Visee) => {
-      const a = apercu(k.scene, k.jetons, moi.id, c, x, combat.porteesLibres);
+      const a = apercu(k.scene, k.jetons, moi.id, c, x, combat.porteesLibres, k.zones ?? []);
       return { cases: a.cases, jetons: a.touches, refus: a.refus };
     };
     viseeCarte.v = {

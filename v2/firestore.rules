@@ -606,6 +606,26 @@ service cloud.firestore {
       return s is map && s.keys().hasOnly(['FOR', 'DEX', 'CON', 'Volonte']) && s.keys().hasAll(['FOR', 'DEX', 'CON', 'Volonte'])
         && entierEntre(s.FOR, -10, 40) && entierEntre(s.DEX, -10, 40) && entierEntre(s.CON, -10, 40) && entierEntre(s.Volonte, -10, 40);
     }
+    // Aligné sur schemaZoneSol (src/lib/schemas/zones.ts, L6.4b1). Le détail (sort, danger) est vérifié par l'app.
+    function zoneValide(d) {
+      return d.keys().hasOnly(['nom', 'nature', 'cases', 'ancre', 'lanceur', 'camp', 'filtre', 'quand', 'sort', 'danger', 'dd', 'texte', 'usageUnique', 'cachee', 'rounds', 'declenchements', 'creeLe'])
+        && d.keys().hasAll(['nom', 'nature', 'cases', 'ancre', 'lanceur', 'camp', 'filtre', 'quand', 'sort', 'danger', 'dd', 'texte', 'usageUnique', 'cachee', 'rounds', 'declenchements', 'creeLe'])
+        && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 60
+        && (d.nature == null || d.nature in ['infranchissable', 'difficile', 'dangereuse', 'speciale', 'glissant', 'bloquant', 'couverture', 'enflamme', 'sanctuaire', 'illusion', 'sanctifie', 'electrifie'])
+        && d.cases is list && d.cases.size() >= 1 && d.cases.size() <= 200
+        && (d.ancre == null || d.ancre is map) && (d.lanceur == null || d.lanceur is string)
+        && (d.ancre != null || d.lanceur != null)
+        && (d.camp == null || d.camp in ['pj', 'monstre'])
+        && d.filtre in ['tous', 'ennemis', 'allies']
+        && (d.quand == null || d.quand in ['entree', 'finDeplacement', 'debutTour', 'finTour'])
+        && (d.sort == null || d.sort is map) && (d.danger == null || d.danger is map)
+        && (d.dd == null || entierEntre(d.dd, 5, 30))
+        && (d.texte == null || (d.texte is string && d.texte.size() <= 200))
+        && d.usageUnique is bool && d.cachee is bool
+        && (d.rounds == null || entierEntre(d.rounds, 1, 99))
+        && d.declenchements is map && d.declenchements.size() <= 100
+        && d.creeLe is int;
+    }
     // Un jet de mort (L6.2, 7a) : une réussite ou un échec de plus ; la troisième réussite remet tout à zéro, le troisième échec tue.
     function jetDeMortValide(n, o) {
       return (n.mortSucces == o.mortSucces + 1 && n.mortEchecs == o.mortEchecs && !n.mort)
@@ -753,6 +773,15 @@ service cloud.firestore {
         match /dessins/{dessin} {
           allow read: if estMembre(table);
           allow create, update: if estMj(table) && dessinValide(request.resource.data);
+          allow delete: if estMj(table);
+        }
+
+        // Cases du MJ (L6.4b1, 1a, 3a, 4a) : le MJ seul les peint, les
+        // déclenche et les efface ; un joueur ne lit que celles qui ne sont
+        // pas cachées (sa requête : cachee == false).
+        match /zones/{zone} {
+          allow read: if estMj(table) || (estMembre(table) && resource.data.cachee == false);
+          allow create, update: if estMj(table) && zoneValide(request.resource.data);
           allow delete: if estMj(table);
         }
 
@@ -1034,6 +1063,15 @@ service cloud.firestore {
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['actif', 'round', 'tour'])
               && request.resource.data.tour == resource.data.tour + 1
               && request.resource.data.round in [resource.data.round, resource.data.round + 1]));
+
+        // Zones de sort et pièges (L6.4b1, 5a, 7a, 9a, 10a) : le joueur qui a
+        // la main les pose, les déclenche (en bougeant, ou en finissant son
+        // tour : le décompte de ses zones) et les retire ; le MJ, toujours.
+        match /zones/{zone} {
+          allow read: if estMembre(table);
+          allow create, update: if zoneValide(request.resource.data) && (estMj(table) || (estJoueur(table) && aLaMain(table, combat)));
+          allow delete: if estMj(table) || (estJoueur(table) && aLaMain(table, combat));
+        }
 
         // Un combattant par jeton. Le joueur y lance son initiative (une fois)
         // et note ses actions du tour, à son tour seulement (7a).

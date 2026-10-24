@@ -28,6 +28,8 @@ export function pousser(scene: SceneCalcul, jetons: readonly JetonCarte[], idAtt
   const vers = { cx: c.cx + dx, cy: c.cy + dy };
   if (vers.cx < 0 || vers.cy < 0 || vers.cx >= scene.colonnes || vers.cy >= scene.lignes) return { collision: 'decor' };
   if (obstacleDeplacement(scene, c, vers)) return { collision: 'decor' };
+  // L6.4b1 (1a) : une case infranchissable arrête la poussée comme le décor.
+  if (scene.infranchissables?.has(`${vers.cx},${vers.cy}`)) return { collision: 'decor' };
   const p0 = centre(c), p1 = centre(vers);
   if (scene.obstacles.some(([x, y]) => intersectionSegments(p0, p1, x, y))) return { collision: 'decor' };
   if (caseOccupee(jetons, vers.cx, vers.cy)) return { collision: 'jeton', avec: jetons.find((j) => j.cx === vers.cx && j.cy === vers.cy && !j.mort)!.id };
@@ -51,7 +53,7 @@ export function attirer(scene: SceneCalcul, jetons: readonly JetonCarte[], idLan
   const dx = Math.sign(a.cx - c.cx), dy = Math.sign(a.cy - c.cy);
   const vers = { cx: c.cx + dx, cy: c.cy + dy };
   if ((!dx && !dy) || (vers.cx === a.cx && vers.cy === a.cy)) return null;
-  if (obstacleDeplacement(scene, c, vers) || caseOccupee(jetons, vers.cx, vers.cy)) return null;
+  if (obstacleDeplacement(scene, c, vers) || caseOccupee(jetons, vers.cx, vers.cy) || scene.infranchissables?.has(`${vers.cx},${vers.cy}`)) return null;
   const p0 = centre(c), p1 = centre(vers);
   return scene.obstacles.some(([x, y]) => intersectionSegments(p0, p1, x, y)) ? null : vers;
 }
@@ -95,5 +97,6 @@ export function arriveePermise(scene: SceneCalcul, jetons: readonly JetonCarte[]
   if (vers.cx < 0 || vers.cy < 0 || vers.cx >= scene.colonnes || vers.cy >= scene.lignes) return 'hors de la carte';
   if (Math.max(Math.abs(vers.cx - c.cx), Math.abs(vers.cy - c.cy)) > cases) return `${cases} case${cases > 1 ? 's' : ''} au plus`;
   if (caseOccupee(jetons.filter((j) => j.id !== idCible), vers.cx, vers.cy)) return 'case prise';
+  if (scene.infranchissables?.has(`${vers.cx},${vers.cy}`)) return 'case infranchissable';
   return null;
 }

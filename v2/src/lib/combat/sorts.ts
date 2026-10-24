@@ -12,6 +12,7 @@ import type { Fiche, FicheV2 } from '../schemas/fiche.ts';
 import { attaquesDuPj } from './attaques-pj.ts';
 import { bonusFixe } from './bonus.ts';
 import { famillesManiees } from './speciales.ts';
+import { protegeParSanctuaire, type ZoneActive } from './zones-sol.ts';
 import { casesDeZone, jetonsDansZone, porteeEnCases, refusDePortee, type CaseTouchee, type ZoneSort } from './zone.ts';
 
 /*
@@ -197,7 +198,7 @@ export interface ApercuVisee {
  * dedans, ou les jetons visés ; un refus de portée ou de vue (sauf portées
  * libres).
  */
-export function apercu(scene: SceneCalcul, jetons: readonly JetonCarte[], idLanceur: string, c: CiblageSort, v: Visee, porteesLibres: boolean): ApercuVisee {
+export function apercu(scene: SceneCalcul, jetons: readonly JetonCarte[], idLanceur: string, c: CiblageSort, v: Visee, porteesLibres: boolean, zones: readonly ZoneActive[] = []): ApercuVisee {
   const lanceur = jetons.find((j) => j.id === idLanceur);
   if (!lanceur) return { cases: [], touches: [], refus: 'ton jeton n’est pas sur la carte' };
   const viseCase = v.point ?? (v.cibles[0] ? (jetons.find((j) => j.id === v.cibles[0]) ?? null) : null);
@@ -207,6 +208,8 @@ export function apercu(scene: SceneCalcul, jetons: readonly JetonCarte[], idLanc
     if (c.type === 'creature') for (const id of v.cibles) refus ??= verifier(jetons.find((j) => j.id === id) ?? lanceur);
     else if (c.type === 'point' && v.point) refus = verifier(v.point);
   }
+  // L6.4b1 (11a) : une créature dans un sanctuaire où le lanceur n'est pas ne se vise pas.
+  if (c.type === 'creature' && v.cibles.some((id) => protegeParSanctuaire(zones, jetons, idLanceur, id))) refus = 'la cible est dans un sanctuaire';
   const cases = c.zone && (viseCase || c.zone.origine === 'lanceur') ? casesDeZone(scene, c.zone, lanceur, viseCase ?? lanceur) : [];
   const dansZone = jetonsDansZone(jetons, cases, idLanceur).map((x) => x.id);
   return { cases, touches: [...new Set([...v.cibles, ...dansZone])], refus };
@@ -304,7 +307,7 @@ export function preparerLancer(
   moi: Combattant & { id: string },
   combat: Pick<Combat, 'round' | 'tour' | 'porteesLibres'>,
   choix: ChoixDuLancer,
-  carte: { scene: SceneCalcul; jetons: readonly JetonCarte[] } | null,
+  carte: { scene: SceneCalcul; jetons: readonly JetonCarte[]; zones?: readonly ZoneActive[] } | null,
   combattants: readonly (Combattant & { id: string })[],
   fiches: ReadonlyMap<string, Fiche>,
   alea: () => number,
@@ -333,7 +336,7 @@ export function preparerLancer(
   };
   let zone: CibleEnJeu[] | undefined;
   if (carte) {
-    const a = apercu(carte.scene, carte.jetons, moi.id, c, choix.visee, combat.porteesLibres);
+    const a = apercu(carte.scene, carte.jetons, moi.id, c, choix.visee, combat.porteesLibres, carte.zones ?? []);
     if (a.refus) return `Hors d’atteinte : ${a.refus}.`;
     if (c.zone) {
       const pris = jetonsDansZone(carte.jetons, a.cases, moi.id);

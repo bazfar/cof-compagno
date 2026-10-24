@@ -3,6 +3,10 @@
   import { attaqueDeMonstre, poserEtatSur, retirerEtatDe } from '../lib/actions/attaques';
   import { ajusterPvMonstre, corrigerSauvegardes, RefusCombat } from '../lib/actions/combat';
   import { texteBonus } from '../lib/combat/bonus';
+  import { couverture, protegeParSanctuaire, texteZone } from '../lib/combat/zones-sol';
+  import { retirerZone } from '../lib/actions/zones';
+  import { suivreZonesCombat } from '../lib/magasins/zones.svelte';
+  import type { ZoneSol } from '../lib/schemas/zones';
   import { messageErreurJournal } from '../lib/actions/journal';
   import { attaquesDuMonstre, horsDePortee, type AttaqueMonstre, type CarteDuCombat } from '../lib/combat/attaque';
   import { ciblable, defenseVisee, etatsPosables, regleEtat, texteEtat } from '../lib/combat/etats';
@@ -39,6 +43,10 @@
    * Lot L6.4a (8a, 11a, 12a) : les sauvegardes du monstre, dérivées du
    * bestiaire au démarrage, que le MJ corrige ; les PV temporaires et les
    * bonus du combat de chacun.
+   *
+   * Lot L6.4b1 (16a, 11a) : les zones au sol du combat, que le MJ retire ;
+   * un PJ dans un sanctuaire ne se vise pas, sa couverture compte contre
+   * une attaque à distance.
    */
 
   let { carte = null }: { carte?: CarteDuCombat | null } = $props();
@@ -54,17 +62,21 @@
     armes.arreter();
   });
   const idCombat = $derived(table.etat.donnees?.combat ?? null);
-  let suivi = $state<{ c: DocumentSuivi<Combat>; m: CollectionSuivie<Combattant> } | null>(null);
+  let suivi = $state<{ c: DocumentSuivi<Combat>; m: CollectionSuivie<Combattant>; z: CollectionSuivie<ZoneSol> } | null>(null);
   $effect(() => {
     if (!idCombat) return;
-    const x = { c: suivreCombat(session.table, idCombat), m: suivreCombattants(session.table, idCombat) };
+    const x = { c: suivreCombat(session.table, idCombat), m: suivreCombattants(session.table, idCombat), z: suivreZonesCombat(session.table, idCombat) };
     suivi = x;
     return () => {
       x.c.arreter();
       x.m.arreter();
+      x.z.arreter();
       suivi = null;
     };
   });
+  // L6.4b1 (16a) : les zones au sol du combat, que le MJ retire à la main.
+  const zonesCombat = $derived(suivi?.z.etat.elements ?? []);
+  const nomDe = (id: string | null) => (id ? (combattants.find((c) => c.id === id)?.nom ?? id) : 'MJ');
   const combat = $derived(suivi?.c.etat.donnees ?? null);
   const combattants = $derived(ordreCombat(suivi?.m.etat.elements ?? []));
   let choisi = $state('');
@@ -92,7 +104,12 @@
   const ciblePj = $derived(ciblesPj.find((x) => x.c.id === cibleChoisie) ?? ciblesPj[0] ?? null);
   let outrePortee = $state(false);
   const principalePrise = $derived(!!montre && !!combat && actionsDuTour(montre, combat.tour).principale);
-  const refusPortee = (a: AttaqueMonstre) => (montre && ciblePj && !outrePortee ? horsDePortee(carte?.scene ?? null, carte?.jetons ?? [], montre.id, ciblePj.c.id, a.portee) : null);
+  const refusPortee = (a: AttaqueMonstre) =>
+    montre && ciblePj && carte?.zones && protegeParSanctuaire(carte.zones, carte.jetons, montre.id, ciblePj.c.id)
+      ? 'la cible est dans un sanctuaire'
+      : montre && ciblePj && !outrePortee
+        ? horsDePortee(carte?.scene ?? null, carte?.jetons ?? [], montre.id, ciblePj.c.id, a.portee)
+        : null;
   let resultat = $state('');
   // ---- États (L6.3, 4b) ----
   const posables = etatsPosables();
@@ -118,7 +135,9 @@
     resultat = '';
     occupe = true;
     try {
-      const r = await attaqueDeMonstre(idCombat, combat, montre, a, cible.c, f);
+      // L6.4b1 (11a) : la couverture du PJ contre une attaque à distance.
+      const defEnPlus = a.portee.vue && carte?.zones ? couverture(carte.zones, carte.jetons, cible.c.id) : 0;
+      const r = await attaqueDeMonstre(idCombat, combat, montre, { ...a, defEnPlus }, cible.c, f);
       resultat =
         r.net === null
           ? `${a.nom} : raté (${r.issue.echecCritique ? '1 naturel' : `${r.issue.total} contre CA ${r.issue.def}`}).`
@@ -260,6 +279,20 @@
       {/if}
       {#if message}<p class="erreur" role="alert">{message}</p>{/if}
     </section>
+
+    {#if zonesCombat.length}
+      <section class="carte pjs" aria-label="Zones au sol">
+        <h2>Zones au sol</h2>
+        <ul>
+          {#each zonesCombat as z (z.id)}
+            <li>
+              <span>{texteZone(z)} · {nomDe(z.lanceur)}{z.usageUnique ? ' · piège' : ''}</span>
+              <button class="petit discret" aria-label="Retirer {texteZone(z)}" disabled={occupe} onclick={() => etatAgir(() => retirerZone({ combat: idCombat! }, z.id))}>Retirer</button>
+            </li>
+          {/each}
+        </ul>
+      </section>
+    {/if}
 
     <section class="carte pjs" aria-label="Les PJ du combat">
       <h2>Les PJ</h2>

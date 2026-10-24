@@ -1,3 +1,4 @@
+import { traceBresenham } from './ciblage.ts';
 import { borner, centre, distanceCases, distancePointSegment, intersectionSegments, type Case, type JetonCarte, type Point, type Porte, type SceneCalcul } from './geometrie.ts';
 
 /*
@@ -179,4 +180,22 @@ export function contactsPerdus(jetons: readonly JetonCarte[], bouge: JetonCarte,
     .filter((j) => j.genre === 'pj' && j.id !== bouge.id)
     .filter((j) => distanceCases(avant, j) <= 1 && distanceCases(apres, j) > 1)
     .map((j) => j.id);
+}
+
+/*
+ * Lot L6.4b1 (décisions 1a, 2a de Thomas du 24/10/2026) : les cases que les
+ * zones au sol rendent infranchissables ou difficiles (lib/combat/zones-sol.ts).
+ */
+
+/** Coût d'un pas (2a) : la distance, plus une case par case difficile traversée (départ exclu). */
+export function coutDuPas(de: Case, vers: Case, difficiles: ReadonlySet<string> | undefined): number {
+  const chemin = traceBresenham(de.cx, de.cy, vers.cx, vers.cy);
+  const plus = difficiles?.size ? chemin.filter((c) => difficiles.has(`${c.x},${c.y}`)).length : 0;
+  return Math.max(Math.abs(vers.cx - de.cx), Math.abs(vers.cy - de.cy)) + plus;
+}
+
+/** Le pas traverse-t-il une case infranchissable (départ exclu) ? */
+export function traverseInfranchissable(de: Case, vers: Case, infranchissables: ReadonlySet<string> | undefined): boolean {
+  if (!infranchissables?.size) return false;
+  return traceBresenham(de.cx, de.cy, vers.cx, vers.cy).some((c) => infranchissables.has(`${c.x},${c.y}`));
 }

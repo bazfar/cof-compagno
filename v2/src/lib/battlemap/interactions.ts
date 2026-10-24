@@ -1,5 +1,5 @@
-import { caseOccupee, obstacleDeplacement, type Obstacle } from './deplacement.ts';
-import { distanceCases, distancePointSegment, type Case, type JetonCarte, type Point, type Porte, type SceneCalcul } from './geometrie.ts';
+import { caseOccupee, coutDuPas, obstacleDeplacement, traverseInfranchissable, type Obstacle } from './deplacement.ts';
+import { distancePointSegment, type Case, type JetonCarte, type Point, type Porte, type SceneCalcul } from './geometrie.ts';
 
 /*
  * Ce que fait un geste sur la carte (lot L5.2), sans DOM : quel jeton ou
@@ -79,6 +79,8 @@ export function pasDeGlisser(
   if (jeton.genre !== 'pj') return { case: visee, arret: null };
   const obstacle = obstacleDeplacement(scene, actuelle, visee);
   if (obstacle) return { case: actuelle, arret: obstacle };
+  // L6.4b1 (1a) : une case infranchissable du MJ arrête un PJ, comme un mur.
+  if (traverseInfranchissable(actuelle, visee, scene.infranchissables)) return { case: actuelle, arret: 'mur' };
   const autres = jetons.filter((j) => j.id !== jeton.id);
   if (caseOccupee(autres, visee.cx, visee.cy)) return { case: actuelle, arret: 'occupant' };
   return { case: visee, arret: null };
@@ -99,7 +101,8 @@ export function pasDeGlisserBorne(
   restant: number,
 ): { case: Case; cout: number; arret: Obstacle | 'epuise' | null } {
   const p = pasDeGlisser(scene, jetons, jeton, actuelle, visee);
-  const cout = distanceCases(actuelle, p.case);
+  // L6.4b1 (2a) : entrer dans une case difficile coûte 2 cases.
+  const cout = coutDuPas(actuelle, p.case, scene.difficiles);
   if (cout > restant) return { case: actuelle, cout: 0, arret: 'epuise' };
   return { case: p.case, cout, arret: p.arret };
 }

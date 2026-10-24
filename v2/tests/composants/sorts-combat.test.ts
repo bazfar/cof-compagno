@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { readFileSync } from 'node:fs';
 import { flushSync } from 'svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -57,6 +57,15 @@ const journal = vi.hoisted(() => ({ lancerEtNoter: vi.fn(async () => null), mess
 vi.mock('../../src/lib/actions/journal', () => journal);
 vi.mock('../../src/lib/magasins/carte.svelte', async () => (await import('./faux-magasins.svelte')).magasinsCarte);
 vi.mock('../../src/lib/magasins/combat.svelte', async () => (await import('./faux-magasins.svelte')).magasinsCombat);
+vi.mock('../../src/lib/magasins/zones.svelte', async () => (await import('./faux-magasins.svelte')).magasinsZones);
+const zonesActions = vi.hoisted(() => ({
+  apresDeplacement: vi.fn(async (..._a: unknown[]) => 0),
+  peindreCase: vi.fn(async (..._a: unknown[]) => {}),
+  retirerZone: vi.fn(async (..._a: unknown[]) => {}),
+  zonesDuDebutDeTour: vi.fn(async (..._a: unknown[]) => 0),
+  idCase: (c: { cx: number; cy: number }) => `c-${c.cx}-${c.cy}`,
+}));
+vi.mock('../../src/lib/actions/zones', () => zonesActions);
 vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPersos);
 vi.mock('../../src/lib/magasins/presents.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPresents);
 vi.mock('../../src/lib/magasins/bestiaire.svelte', async () => (await import('./faux-magasins.svelte')).magasinsBestiaire);
@@ -66,13 +75,14 @@ vi.mock('../../src/composants/CarteTable.svelte', async () => ({ default: (await
 
 
 const faux = await import('./faux-magasins.svelte');
-const { table, persos, combatDoc, combattants, jetonsScene, joueurs } = faux;
+const { table, persos, combatDoc, combattants, jetonsScene, joueurs, zonesCombat } = faux;
 const { session } = await import('../../src/lib/session.svelte');
 const { ficheDepuisV1 } = await import('../../src/lib/regles/fiche-document');
 const F = await import('../../src/lib/fiche/refonte');
 const { classeParId } = await import('../../src/regles');
 const { default: BarreCombat } = await import('../../src/composants/BarreCombat.svelte');
 const { default: PanneauCombat } = await import('../../src/composants/PanneauCombat.svelte');
+const { default: CombatMj } = await import('../../src/composants/CombatMj.svelte');
 const { viseeCarte } = await import('../../src/lib/combat/visee.svelte');
 const { default: BandeauCombat } = await import('../../src/composants/BandeauCombat.svelte');
 type Combattant = import('../../src/lib/schemas/combat').Combattant;
@@ -111,6 +121,8 @@ beforeEach(() => {
   jetonsScene.elements = [];
   joueurs.elements = [];
   viseeCarte.v = null;
+  zonesCombat.elements = [];
+  Object.values(zonesActions).forEach((f) => typeof f === 'function' && 'mockClear' in f && (f as { mockClear: () => void }).mockClear());
 });
 
 describe('le bloc « Sorts et capacités » (13a)', () => {
@@ -316,5 +328,45 @@ describe('PV temporaires, bonus, sauvegardes (8a, 11a, 12a)', () => {
     render(PanneauCombat);
     expect(screen.getByText('Sauvegardes à donner (+0)')).toBeTruthy();
     expect((screen.getByLabelText('Sauvegarde FOR') as HTMLInputElement).value).toBe('0');
+  });
+});
+
+describe('zones au sol à l’écran (L6.4b1 : 7a, 11a, 16a)', () => {
+  const zone = (z: Record<string, unknown> = {}, id = 'z1') => ({
+    id, nom: 'Zone', nature: null, cases: [{ dx: 0, dy: 0 }], ancre: { cx: 3, cy: 2 }, lanceur: null, camp: null, filtre: 'tous', quand: null, sort: null, danger: null, dd: null, texte: null,
+    usageUnique: false, cachee: false, rounds: null, declenchements: {}, creeLe: 1, ...z,
+  });
+
+  it('11a : une goule dans un sanctuaire où il n’est pas ne se vise pas, ni d’une arme ni d’un sort', async () => {
+    const k = { ...carte, zones: [zone({ nature: 'sanctuaire', nom: 'Sanctuaire' })] as never };
+    barre({ carte: k });
+    expect(screen.getByText(/: la cible est dans un sanctuaire\./)).toBeTruthy();
+    await fireEvent.change(screen.getByLabelText('Sort ou capacité'), { target: { value: 'evocation.choc' } });
+    await fireEvent.click(bouton('Viser sur la carte'));
+    expect(viseeCarte.v!.apercu({ cx: 3, cy: 2 }).refus).toBe('la cible est dans un sanctuaire');
+  });
+
+  it('16a : le MJ voit les zones du combat, leur lanceur, et les retire', async () => {
+    combatDoc.donnees = combat({ actif: 'm-r1-a' });
+    combattants.elements = [goule(), pj('p1', { nom: 'Shyrion' })];
+    zonesCombat.elements = [zone({ nom: 'Givre', rounds: 2, lanceur: 'pj-p1', camp: 'pj' }, 'g'), zone({ nom: 'Piège de fortune', usageUnique: true, lanceur: 'pj-p1', camp: 'pj' }, 'p')];
+    render(PanneauCombat);
+    const liste = within(screen.getByRole('region', { name: 'Zones au sol' }));
+    expect(liste.getByText('Givre (2) · Shyrion')).toBeTruthy();
+    expect(liste.getByText('Piège de fortune · Shyrion · piège')).toBeTruthy();
+    await fireEvent.click(liste.getByRole('button', { name: 'Retirer Givre (2)' }));
+    expect(zonesActions.retirerZone).toHaveBeenCalledWith({ combat: 'c1' }, 'g');
+  });
+
+  it('7a : la main arrive à un combattant : le client du MJ joue les zones sur sa case, une fois par tour', async () => {
+    session.uid = 'mj';
+    combatDoc.donnees = combat({ actif: 'm-r1-a' });
+    combattants.elements = [goule(), pj('p1')];
+    zonesCombat.elements = [zone({ quand: 'debutTour' })];
+    render(CombatMj);
+    await waitFor(() => expect(zonesActions.zonesDuDebutDeTour).toHaveBeenCalledWith(expect.objectContaining({ lieu: { combat: 'c1' }, combat: { id: 'c1', tour: 6 }, auteur: 'MJ' }), 'm-r1-a'));
+    combattants.elements = [...combattants.elements];
+    flushSync();
+    expect(zonesActions.zonesDuDebutDeTour).toHaveBeenCalledTimes(1);
   });
 });

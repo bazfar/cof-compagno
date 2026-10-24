@@ -11,7 +11,8 @@ import { segmentsBloquants } from '../battlemap/visibilite.ts';
  *   - cercle N : rayon N, en distance de cases (Chebyshev, comme
  *     jetonsEnZone de la v1) ;
  *   - ligne N : N cases depuis le lanceur vers la case visée, arrêtée par
- *     le premier obstacle (ligneCases, v1) ;
+ *     le premier obstacle (ligneCases, v1) ; posée sur une case (Rempart,
+ *     L6.4b1), elle se dresse en travers de la direction du lanceur ;
  *   - cône N (7a) : le quart de plan de 90° ouvert du lanceur vers la case
  *     visée, sur N cases ;
  *   - une case derrière un mur, vue du centre de la zone, n'est pas
@@ -39,6 +40,17 @@ export function centreDeZone(zone: ZoneSort, lanceur: Case, vise: Case): Case {
 
 /** Les cases d'une zone, avec leur anneau ; la case du lanceur n'en fait jamais partie pour une ligne ou un cône. */
 export function casesDeZone(scene: SceneCalcul, zone: ZoneSort, lanceur: Case, vise: Case): CaseTouchee[] {
+  // L6.4b1 : une ligne posée sur une case (Rempart) se dresse en travers, centrée sur elle, de biais à la direction du lanceur.
+  if (zone.forme === 'ligne' && zone.origine === 'point') {
+    const sx = Math.sign(vise.cx - lanceur.cx), sy = Math.sign(vise.cy - lanceur.cy);
+    const [px, py] = sx || sy ? [-sy, sx] : [1, 0];
+    const r: CaseTouchee[] = [];
+    for (let k = -Math.floor((zone.taille - 1) / 2); k <= Math.ceil((zone.taille - 1) / 2); k++) {
+      const c = { cx: vise.cx + k * px, cy: vise.cy + k * py };
+      if (dans(scene, c)) r.push({ ...c, anneau: Math.abs(k) });
+    }
+    return r;
+  }
   if (zone.forme === 'ligne') return ligneCases(scene, lanceur, vise, zone.taille).cases.map((c, i) => ({ cx: c.x, cy: c.y, anneau: i }));
   const segs = segmentsBloquants(scene);
   if (zone.forme === 'cone') {

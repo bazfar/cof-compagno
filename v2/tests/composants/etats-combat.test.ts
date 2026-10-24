@@ -51,6 +51,15 @@ const journal = vi.hoisted(() => ({ lancerEtNoter: vi.fn(async () => null), mess
 vi.mock('../../src/lib/actions/journal', () => journal);
 vi.mock('../../src/lib/magasins/carte.svelte', async () => (await import('./faux-magasins.svelte')).magasinsCarte);
 vi.mock('../../src/lib/magasins/combat.svelte', async () => (await import('./faux-magasins.svelte')).magasinsCombat);
+vi.mock('../../src/lib/magasins/zones.svelte', async () => (await import('./faux-magasins.svelte')).magasinsZones);
+const zonesActions = vi.hoisted(() => ({
+  apresDeplacement: vi.fn(async (..._a: unknown[]) => 0),
+  peindreCase: vi.fn(async (..._a: unknown[]) => {}),
+  retirerZone: vi.fn(async (..._a: unknown[]) => {}),
+  zonesDuDebutDeTour: vi.fn(async (..._a: unknown[]) => 0),
+  idCase: (c: { cx: number; cy: number }) => `c-${c.cx}-${c.cy}`,
+}));
+vi.mock('../../src/lib/actions/zones', () => zonesActions);
 vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPersos);
 vi.mock('../../src/lib/magasins/presents.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPresents);
 vi.mock('../../src/lib/magasins/bestiaire.svelte', async () => (await import('./faux-magasins.svelte')).magasinsBestiaire);

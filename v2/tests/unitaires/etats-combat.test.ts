@@ -35,11 +35,19 @@ vi.mock('firebase/firestore', () => {
         },
       };
     },
+    getDocs: async (q: { chemin: string; w?: { champ: string; v: unknown } }) => ({
+      docs: [...base.entries()]
+        .filter(([k, d]) => k.startsWith(`${q.chemin}/`) && !k.slice(q.chemin.length + 1).includes('/') && (!q.w || d[q.w.champ] === q.w.v))
+        .map(([k, d]) => ({ id: k.split('/').pop(), data: () => d })),
+    }),
+    query: (c: { chemin: string }, w?: { champ: string; v: unknown }) => ({ ...c, w }),
+    where: (champ: string, _op: string, v: unknown) => ({ champ, v }),
     runTransaction: async (_db: unknown, f: (tx: unknown) => Promise<unknown>) => {
       const ecritures: typeof appels = [];
       const tx = {
         get: async (r: { chemin: string }) => lu(r.chemin),
         update: (r: { chemin: string }, donnees: unknown) => ecritures.push({ fn: 'tx.update', chemin: r.chemin, donnees }),
+        delete: (r: { chemin: string }) => ecritures.push({ fn: 'tx.delete', chemin: r.chemin }),
       };
       const r = await f(tx);
       appels.push(...ecritures);

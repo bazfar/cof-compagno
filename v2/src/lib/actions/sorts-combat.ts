@@ -2,13 +2,15 @@ import { doc, runTransaction, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/client';
 import { actionParId } from '../../regles/index.ts';
 import { lancerDegats, type CarteDuCombat } from '../combat/attaque';
-import { appliquerChangements, type Lu } from '../combat/changements';
+import { appliquerChangements, texteJet, type Lu } from '../combat/changements';
 import { peutAgir } from '../combat/etats';
 import { actionsDuTour } from '../combat/ordre';
 import { arriveePermise, DEGATS_COLLISION_DECOR, DEGATS_COLLISION_JETON, trajet } from '../combat/poussee';
 import { payer, type Jauges } from '../combat/ressources';
-import { CATALOGUE, ciblageDe, preparerLancer, sortsDeCombat, type ChoixDuLancer } from '../combat/sorts';
-import { resoudreLancer, type JetNote } from '../effets/resolution';
+import { zoneDuSort } from '../combat/effets-zone';
+import { apercu, CATALOGUE, ciblageDe, preparerLancer, sortsDeCombat, type ChoixDuLancer } from '../combat/sorts';
+import { centreDeZone } from '../combat/zone';
+import { resoudreLancer } from '../effets/resolution';
 import { ppDisponibles } from '../fiche/sorts-hors-combat';
 import { vueFiche } from '../fiche/vue-fiche';
 import type { Case } from '../battlemap/geometrie';
@@ -18,6 +20,7 @@ import { session } from '../session.svelte';
 import { blesser } from './attaques';
 import { RefusCombat } from './combat';
 import { noterJet } from './journal';
+import { apresDeplacement, poserZone, type ContexteZones } from './zones';
 
 /*
  * Lancer un sort ou une capacité en combat (lot L6.4a, décisions de Thomas
@@ -56,12 +59,7 @@ export interface SortLance {
   aPlacer: APlacer[];
 }
 
-/** « sauvegarde de DEX 14 contre DD 13 : réussie » ; « attaque magique 17 contre DEF 12 : touché ». */
-export function texteJet(j: JetNote): string {
-  const des = j.des.length > 1 ? ` (${j.des.join(', ')})` : '';
-  const issue = j.reussi === undefined ? '' : j.quoi.startsWith('attaque') ? (j.reussi ? (j.critique ? ' : critique' : ' : touché') : ' : raté') : j.reussi ? ' : réussi' : ' : raté';
-  return `${j.quoi} ${j.total}${des}${j.contre !== undefined ? ` contre ${j.quoi.startsWith('attaque') ? 'DEF' : j.quoi.startsWith('maîtrise') ? 'échec sur' : 'DD'} ${j.contre}` : ''}${issue}`;
-}
+export { texteJet };
 
 /**
  * Le joueur lance un sort ou une capacité, à son tour (2a, 5a) : le moteur
@@ -142,6 +140,32 @@ export async function lancerSortEnCombat(
     return ecr;
   });
 
+  // L6.4b1 (5a, 8a, 10a) : une zone qui dure, un piège ou un terrain reste au sol.
+  const lanceurJeton = carte?.jetons.find((j) => j.id === moi.id) ?? null;
+  const cib = ciblageDe(s.id, r.palierLance);
+  let zonePosee: string | null = null;
+  if (carte && lanceurJeton && cib && r.issue === 'reussi') {
+    const vise = choix.visee.point ?? carte.jetons.find((j) => j.id === choix.visee.cibles[0]) ?? lanceurJeton;
+    const cases = cib.zone ? apercu(carte.scene, carte.jetons, moi.id, cib, choix.visee, true).cases : cib.type === 'point' ? [vise] : [];
+    const suit = !!cib.zone && cib.zone.origine === 'lanceur' && (cib.zone.forme === 'carre' || cib.zone.forme === 'cercle');
+    const l = lancer.lanceur;
+    const mods = Object.fromEntries(Object.entries(l.mods ?? {}).filter(([, v]) => Number.isInteger(v)));
+    const z = zoneDuSort({
+      action: s.id,
+      palier: r.palierLance,
+      element: lancer.element ?? null,
+      lanceur: { id: moi.id, nom: fiche.nom.slice(0, 40), camp: 'pj', def: l.def, sauvegardes: { FOR: l.sauvegardes.FOR, DEX: l.sauvegardes.DEX, CON: l.sauvegardes.CON, Volonte: l.sauvegardes.Volonte }, modMagie: l.modMagie, attaqueMagique: l.attaqueMagique, niveau: l.niveau ?? 1, mods },
+      dd: r.dd,
+      cases,
+      ancre: suit ? lanceurJeton : cib.zone ? centreDeZone(cib.zone, lanceurJeton, vise) : vise,
+      suit,
+      changements: r.changements,
+      maintenant: Date.now(),
+    });
+    if (z) zonePosee = await poserZone(idCombat, z);
+  }
+  if (zonePosee) e.auMj.splice(0, e.auMj.length, ...e.auMj.filter((x) => !x.startsWith('Terrain')));
+
   // 13a : au journal, le lanceur, puis chaque cible.
   const nom = `${s.nom} ${r.palierLance}`;
   const duLanceur = r.jets.filter((j) => !j.cible);
@@ -185,7 +209,10 @@ export async function lancerSortEnCombat(
     if (t.vers) {
       const v = t.vers;
       await updateDoc(refJeton(combat.scene, d.cible), { cx: v.cx, cy: v.cy });
+      const avant = jetons.find((j) => j.id === d.cible);
       jetons = jetons.map((j) => (j.id === d.cible ? { ...j, cx: v.cx, cy: v.cy } : j));
+      // L6.4b1 (7a) : poussé ou attiré dans une zone, il la déclenche.
+      if (avant && carte.zones?.length) await apresDeplacement(contexteZones(carte, jetons, combat, idCombat, combattants, fiches, fiche.nom), { id: d.cible, de: avant, vers: v }, alea);
     }
     if (t.collision) {
       // L'état d'après le sort : ses états, ses PV temporaires, les PV de sa fiche.
@@ -202,6 +229,19 @@ export async function lancerSortEnCombat(
   }
   const texte = r.issue === 'reussi' ? `${nom} lancé.` : r.issue === 'echecEcole' ? `${nom} : raté, les PP sont dépensés.` : `${nom} : l’élément dérape, le sort échoue.`;
   return { issue: r.issue, texte, aPlacer };
+}
+
+/** Les zones du combat sur la carte, pour les déclencher (L6.4b1). */
+export function contexteZones(
+  carte: CarteDuCombat,
+  jetons: CarteDuCombat['jetons'],
+  combat: Pick<Combat, 'tour'>,
+  idCombat: string,
+  combattants: readonly AvecId<Combattant>[],
+  fiches: ReadonlyMap<string, AvecId<Fiche>>,
+  auteur: string,
+): ContexteZones {
+  return { lieu: { combat: idCombat }, zones: (carte.zones ?? []).filter((z) => !carte.idsZonesCombat || carte.idsZonesCombat.has(z.id)), jetons, combat: { id: idCombat, tour: combat.tour }, combattants, fiches, auteur };
 }
 
 /** Placer un jeton déplacé par un sort (téléporte, libre : 10a) sur la case cliquée. */

@@ -1,6 +1,9 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { debutDeTour, remettreJetsDeMort } from '../lib/actions/attaques';
+  import { zonesDuDebutDeTour } from '../lib/actions/zones';
+  import { suivreZonesCombat } from '../lib/magasins/zones.svelte';
+  import type { ZoneSol } from '../lib/schemas/zones';
   import { marquerMort } from '../lib/actions/carte';
   import { ajouterCombattant, basculerPortees, cloreCombat, demarrerCombat, donnerLaMain, RefusCombat } from '../lib/actions/combat';
   import { messageErreurJournal } from '../lib/actions/journal';
@@ -45,6 +48,9 @@
    * ressource qui repart à chaque combat reprend sa valeur (Ki) ; à la
    * clôture, la Plongée revient à 0 (9a). Quand la main arrive à un
    * combattant, le client du MJ joue ses dégâts par tour, une fois (6a).
+   *
+   * Lot L6.4b1 (7a, 11a) : quand la main arrive à un combattant, le client du MJ
+   * joue les zones du combat sur sa case (Tempête, Ossuaire, sol en feu).
    */
 
   const table = suivreTable(session.table);
@@ -72,14 +78,15 @@
       jetonsSuivis = null;
     };
   });
-  let suivi = $state<{ c: DocumentSuivi<Combat>; m: CollectionSuivie<Combattant> } | null>(null);
+  let suivi = $state<{ c: DocumentSuivi<Combat>; m: CollectionSuivie<Combattant>; z: CollectionSuivie<ZoneSol> } | null>(null);
   $effect(() => {
     if (!idCombat) return;
-    const x = { c: suivreCombat(session.table, idCombat), m: suivreCombattants(session.table, idCombat) };
+    const x = { c: suivreCombat(session.table, idCombat), m: suivreCombattants(session.table, idCombat), z: suivreZonesCombat(session.table, idCombat) };
     suivi = x;
     return () => {
       x.c.arreter();
       x.m.arreter();
+      x.z.arreter();
       suivi = null;
     };
   });
@@ -200,6 +207,19 @@
     const fiche = c.perso ? (persos.etat.elements.find((p) => p.id === c.perso) ?? null) : null;
     const id = idCombat;
     agir(() => debutDeTour(id, combat, c, fiche));
+  });
+  // L6.4b1 (7a, 11a) : la main arrive à un combattant : les zones sur sa case agissent, une fois par tour.
+  const zonesJouees = new Set<string>();
+  $effect(() => {
+    if (!combat || !idCombat || combat.statut !== 'encours' || !combat.actif || !suivi?.z.etat.elements.length) return;
+    const cle = `${combat.tour}:${combat.actif}`;
+    if (zonesJouees.has(cle)) return;
+    zonesJouees.add(cle);
+    const id = idCombat;
+    const fiches = new Map(persos.etat.elements.map((p) => [p.id, p]));
+    const jetons = jetonsSuivis?.etat.elements ?? [];
+    const actif = combat.actif;
+    agir(() => zonesDuDebutDeTour({ lieu: { combat: id }, zones: suivi!.z.etat.elements, jetons, combat: { id, tour: combat.tour }, combattants, fiches, auteur: 'MJ' }, actif));
   });
   // L6.2 (7a) : un PJ relevé ou soigné repart de zéro jet de mort.
   const jetsRemis = new Set<string>();

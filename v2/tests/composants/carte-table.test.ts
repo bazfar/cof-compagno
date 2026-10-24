@@ -40,6 +40,15 @@ vi.mock('../../src/lib/actions/carte', () => ({
 vi.mock('../../src/composants/Battlemap.svelte', async () => ({ default: (await import('./FauxBattlemap.svelte')).default }));
 // Combat (L6.1).
 vi.mock('../../src/lib/magasins/combat.svelte', async () => (await import('./faux-magasins.svelte')).magasinsCombat);
+vi.mock('../../src/lib/magasins/zones.svelte', async () => (await import('./faux-magasins.svelte')).magasinsZones);
+const zonesActions = vi.hoisted(() => ({
+  apresDeplacement: vi.fn(async (..._a: unknown[]) => 0),
+  peindreCase: vi.fn(async (..._a: unknown[]) => {}),
+  retirerZone: vi.fn(async (..._a: unknown[]) => {}),
+  zonesDuDebutDeTour: vi.fn(async (..._a: unknown[]) => 0),
+  idCase: (c: { cx: number; cy: number }) => `c-${c.cx}-${c.cy}`,
+}));
+vi.mock('../../src/lib/actions/zones', () => zonesActions);
 const combatActions = vi.hoisted(() => ({ noterAction: vi.fn(async () => {}) }));
 vi.mock('../../src/lib/actions/combat', () => combatActions);
 

@@ -265,6 +265,13 @@ export interface Lancer {
   /** Caractéristique choisie au lancer (élixirs : bonus `caracAuChoix`, lot L4.8). */
   caracChoisie?: Carac;
   alea?: () => number;
+  /**
+   * Zone qui dure (lot L6.4b1, décision 6a de Thomas du 24/10/2026) : le
+   * sort déjà lancé se rejoue sur qui la déclenche. Ni dérapage, ni d20 de
+   * chaos : ils ont été joués au lancer (le lanceur figé n'a pas d'école,
+   * donc pas d'échec d'école).
+   */
+  rejoue?: true;
 }
 
 // ---------- Sorties ----------
@@ -691,7 +698,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   // 3. Dérapage de l'élément.
   let derape = false; // élément raté : le sort entier échoue (1b)
   // Les souffles du Moine (lot L4.16, 8a) portent un élément sans jet de maîtrise : ce ne sont pas des sorts.
-  const seuilElement = l.element && estSort && (!mineur || affinite) ? seuilEchec(l.element.maitrise) : 0;
+  const seuilElement = l.element && estSort && (!mineur || affinite) && !l.rejoue ? seuilEchec(l.element.maitrise) : 0;
   let ficheDerapee = fiche;
   if (seuilElement) {
     const j = d20(alea, 0);
@@ -724,7 +731,7 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   }
 
   // d20 de chaos (R3 des Voies du chaos, 5a) : 18 à 20, mutation du palier 1.
-  if (action.jetDeChaos) {
+  if (action.jetDeChaos && !l.rejoue) {
     const j = d20(alea, 0);
     jets.push({ quoi: 'd20 de chaos', des: j.des, total: j.garde, contre: 18, reussi: j.garde < 18 });
     if (j.garde >= 18) changements.push({ type: 'mutation', cible: l.lanceur.id, palier: 1 });
