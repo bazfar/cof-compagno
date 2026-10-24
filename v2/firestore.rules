@@ -639,13 +639,16 @@ service cloud.firestore {
         && aLaMain(table, combat);
     }
     // L6.4a (10a) : le sort du joueur qui a la main soigne un allié du combat : ses PV ne font que monter.
+    // Un allié à terre se relève par l'action d'un allié ou par un soin ;
+    // un mort, non (7a) : comme `releveParAllie`, le soin vérifie `mort`.
     function soinParAllie(table, perso) {
       let combat = get(/databases/$(database)/documents/tables/$(table)).data.get('combat', null);
+      let allie = /databases/$(database)/documents/tables/$(table)/combats/$(combat)/combattants/$('pj-' + perso);
       return combat != null
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pvActuel'])
         && request.resource.data.pvActuel is int
         && (resource.data.pvActuel == null || request.resource.data.pvActuel > resource.data.pvActuel)
-        && exists(/databases/$(database)/documents/tables/$(table)/combats/$(combat)/combattants/$('pj-' + perso))
+        && exists(allie) && get(allie).data.mort == false
         && aLaMain(table, combat);
     }
     // L6.3 (12a) : le joueur qui a la main blesse un allié du combat (collision) : ses PV ne font que baisser.
