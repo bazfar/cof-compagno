@@ -96,12 +96,12 @@ const neutre = { physique: 1, magique: 1 };
 const pj = (id: string, c: Partial<Combattant> = {}): Combattant & { id: string } => ({
   id: `pj-${id}`, genre: 'pj', nom: id, perso: id, uid: `u-${id}`, monstre: null, modInit: 1, initiative: 10, de: 9, pv: null, pvMax: null, aTerre: false,
   mvtBase: 5, def: null, armure: 0, resistances: neutre, mortSucces: 0, mortEchecs: 0, mort: false, etats: [], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false,
-  sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+  sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, maitre: null, invocation: null, concentration: null, ...c,
 });
 const monstre = (id: string, c: Partial<Combattant> = {}): Combattant & { id: string } => ({
   id: `m-r1-${id}`, genre: 'monstre', nom: id, perso: null, uid: null, monstre: 'goule', modInit: 3, initiative: 15, de: 12, pv: 14, pvMax: 14, aTerre: false,
   mvtBase: 5, def: 13, armure: 0, resistances: neutre, mortSucces: 0, mortEchecs: 0, mort: false, etats: [], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false,
-  sauvegardes: { FOR: 1, DEX: 2, CON: 1, Volonte: 0 }, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+  sauvegardes: { FOR: 1, DEX: 2, CON: 1, Volonte: 0 }, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, maitre: null, invocation: null, concentration: null, ...c,
 });
 /** Une suite de dés : [valeur, faces]. */
 const suite = (...v: [number, number][]) => {
@@ -667,7 +667,7 @@ describe('lancer en combat (2a, 4a, 5a, 10a, 13a)', () => {
     enBase(goule);
     // Sauvegarde : d20 = 2 (+1) ; dégâts 2d6 = 4 + 5.
     const r = await L.lancerSortEnCombat('c1', combat, moi, f, choix(), carte, [moi, goule], new Map([['p1', f]]), suite([2, 20], [4, 6], [5, 6]));
-    expect(r).toEqual({ issue: 'reussi', texte: 'Choc I lancé.', aPlacer: [] });
+    expect(r).toEqual({ issue: 'reussi', texte: 'Choc I lancé.', aPlacer: [], aInvoquer: [] });
     expect(ecritures()).toEqual([
       { fn: 'tx.update', chemin: `${C}/m-r1-a`, donnees: { pv: 5, aTerre: false } },
       { fn: 'tx.update', chemin: `${C}/pj-p1`, donnees: { tourActions: 6, principale: true, secondaire: false, mvt: 0, sprint: false } },
@@ -758,7 +758,7 @@ describe('lancer en combat (2a, 4a, 5a, 10a, 13a)', () => {
     enBase(moi);
     enBase(goule);
     const r = await L.lancerSortEnCombat('c1', combat, moi, f2, choix({ element: 'feu' }), carte, [moi, goule], new Map([['p1', f2]]), () => 0.05);
-    expect(r).toEqual({ issue: 'derapage', texte: 'Choc I : l’élément dérape, le sort échoue.', aPlacer: [] });
+    expect(r).toEqual({ issue: 'derapage', texte: 'Choc I : l’élément dérape, le sort échoue.', aPlacer: [], aInvoquer: [] });
     expect(ecritures().find((a) => a.chemin === 'tables/t1/persos/p1')!.donnees).toMatchObject({ ppActuel: 6 });
     expect(ecritures().some((a) => a.chemin.endsWith('m-r1-a'))).toBe(false);
     expect(journal.noterJet.mock.calls[0]![1]).toBe('1d20');

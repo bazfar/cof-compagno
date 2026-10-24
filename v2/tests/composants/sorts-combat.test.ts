@@ -47,7 +47,7 @@ const attaques = vi.hoisted(() => ({
 }));
 vi.mock('../../src/lib/actions/attaques', () => attaques);
 const sortsCombat = vi.hoisted(() => ({
-  lancerSortEnCombat: vi.fn(async (..._a: unknown[]) => ({ issue: 'reussi', texte: 'Choc I lancé.', aPlacer: [] as { cible: string; nom: string; cases: number }[] })),
+  lancerSortEnCombat: vi.fn(async (..._a: unknown[]) => ({ issue: 'reussi', texte: 'Choc I lancé.', aPlacer: [] as { cible: string; nom: string; cases: number }[], aInvoquer: [] as never[] })),
   placerParSort: vi.fn(async (..._a: unknown[]) => {}),
 }));
 vi.mock('../../src/lib/actions/sorts-combat', () => sortsCombat);
@@ -95,7 +95,7 @@ const v2 = (nom: string, classe: string, choix: Record<string, unknown> = {}, id
   return { ...F.convertirFiche(f as never, { ...F.refonteVierge(classeParId.get(classe)!, f.niveau), ...choix }), id };
 };
 const neutre = { physique: 1, magique: 1 };
-const base = { modInit: 1, de: 10, pv: null as number | null, pvMax: null as number | null, aTerre: false, mvtBase: 5, def: null as number | null, armure: 0, resistances: neutre, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as EtatCombat[], usages: {} as Record<string, number>, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, monstre: null as string | null };
+const base = { modInit: 1, de: 10, pv: null as number | null, pvMax: null as number | null, aTerre: false, mvtBase: 5, def: null as number | null, armure: 0, resistances: neutre, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as EtatCombat[], usages: {} as Record<string, number>, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, maitre: null, invocation: null, concentration: null, monstre: null as string | null };
 const pj = (id: string, c: Partial<Combattant> = {}) => ({ ...base, id: `pj-${id}`, genre: 'pj' as const, nom: id, perso: id, uid: 'alice', initiative: 11 as number | null, ...c });
 const goule = (c: Partial<Combattant & { id: string }> = {}) => ({ ...base, id: 'm-r1-a', genre: 'monstre' as const, nom: 'Goule A', perso: null, uid: null, monstre: 'goule', modInit: 3, initiative: 15 as number | null, pv: 9, pvMax: 14, def: 13, ...c });
 const combat = (c: Record<string, unknown> = {}) => ({ nom: 'Goules', scene: 'cave', rencontre: 'r1', statut: 'encours' as const, round: 2, tour: 6, actif: 'pj-p1' as string | null, porteesLibres: false, creeLe: 1, closLe: null, ...c });
@@ -280,7 +280,7 @@ describe('le bloc « Sorts et capacités » (13a)', () => {
   });
 
   it('10a : un sort qui téléporte : la case d’arrivée d’un clic', async () => {
-    sortsCombat.lancerSortEnCombat.mockResolvedValueOnce({ issue: 'reussi', texte: 'Portail I lancé.', aPlacer: [{ cible: 'm-r1-a', nom: 'Goule A', cases: 6 }] });
+    sortsCombat.lancerSortEnCombat.mockResolvedValueOnce({ issue: 'reussi', texte: 'Portail I lancé.', aPlacer: [{ cible: 'm-r1-a', nom: 'Goule A', cases: 6 }], aInvoquer: [] });
     barre();
     await fireEvent.change(screen.getByLabelText('Sort ou capacité'), { target: { value: 'mineur.lumiere' } });
     await fireEvent.click(bouton('Lancer Lumière'));

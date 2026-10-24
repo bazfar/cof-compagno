@@ -50,7 +50,7 @@
   $effect(() => portraits.suivre(combattants.flatMap((c) => (c.perso ? [c.perso] : []))));
   const fiches = $derived(new Map(persos.etat.elements.map((p) => [p.id, vueFiche(p).pv])));
   const aTerre = $derived(aTerreDuCombat(combattants));
-  const pvDe = (c: Combattant) => (c.genre === 'monstre' ? (c.pv !== null && c.pvMax !== null ? { actuel: c.pv, max: c.pvMax } : null) : c.perso ? (fiches.get(c.perso) ?? null) : null);
+  const pvDe = (c: Combattant) => (c.genre !== 'pj' ? (c.pv !== null && c.pvMax !== null ? { actuel: c.pv, max: c.pvMax } : null) : c.perso ? (fiches.get(c.perso) ?? null) : null);
 </script>
 
 {#if combat && combat.statut === 'encours' && combattants.length}

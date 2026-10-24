@@ -46,7 +46,7 @@ const combat = (extra: Record<string, unknown> = {}) => ({
 const combattant = (extra: Record<string, unknown> = {}) => ({
   genre: 'pj', nom: 'Kargash', perso: 'p1', uid: 'alice', monstre: null, modInit: 2, initiative: 14, de: 12, pv: null, pvMax: null, aTerre: false,
   mvtBase: 5, def: null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [],
-  tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...extra,
+  tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, maitre: null, invocation: null, concentration: null, ...extra,
 });
 const goule = (extra: Record<string, unknown> = {}) =>
   combattant({ genre: 'monstre', nom: 'Goule', perso: null, uid: null, monstre: 'goule', modInit: 3, pv: 14, pvMax: 14, def: 13, armure: 1, resistances: { physique: 0.5, magique: 1 }, ...extra });
@@ -359,5 +359,76 @@ describe('zones au sol (L6.4b1)', () => {
     await poser(C, combat({ actif: 'm-r1-a' }));
     await assertFails(pour('alice').doc(`${Z}/z3`).update({ rounds: 1 }));
     await assertSucceeds(pour('bob').doc(`${Z}/z3`).delete());
+  });
+});
+
+describe('concentration et invocations (L6.4b2)', () => {
+  const tison = (extra: Record<string, unknown> = {}) =>
+    combattant({
+      genre: 'invocation', nom: 'Tison', perso: null, uid: 'alice', monstre: null, pv: 27, pvMax: 27, def: 15, initiative: 13, de: 11, maitre: 'pj-p1',
+      invocation: { creature: 'serviteur.feu', element: 'feu', attaque: { bonus: 7, des: '1d8+3', typeDegats: 'feu' }, objet: false, remous: 1, rounds: 3, lancer: 't3' }, ...extra,
+    });
+  const conc = { action: 'enchantement.fascination', nom: 'Fascination', lancer: 't3', maintien: 1, rupture: ['cibleAttaquee'], rounds: null, etats: [{ cible: 'm-r1-a', etat: 'fascine' }], zone: null, invocations: [] };
+  const I = `${C}/combattants/i-p1-t3-1`;
+  const J = `${TABLE}/scenes/cave/jetons/i-p1-t3-1`;
+  const jeton = (extra: Record<string, unknown> = {}) => ({ genre: 'invocation', nom: 'Tison', couleur: '#8e44ad', cx: 3, cy: 1, proprietaire: 'alice', creeLe: 1, ...extra });
+
+  it('13b, 11a : le joueur qui a la main appelle son invocation (son maître : lui ; PV pleins), puis pose son jeton', async () => {
+    await assertFails(pour('alice').doc(J).set(jeton()));
+    await assertFails(pour('alice').doc(I).set(tison({ maitre: 'pj-p2' })));
+    await assertFails(pour('alice').doc(I).set(tison({ uid: 'carol' })));
+    await assertFails(pour('alice').doc(I).set(tison({ pv: 20 })));
+    await assertFails(pour('alice').doc(I).set(tison({ maitre: null })));
+    await assertFails(pour('alice').doc(I).set(tison({ invocation: null })));
+    await assertFails(pour('alice').doc(I).set(tison({ etats: [{ id: 'invisible', rounds: null, cumul: 1, charges: null, des: null, source: null }] })));
+    await assertFails(pour('carol').doc(I).set(tison({ uid: 'carol' })));
+    await assertFails(pour('alice').doc(`${C}/combattants/m-r1-z`).set(goule()));
+    await assertSucceeds(pour('alice').doc(I).set(tison()));
+    await assertFails(pour('alice').doc(J).set(jeton({ proprietaire: 'carol' })));
+    await assertFails(pour('alice').doc(J).set(jeton({ genre: 'monstre' })));
+    await assertFails(pour('carol').doc(J).set(jeton({ proprietaire: 'carol' })));
+    await assertSucceeds(pour('alice').doc(J).set(jeton()));
+    // Sans la main, non.
+    await poser(C, combat({ actif: 'm-r1-a' }));
+    await assertFails(pour('alice').doc(`${C}/combattants/i-p1-t3-2`).set(tison()));
+    await assertSucceeds(pour('bob').doc(`${C}/combattants/i-p1-t3-2`).set(tison()));
+  });
+
+  it('14a, 9a : à son tour, il la joue ; au tour du maître, ses rounds baissent ; il la retire, et son jeton ; un autre joueur non', async () => {
+    await poser(I, tison());
+    await poser(J, jeton());
+    await poser(C, combat({ actif: 'i-p1-t3-1' }));
+    await assertSucceeds(pour('alice').doc(I).update({ tourActions: 3, principale: true }));
+    await assertSucceeds(pour('alice').doc(J).update({ cx: 4 }));
+    // Elle a la main : son joueur blesse un monstre.
+    await assertSucceeds(pour('alice').doc(`${C}/combattants/m-r1-a`).update({ pv: 8, aTerre: false }));
+    await poser(C, combat({ actif: 'pj-p1' }));
+    await assertFails(pour('alice').doc(J).update({ cx: 5 }));
+    await assertSucceeds(pour('alice').doc(I).update({ invocation: { creature: 'serviteur.feu', element: 'feu', attaque: { bonus: 7, des: '1d8+3', typeDegats: 'feu' }, objet: false, remous: 1, rounds: 2, lancer: 't3' } }));
+    await assertFails(pour('alice').doc(I).update({ pv: 30 }));
+    await assertFails(pour('carol').doc(I).delete());
+    await assertFails(pour('carol').doc(J).delete());
+    await assertSucceeds(pour('alice').doc(I).delete());
+    await assertSucceeds(pour('alice').doc(J).delete());
+  });
+
+  it('12a, 1a : la concentration du PJ ; le joueur qui a la main la rompt (pas d’en poser une à un autre) ; un monstre ne se concentre pas', async () => {
+    await assertSucceeds(pour('alice').doc(`${C}/combattants/pj-p1`).update({ tourActions: 3, principale: true, concentration: conc }));
+    await assertFails(pour('bob').doc(`${C}/combattants/m-r1-a`).update({ concentration: conc }));
+    await poser(`${C}/combattants/pj-p2`, combattant({ nom: 'Hermione', perso: 'p2', uid: 'carol', concentration: conc }));
+    await assertFails(pour('alice').doc(`${C}/combattants/pj-p2`).update({ concentration: { ...conc, nom: 'Autre' } }));
+    await assertSucceeds(pour('alice').doc(`${C}/combattants/pj-p2`).update({ concentration: null }));
+    await assertFails(pour('carol').doc(`${C}/combattants/pj-p1`).update({ concentration: null }));
+    await assertSucceeds(pour('bob').doc(`${C}/combattants/pj-p1`).update({ concentration: null }));
+  });
+
+  it('10a : le MJ blesse une invocation ; une barricade a sa DEF ; pas de sauvegardes de monstre', async () => {
+    await poser(I, tison());
+    await assertSucceeds(pour('bob').doc(I).update({ pv: 3, aTerre: false }));
+    await assertFails(pour('bob').doc(`${C}/combattants/i-x`).set(tison({ def: null })));
+    await assertFails(pour('bob').doc(`${C}/combattants/i-x`).set(tison({ sauvegardes: { FOR: 0, DEX: 0, CON: 0, Volonte: 0 } })));
+    await assertFails(pour('bob').doc(`${C}/combattants/i-x`).set(tison({ perso: 'p1' })));
+    await assertFails(pour('bob').doc(`${C}/combattants/i-x`).set(tison({ concentration: conc })));
+    await assertSucceeds(pour('bob').doc(I).delete());
   });
 });

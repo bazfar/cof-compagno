@@ -11,6 +11,7 @@ import type { Action, Element, Maitrise, Palier, Sauvegarde } from '../schemas/e
 import type { Fiche, FicheV2 } from '../schemas/fiche.ts';
 import { attaquesDuPj } from './attaques-pj.ts';
 import { bonusFixe } from './bonus.ts';
+import { campDe } from './ordre.ts';
 import { famillesManiees } from './speciales.ts';
 import { protegeParSanctuaire, type ZoneActive } from './zones-sol.ts';
 import { casesDeZone, jetonsDansZone, porteeEnCases, refusDePortee, type CaseTouchee, type ZoneSort } from './zone.ts';
@@ -176,7 +177,7 @@ export function ciblageDe(id: string, palier: Palier, porteeArme = 1): CiblageSo
 
 /** Le jeton peut-il être pris pour cible par ce sort (camp, vivant) ? */
 export function campPermis(c: Pick<Combattant, 'genre'>, camp: CiblageSort['camp']): boolean {
-  return camp === 'toute' || (camp === 'ennemi' ? c.genre === 'monstre' : c.genre === 'pj');
+  return camp === 'toute' || (camp === 'ennemi' ? c.genre === 'monstre' : c.genre !== 'monstre');
 }
 
 export interface Visee {
@@ -246,8 +247,9 @@ const modsDe = (f: Fiche) => Object.fromEntries(vueFiche(f).caracs.map((c) => [c
 export function cibleDe(c: Combattant & { id: string }, fiche: Fiche | null, distance: number, anneau?: number): CibleEnJeu {
   const etats = c.etats.map((e) => e.id);
   const commun = { id: c.id, etats, distance, ...(anneau !== undefined ? { anneau } : {}) };
-  if (c.genre === 'monstre')
-    return { ...commun, camp: 'monstre', def: (c.def ?? 10) + bonusFixe(c.bonus, ['DEF']), sauvegardes: avecBonus(c.sauvegardes ?? ZERO, c), boss: c.boss, demonOuMortVivant: c.demonOuMortVivant, pv: c.pv ?? 0 };
+  // L6.4b2 (10a) : une invocation se lit comme un monstre (ses chiffres), dans le camp des PJ.
+  if (c.genre !== 'pj')
+    return { ...commun, camp: campDe(c), def: (c.def ?? 10) + bonusFixe(c.bonus, ['DEF']), sauvegardes: avecBonus(c.sauvegardes ?? ZERO, c), boss: c.boss, demonOuMortVivant: c.demonOuMortVivant, pv: c.pv ?? 0 };
   if (!fiche) throw new Error(`La fiche de ${c.nom} manque.`);
   const vue = vueFiche(fiche);
   return { ...commun, camp: 'pj', mods: modsDe(fiche), def: vue.stats.ca + bonusFixe(c.bonus, ['DEF']), sauvegardes: avecBonus(sauvegardesDuPj(fiche), c), pv: vue.pv.actuel };

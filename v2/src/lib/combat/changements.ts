@@ -86,7 +86,7 @@ export function appliquerChangements(
     if (!lu) return null;
     let s = suivis.get(id);
     if (!s) {
-      const pv = lu.c.genre === 'monstre' ? { pv: lu.c.pv ?? 0, pvMax: lu.c.pvMax ?? 1 } : lu.fiche ? { pv: pvDepart.get(lu.fiche.id) ?? vueFiche(lu.fiche).pv.actuel, pvMax: vueFiche(lu.fiche).pv.max } : { pv: 0, pvMax: 1 };
+      const pv = lu.c.genre !== 'pj' ? { pv: lu.c.pv ?? 0, pvMax: lu.c.pvMax ?? 1 } : lu.fiche ? { pv: pvDepart.get(lu.fiche.id) ?? vueFiche(lu.fiche).pv.actuel, pvMax: vueFiche(lu.fiche).pv.max } : { pv: 0, pvMax: 1 };
       s = { etats: [...lu.c.etats], bonus: [...lu.c.bonus], pvTemp: lu.c.pvTemp, ...pv };
       suivis.set(id, s);
     }
@@ -233,7 +233,7 @@ export function appliquerChangements(
     if (!memes(s.etats, lu.c.etats)) m.etats = s.etats;
     if (!memes(s.bonus, lu.c.bonus)) m.bonus = s.bonus;
     if (s.pvTemp !== lu.c.pvTemp) m.pvTemp = s.pvTemp;
-    if (lu.c.genre === 'monstre' && s.pv !== lu.c.pv) Object.assign(m, { pv: s.pv, aTerre: s.pv <= 0 });
+    if (lu.c.genre !== 'pj' && s.pv !== lu.c.pv) Object.assign(m, { pv: s.pv, aTerre: s.pv <= 0 });
     if (Object.keys(m).length) combattants.set(id, m);
     if (lu.c.genre === 'pj' && lu.fiche && s.pv !== (pvDepart.get(lu.fiche.id) ?? vueFiche(lu.fiche).pv.actuel)) fiches.set(lu.fiche.id, { pvActuel: s.pv });
   }

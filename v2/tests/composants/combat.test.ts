@@ -86,11 +86,11 @@ const FICHES = JSON.parse(readFileSync('tests/fixtures/fiches-v1.json', 'utf8'))
 const reelle = (nom: string, id: string, uid: string) => ({ ...ficheDepuisV1(FICHES.find((f: { nom: string }) => f.nom.startsWith(nom)), uid, 1).fiche, id });
 const pj = (id: string, c: Partial<Combattant> = {}) => ({
   id: `pj-${id}`, genre: 'pj' as const, nom: id, perso: id, uid: `u-${id}`, monstre: null, modInit: 1, initiative: null as number | null, de: null as number | null, pv: null, pvMax: null, aTerre: false,
-  mvtBase: 5, def: null as number | null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+  mvtBase: 5, def: null as number | null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, maitre: null, invocation: null, concentration: null, ...c,
 });
 const monstre = (id: string, c: Partial<Combattant> = {}) => ({
   id: `m-r1-${id}`, genre: 'monstre' as const, nom: id, perso: null, uid: null, monstre: 'goule', modInit: 3, initiative: null as number | null, de: null as number | null, pv: 14, pvMax: 14, aTerre: false,
-  mvtBase: 5, def: 13 as number | null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+  mvtBase: 5, def: 13 as number | null, armure: 0, resistances: { physique: 1, magique: 1 }, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as never[], usages: {}, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, maitre: null, invocation: null, concentration: null, ...c,
 });
 const combat = (c: Record<string, unknown> = {}) => ({ nom: 'Les goules du cellier', scene: 'cave', rencontre: 'r1', statut: 'encours' as const, round: 2, tour: 6, actif: null as string | null, porteesLibres: false, creeLe: 1, closLe: null, ...c });
 
@@ -252,7 +252,7 @@ describe('section Combat du MJ (4a, 9a, 11a)', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
     await waitFor(() => expect(actions.ajouterCombattant).toHaveBeenCalledWith('c1', expect.objectContaining({ id: 'm-x', pvMax: 5, def: 10 })));
     await fireEvent.click(screen.getByRole('button', { name: 'Clore le combat' }));
-    await waitFor(() => expect(actions.cloreCombat).toHaveBeenCalledWith('c1', expect.any(Array)));
+    await waitFor(() => expect(actions.cloreCombat).toHaveBeenCalledWith('c1', expect.any(Array), { scene: expect.any(String), ids: [] }));
   });
 });
 

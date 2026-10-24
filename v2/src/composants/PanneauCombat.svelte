@@ -1,6 +1,9 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { attaqueDeMonstre, poserEtatSur, retirerEtatDe } from '../lib/actions/attaques';
+  import { attaqueDeMonstre, attaqueSurInvocation, poserEtatSur, retirerEtatDe } from '../lib/actions/attaques';
+  import { finirConcentration, maintenirConcentration } from '../lib/actions/invocations';
+  import { texteConcentration } from '../lib/combat/concentration';
+  import { texteInvocation } from '../lib/combat/invocations';
   import { ajusterPvMonstre, corrigerSauvegardes, RefusCombat } from '../lib/actions/combat';
   import { texteBonus } from '../lib/combat/bonus';
   import { couverture, protegeParSanctuaire, texteZone } from '../lib/combat/zones-sol';
@@ -47,6 +50,12 @@
    * Lot L6.4b1 (16a, 11a) : les zones au sol du combat, que le MJ retire ;
    * un PJ dans un sanctuaire ne se vise pas, sa couverture compte contre
    * une attaque à distance.
+   *
+   * Lot L6.4b2 (décisions de Thomas du 24/10/2026) : une invocation montre
+   * ses PV et sa DEF, que le MJ règle et que ses monstres attaquent (10a) ;
+   * un PJ touché pendant sa concentration fait sa sauvegarde de CON pour la
+   * maintenir (1a) ; le MJ rompt une concentration d'un bouton (lanceur
+   * surpris, 1a).
    */
 
   let { carte = null }: { carte?: CarteDuCombat | null } = $props();
@@ -101,14 +110,18 @@
   const attaquesMonstre = $derived(modele ? attaquesDuMonstre(modele.attaques, listeArmes) : []);
   const ciblesPj = $derived(pjs.filter(({ c, v }) => etatPj(v.pv.actuel, c) !== 'mort' && ciblable(c.etats)));
   let cibleChoisie = $state('');
+  // L6.4b2 (10a) : les invocations se visent aussi.
+  const ciblesInv = $derived(combattants.filter((c) => c.genre === 'invocation' && !c.aTerre && ciblable(c.etats)));
+  const cibleInv = $derived(ciblesInv.find((c) => c.id === cibleChoisie) ?? null);
   const ciblePj = $derived(ciblesPj.find((x) => x.c.id === cibleChoisie) ?? ciblesPj[0] ?? null);
+  const cibleId = $derived(cibleInv?.id ?? ciblePj?.c.id ?? null);
   let outrePortee = $state(false);
   const principalePrise = $derived(!!montre && !!combat && actionsDuTour(montre, combat.tour).principale);
   const refusPortee = (a: AttaqueMonstre) =>
-    montre && ciblePj && carte?.zones && protegeParSanctuaire(carte.zones, carte.jetons, montre.id, ciblePj.c.id)
+    montre && cibleId && carte?.zones && protegeParSanctuaire(carte.zones, carte.jetons, montre.id, cibleId)
       ? 'la cible est dans un sanctuaire'
-      : montre && ciblePj && !outrePortee
-        ? horsDePortee(carte?.scene ?? null, carte?.jetons ?? [], montre.id, ciblePj.c.id, a.portee)
+      : montre && cibleId && !outrePortee
+        ? horsDePortee(carte?.scene ?? null, carte?.jetons ?? [], montre.id, cibleId, a.portee)
         : null;
   let resultat = $state('');
   // ---- États (L6.3, 4b) ----
@@ -127,7 +140,23 @@
       occupe = false;
     }
   }
+  async function attaquerInvocation(a: AttaqueMonstre, cible: (typeof combattants)[number]) {
+    if (!montre || !combat || !idCombat) return;
+    message = '';
+    resultat = '';
+    occupe = true;
+    try {
+      const defEnPlus = a.portee.vue && carte?.zones ? couverture(carte.zones, carte.jetons, cible.id) : 0;
+      const r = await attaqueSurInvocation(idCombat, combat, montre, { ...a, defEnPlus }, cible);
+      resultat = r.net === null ? `${a.nom} : raté (${r.issue.total} contre DEF ${r.issue.def}).` : `${a.nom} : touché, ${r.net} dégâts → ${cible.nom} ${r.pv} PV.`;
+    } catch (e) {
+      message = e instanceof RefusCombat ? e.message : messageErreurJournal(e);
+    } finally {
+      occupe = false;
+    }
+  }
   async function attaquerPj(a: AttaqueMonstre) {
+    if (cibleInv) return attaquerInvocation(a, cibleInv);
     const cible = ciblePj;
     const f = cible?.c.perso ? persos.etat.elements.find((p) => p.id === cible.c.perso) : undefined;
     if (!montre || !combat || !idCombat || !cible || !f) return;
@@ -138,6 +167,8 @@
       // L6.4b1 (11a) : la couverture du PJ contre une attaque à distance.
       const defEnPlus = a.portee.vue && carte?.zones ? couverture(carte.zones, carte.jetons, cible.c.id) : 0;
       const r = await attaqueDeMonstre(idCombat, combat, montre, { ...a, defEnPlus }, cible.c, f);
+      // L6.4b2 (1a) : touché, il fait sa sauvegarde de CON pour maintenir sa concentration.
+      if (r.issue.touche && cible.c.concentration) await maintenirConcentration(idCombat, combat.scene, cible.c, f, r.net ?? 0, combattants, montre.nom);
       resultat =
         r.net === null
           ? `${a.nom} : raté (${r.issue.echecCritique ? '1 naturel' : `${r.issue.total} contre CA ${r.issue.def}`}).`
@@ -213,7 +244,7 @@
         </select>
       </label>
       <h2>{montre.nom}</h2>
-      {#if montre.genre === 'monstre' && montre.pv !== null && montre.pvMax !== null}
+      {#if montre.genre !== 'pj' && montre.pv !== null && montre.pvMax !== null}
         <div class="jauge">
           <div class="fond"><div class="plein" style:width="{(Math.max(0, montre.pv) / montre.pvMax) * 100}%"></div></div>
           <strong data-testid="pv-monstre">{montre.pv}/{montre.pvMax} PV</strong>
@@ -241,20 +272,23 @@
             <button class="petit" disabled={occupe}>Corriger</button>
           </form>
         {/if}
-        {#if modele}
+        {#if montre.invocation}
+          <p class="aide">Invocation de {nomDe(montre.maitre)}{montre.invocation.rounds ? ` · ${montre.invocation.rounds} round${montre.invocation.rounds > 1 ? 's' : ''}` : ''}{montre.invocation.remous ? ` · Remous ${montre.invocation.remous} PP` : ''}{montre.invocation.objet ? ' · un objet : toute attaque la touche' : ''}</p>
+        {:else if modele}
           <h3>Attaques</h3>
-          {#if ciblesPj.length}
+          {#if ciblesPj.length || ciblesInv.length}
             <label class="choix"
               >Cible
-              <select value={ciblePj?.c.id ?? ''} onchange={(e) => (cibleChoisie = e.currentTarget.value)}>
+              <select value={cibleId ?? ''} onchange={(e) => (cibleChoisie = e.currentTarget.value)}>
                 {#each ciblesPj as { c, v } (c.id)}<option value={c.id}>{c.nom} · CA {defenseVisee(v.stats.ca, c.etats, c.bonus)} · {v.pv.actuel}/{v.pv.max} PV</option>{/each}
+                {#each ciblesInv as c (c.id)}<option value={c.id}>{texteInvocation(c)} · DEF {c.def === null ? '—' : defenseVisee(c.def, c.etats, c.bonus)} · {c.pv}/{c.pvMax} PV</option>{/each}
               </select>
             </label>
           {/if}
           <div class="attaques">
             {#each attaquesMonstre as a, i (i)}
               {@const refus = refusPortee(a)}
-              <button disabled={occupe || !ciblePj || principalePrise || !!refus} onclick={() => attaquerPj(a)}>{a.nom} {signe(a.bonus)} · {a.formule}</button>
+              <button disabled={occupe || !cibleId || principalePrise || !!refus} onclick={() => attaquerPj(a)}>{a.nom} {signe(a.bonus)} · {a.formule}</button>
               {#if refus}<span class="aide">{refus}</span>{/if}
             {:else}
               <p class="aide">Aucune attaque dont l'arme est dans la liste des armes.</p>
@@ -275,6 +309,12 @@
           <span>Init {signe(vue.stats.initiative)}</span>
           {#if montre.pvTemp}<span>PV temp. {montre.pvTemp}</span>{/if}
         </div>
+        {#if montre.concentration}
+          <p class="concentration" role="status">
+            Concentration : <strong>{texteConcentration(montre.concentration)}</strong>
+            <button class="petit discret" disabled={occupe} onclick={() => etatAgir(() => finirConcentration(idCombat!, combat.scene, montre, combattants, 'rompue par le MJ', 'MJ'))}>Rompre</button>
+          </p>
+        {/if}
         {@render etatsDe(montre)}
       {/if}
       {#if message}<p class="erreur" role="alert">{message}</p>{/if}

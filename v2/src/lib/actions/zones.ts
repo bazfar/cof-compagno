@@ -4,6 +4,7 @@ import type { Case, JetonCarte } from '../battlemap/geometrie';
 import { degatsSurPj } from '../combat/attaques-pj';
 import { appliquerChangements, texteJet, typeSubi } from '../combat/changements';
 import { effetDeZone } from '../combat/effets-zone';
+import { campDe } from '../combat/ordre';
 import { cibleDe } from '../combat/sorts';
 import { declenchements, debutDeTourZones, type ZoneActive } from '../combat/zones-sol';
 import type { CibleEnJeu } from '../effets/resolution';
@@ -185,7 +186,7 @@ function quiEst(ctx: ContexteZones, id: string) {
   const jeton = ctx.jetons.find((j) => j.id === id);
   const perso = combattant?.perso ?? (id.startsWith('pj-') ? id.slice(3) : null);
   const fiche = perso ? (ctx.fiches.get(perso) ?? null) : null;
-  const camp: 'pj' | 'monstre' = combattant ? combattant.genre : jeton?.genre === 'pj' ? 'pj' : 'monstre';
+  const camp: 'pj' | 'monstre' = combattant ? campDe(combattant) : jeton?.genre === 'pj' || jeton?.genre === 'invocation' ? 'pj' : 'monstre';
   return { combattant, fiche, camp, nom: combattant?.nom ?? fiche?.nom ?? (jeton && 'nom' in jeton ? String((jeton as { nom?: unknown }).nom) : id) };
 }
 

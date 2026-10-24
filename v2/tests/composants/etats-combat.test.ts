@@ -90,7 +90,7 @@ const v2 = (nom: string, classe: string, choix: Record<string, unknown> = {}, id
   return { ...F.convertirFiche(f as never, { ...F.refonteVierge(classeParId.get(classe)!, f.niveau), ...choix }), id };
 };
 const neutre = { physique: 1, magique: 1 };
-const base = { modInit: 1, de: 10, pv: null as number | null, pvMax: null as number | null, aTerre: false, mvtBase: 5, def: null as number | null, armure: 0, resistances: neutre, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as EtatCombat[], usages: {} as Record<string, number>, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, monstre: null as string | null };
+const base = { modInit: 1, de: 10, pv: null as number | null, pvMax: null as number | null, aTerre: false, mvtBase: 5, def: null as number | null, armure: 0, resistances: neutre, mortSucces: 0, mortEchecs: 0, mort: false, etats: [] as EtatCombat[], usages: {} as Record<string, number>, gainTouche: { round: 0, montant: 0 }, debutTour: 0, visee: false, sauvegardes: null, boss: false, demonOuMortVivant: false, pvTemp: 0, bonus: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, maitre: null, invocation: null, concentration: null, monstre: null as string | null };
 const pj = (id: string, c: Partial<Combattant> = {}) => ({ ...base, id: `pj-${id}`, genre: 'pj' as const, nom: id, perso: id, uid: 'alice', initiative: 11 as number | null, ...c });
 const goule = (c: Partial<Combattant & { id: string }> = {}) => ({ ...base, id: 'm-r1-a', genre: 'monstre' as const, nom: 'Goule A', perso: null, uid: null, monstre: 'goule', modInit: 3, initiative: 15 as number | null, pv: 9, pvMax: 14, def: 13, ...c });
 const etat = (id: string, c: Partial<EtatCombat> = {}): EtatCombat => ({ id, rounds: 1, cumul: 1, charges: null, des: null, source: null, ...c });
@@ -313,7 +313,7 @@ describe('le MJ (L6.3)', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(CombatMj);
     await fireEvent.click(screen.getByRole('button', { name: 'Clore le combat' }));
-    await waitFor(() => expect(actions.cloreCombat).toHaveBeenCalledWith('c1', [{ perso: 'p1', jauges: { plongee: 0 } }]));
+    await waitFor(() => expect(actions.cloreCombat).toHaveBeenCalledWith('c1', [{ perso: 'p1', jauges: { plongee: 0 } }], { scene: expect.any(String), ids: [] }));
   });
 });
 

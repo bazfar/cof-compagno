@@ -90,10 +90,16 @@ export function detailInitiative(de: number, mod: number): string {
 }
 
 /**
- * Ceux dont le tour est sauté (6a) : les monstres à 0 PV, les PJ morts.
+ * Ceux dont le tour est sauté (6a) : les monstres à 0 PV, les PJ morts
+ * (L6.4b2 : une invocation à 0 PV, le temps que le MJ la retire).
  * Lot L6.2 (7a) : un PJ à 0 PV est Mourant et garde son tour, pour ses jets
  * de mort ; seul le troisième échec le sort de l'ordre (v1 : _estKO).
  */
 export function aTerreDuCombat(combattants: readonly AvecId<Pick<Combattant, 'genre' | 'aTerre' | 'mort'>>[]): Set<string> {
-  return new Set(combattants.filter((c) => (c.genre === 'monstre' ? c.aTerre : c.mort)).map((c) => c.id));
+  return new Set(combattants.filter((c) => (c.genre === 'pj' ? c.mort : c.aTerre)).map((c) => c.id));
+}
+
+/** Le camp d'un combattant : une invocation est du camp des PJ (L6.4b2, 13b). */
+export function campDe(c: Pick<Combattant, 'genre'>): 'pj' | 'monstre' {
+  return c.genre === 'monstre' ? 'monstre' : 'pj';
 }

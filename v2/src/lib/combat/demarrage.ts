@@ -42,7 +42,7 @@ export function sauvegardesDuMonstre(m: { init: number; dangerosite: number; tai
 export interface BrouillonCombattant {
   /** Identifiant du jeton, et donc du combattant. */
   id: string;
-  genre: Combattant['genre'];
+  genre: Exclude<Combattant['genre'], 'invocation'>;
   nom: string;
   perso: string | null;
   uid: string | null;

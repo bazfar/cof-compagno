@@ -11,6 +11,10 @@ import { zoneDuSort } from '../combat/effets-zone';
 import { apercu, CATALOGUE, ciblageDe, preparerLancer, sortsDeCombat, type ChoixDuLancer } from '../combat/sorts';
 import { centreDeZone } from '../combat/zone';
 import { resoudreLancer } from '../effets/resolution';
+import { actionAuPalier } from '../effets/paliers';
+import { concentrationDuLancer } from '../combat/concentration';
+import { invocationsDuLancer } from '../combat/invocations';
+import { formuleTest } from '../regles/des';
 import { ppDisponibles } from '../fiche/sorts-hors-combat';
 import { vueFiche } from '../fiche/vue-fiche';
 import type { Case } from '../battlemap/geometrie';
@@ -21,6 +25,7 @@ import { blesser } from './attaques';
 import { RefusCombat } from './combat';
 import { noterJet } from './journal';
 import { apresDeplacement, poserZone, type ContexteZones } from './zones';
+import { finirConcentration, rompreParAttaque, type InvocationAPoser } from './invocations';
 
 /*
  * Lancer un sort ou une capacité en combat (lot L6.4a, décisions de Thomas
@@ -37,6 +42,15 @@ import { apresDeplacement, poserZone, type ContexteZones } from './zones';
  *     joués sur la carte, ceux qu'on place à la main rendus au joueur ;
  *   - 13a : au journal, le jet du lanceur, puis chaque cible : sa
  *     sauvegarde ou l'attaque, et ce qu'elle prend.
+ *
+ * Lot L6.4b2 (décisions de Thomas du 24/10/2026) :
+ *   - 1a, 3a : un sort de concentration réussi remplace celle du lanceur
+ *     (ce que l'ancienne a posé s'en va d'abord), puis s'inscrit sur son
+ *     combattant ; une attaque d'un sort contre la cible d'une concentration
+ *     qui le dit la rompt ;
+ *   - 13b, 4a, 5a, 6a : ce que le sort appelle est rendu à la barre, qui le
+ *     fait poser d'un clic ; l'initiative est lancée ici, un jet par lancer,
+ *     au journal.
  */
 
 type AvecId<T> = T & { id: string };
@@ -57,6 +71,8 @@ export interface SortLance {
   /** Ce que la barre dit en une phrase. */
   texte: string;
   aPlacer: APlacer[];
+  /** L6.4b2 (13b) : les créatures appelées, à poser d'un clic. */
+  aInvoquer: InvocationAPoser[];
 }
 
 export { texteJet };
@@ -115,6 +131,12 @@ export async function lancerSortEnCombat(
   }
   if (s.limite !== 'volonte') usages = { ...usages, [s.id]: combat.round };
 
+  // L6.4b2 (1a, 3a) : un sort de concentration réussi met fin à l'ancienne avant de s'écrire.
+  const lancerId = `t${combat.tour}`;
+  const auPalier = actionAuPalier(action, r.palierLance);
+  const seConcentre = r.issue === 'reussi' && auPalier.persistance.type === 'concentration';
+  if (seConcentre && moi.concentration) await finirConcentration(idCombat, combat.scene, moi, combattants, `${s.nom} la remplace`, fiche.nom);
+
   // Ceux que le sort touche : lus et écrits dans une transaction (2a).
   const touches = new Set<string>([moi.id]);
   for (const c of r.changements) if ('cible' in c) touches.add(c.cible);
@@ -166,6 +188,12 @@ export async function lancerSortEnCombat(
   }
   if (zonePosee) e.auMj.splice(0, e.auMj.length, ...e.auMj.filter((x) => !x.startsWith('Terrain')));
 
+  // L6.4b2 (13b, 5a, 6a) : les créatures appelées ; un jet d'initiative par lancer.
+  const maitre = { niveau: lancer.lanceur.niveau ?? fiche.niveau, modMagie: lancer.lanceur.modMagie, attaqueMagique: lancer.lanceur.attaqueMagique, def: lancer.lanceur.def, pvActuel: pvApresCout, modInit: moi.modInit };
+  // Un sort raté ou qui dérape ne rend pas d'invocation : le moteur ne l'a pas appelée.
+  const aInvoquer: InvocationAPoser[] = invocationsDuLancer(r.changements, moi.id, lancerId).map((a) => ({ ...a, maitre, de: 1 + Math.floor(alea() * 20), lancer: lancerId }));
+  if (aInvoquer.length) e.auMj.splice(0, e.auMj.length, ...e.auMj.filter((x) => !x.startsWith('Invocation')));
+
   // 13a : au journal, le lanceur, puis chaque cible.
   const nom = `${s.nom} ${r.palierLance}`;
   const duLanceur = r.jets.filter((j) => !j.cible);
@@ -187,6 +215,15 @@ export async function lancerSortEnCombat(
     const detail = [...jets.map(texteJet), ...(e.lignes.get(id) ?? [])].join(' ; ') || 'rien';
     await noterJet(`${s.nom} sur ${nomCible}`, j ? '1d20' : '0', j ? { des: j.des, faces: 20, bonus: 0, total: j.total } : { des: [], faces: 0, bonus: 0, total: 0 }, fiche.nom, detail);
   }
+
+  for (const a of aInvoquer)
+    await noterJet(`Initiative de ${a.nom}`, formuleTest(moi.modInit), { des: [a.de], faces: 20, bonus: moi.modInit, total: a.de + moi.modInit }, fiche.nom, `${a.ids.length > 1 ? `${a.ids.length} × ` : ''}${a.nom} : à poser, ${a.portee} cases au plus.`);
+
+  // L6.4b2 (1a) : une attaque du sort contre la cible d'une concentration qui le dit la rompt.
+  for (const id of new Set(r.jets.filter((j) => j.cible && j.quoi.startsWith('attaque')).map((j) => j.cible!))) await rompreParAttaque(idCombat, combat.scene, id, combattants, fiche.nom);
+  // 1a, 3a : la concentration s'inscrit, avec ce que le lancer a posé.
+  const conc = seConcentre ? concentrationDuLancer(auPalier, lancerId, r.changements, zonePosee, aInvoquer.flatMap((a) => a.ids)) : null;
+  if (conc) await updateDoc(refCombattant(idCombat, moi.id), { concentration: conc });
 
   // 10a : les déplacements.
   const aPlacer: APlacer[] = [];
@@ -228,7 +265,7 @@ export async function lancerSortEnCombat(
     }
   }
   const texte = r.issue === 'reussi' ? `${nom} lancé.` : r.issue === 'echecEcole' ? `${nom} : raté, les PP sont dépensés.` : `${nom} : l’élément dérape, le sort échoue.`;
-  return { issue: r.issue, texte, aPlacer };
+  return { issue: r.issue, texte: `${texte}${conc ? ` Concentration : ${conc.nom}.` : ''}`, aPlacer, aInvoquer };
 }
 
 /** Les zones du combat sur la carte, pour les déclencher (L6.4b1). */

@@ -9,6 +9,8 @@
   import { attaquesSpecialesDuPj, type AttaqueSpeciale } from '../lib/combat/speciales';
   import { actionsDuTour } from '../lib/combat/ordre';
   import { lancerSortEnCombat, placerParSort, type APlacer } from '../lib/actions/sorts-combat';
+  import { finirConcentration, placementPermis, poserInvocation, rompreParAttaque, type InvocationAPoser } from '../lib/actions/invocations';
+  import { texteConcentration } from '../lib/combat/concentration';
   import { texteBonus } from '../lib/combat/bonus';
   import { arriveePermise } from '../lib/combat/poussee';
   import { apercu, campPermis, ciblageDe, coutAffiche, palierLance, sortsDeCombat, surchargeable, viseeComplete, type CiblageSort, type Visee } from '../lib/combat/sorts';
@@ -61,6 +63,12 @@
    * Lot L6.4b1 (11a) : une cible dans un sanctuaire où il n'est pas ne se
    * vise pas ; la couverture d'une cible ajoute 2 à sa DEF contre une
    * attaque à distance.
+   *
+   * Lot L6.4b2 (décisions de Thomas du 24/10/2026) : sa concentration
+   * s'affiche, et il y met fin d'un bouton, à son tour (1a) ; une attaque
+   * contre la cible d'une concentration qui le dit la rompt (Fascination) ;
+   * une créature appelée se pose d'un clic sur une case libre, à 6 cases au
+   * plus (4a).
    */
 
   let {
@@ -148,6 +156,7 @@
     if (!c) return;
     return agir(async () => {
       const i = await attaquer(idCombat, combat, moi, c, { nom: a.nom, bonus: a.bonus, seuilCritique: a.seuilCritique, mode: a.mode, defEnPlus: defEnPlus(a, c) }, fiche, Math.random, s ? { s, estoc, carte, fiches, combattants } : null);
+      await rompreParAttaque(idCombat, combat.scene, c.id, combattants, fiche.nom);
       if (i.touche && a.formule) aLancer = { a, cible: c, critique: i.critique };
       return texteIssue(i, c.nom);
     });
@@ -156,7 +165,12 @@
     if (s.effet.type === 'precision') return agir(async () => (await viser(idCombat, combat, moi, s, fiche), 'Tu vises : ta prochaine attaque gagne +1d6.'));
     if (s.effet.type === 'decharge') {
       const choisies = monstres.filter((m) => cibles3.includes(m.id)).slice(0, 3);
-      return agir(async () => `Décharge : ${await decharger(idCombat, combat, moi, choisies.length ? choisies : cible ? [cible] : [], s, fiche)} balle(s) au but.`);
+      const visees = choisies.length ? choisies : cible ? [cible] : [];
+      return agir(async () => {
+        const n = await decharger(idCombat, combat, moi, visees, s, fiche);
+        for (const v of visees) await rompreParAttaque(idCombat, combat.scene, v.id, combattants, fiche.nom);
+        return `Décharge : ${n} balle(s) au but.`;
+      });
     }
     return attaquerAvec(s.arme, s, estoc);
   }
@@ -270,6 +284,24 @@
     };
     return () => (viseeCarte.v = null);
   });
+  // L6.4b2 (4a) : poser une créature appelée, d'un clic sur une case libre.
+  let aInvoquer = $state<{ a: InvocationAPoser; id: string }[]>([]);
+  $effect(() => {
+    const p = aInvoquer[0];
+    const k = carte;
+    if (!p || !k) return;
+    viseeCarte.v = {
+      apercu: (survol) => ({ cases: [survol], jetons: [], refus: placementPermis(k.scene, k.jetons, moi.id, survol, p.a.portee) }),
+      choisir: (k2) =>
+        void agir(async () => {
+          await poserInvocation(idCombat, combat, moi, p.a, p.id, k2, k);
+          aInvoquer = aInvoquer.slice(1);
+          return `${p.a.nom} paraît.`;
+        }),
+      fixe: { cases: [], jetons: [] },
+    };
+    return () => (viseeCarte.v = null);
+  });
   const dejaServi = $derived(
     !!sort && ((sort.limite === '1x/round' && moi.usages[sort.id] === combat.round) || (sort.limite !== 'volonte' && sort.limite !== '1x/round' && !!moi.usages[sort.id])),
   );
@@ -282,7 +314,8 @@
       visee = { cibles: [], point: null };
       viseEnCours = false;
       aPlacer = r.aPlacer;
-      return `${r.texte}${r.aPlacer.length ? ` Clique sur la carte la case d’arrivée de ${r.aPlacer[0]!.nom} (${r.aPlacer[0]!.cases} cases au plus).` : ''}`;
+      aInvoquer = r.aInvoquer.flatMap((a) => a.ids.map((id) => ({ a, id })));
+      return `${r.texte}${r.aPlacer.length ? ` Clique sur la carte la case d’arrivée de ${r.aPlacer[0]!.nom} (${r.aPlacer[0]!.cases} cases au plus).` : ''}${aInvoquer.length ? ` Clique sur la carte la case où paraît ${aInvoquer[0]!.a.nom} (${aInvoquer[0]!.a.portee} cases au plus).` : ''}`;
     });
   }
 </script>
@@ -301,6 +334,12 @@
       {#each jauges as j (j.cle)}<span>{j.nom} {j.actuel}{j.max !== null ? `/${j.max}` : ''}</span>{/each}
       {#if moi.pvTemp}<span>PV temp. {moi.pvTemp}</span>{/if}
     </div>
+    {#if moi.concentration}
+      <p class="concentration" role="status">
+        Concentration : <strong>{texteConcentration(moi.concentration)}</strong>
+        {#if monTour}<button class="lien" disabled={occupe} onclick={() => agir(async () => (await finirConcentration(idCombat, combat.scene, moi, combattants, 'il y met fin', fiche.nom), 'Concentration terminée.'))}>y mettre fin</button>{/if}
+      </p>
+    {/if}
     {#if moi.bonus.length}
       <ul class="etats" aria-label="Mes bonus">
         {#each moi.bonus as b, i (i)}<li><strong>{texteBonus(b)}</strong>{b.source ? ` · ${b.source}` : ''}</li>{/each}
@@ -460,7 +499,7 @@
         {/if}
         <button
           class="lancer"
-          disabled={occupe || !monTour || agit !== 'oui' || actionPrise || dejaServi || !coutSort || 'refus' in coutSort || !viseeComplete(ciblage, visee) || aPlacer.length > 0}
+          disabled={occupe || !monTour || agit !== 'oui' || actionPrise || dejaServi || !coutSort || 'refus' in coutSort || !viseeComplete(ciblage, visee) || aPlacer.length > 0 || aInvoquer.length > 0}
           onclick={lancerLeSort}>Lancer {sort.nom}</button
         >
       </div>
@@ -474,6 +513,7 @@
       {#if monTour && actionPrise}<p class="aide">{sort.typeAction === 'principale' ? 'Action principale' : 'Action secondaire'} prise ce tour.</p>{/if}
       {#if dejaServi}<p class="aide">{sort.nom} a déjà servi.</p>{/if}
       {#if aPlacer.length}<p class="alerte" role="status">Place {aPlacer[0]!.nom} : clique la case d’arrivée ({aPlacer[0]!.cases} cases au plus).</p>{/if}
+      {#if aInvoquer.length}<p class="alerte" role="status">Place {aInvoquer[0]!.a.nom} : clique une case libre ({aInvoquer[0]!.a.portee} cases au plus).</p>{/if}
     {:else}
       <p class="aide">{fiche.schemaVersion === 2 ? 'Aucun sort ni capacité à lancer.' : 'Les sorts se lancent depuis une fiche de la refonte.'}</p>
     {/if}
@@ -664,5 +704,8 @@
   .message {
     width: 100%;
     padding: 10px 16px 12px;
+  }
+  .concentration {
+    font-size: 13px;
   }
 </style>

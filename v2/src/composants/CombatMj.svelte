@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { debutDeTour, remettreJetsDeMort } from '../lib/actions/attaques';
+  import { payerDebutDeTour, retirerInvocations } from '../lib/actions/invocations';
+  import { remousDu } from '../lib/combat/invocations';
   import { zonesDuDebutDeTour } from '../lib/actions/zones';
   import { suivreZonesCombat } from '../lib/magasins/zones.svelte';
   import type { ZoneSol } from '../lib/schemas/zones';
@@ -51,6 +53,11 @@
    *
    * Lot L6.4b1 (7a, 11a) : quand la main arrive à un combattant, le client du MJ
    * joue les zones du combat sur sa case (Tempête, Ossuaire, sol en feu).
+   *
+   * Lot L6.4b2 (2a, 15a, 9a) : quand la main arrive à un mage, le client du
+   * MJ lui fait payer en PP le maintien de sa concentration et le Remous de
+   * ses invocations ; une invocation à 0 PV retourne à la Mer ; à la
+   * clôture, les jetons des invocations s'en vont.
    */
 
   const table = suivreTable(session.table);
@@ -170,7 +177,8 @@
     if (!idCombat || !confirm('Clore le combat ? L’ordre d’initiative sera effacé.')) return;
     const id = idCombat;
     const remises = persos.etat.elements.filter((p) => combattants.some((c) => c.perso === p.id)).map((p) => ({ perso: p.id, jauges: jaugesALaFinDuCombat(p) }));
-    await agir(() => cloreCombat(id, remises));
+    const invocations = combat ? { scene: combat.scene, ids: combattants.filter((c) => c.genre === 'invocation').map((c) => c.id) } : null;
+    await agir(() => cloreCombat(id, remises, invocations));
   }
 
   // Personne n'a la main : dès qu'un combattant a une initiative, le client du MJ la lui donne.
@@ -202,11 +210,29 @@
     if (!combat || !idCombat || combat.statut !== 'encours' || !combat.actif) return;
     const c = combattants.find((x) => x.id === combat.actif);
     const cle = `${combat.tour}:${combat.actif}`;
-    if (!c || c.debutTour === combat.tour || !degatsParTour(c.etats).length || debutsJoues.has(cle)) return;
+    // L6.4b2 (2a, 15a) : un mage paie aussi le maintien de sa concentration et le Remous de ses invocations.
+    const aPayer = !!c?.concentration?.maintien || (!!c && remousDu(combattants, c.id) > 0);
+    if (!c || c.debutTour === combat.tour || (!degatsParTour(c.etats).length && !aPayer) || debutsJoues.has(cle)) return;
     debutsJoues.add(cle);
     const fiche = c.perso ? (persos.etat.elements.find((p) => p.id === c.perso) ?? null) : null;
     const id = idCombat;
-    agir(() => debutDeTour(id, combat, c, fiche));
+    const scene = combat.scene;
+    const tous = combattants;
+    agir(async () => {
+      if (aPayer) await payerDebutDeTour(id, scene, c, fiche, tous);
+      await debutDeTour(id, combat, c, fiche);
+    });
+  });
+  // L6.4b2 (9a) : une invocation à 0 PV retourne à la Mer.
+  const invocationsRetirees = new Set<string>();
+  $effect(() => {
+    if (!combat || !idCombat || combat.statut !== 'encours') return;
+    const tombees = combattants.filter((c) => c.genre === 'invocation' && c.aTerre && !invocationsRetirees.has(c.id));
+    if (!tombees.length) return;
+    for (const c of tombees) invocationsRetirees.add(c.id);
+    const id = idCombat;
+    const scene = combat.scene;
+    agir(() => retirerInvocations(id, scene, tombees, 'à 0 PV, elles retournent à la Mer', 'MJ'));
   });
   // L6.4b1 (7a, 11a) : la main arrive à un combattant : les zones sur sa case agissent, une fois par tour.
   const zonesJouees = new Set<string>();

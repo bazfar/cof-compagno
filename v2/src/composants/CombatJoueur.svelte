@@ -13,6 +13,7 @@
   import { session } from '../lib/session.svelte';
   import BandeauCombat from './BandeauCombat.svelte';
   import BarreCombat from './BarreCombat.svelte';
+  import BarreInvocation from './BarreInvocation.svelte';
   import CarteTable from './CarteTable.svelte';
   import OrdreCombat from './OrdreCombat.svelte';
 
@@ -28,6 +29,8 @@
    * (relever un allié) et la carte (portées, 4a).
    * Lot L6.3 : le bandeau des combattants, leurs PV et leurs états, au-dessus
    * de la carte (C).
+   * Lot L6.4b2 (14a) : au tour d'une de ses invocations, sa barre à elle
+   * paraît au-dessus de la sienne.
    */
 
   let { surEnCombat }: { surEnCombat?: (oui: boolean) => void } = $props();
@@ -65,6 +68,7 @@
   const moi = $derived(persoActif ? (combattants.find((c) => c.id === idJetonPerso(persoActif)) ?? null) : null);
   const fiches = $derived(new Map(persos.etat.elements.map((p) => [p.id, p])));
   let carte = $state<CarteDuCombat | null>(null);
+  const monInvocation = $derived(combattants.find((c) => c.genre === 'invocation' && c.id === combat?.actif && c.uid === session.uid) ?? null);
 </script>
 
 {#if enCombat && combat && idCombat}
@@ -73,6 +77,7 @@
     <div class="centre">
       <BandeauCombat />
       <CarteTable role="joueur" hauteur="560px" surCarte={(c) => (carte = c)} />
+      {#if monInvocation}<BarreInvocation inv={monInvocation} {idCombat} {combat} {combattants} {fiches} {carte} />{/if}
       {#if fiche && moi}<BarreCombat {fiche} {idCombat} {combat} {moi} {combattants} {fiches} {carte} />{/if}
     </div>
   </div>

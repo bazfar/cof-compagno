@@ -43,7 +43,7 @@
   const moiQuiJoue = $derived(role === 'joueur' && actif !== null && actif.uid === session.uid);
   const actions = $derived(actif ? actionsDuTour(actif, combat.tour) : null);
   const restant = $derived(actif ? deplacementRestant(actif, combat.tour) : 0);
-  const pvDe = (c: AvecId<Combattant>) => (c.genre === 'monstre' ? (c.pv !== null && c.pvMax !== null ? { actuel: c.pv, max: c.pvMax } : null) : (pvPj.get(c.id) ?? null));
+  const pvDe = (c: AvecId<Combattant>) => (c.genre !== 'pj' ? (c.pv !== null && c.pvMax !== null ? { actuel: c.pv, max: c.pvMax } : null) : (pvPj.get(c.id) ?? null));
   let main = $state('');
   let message = $state('');
   let occupe = $state(false);

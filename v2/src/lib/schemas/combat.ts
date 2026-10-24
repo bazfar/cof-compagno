@@ -28,6 +28,15 @@ import { z } from 'zod';
  * que le MJ corrige ; les PV temporaires (11a) et les bonus temporaires
  * (12a) vivent sur le combattant, le temps du combat.
  *
+ * Lot L6.4b2 (décisions de Thomas du 24/10/2026) :
+ *   - concentration (12a) : le sort que le PJ maintient vit sur son
+ *     combattant, avec ce qu'il a posé (états, zone, invocations), pour
+ *     tout retirer quand elle s'arrête ;
+ *   - invocations (13b) : un combattant à part, du genre « invocation »,
+ *     avec son initiative, ses PV et sa DEF en chiffres (10a) ; `maitre`
+ *     est le combattant qui l'a appelée, `uid` le joueur qui la joue
+ *     (14a, 11a).
+ *
  * Actions du tour (7a) : elles valent pour le tour `tourActions` ; quand le
  * combat passe au tour suivant, celles d'un autre tour comptent comme
  * neuves, sans que personne n'ait à les remettre à zéro.
@@ -99,7 +108,47 @@ export const schemaSauvegardesCombat = z.strictObject({
 });
 export type SauvegardesCombat = z.infer<typeof schemaSauvegardesCombat>;
 
-export const GENRES_COMBATTANT = ['pj', 'monstre'] as const;
+/**
+ * Une invocation en jeu (L6.4b2, 10a) : ses chiffres, calculés au lancer
+ * d'après son maître (lib/combat/invocations.ts). `attaque` : bonus (l'attaque
+ * magique du maître), dés et type ; `objet` : toute attaque la touche
+ * (barricade) ; `remous` : PP que le maître paie au début de son tour (15a) ;
+ * `rounds` : décomptés à la fin du tour du maître (9a), null jusqu'à la fin
+ * du combat ; `lancer` : le lancer qui l'a appelée.
+ */
+export const schemaInvocationEnJeu = z.strictObject({
+  creature: z.string().min(1).max(60),
+  element: z.string().min(1).max(20).nullable(),
+  attaque: z.strictObject({ bonus: z.number().int().min(-10).max(40), des: z.string().min(1).max(20), typeDegats: z.string().min(1).max(20) }).nullable(),
+  objet: z.boolean(),
+  remous: z.number().int().min(0).max(3),
+  rounds: z.number().int().min(1).max(99).nullable(),
+  lancer: z.string().min(1).max(60),
+});
+export type InvocationEnJeu = z.infer<typeof schemaInvocationEnJeu>;
+
+export const RUPTURES_CONCENTRATION = ['cibleAttaquee', 'lanceurSurpris', 'lanceurAttaque', 'autreConcentration'] as const;
+
+/**
+ * La concentration d'un PJ (L6.4b2, 1a à 3a) : le sort maintenu, son
+ * maintien en PP par round (2a), ce qui la rompt (1a), ses rounds
+ * (décomptés à la fin de son tour), et ce que ce lancer a posé (3a) : les
+ * états sur leurs cibles, sa zone au sol, ses invocations.
+ */
+export const schemaConcentration = z.strictObject({
+  action: z.string().min(1).max(100),
+  nom: z.string().min(1).max(60),
+  lancer: z.string().min(1).max(60),
+  maintien: z.number().int().min(0).max(5),
+  rupture: z.array(z.enum(RUPTURES_CONCENTRATION)).max(4),
+  rounds: z.number().int().min(1).max(99).nullable(),
+  etats: z.array(z.strictObject({ cible: z.string().min(1).max(150), etat: z.string().min(1).max(60) })).max(20),
+  zone: z.string().min(1).max(100).nullable(),
+  invocations: z.array(z.string().min(1).max(150)).max(10),
+});
+export type Concentration = z.infer<typeof schemaConcentration>;
+
+export const GENRES_COMBATTANT = ['pj', 'monstre', 'invocation'] as const;
 export type GenreCombattant = (typeof GENRES_COMBATTANT)[number];
 
 export const schemaCombattant = z
@@ -166,10 +215,20 @@ export const schemaCombattant = z
     /** Sprint : +2 cases, l'action principale en échange. */
     sprint: z.boolean(),
     creeLe: z.number().int().nonnegative(),
+    // ---- Concentration et invocations (L6.4b2) ----
+    /** Invocation : le combattant qui l'a appelée. */
+    maitre: z.string().min(1).max(150).nullable().default(null),
+    invocation: schemaInvocationEnJeu.nullable().default(null),
+    /** PJ : le sort qu'il maintient. */
+    concentration: schemaConcentration.nullable().default(null),
   })
   .superRefine((c, ctx) => {
     const pj = c.genre === 'pj';
-    if (pj !== (c.perso !== null) || pj !== (c.uid !== null)) ctx.addIssue({ code: 'custom', message: 'un PJ a son personnage et son joueur, un monstre non', path: ['perso'] });
+    const inv = c.genre === 'invocation';
+    if (pj !== (c.perso !== null) || (pj || inv) !== (c.uid !== null)) ctx.addIssue({ code: 'custom', message: 'un PJ a son personnage et son joueur, un monstre non', path: ['perso'] });
+    if (inv !== (c.invocation !== null) || inv !== (c.maitre !== null) || (inv && c.monstre !== null))
+      ctx.addIssue({ code: 'custom', message: 'une invocation a son maître et ses chiffres', path: ['invocation'] });
+    if (c.concentration && !pj) ctx.addIssue({ code: 'custom', message: 'seul un PJ se concentre', path: ['concentration'] });
     if (pj && (c.pv !== null || c.pvMax !== null || c.monstre !== null)) ctx.addIssue({ code: 'custom', message: 'les PV d’un PJ sont sur sa fiche', path: ['pv'] });
     if (!pj && (c.pv === null || c.pvMax === null)) ctx.addIssue({ code: 'custom', message: 'un monstre a ses PV', path: ['pv'] });
     if (pj !== (c.def === null)) ctx.addIssue({ code: 'custom', message: 'un monstre a sa DEF, un PJ a sa CA sur sa fiche', path: ['def'] });

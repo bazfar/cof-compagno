@@ -569,8 +569,8 @@ service cloud.firestore {
     }
     // Aligné sur schemaCombattant (src/lib/schemas/combat.ts).
     function combattantValide(d) {
-      return d.keys().hasOnly(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'def', 'armure', 'resistances', 'mortSucces', 'mortEchecs', 'mort', 'etats', 'usages', 'gainTouche', 'debutTour', 'visee', 'sauvegardes', 'boss', 'demonOuMortVivant', 'pvTemp', 'bonus', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe'])
-        && d.keys().hasAll(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'def', 'armure', 'resistances', 'mortSucces', 'mortEchecs', 'mort', 'etats', 'usages', 'gainTouche', 'debutTour', 'visee', 'sauvegardes', 'boss', 'demonOuMortVivant', 'pvTemp', 'bonus', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe'])
+      return d.keys().hasOnly(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'def', 'armure', 'resistances', 'mortSucces', 'mortEchecs', 'mort', 'etats', 'usages', 'gainTouche', 'debutTour', 'visee', 'sauvegardes', 'boss', 'demonOuMortVivant', 'pvTemp', 'bonus', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe', 'maitre', 'invocation', 'concentration'])
+        && d.keys().hasAll(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'def', 'armure', 'resistances', 'mortSucces', 'mortEchecs', 'mort', 'etats', 'usages', 'gainTouche', 'debutTour', 'visee', 'sauvegardes', 'boss', 'demonOuMortVivant', 'pvTemp', 'bonus', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe', 'maitre', 'invocation', 'concentration'])
         // L6.3 : états, usages, gain par touche, début de tour, visée (aligné sur schemaCombattant).
         && d.etats is list && d.etats.size() <= 20
         && d.usages is map && d.usages.size() <= 50
@@ -581,17 +581,23 @@ service cloud.firestore {
         && d.boss is bool && d.demonOuMortVivant is bool && (d.genre == 'monstre' || (!d.boss && !d.demonOuMortVivant))
         && entierEntre(d.pvTemp, 0, 999)
         && d.bonus is list && d.bonus.size() <= 20
-        && d.genre in ['pj', 'monstre']
+        && d.genre in ['pj', 'monstre', 'invocation']
         && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 40
         && ((d.genre == 'pj' && d.perso is string && d.uid is string && d.pv == null && d.pvMax == null && d.monstre == null)
-          || (d.genre == 'monstre' && d.perso == null && d.uid == null && entierEntre(d.pv, -999, 9999) && entierEntre(d.pvMax, 1, 9999)))
+          || (d.genre == 'monstre' && d.perso == null && d.uid == null && entierEntre(d.pv, -999, 9999) && entierEntre(d.pvMax, 1, 9999))
+          // L6.4b2 (13b, 10a) : une invocation, au joueur de son maître, avec ses PV en chiffres.
+          || (d.genre == 'invocation' && d.perso == null && d.uid is string && d.monstre == null && entierEntre(d.pv, -999, 9999) && entierEntre(d.pvMax, 1, 9999)))
+        && ((d.genre == 'invocation') == (d.maitre != null)) && (d.maitre == null || (d.maitre is string && d.maitre.size() <= 150))
+        && ((d.genre == 'invocation') == (d.invocation != null)) && (d.invocation == null || d.invocation is map)
+        // L6.4b2 (12a) : la concentration d'un PJ.
+        && (d.concentration == null || (d.genre == 'pj' && d.concentration is map))
         && entierEntre(d.modInit, -10, 40)
         && ((d.initiative == null && d.de == null) || (entierEntre(d.initiative, -9, 60) && entierEntre(d.de, 1, 20)))
         && d.aTerre is bool && entierEntre(d.mvtBase, 0, 20)
         && entierEntre(d.tourActions, 0, 99999) && d.principale is bool && d.secondaire is bool
         && entierEntre(d.mvt, 0, 40) && d.sprint is bool && (!d.sprint || d.principale)
         // L6.2 : défense du monstre (1b, 10a) et jets de mort du PJ (7a).
-        && ((d.genre == 'pj' && d.def == null) || (d.genre == 'monstre' && entierEntre(d.def, -10, 99)))
+        && ((d.genre == 'pj' && d.def == null) || (d.genre != 'pj' && entierEntre(d.def, -10, 99)))
         && entierEntre(d.armure, 0, 99)
         && d.resistances is map && d.resistances.keys().hasOnly(['physique', 'magique']) && d.resistances.keys().hasAll(['physique', 'magique'])
         && d.resistances.physique is number && d.resistances.physique >= 0 && d.resistances.physique <= 5
@@ -691,6 +697,12 @@ service cloud.firestore {
         && request.resource.data.pvActuel == 1
         && exists(allie) && get(allie).data.mort == false
         && aLaMain(table, combat);
+    }
+    // L6.4b2 (13b, 4a) : le jeton d'une invocation du combat en cours que le joueur joue.
+    function invocationDuJoueur(table, jeton) {
+      let combat = get(/databases/$(database)/documents/tables/$(table)).data.get('combat', null);
+      let c = /databases/$(database)/documents/tables/$(table)/combats/$(combat)/combattants/$(jeton);
+      return combat != null && exists(c) && get(c).data.genre == 'invocation' && get(c).data.uid == request.auth.uid;
     }
     // Pendant un combat (L6.1, 8a), le jeton d'un combattant ne bouge qu'à son tour (le MJ, toujours).
     function jetonBougeable(table, jeton) {
@@ -799,7 +811,13 @@ service cloud.firestore {
                 && get(/databases/$(database)/documents/tables/$(table)/persos/$(persoJoueDe(table, request.auth.uid))).data.proprietaireUid == request.auth.uid
                 && request.resource.data.genre == 'pj'
                 && request.resource.data.proprietaire == request.auth.uid
-                && !('mort' in request.resource.data)));
+                && !('mort' in request.resource.data))
+              // L6.4b2 (4a) : le joueur pose le jeton de son invocation, une fois son combattant créé.
+              || (estJoueur(table)
+                && request.resource.data.genre == 'invocation'
+                && request.resource.data.proprietaire == request.auth.uid
+                && !('mort' in request.resource.data)
+                && invocationDuJoueur(table, jeton)));
           allow update: if jetonValide(request.resource.data)
             && (estMj(table)
               || (estJoueur(table)
@@ -1075,10 +1093,21 @@ service cloud.firestore {
 
         // Un combattant par jeton. Le joueur y lance son initiative (une fois)
         // et note ses actions du tour, à son tour seulement (7a).
+        // L6.4b2 (11a) : le joueur qui a la main appelle ses invocations (leur
+        // maître : son combattant actif ; PV pleins) et retire les siennes.
         match /combattants/{combattant} {
           allow read: if estMembre(table);
-          allow create: if estMj(table) && combattantValide(request.resource.data);
-          allow delete: if estMj(table);
+          allow create: if combattantValide(request.resource.data)
+            && (estMj(table)
+              || (estJoueur(table)
+                && request.resource.data.genre == 'invocation'
+                && request.resource.data.uid == request.auth.uid
+                && request.resource.data.maitre == get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)).data.actif
+                && request.resource.data.pv == request.resource.data.pvMax
+                && request.resource.data.etats.size() == 0 && request.resource.data.bonus.size() == 0
+                && aLaMain(table, combat)));
+          allow delete: if estMj(table)
+            || (estJoueur(table) && resource.data.genre == 'invocation' && resource.data.uid == request.auth.uid);
           allow update: if combattantValide(request.resource.data)
             && (estMj(table)
               || (estJoueur(table)
@@ -1086,7 +1115,7 @@ service cloud.firestore {
                 && ((resource.data.initiative == null
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['initiative', 'de'])
                     && request.resource.data.initiative == request.resource.data.de + resource.data.modInit)
-                  || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'mortSucces', 'mortEchecs', 'mort', 'etats', 'usages', 'gainTouche', 'visee', 'pvTemp', 'bonus'])
+                  || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'mortSucces', 'mortEchecs', 'mort', 'etats', 'usages', 'gainTouche', 'visee', 'pvTemp', 'bonus', 'concentration'])
                     && get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)).data.actif == combattant
                     && request.resource.data.tourActions == get(/databases/$(database)/documents/tables/$(table)/combats/$(combat)).data.tour
                     && request.resource.data.mvt <= request.resource.data.mvtBase + (request.resource.data.sprint ? 2 : 0)
@@ -1096,12 +1125,19 @@ service cloud.firestore {
               // L6.2 (1b, 2a) : le joueur qui a la main blesse un monstre ; ses PV ne font que baisser, à terre à 0.
               // L6.3 (4b, 6a) : il pose, retire ou rompt les états de n'importe quel combattant.
               // L6.4a (10a, 11a, 12a) : ses sorts donnent ou ôtent PV temporaires et bonus.
+              // L6.4b2 (1a) : il rompt une concentration (la sienne, ou celle qui tient la cible qu'il attaque).
               || (estJoueur(table)
-                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pv', 'aTerre', 'etats', 'pvTemp', 'bonus'])
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pv', 'aTerre', 'etats', 'pvTemp', 'bonus', 'concentration'])
                 && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['pv', 'aTerre'])
                   || (resource.data.genre == 'monstre'
                     && request.resource.data.pv < resource.data.pv && request.resource.data.pv >= 0
                     && request.resource.data.aTerre == (request.resource.data.pv == 0)))
+                && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['concentration']) || request.resource.data.concentration == null)
+                && aLaMain(table, combat))
+              // L6.4b2 (9a) : à la fin du tour du maître, ses invocations perdent un round.
+              || (estJoueur(table)
+                && resource.data.genre == 'invocation' && resource.data.uid == request.auth.uid
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['invocation'])
                 && aLaMain(table, combat)));
         }
       }

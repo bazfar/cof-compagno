@@ -30,7 +30,7 @@ export function combatSurCarte(
   uid: string,
 ): CombatSurCarte {
   if (!combat || combat.statut !== 'encours' || combat.scene !== sceneAffichee) return HORS_COMBAT;
-  const pvMonstres = new Map(combattants.filter((c) => c.genre === 'monstre' && c.pv !== null && c.pvMax !== null).map((c) => [c.id, { actuel: c.pv!, max: c.pvMax! }]));
+  const pvMonstres = new Map(combattants.filter((c) => c.genre !== 'pj' && c.pv !== null && c.pvMax !== null).map((c) => [c.id, { actuel: c.pv!, max: c.pvMax! }]));
   if (role === 'mj') return { actif: combat.actif, bloques: new Set(), budget: null, pvMonstres };
   const bloques = new Set(combattants.filter((c) => c.id !== combat.actif).map((c) => c.id));
   const joue = combattants.find((c) => c.id === combat.actif && c.uid === uid);

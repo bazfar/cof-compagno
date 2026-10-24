@@ -269,7 +269,7 @@ export async function blesser(
   libelle: string,
   auteur: string,
 ): Promise<number> {
-  if (c.genre === 'monstre') {
+  if (c.genre !== 'pj') {
     const r = await runTransaction(db, async (tx) => {
       const lu = await tx.get(refCombattant(idCombat, c.id));
       if (!lu.exists()) throw new RefusCombat(`${c.nom} n’est plus dans le combat.`);
@@ -465,6 +465,56 @@ export async function attaqueDeMonstre(
     `${brut.detail}${net !== brut.net ? `, affaibli : ${net}` : ''}${absorbe.pvTemp !== cible.pvTemp ? `, ${cible.pvTemp - absorbe.pvTemp} sur les PV temporaires` : ''} → ${fiche.nom} ${pv}/${vue.pv.max} PV${pv <= 0 ? ', Mourant' : ''}${suite ? ` ; ${suite}` : ''}`,
   );
   return { issue, net, pv, etat };
+}
+
+/**
+ * MJ : un monstre attaque une invocation (L6.4b2, 10a) : d20 + bonus contre
+ * sa DEF (une barricade, un objet, est toujours touchée) ; touchée, les
+ * dégâts de l'arme du monstre ôtent ses PV en chiffres (sans armure ni
+ * résistance), dans une transaction. À 0 PV, le client du MJ la retire.
+ */
+export async function attaqueSurInvocation(
+  idCombat: string,
+  combat: Pick<Combat, 'tour'>,
+  monstre: AvecId<Combattant>,
+  a: AttaqueMonstre & { defEnPlus?: number },
+  cible: AvecId<Combattant>,
+  alea: () => number = Math.random,
+): Promise<{ issue: IssueAttaque; net: number | null; pv: number }> {
+  if (monstre.genre !== 'monstre') throw new RefusCombat('Seul un monstre attaque depuis ce panneau.');
+  if (cible.genre !== 'invocation' || cible.def === null || cible.pv === null) throw new RefusCombat('On attaque une invocation du combat.');
+  if (!ciblable(cible.etats)) throw new RefusCombat(`${cible.nom} ne peut pas être pris pour cible.`);
+  peutAttaquer(monstre, a.portee.vue ? 'distance' : 'contact');
+  const actions = principaleLibre(combat, monstre, 'attaque');
+  const j = jetAttaque(monstre, cible, { ...a, mode: a.portee.vue ? 'distance' : 'contact' }, cible.def, alea);
+  const brute = j.issue ?? { de: 0, bonus: a.bonus, total: 0, def: cible.def, touche: false, critique: false, echecCritique: false };
+  const issue = cible.invocation?.objet && !j.leurre ? { ...brute, touche: true } : brute;
+  await updateDoc(refCombattant(idCombat, monstre.id), { ...avecPrincipale(combat, actions), ...(memes(j.etatsAttaquant, monstre.etats) ? {} : { etats: j.etatsAttaquant }) });
+  const t = j.leurre ? `${etatDuCatalogue(j.leurre)?.nom ?? j.leurre} : l’attaque rate d’office.` : cible.invocation?.objet ? 'un objet : touché d’office' : texteAttaque(issue);
+  await noterJet(`${a.nom} sur ${cible.nom}`, formuleTest(issue.bonus), { des: j.leurre ? [] : (issue.des ?? [issue.de]), faces: 20, bonus: issue.bonus, total: issue.total }, monstre.nom, t);
+  if (!issue.touche) {
+    if (!memes(j.etatsCible, cible.etats)) await updateDoc(refCombattant(idCombat, cible.id), { etats: j.etatsCible });
+    return { issue, net: null, pv: cible.pv };
+  }
+  const plus = modificateur(monstre.etats, ['degats']) + bonusFixe(monstre.bonus, ['degats']);
+  const formule = `${formuleDegats(a.formule, issue.critique)}${plus ? (plus > 0 ? `+${plus}` : plus) : ''}`;
+  const jet = lancerDegats(formule, alea);
+  if (!jet) throw new RefusCombat(`Formule de dégâts illisible : « ${formule} ».`);
+  const faible = affaibli(monstre.etats);
+  const r = await runTransaction(db, async (tx) => {
+    const lu = await tx.get(refCombattant(idCombat, cible.id));
+    if (!lu.exists()) throw new RefusCombat(`${cible.nom} n’est plus dans le combat.`);
+    const c = schemaCombattant.parse(lu.data());
+    const brut = degatsSurMonstre(jet.total, c, a.typeDegats);
+    const net = faible ? appliquerAffaibli(brut.net, faible.pourcent, faible.minimum) : brut.net;
+    const abs = absorber(c.pvTemp, net);
+    const pv = Math.max(0, (c.pv ?? 0) - abs.reste);
+    const etats = net > 0 ? rompre(j.etatsCible, 'degatsSubis') : j.etatsCible;
+    tx.update(refCombattant(idCombat, cible.id), { pv, aTerre: pv <= 0, ...(memes(etats, c.etats) ? {} : { etats }), ...(abs.pvTemp !== c.pvTemp ? { pvTemp: abs.pvTemp } : {}) });
+    return { net, detail: brut.detail, pv, pvMax: c.pvMax! };
+  });
+  await noterJet(`Dégâts ${a.nom} sur ${cible.nom}${issue.critique ? ' (critique)' : ''}`, formule.slice(0, 40), jet, monstre.nom, `${r.detail} → ${cible.nom} ${r.pv <= 0 ? 'retourne à la Mer' : `${r.pv}/${r.pvMax} PV`}`);
+  return { issue, net: r.net, pv: r.pv };
 }
 
 /**

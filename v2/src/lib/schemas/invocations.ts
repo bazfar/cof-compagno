@@ -13,6 +13,9 @@ import { schemaEffet, schemaElement, schemaTypeDegats } from './effets.ts';
  * magie pour les serviteurs), attaque au jet d'attaque magique du lanceur.
  * Décisions du 21/10/2026 : déplacement de 6 cases (3a) ; l'arme
  * spirituelle a PV = niveau et DEF 12, comme le familier (4a).
+ * Lot L6.4b2 (décision 13b de Thomas du 24/10/2026) : en combat, une
+ * invocation a sa propre initiative ; son tour se joue depuis la barre du
+ * joueur de son maître (14a). Cela remplace « au tour du mage » ci-dessus.
  */
 export const schemaInvocation = z.strictObject({
   id: schemaId,
@@ -30,7 +33,8 @@ export const schemaInvocation = z.strictObject({
     z.strictObject({ commeLanceur: z.literal(true) }),
     z.strictObject({ objet: z.literal(true) }),
   ]),
-  deplacement: z.number().int().min(0).max(30),
+  /** Cases par tour ; 20 au plus, comme un combattant (L6.4b2). */
+  deplacement: z.number().int().min(0).max(20),
   vol: z.boolean().default(false),
   /** Frappe au jet d'attaque magique du lanceur ; null : elle n'attaque pas. */
   attaque: z

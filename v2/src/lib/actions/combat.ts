@@ -2,6 +2,8 @@ import { collection, doc, getDocs, query, runTransaction, updateDoc, where, writ
 import { db } from '../firebase/client';
 import { finDeTourBonus } from '../combat/bonus';
 import { finDeTourZones } from '../combat/zones-sol';
+import { finDeConcentration, finDeTourConcentration } from '../combat/concentration';
+import { finDeTourInvocations } from '../combat/invocations';
 import { finDeTour, rompre } from '../combat/etats';
 import { champsJauges, type Jauges } from '../combat/ressources';
 import { actionsDuTour, deplacementRestant, mainSuivante, premierActif } from '../combat/ordre';
@@ -30,6 +32,7 @@ const refCombat = (id: string) => doc(db, `tables/${session.table}/combats/${id}
 const refPerso = (id: string) => doc(db, `tables/${session.table}/persos/${id}`);
 const refCombattant = (id: string, c: string) => doc(db, `tables/${session.table}/combats/${id}/combattants/${c}`);
 const refZone = (id: string, z: string) => doc(db, `tables/${session.table}/combats/${id}/zones/${z}`);
+const refJeton = (scene: string, id: string) => doc(db, `tables/${session.table}/scenes/${scene}/jetons/${id}`);
 const d20 = (alea: () => number) => 1 + Math.floor(alea() * 20);
 
 function nouveauCombattant(b: BrouillonCombattant, de: number | null, maintenant: number): Combattant {
@@ -70,6 +73,9 @@ function nouveauCombattant(b: BrouillonCombattant, de: number | null, maintenant
     mvt: 0,
     sprint: false,
     creeLe: maintenant,
+    maitre: null,
+    invocation: null,
+    concentration: null,
   });
 }
 
@@ -143,6 +149,9 @@ export async function lancerInitiative(idCombat: string, c: AvecId<Combattant>):
  * suivant qui peut jouer ; un nouveau round s'ouvre en repartant de la
  * tête. `aTerre` : ceux dont le tour est sauté (monstres à 0 PV, PJ à
  * 0 PV sur leur fiche).
+ * Lot L6.4b2 (9a, 1a, 3a) : ses invocations perdent un round (à 0, elles
+ * s'en vont avec leur jeton) ; sa concentration aussi (à 0, ce qu'elle a
+ * posé s'en va).
  */
 export async function finirTour(idCombat: string, actifAttendu: string | null, combattants: readonly AvecId<Combattant>[], aTerre: ReadonlySet<string>): Promise<Combat> {
   // L6.4b1 (9a) : les zones de celui qui finit son tour perdent un round.
@@ -154,7 +163,10 @@ export async function finirTour(idCombat: string, actifAttendu: string | null, c
       }))
     : [];
   const decompte = finDeTourZones(zones, actifAttendu ?? '');
-  return runTransaction(db, async (tx) => {
+  // L6.4b2 (9a) : les invocations de celui qui finit son tour perdent un round.
+  const invocations = finDeTourInvocations(combattants, actifAttendu ?? '');
+  let finies: string[] = [];
+  const r = await runTransaction(db, async (tx) => {
     const lu = await tx.get(refCombat(idCombat));
     if (!lu.exists()) throw new RefusCombat('Ce combat n’existe plus.');
     const c = schemaCombat.parse(lu.data());
@@ -165,20 +177,47 @@ export async function finirTour(idCombat: string, actifAttendu: string | null, c
     const s = mainSuivante(combattants, c.actif, c.round, aTerre);
     const apres = { ...c, actif: s.actif, round: s.round, tour: c.tour + 1 };
     // L6.4a (12a) : ses bonus temporaires aussi.
+    const zonesRetirees = new Set(decompte.retirer);
+    const retirees = new Set(invocations.retirer);
+    let conc: Combattant['concentration'] = null;
     if (lu2?.exists()) {
       const m = schemaCombattant.parse(lu2.data());
-      const etats = finDeTour(m.etats);
+      let etats = finDeTour(m.etats);
       const bonus = finDeTourBonus(m.bonus);
       const maj: Record<string, unknown> = {};
+      // L6.4b2 (1a, 3a) : sa concentration perd un round ; à 0, ce qu'elle a posé s'en va.
+      const fc = m.concentration ? finDeTourConcentration(m.concentration) : null;
+      if (fc === 'fin' && m.concentration) {
+        conc = m.concentration;
+        const fin = finDeConcentration(m.concentration, combattants.map((x) => (x.id === c.actif ? { ...x, etats } : x)));
+        for (const [id, e] of fin.etats) {
+          if (id === c.actif) etats = e;
+          else tx.update(refCombattant(idCombat, id), { etats: e });
+        }
+        if (fin.zone) zonesRetirees.add(fin.zone);
+        for (const id of fin.invocations) retirees.add(id);
+        maj.concentration = null;
+      } else if (fc && fc !== 'fin' && m.concentration) maj.concentration = { ...m.concentration, rounds: fc.rounds };
       if (JSON.stringify(etats) !== JSON.stringify(m.etats)) maj.etats = etats;
       if (JSON.stringify(bonus) !== JSON.stringify(m.bonus)) maj.bonus = bonus;
       if (Object.keys(maj).length) tx.update(refCombattant(idCombat, c.actif!), maj);
     }
-    for (const z of decompte.maj) tx.update(refZone(idCombat, z.id), { rounds: z.rounds });
-    for (const id of decompte.retirer) tx.delete(refZone(idCombat, id));
+    for (const z of decompte.maj) if (!zonesRetirees.has(z.id)) tx.update(refZone(idCombat, z.id), { rounds: z.rounds });
+    for (const id of zonesRetirees) tx.delete(refZone(idCombat, id));
+    for (const i of invocations.maj) if (!retirees.has(i.id)) tx.update(refCombattant(idCombat, i.id), { invocation: i.invocation });
+    for (const id of retirees) {
+      tx.delete(refCombattant(idCombat, id));
+      tx.delete(refJeton(c.scene, id));
+    }
+    finies = [...retirees];
     tx.update(refCombat(idCombat), { actif: apres.actif, round: apres.round, tour: apres.tour });
-    return apres;
+    return { apres, conc };
   });
+  const auteur = combattants.find((x) => x.id === actifAttendu)?.nom ?? 'MJ';
+  if (r.conc) await noterJet(`Concentration : ${r.conc.nom}`, '0', { des: [], faces: 0, bonus: 0, total: 0 }, auteur, `${r.conc.nom} s’achève.`);
+  if (finies.length)
+    await noterJet('Invocations', '0', { des: [], faces: 0, bonus: 0, total: 0 }, auteur, `${finies.map((id) => combattants.find((x) => x.id === id)?.nom ?? id).join(', ')} : leur temps est écoulé, elles retournent à la Mer.`);
+  return r.apres;
 }
 
 /** MJ : corrige les sauvegardes d'un monstre (L6.4a, 8a). */
@@ -226,7 +265,7 @@ export async function noterAction(
 
 /** MJ : règle les PV d'un monstre ; à 0 il est à terre, son jeton marqué mort (et l'inverse). */
 export async function ajusterPvMonstre(idCombat: string, scene: string, c: AvecId<Combattant>, delta: number): Promise<number> {
-  if (c.genre !== 'monstre' || c.pv === null || c.pvMax === null) throw new RefusCombat('Les PV d’un PJ se règlent sur sa fiche.');
+  if (c.genre === 'pj' || c.pv === null || c.pvMax === null) throw new RefusCombat('Les PV d’un PJ se règlent sur sa fiche.');
   const pv = Math.max(0, Math.min(c.pvMax, c.pv + Math.round(delta)));
   const aTerre = pv <= 0;
   await updateDoc(refCombattant(idCombat, c.id), { pv, aTerre });
@@ -239,9 +278,13 @@ export async function basculerPortees(idCombat: string, libres: boolean): Promis
   await updateDoc(refCombat(idCombat), { porteesLibres: libres });
 }
 
-/** MJ : clôt le combat (11a). Les monstres morts restent sur la carte, marqués morts. L6.3 (9a) : la Plongée revient à 0. */
-export async function cloreCombat(idCombat: string, remises: readonly { perso: string; jauges: Jauges }[] = []): Promise<void> {
+/**
+ * MJ : clôt le combat (11a). Les monstres morts restent sur la carte, marqués morts. L6.3 (9a) : la Plongée revient à 0.
+ * L6.4b2 (9a) : les invocations s'en vont avec le combat, leurs jetons aussi.
+ */
+export async function cloreCombat(idCombat: string, remises: readonly { perso: string; jauges: Jauges }[] = [], invocations: { scene: string; ids: readonly string[] } | null = null): Promise<void> {
   const lot = writeBatch(db);
+  if (invocations) for (const id of invocations.ids) lot.delete(refJeton(invocations.scene, id));
   for (const r of remises) if (Object.keys(r.jauges).length) lot.update(refPerso(r.perso), champsJauges(r.jauges));
   lot.update(refCombat(idCombat), { statut: 'clos', actif: null, closLe: Date.now() });
   lot.set(doc(db, 'tables', session.table), { combat: null }, { merge: true });
