@@ -570,7 +570,8 @@ service cloud.firestore {
     // Aligné sur schemaCombattant (src/lib/schemas/combat.ts).
     function combattantValide(d) {
       return d.keys().hasOnly(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'def', 'armure', 'resistances', 'mortSucces', 'mortEchecs', 'mort', 'etats', 'usages', 'gainTouche', 'debutTour', 'visee', 'sauvegardes', 'boss', 'demonOuMortVivant', 'pvTemp', 'bonus', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe', 'maitre', 'invocation', 'concentration'])
-        && d.keys().hasAll(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'def', 'armure', 'resistances', 'mortSucces', 'mortEchecs', 'mort', 'etats', 'usages', 'gainTouche', 'debutTour', 'visee', 'sauvegardes', 'boss', 'demonOuMortVivant', 'pvTemp', 'bonus', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe', 'maitre', 'invocation', 'concentration'])
+        // Avec le `hasOnly` ci-dessus : exactement ces clés, ni plus ni moins.
+        && d.keys().size() == 37
         // L6.3 : états, usages, gain par touche, début de tour, visée (aligné sur schemaCombattant).
         && d.etats is list && d.etats.size() <= 20
         && d.usages is map && d.usages.size() <= 50

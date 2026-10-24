@@ -111,6 +111,18 @@ describe('combat (L6.1)', () => {
     await assertSucceeds(pour('bob').doc(C).update({ statut: 'clos', actif: null, closLe: 9 }));
   });
 
+  it('la forme d’un combattant : exactement ses clés, ni une de moins, ni une de trop', async () => {
+    const sans = (o: Record<string, unknown>, cle: string) => Object.fromEntries(Object.entries(o).filter(([k]) => k !== cle));
+    const bob = pour('bob');
+    // `monstre` n'est relu par aucune branche pour un monstre : seul le
+    // compte des clés le rend obligatoire.
+    await assertFails(bob.doc(`${C}/combattants/m-r2-a`).set(sans(goule(), 'monstre')));
+    await assertFails(bob.doc(`${C}/combattants/m-r2-b`).set(sans(goule(), 'visee')));
+    await assertFails(bob.doc(`${C}/combattants/pj-p6`).set(sans(combattant(), 'concentration')));
+    await assertFails(bob.doc(`${C}/combattants/pj-p7`).set(combattant({ humeur: 'grognon' })));
+    await assertSucceeds(bob.doc(`${C}/combattants/m-r2-c`).set(goule()));
+  });
+
   it('6a : le joueur qui a la main la passe (tour + 1, round inchangé ou + 1) ; pas un autre', async () => {
     await assertFails(pour('carol').doc(C).update({ actif: 'm-r1-a', tour: 4 }));
     await assertFails(pour('alice').doc(C).update({ actif: 'm-r1-a', tour: 5 }));
