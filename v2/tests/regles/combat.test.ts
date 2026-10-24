@@ -403,7 +403,10 @@ describe('concentration et invocations (L6.4b2)', () => {
     // Elle a la main : son joueur blesse un monstre.
     await assertSucceeds(pour('alice').doc(`${C}/combattants/m-r1-a`).update({ pv: 8, aTerre: false }));
     await poser(C, combat({ actif: 'pj-p1' }));
-    await assertFails(pour('alice').doc(J).update({ cx: 5 }));
+    // Hors de son tour, son joueur ne joue plus l'invocation ; son jeton,
+    // lui, reste déplaçable par un sort (L6.4a, 10a : 20 cases au plus).
+    await assertFails(pour('alice').doc(I).update({ tourActions: 4, principale: true }));
+    await assertFails(pour('alice').doc(J).update({ cx: 40 }));
     await assertSucceeds(pour('alice').doc(I).update({ invocation: { creature: 'serviteur.feu', element: 'feu', attaque: { bonus: 7, des: '1d8+3', typeDegats: 'feu' }, objet: false, remous: 1, rounds: 2, lancer: 't3' } }));
     await assertFails(pour('alice').doc(I).update({ pv: 30 }));
     await assertFails(pour('carol').doc(I).delete());
