@@ -7,7 +7,7 @@
   import { suivreZonesCombat } from '../lib/magasins/zones.svelte';
   import type { ZoneSol } from '../lib/schemas/zones';
   import { marquerMort } from '../lib/actions/carte';
-  import { ajouterCombattant, basculerPortees, cloreCombat, demarrerCombat, donnerLaMain, RefusCombat } from '../lib/actions/combat';
+  import { ajouterCombattant, basculerPortees, cloreCombat, demarrerCombat, donnerLaMain, finirTour, RefusCombat } from '../lib/actions/combat';
   import { messageErreurJournal } from '../lib/actions/journal';
   import { brouillonDuCombat, manquePourDemarrer, monstrePourCombat, type BrouillonCombattant, type FichePourCombat, type MonstrePourCombat } from '../lib/combat/demarrage';
   import { degatsParTour } from '../lib/combat/etats';
@@ -232,7 +232,15 @@
     for (const c of tombees) invocationsRetirees.add(c.id);
     const id = idCombat;
     const scene = combat.scene;
-    agir(() => retirerInvocations(id, scene, tombees, 'à 0 PV, elles retournent à la Mer', 'MJ'));
+    // Si elle tenait la main, son tour finit d'abord : sinon `actif`
+    // montrerait un combattant retiré, et plus personne ne pourrait jouer.
+    const actif = combat.actif;
+    const tous = combattants;
+    const sienne = !!actif && tombees.some((c) => c.id === actif);
+    agir(async () => {
+      if (sienne) await finirTour(id, actif, tous, aTerre);
+      await retirerInvocations(id, scene, tombees, 'à 0 PV, elles retournent à la Mer', 'MJ');
+    });
   });
   // L6.4b1 (7a, 11a) : la main arrive à un combattant : les zones sur sa case agissent, une fois par tour.
   const zonesJouees = new Set<string>();

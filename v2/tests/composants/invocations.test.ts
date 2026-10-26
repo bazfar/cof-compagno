@@ -321,6 +321,26 @@ describe('le MJ (1a, 2a, 9a, 10a, 15a)', () => {
     await waitFor(() => expect(actions.cloreCombat).toHaveBeenCalledWith('c1', expect.any(Array), { scene: 'cave', ids: ['i-p1-t3-1'] }));
   });
 
+  it('9a : une invocation abattue à son propre tour finit son tour avant d’être retirée (la main ne reste pas sur elle)', async () => {
+    session.uid = 'mj';
+    persos.elements = [mage() as never];
+    combatDoc.donnees = combat({ actif: 'i-p1-t3-1' });
+    combattants.elements = [goule(), pj('p1', { nom: 'Shyrion', debutTour: 6 }), tison({ pv: 0, aTerre: true })];
+    render(CombatMj);
+    await waitFor(() => expect(actions.finirTour).toHaveBeenCalledWith('c1', 'i-p1-t3-1', expect.any(Array), expect.any(Set)));
+    await waitFor(() => expect(inv.retirerInvocations).toHaveBeenCalledWith('c1', 'cave', [expect.objectContaining({ id: 'i-p1-t3-1' })], 'à 0 PV, elles retournent à la Mer', 'MJ'));
+  });
+
+  it('9a : abattue hors de son tour, elle est retirée sans toucher à la main', async () => {
+    session.uid = 'mj';
+    persos.elements = [mage() as never];
+    combatDoc.donnees = combat({ actif: 'm-r1-a' });
+    combattants.elements = [goule(), pj('p1', { nom: 'Shyrion', debutTour: 6 }), tison({ pv: 0, aTerre: true })];
+    render(CombatMj);
+    await waitFor(() => expect(inv.retirerInvocations).toHaveBeenCalledWith('c1', 'cave', [expect.objectContaining({ id: 'i-p1-t3-1' })], 'à 0 PV, elles retournent à la Mer', 'MJ'));
+    expect(actions.finirTour).not.toHaveBeenCalled();
+  });
+
   it('un monstre sans maintien ni Remous ni dégâts par tour : rien à payer', async () => {
     session.uid = 'mj';
     combatDoc.donnees = combat({ actif: 'm-r1-a' });
