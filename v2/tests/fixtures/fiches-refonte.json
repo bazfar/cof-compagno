@@ -1,0 +1,448 @@
+{
+  "Nysa": {
+    "schemaVersion": 2,
+    "proprietaireUid": "alice",
+    "creeLe": 1793017733942,
+    "nom": "Nysa",
+    "genre": "homme",
+    "niveau": 10,
+    "classe": "magicien",
+    "race": "humain",
+    "raceVariante": null,
+    "caracs": {
+      "FOR": 10,
+      "DEX": 10,
+      "CON": 14,
+      "INT": 15,
+      "SAG": 10,
+      "CHA": 10
+    },
+    "capacitesRace": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "capacitesRaceChoix": {
+      "4": "FOR"
+    },
+    "dons": [
+      "frappe_puissante",
+      "tir_precision"
+    ],
+    "donsChoix": {},
+    "bonusCompetences": {},
+    "pvMax": 51,
+    "pvActuel": 51,
+    "pvHistorique": [
+      {
+        "niveau": 2,
+        "faces": 4,
+        "jet": 1,
+        "modCON": 2,
+        "total": 3
+      },
+      {
+        "niveau": 3,
+        "faces": 4,
+        "jet": 2,
+        "modCON": 2,
+        "total": 4
+      },
+      {
+        "niveau": 4,
+        "faces": 4,
+        "jet": 3,
+        "modCON": 2,
+        "total": 5
+      },
+      {
+        "niveau": 5,
+        "faces": 4,
+        "jet": 4,
+        "modCON": 2,
+        "total": 6
+      },
+      {
+        "niveau": 6,
+        "faces": 4,
+        "jet": 3,
+        "modCON": 2,
+        "total": 5
+      },
+      {
+        "niveau": 7,
+        "faces": 4,
+        "jet": 4,
+        "modCON": 2,
+        "total": 6
+      },
+      {
+        "niveau": 8,
+        "faces": 4,
+        "jet": 3,
+        "modCON": 2,
+        "total": 5
+      },
+      {
+        "niveau": 9,
+        "faces": 4,
+        "jet": 2,
+        "modCON": 2,
+        "total": 4
+      },
+      {
+        "niveau": 10,
+        "faces": 4,
+        "jet": 3,
+        "modCON": 2,
+        "total": 5
+      }
+    ],
+    "ppActuel": 28,
+    "equipement": {
+      "main_droite": {
+        "id": "grimoire",
+        "nom": "Grimoire",
+        "type": "arme",
+        "porte": false,
+        "description": "Ouvrage arcanique relié de cuir et de fermoirs de métal. Renforce les incantations du porteur, et peut au besoin servir à frapper l'adversaire.",
+        "prixPo": 8,
+        "degats": "1d4",
+        "degatsAuMoinsRare": "1d6",
+        "portee": "1 case",
+        "porteeMinCases": 1,
+        "porteeMaxCases": 1,
+        "categoriePortee": "contact",
+        "typedegats": "physique",
+        "enchantement": 0,
+        "deuxMains": false,
+        "categorieArme": "courte",
+        "maitrise": "simple",
+        "bonusAttaqueMagique": 1
+      },
+      "torse": {
+        "id": "robe_mage",
+        "nom": "Robe de mage tissée de Sève",
+        "type": "armure",
+        "porte": false,
+        "description": "Tissu léger imprégné de Sève. Protège sans entraver la magie.",
+        "prixPo": 5,
+        "valeurCA": 11,
+        "categorie": "legere",
+        "reductionDegats": 0,
+        "malusDEX": 0
+      }
+    },
+    "inventaire": {
+      "manuel_incantation": {
+        "id": "manuel_incantation",
+        "nom": "Manuel d'incantation",
+        "type": "accessoire",
+        "porte": false,
+        "description": "Recueil de formules et de gestes arcaniques, relié pour un usage nomade en combat. Réservé aux Magiciens, Enchanteurs et Nécromanciens.",
+        "prixPo": 75,
+        "sansModificateurRegional": true,
+        "effet": "6 emplacements de sorts (4× rang 1-2, 1× rang 1-3, 1× rang 1-4) ; +3 par palier de rareté, répartis vers les rangs les plus élevés",
+        "grimoireClasses": [
+          "magicien",
+          "enchanteur",
+          "necromancien"
+        ]
+      },
+      "parchemin_trait_de_feu": {
+        "id": "parchemin_trait_de_feu",
+        "nom": "Parchemin — Trait de feu",
+        "type": "consommable",
+        "porte": false,
+        "description": "Rouleau scellé, incantation de Trait de feu prête à être copiée dans un Manuel d'incantation.",
+        "prixPo": 30,
+        "quantite": 1,
+        "sortAppris": "trait_de_feu"
+      },
+      "potion_soin": {
+        "id": "potion_soin",
+        "nom": "Potion de soin",
+        "type": "consommable",
+        "porte": false,
+        "description": "Régénère 1d6 PV immédiatement. Goût amer de Sève.",
+        "prixPo": 30,
+        "quantite": 1
+      }
+    },
+    "piecesOr": 0,
+    "piecesArgent": 0,
+    "piecesBronze": 0,
+    "etatsActifs": [],
+    "mutations": null,
+    "contratDemoniaquePenalite": null,
+    "amesStockees": 0,
+    "progression": {
+      "crans": 0
+    },
+    "vecu": {
+      "crans": 0,
+      "paliers": 0,
+      "points": 0,
+      "noeuds": [],
+      "noeudOffert": "erudit"
+    },
+    "usages": {},
+    "modules": {},
+    "refonte": {
+      "classe": "magicien",
+      "rangs": {
+        "magicien.ecole": 5,
+        "magicien.elementaire": 5,
+        "magicien.sauvage": 3
+      },
+      "rangOffert": null,
+      "ecole": "evocation",
+      "elementDepart": "feu",
+      "secondElement": "glace",
+      "elementMaitre": "feu",
+      "mineurs": [
+        "mineur.trait-arcanique",
+        "mineur.main-du-mage",
+        "mineur.lumiere",
+        "mineur.detection-magie"
+      ],
+      "mineurPalierII": null,
+      "caracEnPlus": null,
+      "variantes": {},
+      "jauges": {
+        "endurance": null,
+        "inspiration": null,
+        "sacre": null,
+        "plongee": 0,
+        "corruptionAme": 0
+      }
+    },
+    "octrois": {
+      "chaos": false,
+      "elements": {},
+      "verbes": [],
+      "reconversion": false
+    }
+  },
+  "Orel": {
+    "schemaVersion": 2,
+    "proprietaireUid": "alice",
+    "creeLe": 1793017770063,
+    "nom": "Orel",
+    "genre": "homme",
+    "niveau": 12,
+    "classe": "guerrier",
+    "race": "humain",
+    "raceVariante": null,
+    "caracs": {
+      "FOR": 12,
+      "DEX": 10,
+      "CON": 14,
+      "INT": 13,
+      "SAG": 10,
+      "CHA": 10
+    },
+    "capacitesRace": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "capacitesRaceChoix": {
+      "4": "FOR"
+    },
+    "dons": [
+      "frappe_puissante",
+      "tir_precision",
+      "combattant_duel"
+    ],
+    "donsChoix": {},
+    "bonusCompetences": {},
+    "pvMax": 92,
+    "pvActuel": 92,
+    "pvHistorique": [
+      {
+        "niveau": 2,
+        "faces": 10,
+        "jet": 2,
+        "modCON": 2,
+        "total": 4
+      },
+      {
+        "niveau": 3,
+        "faces": 10,
+        "jet": 7,
+        "modCON": 2,
+        "total": 9
+      },
+      {
+        "niveau": 4,
+        "faces": 10,
+        "jet": 6,
+        "modCON": 2,
+        "total": 8
+      },
+      {
+        "niveau": 5,
+        "faces": 10,
+        "jet": 9,
+        "modCON": 2,
+        "total": 11
+      },
+      {
+        "niveau": 6,
+        "faces": 10,
+        "jet": 4,
+        "modCON": 2,
+        "total": 6
+      },
+      {
+        "niveau": 7,
+        "faces": 10,
+        "jet": 3,
+        "modCON": 2,
+        "total": 5
+      },
+      {
+        "niveau": 8,
+        "faces": 10,
+        "jet": 5,
+        "modCON": 2,
+        "total": 7
+      },
+      {
+        "niveau": 9,
+        "faces": 10,
+        "jet": 7,
+        "modCON": 2,
+        "total": 9
+      },
+      {
+        "niveau": 10,
+        "faces": 10,
+        "jet": 9,
+        "modCON": 2,
+        "total": 11
+      },
+      {
+        "niveau": 11,
+        "faces": 10,
+        "jet": 3,
+        "modCON": 2,
+        "total": 5
+      },
+      {
+        "niveau": 12,
+        "faces": 10,
+        "jet": 1,
+        "modCON": 2,
+        "total": 3
+      }
+    ],
+    "equipement": {
+      "main_droite": {
+        "id": "epee_longue",
+        "nom": "Épée longue",
+        "type": "arme",
+        "porte": false,
+        "description": "Arme emblématique du guerrier. Bon équilibre dégâts/maniabilité.",
+        "prixPo": 15,
+        "degats": "1d8",
+        "portee": "1 case",
+        "porteeMinCases": 1,
+        "porteeMaxCases": 1,
+        "categoriePortee": "contact",
+        "typedegats": "physique",
+        "enchantement": 0,
+        "deuxMains": false,
+        "categorieArme": "longue",
+        "maitrise": "martiale"
+      },
+      "main_gauche": {
+        "id": "bouclier_acier",
+        "nom": "Bouclier en acier",
+        "type": "bouclier",
+        "porte": false,
+        "description": "Protection solide. Standard de l'infanterie des Royaumes Coalisés.",
+        "prixPo": 40,
+        "categorieBouclier": "moyen",
+        "bonusDEF": 2
+      },
+      "torse": {
+        "id": "armure_cuir",
+        "nom": "Armure de cuir",
+        "type": "armure",
+        "porte": false,
+        "description": "Protection légère, n'entrave pas les mouvements.",
+        "prixPo": 10,
+        "valeurCA": 12,
+        "categorie": "legere",
+        "reductionDegats": 1,
+        "malusDEX": 0
+      }
+    },
+    "inventaire": {
+      "potion_soin": {
+        "id": "potion_soin",
+        "nom": "Potion de soin",
+        "type": "consommable",
+        "porte": false,
+        "description": "Régénère 1d6 PV immédiatement. Goût amer de Sève.",
+        "prixPo": 30,
+        "quantite": 1
+      }
+    },
+    "piecesOr": 0,
+    "piecesArgent": 0,
+    "piecesBronze": 0,
+    "etatsActifs": [],
+    "mutations": null,
+    "contratDemoniaquePenalite": null,
+    "amesStockees": 0,
+    "progression": {
+      "crans": 0
+    },
+    "vecu": {
+      "crans": 0,
+      "paliers": 0,
+      "points": 0,
+      "noeuds": [],
+      "noeudOffert": "premiers-soins"
+    },
+    "usages": {},
+    "modules": {},
+    "refonte": {
+      "classe": "guerrier",
+      "rangs": {
+        "guerrier.soldat": 5,
+        "guerrier.peuple": 5,
+        "guerrier.maitre-d-armes": 5
+      },
+      "rangOffert": null,
+      "ecole": null,
+      "elementDepart": null,
+      "secondElement": null,
+      "elementMaitre": null,
+      "mineurs": [],
+      "mineurPalierII": null,
+      "caracEnPlus": "FOR",
+      "variantes": {},
+      "jauges": {
+        "endurance": 7,
+        "inspiration": null,
+        "sacre": null,
+        "plongee": 0,
+        "corruptionAme": 0
+      }
+    },
+    "octrois": {
+      "chaos": false,
+      "elements": {},
+      "verbes": [],
+      "reconversion": false
+    }
+  }
+}

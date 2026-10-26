@@ -62,9 +62,40 @@ service cloud.firestore {
     // dans l'app, les règles bornent les champs et l'essentiel.
     // Deux versions (lot L4.11a) : la v1, et la fiche convertie à la refonte
     // (schemaFicheV1, schemaFicheV2). Chacune a sa liste de champs.
+    /*
+     * CHEMIN RAPIDE DES ÉCRITURES VOLATILES (décision de Thomas du
+     * 26/10/2026) — voulu : budget d'évaluation, NE PAS FUSIONNER avec
+     * `ficheValide`. Sur une fiche de la refonte niveau 10, revalider la
+     * fiche entière à chaque écriture épuisait les 1000 expressions de
+     * Firestore, et le lot d'un sort qui blesse (fiche + deux combattants)
+     * était refusé en partie.
+     *
+     * Les champs volatils sont ceux que le combat écrit : `pvActuel`,
+     * `ppActuel` et les jauges de la refonte. Leurs bornes se lisent dans
+     * `resource.data` (l'avant), jamais dans ce qui est écrit : les
+     * maxima (`pvMax`) restent hors de la liste blanche, donc inchangés
+     * par une écriture volatile. Tout le reste passe par `ficheValide`,
+     * inchangé, comme à la création. Les contrôles d'identité et de
+     * propriétaire sont les mêmes des deux côtés.
+     */
+    function majVolatilePerso(apres, avant) {
+      return (!apres.diff(avant).affectedKeys().hasAny(['pvActuel'])
+          || (apres.pvActuel is int && apres.pvActuel >= 0 && apres.pvActuel <= avant.pvMax))
+        && (!apres.diff(avant).affectedKeys().hasAny(['ppActuel'])
+          || (apres.ppActuel is int && apres.ppActuel >= 0))
+        && (!apres.diff(avant).affectedKeys().hasAny(['refonte'])
+          || (apres.refonte.diff(avant.refonte).affectedKeys().hasOnly(['jauges'])
+            && apres.refonte.jauges.plongee is int && apres.refonte.jauges.corruptionAme is int));
+    }
+    function persoMajValide(apres, avant) {
+      return apres.diff(avant).affectedKeys().hasOnly(['pvActuel', 'ppActuel', 'refonte'])
+        ? majVolatilePerso(apres, avant)
+        : ficheValide(apres);
+    }
     function ficheValide(d) {
       return (d.schemaVersion == 1 && ficheV1Valide(d)) || (d.schemaVersion == 2 && ficheV2Valide(d));
     }
+
     function ficheV1Valide(d) {
       return d.keys().hasOnly([
           'schemaVersion', 'proprietaireUid', 'creeLe', 'nom', 'genre', 'niveau',
@@ -608,6 +639,46 @@ service cloud.firestore {
         && (!d.mort || d.mortEchecs == 3)
         && d.creeLe is int;
     }
+    /*
+     * CHEMIN RAPIDE DES ÉCRITURES VOLATILES (décision de Thomas du
+     * 26/10/2026) — voulu : budget d'évaluation, NE PAS FUSIONNER avec
+     * `combattantValide`. La liste blanche est relevée sur les écritures
+     * que le code de combat émet (lib/actions : attaques, combat,
+     * invocations, sorts-combat, zones) ; tout ce qui tient l'identité ou
+     * la forme du combattant (genre, nom, perso, uid, monstre, modInit,
+     * pvMax, mvtBase, def, armure, resistances, boss, demonOuMortVivant,
+     * maitre, creeLe) en est dehors et passe par `combattantValide`.
+     * Les bornes se lisent dans `resource.data` : `pvMax` et `mvtBase`
+     * sont hors liste, donc inchangés par une écriture volatile.
+     */
+    function majVolatileCombattant(apres, avant) {
+      return (apres.pv == null ? avant.pv == null : (apres.pv is int && apres.pv >= -999 && apres.pv <= avant.pvMax))
+        && apres.aTerre is bool && apres.mort is bool && apres.visee is bool
+        && apres.principale is bool && apres.secondaire is bool && apres.sprint is bool
+        && entierEntre(apres.tourActions, 0, 99999) && entierEntre(apres.debutTour, 0, 99999)
+        && entierEntre(apres.mvt, 0, 40) && (!apres.sprint || apres.principale)
+        && entierEntre(apres.mortSucces, 0, 3) && entierEntre(apres.mortEchecs, 0, 3)
+        && (avant.genre == 'pj' || (apres.mortSucces == 0 && apres.mortEchecs == 0 && !apres.mort))
+        && (!apres.mort || apres.mortEchecs == 3)
+        && ((apres.initiative == null && apres.de == null) || (entierEntre(apres.initiative, -9, 60) && entierEntre(apres.de, 1, 20)))
+        && apres.etats is list && apres.etats.size() <= 20
+        && apres.bonus is list && apres.bonus.size() <= 20
+        && apres.usages is map && apres.usages.size() <= 50
+        && apres.gainTouche is map && apres.gainTouche.keys().hasOnly(['round', 'montant'])
+        && entierEntre(apres.gainTouche.round, 0, 999) && entierEntre(apres.gainTouche.montant, 0, 10)
+        && entierEntre(apres.pvTemp, 0, 999)
+        && (apres.sauvegardes == null || (avant.genre == 'monstre' && sauvegardesValides(apres.sauvegardes)))
+        && (apres.concentration == null || (avant.genre == 'pj' && apres.concentration is map))
+        && ((avant.genre == 'invocation') == (apres.invocation != null)) && (apres.invocation == null || apres.invocation is map);
+    }
+    function combattantMajValide(apres, avant) {
+      return apres.diff(avant).affectedKeys().hasOnly(['pv', 'aTerre', 'etats', 'pvTemp', 'bonus',
+          'tourActions', 'principale', 'secondaire', 'mvt', 'sprint',
+          'mortSucces', 'mortEchecs', 'mort', 'initiative', 'de', 'debutTour', 'visee',
+          'usages', 'gainTouche', 'concentration', 'invocation', 'sauvegardes'])
+        ? majVolatileCombattant(apres, avant)
+        : combattantValide(apres);
+    }
     // Aligné sur schemaSauvegardesCombat (L6.4a, 8a).
     function sauvegardesValides(s) {
       return s is map && s.keys().hasOnly(['FOR', 'DEX', 'CON', 'Volonte']) && s.keys().hasAll(['FOR', 'DEX', 'CON', 'Volonte'])
@@ -890,7 +961,7 @@ service cloud.firestore {
               && request.resource.data.proprietaireUid == request.auth.uid
               && progressionVierge(request.resource.data)
               && (request.resource.data.schemaVersion == 1 || octroisVierges(request.resource.data.octrois))));
-        allow update: if ficheValide(request.resource.data)
+        allow update: if persoMajValide(request.resource.data, resource.data)
           && (estMj(table)
             || (estJoueur(table)
               && resource.data.proprietaireUid == request.auth.uid
@@ -1109,7 +1180,7 @@ service cloud.firestore {
                 && aLaMain(table, combat)));
           allow delete: if estMj(table)
             || (estJoueur(table) && resource.data.genre == 'invocation' && resource.data.uid == request.auth.uid);
-          allow update: if combattantValide(request.resource.data)
+          allow update: if combattantMajValide(request.resource.data, resource.data)
             && (estMj(table)
               || (estJoueur(table)
                 && resource.data.uid == request.auth.uid
