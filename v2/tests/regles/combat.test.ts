@@ -299,13 +299,16 @@ describe('sorts en combat (L6.4a)', () => {
     await assertFails(pour('alice').doc(`${C}/combattants/m-r1-a`).update({ sauvegardes: sauv }));
   });
 
-  it('11a, 12a : le joueur qui a la main donne ou ôte PV temporaires et bonus à n’importe quel combattant ; les siens à son tour ; sans la main, non', async () => {
+  it('11a, 12a : le joueur qui a la main donne ou ôte PV temporaires et bonus à n’importe quel combattant ; les siens à son tour ; sans la main, seulement encaisser les siens', async () => {
     await assertSucceeds(pour('alice').doc(`${C}/combattants/m-r1-a`).update({ pvTemp: 0, bonus: [bonus], pv: 10, aTerre: false }));
     await assertSucceeds(pour('alice').doc(`${C}/combattants/pj-p2`).update({ pvTemp: 5, bonus: [bonus] }));
     await assertSucceeds(pour('alice').doc(`${C}/combattants/pj-p1`).update({ tourActions: 3, principale: true, pvTemp: 4, bonus: [bonus] }));
     await assertFails(pour('alice').doc(`${C}/combattants/pj-p2`).update({ pvTemp: 5, sauvegardes: null, nom: 'x' }));
     await assertFails(pour('carol').doc(`${C}/combattants/m-r1-a`).update({ bonus: [] }));
-    await assertFails(pour('carol').doc(`${C}/combattants/pj-p2`).update({ pvTemp: 3 }));
+    // Hors main, elle n'encaisse que ses propres dégâts : la réserve baisse,
+    // elle ne monte pas (décision du 26/10, `encaisseSesDegats`).
+    await assertFails(pour('carol').doc(`${C}/combattants/pj-p2`).update({ pvTemp: 7 }));
+    await assertSucceeds(pour('carol').doc(`${C}/combattants/pj-p2`).update({ pvTemp: 3 }));
   });
 
   it('10a : son sort déplace le jeton d’un combattant de 20 cases au plus ; pas un autre champ ; sans la main, non', async () => {

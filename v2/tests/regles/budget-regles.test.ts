@@ -106,6 +106,46 @@ describe('budget d’évaluation, sur de vraies fiches de la refonte', () => {
     await assertFails(d.update({ ppActuel: '12' }));
   });
 
+  it('hors de son tour, le joueur encaisse ses propres dégâts : pvTemp baisse, ses états rétrécissent', async () => {
+    const endormi = { id: 'endormi', rounds: 2, cumul: 1, charges: null, des: null, source: 'MJ' };
+    const affaibli = { id: 'affaibli', rounds: 2, cumul: 1, charges: null, des: null, source: 'MJ' };
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(C).set(combat({ actif: 'm-r1-a' }));
+      await ctx.firestore().doc(`${C}/combattants/pj-p1`).set(combattant({ pvTemp: 6, etats: [endormi, affaibli] }));
+    });
+    const moi = pour('alice').doc(`${C}/combattants/pj-p1`);
+    await assertSucceeds(moi.update({ pvTemp: 2 }));
+    await assertSucceeds(moi.update({ pvTemp: 0, etats: [affaibli] }));
+  });
+
+  it('hors de son tour, rien de plus : pas de hausse, pas d’ajout d’état, pas le combattant d’un autre', async () => {
+    const endormi = { id: 'endormi', rounds: 2, cumul: 1, charges: null, des: null, source: 'MJ' };
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(C).set(combat({ actif: 'm-r1-a' }));
+      await ctx.firestore().doc(`${C}/combattants/pj-p1`).set(combattant({ pvTemp: 4, etats: [endormi] }));
+      await ctx.firestore().doc(`${C}/combattants/pj-p2`).set(combattant({ nom: 'Orel', perso: 'p2', uid: 'carol', pvTemp: 4 }));
+    });
+    const moi = pour('alice').doc(`${C}/combattants/pj-p1`);
+    await assertFails(moi.update({ pvTemp: 9 }));
+    await assertFails(moi.update({ pvTemp: -1 }));
+    await assertFails(moi.update({ etats: [endormi, { ...endormi, id: 'brulure' }] }));
+    await assertFails(moi.update({ pvTemp: 2, tourActions: 3 }));
+    await assertFails(moi.update({ pvTemp: 2, pvMax: 99 }));
+    await assertFails(pour('alice').doc(`${C}/combattants/pj-p2`).update({ pvTemp: 1 }));
+  });
+
+  it('le lot réel de « Subir des dégâts » hors de son tour : la fiche et le combattant ensemble', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(C).set(combat({ actif: 'm-r1-a' }));
+      await ctx.firestore().doc(`${C}/combattants/pj-p1`).set(combattant({ pvTemp: 6 }));
+    });
+    const db = pour('alice');
+    const lot = writeBatch(db);
+    lot.update(doc(db, `${TABLE}/persos/p1`), { pvActuel: (MAGE.pvActuel as number) - 3 });
+    lot.update(doc(db, `${C}/combattants/pj-p1`), { pvTemp: 3 });
+    await assertSucceeds(lot.commit());
+  });
+
   it('le chemin rapide du combattant : ses champs volatils, pas sa forme', async () => {
     const m = pour('bob').doc(`${C}/combattants/m-r1-a`);
     await assertSucceeds(m.update({ pv: 5, aTerre: false, pvTemp: 3 }));

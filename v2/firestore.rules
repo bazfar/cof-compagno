@@ -671,6 +671,34 @@ service cloud.firestore {
         && (apres.concentration == null || (avant.genre == 'pj' && apres.concentration is map))
         && ((avant.genre == 'invocation') == (apres.invocation != null)) && (apres.invocation == null || apres.invocation is map);
     }
+    /*
+     * HORS MAIN : LE JOUEUR ENCAISSE SES PROPRES DÉGÂTS — baisse
+     * seulement, ne pas élargir (décision de Thomas du 26/10/2026).
+     * « Subir des dégâts » (L6.2, 8a) sert quand un monstre frappe, donc
+     * au tour du monstre ; depuis L6.4a il écrit aussi `pvTemp` (et les
+     * états que les dégâts rompent) sur le combattant, ce que les deux
+     * branches joueur n'accordent qu'à celui qui a la main. Le lot
+     * entier était refusé, fiche comprise.
+     *
+     * Ce chemin ne lit ni le combat ni la main : seulement l'ancien
+     * document. `uid` est hors des champs modifiables, il ne peut pas
+     * être retourné dans la même écriture.
+     *
+     * `etats` : le bouton n'émet qu'une transition, `rompre(…,
+     * 'degatsSubis')`, et le seul état rompu par les dégâts aujourd'hui
+     * est Endormi (src/regles/etats.ts). Les règles ne savent pas lire
+     * `rompuPar` : on exige donc le plus serré qu'elles expriment, une
+     * liste qui ne fait que rétrécir, jamais s'allonger. Poser un état,
+     * à soi ou à autrui, reste soumis à la main.
+     */
+    function encaisseSesDegats(apres, avant) {
+      return avant.uid == request.auth.uid
+        && apres.diff(avant).affectedKeys().hasOnly(['pvTemp', 'etats'])
+        && (!apres.diff(avant).affectedKeys().hasAny(['pvTemp'])
+          || (apres.pvTemp is int && apres.pvTemp >= 0 && apres.pvTemp <= avant.pvTemp))
+        && (!apres.diff(avant).affectedKeys().hasAny(['etats'])
+          || (apres.etats is list && apres.etats.size() < avant.etats.size() && avant.etats.hasAll(apres.etats)));
+    }
     function combattantMajValide(apres, avant) {
       return apres.diff(avant).affectedKeys().hasOnly(['pv', 'aTerre', 'etats', 'pvTemp', 'bonus',
           'tourActions', 'principale', 'secondaire', 'mvt', 'sprint',
@@ -1210,7 +1238,9 @@ service cloud.firestore {
               || (estJoueur(table)
                 && resource.data.genre == 'invocation' && resource.data.uid == request.auth.uid
                 && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['invocation'])
-                && aLaMain(table, combat)));
+                && aLaMain(table, combat))
+              // Hors main : il encaisse ses propres dégâts (voir `encaisseSesDegats`).
+              || (estJoueur(table) && encaisseSesDegats(request.resource.data, resource.data)));
         }
       }
 
