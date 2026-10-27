@@ -96,6 +96,8 @@ export const schemaBonusCombat = z.strictObject({
   consomme: z.boolean(),
   typeDegats: z.string().min(1).max(20).nullable(),
   source: z.string().min(1).max(40).nullable(),
+  /** La posture du Guerrier (L6.5a, 3a) : durable, une nouvelle la remplace. */
+  posture: z.literal(true).optional(),
 });
 export type BonusCombat = z.infer<typeof schemaBonusCombat>;
 

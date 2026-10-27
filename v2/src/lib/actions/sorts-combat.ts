@@ -15,10 +15,14 @@ import { actionAuPalier } from '../effets/paliers';
 import { concentrationDuLancer } from '../combat/concentration';
 import { invocationsDuLancer } from '../combat/invocations';
 import { formuleTest } from '../regles/des';
+import { combinaisonUnParCombat } from '../combat/options-lancer';
+import { poserPosture, textePosture, USAGE_COMBINAISON } from '../combat/posture';
+import { estDeSang } from '../combat/passifs';
+import { jouerPassifs } from './passifs';
 import { ppDisponibles } from '../fiche/sorts-hors-combat';
 import { vueFiche } from '../fiche/vue-fiche';
 import type { Case } from '../battlemap/geometrie';
-import { schemaCombattant, type Combat, type Combattant } from '../schemas/combat';
+import { schemaCombattant, type BonusCombat, type Combat, type Combattant } from '../schemas/combat';
 import type { Fiche, FicheV2 } from '../schemas/fiche';
 import { session } from '../session.svelte';
 import { blesser } from './attaques';
@@ -130,6 +134,15 @@ export async function lancerSortEnCombat(
     usages = { ...usages, attaqueSpeciale: combat.round };
   }
   if (s.limite !== 'volonte') usages = { ...usages, [s.id]: combat.round };
+  // L6.5a (4a) : une combinaison dont le second élément n'est pas Maître sert une fois par combat.
+  const second = lancer.secondElement ?? null;
+  if (combinaisonUnParCombat(second?.maitrise ?? null)) {
+    if (moi.usages[USAGE_COMBINAISON]) throw new RefusCombat('La combinaison du combat est déjà faite.');
+    usages = { ...usages, [USAGE_COMBINAISON]: combat.round };
+  }
+  // L6.5a (3a) : la posture tient jusqu'à ce qu'il en change ; le moteur la pose pour un round, l'app la rend durable.
+  const posture = lancer.posture && r.changements.some((c) => c.type === 'bonus' && c.cible === moi.id) ? lancer.posture : null;
+  const changements = posture ? r.changements.filter((c) => !(c.type === 'bonus' && c.cible === moi.id && (c.sur === posture.plus || c.sur === posture.moins))) : r.changements;
 
   // L6.4b2 (1a, 3a) : un sort de concentration réussi met fin à l'ancienne avant de s'écrire.
   const lancerId = `t${combat.tour}`;
@@ -151,9 +164,14 @@ export async function lancerSortEnCombat(
       const c = { ...schemaCombattant.parse(d.data()), id };
       lus.set(id, { c, fiche: c.perso ? (c.perso === fiche.id ? fiche : (fiches.get(c.perso) ?? null)) : null });
     }
-    const ecr = appliquerChangements(r.changements, lus, { id: moi.id, nom: fiche.nom, fiche }, { pv: new Map([[fiche.id, pvApresCout]]), jauges });
+    const ecr = appliquerChangements(changements, lus, { id: moi.id, nom: fiche.nom, fiche }, { pv: new Map([[fiche.id, pvApresCout]]), jauges });
     const actionsPrises = s.typeAction === 'gratuite' ? {} : { tourActions: combat.tour, ...actions, [s.typeAction]: true };
-    const moiMaj = { ...(ecr.combattants.get(moi.id) ?? {}), ...actionsPrises, ...(usages !== moi.usages ? { usages } : {}) };
+    const moiMaj: Record<string, unknown> = { ...(ecr.combattants.get(moi.id) ?? {}), ...actionsPrises, ...(usages !== moi.usages ? { usages } : {}) };
+    if (posture) {
+      const avant = (moiMaj.bonus as BonusCombat[] | undefined) ?? lus.get(moi.id)?.c.bonus ?? moi.bonus;
+      moiMaj.bonus = poserPosture(avant, posture);
+      ecr.lignes.set(moi.id, [...(ecr.lignes.get(moi.id) ?? []), textePosture(posture)]);
+    }
     for (const [id, m] of ecr.combattants) if (id !== moi.id) tx.update(refCombattant(idCombat, id), m);
     if (Object.keys(moiMaj).length) tx.update(refCombattant(idCombat, moi.id), moiMaj);
     const maFiche: Record<string, unknown> = { ...(r.cout.pp ? { ppActuel: ppDisponibles(fiche) - r.cout.pp } : {}), ...(r.cout.pv ? { pvActuel: pvApresCout } : {}), ...(ecr.fiches.get(fiche.id) ?? {}) };
@@ -161,6 +179,13 @@ export async function lancerSortEnCombat(
     if (Object.keys(maFiche).length) tx.update(refPerso(fiche.id), maFiche);
     return ecr;
   });
+
+  // L6.5a (12a) : un ennemi abattu par ce sort déclenche ses passifs (Soif de sang, Sang impie).
+  const abattus = [...e.combattants].filter(([id, m]) => m.aTerre === true && parId.get(id)?.genre === 'monstre' && !parId.get(id)?.aTerre);
+  if (abattus.length) {
+    const pvApres = (e.fiches.get(fiche.id)?.pvActuel as number | undefined) ?? pvApresCout;
+    await jouerPassifs(idCombat, moi, fiche, { quoi: 'ennemiAbattu', parSortDeSang: estDeSang(action, lancer.element?.id ?? null) }, pvApres, alea);
+  }
 
   // L6.4b1 (5a, 8a, 10a) : une zone qui dure, un piège ou un terrain reste au sol.
   const lanceurJeton = carte?.jetons.find((j) => j.id === moi.id) ?? null;

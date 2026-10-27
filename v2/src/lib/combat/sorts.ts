@@ -14,6 +14,7 @@ import { bonusFixe } from './bonus.ts';
 import { campDe } from './ordre.ts';
 import { famillesManiees } from './speciales.ts';
 import { protegeParSanctuaire, type ZoneActive } from './zones-sol.ts';
+import { rebondDe, type OptionsDuLancer } from './options-lancer.ts';
 import { casesDeZone, jetonsDansZone, porteeEnCases, refusDePortee, type CaseTouchee, type ZoneSort } from './zone.ts';
 
 /*
@@ -133,11 +134,18 @@ const NOMS_RESSOURCES: Readonly<Record<string, string>> = {
 };
 
 /** Le coût affiché (4a) : les PP d'un verbe au tarif de combat, élément et surcharge compris ; le coût fixe d'une capacité. */
-export function coutAffiche(s: Pick<SortDeCombat, 'id' | 'maitrise'>, palier: Palier, surcharge: boolean, element: Maitrise | null): { texte: string; pp: number } | { refus: string } {
+export function coutAffiche(
+  s: Pick<SortDeCombat, 'id' | 'maitrise'>,
+  palier: Palier,
+  surcharge: boolean,
+  element: Maitrise | null,
+  second: Maitrise | null = null,
+): { texte: string; pp: number } | { refus: string } {
   const a = actionParId.get(s.id);
   if (!a) return { refus: 'action inconnue' };
   if (a.nature === 'verbe' || a.nature === 'mineur') {
-    const c = coutSort(a, { palier, ecole: s.maitrise, element, surcharge });
+    // L6.5a (4a) : une combinaison coûte son second élément.
+    const c = coutSort(a, { palier, ecole: s.maitrise, element, surcharge, ...(second ? { secondElement: second } : {}) });
     return c.ok ? { texte: `${c.pp} PP`, pp: c.pp } : { refus: c.raison };
   }
   const termes = (a.cout ?? []).map((c) => `${c.montant} ${NOMS_RESSOURCES[c.ressource] ?? c.ressource}`);
@@ -159,16 +167,18 @@ export interface CiblageSort {
 }
 
 /** Ce que le sort vise au palier lancé. */
-export function ciblageDe(id: string, palier: Palier, porteeArme = 1): CiblageSort | null {
+export function ciblageDe(id: string, palier: Palier, porteeArme = 1, boost?: string, variante?: string): CiblageSort | null {
   const brute = actionParId.get(id);
   if (!brute) return null;
-  const a = palier === 'I' ? brute : actionAuPalier(brute, palier);
+  // L6.5a : une variante peut changer le ciblage (Transfusion prise à un ennemi).
+  const a = palier === 'I' && !variante ? brute : actionAuPalier(brute, palier, variante);
   const zone = a.zone ? { forme: a.zone.forme, taille: a.zone.taille, origine: a.zone.origine, filtre: a.zone.filtre, degressif: a.zone.degressif } : null;
   return {
     type: a.ciblage.type,
     camp: a.ciblage.camp,
     portee: porteeEnCases(a.ciblage.portee, porteeArme),
-    nbCibles: a.ciblage.nbCibles,
+    // L6.5a : le boost « +1 cible » (Inspiration) ou « un second allié » (Sacré) vise une créature de plus.
+    nbCibles: a.ciblage.nbCibles + (boost === 'plusUneCible' || boost === 'secondAllie' ? 1 : 0),
     ligneDeVue: a.ciblage.ligneDeVue,
     zone,
     clicCase: a.ciblage.type === 'point',
@@ -298,6 +308,8 @@ export interface ChoixDuLancer {
   surcharge: boolean;
   element: Element | null;
   visee: Visee;
+  /** L6.5a (2b) : les choix du panneau « Options ». */
+  options?: OptionsDuLancer;
 }
 
 /**
@@ -320,9 +332,13 @@ export function preparerLancer(
   if (!s.paliers.includes(choix.palier)) return `Palier ${choix.palier} pas encore atteint.`;
   const elt = choix.element ? s.elements.find((e) => e.id === choix.element) : null;
   if (choix.element && !elt) return 'Tu ne maîtrises pas cet élément.';
+  const o = choix.options ?? {};
+  // L6.5a (4a) : le second élément d'une combinaison, parmi les siens.
+  const elt2 = o.secondElement ? s.elements.find((e) => e.id === o.secondElement) : null;
+  if (o.secondElement && (!elt2 || !elt)) return 'Une combinaison prend un premier élément, puis un second que tu maîtrises.';
   const arme = action.resolution.jet === 'attaque' && !action.attaquePar ? armeEnJeu(f, action) : undefined;
   const porteeArme = arme ? (attaquesDuPj(f).find((x) => x.nom === arme.id)?.portee?.max ?? 1) : 1;
-  const c = ciblageDe(s.id, palierLance(s.id, choix.palier, choix.surcharge), porteeArme);
+  const c = ciblageDe(s.id, palierLance(s.id, choix.palier, choix.surcharge), porteeArme, o.boost, o.variante);
   if (!c) return 'Sort inconnu.';
   if (!viseeComplete(c, choix.visee)) return c.type === 'creature' ? 'Choisis ta cible sur la carte.' : 'Choisis une case sur la carte.';
   const parId = new Map(combattants.map((x) => [x.id, x]));
@@ -355,6 +371,34 @@ export function preparerLancer(
     c.type === 'soi' ? [{ ...lanceur, distance: 0 }] : choix.visee.cibles.map((id) => cibleDe(parId.get(id)!, ficheDe(parId.get(id)!), distance(id)));
   const classe = classeDeLaRefonte(f.refonte.classe);
   const p = classe ? profilDe(classe, f.refonte, contexteDe(f, classe)) : null;
+  // L6.5a : l'allié et le rebond se choisissent dans les options ; les voisins se prennent autour de la cible principale.
+  const autre = (id: string | undefined, quoi: 'allie' | 'rebond'): CibleEnJeu | string | undefined => {
+    if (!id) return undefined;
+    const x = parId.get(id);
+    if (!x || x.aTerre || x.mort) return 'Cette créature n’est pas dans le combat.';
+    if (quoi === 'allie' && x.genre === 'monstre') return `${x.nom} : un allié seulement.`;
+    return cibleDe(x, ficheDe(x), distance(id));
+  };
+  const allie = autre(o.allie, 'allie');
+  if (typeof allie === 'string') return allie;
+  const rebond = autre(o.rebond, 'rebond');
+  if (typeof rebond === 'string') return rebond;
+  const premiere = choix.visee.cibles[0] ? carte?.jetons.find((j) => j.id === choix.visee.cibles[0]) : undefined;
+  const sautRebond = rebondDe([elt?.id, elt2?.id]);
+  if (rebond && sautRebond === null) return 'Seul un élément qui rebondit (électricité) a un rebond.';
+  if (rebond && premiere && carte) {
+    const j = carte.jetons.find((x) => x.id === o.rebond);
+    if (j && distanceCases(premiere, j) > sautRebond!) return `Le rebond saute ${sautRebond} cases au plus.`;
+  }
+  const voisins =
+    elt2 && premiere && carte
+      ? carte.jetons
+          .filter((j) => j.id !== premiere.id && j.id !== moi.id && distanceCases(premiere, j) <= 1)
+          .flatMap((j) => {
+            const x = parId.get(j.id);
+            return x && !x.aTerre && !x.mort ? [cibleDe(x, ficheDe(x), distance(j.id))] : [];
+          })
+      : [];
   return {
     action,
     palier: choix.palier,
@@ -369,6 +413,17 @@ export function preparerLancer(
     ...(arme ? { arme } : {}),
     immobile: moi.tourActions !== combat.tour || moi.mvt === 0,
     premierRound: combat.round === 1,
+    ...(o.variante ? { variante: o.variante } : {}),
+    ...(o.nombreDeDes ? { nombreDeDes: o.nombreDeDes } : {}),
+    ...(o.boost ? { boost: o.boost } : {}),
+    ...(elt2 ? { secondElement: { id: elt2.id, maitrise: elt2.maitrise } } : {}),
+    ...(o.choixEau ? { choixEau: o.choixEau } : {}),
+    ...(o.posture ? { posture: o.posture } : {}),
+    ...(o.montant ? { montant: o.montant } : {}),
+    ...(o.caracChoisie ? { caracChoisie: o.caracChoisie } : {}),
+    ...(allie ? { allie } : {}),
+    ...(rebond ? { rebond } : {}),
+    ...(voisins.length ? { voisins } : {}),
     alea,
   };
 }

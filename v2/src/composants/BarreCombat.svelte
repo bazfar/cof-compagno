@@ -11,6 +11,9 @@
   import { lancerSortEnCombat, placerParSort, type APlacer } from '../lib/actions/sorts-combat';
   import { finirConcentration, placementPermis, poserInvocation, rompreParAttaque, type InvocationAPoser } from '../lib/actions/invocations';
   import { texteConcentration } from '../lib/combat/concentration';
+  import { besoinsDuLancer, CARACS, combinaisonUnParCombat, manqueAuLancer, nomDeLaPaire, plafondPosture, type OptionsDuLancer } from '../lib/combat/options-lancer';
+  import { USAGE_COMBINAISON } from '../lib/combat/posture';
+  import { jouerPassifs } from '../lib/actions/passifs';
   import { texteBonus } from '../lib/combat/bonus';
   import { arriveePermise } from '../lib/combat/poussee';
   import { apercu, campPermis, ciblageDe, coutAffiche, palierLance, sortsDeCombat, surchargeable, viseeComplete, type CiblageSort, type Visee } from '../lib/combat/sorts';
@@ -69,6 +72,13 @@
    * contre la cible d'une concentration qui le dit la rompt (Fascination) ;
    * une créature appelée se pose d'un clic sur une case libre, à 6 cases au
    * plus (4a).
+   *
+   * Lot L6.5a (décisions de Thomas du 26/10/2026) : un panneau « Options »
+   * replié (2b) propose les choix dont le sort a besoin : variante, boost,
+   * second élément (4a, une fois par combat sauf second Maître), choix de
+   * l'eau, posture (3a), montant et caractéristique (5a), allié, rebond,
+   * nombre de dés ; « Lancer » attend ce qui manque. Un ennemi qu'il abat
+   * de son arme déclenche ses passifs (12a).
    */
 
   let {
@@ -180,6 +190,8 @@
     return agir(async () => {
       const r = await infligerDegats(idCombat, x.cible, { nom: x.a.nom, formule: x.a.formule, typeDegats: x.a.typeDegats, critique: x.critique }, fiche.nom, Math.random, moi);
       aLancer = null;
+      // L6.5a (12a) : l'ennemi qu'il abat déclenche ses passifs (Soif de sang).
+      if (r.pv <= 0) await jouerPassifs(idCombat, moi, fiche, { quoi: 'ennemiAbattu', parSortDeSang: false });
       return `${r.degats.net} dégâts (${r.degats.detail}) : ${r.pv <= 0 ? `${x.cible.nom} tombe.` : `${x.cible.nom} à ${r.pv} PV.`}`;
     });
   }
@@ -222,8 +234,44 @@
   const surcharge = $derived(!!sort && surchargeVoulue && surchargeable(sort.id, palier));
   let elementChoisi = $state('');
   const element = $derived(sort ? (sort.elements.find((e) => e.id === elementChoisi) ?? (sort.elementRequis ? (sort.elements[0] ?? null) : null)) : null);
-  const coutSort = $derived(sort ? coutAffiche(sort, palier, surcharge, element?.maitrise ?? null) : null);
-  const ciblage = $derived(sort ? ciblageDe(sort.id, palierLance(sort.id, palier, surcharge), attaques[0]?.portee?.max ?? 1) : null);
+  // ---- Options du lancer (L6.5a, 2b) ----
+  let secondChoisi = $state('');
+  let variante = $state('');
+  let boost = $state('');
+  let choixEau = $state<'poussee' | 'retraitEtat'>('poussee');
+  let posturePlus = $state('');
+  let postureMoins = $state('');
+  let postureValeur = $state<number | null>(null);
+  let montant = $state<number | null>(null);
+  let carac = $state('');
+  let allieChoisi = $state('');
+  let rebondChoisi = $state('');
+  let nombreDeDes = $state<number | null>(null);
+  const second = $derived(sort && element ? (sort.elements.find((e) => e.id === secondChoisi && e.id !== element.id) ?? null) : null);
+  const besoins = $derived(sort && fiche.schemaVersion === 2 ? besoinsDuLancer(fiche as AvecId<FicheV2>, sort, palier, element?.id ?? null, second?.id ?? null, variante || undefined) : null);
+  const options: OptionsDuLancer = $derived.by(() => {
+    const b = besoins;
+    if (!b) return {};
+    const o: OptionsDuLancer = {};
+    if (variante && b.variantes.some((v) => v.id === variante)) o.variante = variante;
+    if (b.nombreDeDes && nombreDeDes) o.nombreDeDes = nombreDeDes;
+    if (boost && b.boosts.some((x) => x.id === boost)) o.boost = boost as OptionsDuLancer['boost'];
+    if (second && b.secondsElements.some((x) => x.id === second.id)) o.secondElement = second.id;
+    if (b.eau && choixEau === 'retraitEtat') o.choixEau = 'retraitEtat';
+    if (b.posture && posturePlus && postureMoins && postureValeur) o.posture = { plus: posturePlus as never, moins: postureMoins as never, valeur: postureValeur };
+    if (b.montant && montant) o.montant = montant;
+    if (b.carac && carac) o.caracChoisie = carac as OptionsDuLancer['caracChoisie'];
+    if (b.allie && allieChoisi) o.allie = allieChoisi;
+    if (b.rebond && rebondChoisi) o.rebond = rebondChoisi;
+    return o;
+  });
+  const avecOptions = $derived(!!besoins && (besoins.variantes.length > 0 || !!besoins.nombreDeDes || besoins.boosts.length > 0 || besoins.secondsElements.length > 0 || besoins.eau || !!besoins.posture || !!besoins.montant || besoins.carac || !!besoins.allie || besoins.rebond));
+  const manque = $derived(besoins ? manqueAuLancer(besoins, options) : null);
+  const combinaisonFaite = $derived(!!second && combinaisonUnParCombat(second.maitrise) && !!moi.usages[USAGE_COMBINAISON]);
+  const allies = $derived(combattants.filter((c) => c.genre !== 'monstre' && !c.aTerre));
+  const autres = $derived(combattants.filter((c) => !c.aTerre && !visee.cibles.includes(c.id) && c.id !== moi.id));
+  const coutSort = $derived(sort ? coutAffiche(sort, palier, surcharge, element?.maitrise ?? null, second?.maitrise ?? null) : null);
+  const ciblage = $derived(sort ? ciblageDe(sort.id, palierLance(sort.id, palier, surcharge), attaques[0]?.portee?.max ?? 1, options.boost, options.variante) : null);
   let visee = $state<Visee>({ cibles: [], point: null });
   let viseEnCours = $state(false);
   let aPlacer = $state<APlacer[]>([]);
@@ -232,6 +280,15 @@
     void cleSort;
     visee = { cibles: [], point: null };
     viseEnCours = false;
+    // L6.5a : les options d'un autre sort ne valent pas pour celui-ci.
+    secondChoisi = variante = boost = posturePlus = postureMoins = carac = allieChoisi = rebondChoisi = '';
+    choixEau = 'poussee';
+    postureValeur = montant = nombreDeDes = null;
+  });
+  // Le panneau s'ouvre de lui-même quand un choix exigé manque ; il ne se referme pas sous la main du joueur.
+  let optionsOuvertes = $state(false);
+  $effect(() => {
+    if (manque) optionsOuvertes = true;
   });
   const nomDe = (id: string) => combattants.find((c) => c.id === id)?.nom ?? id;
   const typeTexte = { principale: 'action', secondaire: 'action mineure', gratuite: 'gratuite' } as const;
@@ -310,7 +367,7 @@
     const s = sort;
     if (!s || fiche.schemaVersion !== 2) return;
     return agir(async () => {
-      const r = await lancerSortEnCombat(idCombat, combat, moi, fiche as AvecId<FicheV2>, { sort: s.id, palier, surcharge, element: element?.id ?? null, visee }, carte, combattants, fiches);
+      const r = await lancerSortEnCombat(idCombat, combat, moi, fiche as AvecId<FicheV2>, { sort: s.id, palier, surcharge, element: element?.id ?? null, visee, ...(Object.keys(options).length ? { options } : {}) }, carte, combattants, fiches);
       visee = { cibles: [], point: null };
       viseEnCours = false;
       aPlacer = r.aPlacer;
@@ -492,6 +549,52 @@
         {#if sort.limite !== 'volonte'}<span class="aide">{sort.limite.replace('1x', '1×')}</span>{/if}
       </div>
       <p class="aide">{texteCiblage(ciblage)}</p>
+      {#if besoins && avecOptions}
+        <details class="options" bind:open={optionsOuvertes}>
+          <summary>Options{manque ? ` · ${manque}` : ''}</summary>
+          {#if besoins.variantes.length}
+            <label>Variante <select aria-label="Variante" bind:value={variante}><option value="">Sans variante</option>{#each besoins.variantes as v (v.id)}<option value={v.id}>{v.nom}</option>{/each}</select></label>
+          {/if}
+          {#if besoins.boosts.length}
+            <label>Boost <select aria-label="Boost" bind:value={boost}><option value="">Sans boost</option>{#each besoins.boosts as x (x.id)}<option value={x.id}>{x.nom}</option>{/each}</select></label>
+          {/if}
+          {#if besoins.secondsElements.length}
+            <label
+              >Second élément <select aria-label="Second élément" bind:value={secondChoisi}
+                ><option value="">Sans combinaison</option>{#each besoins.secondsElements as x (x.id)}<option value={x.id}>{x.nom}</option>{/each}</select
+              ></label
+            >
+            {#if second}<span class="aide">{nomDeLaPaire(element?.id ?? null, second.id) ?? 'Combinaison'}{combinaisonUnParCombat(second.maitrise) ? ' · 1× par combat' : ''}{combinaisonFaite ? ' : déjà faite' : ''}</span>{/if}
+          {/if}
+          {#if besoins.eau}
+            <label>Eau <select aria-label="Effet de l’eau" bind:value={choixEau}><option value="poussee">Repousser</option><option value="retraitEtat">Retirer un état à un allié</option></select></label>
+          {/if}
+          {#if besoins.posture}
+            {@const plafond = plafondPosture(besoins, moi)}
+            <label>Bonus <select aria-label="Axe en bonus" bind:value={posturePlus}><option value="">—</option>{#each besoins.posture.axes as a (a)}<option value={a}>{a === 'degats' ? 'dégâts' : a}</option>{/each}</select></label>
+            <label>Malus <select aria-label="Axe en malus" bind:value={postureMoins}><option value="">—</option>{#each besoins.posture.axes as a (a)}<option value={a}>{a === 'degats' ? 'dégâts' : a}</option>{/each}</select></label>
+            <label>Valeur <input type="number" min="1" max={plafond} aria-label="Valeur de la posture" bind:value={postureValeur} /></label>
+            <span class="aide">1 à {plafond}</span>
+          {/if}
+          {#if besoins.montant}
+            <label>PV <input type="number" min="1" max={besoins.montant.max} aria-label="Montant" bind:value={montant} /></label>
+            <span class="aide">1 à {besoins.montant.max}</span>
+          {/if}
+          {#if besoins.carac}
+            <label>Caractéristique <select aria-label="Caractéristique" bind:value={carac}><option value="">—</option>{#each CARACS as k (k)}<option value={k}>{k}</option>{/each}</select></label>
+          {/if}
+          {#if besoins.nombreDeDes}
+            <label>Dés <input type="number" min="1" max={besoins.nombreDeDes.max} aria-label="Nombre de dés" bind:value={nombreDeDes} /></label>
+            <span class="aide">{besoins.nombreDeDes.ppParDe} PP chacun</span>
+          {/if}
+          {#if besoins.allie}
+            <label>Allié <select aria-label="Allié" bind:value={allieChoisi}><option value="">—</option>{#each allies as a (a.id)}<option value={a.id}>{a.nom}</option>{/each}</select></label>
+          {/if}
+          {#if besoins.rebond}
+            <label>Rebond <select aria-label="Rebond" bind:value={rebondChoisi}><option value="">Sans rebond</option>{#each autres as a (a.id)}<option value={a.id}>{a.nom}</option>{/each}</select></label>
+          {/if}
+        </details>
+      {/if}
       {#if sort.manuel}<p class="aide">Au MJ : {sort.manuel}</p>{/if}
       <div class="boutons">
         {#if ciblage.type === 'creature' || ciblage.clicCase}
@@ -499,7 +602,7 @@
         {/if}
         <button
           class="lancer"
-          disabled={occupe || !monTour || agit !== 'oui' || actionPrise || dejaServi || !coutSort || 'refus' in coutSort || !viseeComplete(ciblage, visee) || aPlacer.length > 0 || aInvoquer.length > 0}
+          disabled={occupe || !monTour || agit !== 'oui' || actionPrise || dejaServi || !coutSort || 'refus' in coutSort || !viseeComplete(ciblage, visee) || aPlacer.length > 0 || aInvoquer.length > 0 || !!manque || combinaisonFaite}
           onclick={lancerLeSort}>Lancer {sort.nom}</button
         >
       </div>
@@ -707,5 +810,26 @@
   }
   .concentration {
     font-size: 13px;
+  }
+  .options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    font-size: 13px;
+  }
+  .options summary {
+    flex-basis: 100%;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .options label {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    margin: 4px 10px 4px 0;
+  }
+  .options input {
+    width: 64px;
   }
 </style>
