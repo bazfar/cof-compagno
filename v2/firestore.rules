@@ -685,19 +685,40 @@ service cloud.firestore {
      * être retourné dans la même écriture.
      *
      * `etats` : le bouton n'émet qu'une transition, `rompre(…,
-     * 'degatsSubis')`, et le seul état rompu par les dégâts aujourd'hui
-     * est Endormi (src/regles/etats.ts). Les règles ne savent pas lire
-     * `rompuPar` : on exige donc le plus serré qu'elles expriment, une
-     * liste qui ne fait que rétrécir, jamais s'allonger. Poser un état,
-     * à soi ou à autrui, reste soumis à la main.
+     * 'degatsSubis')`. `rompuPar` n'est pas un champ du document —
+     * schemaEtatCombat n'a que id, rounds, cumul, charges, des, source —
+     * mais une donnée de règles tenue dans src/regles/etats.ts et lue par
+     * id. On borne donc le retrait par la différence des deux listes, et
+     * on vérifie l'id de chaque retiré contre `rompusParDegats()`. Poser
+     * un état, à soi ou à autrui, reste soumis à la main.
+     *
+     * Hors main : seuls les états rompus par les dégâts peuvent tomber —
+     * lu dans resource.data, ne pas élargir (décision de Thomas du
+     * 27/10/2026).
      */
+    /*
+     * Les états qu'un dégât subi rompt : ceux dont `rompuPar` contient
+     * 'degatsSubis' dans src/regles/etats.ts. Aujourd'hui, Endormi seul.
+     * `tests/unitaires/etats-rompus.test.ts` échoue si les données
+     * changent sans cette liste, et dit la ligne d'index à ajouter.
+     */
+    function rompusParDegats() {
+      return ['endormi'];
+    }
+    function retraitsParDegats(apres, avant) {
+      let retires = avant.etats.removeAll(apres.etats);
+      return avant.etats.hasAll(apres.etats)
+        && retires.size() <= rompusParDegats().size()
+        && (retires.size() < 1 || retires[0].id in rompusParDegats())
+        && (retires.size() < 2 || retires[1].id in rompusParDegats());
+    }
     function encaisseSesDegats(apres, avant) {
       return avant.uid == request.auth.uid
         && apres.diff(avant).affectedKeys().hasOnly(['pvTemp', 'etats'])
         && (!apres.diff(avant).affectedKeys().hasAny(['pvTemp'])
           || (apres.pvTemp is int && apres.pvTemp >= 0 && apres.pvTemp <= avant.pvTemp))
         && (!apres.diff(avant).affectedKeys().hasAny(['etats'])
-          || (apres.etats is list && apres.etats.size() < avant.etats.size() && avant.etats.hasAll(apres.etats)));
+          || (apres.etats is list && retraitsParDegats(apres, avant)));
     }
     function combattantMajValide(apres, avant) {
       return apres.diff(avant).affectedKeys().hasOnly(['pv', 'aTerre', 'etats', 'pvTemp', 'bonus',

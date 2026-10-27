@@ -134,6 +134,25 @@ describe('budget d’évaluation, sur de vraies fiches de la refonte', () => {
     await assertFails(pour('alice').doc(`${C}/combattants/pj-p2`).update({ pvTemp: 1 }));
   });
 
+  it('hors de son tour, seuls les états que les dégâts rompent peuvent tomber (décision du 27/10/2026)', async () => {
+    const endormi = { id: 'endormi', rounds: 2, cumul: 1, charges: null, des: null, source: 'MJ' };
+    const etourdi = { id: 'etourdi', rounds: 2, cumul: 1, charges: null, des: null, source: 'MJ' };
+    const affaibli = { id: 'affaibli', rounds: 3, cumul: 1, charges: null, des: null, source: 'MJ' };
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(C).set(combat({ actif: 'm-r1-a' }));
+      await ctx.firestore().doc(`${C}/combattants/pj-p1`).set(combattant({ pvTemp: 6, etats: [endormi, etourdi, affaibli] }));
+    });
+    const moi = pour('alice').doc(`${C}/combattants/pj-p1`);
+    // Endormi est le seul état dont `rompuPar` contient 'degatsSubis'.
+    await assertFails(moi.update({ etats: [endormi, affaibli] })); // Étourdi ne tombe pas sous les dégâts
+    await assertFails(moi.update({ etats: [endormi, etourdi] })); // Affaibli non plus
+    await assertFails(moi.update({ etats: [affaibli] })); // deux retraits d'un coup
+    await assertFails(moi.update({ etats: [] })); // les trois
+    await assertFails(moi.update({ etats: [{ ...endormi, rounds: 1 }, etourdi, affaibli] })); // une durée modifiée n'est pas un retrait
+    await assertFails(moi.update({ pvTemp: 2, etats: [endormi, etourdi, affaibli, { ...affaibli, id: 'brulure' }] })); // un ajout
+    await assertSucceeds(moi.update({ pvTemp: 2, etats: [etourdi, affaibli] }));
+  });
+
   it('le lot réel de « Subir des dégâts » hors de son tour : la fiche et le combattant ensemble', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       await ctx.firestore().doc(C).set(combat({ actif: 'm-r1-a' }));
