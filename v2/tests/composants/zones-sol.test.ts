@@ -55,7 +55,7 @@ const zone = (z: Record<string, unknown> = {}, id = 'z1') => ({
 });
 const combattant = (id: string, c: Record<string, unknown> = {}) => ({
   id, genre: 'pj', nom: id, perso: id.slice(3), uid: 'alice', monstre: null, modInit: 1, initiative: 10, de: 9, pv: null, pvMax: null, aTerre: false,
-  mvtBase: 5, etats: [], tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
+  mvtBase: 5, etats: [], usages: {}, debutTour: 0, tourActions: 0, principale: false, secondaire: false, mvt: 0, sprint: false, creeLe: 1, ...c,
 });
 const poser = (actif: string | null) => {
   jetonsScene.elements = [

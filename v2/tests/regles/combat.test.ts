@@ -28,6 +28,11 @@ import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
  * Lot L6.4b1 : les cases du MJ (le MJ seul les écrit ; le joueur ne lit
  * que les visibles), les zones du combat (le joueur qui a la main les
  * pose, les déclenche, les retire).
+ *
+ * Lot L6.5b : le joueur demande sa réaction, pour son combattant, hors de
+ * son tour ; le MJ seul la passe à « jouée » ou « refusée » (1a). Le
+ * joueur qui a la main note les attaques d'opportunité que son pas ouvre,
+ * ce tour ; le MJ, toutes (2b).
  */
 const TABLE = 'tables/t1';
 const C = `${TABLE}/combats/c1`;
@@ -448,5 +453,59 @@ describe('concentration et invocations (L6.4b2)', () => {
     await assertFails(pour('bob').doc(`${C}/combattants/i-x`).set(tison({ perso: 'p1' })));
     await assertFails(pour('bob').doc(`${C}/combattants/i-x`).set(tison({ concentration: conc })));
     await assertSucceeds(pour('bob').doc(I).delete());
+  });
+});
+
+describe('réactions (L6.5b)', () => {
+  const R = `${C}/reactions`;
+  const O = `${C}/opportunites`;
+  const demande = (extra: Record<string, unknown> = {}) => ({
+    qui: 'pj-p1', uid: 'alice', reaction: 'abjuration.bouclier', cible: 'pj-p1', case: null, posture: null, opportunite: null, tour: 3, statut: 'attente', texte: null, creeLe: 1, ...extra,
+  });
+  const opp = (extra: Record<string, unknown> = {}) => ({ attaquant: 'm-r1-a', cible: 'pj-p1', tour: 3, creeLe: 1, ...extra });
+
+  it('1a : le joueur demande la sienne, hors de son tour, en attente ; le MJ seul la joue ; la forme est vérifiée', async () => {
+    await poser(C, combat({ actif: 'm-r1-a' }));
+    await assertSucceeds(pour('alice').doc(`${R}/r1`).set(demande()));
+    await assertSucceeds(pour('alice').doc(`${R}/r2`).set(demande({ reaction: 'barde.esquive-acrobatique', cible: null, case: { cx: 3, cy: 4 } })));
+    await assertSucceeds(pour('alice').doc(`${R}/r3`).set(demande({ reaction: 'guerrier.changement-de-posture', cible: null, posture: { plus: 'degats', moins: 'DEF', valeur: 3 } })));
+    await assertSucceeds(pour('alice').doc(`${R}/r4`).set(demande({ reaction: 'arme.opportunite', cible: 'm-r1-a', opportunite: 't3-pj-p1-m-r1-a' })));
+    // Pas pour le combattant d'un autre, ni au nom d'un autre, ni déjà jouée.
+    await assertFails(pour('alice').doc(`${R}/x`).set(demande({ qui: 'pj-p2' })));
+    await assertFails(pour('alice').doc(`${R}/x`).set(demande({ uid: 'carol' })));
+    await assertFails(pour('alice').doc(`${R}/x`).set(demande({ statut: 'jouee' })));
+    await assertFails(pour('alice').doc(`${R}/x`).set(demande({ texte: 'Jouée.' })));
+    await assertFails(pour('alice').doc(`${R}/x`).set(demande({ x: 1 })));
+    await assertFails(pour('alice').doc(`${R}/x`).set((({ creeLe: _c, ...d }) => d)(demande())));
+    await assertFails(pour('alice').doc(`${R}/x`).set(demande({ posture: { plus: 'vitesse', moins: 'DEF', valeur: 3 } })));
+    await assertFails(pour('alice').doc(`${R}/x`).set(demande({ posture: { plus: 'DEF', moins: 'attaque', valeur: 0 } })));
+    await assertFails(pour('alice').doc(`${R}/x`).set(demande({ case: { cx: 500, cy: 0 } })));
+    await assertFails(pour('alice').doc(`${R}/x`).set(demande({ case: { cx: 1 } })));
+    await assertFails(pour('alice').doc(`${R}/x`).set(demande({ tour: 0 })));
+    await assertFails(pour('alice').doc(`${R}/x`).set(demande({ reaction: '' })));
+    await assertSucceeds(pour('carol').doc(`${R}/r1`).get());
+    // Le joueur ne la passe pas à « jouée » ; le MJ, avec le texte, rien d'autre.
+    await assertFails(pour('alice').doc(`${R}/r1`).update({ statut: 'jouee' }));
+    await assertSucceeds(pour('bob').doc(`${R}/r1`).update({ statut: 'jouee' }));
+    await assertSucceeds(pour('bob').doc(`${R}/r1`).update({ statut: 'refusee', texte: 'Trop tard : le tour a passé.' }));
+    await assertFails(pour('bob').doc(`${R}/r1`).update({ reaction: 'guerrier.riposte' }));
+    await assertFails(pour('bob').doc(`${R}/r1`).update({ statut: 'perdue' }));
+    await assertFails(pour('alice').doc(`${R}/r1`).delete());
+    await assertSucceeds(pour('bob').doc(`${R}/r1`).delete());
+  });
+
+  it('2b : le joueur qui a la main note l’opportunité que son pas ouvre, ce tour (deux fois, il la réécrit) ; le MJ, toutes ; le MJ seul la retire', async () => {
+    await assertSucceeds(pour('alice').doc(`${O}/t3-m-r1-a-pj-p1`).set(opp()));
+    await assertSucceeds(pour('alice').doc(`${O}/t3-m-r1-a-pj-p1`).set(opp({ creeLe: 2 })));
+    await assertFails(pour('alice').doc(`${O}/x`).set(opp({ cible: 'pj-p2' })));
+    await assertFails(pour('alice').doc(`${O}/x`).set(opp({ tour: 2 })));
+    await assertFails(pour('alice').doc(`${O}/x`).set(opp({ x: 1 })));
+    await assertFails(pour('carol').doc(`${O}/x`).set(opp({ cible: 'pj-p2' })));
+    await assertSucceeds(pour('carol').doc(`${O}/t3-m-r1-a-pj-p1`).get());
+    await poser(C, combat({ actif: 'm-r1-a' }));
+    await assertFails(pour('alice').doc(`${O}/y`).set(opp()));
+    await assertSucceeds(pour('bob').doc(`${O}/t3-pj-p1-m-r1-a`).set(opp({ attaquant: 'pj-p1', cible: 'm-r1-a' })));
+    await assertFails(pour('alice').doc(`${O}/t3-m-r1-a-pj-p1`).delete());
+    await assertSucceeds(pour('bob').doc(`${O}/t3-m-r1-a-pj-p1`).delete());
   });
 });

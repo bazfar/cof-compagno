@@ -45,6 +45,17 @@ export function consommerBonus(bonus: readonly BonusCombat[], cibles: readonly s
   return bonus.filter((b) => !(b.consomme && cibles.includes(b.sur)));
 }
 
+/**
+ * L6.5b (8a) : le bonus d'une réaction « contre cette attaque » (Bouclier :
+ * +2 DEF ; Tir de couverture : −2 à l'attaque de l'ennemi) tombe avec la
+ * prochaine attaque : celle qu'il reçoit pour une DEF, celle qu'il porte
+ * pour une attaque.
+ */
+export const SUR_CONTRE_ATTAQUE: readonly string[] = ['DEF', 'DEFContact', 'DEFDistance', 'attaque', 'attaqueContact', 'attaqueDistance'];
+export function apresAttaque(bonus: readonly BonusCombat[], role: 'attaquant' | 'cible'): BonusCombat[] {
+  return bonus.filter((b) => !(b.contreAttaque && b.sur.startsWith(role === 'cible' ? 'DEF' : 'attaque')));
+}
+
 /** Retire les `n` bonus les plus récents (dissipation). */
 export function dissiper(bonus: readonly BonusCombat[], n: number): BonusCombat[] {
   return bonus.slice(0, Math.max(0, bonus.length - n));
@@ -70,7 +81,7 @@ const NOMS: Readonly<Record<string, string>> = {
 /** « +2 DEF (3) », « +1d6 dégâts, prochaine frappe ». */
 export function texteBonus(b: BonusCombat): string {
   const v = typeof b.valeur === 'number' ? (b.valeur >= 0 ? `+${b.valeur}` : `−${-b.valeur}`) : `+${b.valeur}`;
-  return `${v} ${NOMS[b.sur] ?? b.sur}${b.typeDegats ? ` (${b.typeDegats})` : ''}${b.consomme ? ', prochaine frappe' : ''}${b.rounds !== null ? ` (${b.rounds})` : ''}`;
+  return `${v} ${NOMS[b.sur] ?? b.sur}${b.typeDegats ? ` (${b.typeDegats})` : ''}${b.consomme ? ', prochaine frappe' : ''}${b.contreAttaque ? ', prochaine attaque' : ''}${b.rounds !== null ? ` (${b.rounds})` : ''}`;
 }
 
 /** PV temporaires (11a) : les dégâts les entament d'abord ; rend ce qui reste de chacun. */

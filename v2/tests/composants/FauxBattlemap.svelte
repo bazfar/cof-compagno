@@ -4,6 +4,7 @@
   import type { GrilleExploration } from '../../src/lib/battlemap/exploration';
   import type { GeometrieScene } from '../../src/lib/schemas/scene';
   import type { JetonAffiche } from '../../src/lib/battlemap/rendu';
+  import { glisserLibre } from './faux-magasins.svelte';
 
   /*
    * Remplace Battlemap.svelte dans les tests de composants (pas de canvas
@@ -11,6 +12,8 @@
    * vrai composant au dessin, et l'affiche en attributs ; le bouton « voir »
    * simule un PJ en (2, 2) qui voit autour de lui. L6.4b1 : les zones,
    * le sol et la visée ; « cliquer 2,3 » clique la case (2, 3).
+   * L6.5b : le glisser passe son chemin, case par case ; « glisser libre »
+   * joue le glisser sans budget que le test a préparé (`glisserLibre`).
    */
   let {
     geometrie,
@@ -32,7 +35,7 @@
     miens?: ReadonlySet<string>;
     actif?: string | null;
     budget?: { id: string; cases: number } | null;
-    surDeplacement?: (id: string, vers: { cx: number; cy: number }, cases?: number) => void;
+    surDeplacement?: (id: string, vers: { cx: number; cy: number }, cases?: number, chemin?: { cx: number; cy: number }[]) => void;
     /** L6.4a, L6.4b1 : la visée (sort, ou outil « Cases » du MJ). */
     visee?: { choisir: (c: { cx: number; cy: number }, jeton: string | null) => void } | null;
     /** L6.4b1 : zones au sol dessinées. */
@@ -42,7 +45,12 @@
 
   // Combat (L6.1) : simule le glisser du jeton qui a un budget, de 2 cases.
   function glisser() {
-    if (budget) surDeplacement?.(budget.id, { cx: 4, cy: 4 }, 2);
+    if (budget)
+      surDeplacement?.(budget.id, { cx: 4, cy: 4 }, 2, [
+        { cx: 2, cy: 2 },
+        { cx: 3, cy: 3 },
+        { cx: 4, cy: 4 },
+      ]);
   }
 
   function voir() {
@@ -65,4 +73,5 @@
 ></div>
 <button onclick={() => visee?.choisir({ cx: 2, cy: 3 }, null)}>cliquer 2,3</button>
 <button onclick={glisser}>glisser</button>
+<button onclick={() => glisserLibre.v && surDeplacement?.(glisserLibre.v.id, glisserLibre.v.chemin.at(-1)!, undefined, glisserLibre.v.chemin)}>glisser libre</button>
 <button onclick={voir}>voir</button>

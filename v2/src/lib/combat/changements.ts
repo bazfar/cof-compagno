@@ -5,7 +5,7 @@ import type { BonusCombat, Combattant, EtatCombat } from '../schemas/combat.ts';
 import type { Fiche } from '../schemas/fiche.ts';
 import { degatsSurMonstre } from './attaque.ts';
 import { degatsSurPj } from './attaques-pj.ts';
-import { absorber, dissiper, dureeEnRounds, gagnerPvTemp, poserBonus, texteBonus } from './bonus.ts';
+import { absorber, dissiper, dureeEnRounds, gagnerPvTemp, poserBonus, SUR_CONTRE_ATTAQUE, texteBonus } from './bonus.ts';
 import { consommerCharge, poserEtat, retirerEtat, rompre } from './etats.ts';
 import { champsJauges, gainParDegatsSubis, jauge, type Jauges } from './ressources.ts';
 
@@ -72,6 +72,8 @@ export function appliquerChangements(
     pv?: ReadonlyMap<string, number>;
     /** Jauges du lanceur après le coût (Endurance, Sacré…). */
     jauges?: Jauges;
+    /** L6.5b (8a) : une réaction ; ses bonus de DEF et d'attaque tombent avec la prochaine attaque. */
+    reaction?: boolean;
   } = {},
 ): Ecritures {
   const pvDepart = depart.pv ?? new Map<string, number>();
@@ -188,6 +190,7 @@ export function appliquerChangements(
           consomme: ch.consomme === 'prochaineFrappe',
           typeDegats: ch.typeDegats ?? null,
           source: lanceur.nom.slice(0, 40),
+          ...(depart.reaction && SUR_CONTRE_ATTAQUE.includes(ch.sur) ? { contreAttaque: true as const } : {}),
         };
         s.bonus = poserBonus(s.bonus, b);
         dire(ch.cible, texteBonus(b));

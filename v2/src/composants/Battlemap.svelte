@@ -3,7 +3,7 @@
   import type { GrilleExploration } from '../lib/battlemap/exploration';
   import { aimanter, bornerPoint, estUnTrace, type TypeDessin } from '../lib/battlemap/dessins';
   import { sceneCalcul, type Case, type EtatScene, type Point, type SceneCalcul } from '../lib/battlemap/geometrie';
-  import { jetonsADessiner, jetonSousPointeur, pasDeGlisser, pasDeGlisserBorne, peutDeplacer, porteSousPointeur, type Role } from '../lib/battlemap/interactions';
+  import { jetonsADessiner, jetonSousPointeur, pasAPas, pasDeGlisser, pasDeGlisserBorne, peutDeplacer, porteSousPointeur, type Role } from '../lib/battlemap/interactions';
   import { dessiner, peindreExploration, type JetonAffiche, type ZoneDessinee } from '../lib/battlemap/rendu';
   import { jetonsVisiblesDesPJ, segmentsBloquants, visionsDesPJ, type VisionJeton } from '../lib/battlemap/visibilite';
   import { deplacer, ecranVersCase, ecranVersScene, vueAjustee, zoomer, type Vue } from '../lib/battlemap/vue';
@@ -73,8 +73,11 @@
     afficherMurs?: boolean;
     afficherGrille?: boolean;
     selection?: string | null;
-    /** `cases` : ce que le glisser a coûté, quand le jeton avait un budget (combat, L6.1). */
-    surDeplacement: (id: string, vers: Case, cases?: number) => void;
+    /**
+     * `cases` : ce que le glisser a coûté, quand le jeton avait un budget (combat, L6.1).
+     * `chemin` (L6.5b, 3b) : les cases traversées, une à une, arrivée comprise, départ non.
+     */
+    surDeplacement: (id: string, vers: Case, cases?: number, chemin?: Case[]) => void;
     surPorte: (idPorte: string) => void;
     surSelection?: (id: string | null) => void;
     /** Appelé quand la vision des PJ change (pour marquer l'exploration). */
@@ -100,7 +103,7 @@
   let vue = $state<Vue | null>(null);
   let imageChargee = $state<HTMLImageElement | null>(null);
   let survol = $state<Case | null>(null);
-  let glisser = $state<{ id: string; depart: Case; case: Case; cout: number } | null>(null);
+  let glisser = $state<{ id: string; depart: Case; case: Case; cout: number; chemin: Case[] } | null>(null);
   // `clic` : point exact du clic (non aimanté), pour la gomme.
   let trace = $state<{ a: Point; b: Point; clic: Point } | null>(null);
 
@@ -255,7 +258,7 @@
     if (jeton) {
       surSelection?.(jeton.id);
       if (peutDeplacer(role, jeton, miens)) {
-        glisser = { id: jeton.id, depart: { cx: jeton.cx, cy: jeton.cy }, case: { cx: jeton.cx, cy: jeton.cy }, cout: 0 };
+        glisser = { id: jeton.id, depart: { cx: jeton.cx, cy: jeton.cy }, case: { cx: jeton.cx, cy: jeton.cy }, cout: 0, chemin: [] };
         canvas!.setPointerCapture(ev.pointerId);
       }
       return;
@@ -280,10 +283,9 @@
       const visee = ecranVersCase(vue, ex, ey, geometrie);
       const jeton = jetons.find((j) => j.id === glisser!.id);
       if (visee && jeton) {
-        if (budget?.id === jeton.id) {
-          const p = pasDeGlisserBorne(scene, jetons, jeton, glisser.case, visee, budget.cases - glisser.cout);
-          glisser = { ...glisser, case: p.case, cout: glisser.cout + p.cout };
-        } else glisser = { ...glisser, case: pasDeGlisser(scene, jetons, jeton, glisser.case, visee).case };
+        const p = budget?.id === jeton.id ? pasDeGlisserBorne(scene, jetons, jeton, glisser.case, visee, budget.cases - glisser.cout) : { ...pasDeGlisser(scene, jetons, jeton, glisser.case, visee), cout: 0 };
+        // L6.5b (3b) : le chemin, case après case (un pas rapide en saute : elles s'intercalent).
+        glisser = { ...glisser, case: p.case, cout: glisser.cout + p.cout, chemin: [...glisser.chemin, ...pasAPas(glisser.case, p.case)] };
       }
       return;
     }
@@ -309,12 +311,9 @@
     }
     trace = null;
     if (glisser) {
-      const { id, depart, case: arrivee, cout } = glisser;
+      const { id, depart, case: arrivee, cout, chemin } = glisser;
       glisser = null;
-      if (arrivee.cx !== depart.cx || arrivee.cy !== depart.cy) {
-        if (budget?.id === id) surDeplacement(id, arrivee, cout);
-        else surDeplacement(id, arrivee);
-      }
+      if (arrivee.cx !== depart.cx || arrivee.cy !== depart.cy) surDeplacement(id, arrivee, budget?.id === id ? cout : undefined, chemin);
     } else if (deplacementVue && !deplacementVue.bouge) {
       surSelection?.(null); // clic dans le vide : désélection
     }

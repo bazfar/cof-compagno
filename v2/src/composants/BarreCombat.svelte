@@ -26,6 +26,7 @@
   import { formuleSoin } from '../lib/regles/equipement';
   import type { Combat, Combattant } from '../lib/schemas/combat';
   import type { Fiche, FicheV2 } from '../lib/schemas/fiche';
+  import BlocReactions from './BlocReactions.svelte';
 
   /*
    * La barre du joueur en combat (lot L6.1), sous la carte, d'après la
@@ -79,6 +80,9 @@
    * l'eau, posture (3a), montant et caractéristique (5a), allié, rebond,
    * nombre de dés ; « Lancer » attend ce qui manque. Un ennemi qu'il abat
    * de son arme déclenche ses passifs (12a).
+   *
+   * Lot L6.5b (6a) : hors de son tour, debout, le bloc « Réactions »
+   * (BlocReactions) : ses réactions et l'attaque d'opportunité ouverte.
    */
 
   let {
@@ -492,6 +496,10 @@
         <button disabled={occupe || !monTour || actions.principale} onclick={() => agir(async () => void (await releverAllie(idCombat, combat, moi, m, fiches.get(m.perso!)!, fiche.nom)))}>Relever {m.nom}</button>
       {/each}
     </div>
+  {/if}
+
+  {#if !monTour && etat === 'debout' && fiche.schemaVersion === 2}
+    <BlocReactions fiche={fiche as AvecId<FicheV2>} {idCombat} {combat} {moi} {combattants} {carte} />
   {/if}
 
   {#if monTour && etat !== 'mort'}

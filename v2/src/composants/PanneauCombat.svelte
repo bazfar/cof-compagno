@@ -23,6 +23,8 @@
   import { suivrePersos } from '../lib/magasins/persos.svelte';
   import type { Combat, Combattant } from '../lib/schemas/combat';
   import { session } from '../lib/session.svelte';
+  import { rappelAvantAttaque } from '../lib/combat/reactions';
+  import ReactionsMj from './ReactionsMj.svelte';
 
   /*
    * Section Combat du MJ, colonne de droite (lot L6.1, maquette 2.0) : le
@@ -56,6 +58,11 @@
    * un PJ touché pendant sa concentration fait sa sauvegarde de CON pour la
    * maintenir (1a) ; le MJ rompt une concentration d'un bouton (lanceur
    * surpris, 1a).
+   *
+   * Lot L6.5b (décisions de Thomas du 26/10/2026) : avant l'attaque d'un
+   * monstre, les réactions que la cible et ses alliés peuvent encore jouer
+   * (6a) ; dessous, ReactionsMj joue leurs demandes (1a) et offre
+   * l'attaque d'opportunité des monstres (5a).
    */
 
   let { carte = null }: { carte?: CarteDuCombat | null } = $props();
@@ -116,6 +123,9 @@
   const ciblePj = $derived(ciblesPj.find((x) => x.c.id === cibleChoisie) ?? ciblesPj[0] ?? null);
   const cibleId = $derived(cibleInv?.id ?? ciblePj?.c.id ?? null);
   let outrePortee = $state(false);
+  // L6.5b (6a) : avant l'attaque, les réactions que la cible et ses alliés peuvent jouer ; le MJ attend leur clic.
+  const fichesParPerso = $derived(new Map(persos.etat.elements.map((p) => [p.id, p])));
+  const rappel = $derived(cibleId ? rappelAvantAttaque(cibleId, combattants, fichesParPerso) : []);
   const principalePrise = $derived(!!montre && !!combat && actionsDuTour(montre, combat.tour).principale);
   const refusPortee = (a: AttaqueMonstre) =>
     montre && cibleId && carte?.zones && protegeParSanctuaire(carte.zones, carte.jetons, montre.id, cibleId)
@@ -294,6 +304,11 @@
               <p class="aide">Aucune attaque dont l'arme est dans la liste des armes.</p>
             {/each}
           </div>
+          {#if rappel.length}
+            <p class="rappel" role="note" aria-label="Réactions possibles">
+              Avant l’attaque, ils peuvent réagir : {rappel.map((r) => `${r.nom} (${r.reactions.join(', ')})`).join(' ; ')}.
+            </p>
+          {/if}
           <label class="case"><input type="checkbox" bind:checked={outrePortee} /> Passer outre la portée</label>
           {#if principalePrise}<p class="aide">Action principale prise ce tour.</p>{/if}
           {#if resultat}<p role="status">{resultat}</p>{/if}
@@ -319,6 +334,8 @@
       {/if}
       {#if message}<p class="erreur" role="alert">{message}</p>{/if}
     </section>
+
+    {#if idCombat}<ReactionsMj {idCombat} {combat} {combattants} fiches={fichesParPerso} bestiaire={bestiaire.etat.elements} armes={listeArmes} {carte} />{/if}
 
     {#if zonesCombat.length}
       <section class="carte pjs" aria-label="Zones au sol">
@@ -468,6 +485,12 @@
   }
   .poser input {
     width: 56px;
+  }
+  .rappel {
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--couleur-accent-pale);
+    font-size: 13px;
   }
   .case {
     display: flex;

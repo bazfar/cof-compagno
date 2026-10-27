@@ -8,7 +8,7 @@ import { actionsDuTour } from '../combat/ordre';
 import { arriveePermise, DEGATS_COLLISION_DECOR, DEGATS_COLLISION_JETON, trajet } from '../combat/poussee';
 import { payer, type Jauges } from '../combat/ressources';
 import { zoneDuSort } from '../combat/effets-zone';
-import { apercu, CATALOGUE, ciblageDe, preparerLancer, sortsDeCombat, type ChoixDuLancer } from '../combat/sorts';
+import { apercu, CATALOGUE, ciblageDe, OPPORTUNITE, preparerLancer, reactionsDeCombat, sortsDeCombat, type ChoixDuLancer } from '../combat/sorts';
 import { centreDeZone } from '../combat/zone';
 import { resoudreLancer } from '../effets/resolution';
 import { actionAuPalier } from '../effets/paliers';
@@ -19,6 +19,7 @@ import { combinaisonUnParCombat } from '../combat/options-lancer';
 import { poserPosture, textePosture, USAGE_COMBINAISON } from '../combat/posture';
 import { estDeSang } from '../combat/passifs';
 import { jouerPassifs } from './passifs';
+import { reactionDisponible, USAGE_REACTION } from '../combat/reactions';
 import { ppDisponibles } from '../fiche/sorts-hors-combat';
 import { vueFiche } from '../fiche/vue-fiche';
 import type { Case } from '../battlemap/geometrie';
@@ -85,6 +86,11 @@ export { texteJet };
  * Le joueur lance un sort ou une capacité, à son tour (2a, 5a) : le moteur
  * résout, il paie, les cibles prennent (10a). Rend l'issue et les
  * déplacements à placer.
+ *
+ * L6.5b (1a) : `choix.reaction` : une réaction, que le client du MJ joue
+ * pour lui, hors de son tour ; elle ne prend pas d'action du tour, mais la
+ * réaction du round (7a) ; ses bonus de DEF et d'attaque tombent avec la
+ * prochaine attaque (8a).
  */
 export async function lancerSortEnCombat(
   idCombat: string,
@@ -97,13 +103,17 @@ export async function lancerSortEnCombat(
   fiches: ReadonlyMap<string, AvecId<Fiche>>,
   alea: () => number = Math.random,
 ): Promise<SortLance> {
-  if (combat.actif !== moi.id) throw new RefusCombat('Ce n’est pas ton tour.');
+  // L6.5b (6a, 7a) : une réaction se joue hors de son tour, une par round.
+  const reaction = !!choix.reaction;
+  if (reaction && combat.actif === moi.id) throw new RefusCombat('À ton tour, pas de réaction : elle se joue hors de ton tour.');
+  if (reaction && !reactionDisponible(moi)) throw new RefusCombat(`${moi.nom} a déjà réagi ce round.`);
+  if (!reaction && combat.actif !== moi.id) throw new RefusCombat('Ce n’est pas ton tour.');
   const agit = peutAgir(moi.etats);
   if (agit !== 'oui') throw new RefusCombat(agit === 'non' ? `${moi.nom} ne peut pas agir ce tour.` : `${moi.nom} ne peut que se déplacer ce tour.`);
-  const s = sortsDeCombat(fiche).find((x) => x.id === choix.sort);
+  const s = (reaction ? reactionsDeCombat : sortsDeCombat)(fiche).find((x) => x.id === choix.sort);
   const action = actionParId.get(choix.sort);
   if (!s || !action) throw new RefusCombat('Tu ne connais pas ce sort.');
-  // 5a : l'action du tour, et les limites.
+  // 5a : l'action du tour, et les limites. Hors de son tour (une réaction), ses actions du tour sont libres.
   const actions = actionsDuTour(moi, combat.tour);
   if (s.typeAction === 'principale' && actions.principale) throw new RefusCombat('L’action principale est déjà prise ce tour.');
   if (s.typeAction === 'secondaire' && actions.secondaire) throw new RefusCombat('L’action secondaire est déjà prise ce tour.');
@@ -134,6 +144,7 @@ export async function lancerSortEnCombat(
     usages = { ...usages, attaqueSpeciale: combat.round };
   }
   if (s.limite !== 'volonte') usages = { ...usages, [s.id]: combat.round };
+  if (reaction) usages = { ...usages, [USAGE_REACTION]: combat.tour };
   // L6.5a (4a) : une combinaison dont le second élément n'est pas Maître sert une fois par combat.
   const second = lancer.secondElement ?? null;
   if (combinaisonUnParCombat(second?.maitrise ?? null)) {
@@ -142,7 +153,9 @@ export async function lancerSortEnCombat(
   }
   // L6.5a (3a) : la posture tient jusqu'à ce qu'il en change ; le moteur la pose pour un round, l'app la rend durable.
   const posture = lancer.posture && r.changements.some((c) => c.type === 'bonus' && c.cible === moi.id) ? lancer.posture : null;
-  const changements = posture ? r.changements.filter((c) => !(c.type === 'bonus' && c.cible === moi.id && (c.sur === posture.plus || c.sur === posture.moins))) : r.changements;
+  const sansPosture = posture ? r.changements.filter((c) => !(c.type === 'bonus' && c.cible === moi.id && (c.sur === posture.plus || c.sur === posture.moins))) : r.changements;
+  // L6.5b (4) : le déplacement va au bout, l'opportunité part quand même : « Son déplacement s'arrête là » ne se joue pas.
+  const changements = s.id === OPPORTUNITE ? sansPosture.filter((c) => c.type !== 'narratif') : sansPosture;
 
   // L6.4b2 (1a, 3a) : un sort de concentration réussi met fin à l'ancienne avant de s'écrire.
   const lancerId = `t${combat.tour}`;
@@ -164,8 +177,8 @@ export async function lancerSortEnCombat(
       const c = { ...schemaCombattant.parse(d.data()), id };
       lus.set(id, { c, fiche: c.perso ? (c.perso === fiche.id ? fiche : (fiches.get(c.perso) ?? null)) : null });
     }
-    const ecr = appliquerChangements(changements, lus, { id: moi.id, nom: fiche.nom, fiche }, { pv: new Map([[fiche.id, pvApresCout]]), jauges });
-    const actionsPrises = s.typeAction === 'gratuite' ? {} : { tourActions: combat.tour, ...actions, [s.typeAction]: true };
+    const ecr = appliquerChangements(changements, lus, { id: moi.id, nom: fiche.nom, fiche }, { pv: new Map([[fiche.id, pvApresCout]]), jauges, reaction });
+    const actionsPrises = reaction || s.typeAction === 'gratuite' ? {} : { tourActions: combat.tour, ...actions, [s.typeAction]: true };
     const moiMaj: Record<string, unknown> = { ...(ecr.combattants.get(moi.id) ?? {}), ...actionsPrises, ...(usages !== moi.usages ? { usages } : {}) };
     if (posture) {
       const avant = (moiMaj.bonus as BonusCombat[] | undefined) ?? lus.get(moi.id)?.c.bonus ?? moi.bonus;

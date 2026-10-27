@@ -28,6 +28,8 @@
   import { suivreDessins, suivreEtatScene, suivreImageScene, suivreJetons, suivreScenesImportees, suivreTable } from '../lib/magasins/carte.svelte';
   import { suivreJoueurs } from '../lib/magasins/presents.svelte';
   import { noterAction } from '../lib/actions/combat';
+  import { signalerOpportunites } from '../lib/actions/reactions';
+  import { opportunitesDuChemin } from '../lib/combat/reactions';
   import type { CarteDuCombat } from '../lib/combat/attaque';
   import { combatSurCarte } from '../lib/combat/carte';
   import { viseeCarte, type ViseeCarte } from '../lib/combat/visee.svelte';
@@ -286,15 +288,22 @@
     p.catch(signaler);
   };
 
-  function surDeplacement(id: string, vers: Case, cases?: number) {
+  function surDeplacement(id: string, vers: Case, cases?: number, chemin: Case[] = []) {
     if (!idScene) return;
+    // Sa case de départ, lue avant que le pas ne s'écrive.
+    const de = jetons.find((j) => j.id === id);
     agir(deplacerJeton(idScene, id, vers));
     // Combat (7a) : les cases parcourues à son tour se décomptent.
     const c = combattants.find((x) => x.id === id);
     const cb = combatSuivi?.c.etat.donnees;
     if (cases !== undefined && c && cb && idCombat) agir(noterAction(idCombat, cb, c, { cases }));
+    // L6.5b (2b, 3b) : le pas qui quitte le contact d'un ennemi, case après case, ouvre son attaque d'opportunité, ce tour.
+    // Le joueur ne la note que pour le combattant qui a la main ; le MJ, pour tous.
+    if (c && cb && cb.statut === 'encours' && idCombat && de && (role === 'mj' || cb.actif === id)) {
+      const attaquants = opportunitesDuChemin(id, [de, ...chemin], jetons, combattants);
+      if (attaquants.length) agir(signalerOpportunites(idCombat, cb.tour, id, attaquants));
+    }
     // L6.4b1 (7a) : les zones du combat où il entre, ou finit son pas.
-    const de = jetons.find((j) => j.id === id);
     if (c && cb && idCombat && de && zonesCombat.length)
       agir(apresDeplacement({ lieu: { combat: idCombat }, zones: zonesCombat, jetons, combat: { id: idCombat, tour: cb.tour }, combattants, fiches, auteur: c.nom }, { id, de, vers }));
   }

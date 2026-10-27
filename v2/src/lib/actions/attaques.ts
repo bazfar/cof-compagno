@@ -24,7 +24,8 @@ import { actionsDuTour } from '../combat/ordre';
 import { DEGATS_COLLISION_DECOR, DEGATS_COLLISION_JETON, pousser } from '../combat/poussee';
 import { champsJauges, gainParDegatsSubis, gainParTouche, gainParVingtNaturel, payer, type Jauges } from '../combat/ressources';
 import type { AttaqueSpeciale } from '../combat/speciales';
-import { absorber, bonusDes, bonusFixe, consommerBonus } from '../combat/bonus';
+import { absorber, apresAttaque, bonusDes, bonusFixe, consommerBonus } from '../combat/bonus';
+import { reactionDisponible, USAGE_REACTION } from '../combat/reactions';
 import { appliquerAffaibli } from '../effets/resolution';
 import { vueFiche } from '../fiche/vue-fiche';
 import { formuleTest, type Jet } from '../regles/des';
@@ -87,6 +88,13 @@ function principaleLibre(combat: Pick<Combat, 'tour'>, c: Combattant, quoi: stri
 }
 
 const avecPrincipale = (combat: Pick<Combat, 'tour'>, a: Pick<Combattant, 'principale' | 'secondaire' | 'mvt' | 'sprint'>) => ({ tourActions: combat.tour, ...a, principale: true });
+
+/** Ce que l'attaque d'un monstre prend : son action principale, ou, en réaction (L6.5b, 5a, 7a), la réaction du round. */
+function priseDeLAttaque(combat: Pick<Combat, 'tour'>, monstre: Combattant, reaction: boolean): Record<string, unknown> {
+  if (!reaction) return avecPrincipale(combat, principaleLibre(combat, monstre, 'attaque'));
+  if (!reactionDisponible(monstre)) throw new RefusCombat(`${monstre.nom} a déjà réagi ce round.`);
+  return { usages: { ...monstre.usages, [USAGE_REACTION]: combat.tour } };
+}
 
 /** Ce que les états de l'attaquant lui interdisent (6a, 7b) : agir, viser loin. */
 function peutAttaquer(attaquant: Combattant, mode: 'contact' | 'distance'): void {
@@ -406,12 +414,13 @@ export async function attaqueDeMonstre(
   cible: AvecId<Combattant>,
   fiche: AvecId<Fiche>,
   alea: () => number = Math.random,
+  reaction = false,
 ): Promise<{ issue: IssueAttaque; net: number | null; pv: number; etat: string | null }> {
   if (monstre.genre !== 'monstre') throw new RefusCombat('Seul un monstre attaque depuis ce panneau.');
   if (cible.genre !== 'pj' || cible.perso !== fiche.id) throw new RefusCombat('On attaque un PJ du combat.');
   if (!ciblable(cible.etats)) throw new RefusCombat(`${cible.nom} ne peut pas être pris pour cible.`);
   peutAttaquer(monstre, a.portee.vue ? 'distance' : 'contact');
-  const actions = principaleLibre(combat, monstre, 'attaque');
+  const prise = priseDeLAttaque(combat, monstre, reaction);
   const vue = vueFiche(fiche);
   const j = jetAttaque(monstre, cible, { ...a, mode: a.portee.vue ? 'distance' : 'contact' }, vue.stats.ca, alea);
   const issue = j.issue ?? { de: 0, bonus: a.bonus, total: 0, def: vue.stats.ca, touche: false, critique: false, echecCritique: false };
@@ -426,13 +435,18 @@ export async function attaqueDeMonstre(
       etat = id;
     } else etatInconnu = a.etatSurTouche.id;
   }
+  // L6.5b (8a) : le bonus d'une réaction « contre cette attaque » tombe avec elle.
+  const bonusMonstre = apresAttaque(monstre.bonus, 'attaquant');
+  const bonusCible = apresAttaque(cible.bonus, 'cible');
   const lot = writeBatch(db);
-  lot.update(refCombattant(idCombat, monstre.id), { ...avecPrincipale(combat, actions), ...(memes(j.etatsAttaquant, monstre.etats) ? {} : { etats: j.etatsAttaquant }) });
+  lot.update(refCombattant(idCombat, monstre.id), { ...prise, ...(memes(j.etatsAttaquant, monstre.etats) ? {} : { etats: j.etatsAttaquant }), ...(bonusMonstre.length !== monstre.bonus.length ? { bonus: bonusMonstre } : {}) });
   await lot.commit();
   const t = j.leurre ? `${etatDuCatalogue(j.leurre)?.nom ?? j.leurre} : l’attaque rate d’office.` : texteAttaque(issue, 'CA');
-  await noterJet(`${a.nom} sur ${fiche.nom}`, formuleTest(issue.bonus), { des: j.leurre ? [] : (issue.des ?? [issue.de]), faces: 20, bonus: issue.bonus, total: issue.total }, monstre.nom, t);
+  await noterJet(`${reaction ? 'Opportunité : ' : ''}${a.nom} sur ${fiche.nom}`, formuleTest(issue.bonus), { des: j.leurre ? [] : (issue.des ?? [issue.de]), faces: 20, bonus: issue.bonus, total: issue.total }, monstre.nom, t);
+  const bonusTombe = bonusCible.length !== cible.bonus.length ? { bonus: bonusCible } : {};
   if (!issue.touche) {
-    if (!memes(etatsCible, cible.etats)) await updateDoc(refCombattant(idCombat, cible.id), { etats: etatsCible });
+    const maj = { ...(memes(etatsCible, cible.etats) ? {} : { etats: etatsCible }), ...bonusTombe };
+    if (Object.keys(maj).length) await updateDoc(refCombattant(idCombat, cible.id), maj);
     return { issue, net: null, pv: vue.pv.actuel, etat: null };
   }
   const plus = modificateur(monstre.etats, ['degats']) + bonusFixe(monstre.bonus, ['degats']);
@@ -448,11 +462,11 @@ export async function attaqueDeMonstre(
   if (etat && !etatsCible.some((e) => e.id === etat)) etatsCible = poserEtat(etatsCible, etat, a.etatSurTouche!.duree, monstre.nom, { des: a.etatSurTouche!.formuleDot ?? null });
   const lot2 = writeBatch(db);
   lot2.update(refPerso(fiche.id), { pvActuel: pv, ...champsJauges(gainParDegatsSubis(fiche, net)) });
-  const majCible: Record<string, unknown> = memes(etatsCible, cible.etats) ? {} : { etats: etatsCible };
+  const majCible: Record<string, unknown> = { ...(memes(etatsCible, cible.etats) ? {} : { etats: etatsCible }), ...bonusTombe };
   if (absorbe.pvTemp !== cible.pvTemp) majCible.pvTemp = absorbe.pvTemp;
   if (Object.keys(majCible).length) lot2.update(refCombattant(idCombat, cible.id), majCible);
-  const restants = consommerBonus(monstre.bonus, ['degats']);
-  if (restants.length !== monstre.bonus.length) lot2.update(refCombattant(idCombat, monstre.id), { bonus: restants });
+  const restants = consommerBonus(bonusMonstre, ['degats']);
+  if (restants.length !== bonusMonstre.length) lot2.update(refCombattant(idCombat, monstre.id), { bonus: restants });
   await lot2.commit();
   const suite = [etat ? `${etatDuCatalogue(etat)!.nom} ${a.etatSurTouche!.duree} round${a.etatSurTouche!.duree > 1 ? 's' : ''}` : '', etatInconnu ? `état « ${etatInconnu} » inconnu de la refonte, au MJ` : '']
     .filter(Boolean)
@@ -480,18 +494,20 @@ export async function attaqueSurInvocation(
   a: AttaqueMonstre & { defEnPlus?: number },
   cible: AvecId<Combattant>,
   alea: () => number = Math.random,
+  reaction = false,
 ): Promise<{ issue: IssueAttaque; net: number | null; pv: number }> {
   if (monstre.genre !== 'monstre') throw new RefusCombat('Seul un monstre attaque depuis ce panneau.');
   if (cible.genre !== 'invocation' || cible.def === null || cible.pv === null) throw new RefusCombat('On attaque une invocation du combat.');
   if (!ciblable(cible.etats)) throw new RefusCombat(`${cible.nom} ne peut pas être pris pour cible.`);
   peutAttaquer(monstre, a.portee.vue ? 'distance' : 'contact');
-  const actions = principaleLibre(combat, monstre, 'attaque');
+  const prise = priseDeLAttaque(combat, monstre, reaction);
   const j = jetAttaque(monstre, cible, { ...a, mode: a.portee.vue ? 'distance' : 'contact' }, cible.def, alea);
   const brute = j.issue ?? { de: 0, bonus: a.bonus, total: 0, def: cible.def, touche: false, critique: false, echecCritique: false };
   const issue = cible.invocation?.objet && !j.leurre ? { ...brute, touche: true } : brute;
-  await updateDoc(refCombattant(idCombat, monstre.id), { ...avecPrincipale(combat, actions), ...(memes(j.etatsAttaquant, monstre.etats) ? {} : { etats: j.etatsAttaquant }) });
+  const bonusMonstre = apresAttaque(monstre.bonus, 'attaquant');
+  await updateDoc(refCombattant(idCombat, monstre.id), { ...prise, ...(memes(j.etatsAttaquant, monstre.etats) ? {} : { etats: j.etatsAttaquant }), ...(bonusMonstre.length !== monstre.bonus.length ? { bonus: bonusMonstre } : {}) });
   const t = j.leurre ? `${etatDuCatalogue(j.leurre)?.nom ?? j.leurre} : l’attaque rate d’office.` : cible.invocation?.objet ? 'un objet : touché d’office' : texteAttaque(issue);
-  await noterJet(`${a.nom} sur ${cible.nom}`, formuleTest(issue.bonus), { des: j.leurre ? [] : (issue.des ?? [issue.de]), faces: 20, bonus: issue.bonus, total: issue.total }, monstre.nom, t);
+  await noterJet(`${reaction ? 'Opportunité : ' : ''}${a.nom} sur ${cible.nom}`, formuleTest(issue.bonus), { des: j.leurre ? [] : (issue.des ?? [issue.de]), faces: 20, bonus: issue.bonus, total: issue.total }, monstre.nom, t);
   if (!issue.touche) {
     if (!memes(j.etatsCible, cible.etats)) await updateDoc(refCombattant(idCombat, cible.id), { etats: j.etatsCible });
     return { issue, net: null, pv: cible.pv };

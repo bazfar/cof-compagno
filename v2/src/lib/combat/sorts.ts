@@ -73,8 +73,29 @@ function lancableEnCombat(a: Action): boolean {
   return a.nature !== 'passif' && a.nature !== 'reaction' && a.action !== 'reaction' && a.action !== 'aucune' && !a.id.startsWith('arme.') && !a.famille;
 }
 
+/** L6.5b (10a) : l'attaque d'opportunité des données, que tout combattant a. */
+export const OPPORTUNITE = 'arme.opportunite';
+
+/** L6.5b : une réaction (dans les données, toute réaction, capacité ou verbe, se joue en `action: 'reaction'`) ; l'attaque d'opportunité, que le profil ne porte pas, est ajoutée à part. */
+function estReaction(a: Action): boolean {
+  return a.action === 'reaction';
+}
+
 /** Les sorts et capacités que ce personnage lance en combat : verbes, puis sorts mineurs, puis capacités (l'ordre du profil). */
 export function sortsDeCombat(f: Fiche): SortDeCombat[] {
+  return sortsDuProfil(f, lancableEnCombat);
+}
+
+/**
+ * L6.5b (6a) : ses réactions, dans l'ordre du profil, et l'attaque
+ * d'opportunité (src/regles/armes.ts), que tout combattant a.
+ */
+export function reactionsDeCombat(f: Fiche): SortDeCombat[] {
+  const r = sortsDuProfil(f, estReaction);
+  return f.schemaVersion === 2 ? [...r, versSort(actionParId.get(OPPORTUNITE)!, 'I', 'adepte', false, {})] : r;
+}
+
+function sortsDuProfil(f: Fiche, garder: (a: Action) => boolean): SortDeCombat[] {
   if (f.schemaVersion !== 2) return [];
   const classe = classeDeLaRefonte(f.refonte.classe);
   if (!classe) return [];
@@ -92,28 +113,30 @@ export function sortsDeCombat(f: Fiche): SortDeCombat[] {
   const r: SortDeCombat[] = [];
   for (const e of entrees) {
     const a = actionParId.get(e.id);
-    if (!a || vus.has(e.id) || !lancableEnCombat(a)) continue;
+    if (!a || vus.has(e.id) || !garder(a)) continue;
     vus.add(e.id);
-    const max = ORDRE.indexOf(e.palier);
-    const min = a.elementMin ? MAITRISES.indexOf(a.elementMin) : 0;
-    r.push({
-      id: a.id,
-      nom: a.nom,
-      description: a.description,
-      groupe: a.nature === 'verbe' ? 'verbe' : a.nature === 'mineur' ? 'mineur' : 'capacite',
-      paliers: paliersDefinis(a).filter((x) => ORDRE.indexOf(x) <= max),
-      maitrise: e.grimoire ?? ecoleDe(a),
-      grimoire: !!e.grimoire,
-      typeAction: typeDAction(a),
-      limite: a.limite,
-      elements: a.element
-        ? (Object.entries(p.elements) as [Element, Maitrise][]).filter(([, m]) => MAITRISES.indexOf(m) >= min).map(([id, m]) => ({ id, nom: nomElement(id), maitrise: m }))
-        : [],
-      elementRequis: !!a.elementMin,
-      manuel: a.manuel ?? null,
-    });
+    r.push(versSort(a, e.palier, e.grimoire ?? ecoleDe(a), !!e.grimoire, p.elements));
   }
   return r;
+}
+
+function versSort(a: Action, palier: Palier, maitrise: Maitrise, grimoire: boolean, elements: Partial<Record<Element, Maitrise>>): SortDeCombat {
+  const max = ORDRE.indexOf(palier);
+  const min = a.elementMin ? MAITRISES.indexOf(a.elementMin) : 0;
+  return {
+    id: a.id,
+    nom: a.nom,
+    description: a.description,
+    groupe: a.nature === 'verbe' ? 'verbe' : a.nature === 'mineur' ? 'mineur' : 'capacite',
+    paliers: paliersDefinis(a).filter((x) => ORDRE.indexOf(x) <= max),
+    maitrise,
+    grimoire,
+    typeAction: typeDAction(a),
+    limite: a.limite,
+    elements: a.element ? (Object.entries(elements) as [Element, Maitrise][]).filter(([, m]) => MAITRISES.indexOf(m) >= min).map(([id, m]) => ({ id, nom: nomElement(id), maitrise: m })) : [],
+    elementRequis: !!a.elementMin,
+    manuel: a.manuel ?? null,
+  };
 }
 
 /** Le palier où le sort part : celui choisi, ou le suivant avec la surcharge (4a). */
@@ -310,6 +333,8 @@ export interface ChoixDuLancer {
   visee: Visee;
   /** L6.5a (2b) : les choix du panneau « Options ». */
   options?: OptionsDuLancer;
+  /** L6.5b : une réaction, jouée hors de son tour (reactionsDeCombat). */
+  reaction?: true;
 }
 
 /**
@@ -326,7 +351,7 @@ export function preparerLancer(
   fiches: ReadonlyMap<string, Fiche>,
   alea: () => number,
 ): Lancer | string {
-  const s = sortsDeCombat(f).find((x) => x.id === choix.sort);
+  const s = (choix.reaction ? reactionsDeCombat : sortsDeCombat)(f).find((x) => x.id === choix.sort);
   const action = actionParId.get(choix.sort);
   if (!s || !action) return 'Tu ne connais pas ce sort.';
   if (!s.paliers.includes(choix.palier)) return `Palier ${choix.palier} pas encore atteint.`;

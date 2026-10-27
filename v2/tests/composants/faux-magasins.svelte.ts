@@ -192,9 +192,18 @@ export const magasinsSorts = {
 export const combatDoc = $state({ donnees: null as Record<string, unknown> | null, pret: true, erreur: null as string | null });
 export const combattants = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
 
+/** L6.5b : le glisser sans budget que FauxBattlemap joue (« glisser libre ») : un jeton, son chemin, arrivée comprise. */
+export const glisserLibre: { v: { id: string; chemin: { cx: number; cy: number }[] } | null } = { v: null };
+
+// Réactions (lot L6.5b) : les demandes des joueurs, les attaques d'opportunité ouvertes.
+export const reactions = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+export const opportunites = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+
 export const magasinsCombat = {
   suivreCombat: () => ({ etat: combatDoc, arreter: () => {} }),
   suivreCombattants: () => ({ etat: combattants, arreter: () => {} }),
+  suivreReactions: () => ({ etat: reactions, arreter: () => {} }),
+  suivreOpportunites: () => ({ etat: opportunites, arreter: () => {} }),
 };
 
 /** La carte que la fausse CarteTable rend à l'écran qui la monte (L6.2, portées). */

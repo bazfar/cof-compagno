@@ -107,6 +107,21 @@ export function pasDeGlisserBorne(
   return { case: p.case, cout, arret: p.arret };
 }
 
+/**
+ * Les cases d'un pas à l'autre, une à une, départ exclu (lot L6.5b, 3b) :
+ * un glisser rapide saute des cases, le chemin les intercale (en diagonale
+ * d'abord, puis tout droit).
+ */
+export function pasAPas(a: Case, b: Case): Case[] {
+  const r: Case[] = [];
+  let k = a;
+  while (k.cx !== b.cx || k.cy !== b.cy) {
+    k = { cx: k.cx + Math.sign(b.cx - k.cx), cy: k.cy + Math.sign(b.cy - k.cy) };
+    r.push(k);
+  }
+  return r;
+}
+
 /** Initiales d'un nom, pour le jeton (v1 : initiales). */
 export function initiales(nom: string): string {
   return (nom || '?').trim().split(/\s+/).map((m) => m[0]).slice(0, 2).join('').toUpperCase();
