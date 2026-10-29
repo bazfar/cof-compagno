@@ -6,7 +6,7 @@ import type { Fiche } from '../schemas/fiche.ts';
 import { degatsSurMonstre } from './attaque.ts';
 import { degatsSurPj } from './attaques-pj.ts';
 import { absorber, dissiper, dureeEnRounds, gagnerPvTemp, poserBonus, SUR_CONTRE_ATTAQUE, texteBonus } from './bonus.ts';
-import { consommerCharge, poserEtat, retirerEtat, rompre } from './etats.ts';
+import { consommerCharge, immunise, poserEtat, retirerEtat, rompre } from './etats.ts';
 import { champsJauges, gainParDegatsSubis, jauge, type Jauges } from './ressources.ts';
 
 /*
@@ -74,6 +74,8 @@ export function appliquerChangements(
     jauges?: Jauges;
     /** L6.5b (8a) : une réaction ; ses bonus de DEF et d'attaque tombent avec la prochaine attaque. */
     reaction?: boolean;
+    /** L6.6a (2a) : le MJ écrit : ses soins remontent aussi les PV d'un monstre (un joueur ne le peut pas). */
+    parLeMj?: boolean;
   } = {},
 ): Ecritures {
   const pvDepart = depart.pv ?? new Map<string, number>();
@@ -141,7 +143,7 @@ export function appliquerChangements(
       }
       case 'soin':
       case 'soinComplet': {
-        if (!pj) {
+        if (!pj && !depart.parLeMj) {
           auMj.push(`Soin de ${lu.c.nom}${ch.type === 'soin' ? ` (${ch.montant})` : ''} : au MJ`);
           continue;
         }
@@ -160,8 +162,13 @@ export function appliquerChangements(
           auMj.push(`État « ${ch.etat} » sur ${lu.c.nom}`);
           continue;
         }
+        // L6.6a (8a) : un état dont il est immunisé ne se pose pas.
+        if (immunise(lu.c, ch.etat)) {
+          dire(ch.cible, `immunisé : ${d.nom}`);
+          continue;
+        }
         const rounds = dureeEnRounds(ch.duree);
-        s.etats = poserEtat(s.etats, ch.etat, rounds, lanceur.nom, { charges: ch.charges ?? null });
+        s.etats = poserEtat(s.etats, ch.etat, rounds, lanceur.nom, { charges: ch.charges ?? null, des: ch.des ?? null });
         dire(ch.cible, `${d.nom}${rounds ? ` ${rounds} round${rounds > 1 ? 's' : ''}` : ''}`);
         if (ch.contre || ch.drainePour) auMj.push(`${d.nom} sur ${lu.c.nom} : ${ch.drainePour ? 'drain' : 'contre'} au MJ`);
         break;

@@ -32,6 +32,8 @@ import { ETATS } from './etats';
 import { EVOCATION } from './ecoles/evocation';
 import { schemaNoeudVecu, type NoeudVecu } from '../lib/schemas/vecu';
 import { NOEUDS_VECU, PREDILECTIONS_VECU, VECU_DES_CAPACITES_V1 } from './vecu';
+import { EFFETS_ATTAQUES, ETATS_BESTIAIRE } from './monstres';
+import { schemaEffetAttaqueMonstre, type EffetAttaqueMonstre } from '../lib/schemas/monstres';
 
 /*
  * Règles de la 2.0, écrites à la main (lot L4, décidé le 20/10/2026 : la
@@ -175,3 +177,15 @@ export function referencesVecuManquantes(): string[] {
 
 const manquantes = [...referencesManquantes(), ...referencesVecuManquantes()];
 if (manquantes.length) throw new Error(`Références manquantes : ${manquantes.join(', ')}`);
+
+// ---- Le bestiaire en combat (lot L6.6a) ----
+/** Les effets des attaques du bestiaire traduits en données (6b), par `monstre|attaque`. */
+export const effetsAttaquesMonstres: ReadonlyMap<string, EffetAttaqueMonstre> = new Map(Object.entries(EFFETS_ATTAQUES).map(([k, e]) => [k, schemaEffetAttaqueMonstre.parse(e)]));
+/** Les états du bestiaire (v1) et leur état de la refonte. */
+export { ETATS_BESTIAIRE };
+
+/** Les états de la refonte que citent les effets d'attaque et la correspondance du bestiaire, inconnus du catalogue (vide). */
+export function etatsDuBestiaireInconnus(etats: Readonly<Record<string, string>> = ETATS_BESTIAIRE, effets: Iterable<EffetAttaqueMonstre> = effetsAttaquesMonstres.values()): string[] {
+  const cites = [...Object.values(etats), ...[...effets].flatMap((e) => (e.etats ?? []).map((x) => x.id))];
+  return [...new Set(cites)].filter((id) => !etatParId.has(id));
+}

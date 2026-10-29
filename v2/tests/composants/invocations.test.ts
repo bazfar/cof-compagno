@@ -255,7 +255,7 @@ describe('le MJ (1a, 2a, 9a, 10a, 15a)', () => {
   it('10a : une invocation montre ses chiffres et son maître ; ses monstres la visent', async () => {
     combatDoc.donnees = combat({ actif: 'm-r1-a' });
     combattants.elements = [goule(), pj('p1', { nom: 'Shyrion' }), tison({ invocation: { ...tison().invocation, rounds: 2 } as never })];
-    faux.bestiaire.elements = [{ id: 'goule', nom: 'Goule', attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, bonusDegats: 2, effetSpecial: null }] }] as never;
+    faux.bestiaire.elements = [{ id: 'goule', nom: 'Goule', capacitesSpeciales: [], attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, bonusDegats: 2, effetSpecial: null }] }] as never;
     faux.armesBestiaire.donnees = { liste: [{ id: 'griffes', nom: 'Griffes', type: 'arme', degats: '1d6', portee: 'contact', typedegats: 'physique' }] } as never;
     const v = render(PanneauCombat);
     const cible = screen.getByLabelText('Cible') as HTMLSelectElement;
@@ -278,7 +278,7 @@ describe('le MJ (1a, 2a, 9a, 10a, 15a)', () => {
     persos.elements = [mage() as never];
     combatDoc.donnees = combat({ actif: 'm-r1-a' });
     combattants.elements = [goule(), moi];
-    faux.bestiaire.elements = [{ id: 'goule', nom: 'Goule', attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, bonusDegats: 2, effetSpecial: null }] }] as never;
+    faux.bestiaire.elements = [{ id: 'goule', nom: 'Goule', capacitesSpeciales: [], attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, bonusDegats: 2, effetSpecial: null }] }] as never;
     faux.armesBestiaire.donnees = { liste: [{ id: 'griffes', nom: 'Griffes', type: 'arme', degats: '1d6', portee: 'contact', typedegats: 'physique' }] } as never;
     const v = render(PanneauCombat);
     await fireEvent.click(screen.getByRole('button', { name: /^Griffes/ }));

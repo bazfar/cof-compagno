@@ -185,7 +185,7 @@ describe('section Combat du MJ (4a, 9a, 11a)', () => {
       { id: 'm-x', genre: 'monstre', nom: 'Rat', couleur: '#c0392b', cx: 6, cy: 5, proprietaire: null, creeLe: 1 },
     ];
     rencontres.elements = [{ id: 'r1', nom: 'Les goules du cellier', scene: 'cave', statut: 'lancee', lanceeLe: 5, monstres: [{ cle: 'a', monstre: 'goule', nom: 'Goule A', cx: 5, cy: 5 }], butin: [], creeLe: 1 }];
-    bestiaire.elements = [{ id: 'goule', nom: 'Goule', race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, armureId: 'cuir', attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
+    bestiaire.elements = [{ id: 'goule', nom: 'Goule', capacitesSpeciales: [], race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, armureId: 'cuir', attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
     armuresBestiaire.donnees = { liste: [{ id: 'cuir', nom: 'Cuir épais', reduction: 2, naturelle: true }] };
   };
 
@@ -261,7 +261,7 @@ describe('panneau du combattant (3b)', () => {
     table.donnees = { sceneActive: 'cave', combat: 'c1' };
     combatDoc.donnees = combat({ actif: 'm-r1-a' });
     persos.elements = [reelle('Kargash', 'p1', 'alice')];
-    bestiaire.elements = [{ id: 'goule', nom: 'Goule', race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
+    bestiaire.elements = [{ id: 'goule', nom: 'Goule', capacitesSpeciales: [], race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
     combattants.elements = [monstre('a', { nom: 'Goule A', initiative: 15, de: 12, pv: 9 }), pj('p1', { nom: 'Kargash', perso: 'p1', uid: 'alice', initiative: 11, de: 10 })];
   });
 
@@ -444,7 +444,7 @@ describe('attaques et dégâts (L6.2)', () => {
     table.donnees = { sceneActive: 'cave', combat: 'c1' };
     combatDoc.donnees = combat({ actif: 'm-r1-a' });
     persos.elements = [k()];
-    bestiaire.elements = [{ id: 'goule', nom: 'Goule', race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, bonusDegats: 2, effetSpecial: null }] }];
+    bestiaire.elements = [{ id: 'goule', nom: 'Goule', capacitesSpeciales: [], race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, bonusDegats: 2, effetSpecial: null }] }];
     armesBestiaire.donnees = { liste: [{ id: 'griffes', nom: 'Griffes', type: 'arme', degats: '1d6', portee: 'contact', typedegats: 'physique' }] };
     persos.elements = [k(), { ...reelle('Hermione', 'p2', 'bob'), pvActuel: 0 }];
     combattants.elements = [goule(), moi(), pj('p2', { nom: 'Hermione', perso: 'p2', uid: 'bob', mortEchecs: 3, mort: true })];
@@ -474,7 +474,7 @@ describe('attaques et dégâts (L6.2)', () => {
     table.donnees = { sceneActive: 'cave', combat: 'c1' };
     combatDoc.donnees = combat({ actif: 'm-r1-a' });
     persos.elements = [{ ...k(), pvActuel: 0 }];
-    bestiaire.elements = [{ id: 'goule', nom: 'Goule', race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
+    bestiaire.elements = [{ id: 'goule', nom: 'Goule', capacitesSpeciales: [], race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
     armesBestiaire.donnees = { liste: [{ id: 'griffes', nom: 'Griffes', type: 'arme', degats: '1d6', portee: 'contact', typedegats: 'physique' }] };
     combattants.elements = [goule({ tourActions: 6, principale: true }), moi({ mortSucces: 2 })];
     render(PanneauCombat);

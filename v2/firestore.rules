@@ -600,9 +600,12 @@ service cloud.firestore {
     }
     // Aligné sur schemaCombattant (src/lib/schemas/combat.ts).
     function combattantValide(d) {
-      return d.keys().hasOnly(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'def', 'armure', 'resistances', 'mortSucces', 'mortEchecs', 'mort', 'etats', 'usages', 'gainTouche', 'debutTour', 'visee', 'sauvegardes', 'boss', 'demonOuMortVivant', 'pvTemp', 'bonus', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe', 'maitre', 'invocation', 'concentration'])
-        // Avec le `hasOnly` ci-dessus : exactement ces clés, ni plus ni moins.
-        && d.keys().size() == 37
+      return d.keys().hasOnly(['genre', 'nom', 'perso', 'uid', 'monstre', 'modInit', 'initiative', 'de', 'pv', 'pvMax', 'aTerre', 'mvtBase', 'def', 'armure', 'resistances', 'mortSucces', 'mortEchecs', 'mort', 'etats', 'usages', 'gainTouche', 'debutTour', 'visee', 'sauvegardes', 'boss', 'demonOuMortVivant', 'pvTemp', 'bonus', 'tourActions', 'principale', 'secondaire', 'mvt', 'sprint', 'creeLe', 'maitre', 'invocation', 'concentration', 'immunites', 'legendaire'])
+        // Avec le `hasOnly` ci-dessus : exactement ces clés, ni plus ni moins (L6.6a : immunites et legendaire, facultatives).
+        && d.keys().size() == 37 + ('immunites' in d ? 1 : 0) + ('legendaire' in d ? 1 : 0)
+        // L6.6a (8a, 7a) : les immunités et les résistances légendaires d'un monstre.
+        && (!('immunites' in d) || (d.genre == 'monstre' && d.immunites is list && d.immunites.size() >= 1 && d.immunites.size() <= 20))
+        && (!('legendaire' in d) || (d.genre == 'monstre' && entierEntre(d.legendaire, 1, 10)))
         // L6.3 : états, usages, gain par touche, début de tour, visée (aligné sur schemaCombattant).
         && d.etats is list && d.etats.size() <= 20
         && d.usages is map && d.usages.size() <= 50
@@ -1299,15 +1302,23 @@ service cloud.firestore {
               // L6.3 (4b, 6a) : il pose, retire ou rompt les états de n'importe quel combattant.
               // L6.4a (10a, 11a, 12a) : ses sorts donnent ou ôtent PV temporaires et bonus.
               // L6.4b2 (1a) : il rompt une concentration (la sienne, ou celle qui tient la cible qu'il attaque).
-              // L6.5a (3a, correctif du 29/10/2026) : `usages` est ici parce
-              // qu'une capacité GRATUITE à usage limité (Posture de combat,
-              // 1x/round) n'écrit jamais `tourActions` — la branche « à son
-              // tour » ci-dessus l'exige, et refusait donc tout le lot. Comme
-              // le reste de cette branche, c'est borné par `aLaMain` : le
-              // joueur qui a la main note les usages, les siens comme ceux de
-              // la créature qu'il touche. Ne pas élargir au-delà de la main.
+              // L6.6a (7a) : son sort fait servir une résistance légendaire au monstre — une de plus, pas au-delà.
               || (estJoueur(table)
                 && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pv', 'aTerre', 'etats', 'pvTemp', 'bonus', 'concentration', 'usages'])
+                && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['usages'])
+                  // L6.5a (3a, correctif du 29/10/2026) : une capacité GRATUITE
+                  // à usage limité (Posture de combat, 1x/round) n'écrit jamais
+                  // `tourActions`, que la branche « à son tour » exige ; elle
+                  // passe donc ici. Comme le reste de cette branche, c'est
+                  // borné par `aLaMain`. Ne pas élargir au-delà de la main.
+                  // Sur un monstre, seule la résistance légendaire ci-dessous ;
+                  // et `legendaire` ne se compte jamais sur un autre genre.
+                  || (resource.data.genre != 'monstre'
+                    && !request.resource.data.usages.diff(resource.data.usages).affectedKeys().hasAny(['legendaire']))
+                  || (resource.data.genre == 'monstre'
+                    && request.resource.data.usages.diff(resource.data.usages).affectedKeys().hasOnly(['legendaire'])
+                    && request.resource.data.usages.legendaire == resource.data.usages.get('legendaire', 0) + 1
+                    && request.resource.data.usages.legendaire <= resource.data.get('legendaire', 0)))
                 && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['pv', 'aTerre'])
                   || (resource.data.genre == 'monstre'
                     && request.resource.data.pv < resource.data.pv && request.resource.data.pv >= 0

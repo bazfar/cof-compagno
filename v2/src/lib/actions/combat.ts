@@ -76,6 +76,9 @@ function nouveauCombattant(b: BrouillonCombattant, de: number | null, maintenant
     maitre: null,
     invocation: null,
     concentration: null,
+    // L6.6a (7a, 8a) : un monstre du bestiaire porte ses immunités et ses résistances légendaires.
+    ...(b.immunites?.length ? { immunites: b.immunites } : {}),
+    ...(b.legendaire ? { legendaire: b.legendaire } : {}),
   });
 }
 

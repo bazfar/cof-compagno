@@ -230,7 +230,7 @@ describe('le MJ (L6.3)', () => {
 
   it('le panneau : un PJ que nul ne peut cibler n’est pas proposé aux attaques du monstre', () => {
     const { armesBestiaire, bestiaire } = faux;
-    bestiaire.elements = [{ id: 'goule', nom: 'Goule', race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
+    bestiaire.elements = [{ id: 'goule', nom: 'Goule', capacitesSpeciales: [], race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
     armesBestiaire.donnees = { liste: [{ id: 'griffes', nom: 'Griffes', type: 'arme', degats: '1d6', portee: 'contact', typedegats: 'physique' }] };
     persos.elements = [v1('Kargash', 'p1', 'alice'), v1('Hermione', 'p2', 'bob')];
     combatDoc.donnees = combat({ actif: 'm-r1-a' });
@@ -243,7 +243,7 @@ describe('le MJ (L6.3)', () => {
 
   it('la DEF du monstre et la CA des PJ sont montrées telles que le jet les visera : l’Exposé les baisse de 2', () => {
     const { armesBestiaire, bestiaire } = faux;
-    bestiaire.elements = [{ id: 'goule', nom: 'Goule', init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
+    bestiaire.elements = [{ id: 'goule', nom: 'Goule', capacitesSpeciales: [], init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
     armesBestiaire.donnees = { liste: [{ id: 'griffes', nom: 'Griffes', type: 'arme', degats: '1d6', portee: 'contact', typedegats: 'physique' }] };
     const kargash = v1('Kargash', 'p1', 'alice');
     persos.elements = [kargash];

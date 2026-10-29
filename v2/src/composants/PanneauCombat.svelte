@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { attaqueDeMonstre, attaqueSurInvocation, poserEtatSur, retirerEtatDe } from '../lib/actions/attaques';
+  import { attaqueDeMonstre, attaqueSurInvocation, poserEtatSur, repousserDe, retirerEtatDe } from '../lib/actions/attaques';
   import { finirConcentration, maintenirConcentration } from '../lib/actions/invocations';
   import { texteConcentration } from '../lib/combat/concentration';
   import { texteInvocation } from '../lib/combat/invocations';
@@ -25,6 +25,8 @@
   import { session } from '../lib/session.svelte';
   import { rappelAvantAttaque } from '../lib/combat/reactions';
   import ReactionsMj from './ReactionsMj.svelte';
+  import CapacitesMj from './CapacitesMj.svelte';
+  import { limiteDeLAttaque, refusDeLimite, texteEffetAttaque } from '../lib/combat/monstres';
 
   /*
    * Section Combat du MJ, colonne de droite (lot L6.1, maquette 2.0) : le
@@ -63,6 +65,11 @@
    * monstre, les réactions que la cible et ses alliés peuvent encore jouer
    * (6a) ; dessous, ReactionsMj joue leurs demandes (1a) et offre
    * l'attaque d'opportunité des monstres (5a).
+   *
+   * Lot L6.6a (décisions de Thomas du 28/10/2026) : sous chaque attaque,
+   * son effet traduit et sa limite (6b) ; une attaque à plusieurs jets
+   * attend les suivants ; repoussée, la cible recule ; CapacitesMj : les
+   * immunités, les résistances légendaires et les capacités du monstre.
    */
 
   let { carte = null }: { carte?: CarteDuCombat | null } = $props();
@@ -114,7 +121,7 @@
 
   // ---- Attaques du monstre (L6.2, 6a) ----
   const listeArmes = $derived(new Map((armes.etat.donnees?.liste ?? []).map((a) => [a.id, a])));
-  const attaquesMonstre = $derived(modele ? attaquesDuMonstre(modele.attaques, listeArmes) : []);
+  const attaquesMonstre = $derived(modele ? attaquesDuMonstre(modele.attaques, listeArmes, montre?.monstre ?? null) : []);
   const ciblesPj = $derived(pjs.filter(({ c, v }) => etatPj(v.pv.actuel, c) !== 'mort' && ciblable(c.etats)));
   let cibleChoisie = $state('');
   // L6.4b2 (10a) : les invocations se visent aussi.
@@ -165,6 +172,12 @@
       occupe = false;
     }
   }
+  /** L6.6a (6b) : les jets qui restent d'une attaque à plusieurs jets, sur la même cible. */
+  let suiteJet = $state<{ nom: string; cible: string; reste: number } | null>(null);
+  $effect(() => {
+    void montre?.id;
+    suiteJet = null;
+  });
   async function attaquerPj(a: AttaqueMonstre) {
     if (cibleInv) return attaquerInvocation(a, cibleInv);
     const cible = ciblePj;
@@ -176,7 +189,10 @@
     try {
       // L6.4b1 (11a) : la couverture du PJ contre une attaque à distance.
       const defEnPlus = a.portee.vue && carte?.zones ? couverture(carte.zones, carte.jetons, cible.c.id) : 0;
-      const r = await attaqueDeMonstre(idCombat, combat, montre, { ...a, defEnPlus }, cible.c, f);
+      const r = suiteJet ? await attaqueDeMonstre(idCombat, combat, montre, { ...a, defEnPlus }, cible.c, f, Math.random, false, true) : await attaqueDeMonstre(idCombat, combat, montre, { ...a, defEnPlus }, cible.c, f);
+      // L6.6a (6b) : une attaque à plusieurs jets attend les suivants ; repoussé, son jeton recule.
+      suiteJet = suiteJet ? (suiteJet.reste > 1 ? { ...suiteJet, reste: suiteJet.reste - 1 } : null) : a.effet?.jets ? { nom: a.nom, cible: cible.c.id, reste: a.effet.jets - 1 } : null;
+      if (r.repousse && carte) await repousserDe(r.repousse, idCombat, combat, montre, cible.c, carte, combattants, fichesParPerso, montre.nom);
       // L6.4b2 (1a) : touché, il fait sa sauvegarde de CON pour maintenir sa concentration.
       if (r.issue.touche && cible.c.concentration) await maintenirConcentration(idCombat, combat.scene, cible.c, f, r.net ?? 0, combattants, montre.nom);
       resultat =
@@ -298,8 +314,15 @@
           <div class="attaques">
             {#each attaquesMonstre as a, i (i)}
               {@const refus = refusPortee(a)}
-              <button disabled={occupe || !cibleId || principalePrise || !!refus} onclick={() => attaquerPj(a)}>{a.nom} {signe(a.bonus)} · {a.formule}</button>
+              {@const limite = refusDeLimite(montre, a.nom, limiteDeLAttaque(a.effet ?? null), combat.round)}
+              {@const effet = texteEffetAttaque(a.effet ?? null, a.texte ?? null)}
+              <button disabled={occupe || !cibleId || principalePrise || !!refus || !!limite || !!suiteJet} onclick={() => attaquerPj(a)}>{a.nom} {signe(a.bonus)} · {a.formule}</button>
+              {#if effet}<span class="aide effet">{effet}</span>{/if}
               {#if refus}<span class="aide">{refus}</span>{/if}
+              {#if limite}<span class="aide">{a.nom} : {limite}.</span>{/if}
+              {#if suiteJet?.nom === a.nom}
+                <button disabled={occupe || cibleId !== suiteJet.cible} onclick={() => attaquerPj(a)}>{a.nom} : jet suivant ({suiteJet.reste})</button>
+              {/if}
             {:else}
               <p class="aide">Aucune attaque dont l'arme est dans la liste des armes.</p>
             {/each}
@@ -310,6 +333,7 @@
             </p>
           {/if}
           <label class="case"><input type="checkbox" bind:checked={outrePortee} /> Passer outre la portée</label>
+          <CapacitesMj idCombat={idCombat!} {combat} monstre={montre} {modele} {combattants} fiches={fichesParPerso} {carte} />
           {#if principalePrise}<p class="aide">Action principale prise ce tour.</p>{/if}
           {#if resultat}<p role="status">{resultat}</p>{/if}
         {:else}
@@ -485,6 +509,9 @@
   }
   .poser input {
     width: 56px;
+  }
+  .effet {
+    font-size: 12px;
   }
   .rappel {
     padding: 6px 10px;

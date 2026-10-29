@@ -20,6 +20,7 @@ import { poserPosture, textePosture, USAGE_COMBINAISON } from '../combat/posture
 import { estDeSang } from '../combat/passifs';
 import { jouerPassifs } from './passifs';
 import { reactionDisponible, USAGE_REACTION } from '../combat/reactions';
+import { legendairesServies, USAGE_LEGENDAIRE } from '../combat/legendaire';
 import { ppDisponibles } from '../fiche/sorts-hors-combat';
 import { vueFiche } from '../fiche/vue-fiche';
 import type { Case } from '../battlemap/geometrie';
@@ -178,6 +179,12 @@ export async function lancerSortEnCombat(
       lus.set(id, { c, fiche: c.perso ? (c.perso === fiche.id ? fiche : (fiches.get(c.perso) ?? null)) : null });
     }
     const ecr = appliquerChangements(changements, lus, { id: moi.id, nom: fiche.nom, fiche }, { pv: new Map([[fiche.id, pvApresCout]]), jauges, reaction });
+    // L6.6a (7a) : les résistances légendaires que le sort a coûtées à un boss.
+    for (const [id, n] of legendairesServies(r.jets)) {
+      const c = lus.get(id)?.c;
+      if (!c) continue;
+      ecr.combattants.set(id, { ...(ecr.combattants.get(id) ?? {}), usages: { ...c.usages, [USAGE_LEGENDAIRE]: Math.min(999, (c.usages[USAGE_LEGENDAIRE] ?? 0) + n) } });
+    }
     const actionsPrises = reaction || s.typeAction === 'gratuite' ? {} : { tourActions: combat.tour, ...actions, [s.typeAction]: true };
     const moiMaj: Record<string, unknown> = { ...(ecr.combattants.get(moi.id) ?? {}), ...actionsPrises, ...(usages !== moi.usages ? { usages } : {}) };
     if (posture) {

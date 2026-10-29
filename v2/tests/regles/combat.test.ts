@@ -33,6 +33,10 @@ import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
  * son tour ; le MJ seul la passe à « jouée » ou « refusée » (1a). Le
  * joueur qui a la main note les attaques d'opportunité que son pas ouvre,
  * ce tour ; le MJ, toutes (2b).
+ *
+ * Lot L6.6a : un monstre porte ses immunités et ses résistances
+ * légendaires (8a, 7a) ; le sort du joueur qui a la main en fait servir
+ * une au boss, une de plus à la fois, pas au-delà de son total (7a).
  */
 const TABLE = 'tables/t1';
 const C = `${TABLE}/combats/c1`;
@@ -331,8 +335,10 @@ describe('sorts en combat (L6.4a)', () => {
     const usages = { 'guerrier.posture-de-combat': 3 };
     const b = [posture('attaque', 2), posture('DEF', -2)];
     await assertSucceeds(pour('alice').doc(`${C}/combattants/pj-p1`).update({ bonus: b, usages }));
-    // Les usages d'un autre combattant aussi : la main suffit, comme pour ses états et ses bonus.
-    await assertSucceeds(pour('alice').doc(`${C}/combattants/m-r1-a`).update({ usages }));
+    // Ceux d'un autre PJ aussi : la main suffit, comme pour ses états et ses bonus.
+    await assertSucceeds(pour('alice').doc(`${C}/combattants/pj-p2`).update({ usages }));
+    // Sur un monstre, non : L6.6a (7a) n'y laisse passer que la résistance légendaire.
+    await assertFails(pour('alice').doc(`${C}/combattants/m-r1-a`).update({ usages }));
     // Sans la main, rien.
     await assertFails(pour('carol').doc(`${C}/combattants/pj-p2`).update({ bonus: b, usages }));
     // La main ne dispense pas du reste : un champ hors liste reste refusé.
@@ -530,5 +536,41 @@ describe('réactions (L6.5b)', () => {
     await assertSucceeds(pour('bob').doc(`${O}/t3-pj-p1-m-r1-a`).set(opp({ attaquant: 'pj-p1', cible: 'm-r1-a' })));
     await assertFails(pour('alice').doc(`${O}/t3-m-r1-a-pj-p1`).delete());
     await assertSucceeds(pour('bob').doc(`${O}/t3-m-r1-a-pj-p1`).delete());
+  });
+});
+
+describe('monstres avancés (L6.6a)', () => {
+  it('8a, 7a : un monstre porte ses immunités et ses résistances légendaires ; un PJ non ; la forme est vérifiée', async () => {
+    const bob = pour('bob');
+    await assertSucceeds(bob.doc(`${C}/combattants/m-r1-b`).set(goule({ boss: true, immunites: ['effroi', 'charme'], legendaire: 3 })));
+    await assertSucceeds(bob.doc(`${C}/combattants/m-r1-c`).set(goule({ immunites: ['empoisonne'] })));
+    await assertFails(bob.doc(`${C}/combattants/m-r1-d`).set(goule({ immunites: [] })));
+    await assertFails(bob.doc(`${C}/combattants/m-r1-d`).set(goule({ immunites: 'effroi' })));
+    await assertFails(bob.doc(`${C}/combattants/m-r1-d`).set(goule({ immunites: Array.from({ length: 21 }, (_, i) => `e${i}`) })));
+    await assertFails(bob.doc(`${C}/combattants/m-r1-d`).set(goule({ legendaire: 0 })));
+    await assertFails(bob.doc(`${C}/combattants/m-r1-d`).set(goule({ legendaire: 11 })));
+    await assertFails(bob.doc(`${C}/combattants/m-r1-d`).set(goule({ legendaire: 1.5 })));
+    await assertFails(bob.doc(`${C}/combattants/pj-p3`).set(combattant({ perso: 'p3', immunites: ['effroi'] })));
+    await assertFails(bob.doc(`${C}/combattants/pj-p3`).set(combattant({ perso: 'p3', legendaire: 2 })));
+    await assertFails(bob.doc(`${C}/combattants/m-r1-d`).set(goule({ legendaire: 2, x: 1 })));
+  });
+
+  it('7a : le sort du joueur qui a la main fait servir une résistance légendaire au boss : une de plus, pas au-delà ; rien d’autre dans ses usages ; sans la main, non', async () => {
+    await poser(`${C}/combattants/m-r1-b`, goule({ boss: true, legendaire: 2, usages: { 'c:Souffle': 1 } }));
+    const alice = pour('alice');
+    await assertSucceeds(alice.doc(`${C}/combattants/m-r1-b`).update({ usages: { 'c:Souffle': 1, legendaire: 1 }, pv: 10 }));
+    // Réécrire la même valeur ne prouve rien : le document ne change pas,
+    // `affectedKeys()` est vide et aucune garde ne s'applique. Ce qui doit
+    // être refusé, c'est un compteur qui ne fait pas exactement +1 — ici,
+    // un retour en arrière (correctif du 29/10/2026).
+    await assertFails(alice.doc(`${C}/combattants/m-r1-b`).update({ usages: { 'c:Souffle': 1, legendaire: 0 } }));
+    await assertFails(alice.doc(`${C}/combattants/m-r1-b`).update({ usages: { 'c:Souffle': 0, legendaire: 2 } }));
+    await assertSucceeds(alice.doc(`${C}/combattants/m-r1-b`).update({ usages: { 'c:Souffle': 1, legendaire: 2 } }));
+    await assertFails(alice.doc(`${C}/combattants/m-r1-b`).update({ usages: { 'c:Souffle': 1, legendaire: 3 } }));
+    await assertFails(alice.doc(`${C}/combattants/m-r1-a`).update({ usages: { legendaire: 1 } }));
+    await assertFails(alice.doc(`${C}/combattants/pj-p2`).update({ usages: { legendaire: 1 } }));
+    await assertFails(pour('carol').doc(`${C}/combattants/m-r1-b`).update({ usages: { 'c:Souffle': 1, legendaire: 3 } }));
+    // Le MJ le corrige, dans les deux sens.
+    await assertSucceeds(pour('bob').doc(`${C}/combattants/m-r1-b`).update({ usages: { 'c:Souffle': 1 } }));
   });
 });

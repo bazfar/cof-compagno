@@ -174,6 +174,15 @@ describe('qui entre dans le combat (4a)', () => {
     expect(D.brouillonDuCombat(jetons, fiches, null, bestiaire).find((c) => c.id === 'm-r1-a')).toMatchObject({ monstre: null, pvMax: null, def: null });
   });
 
+  it('L6.6a (7a, 8a) : un monstre du bestiaire porte ses immunités et ses résistances légendaires ; vides, rien', () => {
+    const avec = new Map([['goule', { ...bestiaire.get('goule')!, immunites: ['effroi'], legendaire: 2 }]]);
+    expect(D.brouillonDuCombat(jetons, fiches, rencontre, avec).find((c) => c.id === 'm-r1-a')).toMatchObject({ immunites: ['effroi'], legendaire: 2 });
+    const vides = new Map([['goule', { ...bestiaire.get('goule')!, immunites: [], legendaire: 0 }]]);
+    const b = D.brouillonDuCombat(jetons, fiches, rencontre, vides).find((c) => c.id === 'm-r1-a')!;
+    expect(b).not.toHaveProperty('immunites');
+    expect(b).not.toHaveProperty('legendaire');
+  });
+
   it('ce qui manque pour démarrer', () => {
     const b = D.brouillonDuCombat(jetons, fiches, rencontre, bestiaire);
     expect(D.manquePourDemarrer(b)).toBe('Donne les PV de Gobelin.');

@@ -149,9 +149,25 @@ describe('sauvegardes des monstres (8a, 9a)', () => {
 
   it('ce que le combat lit du bestiaire : armure, sauvegardes, boss, démon ou mort-vivant', () => {
     const m = { init: 3, pv: 14, def: 13, armureId: 'cuir', resistances: { magique: 0.5 }, dangerosite: 2, taille: 'grande', boss: true, race: ['mort-vivant'] };
-    expect(D.monstrePourCombat(m, new Map([['cuir', 2]]))).toEqual({ init: 3, pv: 14, def: 13, armure: 2, resistances: { magique: 0.5 }, sauvegardes: { FOR: 3, DEX: 3, CON: 3, Volonte: 3 }, boss: true, demonOuMortVivant: true });
+    expect(D.monstrePourCombat(m, new Map([['cuir', 2]]))).toEqual({ init: 3, pv: 14, def: 13, armure: 2, resistances: { magique: 0.5 }, sauvegardes: { FOR: 3, DEX: 3, CON: 3, Volonte: 3 }, boss: true, demonOuMortVivant: true, legendaire: 1 });
     expect(D.monstrePourCombat({ ...m, race: ['démon'], armureId: 'inconnue' }, new Map())).toMatchObject({ armure: 0, demonOuMortVivant: true });
     expect(D.monstrePourCombat({ ...m, race: ['humanoïdes'], armureId: undefined, boss: false }, new Map())).toMatchObject({ armure: 0, boss: false, demonOuMortVivant: false });
+  });
+
+  it('L6.6a (7a, 8a) : un boss du bestiaire apporte ses immunités (en états de la refonte) et ses résistances légendaires, jusqu’à son combattant', async () => {
+    const m = { init: 3, pv: 14, def: 13, dangerosite: 5, taille: 'moyenne', boss: true, race: ['humain'], immunites: ['effrayee', 'paralysee'] };
+    expect(D.monstrePourCombat(m, new Map())).toMatchObject({ immunites: ['effroi'], legendaire: 3 });
+    const sans = D.monstrePourCombat({ ...m, boss: false, immunites: ['paralysee'] }, new Map());
+    expect(sans).not.toHaveProperty('immunites');
+    expect(sans).not.toHaveProperty('legendaire');
+    const b = { id: 'm-r1-a', genre: 'monstre' as const, nom: 'Goule', perso: null, uid: null, monstre: 'goule', modInit: 3, pvMax: 14, def: 12, armure: 0, resistances: neutre, mvtBase: 5, sauvegardes: null, boss: true, demonOuMortVivant: false, immunites: ['effroi'], legendaire: 3 };
+    await A.ajouterCombattant('c1', b, () => 0);
+    expect(appels[0]!.donnees).toMatchObject({ immunites: ['effroi'], legendaire: 3 });
+    const { schemaCombattant } = await import('../../src/lib/schemas/combat');
+    expect(schemaCombattant.safeParse(appels[0]!.donnees).success).toBe(true);
+    await A.ajouterCombattant('c1', { ...b, immunites: [], legendaire: 0 }, () => 0);
+    expect(appels[1]!.donnees).not.toHaveProperty('immunites');
+    expect(appels[1]!.donnees).not.toHaveProperty('legendaire');
   });
 
   it('le combattant les porte ; le MJ les corrige, un PJ non', async () => {
@@ -685,6 +701,29 @@ describe('lancer en combat (2a, 4a, 5a, 10a, 13a)', () => {
     await L.lancerSortEnCombat('c1', combat, moi, f, choix(), carte, [moi, goule], new Map([['p1', f]]), suite([19, 20], [4, 6], [5, 6]));
     expect(ecritures()[0]).toEqual({ fn: 'tx.update', chemin: `${C}/m-r1-a`, donnees: { pv: 10, aTerre: false } });
     expect(appels.some((a) => a.chemin.includes('jetons'))).toBe(false);
+  });
+
+  it('L6.6a (7a) : un boss rate sa sauvegarde : une résistance légendaire la réussit (la moitié, pas de recul), comptée dans ses usages ; plus de résistance, il la rate', async () => {
+    const boss = monstre('a', { boss: true, legendaire: 2, usages: { 'c:Souffle': 1, legendaire: 1 } });
+    enBase(moi);
+    enBase(boss);
+    await L.lancerSortEnCombat('c1', combat, moi, f, choix(), carte, [moi, boss], new Map([['p1', f]]), suite([2, 20], [4, 6], [5, 6]));
+    expect(ecritures()[0]).toEqual({ fn: 'tx.update', chemin: `${C}/m-r1-a`, donnees: { pv: 10, aTerre: false, usages: { 'c:Souffle': 1, legendaire: 2 } } });
+    expect(appels.some((a) => a.chemin.includes('jetons'))).toBe(false);
+    expect(journal.noterJet.mock.calls[1]![4]).toMatch(/^sauvegarde de FOR \(résistance légendaire\) 3 contre DD \d+ : réussi ; /);
+    appels.length = 0;
+    journal.noterJet.mockClear();
+    // Réussie d'elle-même : aucune résistance ne sert.
+    appels.length = 0;
+    enBase(boss);
+    await L.lancerSortEnCombat('c1', combat, moi, f, choix(), carte, [moi, boss], new Map([['p1', f]]), suite([19, 20], [4, 6], [5, 6]));
+    expect(ecritures()[0]).toEqual({ fn: 'tx.update', chemin: `${C}/m-r1-a`, donnees: { pv: 10, aTerre: false } });
+    appels.length = 0;
+    journal.noterJet.mockClear();
+    const usee = monstre('a', { boss: true, legendaire: 2, usages: { legendaire: 2 } });
+    enBase(usee);
+    await L.lancerSortEnCombat('c1', combat, moi, f, choix(), carte, [moi, usee], new Map([['p1', f]]), suite([2, 20], [4, 6], [5, 6]));
+    expect(ecritures()[0]).toEqual({ fn: 'tx.update', chemin: `${C}/m-r1-a`, donnees: { pv: 5, aTerre: false } });
   });
 
   it('Trait arcanique (mineur) : l’attaque magique contre la DEF, 0 PP', async () => {

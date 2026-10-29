@@ -108,6 +108,8 @@ export interface Combattant {
   boss?: boolean;
   /** PV actuels (seuil de Sommeil). */
   pv?: number;
+  /** L6.6a (7a) : les résistances légendaires qui restent à un boss ; une sauvegarde ratée devient réussie, une par résistance. */
+  legendaire?: number;
 }
 
 export interface CibleEnJeu extends Combattant {
@@ -280,7 +282,7 @@ export type Changement =
   | { type: 'degats'; cible: string; montant: number; typeDegats: string; calcul: string }
   | { type: 'soin'; cible: string; montant: number }
   | { type: 'pvTemp'; cible: string; montant: number }
-  | { type: 'etat'; cible: string; etat: string; duree: Duree; charges?: number; contre?: { cible: 'attaque' | 'degats'; valeur: number }[]; drainePour?: string }
+  | { type: 'etat'; cible: string; etat: string; duree: Duree; charges?: number; contre?: { cible: 'attaque' | 'degats'; valeur: number }[]; drainePour?: string; des?: string }
   | { type: 'chargeConsommee'; cible: string; etat: string }
   | { type: 'jetsReserves'; cible: string; valeurs: number[] }
   | { type: 'retraitEtat'; cible: string; etats: readonly string[]; nombre: number }
@@ -308,6 +310,8 @@ export interface JetNote {
   reussi?: boolean;
   /** Critique (lot L4.7). */
   critique?: true;
+  /** L6.6a (7a) : sauvegarde ratée, réussie par une résistance légendaire. */
+  legendaire?: true;
 }
 
 export type Resultat =
@@ -764,13 +768,18 @@ export function resoudreLancer(l: Lancer, cat: Catalogue): Resultat {
   const sauvegarde: Sauvegarde | undefined =
     action.resolution.jet === 'sauvegarde' ? (modifs.sauvegarde ?? action.resolution.sauvegarde) : undefined;
   const saves = new Map<string, boolean>();
+  const legendaires = new Map<string, number>();
   const sauve = (c: CibleEnJeu, type: Sauvegarde, quoi: string): boolean => {
     const cle = `${c.id}|${type}`;
     if (saves.has(cle)) return saves.get(cle)!;
     const bonus = c.sauvegardes[type] + modificateur(c, cat, ['sauvegardes', `sauvegarde${type}`]);
     const j = d20(alea, 0);
-    const reussi = j.garde + bonus >= dd;
-    jets.push({ quoi, cible: c.id, des: j.des, total: j.garde + bonus, contre: dd, reussi });
+    // L6.6a (7a) : un boss qui rate la réussit, tant qu'il lui reste une résistance légendaire.
+    const restantes = legendaires.get(c.id) ?? c.legendaire ?? 0;
+    const legendaire = j.garde + bonus < dd && restantes > 0;
+    if (legendaire) legendaires.set(c.id, restantes - 1);
+    const reussi = legendaire || j.garde + bonus >= dd;
+    jets.push({ quoi: legendaire ? `${quoi} (résistance légendaire)` : quoi, cible: c.id, des: j.des, total: j.garde + bonus, contre: dd, reussi, ...(legendaire ? { legendaire: true as const } : {}) });
     saves.set(cle, reussi);
     return reussi;
   };

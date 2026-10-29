@@ -12,6 +12,7 @@ import {
   degatsParTour,
   ETATS_V1_VERS_REFONTE,
   etatDuCatalogue,
+  immunise,
   leurre,
   modificateur,
   peutAgir,
@@ -24,7 +25,9 @@ import { actionsDuTour } from '../combat/ordre';
 import { DEGATS_COLLISION_DECOR, DEGATS_COLLISION_JETON, pousser } from '../combat/poussee';
 import { champsJauges, gainParDegatsSubis, gainParTouche, gainParVingtNaturel, payer, type Jauges } from '../combat/ressources';
 import type { AttaqueSpeciale } from '../combat/speciales';
-import { absorber, apresAttaque, bonusDes, bonusFixe, consommerBonus } from '../combat/bonus';
+import { absorber, apresAttaque, bonusDes, bonusFixe, consommerBonus, poserBonus, texteBonus } from '../combat/bonus';
+import { avecUsage, limiteDeLAttaque, refusDeLimite } from '../combat/monstres';
+import { cibleDe } from '../combat/sorts';
 import { reactionDisponible, USAGE_REACTION } from '../combat/reactions';
 import { appliquerAffaibli } from '../effets/resolution';
 import { vueFiche } from '../fiche/vue-fiche';
@@ -195,9 +198,12 @@ export async function attaquer(
   if (j.issue) jauges = { ...jauges, ...gainParVingtNaturel(fiche, j.issue.de) };
   // L'état de la spéciale, touché (11a ; Coup d'estoc : au choix, 12a).
   let pousse = false;
+  let immunite = '';
   if (speciale && issue.touche) {
     const e = speciale.s.effet;
-    if (e.type === 'etat' || (e.type === 'estoc' && speciale.estoc !== 'repousse')) etatsCible = poserEtat(etatsCible, e.etat, e.rounds, fiche.nom);
+    // L6.6a (8a) : un état dont le monstre est immunisé ne se pose pas.
+    if ((e.type === 'etat' || (e.type === 'estoc' && speciale.estoc !== 'repousse')) && immunise(cible, e.etat)) immunite = ` ; immunisé : ${etatDuCatalogue(e.etat)?.nom ?? e.etat}`;
+    else if (e.type === 'etat' || (e.type === 'estoc' && speciale.estoc !== 'repousse')) etatsCible = poserEtat(etatsCible, e.etat, e.rounds, fiche.nom);
     if (e.type === 'repousse' || (e.type === 'estoc' && speciale.estoc === 'repousse')) pousse = true;
   }
   const lot = writeBatch(db);
@@ -209,7 +215,7 @@ export async function attaquer(
     await noterJet(libelle, formuleTest(a.bonus), { des: [], faces: 0, bonus: a.bonus, total: 0 }, fiche.nom, `${etatDuCatalogue(j.leurre)?.nom ?? j.leurre} : l’attaque rate d’office.`);
     return issue;
   }
-  await noterJet(libelle, formuleTest(issue.bonus), { des: issue.des ?? [issue.de], faces: 20, bonus: issue.bonus, total: issue.total }, fiche.nom, texteAttaque(issue));
+  await noterJet(libelle, formuleTest(issue.bonus), { des: issue.des ?? [issue.de], faces: 20, bonus: issue.bonus, total: issue.total }, fiche.nom, `${texteAttaque(issue)}${immunite}`);
   if (pousse && speciale?.carte) await repousser(idCombat, combat.scene, attaquant, cible, speciale.carte, speciale.combattants ?? [], speciale.fiches ?? new Map(), fiche.nom, alea, combat);
   return issue;
 }
@@ -408,21 +414,29 @@ export async function decharger(
  */
 export async function attaqueDeMonstre(
   idCombat: string,
-  combat: Pick<Combat, 'tour'>,
+  combat: Pick<Combat, 'tour' | 'round'>,
   monstre: AvecId<Combattant>,
   a: AttaqueMonstre & { defEnPlus?: number },
   cible: AvecId<Combattant>,
   fiche: AvecId<Fiche>,
   alea: () => number = Math.random,
   reaction = false,
-): Promise<{ issue: IssueAttaque; net: number | null; pv: number; etat: string | null }> {
+  /** L6.6a (6b) : le jet suivant d'une attaque à plusieurs jets : ni action ni usage de plus. */
+  jetSuivant = false,
+): Promise<{ issue: IssueAttaque; net: number | null; pv: number; etat: string | null; repousse: number }> {
   if (monstre.genre !== 'monstre') throw new RefusCombat('Seul un monstre attaque depuis ce panneau.');
   if (cible.genre !== 'pj' || cible.perso !== fiche.id) throw new RefusCombat('On attaque un PJ du combat.');
   if (!ciblable(cible.etats)) throw new RefusCombat(`${cible.nom} ne peut pas être pris pour cible.`);
   peutAttaquer(monstre, a.portee.vue ? 'distance' : 'contact');
-  const prise = priseDeLAttaque(combat, monstre, reaction);
+  // L6.6a (6b) : ses limites (par combat, par round, recharge), comptées dans ses usages.
+  const effet = a.effet ?? null;
+  const limite = limiteDeLAttaque(effet);
+  const refus = jetSuivant ? null : refusDeLimite(monstre, a.nom, limite, combat.round);
+  if (refus) throw new RefusCombat(`${a.nom} : ${refus}.`);
+  const prise: Record<string, unknown> = jetSuivant ? {} : priseDeLAttaque(combat, monstre, reaction);
+  if (!jetSuivant && (limite.parCombat || limite.parRound || limite.recharge)) prise.usages = avecUsage((prise.usages as Record<string, number> | undefined) ?? monstre.usages, a.nom, limite, combat.round);
   const vue = vueFiche(fiche);
-  const j = jetAttaque(monstre, cible, { ...a, mode: a.portee.vue ? 'distance' : 'contact' }, vue.stats.ca, alea);
+  const j = jetAttaque(monstre, cible, { ...a, mode: a.portee.vue ? 'distance' : 'contact', defEnPlus: (a.defEnPlus ?? 0) - (effet?.defIgnoree ?? 0) }, vue.stats.ca, alea);
   const issue = j.issue ?? { de: 0, bonus: a.bonus, total: 0, def: vue.stats.ca, touche: false, critique: false, echecCritique: false };
   // L'état de l'attaque (8), traduit du bestiaire (1a) ; inconnu, il est dit au journal.
   let etatsCible = j.etatsCible;
@@ -438,8 +452,10 @@ export async function attaqueDeMonstre(
   // L6.5b (8a) : le bonus d'une réaction « contre cette attaque » tombe avec elle.
   const bonusMonstre = apresAttaque(monstre.bonus, 'attaquant');
   const bonusCible = apresAttaque(cible.bonus, 'cible');
+  const majMonstre = { ...prise, ...(memes(j.etatsAttaquant, monstre.etats) ? {} : { etats: j.etatsAttaquant }), ...(bonusMonstre.length !== monstre.bonus.length ? { bonus: bonusMonstre } : {}) };
+  // Le jet suivant (6b) ne prend rien : sans changement, pas d'écriture.
   const lot = writeBatch(db);
-  lot.update(refCombattant(idCombat, monstre.id), { ...prise, ...(memes(j.etatsAttaquant, monstre.etats) ? {} : { etats: j.etatsAttaquant }), ...(bonusMonstre.length !== monstre.bonus.length ? { bonus: bonusMonstre } : {}) });
+  if (Object.keys(majMonstre).length) lot.update(refCombattant(idCombat, monstre.id), majMonstre);
   await lot.commit();
   const t = j.leurre ? `${etatDuCatalogue(j.leurre)?.nom ?? j.leurre} : l’attaque rate d’office.` : texteAttaque(issue, 'CA');
   await noterJet(`${reaction ? 'Opportunité : ' : ''}${a.nom} sur ${fiche.nom}`, formuleTest(issue.bonus), { des: j.leurre ? [] : (issue.des ?? [issue.de]), faces: 20, bonus: issue.bonus, total: issue.total }, monstre.nom, t);
@@ -447,7 +463,7 @@ export async function attaqueDeMonstre(
   if (!issue.touche) {
     const maj = { ...(memes(etatsCible, cible.etats) ? {} : { etats: etatsCible }), ...bonusTombe };
     if (Object.keys(maj).length) await updateDoc(refCombattant(idCombat, cible.id), maj);
-    return { issue, net: null, pv: vue.pv.actuel, etat: null };
+    return { issue, net: null, pv: vue.pv.actuel, etat: null, repousse: 0 };
   }
   const plus = modificateur(monstre.etats, ['degats']) + bonusFixe(monstre.bonus, ['degats']);
   const formule = `${formuleDegats(a.formule, issue.critique)}${bonusDes(monstre.bonus, ['degats']).map((x) => `+${x}`).join('')}${plus ? (plus > 0 ? `+${plus}` : plus) : ''}`;
@@ -460,15 +476,44 @@ export async function attaqueDeMonstre(
   const pv = Math.max(0, vue.pv.actuel - absorbe.reste);
   if (net > 0) etatsCible = rompre(etatsCible, 'degatsSubis');
   if (etat && !etatsCible.some((e) => e.id === etat)) etatsCible = poserEtat(etatsCible, etat, a.etatSurTouche!.duree, monstre.nom, { des: a.etatSurTouche!.formuleDot ?? null });
+  // L6.6a (6b) : l'effet traduit, après la sauvegarde de la cible s'il en a une ; ce qui reste va au MJ.
+  let bonusFinal = bonusCible;
+  let repousse = 0;
+  const effets: string[] = [];
+  if (effet?.etats || effet?.malus || effet?.repousse) {
+    let sauve = false;
+    if (effet.sauvegarde) {
+      const d = 1 + Math.floor(alea() * 20);
+      const total = d + cibleDe(cible, fiche, 0).sauvegardes[effet.sauvegarde.type];
+      sauve = total >= effet.sauvegarde.dd;
+      effets.push(`sauvegarde de ${effet.sauvegarde.type} ${total} (d20 ${d}) contre ${effet.sauvegarde.dd} : ${sauve ? 'réussie' : 'ratée'}`);
+    }
+    if (!sauve) {
+      for (const x of effet.etats ?? []) {
+        etatsCible = poserEtat(etatsCible, x.id, x.rounds, monstre.nom, { des: x.des ?? null });
+        effets.push(`${etatDuCatalogue(x.id)?.nom ?? x.id}${x.rounds ? ` ${x.rounds} round${x.rounds > 1 ? 's' : ''}` : ''}`);
+      }
+      for (const m of effet.malus ?? []) {
+        const b = { sur: m.sur, valeur: m.valeur, rounds: m.rounds, consomme: false, typeDegats: null, source: monstre.nom.slice(0, 40) };
+        // Le même malus du même monstre ne se cumule pas : il repart pour sa durée.
+        bonusFinal = poserBonus(bonusFinal.filter((x) => !(x.sur === b.sur && x.valeur === b.valeur && x.source === b.source)), b);
+        effets.push(texteBonus(b));
+      }
+      repousse = effet.repousse ?? 0;
+      if (repousse) effets.push(`repoussé de ${repousse} case${repousse > 1 ? 's' : ''}`);
+    }
+  }
+  const auMj = effet ? effet.auMj : (a.texte ?? null);
+  if (auMj) effets.push(`MJ : ${auMj}`);
   const lot2 = writeBatch(db);
   lot2.update(refPerso(fiche.id), { pvActuel: pv, ...champsJauges(gainParDegatsSubis(fiche, net)) });
-  const majCible: Record<string, unknown> = { ...(memes(etatsCible, cible.etats) ? {} : { etats: etatsCible }), ...bonusTombe };
+  const majCible: Record<string, unknown> = { ...(memes(etatsCible, cible.etats) ? {} : { etats: etatsCible }), ...(JSON.stringify(bonusFinal) === JSON.stringify(cible.bonus) ? {} : { bonus: bonusFinal }) };
   if (absorbe.pvTemp !== cible.pvTemp) majCible.pvTemp = absorbe.pvTemp;
   if (Object.keys(majCible).length) lot2.update(refCombattant(idCombat, cible.id), majCible);
   const restants = consommerBonus(bonusMonstre, ['degats']);
   if (restants.length !== bonusMonstre.length) lot2.update(refCombattant(idCombat, monstre.id), { bonus: restants });
   await lot2.commit();
-  const suite = [etat ? `${etatDuCatalogue(etat)!.nom} ${a.etatSurTouche!.duree} round${a.etatSurTouche!.duree > 1 ? 's' : ''}` : '', etatInconnu ? `état « ${etatInconnu} » inconnu de la refonte, au MJ` : '']
+  const suite = [etat ? `${etatDuCatalogue(etat)!.nom} ${a.etatSurTouche!.duree} round${a.etatSurTouche!.duree > 1 ? 's' : ''}` : '', etatInconnu ? `état « ${etatInconnu} » inconnu de la refonte, au MJ` : '', ...effets]
     .filter(Boolean)
     .join(' ; ');
   await noterJet(
@@ -478,7 +523,32 @@ export async function attaqueDeMonstre(
     monstre.nom,
     `${brut.detail}${net !== brut.net ? `, affaibli : ${net}` : ''}${absorbe.pvTemp !== cible.pvTemp ? `, ${cible.pvTemp - absorbe.pvTemp} sur les PV temporaires` : ''} → ${fiche.nom} ${pv}/${vue.pv.max} PV${pv <= 0 ? ', Mourant' : ''}${suite ? ` ; ${suite}` : ''}`,
   );
-  return { issue, net, pv, etat };
+  return { issue, net, pv, etat, repousse };
+}
+
+/** L6.6a (6b) : repoussé de `cases` cases, une à une ; une collision l'arrête. */
+export async function repousserDe(
+  cases: number,
+  idCombat: string,
+  combat: Pick<Combat, 'tour' | 'scene'>,
+  attaquant: AvecId<Combattant>,
+  cible: AvecId<Combattant>,
+  carte: CarteDuCombat,
+  combattants: readonly AvecId<Combattant>[],
+  fiches: ReadonlyMap<string, AvecId<Fiche>>,
+  auteur: string,
+  alea: () => number = Math.random,
+): Promise<number> {
+  let jetons = carte.jetons;
+  let n = 0;
+  for (; n < cases; n++) {
+    const p = pousser(carte.scene, jetons, attaquant.id, cible.id);
+    const r = await repousser(idCombat, combat.scene, attaquant, cible, { ...carte, jetons }, combattants, fiches, auteur, alea, combat);
+    if (r !== 'pousse' || !p || !('vers' in p)) break;
+    const vers = p.vers;
+    jetons = jetons.map((j) => (j.id === cible.id ? { ...j, cx: vers.cx, cy: vers.cy } : j));
+  }
+  return n;
 }
 
 /**
@@ -489,7 +559,7 @@ export async function attaqueDeMonstre(
  */
 export async function attaqueSurInvocation(
   idCombat: string,
-  combat: Pick<Combat, 'tour'>,
+  combat: Pick<Combat, 'tour' | 'round'>,
   monstre: AvecId<Combattant>,
   a: AttaqueMonstre & { defEnPlus?: number },
   cible: AvecId<Combattant>,
@@ -500,7 +570,12 @@ export async function attaqueSurInvocation(
   if (cible.genre !== 'invocation' || cible.def === null || cible.pv === null) throw new RefusCombat('On attaque une invocation du combat.');
   if (!ciblable(cible.etats)) throw new RefusCombat(`${cible.nom} ne peut pas être pris pour cible.`);
   peutAttaquer(monstre, a.portee.vue ? 'distance' : 'contact');
-  const prise = priseDeLAttaque(combat, monstre, reaction);
+  // L6.6a (6b) : ses limites comptent aussi contre une invocation.
+  const limite = limiteDeLAttaque(a.effet ?? null);
+  const refus = refusDeLimite(monstre, a.nom, limite, combat.round);
+  if (refus) throw new RefusCombat(`${a.nom} : ${refus}.`);
+  const prise: Record<string, unknown> = priseDeLAttaque(combat, monstre, reaction);
+  if (limite.parCombat || limite.parRound || limite.recharge) prise.usages = avecUsage((prise.usages as Record<string, number> | undefined) ?? monstre.usages, a.nom, limite, combat.round);
   const j = jetAttaque(monstre, cible, { ...a, mode: a.portee.vue ? 'distance' : 'contact' }, cible.def, alea);
   const brute = j.issue ?? { de: 0, bonus: a.bonus, total: 0, def: cible.def, touche: false, critique: false, echecCritique: false };
   const issue = cible.invocation?.objet && !j.leurre ? { ...brute, touche: true } : brute;
@@ -578,6 +653,8 @@ export async function poserEtatSur(idCombat: string, c: AvecId<Combattant>, id: 
   const d = etatDuCatalogue(id);
   if (!d) throw new RefusCombat(`État inconnu : ${id}`);
   if (rounds !== null && (!Number.isInteger(rounds) || rounds < 1 || rounds > 99)) throw new RefusCombat('Une durée de 1 à 99 rounds.');
+  // L6.6a (8a)
+  if (immunise(c, id)) throw new RefusCombat(`${c.nom} est immunisé : ${d.nom}.`);
   await updateDoc(refCombattant(idCombat, c.id), { etats: poserEtat(c.etats, id, rounds, auteur) });
   await noterJet(`${d.nom} sur ${c.nom}`, '0', { des: [], faces: 0, bonus: 0, total: 0 }, auteur, `${auteur} pose ${d.nom} sur ${c.nom}${rounds ? `, ${rounds} round${rounds > 1 ? 's' : ''}` : ''}.`);
 }

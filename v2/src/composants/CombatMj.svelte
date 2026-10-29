@@ -3,6 +3,8 @@
   import { debutDeTour, remettreJetsDeMort } from '../lib/actions/attaques';
   import { payerDebutDeTour, retirerInvocations } from '../lib/actions/invocations';
   import { remousDu } from '../lib/combat/invocations';
+  import { jouerCurees } from '../lib/actions/monstres';
+  import { cureesApresChute } from '../lib/combat/monstres';
   import { zonesDuDebutDeTour } from '../lib/actions/zones';
   import { suivreZonesCombat } from '../lib/magasins/zones.svelte';
   import type { ZoneSol } from '../lib/schemas/zones';
@@ -57,6 +59,9 @@
    * MJ lui fait payer en PP le maintien de sa concentration et le Remous de
    * ses invocations ; une invocation à 0 PV retourne à la Mer ; à la
    * clôture, les jetons des invocations s'en vont.
+   *
+   * Lot L6.6a (9a) : un monstre tombe : Curée, d'office, pour ceux de sa
+   * famille qui l'ont.
    */
 
   const table = suivreTable(session.table);
@@ -202,6 +207,22 @@
       jetonsMarques.delete(`${c.id}:${!c.aTerre}`);
       agir(() => marquerMort(scene, c.id, c.aTerre));
     }
+  });
+  // L6.6a (9a) : un monstre que ce client a vu debout tombe : Curée pour ceux de sa famille, une fois par chute.
+  // (Un rechargement ne rejoue pas les chutes passées : il ne les a pas vues debout.)
+  const vusDebout = new Set<string>();
+  $effect(() => {
+    if (!combat || !idCombat || combat.statut !== 'encours') return;
+    const tombes = combattants.filter((c) => c.genre === 'monstre' && c.aTerre && vusDebout.has(c.id));
+    for (const c of combattants) if (c.genre === 'monstre' && !c.aTerre) vusDebout.add(c.id);
+    if (!tombes.length) return;
+    for (const c of tombes) vusDebout.delete(c.id);
+    const id = idCombat;
+    const parId = new Map(bestiaire.etat.elements.map((m) => [m.id, m]));
+    const tous = combattants;
+    agir(async () => {
+      for (const t of tombes) await jouerCurees(id, t, cureesApresChute(t, tous, parId));
+    });
   });
   /*
    * L6.3 (6a) : la main arrive à un combattant : ses dégâts par tour, une

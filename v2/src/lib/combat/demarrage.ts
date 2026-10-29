@@ -3,6 +3,7 @@ import { idJetonRencontre } from '../rencontres/rencontre.ts';
 import type { Combattant, SauvegardesCombat } from '../schemas/combat.ts';
 import type { Rencontre } from '../schemas/rencontre.ts';
 import { deplacementDeBase } from './ordre.ts';
+import { immunitesDuMonstre, legendaireDuMonstre } from './monstres.ts';
 
 /*
  * Qui entre dans un combat (lot L6.1, décision 4a du 23/10/2026) : les
@@ -59,6 +60,10 @@ export interface BrouillonCombattant {
   sauvegardes: SauvegardesCombat | null;
   boss: boolean;
   demonOuMortVivant: boolean;
+  /** L6.6a (8a) : monstre du bestiaire : ses immunités, en états de la refonte ; absent : aucune. */
+  immunites?: string[];
+  /** L6.6a (7a) : boss du bestiaire : ses résistances légendaires ; absent : aucune. */
+  legendaire?: number;
 }
 
 export interface FichePourCombat {
@@ -80,11 +85,27 @@ export interface MonstrePourCombat {
   boss: boolean;
   /** Race démon ou mort-vivant. */
   demonOuMortVivant: boolean;
+  /** L6.6a : immunités (8a), résistances légendaires (7a) ; absent : aucune. */
+  immunites?: string[];
+  legendaire?: number;
 }
 
 /** Ce que le combat lit d'un monstre du bestiaire (L6.2, L6.4a) : la réduction de son armure, ses sauvegardes, boss, démon ou mort-vivant. */
 export function monstrePourCombat(
-  m: { init: number; pv: number; def: number; armureId?: string | undefined; resistances?: { physique?: number; magique?: number } | undefined; dangerosite: number; taille: string; tier?: string | undefined; boss: boolean; race: readonly string[] },
+  m: {
+    init: number;
+    pv: number;
+    def: number;
+    armureId?: string | undefined;
+    resistances?: { physique?: number; magique?: number } | undefined;
+    dangerosite: number;
+    taille: string;
+    tier?: string | undefined;
+    boss: boolean;
+    race: readonly string[];
+    immunites?: readonly string[] | undefined;
+    resistanceLegendaire?: unknown;
+  },
   reductions: ReadonlyMap<string, number>,
 ): MonstrePourCombat {
   return {
@@ -96,6 +117,8 @@ export function monstrePourCombat(
     sauvegardes: sauvegardesDuMonstre(m),
     boss: m.boss,
     demonOuMortVivant: m.race.includes('démon') || m.race.includes('mort-vivant'),
+    ...(immunitesDuMonstre(m).length ? { immunites: immunitesDuMonstre(m) } : {}),
+    ...(legendaireDuMonstre(m) ? { legendaire: legendaireDuMonstre(m) } : {}),
   };
 }
 
@@ -134,6 +157,8 @@ export function brouillonDuCombat(
         sauvegardes: modele?.sauvegardes ?? null,
         boss: modele?.boss ?? false,
         demonOuMortVivant: modele?.demonOuMortVivant ?? false,
+        ...(modele?.immunites?.length ? { immunites: modele.immunites } : {}),
+        ...(modele?.legendaire ? { legendaire: modele.legendaire } : {}),
       });
     }
   }

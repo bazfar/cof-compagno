@@ -392,7 +392,7 @@ describe('le MJ (1a, 5a, 6a)', () => {
     table.donnees = { sceneActive: 'cave', combat: 'c1' };
     combatDoc.donnees = combat({ actif: 'm-r1-a' });
     persos.elements = [mageAbj()];
-    bestiaire.elements = [{ id: 'goule', nom: 'Goule', race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
+    bestiaire.elements = [{ id: 'goule', nom: 'Goule', capacitesSpeciales: [], race: ['mort-vivant'], dangerosite: 2, taille: 'moyenne', boss: false, init: 3, pv: 14, def: 13, attaques: [{ nom: 'Griffes', armeId: 'griffes', bonusAttaque: 4, effetSpecial: null }] }];
     armesBestiaire.donnees = { liste: [{ id: 'griffes', nom: 'Griffes', type: 'arme', degats: '1d6', portee: 'contact', typedegats: 'physique' }] };
     combattants.elements = [goule(), pj('p1', { nom: 'Shyrion' })];
   };

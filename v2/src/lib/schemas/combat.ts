@@ -225,6 +225,11 @@ export const schemaCombattant = z
     invocation: schemaInvocationEnJeu.nullable().default(null),
     /** PJ : le sort qu'il maintient. */
     concentration: schemaConcentration.nullable().default(null),
+    // ---- Monstres avancés (L6.6a) ----
+    /** Monstre : les états du catalogue qui ne se posent pas sur lui (8a), recopiés du bestiaire au démarrage ; absent : aucun. */
+    immunites: z.array(z.string().min(1).max(60)).min(1).max(20).optional(),
+    /** Monstre boss : ses résistances légendaires du combat (7a) ; `usages.legendaire` compte celles qui ont servi ; absent : aucune. */
+    legendaire: z.number().int().min(1).max(10).optional(),
   })
   .superRefine((c, ctx) => {
     const pj = c.genre === 'pj';
@@ -236,6 +241,7 @@ export const schemaCombattant = z
     if (pj && (c.pv !== null || c.pvMax !== null || c.monstre !== null)) ctx.addIssue({ code: 'custom', message: 'les PV d’un PJ sont sur sa fiche', path: ['pv'] });
     if (!pj && (c.pv === null || c.pvMax === null)) ctx.addIssue({ code: 'custom', message: 'un monstre a ses PV', path: ['pv'] });
     if (pj !== (c.def === null)) ctx.addIssue({ code: 'custom', message: 'un monstre a sa DEF, un PJ a sa CA sur sa fiche', path: ['def'] });
+    if (c.genre !== 'monstre' && (c.immunites !== undefined || c.legendaire !== undefined)) ctx.addIssue({ code: 'custom', message: 'seul un monstre a des immunités et des résistances légendaires', path: ['immunites'] });
     if (pj && (c.sauvegardes !== null || c.boss || c.demonOuMortVivant)) ctx.addIssue({ code: 'custom', message: 'les sauvegardes d’un PJ sont sur sa fiche', path: ['sauvegardes'] });
     if (!pj && (c.mortSucces || c.mortEchecs || c.mort)) ctx.addIssue({ code: 'custom', message: 'seul un PJ fait des jets de mort', path: ['mort'] });
     if (c.mort && c.mortEchecs < 3) ctx.addIssue({ code: 'custom', message: 'la mort vient au troisième échec', path: ['mort'] });

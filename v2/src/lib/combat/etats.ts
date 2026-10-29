@@ -1,4 +1,4 @@
-import { etatParId, etatsRefonte } from '../../regles/index.ts';
+import { ETATS_BESTIAIRE, etatParId, etatsRefonte } from '../../regles/index.ts';
 import { bonusFixe } from './bonus.ts';
 import type { BonusCombat, EtatCombat } from '../schemas/combat.ts';
 import type { EtatRefonte } from '../schemas/etats.ts';
@@ -20,8 +20,8 @@ import type { EtatRefonte } from '../schemas/etats.ts';
  *   - 7b : qui « n'agit pas » garde la main et la passe lui-même.
  */
 
-/** États du bestiaire (v1) traduits en états de la refonte ; un état sans équivalent n'est pas posé (dit au journal). */
-export const ETATS_V1_VERS_REFONTE: Readonly<Record<string, string>> = { maudite: 'maudit' };
+/** États du bestiaire (v1) traduits en états de la refonte (L6.6a : src/regles/monstres.ts) ; un état sans équivalent n'est pas posé (dit au journal). */
+export const ETATS_V1_VERS_REFONTE: Readonly<Record<string, string>> = ETATS_BESTIAIRE;
 
 export function etatDuCatalogue(id: string): EtatRefonte | null {
   return etatParId.get(id) ?? null;
@@ -47,6 +47,11 @@ export function poserEtat(etats: readonly EtatCombat[], id: string, rounds: numb
     return etats.map((e) => (e.id === id ? { ...e, rounds: duree, cumul: d.cumulable ? Math.min(20, e.cumul + 1) : e.cumul, charges: autres.charges ?? e.charges, des: autres.des ?? e.des } : e));
   }
   return [...etats, { id, rounds, cumul: 1, charges: autres.charges ?? null, des: autres.des ?? null, source: source ? source.slice(0, 40) : null }].slice(-20);
+}
+
+/** L6.6a (8a) : un monstre immunisé : l'état ne se pose pas sur lui. */
+export function immunise(c: { immunites?: readonly string[] | undefined }, etat: string): boolean {
+  return !!c.immunites?.includes(etat);
 }
 
 export function retirerEtat(etats: readonly EtatCombat[], id: string): EtatCombat[] {

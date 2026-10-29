@@ -150,7 +150,7 @@ export function attaqueDOpportunite(attaques: readonly AttaqueMonstre[]): Attaqu
  */
 export async function opportuniteDeMonstre(
   idCombat: string,
-  combat: Pick<Combat, 'tour' | 'scene'>,
+  combat: Pick<Combat, 'tour' | 'round' | 'scene'>,
   o: AvecId<Opportunite>,
   monstre: AvecId<Combattant>,
   cible: AvecId<Combattant>,
@@ -162,7 +162,7 @@ export async function opportuniteDeMonstre(
   alea: () => number = Math.random,
 ): Promise<string> {
   if (o.tour !== combat.tour || o.attaquant !== monstre.id || o.cible !== cible.id) throw new RefusCombat('Cette attaque d’opportunité n’est plus ouverte.');
-  const a = attaqueDOpportunite(attaquesDuMonstre(duBestiaire, armes));
+  const a = attaqueDOpportunite(attaquesDuMonstre(duBestiaire, armes, monstre.monstre));
   if (!a) throw new RefusCombat(`${monstre.nom} n’a pas d’attaque au contact.`);
   let texte: string;
   if (cible.genre === 'invocation') {

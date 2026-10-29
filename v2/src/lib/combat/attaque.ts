@@ -4,6 +4,8 @@ import { ligneDeVue } from '../battlemap/ciblage.ts';
 import { doublerDes } from '../effets/resolution.ts';
 import { lancerFormule, type Jet } from '../regles/des.ts';
 import type { ArmeMonstre } from '../schemas/bestiaire.ts';
+import type { EffetAttaqueMonstre } from '../schemas/monstres.ts';
+import { effetsAttaquesMonstres } from '../../regles/index.ts';
 import type { Combattant } from '../schemas/combat.ts';
 
 /*
@@ -140,17 +142,36 @@ export interface AttaqueMonstre {
   seuilCritique: number;
   /** L'état que l'attaque pose si elle touche (L6.3, 8 : sans sauvegarde) : son identifiant au bestiaire, ses rounds, ses dégâts par tour. */
   etatSurTouche: { id: string; duree: number; formuleDot?: string } | null;
+  /** L6.6a (6b) : son effet traduit en données (src/regles/monstres.ts) ; absent : aucun. */
+  effet?: EffetAttaqueMonstre | null;
+  /** L6.6a (6b) : le texte du bestiaire, pour le MJ quand l'effet n'est pas traduit ; absent : aucun. */
+  texte?: string | null;
 }
 
 /** Les attaques d'un monstre ; une attaque dont l'arme manque à la liste est laissée de côté (pas devinée). */
 export function attaquesDuMonstre(
-  attaques: readonly { nom: string; armeId: string; bonusAttaque: number; bonusDegats?: number; etatSurTouche?: { id: string; duree: number; formuleDot?: string } }[],
+  attaques: readonly { nom: string; armeId: string; bonusAttaque: number; bonusDegats?: number; etatSurTouche?: { id: string; duree: number; formuleDot?: string }; effetSpecial?: string | null }[],
   armes: ReadonlyMap<string, Pick<ArmeMonstre, 'degats' | 'portee' | 'typedegats' | 'critMin'>>,
+  /** L6.6a (6b) : le monstre du bestiaire, dont l'attaque a peut-être un effet traduit. */
+  monstre: string | null = null,
 ): AttaqueMonstre[] {
   return attaques.flatMap((a) => {
     const arme = armes.get(a.armeId);
     if (!arme) return [];
-    return [{ nom: a.nom, bonus: a.bonusAttaque, formule: a.bonusDegats ? `${arme.degats}${a.bonusDegats > 0 ? '+' : ''}${a.bonusDegats}` : arme.degats, typeDegats: arme.typedegats, portee: CASES_PORTEE_MONSTRE[arme.portee], seuilCritique: arme.critMin ?? SEUIL_CRITIQUE, etatSurTouche: a.etatSurTouche ?? null }];
+    const effet = effetsAttaquesMonstres.get(`${monstre}|${a.nom}`);
+    return [
+      {
+        nom: a.nom,
+        bonus: a.bonusAttaque,
+        formule: a.bonusDegats ? `${arme.degats}${a.bonusDegats > 0 ? '+' : ''}${a.bonusDegats}` : arme.degats,
+        typeDegats: arme.typedegats,
+        portee: CASES_PORTEE_MONSTRE[arme.portee],
+        seuilCritique: effet?.critique ?? arme.critMin ?? SEUIL_CRITIQUE,
+        etatSurTouche: a.etatSurTouche ?? null,
+        ...(effet ? { effet } : {}),
+        ...(a.effetSpecial ? { texte: a.effetSpecial } : {}),
+      },
+    ];
   });
 }
 
