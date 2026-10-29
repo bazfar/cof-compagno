@@ -23,7 +23,7 @@ const actions = vi.hoisted(() => {
 vi.mock('../../src/lib/actions/dons', () => actions);
 vi.mock('../../src/lib/actions/persos', () => ({ appliquerChangement: vi.fn(), messageErreurPerso: (e: unknown) => String(e) }));
 vi.mock('../../src/lib/actions/journal', () => ({ noterJet: vi.fn(), lancerEtNoter: vi.fn() }));
-vi.mock('../../src/lib/actions/montee', () => ({ monterNiveau: vi.fn() }));
+vi.mock('../../src/lib/actions/montee', () => ({ monterNiveauRefonte: vi.fn() }));
 vi.mock('../../src/lib/magasins/persos.svelte', async () => (await import('./faux-magasins.svelte')).magasinsPersos);
 vi.mock('../../src/lib/magasins/dons.svelte', async () => (await import('./faux-magasins.svelte')).magasinsDons);
 

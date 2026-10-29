@@ -3,10 +3,11 @@
   import { messageErreurJournal } from '../lib/actions/journal';
   import { cleCapacite, corrigerLegendaire, jouerCapaciteMonstre } from '../lib/actions/monstres';
   import { corrigerFaim, monterDemon } from '../lib/actions/demons';
+  import { viseeCarte } from '../lib/combat/visee.svelte';
   import { aDesTraits, bonusBerserk, faimDe, peutMonter, rappelsDemon, touchesBerserk, type TraitsDemon } from '../lib/combat/demons';
   import type { CarteDuCombat } from '../lib/combat/attaque';
   import { etatDuCatalogue } from '../lib/combat/etats';
-  import { capacitesDuMonstre, immunitesAuMj, legendairesRestantes, refusDeLimite, type CapaciteMonstre } from '../lib/combat/monstres';
+  import { capacitesDuMonstre, casesDeZone, ciblesDeZone, immunitesAuMj, legendairesRestantes, refusDeLimite, type CapaciteMonstre } from '../lib/combat/monstres';
   import type { AvecId } from '../lib/firebase/suivre.svelte';
   import type { MonstreEnBase } from '../lib/schemas/bestiaire';
   import type { Combat, Combattant } from '../lib/schemas/combat';
@@ -25,6 +26,10 @@
    * (1a), corrigée au −/+ ; au seuil, « Monter » vers son palier suivant
    * (2a) ; son berserk (6a) ; ce qui se joue d'office (5a, 7a, 8a) et les
    * passifs que le MJ applique lui-même.
+   *
+   * Lot L6.7a (décisions du 29/10/2026) : une capacité en zone coche d'office
+   * ce que son rayon prend (2a, 3a) et se montre sur la carte ; une aura le
+   * dit (4a).
    */
 
   let {
@@ -60,8 +65,22 @@
   const restantes = $derived(legendairesRestantes(monstre));
   const ciblesPossibles = (cap: CapaciteMonstre) =>
     combattants.filter((c) => !c.mort && !(c.genre !== 'pj' && c.aTerre) && (cap.cible === 'zone' || (cap.cible === 'ennemi' ? c.genre !== 'monstre' : c.genre === 'monstre')));
+  // L6.7a (2a, 3a) : une capacité en zone coche d'office ce que son rayon prend sur la carte ; le MJ décoche.
+  const parDefaut = (cap: CapaciteMonstre) => (cap.zone && carte ? ciblesDeZone(monstre, cap.zone, combattants, carte.jetons) : []);
   let cochees = $state<Record<string, string[]>>({});
-  const coche = (cap: string, id: string, oui: boolean) => (cochees = { ...cochees, [cap]: oui ? [...(cochees[cap] ?? []), id] : (cochees[cap] ?? []).filter((x) => x !== id) });
+  const cochesDe = (cap: CapaciteMonstre) => cochees[cap.nom] ?? parDefaut(cap);
+  const coche = (cap: CapaciteMonstre, id: string, oui: boolean) => (cochees = { ...cochees, [cap.nom]: oui ? [...cochesDe(cap), id] : cochesDe(cap).filter((x) => x !== id) });
+  // L6.7a (2a) : la zone d'une capacité, montrée sur la carte du MJ.
+  let zoneMontree = $state<string | null>(null);
+  $effect(() => {
+    const cap = lues.capacites.find((c) => c.nom === zoneMontree);
+    const centre = carte?.jetons.find((j) => j.id === monstre.id);
+    if (!cap?.zone || !carte || !centre) return;
+    const cases = casesDeZone(centre, cap.zone, carte.scene);
+    const jetons = cochesDe(cap);
+    viseeCarte.v = { apercu: () => ({ cases, jetons, refus: null }), choisir: () => {}, fixe: { cases, jetons } };
+    return () => (viseeCarte.v = null);
+  });
   const LIBELLE_PREND = { principale: 'action', secondaire: 'action bonus', reaction: 'réaction' } as const;
   const texteLimite = (cap: CapaciteMonstre) =>
     cap.limite.parCombat ? `${cap.limite.parCombat}×/combat` : cap.limite.parRound ? `${cap.limite.parRound}×/round` : cap.limite.recharge ? `recharge ${cap.limite.recharge} round${cap.limite.recharge > 1 ? 's' : ''}` : 'à volonté';
@@ -99,8 +118,9 @@
   const monter = (m: AvecId<MonstreEnBase>) => agir(() => monterDemon(idCombat, combat.scene, monstre, demon!, m, reductions));
   const jouer = (cap: CapaciteMonstre) =>
     agir(async () => {
-      const t = await jouerCapaciteMonstre(idCombat, combat, monstre, cap, cochees[cap.nom] ?? [], { combattants, fiches, carte, demon });
-      cochees = { ...cochees, [cap.nom]: [] };
+      const t = await jouerCapaciteMonstre(idCombat, combat, monstre, cap, cochesDe(cap), { combattants, fiches, carte, demon });
+      const { [cap.nom]: _jouee, ...reste } = cochees;
+      cochees = reste;
       return t;
     });
 </script>
@@ -142,14 +162,17 @@
       {@const refus = refusDeLimite(monstre, cleCapacite(cap.nom), cap.limite, combat.round)}
       <li>
         <strong>{cap.nom}</strong>
-        <span class="aide">{LIBELLE_PREND[cap.prend]} · {texteLimite(cap)}{cap.portee !== null ? ` · ${cap.portee} cases` : ''}{cap.zone ? ` · zone ${cap.zone} m` : ''}{cap.sauvegarde ? ` · ${cap.sauvegarde.type} ${cap.sauvegarde.dd}` : ''}{cap.jetAttaque !== null ? ` · attaque +${cap.jetAttaque}` : ''}</span>
+        <span class="aide">{cap.aura ? 'aura, au début de son tour' : LIBELLE_PREND[cap.prend]} · {texteLimite(cap)}{cap.portee !== null ? ` · ${cap.portee} cases` : ''}{cap.zone ? ` · zone ${cap.zone} m` : ''}{cap.sauvegarde ? ` · ${cap.sauvegarde.type} ${cap.sauvegarde.dd}` : ''}{cap.jetAttaque !== null ? ` · attaque +${cap.jetAttaque}` : ''}</span>
         <span class="aide">{cap.description}</span>
         {#if cap.cible === 'ennemi' || cap.cible === 'allie' || cap.cible === 'zone'}
           <fieldset>
             <legend>Cibles de {cap.nom}</legend>
             {#each ciblesPossibles(cap) as c (c.id)}
-              <label><input type="checkbox" checked={(cochees[cap.nom] ?? []).includes(c.id)} onchange={(e) => coche(cap.nom, c.id, e.currentTarget.checked)} /> {c.nom}</label>
+              <label><input type="checkbox" checked={cochesDe(cap).includes(c.id)} onchange={(e) => coche(cap, c.id, e.currentTarget.checked)} /> {c.nom}</label>
             {/each}
+            {#if cap.cible === 'zone' && cap.zone}
+              <button class="petit discret" aria-pressed={zoneMontree === cap.nom} disabled={!carte} onclick={() => (zoneMontree = zoneMontree === cap.nom ? null : cap.nom)}>{zoneMontree === cap.nom ? 'Cacher la zone' : 'Voir la zone'}</button>
+            {/if}
           </fieldset>
         {/if}
         <button class="petit" disabled={occupe || !!refus} onclick={() => jouer(cap)}>Jouer {cap.nom}</button>

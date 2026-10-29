@@ -22,7 +22,6 @@
   import RumeursVecu from './RumeursVecu.svelte';
   import ConversionRefonte from './ConversionRefonte.svelte';
   import CorrectionFiche from './CorrectionFiche.svelte';
-  import MonteeNiveau from './MonteeNiveau.svelte';
   import MonteeRefonte from './MonteeRefonte.svelte';
   import OctroisMj from './OctroisMj.svelte';
   import Grimoire from './Grimoire.svelte';
@@ -51,7 +50,9 @@
    * le MJ.
    *
    * Montée de niveau (L2.5b) : barre pleine, « Passer au niveau N » ouvre
-   * l'assistant (MonteeNiveau), pour le propriétaire comme pour le MJ.
+   * l'assistant, pour le propriétaire comme pour le MJ. Lot L6.7a (12b,
+   * décision de Thomas du 29/10/2026) : la montée v1 est retirée ; une
+   * fiche v1 passe d'abord à la refonte.
    *
    * Mise en page (L2.6, maquette validée le 18/10) : un en-tête collant
    * (portrait, identité, crans, PV, PP, Points de Cercle) reste visible
@@ -293,7 +294,10 @@
           <span class="aide" data-testid="crans">{barre.crans} / {barre.requis} crans vers le niveau {fiche.niveau + 1}</span>
           {#if barre.pleine}
             <strong class="pleine">Barre pleine</strong>
-            {#if modifiable && !montee && !conversion}<button class="petit" onclick={() => { message = ''; montee = true; }}>Passer au niveau {fiche.niveau + 1}</button>{/if}
+            {#if modifiable && !montee && !conversion}
+              {#if fiche.schemaVersion === 2}<button class="petit" onclick={() => { message = ''; montee = true; }}>Passer au niveau {fiche.niveau + 1}</button>
+              {:else}<span class="aide">Passe d’abord à la refonte pour monter de niveau.</span>{/if}
+            {/if}
           {/if}
         {/if}
       </div>
@@ -376,12 +380,8 @@
   {#if conversion}
     <ConversionRefonte {fiche} surFin={(m) => { conversion = false; message = m; }} />
   {/if}
-  {#if montee}
-    {#if fiche.schemaVersion === 2}
-      <MonteeRefonte {fiche} surFin={(m) => { montee = false; message = m; }} />
-    {:else}
-      <MonteeNiveau {fiche} surFin={(m) => { montee = false; message = m; }} />
-    {/if}
+  {#if montee && fiche.schemaVersion === 2}
+    <MonteeRefonte {fiche} surFin={(m) => { montee = false; message = m; }} />
   {/if}
 
   <div class="onglets" role="tablist" aria-label="Sections de la fiche">

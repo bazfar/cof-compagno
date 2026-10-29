@@ -16,7 +16,6 @@ import {
   ficheCalculDuBrouillon,
   ficheDepuisBrouillon,
   lancerJetPV,
-  pointsVoie,
   prendreDon,
   RefusCreation,
   sortsAChoisir,
@@ -30,7 +29,6 @@ import {
   ErreurImportV1,
   lireExportV1,
   rafraichirObjet,
-  reprendreAnciensChoix,
   type FicheV1,
 } from '../../src/lib/regles/import-v1';
 
@@ -112,15 +110,8 @@ describe.each(FICHES.map((f) => [f.nom, f] as const))('reprise de « %s »', (_n
     expect(anciensChoixLisibles(b.reprise!.anciens).voies.length).toBeGreaterThanOrEqual((v1.capacites ?? []).length);
   });
 
-  it('« Reprendre mes anciens choix » : tout passe par les règles actuelles, rien n’est refusé', () => {
-    const { brouillon, nonRepris } = reprendreAnciensChoix(b);
-    expect(nonRepris).toEqual([]);
-    expect(brouillon.capacites.length).toBe((v1.capacites ?? []).length);
-    expect(pointsVoie(brouillon).restants).toBeGreaterThanOrEqual(0);
-  });
-
   it('fiche créée : valeurs reportées telles quelles, PV et PP actuels dans les nouveaux maximums', () => {
-    const final = completer(reprendreAnciensChoix(b).brouillon);
+    const final = completer(b);
     expect(erreursCreation(final)).toEqual([]);
     const f = ficheDepuisBrouillon(final, 'uid-joueur', 1);
     expect(f).toMatchObject({
@@ -138,11 +129,11 @@ describe.each(FICHES.map((f) => [f.nom, f] as const))('reprise de « %s »', (_n
 });
 
 describe('ce que la reprise change pour la table (à annoncer aux joueurs)', () => {
-  const repris = (nom: string) => reprendreAnciensChoix(brouillonDepuisV1(fiche(nom), 'i')).brouillon;
+  // L6.7a (12b) : « Reprendre mes anciens choix » est retiré ; la reprise part du brouillon v1.
+  const repris = (nom: string) => brouillonDepuisV1(fiche(nom), 'i');
 
-  it('Vhorgar : son rang racial 2 payé en v1 est rendu (voie raciale gratuite), puis repris au niveau 3', () => {
+  it('Vhorgar : son rang racial 2 payé en v1 est gardé pour mémoire (la voie raciale est gratuite)', () => {
     expect(repris('Vhorgar').reprise!.anciens.capacitesRace).toEqual([1, 2]);
-    expect(pointsVoie(repris('Vhorgar')).restants).toBe(1);
   });
 
   it('Kylhian : deux jets de PV jamais lancés en v1 sont exigés (niveaux 3 et 4)', () => {

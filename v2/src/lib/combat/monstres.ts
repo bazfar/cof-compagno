@@ -5,6 +5,7 @@ import type { Combattant } from '../schemas/combat.ts';
 import type { Fiche } from '../schemas/fiche.ts';
 import type { EffetAttaqueMonstre } from '../schemas/monstres.ts';
 import type { Sauvegarde } from '../schemas/effets.ts';
+import { distanceCases, type Case } from '../battlemap/geometrie.ts';
 import { lancerDegats } from './attaque.ts';
 import { immunise } from './etats.ts';
 import { legendairesRestantes, USAGE_LEGENDAIRE } from './legendaire.ts';
@@ -154,6 +155,8 @@ const schemaMecanique = z.object({
 
 /** Une capacité active du bestiaire (2a), lue. */
 export interface CapaciteMonstre {
+  /** L6.7a (4a) : une aura (une zone « libre ») : elle se joue d'office au début de son tour, sans action. */
+  aura: boolean;
   nom: string;
   description: string;
   limite: Limite;
@@ -194,6 +197,7 @@ export function capacitesDuMonstre(m: { capacitesActives?: readonly unknown[] | 
     }
     const k = c.data.mecanique;
     capacites.push({
+      aura: k.cible === 'zone' && k.usage.frequence === 'libre',
       nom: c.data.nom,
       description: c.data.description,
       limite: limiteDe(k.usage.frequence, k.recharge),
@@ -284,6 +288,36 @@ export function jouerCapacite(cap: CapaciteMonstre, cibles: readonly { c: AvecId
     }
   }
   return { jets, changements, auMj };
+}
+
+// ---------------------------------------------------------------- L6.7a : les zones
+
+/**
+ * L6.7a (2a, 3a, décisions de Thomas du 29/10/2026) : une capacité en zone
+ * est centrée sur le monstre (toutes celles du bestiaire le sont) ; elle
+ * prend tout ce qui est debout dans son rayon (1,5 m par case), ses alliés
+ * compris, sauf lui. Sans son jeton sur la carte : personne.
+ */
+export function ciblesDeZone(monstre: { id: string }, zoneM: number, combattants: readonly AvecId<Combattant>[], jetons: readonly { id: string; cx: number; cy: number }[]): string[] {
+  const centre = jetons.find((j) => j.id === monstre.id);
+  if (!centre) return [];
+  const r = Math.floor(zoneM / 1.5);
+  return combattants
+    .filter((c) => c.id !== monstre.id && !c.mort && !(c.genre !== 'pj' && c.aTerre))
+    .filter((c) => {
+      const j = jetons.find((x) => x.id === c.id);
+      return !!j && distanceCases(centre, j) <= r;
+    })
+    .map((c) => c.id);
+}
+
+/** Les cases de la zone, dans la grille, pour la montrer sur la carte. */
+export function casesDeZone(centre: Case, zoneM: number, grille: { colonnes: number; lignes: number }): Case[] {
+  const r = Math.floor(zoneM / 1.5);
+  const cases: Case[] = [];
+  for (let cy = Math.max(0, centre.cy - r); cy <= Math.min(grille.lignes - 1, centre.cy + r); cy++)
+    for (let cx = Math.max(0, centre.cx - r); cx <= Math.min(grille.colonnes - 1, centre.cx + r); cx++) cases.push({ cx, cy });
+  return cases;
 }
 
 // ---------------------------------------------------------------- 9a : Curée

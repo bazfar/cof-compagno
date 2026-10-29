@@ -21,6 +21,7 @@ import { noterJet } from './journal';
  *   - 2a, 3a, 10a : une capacité, sur les cibles cochées ; son action (ou
  *     l'action bonus, ou la réaction du round) et sa limite ;
  *   - 9a : Curée, quand un monstre tombe ;
+ *   - L6.7a (4a) : une aura, au début de son tour, sans action ;
  *   - 7a : le MJ corrige le compteur des résistances légendaires.
  */
 
@@ -80,7 +81,8 @@ export async function jouerCapaciteMonstre(
   alea: () => number = Math.random,
 ): Promise<string> {
   if (monstre.genre !== 'monstre' || monstre.aTerre) throw new RefusCombat('Seul un monstre debout joue ses capacités.');
-  const agit = peutAgir(monstre.etats);
+  // L6.7a (4a) : une aura émane de lui : elle ne demande ni action ni état qui le laisse agir.
+  const agit = cap.aura ? 'oui' : peutAgir(monstre.etats);
   if (agit !== 'oui') throw new RefusCombat(agit === 'non' ? `${monstre.nom} ne peut pas agir ce tour.` : `${monstre.nom} ne peut que se déplacer ce tour.`);
   const refus = refusDeLimite(monstre, cleCapacite(cap.nom), cap.limite, combat.round);
   if (refus) throw new RefusCombat(`${cap.nom} : ${refus}.`);
@@ -100,7 +102,7 @@ export async function jouerCapaciteMonstre(
       if (moi && j && distanceCases(moi, j) > cap.portee) throw new RefusCombat(`${c.nom} est hors de portée (${distanceCases(moi, j)} cases, ${cap.portee} au plus).`);
     }
   }
-  const p = prise(combat, monstre, cap.prend);
+  const p = cap.aura ? {} : prise(combat, monstre, cap.prend);
   const usages = avecUsage((p.usages as Record<string, number> | undefined) ?? monstre.usages, cleCapacite(cap.nom), cap.limite, combat.round);
   const r = jouerCapacite(cap, visees, alea);
   // L6.6b (1a, 8a) : un démon : la faim de ses états de contrôle nouveaux ; Reflet, par sauvegarde ratée contre lui.

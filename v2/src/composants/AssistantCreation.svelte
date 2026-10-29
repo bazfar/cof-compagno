@@ -6,8 +6,8 @@
   import * as RF from '../lib/fiche/refonte';
   import { statistiquesFiche } from '../lib/regles/calculs';
   import * as R from '../lib/regles/creation';
-  import { anciensChoixLisibles, reprendreAnciensChoix } from '../lib/regles/import-v1';
-  import { classeParId, constantes, donParId, dons, raceParId, sortParId, voieParId } from '../lib/regles/donnees';
+  import { anciensChoixLisibles } from '../lib/regles/import-v1';
+  import { classeParId, constantes, donParId, dons, raceParId } from '../lib/regles/donnees';
   import type { Carac } from '../lib/regles/fiche-calcul';
   import { session } from '../lib/session.svelte';
   import ChoixRefonte from './ChoixRefonte.svelte';
@@ -24,14 +24,17 @@
    *
    * `depart` (L2.2c) : brouillon de reprise d'une fiche v1. Classe, race,
    * niveau et caractéristiques y sont verrouillés (les règles refusent d'y
-   * toucher) ; les anciens choix s'affichent à côté, et « Reprendre mes
-   * anciens choix » les rejoue à travers les règles actuelles.
+   * toucher) ; les anciens choix s'affichent à côté.
    *
    * Refonte (L4.11b, décision 10a) : pour une classe refondue, l'étape
    * Voies montre les choix de la refonte (ChoixRefonte, gestes de
    * lib/fiche/creation-refonte.ts), l'étape Magie disparaît, et « Créer »
    * écrit une fiche de la refonte. Les anciens choix v1 restent affichés
    * pour mémoire, sans « Reprendre » : leurs voies n'existent plus.
+   *
+   * Lot L6.7a (12b, décision de Thomas du 29/10/2026) : toutes les classes
+   * passent par la refonte ; la branche v1 (voies v1, voies hors profil,
+   * Polyvalence, étape Magie, « Reprendre mes anciens choix ») est retirée.
    */
 
   let {
@@ -40,7 +43,7 @@
     depart = null,
   }: { surCree: (id: string) => void; surAnnuler: () => void; depart?: R.Brouillon | null } = $props();
 
-  const ETAPES = ['Identité', 'Caractéristiques', 'Voies', 'PV et dons', 'Magie', 'Récapitulatif'] as const;
+  const ETAPES = ['Identité', 'Caractéristiques', 'Voies', 'PV et dons', 'Récapitulatif'] as const;
   type Etape = (typeof ETAPES)[number];
 
   // svelte-ignore state_referenced_locally -- `depart` ne sert qu'à l'ouverture
@@ -68,36 +71,19 @@
   const calc = $derived(R.ficheCalculDuBrouillon(b));
   const stats = $derived(statistiquesFiche(calc));
   const caracs = $derived(R.caracsDuBrouillon(b));
-  const pts = $derived(R.pointsVoie(b));
   const erreurs = $derived(K.erreursCreationRefonte(b));
   const avertissements = $derived(K.avertissementsCreationRefonte(b));
-  const magie = $derived(R.aUnGrimoire(b.classe));
   const race = $derived(b.race ? raceParId.get(b.race) : undefined);
   const rangsRace = $derived(R.capacitesRaceDuBrouillon(b));
-  const polyvalence = $derived(R.polyvalenceAcquise(b) && !R.rangOffert(b));
   const anciens = $derived(b.reprise ? anciensChoixLisibles(b.reprise.anciens) : null);
   const refondue = $derived(K.classeDuBrouillon(b));
   const refonte = $derived(K.refonteDuBrouillon(b));
   const ctxRefonte = $derived(refondue ? K.contexteDuBrouillon(b, refondue) : null);
   const erreursVoiesRefonte = $derived(refondue && refonte && ctxRefonte ? RF.erreursRefonte(refondue, refonte, ctxRefonte) : []);
-  const etapes = $derived(refondue ? ETAPES.filter((e) => e !== 'Magie') : ETAPES);
-  let nonRepris = $state<string[] | null>(null);
-
-  function reprendre() {
-    const r = reprendreAnciensChoix($state.snapshot(b) as R.Brouillon);
-    b = r.brouillon;
-    nonRepris = r.nonRepris;
-    refus = '';
-  }
-
-  const nomVoie = (id: string) => voieParId.get(id)?.nom ?? id;
   const nomDon = (id: string) => donParId.get(id)?.nom ?? id;
-  const nomSort = (id: string) => sortParId.get(id)?.nom ?? id;
   const signe = (n: number | null) => (n === null ? '—' : n >= 0 ? `+${n}` : String(n));
 
-  // Choix en attente pour les capacités et dons qui en demandent un.
-  let choixCapacite = $state<Record<string, string>>({});
-  let voieHorsProfil = $state('');
+  // Choix en attente pour les dons qui en demandent un.
   let donChoisi = $state('');
   let choixAthlete = $state('FOR');
   let choixAmelioration = $state<[string, string]>(['FOR', 'DEX']);
@@ -112,7 +98,6 @@
     if (!confirm(depart ? 'Annuler tes choix et repartir de la fiche v1 ?' : 'Effacer cette création et repartir de zéro ?')) return;
     oublierBrouillon(session.table, session.uid, idReprise);
     b = depart ? structuredClone($state.snapshot(depart) as R.Brouillon) : R.brouillonVide();
-    nonRepris = null;
     etape = 'Identité';
     refus = '';
   }
@@ -122,7 +107,7 @@
     enCours = true;
     try {
       const brouillon = $state.snapshot(b) as R.Brouillon;
-      const fiche = refondue ? K.ficheV2DepuisBrouillon(brouillon, session.uid, Date.now()) : R.ficheDepuisBrouillon(brouillon, session.uid, Date.now());
+      const fiche = K.ficheV2DepuisBrouillon(brouillon, session.uid, Date.now());
       const id = nouvelIdPerso();
       await creerPerso(id, fiche);
       // Portrait v1 repris (L2.3) : dans son propre document, après la fiche.
@@ -144,9 +129,8 @@
   const aFaire = $derived({
     Identité: !b.classe || !b.race || !b.nom.trim() || R.choixRaciauxRequis(b).some(([r]) => !b.capacitesRaceChoix[String(r)]) || (R.varianteRequise(b) && !b.raceVariante),
     Caractéristiques: R.pointsCaracsRestants(b) !== 0,
-    Voies: refondue ? erreursVoiesRefonte.length > 0 : pts.restants < 0,
+    Voies: !refondue || erreursVoiesRefonte.length > 0,
     'PV et dons': b.jetsPV.length < b.niveau - 1 || b.dons.length < R.donsRequis(b),
-    Magie: magie && b.sorts.length > 0 && R.sortsAChoisir(b) < 0,
     Récapitulatif: erreurs.length > 0,
   } satisfies Record<Etape, boolean>);
 </script>
@@ -160,7 +144,7 @@
   </div>
 
   <nav aria-label="Étapes">
-    {#each etapes as e (e)}
+    {#each ETAPES as e (e)}
       <button class="onglet" class:actif={etape === e} aria-current={etape === e ? 'step' : undefined} onclick={() => (etape = e)}>
         {e}{#if aFaire[e]}<span class="pastille" aria-label="à compléter">•</span>{/if}
       </button>
@@ -176,16 +160,6 @@
       {#if anciens.voies.length}<p><strong>Voies :</strong> {anciens.voies.join(' ; ')}</p>{/if}
       {#if anciens.race.length}<p><strong>Voie raciale :</strong> {anciens.race.join(' ; ')}</p>{/if}
       <p><strong>Dons :</strong> {anciens.dons.length ? anciens.dons.join(' ; ') : 'aucun'}</p>
-      {#if etape === 'Voies' && !refondue}
-        <button onclick={reprendre}>Reprendre mes anciens choix</button>
-      {/if}
-      {#if nonRepris}
-        {#if nonRepris.length}
-          <ul class="erreurs" aria-label="Non repris">{#each nonRepris as n (n)}<li>{n}</li>{/each}</ul>
-        {:else}
-          <p class="offert" role="status">Tous tes anciens choix ont été repris.</p>
-        {/if}
-      {/if}
     </aside>
   {/if}
 
@@ -275,60 +249,6 @@
       {#if erreursVoiesRefonte.length}
         <ul class="erreurs" aria-label="Voies à compléter">{#each erreursVoiesRefonte as e (e)}<li>{e}</li>{/each}</ul>
       {/if}
-    {:else}
-      <p class="compteur" aria-live="polite">Points de capacité : <strong data-testid="points-voie">{pts.restants}</strong> / {pts.total}</p>
-      <p class="aide">Rangs 1-2 : 1 point ; rangs 3-5 : 2 points ; dans l'ordre.</p>
-      {#if polyvalence}<p class="offert">Polyvalence : un rang gratuit à prendre dans une voie de ta classe (bouton « Offert »).</p>{/if}
-      {#each R.voiesOuvertes(b) as idVoie (idVoie)}
-        {@const voie = voieParId.get(idVoie)}
-        {@const max = R.rangMaxDansVoie(b, idVoie)}
-        {@const horsProfil = b.voiesHorsProfil.find((h) => h.voie === idVoie)}
-        <div class="voie">
-          <h3>
-            {voie?.nom ?? idVoie}
-            {#if voie?.speciale}<span class="badge">chaos — accord MJ</span>{/if}
-            {#if horsProfil}<span class="badge">hors profil ({horsProfil.cout} pts)</span>
-              <button class="petit discret" onclick={() => geste((x) => R.annulerHorsProfil(x, idVoie))}>Annuler le déblocage</button>{/if}
-          </h3>
-          <ol class="rangs">
-            {#each voie?.rangs ?? [] as r (r.id)}
-              {@const entree = b.capacites.find((c) => c.id === r.id)}
-              {@const options = R.CHOIX_CAPACITES[r.id]}
-              <li class:acquis={!!entree}>
-                <strong>{r.rang}. {r.nom}</strong>
-                {#if entree?.choix}<span class="badge">{entree.choix}</span>{/if}
-                {#if entree?.offert}<span class="badge">offert</span>{/if}
-                <span class="effet">{r.effet}</span>
-                {#if entree && r.rang === max}
-                  <button class="petit discret" aria-label={`Retirer ${r.id}`} onclick={() => geste((x) => R.retirerRang(x, idVoie, r.rang))}>Retirer</button>
-                {:else if !entree && r.rang === max + 1}
-                  {#if options}
-                    <select aria-label={`Choix pour ${r.id}`} value={choixCapacite[r.id] ?? ''} onchange={(ev) => (choixCapacite[r.id] = ev.currentTarget.value)}>
-                      <option value="" disabled>choix…</option>
-                      {#each options as o (o)}<option value={o}>{o}</option>{/each}
-                    </select>
-                  {/if}
-                  <button class="petit" aria-label={`Prendre ${r.id}`} onclick={() => geste((x) => R.prendreRang(x, idVoie, r.rang, options ? choixCapacite[r.id] : undefined))}>
-                    Prendre ({r.rang >= 3 ? 2 : 1})
-                  </button>
-                  {#if polyvalence && !horsProfil}
-                    <button class="petit" aria-label={`Prendre ${r.id} offert`} onclick={() => geste((x) => R.prendreRang(x, idVoie, r.rang, options ? choixCapacite[r.id] : undefined, true))}>Offert</button>
-                  {/if}
-                {/if}
-              </li>
-            {/each}
-          </ol>
-        </div>
-      {/each}
-      <div class="ligne">
-        <select aria-label="Voie hors profil" bind:value={voieHorsProfil}>
-          <option value="">Débloquer une voie hors profil…</option>
-          {#each R.voiesHorsProfilProposees(b) as id (id)}
-            <option value={id}>{nomVoie(id)} ({classeParId.get(voieParId.get(id)?.classe ?? '')?.nom}) — {R.coutHorsProfil(b, id)} pts</option>
-          {/each}
-        </select>
-        <button disabled={!voieHorsProfil} onclick={() => { geste((x) => R.debloquerHorsProfil(x, voieHorsProfil)); voieHorsProfil = ''; }}>Débloquer</button>
-      </div>
     {/if}
   {:else if etape === 'PV et dons'}
     <h3>Points de vie</h3>
@@ -373,39 +293,6 @@
           <button disabled={!donChoisi} onclick={prendreDon}>Prendre</button>
         </div>
         {#if donChoisi}<p class="effet">{donParId.get(donChoisi)?.effet}</p>{/if}
-      {/if}
-    {/if}
-  {:else if etape === 'Magie' && !refondue}
-    {#if b.classe === 'pretre'}
-      <label>
-        Cercle
-        <select aria-label="Cercle" value={b.cercleSpecialisation ?? ''} onchange={(ev) => geste((x) => R.choisirCercle(x, ev.currentTarget.value || null))}>
-          <option value="">Aucun pour l'instant</option>
-          {#each R.CERCLES as c (c)}<option value={c}>{c} (sort offert : {nomSort(constantes.cercleSortGratuit[c] ?? '')})</option>{/each}
-        </select>
-      </label>
-    {/if}
-    {#if !magie}
-      <p>{b.classe ? `${classeParId.get(b.classe)?.nom} n'a pas de Grimoire : aucun sort à choisir.` : "Choisis d'abord une classe."}</p>
-    {:else}
-      <p>Sorts à apprendre : <strong data-testid="sorts-restants">{R.sortsAChoisir(b)}</strong> (plafond d'inscription du Grimoire, sorts offerts compris).</p>
-      {#if R.sortsAccordes(b).length}<p class="aide">Offerts par tes voies et ton Cercle : {R.sortsAccordes(b).map(nomSort).join(', ')}.</p>{/if}
-      <ul class="liste">
-        {#each b.sorts as s (s)}
-          <li>{nomSort(s)} <button class="petit discret" onclick={() => geste((x) => R.oublierSort(x, s))}>Oublier</button></li>
-        {/each}
-      </ul>
-      {#if R.sortsAChoisir(b) > 0}
-        <ul class="liste proposes">
-          {#each R.sortsProposes(b) as s (s)}
-            {@const sort = sortParId.get(s)}
-            <li>
-              <strong>{sort?.nom}</strong> <span class="aide">rang {sort?.rang}, {sort?.categorie}</span>
-              <span class="effet">{sort?.effet}</span>
-              <button class="petit" aria-label={`Apprendre ${sort?.nom}`} onclick={() => geste((x) => R.apprendreSort(x, s))}>Apprendre</button>
-            </li>
-          {/each}
-        </ul>
       {/if}
     {/if}
   {:else}
@@ -571,8 +458,7 @@
     border-radius: var(--rayon);
     margin: 0;
   }
-  .avertissements li,
-  .offert {
+  .avertissements li {
     color: var(--couleur-or-texte);
     margin: 0;
   }

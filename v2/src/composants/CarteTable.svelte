@@ -590,7 +590,7 @@
         {surGomme}
         actif={enCombat.actif}
         budget={enCombat.budget}
-        visee={role === 'joueur' ? viseeCarte.v : peinture}
+        visee={role === 'joueur' ? viseeCarte.v : (viseeCarte.v ?? peinture)}
         zones={zonesDessinees}
       />
     {:else}

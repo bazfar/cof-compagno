@@ -464,6 +464,14 @@ describe('écritures (faux SDK Firestore)', () => {
     const permis = /hasOnly\(\[([^\]]*)\]\)/.exec(corps)![1]!.split(',').map((c) => c.trim().replace(/'/g, ''));
     for (const c of [...M.CHAMPS_MONTEE_REFONTE, 'progression']) expect(permis).toContain(c);
   });
+
+  // Repris de tests/unitaires/montee.test.ts (montée v1 retirée, L6.7a, 12b).
+  it('alignement sur firestore.rules : cransRequis, même table des deux côtés', () => {
+    const regles = readFileSync('firestore.rules', 'utf8');
+    const corps = /function cransRequis\(n\) \{\s*(return [^;]+;)/.exec(regles)![1]!;
+    const deRegles = new Function('n', corps) as (n: number) => number;
+    for (let n = 1; n < 12; n++) expect(deRegles(n), `niveau ${n}`).toBe(cransRequis(n));
+  });
 });
 
 describe('pour les écrans (L4.11b2)', () => {

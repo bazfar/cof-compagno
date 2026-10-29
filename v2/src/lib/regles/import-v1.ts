@@ -7,13 +7,7 @@ import {
   brouillonVide,
   CARACS_LIBRES_MAX_PAR_CARAC,
   CARACS_LIBRES_TOTAL,
-  CHOIX_CAPACITES,
-  choisirOptionRaciale,
-  debloquerHorsProfil,
   NIVEAU_MAX,
-  prendreDon,
-  prendreRang,
-  RefusCreation,
   type AnciensChoix,
   type Brouillon,
 } from './creation.ts';
@@ -199,50 +193,4 @@ export function anciensChoixLisibles(a: AnciensChoix): { voies: string[]; race: 
       return `${donParId.get(d)?.nom ?? d}${choix ? ` (${Array.isArray(choix) ? choix.join(', ') : String(choix)})` : ''}`;
     }),
   };
-}
-
-/** Identifiant 2.0 d'une voie v1 (nom) dans une classe donnée. */
-function idVoieV1(classe: string, nom: string): string | undefined {
-  return classeParId.get(classe)?.voies.find((v) => v.nom === nom)?.id;
-}
-
-/**
- * « Reprendre mes anciens choix » : rejoue les choix v1 À TRAVERS les règles
- * actuelles (déblocages hors profil, puis rangs dans l'ordre, puis dons).
- * Ce que les règles refusent n'est pas repris et est listé, avec la raison.
- * Les rangs raciaux, eux, suivent le calendrier 2.0 : seuls leurs choix
- * (Sang Mêlé…) sont repris quand le rang est acquis.
- */
-export function reprendreAnciensChoix(b: Brouillon): { brouillon: Brouillon; nonRepris: string[] } {
-  const a = b.reprise?.anciens;
-  if (!a || !b.classe) return { brouillon: b, nonRepris: [] };
-  let x = b;
-  const nonRepris: string[] = [];
-  const essayer = (libelle: string, f: (y: Brouillon) => Brouillon) => {
-    try {
-      x = f(x);
-    } catch (e) {
-      if (!(e instanceof RefusCreation)) throw e;
-      nonRepris.push(`${libelle} : ${e.message}`);
-    }
-  };
-  for (const h of a.voiesHorsProfil) {
-    const id = idVoieV1(h.classe, h.voie);
-    if (!id) nonRepris.push(`${h.voie} : voie introuvable.`);
-    else essayer(`${h.voie} (hors profil)`, (y) => debloquerHorsProfil(y, id));
-  }
-  for (const c of [...a.capacites].sort((p, q) => p.rang - q.rang)) {
-    const id = idVoieV1(b.classe, c.voie) ?? a.voiesHorsProfil.map((h) => (h.voie === c.voie ? idVoieV1(h.classe, c.voie) : undefined)).find(Boolean);
-    if (!id) {
-      nonRepris.push(`${c.voie}, rang ${c.rang} : voie introuvable.`);
-      continue;
-    }
-    const options = CHOIX_CAPACITES[`${id}.${c.rang}`];
-    essayer(`${c.voie}, rang ${c.rang}`, (y) => prendreRang(y, id, c.rang, options ? c.choix : undefined));
-  }
-  for (const [rang, option] of Object.entries(a.capacitesRaceChoix)) {
-    essayer(`choix racial du rang ${rang}`, (y) => choisirOptionRaciale(y, Number(rang), option));
-  }
-  for (const d of a.dons) essayer(donParId.get(d)?.nom ?? d, (y) => prendreDon(y, d, a.donsChoix[d]));
-  return { brouillon: x, nonRepris };
 }

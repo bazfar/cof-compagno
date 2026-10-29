@@ -318,6 +318,111 @@ describe('le panneau du MJ : les attaques du monstre (6b)', () => {
   });
 });
 
+describe('les zones et les auras (L6.7a, 2a, 3a, 4a)', () => {
+  const souffle = { nom: 'Souffle', description: 'Autour de lui.', mecanique: { type: 'limitee', usage: { frequence: '1x/combat' }, cible: 'zone', portee: null, zone: 3, effets: [] } };
+  const aura = { nom: 'Lenteur', description: 'À chaque tour.', mecanique: { type: 'activable', usage: { frequence: 'libre' }, cible: 'zone', portee: null, zone: 9, effets: [] } };
+  const modele = { id: 'x', nom: 'X', capacitesActives: [souffle, aura], capacitesSpeciales: [] } as never;
+  const plan = { scene, jetons: [{ id: 'm-r1-a', genre: 'monstre' as const, cx: 5, cy: 5 }, { id: 'pj-p1', genre: 'pj' as const, cx: 6, cy: 5 }, { id: 'pj-p2', genre: 'pj' as const, cx: 5, cy: 7 }, { id: 'm-r1-b', genre: 'monstre' as const, cx: 9, cy: 9 }] };
+  const tous = () => [monstre('a', { nom: 'Chef' }), moi(), pj('p2', { nom: 'Hermione' }), monstre('b', { nom: 'Loin' })];
+  const rendre = (c: unknown = plan) => {
+    const t = tous();
+    return render(CapacitesMj, { props: { idCombat: 'c1', combat: combat(), monstre: t[0], modele, combattants: t, fiches: new Map(), carte: c } as never });
+  };
+  const cochee = (cap: string, nom: string) => (within(screen.getByRole('group', { name: `Cibles de ${cap}` })).getByLabelText(nom) as HTMLInputElement).checked;
+
+  it('2a, 3a : son rayon coche d’office ce qu’il prend ; le MJ décoche ; « Jouer » part avec ce qui reste, puis tout est recoché', async () => {
+    rendre();
+    expect(['Kargash', 'Hermione', 'Loin'].map((n) => cochee('Souffle', n))).toEqual([true, true, false]);
+    expect(['Kargash', 'Hermione', 'Loin'].map((n) => cochee('Lenteur', n))).toEqual([true, true, true]);
+    await fireEvent.click(within(screen.getByRole('group', { name: 'Cibles de Souffle' })).getByLabelText('Hermione'));
+    await fireEvent.click(within(screen.getByRole('group', { name: 'Cibles de Souffle' })).getByLabelText('Loin'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Jouer Souffle' }));
+    expect(monstresActions.jouerCapaciteMonstre).toHaveBeenLastCalledWith('c1', expect.anything(), expect.anything(), expect.objectContaining({ nom: 'Souffle' }), ['pj-p1', 'm-r1-b'], expect.anything());
+    await waitFor(() => expect(cochee('Souffle', 'Hermione')).toBe(true));
+    expect(cochee('Souffle', 'Loin')).toBe(false);
+  });
+
+  it('sans carte : rien n’est coché ; « Voir la zone » est éteint ; une aura le dit', () => {
+    rendre(null);
+    expect(cochee('Souffle', 'Kargash')).toBe(false);
+    expect((screen.getAllByRole('button', { name: 'Voir la zone' })[0] as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/^aura, au début de son tour · à volonté · zone 9 m/)).toBeTruthy();
+  });
+
+  it('2a : « Voir la zone » la montre sur la carte du MJ (ses cases, ses cibles) ; une seconde fois, ou en fermant, elle part', async () => {
+    const { viseeCarte } = await import('../../src/lib/combat/visee.svelte');
+    const r = rendre();
+    const [voir] = screen.getAllByRole('button', { name: 'Voir la zone' });
+    await fireEvent.click(voir!);
+    expect(viseeCarte.v!.fixe.cases).toHaveLength(25);
+    expect(viseeCarte.v!.fixe.jetons).toEqual(['pj-p1', 'pj-p2']);
+    expect(viseeCarte.v!.apercu({ cx: 0, cy: 0 })).toEqual({ cases: viseeCarte.v!.fixe.cases, jetons: ['pj-p1', 'pj-p2'], refus: null });
+    viseeCarte.v!.choisir({ cx: 0, cy: 0 }, null);
+    expect(screen.getByRole('button', { name: 'Cacher la zone' }).getAttribute('aria-pressed')).toBe('true');
+    await fireEvent.click(screen.getByRole('button', { name: 'Cacher la zone' }));
+    expect(viseeCarte.v).toBeNull();
+    await fireEvent.click(screen.getAllByRole('button', { name: 'Voir la zone' })[1]!);
+    expect(viseeCarte.v!.fixe.cases.length).toBeGreaterThan(25);
+    r.unmount();
+    expect(viseeCarte.v).toBeNull();
+  });
+
+  it('4a : la main arrive à La Lente : son aura se joue d’office, sur ce que son rayon prend, une fois par tour ; personne à portée, rien', async () => {
+    const enCombat = (x: number) => {
+      table.donnees = { sceneActive: 'cave', combat: 'c1' };
+      combatDoc.donnees = combat({ actif: 'm-r1-l' });
+      persos.elements = [k()];
+      bestiaire.elements = BESTIAIRE.filter((m) => m.id === 'demon_la_lente') as never;
+      jetonsScene.elements = [
+        { id: 'm-r1-l', genre: 'monstre', nom: 'La Lente', couleur: '#c0392b', cx: 1, cy: 1, proprietaire: null, creeLe: 1 },
+        { id: 'pj-p1', genre: 'pj', nom: 'Kargash', couleur: '#2980b9', cx: x, cy: 1, proprietaire: 'alice', creeLe: 1 },
+      ];
+      combattants.elements = [monstre('l', { nom: 'La Lente', monstre: 'demon_la_lente', initiative: 15 }), moi()];
+    };
+    monstresActions.jouerCapaciteMonstre.mockClear();
+    enCombat(6);
+    render(CombatMj);
+    await waitFor(() => expect(monstresActions.jouerCapaciteMonstre).toHaveBeenCalledTimes(1));
+    expect(monstresActions.jouerCapaciteMonstre.mock.calls[0]!.slice(0, 5)).toEqual(['c1', expect.objectContaining({ tour: 6 }), expect.objectContaining({ id: 'm-r1-l' }), expect.objectContaining({ nom: 'Lenteur', aura: true }), ['pj-p1']]);
+    expect(monstresActions.jouerCapaciteMonstre.mock.calls[0]![5]).toMatchObject({ carte: null, fiches: expect.any(Map) });
+    combattants.elements = [...combattants.elements];
+    flushSync();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(monstresActions.jouerCapaciteMonstre).toHaveBeenCalledTimes(1);
+    cleanup();
+    monstresActions.jouerCapaciteMonstre.mockClear();
+    enCombat(9);
+    render(CombatMj);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(monstresActions.jouerCapaciteMonstre).not.toHaveBeenCalled();
+    // Le Kargash approche dans le même tour : l'aura le prend.
+    jetonsScene.elements = jetonsScene.elements.map((j) => (j.id === 'pj-p1' ? { ...j, cx: 6 } : j));
+    flushSync();
+    await waitFor(() => expect(monstresActions.jouerCapaciteMonstre).toHaveBeenCalledTimes(1));
+    cleanup();
+    monstresActions.jouerCapaciteMonstre.mockClear();
+    enCombat(6);
+    combattants.elements = [monstre('l', { nom: 'La Lente', monstre: 'demon_la_lente', aTerre: true, pv: 0 }), moi()];
+    render(CombatMj);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(monstresActions.jouerCapaciteMonstre).not.toHaveBeenCalled();
+    cleanup();
+    enCombat(6);
+    combatDoc.donnees = combat({ actif: 'm-r1-l', statut: 'clos' as never });
+    render(CombatMj);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(monstresActions.jouerCapaciteMonstre).not.toHaveBeenCalled();
+    // Une capacité en zone qui n'est pas une aura attend le MJ.
+    cleanup();
+    enCombat(6);
+    const lente = BESTIAIRE.find((m) => m.id === 'demon_la_lente')! as unknown as { capacitesActives: { nom: string; mecanique: Record<string, unknown> }[] };
+    bestiaire.elements = [{ ...lente, capacitesActives: [{ ...lente.capacitesActives[0]!, nom: 'Vague', mecanique: { ...lente.capacitesActives[0]!.mecanique, usage: { frequence: '1x/combat' } } }] }] as never;
+    render(CombatMj);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(monstresActions.jouerCapaciteMonstre).not.toHaveBeenCalled();
+  });
+});
+
 describe('Curée dans CombatMj (9a)', () => {
   it('un cupide vu debout tombe : Curée pour sa famille, une fois ; un déjà tombé au chargement, non', async () => {
     table.donnees = { sceneActive: 'cave', combat: 'c1' };

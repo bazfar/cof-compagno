@@ -85,6 +85,25 @@ beforeEach(() => {
   Object.values(zonesActions).forEach((f) => typeof f === 'function' && 'mockClear' in f && (f as { mockClear: () => void }).mockClear());
 });
 
+describe('la visée sur la carte du MJ (L6.7a, 2a)', () => {
+  it('une zone montrée par le panneau passe avant l’outil « Cases » ; refermée, l’outil revient', async () => {
+    const { viseeCarte } = await import('../../src/lib/combat/visee.svelte');
+    render(CarteTable, { props: { role: 'mj' } });
+    poser(null);
+    const carte = await screen.findByTestId('battlemap');
+    expect(carte.dataset.visee).toBe('non');
+    const choisir = vi.fn();
+    viseeCarte.v = { apercu: () => ({ cases: [], jetons: [], refus: null }), choisir, fixe: { cases: [], jetons: [] } };
+    flushSync();
+    expect(carte.dataset.visee).toBe('oui');
+    await fireEvent.click(screen.getByRole('button', { name: 'cliquer 2,3' }));
+    expect(choisir).toHaveBeenCalledWith({ cx: 2, cy: 3 }, null);
+    viseeCarte.v = null;
+    flushSync();
+    expect(carte.dataset.visee).toBe('non');
+  });
+});
+
 describe('l’outil « Cases » du MJ (1a, 3a, 4a)', () => {
   it('le MJ peint une case dangereuse cachée d’un clic ; un clic sur une case peinte l’efface', async () => {
     render(CarteTable, { props: { role: 'mj' } });

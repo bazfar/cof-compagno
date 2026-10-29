@@ -3,11 +3,11 @@
   import { debutDeTour, remettreJetsDeMort } from '../lib/actions/attaques';
   import { payerDebutDeTour, retirerInvocations } from '../lib/actions/invocations';
   import { remousDu } from '../lib/combat/invocations';
-  import { jouerCurees } from '../lib/actions/monstres';
+  import { jouerCapaciteMonstre, jouerCurees } from '../lib/actions/monstres';
   import { compterRoundsSurvecus, debutDeTourDemons, retourALaMer, sursaut } from '../lib/actions/demons';
   import { envoyerButin } from '../lib/actions/rencontres';
   import { airsVicies, estDemon, roundSurvecu, sursautPossible, traitsDemon, USAGE_SURSAUT } from '../lib/combat/demons';
-  import { cureesApresChute } from '../lib/combat/monstres';
+  import { capacitesDuMonstre, ciblesDeZone, cureesApresChute } from '../lib/combat/monstres';
   import { zonesDuDebutDeTour } from '../lib/actions/zones';
   import { suivreZonesCombat } from '../lib/magasins/zones.svelte';
   import type { ZoneSol } from '../lib/schemas/zones';
@@ -71,6 +71,10 @@
    * Dernier souffle quand l'un tombe (8a) ; les rounds survécus (1a). À
    * la clôture, le butin prévu de la rencontre part au vote, sauf si le
    * MJ décoche (12a).
+   *
+   * Lot L6.7a (4a) : la main arrive à un monstre qui a une aura (Attrait de
+   * Celle-qu'on-suit, Lenteur de La Lente) : elle se joue d'office, sans
+   * action, sur ce que son rayon prend.
    */
 
   const table = suivreTable(session.table);
@@ -263,6 +267,28 @@
     const tous = combattants;
     const fichesPj = new Map(persos.etat.elements.map((p) => [p.id, p]));
     agir(() => debutDeTourDemons(id, c, tous, traitsDe, fichesPj, jetons));
+  });
+  // L6.7a (4a) : la main arrive à un monstre qui a une aura : elle se joue d'office sur ce que son rayon prend, sans action ; une fois par tour.
+  const aurasJouees = new Set<string>();
+  $effect(() => {
+    if (!combat || !idCombat || combat.statut !== 'encours' || !combat.actif || !jetonsSuivis) return;
+    const c = combattants.find((x) => x.id === combat.actif);
+    const cle = `${combat.tour}:${combat.actif}`;
+    const modele = c?.genre === 'monstre' && c.monstre ? bestiaire.etat.elements.find((m) => m.id === c.monstre) : undefined;
+    if (!c || !modele || c.aTerre || aurasJouees.has(cle)) return;
+    const jetons = jetonsSuivis.etat.elements;
+    const auras = capacitesDuMonstre(modele).capacites.flatMap((cap) => {
+      const cibles = cap.aura && cap.zone ? ciblesDeZone(c, cap.zone, combattants, jetons) : [];
+      return cibles.length ? [{ cap, cibles }] : [];
+    });
+    if (!auras.length) return;
+    aurasJouees.add(cle);
+    const id = idCombat;
+    const k = combat;
+    const ctx = { combattants, fiches: new Map(persos.etat.elements.map((p) => [p.id, p])), carte: null, demon: traitsDe(c) };
+    agir(async () => {
+      for (const a of auras) await jouerCapaciteMonstre(id, k, c, a.cap, a.cibles, ctx);
+    });
   });
   // 8a : Dernier souffle : un démon tombe, son berserk au seuil : il se relève pour un dernier tour.
   const sursauts = new Set<string>();

@@ -258,6 +258,7 @@ describe('les capacités (2a, 3a, 4a, 10a)', () => {
   it('lues du bestiaire : ce qu’elles prennent, leur portée en cases, leur sauvegarde', () => {
     const loup = M.capacitesDuMonstre(modele('loup_champion')).capacites;
     expect(loup[0]).toEqual({
+      aura: false,
       nom: 'Hurlement de commandement',
       description: expect.any(String),
       limite: { parCombat: 1 },
@@ -289,6 +290,7 @@ describe('les capacités (2a, 3a, 4a, 10a)', () => {
   });
 
   const cap = (c: Partial<import('../../src/lib/combat/monstres').CapaciteMonstre> = {}): import('../../src/lib/combat/monstres').CapaciteMonstre => ({
+    aura: false,
     nom: 'Souffle',
     description: '',
     limite: { parCombat: 1 },
@@ -583,6 +585,7 @@ describe('l’attaque du monstre et son effet (6b)', () => {
 
 describe('le MJ joue une capacité (2a, 3a, 10a)', () => {
   const souffle = (c: Partial<import('../../src/lib/combat/monstres').CapaciteMonstre> = {}): import('../../src/lib/combat/monstres').CapaciteMonstre => ({
+    aura: false,
     nom: 'Souffle',
     description: '',
     limite: { parCombat: 1 },
@@ -715,5 +718,60 @@ describe('le MJ joue une capacité (2a, 3a, 10a)', () => {
       ['a', 2],
       ['c', 1],
     ]);
+  });
+});
+
+describe('les zones et les auras (L6.7a, 2a, 3a, 4a)', () => {
+  const jetons = [
+    { id: 'm-r1-a', cx: 5, cy: 5 },
+    { id: 'm-r1-b', cx: 7, cy: 5 },
+    { id: 'pj-p1', cx: 5, cy: 9 },
+    { id: 'pj-p2', cx: 4, cy: 4 },
+    { id: 'm-r1-c', cx: 6, cy: 6 },
+    { id: 'm-r1-d', cx: 5, cy: 6 },
+    { id: 'pj-p3', cx: 3, cy: 5 },
+    { id: 'pj-p5', cx: 8, cy: 5 },
+  ];
+
+  it('une zone autour du monstre : ce qui est debout dans son rayon (1,5 m par case), ses alliés compris, sauf lui', () => {
+    const a = monstre('a');
+    const combattants = [a, monstre('b'), pj('p1'), pj('p2'), monstre('c', { aTerre: true }), monstre('d', { mort: true }), pj('p3', { aTerre: true }), pj('p4')];
+    // 3 m : 2 cases. p1 à 4 cases, c tombé, d mort, p4 sans jeton ; p3 Mourant, toujours là.
+    expect(M.ciblesDeZone(a, 3, combattants, jetons)).toEqual(['m-r1-b', 'pj-p2', 'pj-p3']);
+    expect(M.ciblesDeZone(a, 4.4, [...combattants, pj('p5')], jetons)).toEqual(['m-r1-b', 'pj-p2', 'pj-p3']);
+    expect(M.ciblesDeZone(a, 4.5, [...combattants, pj('p5')], jetons)).toEqual(['m-r1-b', 'pj-p2', 'pj-p3', 'pj-p5']);
+    expect(M.ciblesDeZone(a, 6, combattants, jetons)).toEqual(['m-r1-b', 'pj-p1', 'pj-p2', 'pj-p3']);
+    expect(M.ciblesDeZone(monstre('z'), 6, combattants, jetons)).toEqual([]);
+  });
+
+  it('les cases de la zone, dans la grille', () => {
+    expect(M.casesDeZone({ cx: 5, cy: 5 }, 1.5, { colonnes: 20, lignes: 20 })).toHaveLength(9);
+    expect(M.casesDeZone({ cx: 0, cy: 0 }, 3, { colonnes: 20, lignes: 20 })).toEqual([
+      { cx: 0, cy: 0 }, { cx: 1, cy: 0 }, { cx: 2, cy: 0 },
+      { cx: 0, cy: 1 }, { cx: 1, cy: 1 }, { cx: 2, cy: 1 },
+      { cx: 0, cy: 2 }, { cx: 1, cy: 2 }, { cx: 2, cy: 2 },
+    ]);
+    expect(M.casesDeZone({ cx: 2, cy: 2 }, 3, { colonnes: 3, lignes: 4 })).toHaveLength(12);
+    expect(M.casesDeZone({ cx: 2, cy: 2 }, 1, { colonnes: 20, lignes: 20 })).toEqual([{ cx: 2, cy: 2 }]);
+  });
+
+  it('4a : les auras du bestiaire : les zones « libres », Attrait de Celle-qu’on-suit et Lenteur de La Lente', () => {
+    const auras = BESTIAIRE.flatMap((m) => M.capacitesDuMonstre(m).capacites.filter((c) => c.aura).map((c) => `${m.id}|${c.nom}`));
+    expect(auras).toEqual(['demon_celle_qu_on_suit|Attrait', 'demon_la_lente|Lenteur']);
+  });
+
+  it('4a : une aura ne prend ni action ni limite, et se joue même s’il ne peut pas agir', async () => {
+    const lenteur = M.capacitesDuMonstre(modele('demon_la_lente')).capacites.find((c) => c.aura)!;
+    const l = monstre('L', { tourActions: 6, principale: true, secondaire: true, etats: [{ id: 'etourdi', rounds: 1, cumul: 1, charges: null, des: null, source: null }] as never });
+    const b = monstre('b');
+    enBase(l);
+    enBase(b);
+    const t = await AM.jouerCapaciteMonstre('c1', combat, l, lenteur, [b.id], { combattants: [l, b], fiches: new Map(), carte: null }, suite([1, 20]));
+    expect(appels.find((a) => a.chemin === `${C}/m-r1-L`)!.donnees).toEqual({ usages: {} });
+    expect(appels.find((a) => a.chemin === `${C}/m-r1-b`)!.donnees).toMatchObject({ etats: [expect.objectContaining({ id: 'ralenti' })] });
+    expect(t).toMatch(/^Lenteur sur b : /);
+    // Une capacité ordinaire, elle, attend qu'il puisse agir.
+    const autre = { ...lenteur, aura: false };
+    await expect(AM.jouerCapaciteMonstre('c1', combat, l, autre, [b.id], { combattants: [l, b], fiches: new Map(), carte: null })).rejects.toThrow('ne peut que se déplacer');
   });
 });

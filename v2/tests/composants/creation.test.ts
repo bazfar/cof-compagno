@@ -191,6 +191,15 @@ describe('assistant de création : classes de la refonte (L4.11b, 10a)', () => {
     expect('capacites' in fiche).toBe(false);
   });
 
+  it('L6.7a (12b) : la branche v1 est retirée : pas d’étape Magie ; sans classe, l’étape Voies le dit et porte sa pastille', async () => {
+    render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
+    const etapes = within(screen.getByRole('navigation', { name: 'Étapes' })).getAllByRole('button');
+    expect(etapes.map((b) => b.textContent!.replace('•', '').trim())).toEqual(['Identité', 'Caractéristiques', 'Voies', 'PV et dons', 'Récapitulatif']);
+    expect(within(etapes[2]!).queryByLabelText('à compléter')).toBeTruthy();
+    await etape('Voies');
+    expect(screen.getByText('Choisis d\'abord une classe.')).toBeTruthy();
+  });
+
   it('un geste refusé par la refonte s’affiche ; retirer un rang le rend', async () => {
     render(AssistantCreation, { props: { surCree: () => {}, surAnnuler: () => {} } });
     await remplirGuerrierRefonte();
