@@ -203,7 +203,7 @@ describe('CapacitesMj : les capacités (2a, 3a, 10a)', () => {
       expect.objectContaining({ id: 'm-r1-a' }),
       expect.objectContaining({ nom: 'Souffle', prend: 'secondaire', portee: 4 }),
       ['pj-p1'],
-      { combattants: expect.any(Array), fiches: expect.any(Map), carte: null },
+      { combattants: expect.any(Array), fiches: expect.any(Map), carte: null, demon: null },
     );
     expect(await screen.findByRole('status')).toHaveProperty('textContent', 'Souffle sur Kargash : rien');
     expect((g.getByLabelText('Kargash') as HTMLInputElement).checked).toBe(false);
@@ -285,7 +285,7 @@ describe('le panneau du MJ : les attaques du monstre (6b)', () => {
     await fireEvent.click(suivant);
     await waitFor(() => expect(attaques.attaqueDeMonstre).toHaveBeenCalledTimes(2));
     expect(attaques.attaqueDeMonstre.mock.calls[1]![4]).toMatchObject({ id: 'pj-p1' });
-    expect(attaques.attaqueDeMonstre.mock.calls[1]!.slice(6)).toEqual([expect.any(Function), false, true]);
+    expect(attaques.attaqueDeMonstre.mock.calls[1]!.slice(6)).toEqual([expect.any(Function), false, true, null]);
     await waitFor(() => expect(screen.queryByRole('button', { name: /jet suivant/ })).toBeNull());
     expect((screen.getByRole('button', { name: 'Double frappe +4 · 1d6' }) as HTMLButtonElement).disabled).toBe(false);
   });

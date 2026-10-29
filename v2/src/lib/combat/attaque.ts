@@ -146,11 +146,13 @@ export interface AttaqueMonstre {
   effet?: EffetAttaqueMonstre | null;
   /** L6.6a (6b) : le texte du bestiaire, pour le MJ quand l'effet n'est pas traduit ; absent : aucun. */
   texte?: string | null;
+  /** L6.6b (4a) : la Morsure d'ancrage : les PP drainés à la touche ; absent : aucun. */
+  drainPP?: number;
 }
 
 /** Les attaques d'un monstre ; une attaque dont l'arme manque à la liste est laissée de côté (pas devinée). */
 export function attaquesDuMonstre(
-  attaques: readonly { nom: string; armeId: string; bonusAttaque: number; bonusDegats?: number; etatSurTouche?: { id: string; duree: number; formuleDot?: string }; effetSpecial?: string | null }[],
+  attaques: readonly { nom: string; armeId: string; bonusAttaque: number; bonusDegats?: number; etatSurTouche?: { id: string; duree: number; formuleDot?: string }; effetSpecial?: string | null; drainPP?: number | undefined }[],
   armes: ReadonlyMap<string, Pick<ArmeMonstre, 'degats' | 'portee' | 'typedegats' | 'critMin'>>,
   /** L6.6a (6b) : le monstre du bestiaire, dont l'attaque a peut-être un effet traduit. */
   monstre: string | null = null,
@@ -170,6 +172,7 @@ export function attaquesDuMonstre(
         etatSurTouche: a.etatSurTouche ?? null,
         ...(effet ? { effet } : {}),
         ...(a.effetSpecial ? { texte: a.effetSpecial } : {}),
+        ...(a.drainPP ? { drainPP: a.drainPP } : {}),
       },
     ];
   });

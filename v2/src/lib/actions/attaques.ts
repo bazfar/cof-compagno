@@ -27,6 +27,7 @@ import { champsJauges, gainParDegatsSubis, gainParTouche, gainParVingtNaturel, p
 import type { AttaqueSpeciale } from '../combat/speciales';
 import { absorber, apresAttaque, bonusDes, bonusFixe, consommerBonus, poserBonus, texteBonus } from '../combat/bonus';
 import { avecUsage, limiteDeLAttaque, refusDeLimite } from '../combat/monstres';
+import { avecFaim, bonusBerserk, drainer, faimDe, faimNourrie, soigne, soinDuDemon, touchesBerserk, USAGE_BERSERK, type TraitsDemon } from '../combat/demons';
 import { cibleDe } from '../combat/sorts';
 import { reactionDisponible, USAGE_REACTION } from '../combat/reactions';
 import { appliquerAffaibli } from '../effets/resolution';
@@ -423,6 +424,8 @@ export async function attaqueDeMonstre(
   reaction = false,
   /** L6.6a (6b) : le jet suivant d'une attaque à plusieurs jets : ni action ni usage de plus. */
   jetSuivant = false,
+  /** L6.6b : ce que le bestiaire dit du démon (faim, berserk, Puits, Vol de sève) ; null : un monstre ordinaire. */
+  demon: TraitsDemon | null = null,
 ): Promise<{ issue: IssueAttaque; net: number | null; pv: number; etat: string | null; repousse: number }> {
   if (monstre.genre !== 'monstre') throw new RefusCombat('Seul un monstre attaque depuis ce panneau.');
   if (cible.genre !== 'pj' || cible.perso !== fiche.id) throw new RefusCombat('On attaque un PJ du combat.');
@@ -452,12 +455,20 @@ export async function attaqueDeMonstre(
   // L6.5b (8a) : le bonus d'une réaction « contre cette attaque » tombe avec elle.
   const bonusMonstre = apresAttaque(monstre.bonus, 'attaquant');
   const bonusCible = apresAttaque(cible.bonus, 'cible');
-  const majMonstre = { ...prise, ...(memes(j.etatsAttaquant, monstre.etats) ? {} : { etats: j.etatsAttaquant }), ...(bonusMonstre.length !== monstre.bonus.length ? { bonus: bonusMonstre } : {}) };
+  const majMonstre: Record<string, unknown> = { ...prise, ...(memes(j.etatsAttaquant, monstre.etats) ? {} : { etats: j.etatsAttaquant }), ...(bonusMonstre.length !== monstre.bonus.length ? { bonus: bonusMonstre } : {}) };
+  // L6.6b (6a) : raté, le berserk lui coûte son bonus en PV et retombe à 0.
+  const usagesMonstre = (prise.usages as Record<string, number> | undefined) ?? monstre.usages;
+  const coutBerserk = !issue.touche && demon ? bonusBerserk(monstre, demon) : 0;
+  if (coutBerserk) {
+    const reste = Math.max(0, (monstre.pv ?? 0) - coutBerserk);
+    const { [USAGE_BERSERK]: _b, ...sans } = usagesMonstre;
+    Object.assign(majMonstre, { pv: reste, aTerre: reste <= 0, usages: sans });
+  }
   // Le jet suivant (6b) ne prend rien : sans changement, pas d'écriture.
   const lot = writeBatch(db);
   if (Object.keys(majMonstre).length) lot.update(refCombattant(idCombat, monstre.id), majMonstre);
   await lot.commit();
-  const t = j.leurre ? `${etatDuCatalogue(j.leurre)?.nom ?? j.leurre} : l’attaque rate d’office.` : texteAttaque(issue, 'CA');
+  const t = `${j.leurre ? `${etatDuCatalogue(j.leurre)?.nom ?? j.leurre} : l’attaque rate d’office.` : texteAttaque(issue, 'CA')}${coutBerserk ? ` ; berserk : ${monstre.nom} perd ${coutBerserk} PV` : ''}`;
   await noterJet(`${reaction ? 'Opportunité : ' : ''}${a.nom} sur ${fiche.nom}`, formuleTest(issue.bonus), { des: j.leurre ? [] : (issue.des ?? [issue.de]), faces: 20, bonus: issue.bonus, total: issue.total }, monstre.nom, t);
   const bonusTombe = bonusCible.length !== cible.bonus.length ? { bonus: bonusCible } : {};
   if (!issue.touche) {
@@ -465,7 +476,7 @@ export async function attaqueDeMonstre(
     if (Object.keys(maj).length) await updateDoc(refCombattant(idCombat, cible.id), maj);
     return { issue, net: null, pv: vue.pv.actuel, etat: null, repousse: 0 };
   }
-  const plus = modificateur(monstre.etats, ['degats']) + bonusFixe(monstre.bonus, ['degats']);
+  const plus = modificateur(monstre.etats, ['degats']) + bonusFixe(monstre.bonus, ['degats']) + (demon ? bonusBerserk(monstre, demon) : 0);
   const formule = `${formuleDegats(a.formule, issue.critique)}${bonusDes(monstre.bonus, ['degats']).map((x) => `+${x}`).join('')}${plus ? (plus > 0 ? `+${plus}` : plus) : ''}`;
   const jet = lancerDegats(formule, alea);
   if (!jet) throw new RefusCombat(`Formule de dégâts illisible : « ${formule} ».`);
@@ -473,7 +484,9 @@ export async function attaqueDeMonstre(
   const faible = affaibli(monstre.etats);
   const net = faible ? appliquerAffaibli(brut.net, faible.pourcent, faible.minimum) : brut.net;
   const absorbe = absorber(cible.pvTemp, net);
-  const pv = Math.max(0, vue.pv.actuel - absorbe.reste);
+  // L6.6b (4a) : la Morsure d'ancrage draine les PP qu'il y a ; le reste, en PV.
+  const drain = a.drainPP ? drainer(a.drainPP, vue.pp?.actuel ?? null) : null;
+  const pv = Math.max(0, vue.pv.actuel - absorbe.reste - (drain?.pv ?? 0));
   if (net > 0) etatsCible = rompre(etatsCible, 'degatsSubis');
   if (etat && !etatsCible.some((e) => e.id === etat)) etatsCible = poserEtat(etatsCible, etat, a.etatSurTouche!.duree, monstre.nom, { des: a.etatSurTouche!.formuleDot ?? null });
   // L6.6a (6b) : l'effet traduit, après la sauvegarde de la cible s'il en a une ; ce qui reste va au MJ.
@@ -503,15 +516,31 @@ export async function attaqueDeMonstre(
       if (repousse) effets.push(`repoussé de ${repousse} case${repousse > 1 ? 's' : ''}`);
     }
   }
+  if (drain) effets.push(`drain : ${[drain.pp ? `${drain.pp} PP` : '', drain.pv ? `${drain.pv} PV` : ''].filter(Boolean).join(', ')}`);
+  // L6.6b (1a, 6a, 7a) : le démon touche : sa faim, son berserk, son Puits et son Vol de sève.
+  const majDemon: Record<string, unknown> = {};
+  if (demon) {
+    let u: Record<string, number> = usagesMonstre;
+    const faim = faimNourrie(demon, { ppDraines: drain?.pp ?? 0, degatsInfliges: net });
+    if (faim) u = avecFaim(u, faim);
+    if (demon.berserk) u = { ...u, [USAGE_BERSERK]: Math.min(999, touchesBerserk(monstre) + 1) };
+    if (u !== usagesMonstre) majDemon.usages = u;
+    const pvDemon = soigne(monstre, soinDuDemon(demon, drain?.pp ?? 0, net));
+    if (pvDemon !== monstre.pv) majDemon.pv = pvDemon;
+    if (faim && demon.faim) effets.push(`faim ${faimDe({ usages: u })}/${demon.faim.seuil}`);
+    if (demon.berserk) effets.push(`berserk +${bonusBerserk({ usages: u }, demon)}`);
+    if (pvDemon !== monstre.pv) effets.push(`${monstre.nom} regagne ${pvDemon - (monstre.pv ?? 0)} PV`);
+  }
   const auMj = effet ? effet.auMj : (a.texte ?? null);
   if (auMj) effets.push(`MJ : ${auMj}`);
   const lot2 = writeBatch(db);
-  lot2.update(refPerso(fiche.id), { pvActuel: pv, ...champsJauges(gainParDegatsSubis(fiche, net)) });
+  lot2.update(refPerso(fiche.id), { pvActuel: pv, ...(drain?.pp ? { ppActuel: (vue.pp?.actuel ?? 0) - drain.pp } : {}), ...champsJauges(gainParDegatsSubis(fiche, net)) });
   const majCible: Record<string, unknown> = { ...(memes(etatsCible, cible.etats) ? {} : { etats: etatsCible }), ...(JSON.stringify(bonusFinal) === JSON.stringify(cible.bonus) ? {} : { bonus: bonusFinal }) };
   if (absorbe.pvTemp !== cible.pvTemp) majCible.pvTemp = absorbe.pvTemp;
   if (Object.keys(majCible).length) lot2.update(refCombattant(idCombat, cible.id), majCible);
   const restants = consommerBonus(bonusMonstre, ['degats']);
-  if (restants.length !== bonusMonstre.length) lot2.update(refCombattant(idCombat, monstre.id), { bonus: restants });
+  if (restants.length !== bonusMonstre.length) majDemon.bonus = restants;
+  if (Object.keys(majDemon).length) lot2.update(refCombattant(idCombat, monstre.id), majDemon);
   await lot2.commit();
   const suite = [etat ? `${etatDuCatalogue(etat)!.nom} ${a.etatSurTouche!.duree} round${a.etatSurTouche!.duree > 1 ? 's' : ''}` : '', etatInconnu ? `état « ${etatInconnu} » inconnu de la refonte, au MJ` : '', ...effets]
     .filter(Boolean)

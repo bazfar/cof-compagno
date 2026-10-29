@@ -3,7 +3,8 @@ import { db } from '../firebase/client';
 import { distanceCases } from '../battlemap/geometrie';
 import type { CarteDuCombat } from '../combat/attaque';
 import { appliquerChangements, texteJet, type Lu } from '../combat/changements';
-import { peutAgir } from '../combat/etats';
+import { immunise, peutAgir } from '../combat/etats';
+import { avecFaim, ETATS_CONTROLE, faimDe, faimNourrie, soigne, type TraitsDemon } from '../combat/demons';
 import { avecUsage, jouerCapacite, legendairesRestantes, refusDeLimite, USAGE_LEGENDAIRE, type CapaciteMonstre } from '../combat/monstres';
 import { actionsDuTour } from '../combat/ordre';
 import { reactionDisponible, USAGE_REACTION } from '../combat/reactions';
@@ -75,7 +76,7 @@ export async function jouerCapaciteMonstre(
   monstre: AvecId<Combattant>,
   cap: CapaciteMonstre,
   cibles: readonly string[],
-  ctx: { combattants: readonly AvecId<Combattant>[]; fiches: ReadonlyMap<string, AvecId<Fiche>>; carte: CarteDuCombat | null },
+  ctx: { combattants: readonly AvecId<Combattant>[]; fiches: ReadonlyMap<string, AvecId<Fiche>>; carte: CarteDuCombat | null; demon?: TraitsDemon | null },
   alea: () => number = Math.random,
 ): Promise<string> {
   if (monstre.genre !== 'monstre' || monstre.aTerre) throw new RefusCombat('Seul un monstre debout joue ses capacités.');
@@ -102,11 +103,33 @@ export async function jouerCapaciteMonstre(
   const p = prise(combat, monstre, cap.prend);
   const usages = avecUsage((p.usages as Record<string, number> | undefined) ?? monstre.usages, cleCapacite(cap.nom), cap.limite, combat.round);
   const r = jouerCapacite(cap, visees, alea);
-  const ecr = await ecrire(idCombat, monstre, r.changements, ctx.fiches, { ...p, usages });
+  // L6.6b (1a, 8a) : un démon : la faim de ses états de contrôle nouveaux ; Reflet, par sauvegarde ratée contre lui.
+  const moi: Record<string, unknown> = { ...p, usages };
+  const notes: string[] = [];
+  const demon = ctx.demon ?? null;
+  if (demon) {
+    const nouveaux = r.changements.filter((ch) => {
+      const c = ch.type === 'etat' && ETATS_CONTROLE.includes(ch.etat) ? visees.find((v) => v.c.id === ch.cible)?.c : undefined;
+      return !!c && ch.type === 'etat' && !immunise(c, ch.etat) && !c.etats.some((e) => e.id === ch.etat);
+    }).length;
+    const faim = faimNourrie(demon, { etatsControle: nouveaux });
+    if (faim && demon.faim) {
+      moi.usages = avecFaim(usages, faim);
+      notes.push(`faim ${faimDe({ usages: moi.usages as Record<string, number> })}/${demon.faim.seuil}`);
+    }
+    const rates = r.jets.filter((j) => j.cible && j.quoi.startsWith('sauvegarde') && j.reussi === false).length;
+    const pv = soigne(monstre, (demon.passifs.reflet ?? 0) * rates);
+    if (pv !== monstre.pv) {
+      moi.pv = pv;
+      notes.push(`Reflet : ${monstre.nom} regagne ${pv - (monstre.pv ?? 0)} PV`);
+    }
+  }
+  const ecr = await ecrire(idCombat, monstre, r.changements, ctx.fiches, moi);
   const nomDe = (id: string) => ctx.combattants.find((c) => c.id === id)?.nom ?? id;
   const lignes = [
     ...r.jets.filter((j) => !j.cible).map(texteJet),
     ...visees.map(({ c }) => `${c.nom} : ${[...r.jets.filter((j) => j.cible === c.id).map(texteJet), ...(ecr.lignes.get(c.id) ?? [])].join(', ') || 'rien'}`),
+    ...notes,
     ...[...r.auMj, ...ecr.auMj].map((x) => `MJ : ${x}`),
   ];
   const texte = lignes.join(' ; ') || 'rien';

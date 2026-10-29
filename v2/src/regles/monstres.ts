@@ -17,9 +17,13 @@ import type { EffetAttaqueMonstre } from '../lib/schemas/monstres';
  *    case), une limite d'usage, une recharge, un seuil de critique, des
  *    points de DEF ignorés, des jets séparés. Une condition (une charge,
  *    des dégâts ≥ 10, une cible du Chaos…) ne se vérifie pas : elle reste
- *    au MJ, comme tout ce qui n'est pas traduit (`auMj`). Les attaques des
- *    démons (drain, berserk) viennent avec L6.6b ; la Putréfaction est
- *    déjà jouée par `etatSurTouche` (L6.3).
+ *    au MJ, comme tout ce qui n'est pas traduit (`auMj`).
+ *
+ * 3. Les attaques des démons (lot L6.6b, 10a, décisions du 29/10/2026) : le
+ *    drain se lit dans `drainPP` de l'attaque, la Putréfaction dans son
+ *    `etatSurTouche` (Putréfié), le berserk et le Vol de sève sur le
+ *    démon (src/lib/combat/demons.ts). Ici : les deux touches (deux jets)
+ *    et le reste, déjà joué, que le texte renvoie aux capacités spéciales.
  */
 
 export const ETATS_BESTIAIRE: Readonly<Record<string, string>> = {
@@ -37,7 +41,8 @@ export const ETATS_BESTIAIRE: Readonly<Record<string, string>> = {
   immobilisee: 'immobilise',
   influencee: 'influence',
   marquee_pretre: 'marque',
-  maudite: 'maudit',
+  // L6.6b (9a) : la Putréfaction des démons, pas le Maudit de la refonte.
+  maudite: 'putrefie',
   ralentie: 'ralenti',
   renversee: 'renverse',
   silencieuse: 'silence',
@@ -183,6 +188,41 @@ export const EFFETS_ATTAQUES: Readonly<Record<string, EffetAttaqueMonstre>> = {
   'nuee_scarabees_forge|Grouillement': { auMj: 'Touche d’office toute créature qui finit son tour dans la case de la nuée, sans jet.' },
   'ver_de_roche_adulte|Morsure annelée': { auMj: 'S’il surgit du sol ce round : la cible perd sa réduction de dégâts pour cette attaque.' },
   'mere_de_roche|Broiement': { auMj: 'Cible grande ou moins : agrippée ; elle subit les dégâts du Broiement au début du tour suivant de la Mère, sauf si elle se libère (test FOR diff. 17).' },
+  // ---- Démons (lot L6.6b, 10a) : le drain, la Putréfaction, le Vol de sève et le berserk se jouent ailleurs ----
+  // « Morsure d'ancrage : draine aussi 2 PP à la cible touchée (2 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales. »
+  'demon_reliquat|Morsure d\'ancrage': { auMj: null },
+  // « Morsure d'ancrage : draine aussi 3 PP à la cible touchée (3 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales. »
+  'demon_affame|Morsure d\'ancrage': { auMj: null },
+  // « Morsure d'ancrage : draine aussi 4 PP à la cible touchée (4 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales. »
+  'demon_insatiable|Morsure d\'ancrage': { auMj: null },
+  // « Morsure d'ancrage : draine aussi 6 PP à la cible touchée (6 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales. »
+  'demon_gouffre|Morsure d\'ancrage': { auMj: null },
+  // « Morsure d'ancrage : draine aussi 6 PP à la cible touchée (6 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales. »
+  'demon_eblouissant|Morsure d\'ancrage': { auMj: null },
+  // « Morsure d'ancrage : draine aussi 12 PP à la cible touchée (12 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales. »
+  'demon_convive|Poigne du besoin': { auMj: null },
+  // « Morsure d'ancrage : draine aussi 8 PP à la cible touchée (8 dégâts de PV supplémentaires si elle n'a pas de PP). Cf. capacitesSpeciales. »
+  'demon_heure_figee|Morsure d\'ancrage': { auMj: null },
+  // « Deux touches (cf. arme) : chacune compte pour le berserk. »
+  'demon_ecorce_fendue|Frappe fendante': { jets: 2, auMj: null },
+  // « Vol de sève : il regagne la moitié des dégâts infligés. Cf. capacitesSpeciales. »
+  'demon_greffeur|Greffe': { auMj: null },
+  // « Deux touches (cf. arme) : chacune compte pour le berserk, à +2. »
+  'demon_seve_rouge|Rage de sève': { jets: 2, auMj: null },
+  // « Putréfaction : pose l'état Maudite (1d4 par tour, 3 tours, non cumulable, rafraîchi à chaque touche). Cf. capacitesSpeciales. »
+  'demon_pustule|Toucher putride': { auMj: null },
+  // « Putréfaction : pose l'état Maudite (1d6 par tour, 3 tours, non cumulable, rafraîchi à chaque touche). Cf. capacitesSpeciales. »
+  'demon_suintant|Toucher putride': { auMj: null },
+  // « Putréfaction : pose l'état Maudite (2d4 par tour, 3 tours, non cumulable, rafraîchi à chaque touche). Cf. capacitesSpeciales. »
+  'demon_pourrissant|Toucher putride': { auMj: null },
+  // « Putréfaction : pose l'état Maudite (2d6 par tour, 3 tours, non cumulable, rafraîchi à chaque touche). Cf. capacitesSpeciales. »
+  'demon_ventre_mort|Toucher putride': { auMj: null },
+  // « Putréfaction : pose l'état Maudite (2d6 par tour, 3 tours, non cumulable, rafraîchi à chaque touche). Cf. capacitesSpeciales. »
+  'demon_semeur_de_peste|Toucher putride': { auMj: null },
+  // « Putréfaction : pose l'état Maudite (3d6 par tour, 3 tours, non cumulable, rafraîchi à chaque touche). Cf. capacitesSpeciales. »
+  'demon_charnier_marchant|Toucher putride': { auMj: null },
+  // « Putréfaction : pose l'état Maudite (3d6 par tour, 5 tours, non cumulable, rafraîchi à chaque touche). Cf. capacitesSpeciales. »
+  'demon_la_lente|Toucher putride': { auMj: null },
 };
 
 /** L'effet traduit d'une attaque du bestiaire, ou null. */

@@ -107,7 +107,7 @@ describe('les données (6b, 8a)', () => {
   it('les effets des attaques sont lus ; leurs états sont au catalogue ; chaque clé est une attaque du bestiaire', () => {
     expect(R.etatsDuBestiaireInconnus()).toEqual([]);
     expect(R.etatsDuBestiaireInconnus({ a: 'pas_un_etat', b: 'effroi' }, [{ etats: [{ id: 'zz', rounds: 1 }, { id: 'effroi', rounds: 1 }], auMj: null }, { auMj: null }])).toEqual(['pas_un_etat', 'zz']);
-    expect(R.effetsAttaquesMonstres.size).toBe(93);
+    expect(R.effetsAttaquesMonstres.size).toBe(110);
     for (const cle of R.effetsAttaquesMonstres.keys()) {
       const [m, a] = cle.split('|') as [string, string];
       expect(modele(m)?.attaques.some((x) => x.nom === a), cle).toBe(true);

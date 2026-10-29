@@ -17,7 +17,8 @@
   import { actionsDuTour, ordreCombat } from '../lib/combat/ordre';
   import { vueFiche } from '../lib/fiche/vue-fiche';
   import type { CollectionSuivie, DocumentSuivi } from '../lib/firebase/suivre.svelte';
-  import { suivreArmesMonstres, suivreBestiaire } from '../lib/magasins/bestiaire.svelte';
+  import { suivreArmesMonstres, suivreArmuresMonstres, suivreBestiaire } from '../lib/magasins/bestiaire.svelte';
+  import { aDesTraits, traitsDemon } from '../lib/combat/demons';
   import { suivreTable } from '../lib/magasins/carte.svelte';
   import { suivreCombat, suivreCombattants } from '../lib/magasins/combat.svelte';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
@@ -78,11 +79,13 @@
   const persos = suivrePersos(session.table);
   const bestiaire = suivreBestiaire(session.table);
   const armes = suivreArmesMonstres(session.table);
+  const armures = suivreArmuresMonstres(session.table);
   onDestroy(() => {
     table.arreter();
     persos.arreter();
     bestiaire.arreter();
     armes.arreter();
+    armures.arreter();
   });
   const idCombat = $derived(table.etat.donnees?.combat ?? null);
   let suivi = $state<{ c: DocumentSuivi<Combat>; m: CollectionSuivie<Combattant>; z: CollectionSuivie<ZoneSol> } | null>(null);
@@ -105,6 +108,12 @@
   let choisi = $state('');
   const montre = $derived(combattants.find((c) => c.id === choisi) ?? combattants.find((c) => c.id === combat?.actif) ?? combattants[0] ?? null);
   const modele = $derived(montre?.monstre ? (bestiaire.etat.elements.find((m) => m.id === montre.monstre) ?? null) : null);
+  // L6.6b : un démon : ses traits (faim, berserk, Puits, Vol de sève, passifs) ; null : un monstre ordinaire.
+  const demon = $derived.by(() => {
+    const t = modele ? traitsDemon(modele) : null;
+    return t && aDesTraits(t) ? t : null;
+  });
+  const reductions = $derived(new Map((armures.etat.donnees?.liste ?? []).map((a) => [a.id, a.reduction])));
   const fiche = $derived(montre?.perso ? (persos.etat.elements.find((p) => p.id === montre.perso) ?? null) : null);
   const vue = $derived(fiche ? vueFiche(fiche) : null);
   const pjs = $derived(
@@ -189,7 +198,7 @@
     try {
       // L6.4b1 (11a) : la couverture du PJ contre une attaque à distance.
       const defEnPlus = a.portee.vue && carte?.zones ? couverture(carte.zones, carte.jetons, cible.c.id) : 0;
-      const r = suiteJet ? await attaqueDeMonstre(idCombat, combat, montre, { ...a, defEnPlus }, cible.c, f, Math.random, false, true) : await attaqueDeMonstre(idCombat, combat, montre, { ...a, defEnPlus }, cible.c, f);
+      const r = suiteJet || demon ? await attaqueDeMonstre(idCombat, combat, montre, { ...a, defEnPlus }, cible.c, f, Math.random, false, !!suiteJet, demon) : await attaqueDeMonstre(idCombat, combat, montre, { ...a, defEnPlus }, cible.c, f);
       // L6.6a (6b) : une attaque à plusieurs jets attend les suivants ; repoussé, son jeton recule.
       suiteJet = suiteJet ? (suiteJet.reste > 1 ? { ...suiteJet, reste: suiteJet.reste - 1 } : null) : a.effet?.jets ? { nom: a.nom, cible: cible.c.id, reste: a.effet.jets - 1 } : null;
       if (r.repousse && carte) await repousserDe(r.repousse, idCombat, combat, montre, cible.c, carte, combattants, fichesParPerso, montre.nom);
@@ -333,7 +342,7 @@
             </p>
           {/if}
           <label class="case"><input type="checkbox" bind:checked={outrePortee} /> Passer outre la portée</label>
-          <CapacitesMj idCombat={idCombat!} {combat} monstre={montre} {modele} {combattants} fiches={fichesParPerso} {carte} />
+          <CapacitesMj idCombat={idCombat!} {combat} monstre={montre} {modele} {combattants} fiches={fichesParPerso} {carte} {demon} modeles={bestiaire.etat.elements} {reductions} />
           {#if principalePrise}<p class="aide">Action principale prise ce tour.</p>{/if}
           {#if resultat}<p role="status">{resultat}</p>{/if}
         {:else}

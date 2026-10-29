@@ -150,6 +150,8 @@ export function appliquerChangements(
         const avant = s.pv;
         s.pv = ch.type === 'soin' ? Math.min(s.pvMax, s.pv + Math.max(0, ch.montant)) : s.pvMax;
         dire(ch.cible, `+${s.pv - avant} PV`);
+        // L6.6b (9a) : un soin de sort ou de capacité met fin à la Putréfaction.
+        s.etats = rompre(s.etats, 'soinMagique');
         break;
       }
       case 'pvTemp':

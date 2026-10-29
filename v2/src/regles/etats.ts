@@ -296,6 +296,15 @@ export const ETATS: EtatSaisi[] = [
     degatsParTour: { des: '1d4', typeDegats: 'feu' },
     rompuPar: ['actionMouvement'],
   },
+  // L6.6b (9a, décision de Thomas du 29/10/2026) : la Putréfaction des démons-peste (« Maudite » au bestiaire).
+  {
+    id: 'putrefie',
+    nom: 'Putréfié',
+    categorie: 'degats',
+    regle: 'Perd des PV au début de chaque tour (les dés du démon qui l’a touché). Une nouvelle touche le rafraîchit, sans cumul ; un soin magique y met fin.',
+    degatsParTour: { des: '1d4', typeDegats: 'physique' },
+    rompuPar: ['soinMagique'],
+  },
   {
     id: 'empoisonne',
     nom: 'Empoisonné',

@@ -4,6 +4,9 @@
   import { payerDebutDeTour, retirerInvocations } from '../lib/actions/invocations';
   import { remousDu } from '../lib/combat/invocations';
   import { jouerCurees } from '../lib/actions/monstres';
+  import { compterRoundsSurvecus, debutDeTourDemons, retourALaMer, sursaut } from '../lib/actions/demons';
+  import { envoyerButin } from '../lib/actions/rencontres';
+  import { airsVicies, estDemon, roundSurvecu, sursautPossible, traitsDemon, USAGE_SURSAUT } from '../lib/combat/demons';
   import { cureesApresChute } from '../lib/combat/monstres';
   import { zonesDuDebutDeTour } from '../lib/actions/zones';
   import { suivreZonesCombat } from '../lib/magasins/zones.svelte';
@@ -62,6 +65,12 @@
    *
    * Lot L6.6a (9a) : un monstre tombe : Curée, d'office, pour ceux de sa
    * famille qui l'ont.
+   *
+   * Lot L6.6b (décisions de Thomas du 29/10/2026) : les démons : au début
+   * d'un tour, la fin d'un Sursaut, la Repousse (5a), l'Air vicié (8a) ;
+   * Dernier souffle quand l'un tombe (8a) ; les rounds survécus (1a). À
+   * la clôture, le butin prévu de la rencontre part au vote, sauf si le
+   * MJ décoche (12a).
    */
 
   const table = suivreTable(session.table);
@@ -177,12 +186,19 @@
       defArrivant = null;
     }
   }
+  // L6.6b (12a) : le butin prévu de la rencontre, pas encore parti : il part au vote à la clôture, sauf si le MJ décoche.
+  const butinEnAttente = $derived(rencontreDuCombat && rencontreDuCombat.butin.length && rencontreDuCombat.butinEnvoyeLe === null ? rencontreDuCombat : null);
+  let envoyerLeButin = $state(true);
   async function clore() {
-    if (!idCombat || !confirm('Clore le combat ? L’ordre d’initiative sera effacé.')) return;
+    const butin = butinEnAttente && envoyerLeButin ? butinEnAttente : null;
+    if (!idCombat || !confirm(`Clore le combat ? L’ordre d’initiative sera effacé.${butin ? ' Le butin part au vote.' : ''}`)) return;
     const id = idCombat;
     const remises = persos.etat.elements.filter((p) => combattants.some((c) => c.perso === p.id)).map((p) => ({ perso: p.id, jauges: jaugesALaFinDuCombat(p) }));
     const invocations = combat ? { scene: combat.scene, ids: combattants.filter((c) => c.genre === 'invocation').map((c) => c.id) } : null;
-    await agir(() => cloreCombat(id, remises, invocations));
+    await agir(async () => {
+      await cloreCombat(id, remises, invocations);
+      if (butin) await envoyerButin(butin.id, butin);
+    });
   }
 
   // Personne n'a la main : dès qu'un combattant a une initiative, le client du MJ la lui donne.
@@ -220,9 +236,60 @@
     const id = idCombat;
     const parId = new Map(bestiaire.etat.elements.map((m) => [m.id, m]));
     const tous = combattants;
+    // L6.6b (11a) : un démon tombé retourne à la Mer, sauf s'il se relève pour son Dernier souffle.
+    const alaMer = tombes.filter((t) => estDemon(t.monstre ? parId.get(t.monstre) : undefined) && !sursautPossible(t, traitsDe(t)!));
     agir(async () => {
+      await retourALaMer(alaMer);
       for (const t of tombes) await jouerCurees(id, t, cureesApresChute(t, tous, parId));
     });
+  });
+  // ---- L6.6b : les démons ----
+  const traitsParModele = $derived(new Map(bestiaire.etat.elements.map((m) => [m.id, traitsDemon(m)])));
+  // Un monstre ordinaire a des traits vides : rien ne s'y joue.
+  const traitsDe = (c: { monstre: string | null; genre: string }) => (c.genre === 'monstre' && c.monstre ? (traitsParModele.get(c.monstre) ?? null) : null);
+  // 5a, 8a : la main arrive à un combattant : la fin d'un Sursaut, la Repousse, l'Air vicié ; une fois par tour.
+  const debutsDemons = new Set<string>();
+  $effect(() => {
+    if (!combat || !idCombat || combat.statut !== 'encours' || !combat.actif || !jetonsSuivis) return;
+    const c = combattants.find((x) => x.id === combat.actif);
+    const cle = `${combat.tour}:${combat.actif}`;
+    if (!c || debutsDemons.has(cle)) return;
+    const t = traitsDe(c);
+    const jetons = jetonsSuivis.etat.elements;
+    const aFaire = (c.genre === 'monstre' && c.usages[USAGE_SURSAUT] !== undefined && !c.aTerre) || (!!t?.repousse && !c.aTerre) || airsVicies(c, combattants, traitsDe, jetons).length > 0;
+    if (!aFaire) return;
+    debutsDemons.add(cle);
+    const id = idCombat;
+    const tous = combattants;
+    const fichesPj = new Map(persos.etat.elements.map((p) => [p.id, p]));
+    agir(() => debutDeTourDemons(id, c, tous, traitsDe, fichesPj, jetons));
+  });
+  // 8a : Dernier souffle : un démon tombe, son berserk au seuil : il se relève pour un dernier tour.
+  const sursauts = new Set<string>();
+  $effect(() => {
+    if (!combat || !idCombat || combat.statut !== 'encours') return;
+    const prets = combattants.filter((c) => !sursauts.has(c.id) && c.genre === 'monstre' && traitsDe(c) && sursautPossible(c, traitsDe(c)!));
+    if (!prets.length) return;
+    for (const c of prets) sursauts.add(c.id);
+    const id = idCombat;
+    const k = combat;
+    agir(async () => {
+      for (const c of prets) await sursaut(id, k, c);
+    });
+  });
+  // 1a : un round commence : les démons debout qui se nourrissent de rounds survécus en comptent un, une fois.
+  const roundsComptes = new Set<number>();
+  $effect(() => {
+    if (!combat || !idCombat || combat.statut !== 'encours' || roundsComptes.has(combat.round)) return;
+    const maj = combattants.flatMap((c) => {
+      const t = traitsDe(c);
+      const usages = t ? roundSurvecu(c, t, combat.round) : null;
+      return usages ? [{ c, usages }] : [];
+    });
+    if (!maj.length) return;
+    roundsComptes.add(combat.round);
+    const id = idCombat;
+    agir(() => compterRoundsSurvecus(id, maj));
   });
   /*
    * L6.3 (6a) : la main arrive à un combattant : ses dégâts par tour, une
@@ -335,6 +402,9 @@
         ><input type="checkbox" checked={combat.porteesLibres} disabled={occupe} onchange={(e) => agir(() => basculerPortees(idCombat, e.currentTarget.checked))} /> Portées libres : les joueurs
         attaquent hors de portée</label
       >
+      {#if butinEnAttente}
+        <label class="case"><input type="checkbox" bind:checked={envoyerLeButin} /> Envoyer le butin au vote à la clôture ({butinEnAttente.butin.length} objet{butinEnAttente.butin.length > 1 ? 's' : ''})</label>
+      {/if}
       <button class="discret" disabled={occupe} onclick={clore}>Clore le combat</button>
     </section>
     <OrdreCombat role="mj" {idCombat} {combat} {combattants} {aTerre} {pvPj} />

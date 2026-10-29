@@ -49,7 +49,8 @@ export const schemaEtatRefonte = z
     contactSeulement: z.boolean().default(false),
     desavantage: z.array(schemaJetsAffectes).default([]),
     avantage: z.array(schemaJetsAffectes).default([]),
-    rompuPar: z.array(z.enum(['degatsSubis', 'sesAttaques', 'estAttaque', 'actionMouvement'])).default([]),
+    /** `soinMagique` : un soin de sort ou de capacité y met fin (Putréfié, lot L6.6b). */
+    rompuPar: z.array(z.enum(['degatsSubis', 'sesAttaques', 'estAttaque', 'actionMouvement', 'soinMagique'])).default([]),
     parSource: z.boolean().default(false),
     /** Chaque charge fait rater une attaque contre le porteur (Double, lot L4.5). */
     annuleAttaquesContre: z.boolean().default(false),

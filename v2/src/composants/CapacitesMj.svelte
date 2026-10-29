@@ -2,6 +2,8 @@
   import { RefusCombat } from '../lib/actions/combat';
   import { messageErreurJournal } from '../lib/actions/journal';
   import { cleCapacite, corrigerLegendaire, jouerCapaciteMonstre } from '../lib/actions/monstres';
+  import { corrigerFaim, monterDemon } from '../lib/actions/demons';
+  import { aDesTraits, bonusBerserk, faimDe, peutMonter, rappelsDemon, touchesBerserk, type TraitsDemon } from '../lib/combat/demons';
   import type { CarteDuCombat } from '../lib/combat/attaque';
   import { etatDuCatalogue } from '../lib/combat/etats';
   import { capacitesDuMonstre, immunitesAuMj, legendairesRestantes, refusDeLimite, type CapaciteMonstre } from '../lib/combat/monstres';
@@ -18,6 +20,11 @@
    *   - ses capacités actives (2a, 3a, 10a) : leur limite, leurs cibles à
    *     cocher, « Jouer » ; celles que l'app ne lit pas, en texte ;
    *   - ses capacités spéciales, en texte.
+   *
+   * Lot L6.6b (décisions de Thomas du 29/10/2026) : un démon : sa faim
+   * (1a), corrigée au −/+ ; au seuil, « Monter » vers son palier suivant
+   * (2a) ; son berserk (6a) ; ce qui se joue d'office (5a, 7a, 8a) et les
+   * passifs que le MJ applique lui-même.
    */
 
   let {
@@ -28,6 +35,9 @@
     combattants,
     fiches,
     carte,
+    demon = null,
+    modeles = [],
+    reductions = new Map(),
   }: {
     idCombat: string;
     combat: Combat;
@@ -37,6 +47,12 @@
     /** Par personnage. */
     fiches: ReadonlyMap<string, AvecId<Fiche>>;
     carte: CarteDuCombat | null;
+    /** L6.6b : ce que le bestiaire dit du démon ; null : un monstre ordinaire. */
+    demon?: TraitsDemon | null;
+    /** L6.6b (2a) : le bestiaire, pour ses paliers suivants. */
+    modeles?: readonly AvecId<MonstreEnBase>[];
+    /** L6.6b (2a) : la réduction des armures, par identifiant. */
+    reductions?: ReadonlyMap<string, number>;
   } = $props();
 
   const lues = $derived(capacitesDuMonstre(modele));
@@ -65,9 +81,25 @@
       occupe = false;
     }
   }
+  const LIBELLE_FAIM = { pp_draines: 'PP drainés', degats_infliges: 'PV infligés', etats_controle: 'états de contrôle', rounds_survecus: 'rounds survécus' } as const;
+  const estDemon = $derived(!!demon && aDesTraits(demon));
+  const paliers = $derived(demon && peutMonter(monstre, demon) ? demon.paliersSuivants.map((id) => ({ id, m: modeles.find((x) => x.id === id) ?? null })) : []);
+  const passifsJoues = $derived(
+    demon
+      ? [
+          ...(demon.repousse ? [`Repousse : +${demon.repousse} PV au début de son tour.`] : []),
+          ...(demon.soinParPPDraine ? [`Puits : +${demon.soinParPPDraine} PV par PP drainé.`] : []),
+          ...(demon.soinSurDegats ? [`Vol de sève : il regagne ${demon.soinSurDegats * 100} % des dégâts qu’il inflige.`] : []),
+          ...(demon.passifs.airVicie ? [`Air vicié : ${demon.passifs.airVicie.formule} à qui commence son tour à ${demon.passifs.airVicie.rayon} m.`] : []),
+          ...(demon.passifs.reflet ? [`Reflet : +${demon.passifs.reflet} PV par sauvegarde ratée contre lui.`] : []),
+          ...(demon.passifs.dernierSouffle ? [`Dernier souffle : à 0 PV avec ${demon.passifs.dernierSouffle} touches de berserk, un dernier tour.`] : []),
+        ]
+      : [],
+  );
+  const monter = (m: AvecId<MonstreEnBase>) => agir(() => monterDemon(idCombat, combat.scene, monstre, demon!, m, reductions));
   const jouer = (cap: CapaciteMonstre) =>
     agir(async () => {
-      const t = await jouerCapaciteMonstre(idCombat, combat, monstre, cap, cochees[cap.nom] ?? [], { combattants, fiches, carte });
+      const t = await jouerCapaciteMonstre(idCombat, combat, monstre, cap, cochees[cap.nom] ?? [], { combattants, fiches, carte, demon });
       cochees = { ...cochees, [cap.nom]: [] };
       return t;
     });
@@ -84,6 +116,23 @@
     <span data-testid="legendaire">Résistance légendaire : {restantes}/{monstre.legendaire}</span>
     <button class="petit discret" aria-label="Une résistance légendaire de moins" disabled={occupe || restantes === 0} onclick={() => agir(() => corrigerLegendaire(idCombat, monstre, 1))}>−</button>
     <button class="petit discret" aria-label="Une résistance légendaire de plus" disabled={occupe || restantes === monstre.legendaire} onclick={() => agir(() => corrigerLegendaire(idCombat, monstre, -1))}>+</button>
+  </div>
+{/if}
+{#if demon && estDemon}
+  <div class="demon" role="group" aria-label="Démon">
+    {#if demon.faim}
+      <div class="ligne">
+        <span data-testid="faim">Faim : {faimDe(monstre)}/{demon.faim.seuil} ({LIBELLE_FAIM[demon.faim.type]})</span>
+        <button class="petit discret" aria-label="Une faim de moins" disabled={occupe || faimDe(monstre) === 0} onclick={() => agir(() => corrigerFaim(idCombat, monstre, -1))}>−</button>
+        <button class="petit discret" aria-label="Une faim de plus" disabled={occupe} onclick={() => agir(() => corrigerFaim(idCombat, monstre, 1))}>+</button>
+      </div>
+    {/if}
+    {#each paliers as p (p.id)}
+      <button class="petit" disabled={occupe || !p.m} onclick={() => p.m && monter(p.m)}>Monter : {p.m?.nom ?? p.id}</button>
+    {/each}
+    {#if demon.berserk}<span data-testid="berserk">Berserk : {touchesBerserk(monstre)} touche{touchesBerserk(monstre) > 1 ? 's' : ''}, +{bonusBerserk(monstre, demon)} aux dégâts</span>{/if}
+    {#each passifsJoues as x (x)}<span class="aide">{x}</span>{/each}
+    {#each rappelsDemon(demon) as x (x)}<span class="aide">Au MJ : {x}</span>{/each}
   </div>
 {/if}
 {#if lues.capacites.length || lues.illisibles.length}
@@ -136,6 +185,18 @@
   }
   .aumj {
     display: block;
+  }
+  .demon {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+  }
+  .demon .ligne {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
   }
   .legendaire {
     display: flex;

@@ -63,7 +63,7 @@ export function finDeTour(etats: readonly EtatCombat[]): EtatCombat[] {
   return etats.flatMap((e) => (e.rounds === null ? [e] : e.rounds > 1 ? [{ ...e, rounds: e.rounds - 1 }] : []));
 }
 
-export type Rupture = 'degatsSubis' | 'sesAttaques' | 'estAttaque' | 'actionMouvement';
+export type Rupture = 'degatsSubis' | 'sesAttaques' | 'estAttaque' | 'actionMouvement' | 'soinMagique';
 
 /** Les états que cet événement rompt tombent (Endormi réveillé par les dégâts, Dissimulé par ses attaques…). */
 export function rompre(etats: readonly EtatCombat[], cause: Rupture): EtatCombat[] {

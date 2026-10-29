@@ -185,12 +185,12 @@ describe('les états (1a, 4b, 5a)', () => {
     ]);
   });
 
-  it('le texte d’un état ; le bestiaire v1 traduit (maudite → maudit)', () => {
+  it('le texte d’un état ; le bestiaire v1 traduit (L6.6b, 9a : maudite → putrefie)', () => {
     expect(E.texteEtat(etat('etourdi'))).toBe('Étourdi (1)');
     expect(E.texteEtat(etat('ivresse', { cumul: 2, rounds: null }))).toBe('Ivresse ×2');
     expect(E.texteEtat(etat('double', { charges: 2, rounds: 3 }))).toBe('Doublé [2] (3)');
-    expect(E.ETATS_V1_VERS_REFONTE.maudite).toBe('maudit');
-    expect(E.etatDuCatalogue('maudit')?.nom).toBe('Maudit');
+    expect(E.ETATS_V1_VERS_REFONTE.maudite).toBe('putrefie');
+    expect(E.etatDuCatalogue('putrefie')?.nom).toBe('Putréfié');
     expect(E.etatsPosables().length).toBeGreaterThan(50);
     expect(E.regleEtat('etourdi')).toMatch(/./);
   });
@@ -437,17 +437,17 @@ describe('écritures (L6.3)', () => {
     expect(journal.noterJet.mock.calls.map((c) => c[0])).toEqual(['Décharge sur A']);
   });
 
-  it('8 : l’attaque d’un monstre pose son état à la touche (maudite → maudit), sans sauvegarde ; le gain par dégâts subis ; les états de part et d’autre', async () => {
+  it('8 : l’attaque d’un monstre pose son état à la touche (maudite → putrefie, L6.6b), sans sauvegarde ; le gain par dégâts subis ; les états de part et d’autre', async () => {
     session.etape = 'mj';
     const g = v2('Karlach', 'guerrier');
     const basse = { ...g, refonte: { ...g.refonte, jauges: { ...g.refonte.jauges, endurance: 0 } } };
     const att = { nom: 'Morsure', bonus: 4, formule: '1d6', typeDegats: 'physique' as const, portee: { min: 0, max: 1, vue: false }, seuilCritique: 20, etatSurTouche: { id: 'maudite', duree: 2 } };
     const r = await X.attaqueDeMonstre('c1', combat, monstre('A', { etats: [etat('expose')] }), att, pj('p1', { perso: 'p1', etats: [etat('endormi')] }), basse, suite([20, 20], [3, 6], [3, 6]));
-    expect(r).toMatchObject({ etat: 'maudit', issue: { critique: true } });
+    expect(r).toMatchObject({ etat: 'putrefie', issue: { critique: true } });
     const ecr = appels.filter((x) => x.fn === 'lot.update');
     expect(ecr.find((x) => x.chemin === 'tables/t1/persos/p1')!.donnees).toEqual({ pvActuel: expect.any(Number), 'refonte.jauges.endurance': 1 });
-    expect(ecr.find((x) => x.chemin === `${C}/pj-p1`)!.donnees).toEqual({ etats: [etat('maudit', { rounds: 2, source: 'A' })] });
-    expect(journal.noterJet.mock.calls.at(-1)![4]).toMatch(/ ; Maudit 2 rounds$/);
+    expect(ecr.find((x) => x.chemin === `${C}/pj-p1`)!.donnees).toEqual({ etats: [etat('putrefie', { rounds: 2, source: 'A' })] });
+    expect(journal.noterJet.mock.calls.at(-1)![4]).toMatch(/ ; Putréfié 2 rounds$/);
     // Un état inconnu de la refonte est dit, pas posé.
     appels.length = 0;
     const r2 = await X.attaqueDeMonstre('c1', combat, monstre('A'), { ...att, etatSurTouche: { id: 'gelee', duree: 1 } }, pj('p1', { perso: 'p1' }), basse, suite([20, 20], [3, 6], [3, 6]));
