@@ -48,9 +48,10 @@ export async function demanderReaction(
 }
 
 /** 2b : son pas ouvre l'attaque d'opportunité de ces ennemis, ce tour. */
-export async function signalerOpportunites(idCombat: string, tour: number, cible: string, attaquants: readonly string[]): Promise<void> {
+export async function signalerOpportunites(idCombat: string, tour: number, cible: string, attaquants: readonly { attaquant: string; case: Case }[]): Promise<void> {
   const lot = writeBatch(db);
-  for (const a of attaquants) lot.set(refOpportunite(idCombat, idOpportunite(tour, a, cible)), { attaquant: a, cible, tour, creeLe: Date.now() } satisfies Opportunite);
+  for (const a of attaquants)
+    lot.set(refOpportunite(idCombat, idOpportunite(tour, a.attaquant, cible)), { attaquant: a.attaquant, cible, case: a.case, tour, creeLe: Date.now() } satisfies Opportunite);
   await lot.commit();
 }
 
@@ -120,13 +121,22 @@ async function resoudre(
     const refus = arriveePermise(ctx.carte.scene, ctx.carte.jetons, moi.id, d.case, b.bond);
     if (refus) throw new RefusCombat(`${s.nom} : ${refus}.`);
   }
+  /*
+   * 10a (décision de Thomas du 29/10/2026) : l'opportunité se juge à la
+   * case où le contact s'est rompu, pas à l'arrivée. Le déplacement va au
+   * bout (décision 4), donc la cible est forcément hors de portée d'une
+   * arme de contact quand le joueur la prend : on remet son jeton là où le
+   * coup est parti, le temps de la résoudre. Ne pas juger sur `carte` tel
+   * quel : toute opportunité de contact serait refusée.
+   */
+  const carte = opp && ctx.carte ? { ...ctx.carte, jetons: ctx.carte.jetons.map((j) => (j.id === opp.cible ? { ...j, cx: opp.case.cx, cy: opp.case.cy } : j)) } : ctx.carte;
   const r = await lancerSortEnCombat(
     idCombat,
     combat,
     moi,
     f,
     { sort: s.id, palier: s.paliers.at(-1) ?? 'I', surcharge: false, element: null, visee: { cibles: d.cible ? [d.cible] : [], point: null }, reaction: true, ...(d.posture ? { options: { posture: d.posture } } : {}) },
-    ctx.carte,
+    carte,
     ctx.combattants,
     ctx.fiches,
     alea,

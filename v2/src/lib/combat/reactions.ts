@@ -49,16 +49,25 @@ export function reactionDisponible(c: Pick<Combattant, 'usages' | 'debutTour'>):
  * Seuls ceux qui le peuvent : debout, qui agissent, leur réaction libre ;
  * pas une invocation (11a).
  */
-export function opportunitesDuChemin(qui: string, chemin: readonly Case[], jetons: readonly JetonCarte[], combattants: readonly AvecId<Combattant>[]): string[] {
+export function opportunitesDuChemin(
+  qui: string,
+  chemin: readonly Case[],
+  jetons: readonly JetonCarte[],
+  combattants: readonly AvecId<Combattant>[],
+): { attaquant: string; case: Case }[] {
   const moi = combattants.find((c) => c.id === qui);
   if (!moi) return [];
   return combattants
     .filter((c) => campDe(c) !== campDe(moi) && c.genre !== 'invocation' && !c.aTerre && !c.mort && reactionDisponible(c) && peutAgir(c.etats) === 'oui')
-    .filter((c) => {
+    .flatMap((c) => {
       const j = jetons.find((x) => x.id === c.id && !x.mort);
-      return !!j && chemin.some((k, i) => i + 1 < chemin.length && distanceCases(k, j) <= 1 && distanceCases(chemin[i + 1]!, j) > 1);
-    })
-    .map((c) => c.id);
+      if (!j) return [];
+      // La dernière case encore au contact : c'est là que le coup part.
+      const i = chemin.findIndex((k, n) => n + 1 < chemin.length && distanceCases(k, j) <= 1 && distanceCases(chemin[n + 1]!, j) > 1);
+      // `chemin[0]` est le jeton de départ, pas une case nue : on n'en garde
+      // que les coordonnées, sinon le document porterait tout le jeton.
+      return i < 0 ? [] : [{ attaquant: c.id, case: { cx: chemin[i]!.cx, cy: chemin[i]!.cy } }];
+    });
 }
 
 /** Identifiant d'une opportunité : un tour, un attaquant, celui qui bouge. */

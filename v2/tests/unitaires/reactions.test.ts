@@ -308,7 +308,11 @@ describe('le chemin et l’attaque d’opportunité (2b, 3b, 10a, 11a)', () => {
       pj('p2'),
       monstre('h'),
     ];
-    expect(R.opportunitesDuChemin('pj-p1', chemin, jetons, cs)).toEqual(['m-r1-a', 'm-r1-b']);
+    // Chacun avec la case où le contact s'est rompu (décision du 29/10/2026).
+    expect(R.opportunitesDuChemin('pj-p1', chemin, jetons, cs)).toEqual([
+      { attaquant: 'm-r1-a', case: { cx: 1, cy: 1 } },
+      { attaquant: 'm-r1-b', case: { cx: 3, cy: 1 } },
+    ]);
     // Sans pas, rien.
     expect(R.opportunitesDuChemin('pj-p1', [chemin[0]!], jetons, cs)).toEqual([]);
     expect(R.opportunitesDuChemin('pj-p9', chemin, jetons, cs)).toEqual([]);
@@ -322,7 +326,7 @@ describe('le chemin et l’attaque d’opportunité (2b, 3b, 10a, 11a)', () => {
     ];
     const jetons = [j('m-r1-a', 3, 1), j('pj-p1', 0, 1, 'pj'), j('i-p1-t2-1', 1, 0, 'pj'), j('pj-p2', 0, 0, 'pj')];
     const cs = [monstre('a'), pj('p1'), { ...pj('x', { genre: 'invocation', perso: null }), id: 'i-p1-t2-1' }, pj('p2', { mort: true, mortEchecs: 3 })];
-    expect(R.opportunitesDuChemin('m-r1-a', chemin, jetons, cs)).toEqual(['pj-p1']);
+    expect(R.opportunitesDuChemin('m-r1-a', chemin, jetons, cs)).toEqual([{ attaquant: 'pj-p1', case: { cx: 1, cy: 1 } }]);
   });
 });
 
@@ -507,10 +511,14 @@ describe('la demande du joueur, le client du MJ (1a, 2b, 6b)', () => {
   });
 
   it('2b : son pas ouvre ces opportunités, ce tour, une par attaquant', async () => {
-    await AR.signalerOpportunites('c1', 6, 'pj-p1', ['m-r1-a', 'm-r1-b']);
+    // Chacune garde la case où le contact s'est rompu (décision du 29/10/2026).
+    await AR.signalerOpportunites('c1', 6, 'pj-p1', [
+      { attaquant: 'm-r1-a', case: { cx: 2, cy: 3 } },
+      { attaquant: 'm-r1-b', case: { cx: 4, cy: 3 } },
+    ]);
     expect(appels).toEqual([
-      { fn: 'lot.set', chemin: `${O_}/t6-m-r1-a-pj-p1`, donnees: { attaquant: 'm-r1-a', cible: 'pj-p1', tour: 6, creeLe: expect.any(Number) } },
-      { fn: 'lot.set', chemin: `${O_}/t6-m-r1-b-pj-p1`, donnees: { attaquant: 'm-r1-b', cible: 'pj-p1', tour: 6, creeLe: expect.any(Number) } },
+      { fn: 'lot.set', chemin: `${O_}/t6-m-r1-a-pj-p1`, donnees: { attaquant: 'm-r1-a', cible: 'pj-p1', case: { cx: 2, cy: 3 }, tour: 6, creeLe: expect.any(Number) } },
+      { fn: 'lot.set', chemin: `${O_}/t6-m-r1-b-pj-p1`, donnees: { attaquant: 'm-r1-b', cible: 'pj-p1', case: { cx: 4, cy: 3 }, tour: 6, creeLe: expect.any(Number) } },
     ]);
   });
 
@@ -564,6 +572,24 @@ describe('la demande du joueur, le client du MJ (1a, 2b, 6b)', () => {
     expect(ecrit(`${C}/m-r1-a`)).toEqual([]);
   });
 
+  it('10a : l’opportunité se juge à la case où le contact s’est rompu, pas à l’arrivée', async () => {
+    // Le déplacement va au bout (4) : quand le joueur la prend, la cible est
+    // déjà à 5 cases. Sans la case de rupture, toute opportunité de contact
+    // serait refusée (décision de Thomas du 29/10/2026).
+    const loin = { scene: scene(), jetons: [j('pj-p1', 0, 0, 'pj'), j('m-r1-a', 5, 0)] };
+    const o = { id: 't6-m-r1-a-pj-p1', attaquant: 'pj-p1', cible: 'm-r1-a', case: { cx: 1, cy: 0 }, tour: 6, creeLe: 1 };
+    const d = { reaction: 'arme.opportunite', opportunite: o.id };
+    enAttente(d);
+    const t = await AR.jouerReaction('c1', horsTour, demande(d), contexte(guerrier(), { opportunites: [o], carte: loin }), () => 0.9);
+    expect(t).toMatch(/^Attaque d’opportunité : /);
+    expect(t).not.toMatch(/atteinte/);
+    // La case de rupture ne dispense pas de la portée : si elle est loin aussi, refus.
+    const o2 = { ...o, case: { cx: 5, cy: 0 } };
+    enAttente(d);
+    const t2 = await AR.jouerReaction('c1', horsTour, demande(d), contexte(guerrier(), { opportunites: [o2], carte: loin }), () => 0.9);
+    expect(t2).toMatch(/atteinte/);
+  });
+
   it('une erreur de l’app : refusée, sans détail', async () => {
     enAttente();
     const ctx = contexte(guerrier());
@@ -572,7 +598,7 @@ describe('la demande du joueur, le client du MJ (1a, 2b, 6b)', () => {
   });
 
   it('l’opportunité ouverte se prend, puis se retire ; le bond se pose sur sa case (6b)', async () => {
-    const o = { id: 't6-m-r1-a-pj-p1', attaquant: 'pj-p1', cible: 'm-r1-a', tour: 6, creeLe: 1 };
+    const o = { id: 't6-m-r1-a-pj-p1', attaquant: 'pj-p1', cible: 'm-r1-a', case: { cx: 1, cy: 1 }, tour: 6, creeLe: 1 };
     const d = { reaction: 'arme.opportunite', opportunite: o.id };
     enAttente(d);
     const pasLeSien = [{ ...o, attaquant: 'pj-p2' }, { ...o, cible: 'm-r1-b' }, { ...o, tour: 5 }, { ...o, id: 'autre' }];
@@ -614,7 +640,7 @@ describe('l’opportunité d’un monstre, depuis le panneau du MJ (5a, 11a)', (
     ['arc', { degats: '1d8', portee: 'moyenne (18m)' as const, typedegats: 'physique' as const }],
     ['griffe', { degats: '1d6', portee: 'contact' as const, typedegats: 'physique' as const }],
   ]);
-  const o = { id: 't6-m-r1-a-pj-p1', attaquant: 'm-r1-a', cible: 'pj-p1', tour: 6, creeLe: 1 };
+  const o = { id: 't6-m-r1-a-pj-p1', attaquant: 'm-r1-a', cible: 'pj-p1', case: { cx: 1, cy: 1 }, tour: 6, creeLe: 1 };
 
   it('sa première attaque au contact ; la réaction prise ; l’opportunité retirée ; la concentration en jeu', async () => {
     const f = guerrier();

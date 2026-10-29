@@ -78,7 +78,8 @@ describe('le pas qui quitte le contact (2b, 3b, 10a)', () => {
     render(CarteTable, { props: { role: 'joueur' } });
     await screen.findByTestId('battlemap');
     await fireEvent.click(screen.getByRole('button', { name: 'glisser' }));
-    expect(reactionsActions.signalerOpportunites).toHaveBeenCalledExactlyOnceWith('c1', 3, 'pj-p1', ['m-r1-a']);
+    // La case de rupture : son départ (1, 1), d'où il quitte la goule (décision du 29/10/2026).
+    expect(reactionsActions.signalerOpportunites).toHaveBeenCalledExactlyOnceWith('c1', 3, 'pj-p1', [{ attaquant: 'm-r1-a', case: { cx: 1, cy: 1 } }]);
   });
 
   it('le chemin compte : partir et revenir au contact l’ouvre quand même', async () => {
@@ -95,7 +96,8 @@ describe('le pas qui quitte le contact (2b, 3b, 10a)', () => {
     render(CarteTable, { props: { role: 'mj' } });
     await screen.findByTestId('battlemap');
     await fireEvent.click(screen.getByRole('button', { name: 'glisser libre' }));
-    expect(reactionsActions.signalerOpportunites).toHaveBeenCalledExactlyOnceWith('c1', 3, 'pj-p1', ['m-r1-a']);
+    // Il reste au contact en (1, 0) et ne le quitte qu'au pas suivant.
+    expect(reactionsActions.signalerOpportunites).toHaveBeenCalledExactlyOnceWith('c1', 3, 'pj-p1', [{ attaquant: 'm-r1-a', case: { cx: 1, cy: 0 } }]);
   });
 
   it('le MJ, pour tous : la goule qu’il éloigne ouvre l’opportunité du PJ', async () => {
@@ -104,7 +106,7 @@ describe('le pas qui quitte le contact (2b, 3b, 10a)', () => {
     render(CarteTable, { props: { role: 'mj' } });
     await screen.findByTestId('battlemap');
     await fireEvent.click(screen.getByRole('button', { name: 'glisser libre' }));
-    expect(reactionsActions.signalerOpportunites).toHaveBeenCalledExactlyOnceWith('c1', 3, 'm-r1-a', ['pj-p1']);
+    expect(reactionsActions.signalerOpportunites).toHaveBeenCalledExactlyOnceWith('c1', 3, 'm-r1-a', [{ attaquant: 'pj-p1', case: { cx: 0, cy: 1 } }]);
   });
 
   it('rien : un joueur qui n’a pas la main, un pas qui reste au contact, un combat clos', async () => {

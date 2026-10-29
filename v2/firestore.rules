@@ -750,9 +750,11 @@ service cloud.firestore {
     }
     // Aligné sur schemaOpportunite (L6.5b, 2b).
     function opportuniteValide(d) {
-      return d.keys().hasOnly(['attaquant', 'cible', 'tour', 'creeLe']) && d.keys().hasAll(['attaquant', 'cible', 'tour', 'creeLe'])
+      return d.keys().hasOnly(['attaquant', 'cible', 'case', 'tour', 'creeLe']) && d.keys().hasAll(['attaquant', 'cible', 'case', 'tour', 'creeLe'])
         && d.attaquant is string && d.attaquant.size() >= 1 && d.attaquant.size() <= 150
         && d.cible is string && d.cible.size() >= 1 && d.cible.size() <= 150
+        // La case où le contact s'est rompu (décision du 29/10/2026) : la portée s'y juge.
+        && d.case is map && d.case.keys().hasOnly(['cx', 'cy']) && d.case.keys().hasAll(['cx', 'cy']) && coordValide(d.case.cx) && coordValide(d.case.cy)
         && entierEntre(d.tour, 1, 99999) && d.creeLe is int;
     }
     // Aligné sur schemaSauvegardesCombat (L6.4a, 8a).

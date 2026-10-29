@@ -43,6 +43,13 @@ export const schemaOpportunite = z.strictObject({
   attaquant: z.string().min(1).max(150),
   /** Celui qui bouge. */
   cible: z.string().min(1).max(150),
+  /**
+   * La case de celui qui bouge quand le contact s'est rompu (décision de
+   * Thomas du 29/10/2026). La portée se juge là, pas à l'arrivée : une arme
+   * de contact porte à une case, et quitter le contact met forcément la
+   * cible à deux — l'opportunité était refusée à tous les coups.
+   */
+  case: schemaCaseReaction,
   tour: z.number().int().min(1).max(99999),
   creeLe: z.number().int(),
 });

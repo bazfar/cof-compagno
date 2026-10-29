@@ -491,7 +491,7 @@ describe('réactions (L6.5b)', () => {
   const demande = (extra: Record<string, unknown> = {}) => ({
     qui: 'pj-p1', uid: 'alice', reaction: 'abjuration.bouclier', cible: 'pj-p1', case: null, posture: null, opportunite: null, tour: 3, statut: 'attente', texte: null, creeLe: 1, ...extra,
   });
-  const opp = (extra: Record<string, unknown> = {}) => ({ attaquant: 'm-r1-a', cible: 'pj-p1', tour: 3, creeLe: 1, ...extra });
+  const opp = (extra: Record<string, unknown> = {}) => ({ attaquant: 'm-r1-a', cible: 'pj-p1', case: { cx: 2, cy: 3 }, tour: 3, creeLe: 1, ...extra });
 
   it('1a : le joueur demande la sienne, hors de son tour, en attente ; le MJ seul la joue ; la forme est vérifiée', async () => {
     await poser(C, combat({ actif: 'm-r1-a' }));
@@ -529,6 +529,10 @@ describe('réactions (L6.5b)', () => {
     await assertFails(pour('alice').doc(`${O}/x`).set(opp({ cible: 'pj-p2' })));
     await assertFails(pour('alice').doc(`${O}/x`).set(opp({ tour: 2 })));
     await assertFails(pour('alice').doc(`${O}/x`).set(opp({ x: 1 })));
+    // La case où le contact s'est rompu : exigée, et bornée (décision du 29/10/2026).
+    await assertFails(pour('alice').doc(`${O}/x`).set({ attaquant: 'm-r1-a', cible: 'pj-p1', tour: 3, creeLe: 1 }));
+    await assertFails(pour('alice').doc(`${O}/x`).set(opp({ case: { cx: -1, cy: 3 } })));
+    await assertFails(pour('alice').doc(`${O}/x`).set(opp({ case: { cx: 2 } })));
     await assertFails(pour('carol').doc(`${O}/x`).set(opp({ cible: 'pj-p2' })));
     await assertSucceeds(pour('carol').doc(`${O}/t3-m-r1-a-pj-p1`).get());
     await poser(C, combat({ actif: 'm-r1-a' }));
