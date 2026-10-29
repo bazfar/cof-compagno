@@ -19,6 +19,7 @@ vi.mock('firebase/firestore', () => {
   const lu = (chemin: string) => ({ exists: () => base.has(chemin), data: () => base.get(chemin) });
   const ref = (chemin: string) => ({ chemin, id: chemin.split('/').pop() });
   return {
+    increment: (n: number) => ({ increment: n }),
     collection: (_db: unknown, chemin: string) => ({ chemin }),
     doc: (parent: { chemin: string } | object, ...p: string[]) => (p.length ? ref(p.join('/')) : ref(`${(parent as { chemin: string }).chemin}/auto${++n}`)),
     deleteField: () => '<supprimé>',
@@ -400,7 +401,11 @@ describe('finir une concentration (1a, 2a, 3a, ajout de Thomas)', () => {
     const l = pj('p1', { concentration: conc() });
     const cs = [l, invoc('a'), invoc('b')];
     expect(await AI.payerDebutDeTour('c1', 'cave', l, f, cs)).toBe(3);
-    expect(appels).toEqual([{ fn: 'updateDoc', chemin: 'tables/t1/persos/p1', donnees: { ppActuel: 0 } }]);
+    // L6.7b (6a) : chaque serviteur payé verse 1 au Remous du lieu, au nom du maître.
+    expect(appels).toEqual([
+      { fn: 'setDoc', chemin: 'tables/t1/remous/cave', donnees: { total: { increment: 2 }, contributions: { p1: { increment: 2 } }, majLe: expect.any(Number) } },
+      { fn: 'updateDoc', chemin: 'tables/t1/persos/p1', donnees: { ppActuel: 0 } },
+    ]);
     expect(journal.noterJet.mock.calls.map((c) => c[4])).toEqual(['p1 paie 1 PP pour maintenir Fascination.', 'p1 paie 2 PP de Remous pour ses invocations.']);
     appels.length = 0;
     journal.noterJet.mockClear();
@@ -417,6 +422,11 @@ describe('finir une concentration (1a, 2a, 3a, ajout de Thomas)', () => {
     appels.length = 0;
     expect(await AI.payerDebutDeTour('c1', 'cave', l, { ...f, ppActuel: 1 }, [l])).toBe(1);
     expect(appels).toEqual([{ fn: 'updateDoc', chemin: 'tables/t1/persos/p1', donnees: { ppActuel: 0 } }]);
+    // L6.7b (6a) : 1 par serviteur, quel que soit son Remous en PP ; une invocation sans Remous n'en est pas un.
+    appels.length = 0;
+    const sansRemous = invoc('c', { invocation: { ...invoc('c').invocation!, remous: 0 } });
+    await AI.payerDebutDeTour('c1', 'cave', pj('p1'), { ...f, ppActuel: 9 }, [pj('p1'), invoc('a', { invocation: { ...invoc('a').invocation!, remous: 3 } }), sansRemous]);
+    expect(appels.find((a) => a.fn === 'setDoc')!.donnees).toMatchObject({ total: { increment: 1 } });
     // Ni maintien ni Remous, ou pas de fiche de la refonte : rien.
     appels.length = 0;
     expect(await AI.payerDebutDeTour('c1', 'cave', pj('p1'), f, [pj('p1')])).toBe(0);

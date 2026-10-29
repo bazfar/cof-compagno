@@ -17,6 +17,7 @@ import type { Fiche, FicheV2 } from '../schemas/fiche';
 import { session } from '../session.svelte';
 import { RefusCombat } from './combat';
 import { noterJet } from './journal';
+import { alimenterRemous } from './remous';
 
 /*
  * Écritures de la concentration et des invocations (lot L6.4b2, décisions
@@ -190,6 +191,9 @@ export async function maintenirConcentration(
  * maintien de sa concentration, puis le Remous de ses invocations, en PP.
  * Sans de quoi payer, la concentration s'arrête, ou toutes ses invocations
  * retournent à la Mer. Rend les PP payés.
+ *
+ * L6.7b (6a) : chaque serviteur payé verse 1 au Remous de la scène, au nom
+ * du maître.
  */
 export async function payerDebutDeTour(idCombat: string, scene: string, c: AvecId<Combattant>, fiche: AvecId<Fiche> | null, combattants: readonly AvecId<Combattant>[]): Promise<number> {
   if (!fiche || fiche.schemaVersion !== 2) return 0;
@@ -207,6 +211,7 @@ export async function payerDebutDeTour(idCombat: string, scene: string, c: AvecI
     if (pp >= remous) {
       pp -= remous;
       await noterJet('Remous', '0', { des: [], faces: 0, bonus: 0, total: remous }, 'MJ', `${c.nom} paie ${remous} PP de Remous pour ses invocations.`);
+      await alimenterRemous(scene, invocationsDe(combattants, c.id).filter((x) => x.invocation?.remous).length, fiche.id);
     } else await retirerInvocations(idCombat, scene, invocationsDe(combattants, c.id), 'le Remous n’est pas payé, elles retournent à la Mer', 'MJ');
   }
   if (pp !== avant) await updateDoc(refPerso(fiche.id), { ppActuel: pp });

@@ -71,7 +71,7 @@ export interface ContexteReaction {
  */
 export async function jouerReaction(
   idCombat: string,
-  combat: Pick<Combat, 'tour' | 'round' | 'scene' | 'actif' | 'porteesLibres'>,
+  combat: Parameters<typeof lancerSortEnCombat>[1],
   d: AvecId<DemandeReaction>,
   ctx: ContexteReaction,
   alea: () => number = Math.random,
@@ -97,7 +97,7 @@ export async function jouerReaction(
 
 async function resoudre(
   idCombat: string,
-  combat: Pick<Combat, 'tour' | 'round' | 'scene' | 'actif' | 'porteesLibres'>,
+  combat: Parameters<typeof lancerSortEnCombat>[1],
   d: DemandeReaction,
   ctx: ContexteReaction,
   alea: () => number,

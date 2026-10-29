@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte';
   import { messageErreurJournal } from '../lib/actions/journal';
   import { lancerSort, RefusSort } from '../lib/actions/sorts-hors-combat';
+  import { suivreTable } from '../lib/magasins/carte.svelte';
   import { suivreMesDemandesSorts } from '../lib/magasins/sorts-hors-combat.svelte';
   import type { DemandeSort } from '../lib/schemas/sort-hors-combat';
   import { session } from '../lib/session.svelte';
@@ -18,6 +19,9 @@
 
   const demandes = suivreMesDemandesSorts(session.table, session.uid);
   onDestroy(() => demandes.arreter());
+  // L6.7b (6a) : ses PP vont au Remous de la scène active.
+  const table = suivreTable(session.table);
+  onDestroy(() => table.arreter());
   const miennes = $derived(
     demandes.etat.elements
       .filter((d) => d.perso === perso)
@@ -31,7 +35,7 @@
     message = '';
     occupe = true;
     try {
-      await lancerSort(id, seance);
+      await lancerSort(id, seance, undefined, table.etat.donnees?.sceneActive ?? null);
     } catch (e) {
       message = e instanceof RefusSort ? e.message : messageErreurJournal(e);
     } finally {

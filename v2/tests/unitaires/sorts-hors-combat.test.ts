@@ -23,6 +23,7 @@ vi.mock('firebase/firestore', () => {
   }
   const lu = (chemin: string) => ({ exists: () => base.has(chemin), data: () => base.get(chemin) });
   return {
+    increment: (n: number) => ({ increment: n }),
     FieldPath,
     collection: (_db: unknown, chemin: string) => ({ chemin }),
     doc: (parent: { chemin: string } | object, ...p: string[]) => (p.length ? { chemin: p.join('/') } : { chemin: `${(parent as { chemin: string }).chemin}/auto${++n}` }),
@@ -252,6 +253,19 @@ describe('lancer (15b, 6a, 9a)', () => {
     expect(d).toMatchObject({ statut: 'lancee', de: null });
     expect(appels[0]!.champs).toEqual(['ppActuel', 2, 'usages/evocation.nova', { seance: 's1', le: expect.any(Number) }]);
     expect(appels[2]!.donnees).toMatchObject({ formule: 'sort', des: [], total: 0 });
+  });
+
+  it('L6.7b (6a, 7a) : ses PP payés vont au Remous de la scène active, × la race, raté ou non ; sans scène, rien', async () => {
+    poser(demande({ pp: 3 }), { ...kylhian({ ppActuel: 5 }), race: 'humain' });
+    await A.lancerSort('d1', 's1', () => 0.45, 'cave');
+    expect(appels.at(-1)).toEqual({ fn: 'setDoc', chemin: 'tables/t1/remous/cave', donnees: { total: { increment: 3 }, contributions: { 'p-k': { increment: 3 } }, majLe: expect.any(Number) } });
+    appels.length = 0;
+    poser(demande({ pp: 3 }), { ...kylhian({ ppActuel: 5 }), race: 'humain' });
+    await A.lancerSort('d1', 's1', () => 0.6);
+    expect(appels.some((a) => a.fn === 'setDoc')).toBe(false);
+    poser(demande({ pp: 3 }), { ...kylhian({ ppActuel: 5 }), race: 'elfe' });
+    await A.lancerSort('d1', 's1', () => 0.6, 'cave');
+    expect(appels.some((a) => a.fn === 'setDoc')).toBe(false);
   });
 
   it('PP jamais notés : la réserve pleine', async () => {

@@ -279,6 +279,7 @@ describe('mes sorts hors combat (5b, 15b, 14b)', () => {
       demande({ id: 'g', uid: 'bob', creeLe: 7 }),
       demande({ id: 'h', perso: 'p-autre', creeLe: 8 }),
     ];
+    table.donnees = { ...table.donnees, sceneActive: 'cave' };
     render(Grimoire, { props: { fiche: kylhian(), lancer: { seance: 's1' } } });
     const liste = within(screen.getByRole('region', { name: 'Mes sorts hors combat' }));
     expect(liste.getAllByRole('listitem').map((l) => l.querySelector('.aide')!.textContent)).toEqual([
@@ -290,7 +291,8 @@ describe('mes sorts hors combat (5b, 15b, 14b)', () => {
       'Lancé (d20 : 15). La cible a résisté.',
     ]);
     await fireEvent.click(liste.getByRole('button', { name: 'Lancer (−1 PP)' }));
-    expect(sorts.lancerSort).toHaveBeenCalledWith('c', 's1');
+    // L6.7b (6a) : ses PP vont au Remous de la scène active.
+    expect(sorts.lancerSort).toHaveBeenCalledWith('c', 's1', undefined, 'cave');
   });
 });
 

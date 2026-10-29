@@ -204,7 +204,14 @@ export const magasinsCombat = {
   suivreCombattants: () => ({ etat: combattants, arreter: () => {} }),
   suivreReactions: () => ({ etat: reactions, arreter: () => {} }),
   suivreOpportunites: () => ({ etat: opportunites, arreter: () => {} }),
+  suivreRemous: (_t: string, scene: string) => {
+    suiviRemous.push(scene);
+    return { etat: remousDoc, arreter: () => {} };
+  },
 };
+/** L6.7b : la jauge de Remous (une pour toutes les scènes), et les scènes suivies. */
+export const remousDoc = $state({ donnees: null as Record<string, unknown> | null, pret: true, erreur: null as string | null });
+export const suiviRemous: string[] = [];
 
 /** La carte que la fausse CarteTable rend à l'écran qui la monte (L6.2, portées). */
 export const carteFaux: { valeur: unknown } = { valeur: null };

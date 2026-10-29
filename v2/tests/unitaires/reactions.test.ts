@@ -20,6 +20,7 @@ vi.mock('firebase/firestore', () => {
   const lu = (chemin: string) => ({ exists: () => base.has(chemin), data: () => base.get(chemin) });
   const ref = (chemin: string) => ({ chemin, id: chemin.split('/').pop() });
   return {
+    increment: (n: number) => ({ increment: n }),
     collection: (_db: unknown, chemin: string) => ({ chemin }),
     doc: (parent: { chemin: string } | object, ...p: string[]) => (p.length ? ref(p.join('/')) : ref(`${(parent as { chemin: string }).chemin}/auto${++n}`)),
     deleteField: () => '<supprimé>',

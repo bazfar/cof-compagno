@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Remous } from '../lib/schemas/remous';
   import { RefusCombat } from '../lib/actions/combat';
   import { messageErreurJournal } from '../lib/actions/journal';
   import { jouerReaction, opportuniteDeMonstre } from '../lib/actions/reactions';
@@ -28,6 +29,7 @@
     bestiaire,
     armes,
     carte,
+    remous = null,
   }: {
     idCombat: string;
     combat: Combat;
@@ -37,6 +39,8 @@
     bestiaire: readonly AvecId<MonstreEnBase>[];
     armes: Parameters<typeof opportuniteDeMonstre>[6];
     carte: CarteDuCombat | null;
+    /** L6.7b (8a) : le Remous du lieu, dont le palier change les sorts. */
+    remous?: Remous | null;
   } = $props();
 
   let suivi = $state<{ r: CollectionSuivie<DemandeReaction>; o: CollectionSuivie<Opportunite> } | null>(null);
@@ -58,7 +62,7 @@
     const attente = (suivi?.r.etat.elements ?? []).filter((d) => d.statut === 'attente' && !enCours.has(d.id));
     if (!attente.length) return;
     const ctx = { combattants, fiches, carte, opportunites };
-    const c = combat;
+    const c = { ...combat, remous };
     for (const d of attente) {
       enCours.add(d.id);
       jouerReaction(idCombat, c, d, ctx).catch((e) => (message = e instanceof RefusCombat ? e.message : messageErreurJournal(e)));

@@ -331,6 +331,27 @@ service cloud.firestore {
         && s.intention is string && s.intention.size() >= 1 && s.intention.size() <= 120
         && s.issue in ['lance', 'rate'];
     }
+    // Aligné sur schemaRemous (src/lib/schemas/remous.ts, lot L6.7b, 5a).
+    function remousValide(d) {
+      return d.keys().hasOnly(['total', 'membrane', 'contributions', 'majLe']) && d.keys().hasAll(['total', 'contributions'])
+        && entierEntre(d.total, 0, 9999)
+        && (!('membrane' in d) || d.membrane in ['epaisse', 'amincie', 'fine', 'dechiree'])
+        && d.contributions is map && d.contributions.size() <= 40
+        && (!('majLe' in d) || d.majLe is int);
+    }
+    /*
+     * L6.7b (6a) : un joueur alimente la jauge du lieu par ses sorts et sa
+     * Plongée, au nom de son personnage joué : le total monte de 1 à 60, sa
+     * contribution d'autant, rien d'autre ne bouge. Il ne la vide pas, ne la
+     * baisse pas, ne touche pas à la membrane (le MJ seul).
+     */
+    function verseParJoueur(apres, avant, table) {
+      let perso = persoJoueDe(table, request.auth.uid);
+      let verse = apres.total - avant.total;
+      return perso != '' && verse >= 1 && verse <= 60
+        && apres.contributions.diff(avant.contributions).affectedKeys().hasOnly([perso])
+        && apres.contributions.get(perso, -1) == avant.contributions.get(perso, 0) + verse;
+    }
     // Personnage joué d'un joueur (joueurs/{uid}.persoActif), '' s'il n'en a pas.
     function persoJoueDe(table, uid) {
       return get(/databases/$(database)/documents/tables/$(table)/joueurs/$(uid)).data.get('persoActif', '');
@@ -916,6 +937,19 @@ service cloud.firestore {
       // comme en v1 : Firestore ne connaît pas la géométrie des scènes.
       // `sceneActive` (scène montrée) est un champ du document de table,
       // écrit par le MJ (règle de /tables/{table} ci-dessus).
+      // ---- Remous du lieu (lot L6.7b, 5a, 6a) : une jauge par scène, lue de toute la table. ----
+      match /remous/{scene} {
+        allow read: if estMembre(table);
+        allow create, update: if estMj(table) && remousValide(request.resource.data);
+        allow delete: if estMj(table);
+        allow create: if estJoueur(table) && remousValide(request.resource.data)
+          && request.resource.data.get('membrane', 'epaisse') == 'epaisse'
+          && verseParJoueur(request.resource.data, { 'total': 0, 'contributions': {} }, table);
+        allow update: if estJoueur(table) && remousValide(request.resource.data)
+          && request.resource.data.get('membrane', 'epaisse') == resource.data.get('membrane', 'epaisse')
+          && verseParJoueur(request.resource.data, resource.data, table);
+      }
+
       match /scenes/{scene} {
         allow read: if estMembre(table);
         // MJ : portes, exploration et sa remise à zéro.

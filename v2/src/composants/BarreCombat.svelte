@@ -21,12 +21,16 @@
   import { couverture, protegeParSanctuaire } from '../lib/combat/zones-sol';
   import type { Palier } from '../lib/schemas/effets';
   import { vueFiche } from '../lib/fiche/vue-fiche';
-  import type { AvecId } from '../lib/firebase/suivre.svelte';
+  import type { AvecId, DocumentSuivi } from '../lib/firebase/suivre.svelte';
+  import type { Remous } from '../lib/schemas/remous';
   import { formuleTest } from '../lib/regles/des';
   import { formuleSoin } from '../lib/regles/equipement';
   import type { Combat, Combattant } from '../lib/schemas/combat';
   import type { Fiche, FicheV2 } from '../lib/schemas/fiche';
   import BlocReactions from './BlocReactions.svelte';
+  import { coutAuPalier, palierDe } from '../lib/combat/remous';
+  import { suivreRemous } from '../lib/magasins/combat.svelte';
+  import { session } from '../lib/session.svelte';
 
   /*
    * La barre du joueur en combat (lot L6.1), sous la carte, d'après la
@@ -105,6 +109,18 @@
   } = $props();
 
   const vue = $derived(vueFiche(fiche));
+  // L6.7b (8a) : le palier du Remous du lieu rend les sorts moins chers et plus forts.
+  let remousSuivi = $state<DocumentSuivi<Remous> | null>(null);
+  $effect(() => {
+    const s = suivreRemous(session.table, combat.scene);
+    remousSuivi = s;
+    return () => {
+      s.arreter();
+      remousSuivi = null;
+    };
+  });
+  const remous = $derived(remousSuivi?.etat.donnees ?? null);
+  const palierRemous = $derived(palierDe(remous));
   const signe = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '+0');
   const part = $derived(vue.pv.max > 0 ? Math.max(0, Math.min(1, vue.pv.actuel / vue.pv.max)) : 0);
   const etat = $derived(etatPj(vue.pv.actuel, moi));
@@ -371,7 +387,7 @@
     const s = sort;
     if (!s || fiche.schemaVersion !== 2) return;
     return agir(async () => {
-      const r = await lancerSortEnCombat(idCombat, combat, moi, fiche as AvecId<FicheV2>, { sort: s.id, palier, surcharge, element: element?.id ?? null, visee, ...(Object.keys(options).length ? { options } : {}) }, carte, combattants, fiches);
+      const r = await lancerSortEnCombat(idCombat, { ...combat, remous }, moi, fiche as AvecId<FicheV2>, { sort: s.id, palier, surcharge, element: element?.id ?? null, visee, ...(Object.keys(options).length ? { options } : {}) }, carte, combattants, fiches);
       visee = { cibles: [], point: null };
       viseEnCours = false;
       aPlacer = r.aPlacer;
@@ -554,6 +570,7 @@
           </select>
         {/if}
         <span class="cout" data-testid="cout-sort">{coutSort && 'texte' in coutSort ? coutSort.texte : (coutSort?.refus ?? '')}</span>
+        {#if palierRemous.palier && coutSort && 'pp' in coutSort && coutSort.pp}<span class="aide" data-testid="remous-sort">Remous : {coutAuPalier(coutSort.pp, palierRemous)} PP, +{palierRemous.degatsSorts} dégâts</span>{/if}
         {#if sort.limite !== 'volonte'}<span class="aide">{sort.limite.replace('1x', '1×')}</span>{/if}
       </div>
       <p class="aide">{texteCiblage(ciblage)}</p>

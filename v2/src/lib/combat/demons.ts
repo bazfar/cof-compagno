@@ -30,6 +30,8 @@ export const USAGE_FAIM = 'faim';
 export const USAGE_FAIM_ROUND = 'faimR';
 export const USAGE_BERSERK = 'berserk';
 export const USAGE_SURSAUT = 'sursaut';
+/** L6.7b (8a) : le Remous a franchi un palier (2 et plus) : le démon peut monter, une fois. */
+export const USAGE_MONTEE_REMOUS = 'monteeRemous';
 
 const schemaFaim = z.object({ type: z.enum(['pp_draines', 'degats_infliges', 'etats_controle', 'rounds_survecus']), seuil: z.number().int().min(1).max(999) });
 const schemaPassifs = z.object({
@@ -100,9 +102,9 @@ export function faimNourrie(t: TraitsDemon, quoi: { ppDraines?: number; degatsIn
   return t.faim.type === 'pp_draines' ? (quoi.ppDraines ?? 0) : t.faim.type === 'degats_infliges' ? (quoi.degatsInfliges ?? 0) : t.faim.type === 'etats_controle' ? (quoi.etatsControle ?? 0) : 0;
 }
 
-/** 2a : au seuil, il peut monter (s'il a un palier suivant). */
+/** 2a : au seuil, il peut monter (s'il a un palier suivant) ; L6.7b (8a) : ou le Remous le lui offre. */
 export function peutMonter(c: Pick<Combattant, 'usages'>, t: TraitsDemon): boolean {
-  return !!t.faim && t.paliersSuivants.length > 0 && faimDe(c) >= t.faim.seuil;
+  return t.paliersSuivants.length > 0 && ((!!t.faim && faimDe(c) >= t.faim.seuil) || !!c.usages[USAGE_MONTEE_REMOUS]);
 }
 
 /**
@@ -116,7 +118,8 @@ export function roundSurvecu(c: Pick<Combattant, 'usages' | 'aTerre' | 'mort'>, 
 
 /**
  * 2a, 3a : le démon monte au palier `m` : il prend son modèle et garde les
- * dégâts subis (au moins 1 PV) ; la faim repart à 0, le berserk se garde.
+ * dégâts subis (au moins 1 PV) ; la faim repart à 0, le berserk se garde ;
+ * la montée que le Remous offrait est prise.
  * Rend les champs du combattant à écrire ; `null` : un champ à retirer.
  */
 export function apresMontee(
@@ -126,7 +129,7 @@ export function apresMontee(
 ): Record<string, unknown> {
   const p = monstrePourCombat(m, reductions);
   const subis = Math.max(0, (c.pvMax ?? 0) - (c.pv ?? 0));
-  const { [USAGE_FAIM]: _f, [USAGE_FAIM_ROUND]: _r, ...usages } = c.usages;
+  const { [USAGE_FAIM]: _f, [USAGE_FAIM_ROUND]: _r, [USAGE_MONTEE_REMOUS]: _m, ...usages } = c.usages;
   return {
     monstre: m.id,
     nom: m.nom.slice(0, 40),

@@ -130,7 +130,7 @@
     for (const d of mesSorts)
       if (d.statut === 'acceptee' && !lances.has(d.id)) {
         lances.add(d.id);
-        lancerSort(d.id, scene?.seance).catch((e: unknown) => {
+        lancerSort(d.id, scene?.seance, undefined, table.etat.donnees?.sceneActive ?? null).catch((e: unknown) => {
           lances.delete(d.id);
           message = e instanceof RefusSort ? e.message : messageErreurJournal(e);
         });

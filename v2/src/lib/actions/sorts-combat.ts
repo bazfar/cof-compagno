@@ -32,6 +32,9 @@ import { RefusCombat } from './combat';
 import { noterJet } from './journal';
 import { apresDeplacement, poserZone, type ContexteZones } from './zones';
 import { finirConcentration, rompreParAttaque, type InvocationAPoser } from './invocations';
+import { coutAuPalier, degatsAuPalier, palierDe, plongeeGagnee, verseParLeSort } from '../combat/remous';
+import type { Remous } from '../schemas/remous';
+import { alimenterRemous } from './remous';
 
 /*
  * Lancer un sort ou une capacité en combat (lot L6.4a, décisions de Thomas
@@ -57,6 +60,11 @@ import { finirConcentration, rompreParAttaque, type InvocationAPoser } from './i
  *   - 13b, 4a, 5a, 6a : ce que le sort appelle est rendu à la barre, qui le
  *     fait poser d'un clic ; l'initiative est lancée ici, un jet par lancer,
  *     au journal.
+ *
+ * Lot L6.7b (décisions de Thomas du 29/10/2026) : `combat.remous`, la
+ * jauge de la scène. 8a : un sort qui coûte des PP coûte moins et frappe
+ * plus fort au palier ; 6a, 7a : il verse ses PP réellement payés (× la
+ * race) et sa Plongée dans la jauge, payé même s'il rate.
  */
 
 type AvecId<T> = T & { id: string };
@@ -95,7 +103,7 @@ export { texteJet };
  */
 export async function lancerSortEnCombat(
   idCombat: string,
-  combat: Pick<Combat, 'tour' | 'round' | 'scene' | 'actif' | 'porteesLibres'>,
+  combat: Pick<Combat, 'tour' | 'round' | 'scene' | 'actif' | 'porteesLibres'> & { remous?: Remous | null },
   moi: AvecId<Combattant>,
   fiche: AvecId<FicheV2>,
   choix: ChoixDuLancer,
@@ -128,9 +136,11 @@ export async function lancerSortEnCombat(
   const r = resoudreLancer(lancer, CATALOGUE);
   if (!r.ok) throw new RefusCombat(`${s.nom} : ${r.raison}.`);
 
-  // 4a : le coût, refusé s'il manque de quoi payer.
+  // 4a : le coût, refusé s'il manque de quoi payer ; L6.7b (8a) : moins cher au palier du Remous.
+  const palier = palierDe(combat.remous ?? null);
+  const pp = coutAuPalier(r.cout.pp, palier);
   const vue = vueFiche(fiche);
-  if (r.cout.pp > ppDisponibles(fiche)) throw new RefusCombat(`Il te faut ${r.cout.pp} PP (il t’en reste ${ppDisponibles(fiche)}).`);
+  if (pp > ppDisponibles(fiche)) throw new RefusCombat(`Il te faut ${pp} PP (il t’en reste ${ppDisponibles(fiche)}).`);
   if (r.cout.pv && r.cout.pv >= vue.pv.actuel) throw new RefusCombat(`Il te faut plus de ${r.cout.pv} PV.`);
   let jauges: Jauges = {};
   const aPayer = { ...(r.cout.ressources ?? {}), ...(r.cout.sacre ? { sacre: (r.cout.ressources?.sacre ?? 0) + r.cout.sacre } : {}) };
@@ -156,7 +166,9 @@ export async function lancerSortEnCombat(
   const posture = lancer.posture && r.changements.some((c) => c.type === 'bonus' && c.cible === moi.id) ? lancer.posture : null;
   const sansPosture = posture ? r.changements.filter((c) => !(c.type === 'bonus' && c.cible === moi.id && (c.sur === posture.plus || c.sur === posture.moins))) : r.changements;
   // L6.5b (4) : le déplacement va au bout, l'opportunité part quand même : « Son déplacement s'arrête là » ne se joue pas.
-  const changements = s.id === OPPORTUNITE ? sansPosture.filter((c) => c.type !== 'narratif') : sansPosture;
+  const sansRemous = s.id === OPPORTUNITE ? sansPosture.filter((c) => c.type !== 'narratif') : sansPosture;
+  // L6.7b (8a) : un sort qui puise des PP frappe plus fort au palier.
+  const changements = r.cout.pp ? degatsAuPalier(sansRemous, palier) : sansRemous;
 
   // L6.4b2 (1a, 3a) : un sort de concentration réussi met fin à l'ancienne avant de s'écrire.
   const lancerId = `t${combat.tour}`;
@@ -194,11 +206,14 @@ export async function lancerSortEnCombat(
     }
     for (const [id, m] of ecr.combattants) if (id !== moi.id) tx.update(refCombattant(idCombat, id), m);
     if (Object.keys(moiMaj).length) tx.update(refCombattant(idCombat, moi.id), moiMaj);
-    const maFiche: Record<string, unknown> = { ...(r.cout.pp ? { ppActuel: ppDisponibles(fiche) - r.cout.pp } : {}), ...(r.cout.pv ? { pvActuel: pvApresCout } : {}), ...(ecr.fiches.get(fiche.id) ?? {}) };
+    const maFiche: Record<string, unknown> = { ...(pp ? { ppActuel: ppDisponibles(fiche) - pp } : {}), ...(r.cout.pv ? { pvActuel: pvApresCout } : {}), ...(ecr.fiches.get(fiche.id) ?? {}) };
     for (const [id, m] of ecr.fiches) if (id !== fiche.id) tx.update(refPerso(id), m);
     if (Object.keys(maFiche).length) tx.update(refPerso(fiche.id), maFiche);
     return ecr;
   });
+
+  // L6.7b (6a, 7a) : ce que le sort verse au Remous de la scène.
+  await alimenterRemous(combat.scene, verseParLeSort(fiche.race ?? '', pp, plongeeGagnee(r.changements, moi.id)), fiche.id);
 
   // L6.5a (12a) : un ennemi abattu par ce sort déclenche ses passifs (Soif de sang, Sang impie).
   const abattus = [...e.combattants].filter(([id, m]) => m.aTerre === true && parId.get(id)?.genre === 'monstre' && !parId.get(id)?.aTerre);
@@ -243,14 +258,14 @@ export async function lancerSortEnCombat(
   const nom = `${s.nom} ${r.palierLance}`;
   const duLanceur = r.jets.filter((j) => !j.cible);
   const issue = r.issue === 'echecEcole' ? 'raté (maîtrise de l’école)' : r.issue === 'derapage' ? 'l’élément dérape' : 'lancé';
-  const cout = [r.cout.pp ? `${r.cout.pp} PP` : '', r.cout.pv ? `${r.cout.pv} PV` : '', ...Object.entries(aPayer).map(([k, v]) => `${v} ${k}`)].filter(Boolean).join(', ');
+  const cout = [pp ? `${pp} PP` : '', r.cout.pv ? `${r.cout.pv} PV` : '', ...Object.entries(aPayer).map(([k, v]) => `${v} ${k}`)].filter(Boolean).join(', ');
   const premier = duLanceur[0];
   await noterJet(
     nom,
     premier ? '1d20' : '0',
     premier ? { des: premier.des, faces: 20, bonus: 0, total: premier.total } : { des: [], faces: 0, bonus: 0, total: 0 },
     fiche.nom,
-    [`${fiche.nom} : ${issue}${cout ? ` (${cout})` : ''}`, ...duLanceur.map(texteJet), ...(e.lignes.get(moi.id) ?? []), ...e.auMj.map((x) => `MJ : ${x}`)].join(' ; '),
+    [`${fiche.nom} : ${issue}${cout ? ` (${cout})` : ''}`, ...(r.cout.pp && palier.palier ? [`Remous, palier ${palier.palier} : −${palier.coutSorts} PP, +${palier.degatsSorts} dégâts`] : []), ...duLanceur.map(texteJet), ...(e.lignes.get(moi.id) ?? []), ...e.auMj.map((x) => `MJ : ${x}`)].join(' ; '),
   );
   const cibles = [...new Set([...r.jets.filter((j) => j.cible && j.cible !== moi.id).map((j) => j.cible!), ...[...e.lignes.keys()].filter((id) => id !== moi.id)])];
   for (const id of cibles) {

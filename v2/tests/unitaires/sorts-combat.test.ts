@@ -18,6 +18,10 @@ vi.mock('firebase/firestore', () => {
   const lu = (chemin: string) => ({ exists: () => base.has(chemin), data: () => base.get(chemin) });
   const ref = (chemin: string) => ({ chemin, id: chemin.split('/').pop() });
   return {
+    increment: (n: number) => ({ increment: n }),
+    setDoc: async (r: { chemin: string }, donnees: unknown) => {
+      appels.push({ fn: 'setDoc', chemin: r.chemin, donnees });
+    },
     collection: (_db: unknown, chemin: string) => ({ chemin }),
     doc: (parent: { chemin: string } | object, ...p: string[]) => (p.length ? ref(p.join('/')) : ref(`${(parent as { chemin: string }).chemin}/auto${++n}`)),
     deleteField: () => '<supprimé>',
@@ -695,6 +699,35 @@ describe('lancer en combat (2a, 4a, 5a, 10a, 13a)', () => {
     expect(journal.noterJet.mock.calls[1]).toEqual(['Choc sur a', '1d20', { des: [2], faces: 20, bonus: 0, total: 3 }, f.nom, `sauvegarde de FOR 3 contre DD ${dd()} : raté ; dégâts 9 (4, 5) ; 9 dégâts magique (9)`]);
   });
 
+  it('L6.7b (8a, 6a, 7a) : au palier 1 du Remous, Choc coûte 1 PP de moins et frappe 2 de plus ; il verse ses PP payés × la race', async () => {
+    const humain = { ...f, race: 'humain' };
+    const solide = monstre('a', { pv: 30, pvMax: 30 });
+    enBase(moi);
+    enBase(solide);
+    const auPalier = { ...combat, remous: { total: 48, membrane: 'epaisse' as const, contributions: {} } };
+    await L.lancerSortEnCombat('c1', auPalier, moi, humain, choix(), carte, [moi, solide], new Map([['p1', humain]]), suite([2, 20], [4, 6], [5, 6]));
+    expect(ecritures()[0]).toEqual({ fn: 'tx.update', chemin: `${C}/m-r1-a`, donnees: { pv: 19, aTerre: false } });
+    expect(ecritures().at(-1)).toEqual({ fn: 'tx.update', chemin: 'tables/t1/persos/p1', donnees: { ppActuel: vueFiche(f).pp!.actuel - 2 } });
+    expect(appels.filter((a) => a.fn === 'setDoc')).toEqual([{ fn: 'setDoc', chemin: 'tables/t1/remous/cave', donnees: { total: { increment: 2 }, contributions: { p1: { increment: 2 } }, majLe: expect.any(Number) } }]);
+    expect(journal.noterJet.mock.calls[0]![4]).toBe(`${f.nom} : lancé (2 PP) ; Remous, palier 1 : −1 PP, +2 dégâts`);
+    expect(journal.noterJet.mock.calls[1]![4]).toBe(`sauvegarde de FOR 3 contre DD ${dd()} : raté ; dégâts 9 (4, 5) ; 11 dégâts magique (11)`);
+    // Au palier 4, il ne coûte plus rien : rien n'est payé, rien ne va au Remous.
+    appels.length = 0;
+    enBase(solide);
+    await L.lancerSortEnCombat('c1', { ...combat, remous: { total: 192, membrane: 'epaisse' as const, contributions: {} } }, moi, humain, choix(), carte, [moi, solide], new Map([['p1', humain]]), suite([2, 20], [4, 6], [5, 6]));
+    expect(ecritures().some((e) => e.chemin === 'tables/t1/persos/p1')).toBe(false);
+    expect(appels.some((a) => a.fn === 'setDoc')).toBe(false);
+    expect(journal.noterJet.mock.calls.at(-2)![4]).toBe(`${f.nom} : lancé ; Remous, palier 4 : −4 PP, +8 dégâts`);
+  });
+
+  it('L6.7b (7a) : un elfe ne verse rien au Remous ; sans jauge, le coût entier', async () => {
+    enBase(moi);
+    enBase(goule);
+    await L.lancerSortEnCombat('c1', { ...combat, remous: null }, moi, { ...f, race: 'elfe' }, choix(), carte, [moi, goule], new Map([['p1', f]]), suite([2, 20], [4, 6], [5, 6]));
+    expect(ecritures().at(-1)).toEqual({ fn: 'tx.update', chemin: 'tables/t1/persos/p1', donnees: { ppActuel: vueFiche(f).pp!.actuel - 3 } });
+    expect(appels.some((a) => a.fn === 'setDoc')).toBe(false);
+  });
+
   it('une sauvegarde réussie : la moitié, pas de recul', async () => {
     enBase(moi);
     enBase(goule);
@@ -733,6 +766,13 @@ describe('lancer en combat (2a, 4a, 5a, 10a, 13a)', () => {
     const att = vueFiche(f).stats.attaque.magique ?? 0;
     expect(journal.noterJet.mock.calls[1]![4]).toBe(`attaque magique ${18 + att} contre DEF 13 : touché ; dégâts 6 ; 6 dégâts magique (6)`);
     expect(ecritures().find((a) => a.chemin.endsWith('persos/p1'))).toBeUndefined();
+    // L6.7b (8a) : sans PP, le palier du Remous ne le touche pas.
+    journal.noterJet.mockClear();
+    enBase(goule);
+    await L.lancerSortEnCombat('c1', { ...combat, remous: { total: 100, membrane: 'epaisse' as const, contributions: {} } }, moi, { ...f, race: 'humain' }, choix({ sort: 'mineur.trait-arcanique' }), carte, [moi, goule], new Map([['p1', f]]), suite([18, 20], [6, 6]));
+    expect(journal.noterJet.mock.calls[0]![4]).toBe(`${f.nom} : lancé`);
+    expect(journal.noterJet.mock.calls[1]![4]).toBe(`attaque magique ${18 + att} contre DEF 13 : touché ; dégâts 6 ; 6 dégâts magique (6)`);
+    expect(appels.some((a) => a.fn === 'setDoc')).toBe(false);
   });
 
   it('refusé : pas son tour, état qui l’empêche, action prise, limite, cible absente, PP manquants', async () => {

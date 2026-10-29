@@ -193,6 +193,28 @@ describe('le bloc « Sorts et capacités » (13a)', () => {
     expect(screen.queryByTestId('visee')).toBeNull();
   });
 
+  it('L6.7b (8a) : au palier du Remous, le coût et les dégâts du sort se disent ; la jauge part avec le lancer', async () => {
+    faux.remousDoc.donnees = { total: 100, membrane: 'epaisse', contributions: {} };
+    const moi = pj('p1', { nom: 'Shyrion' });
+    barre({ moi, combattants: [moi, goule()] });
+    await fireEvent.change(screen.getByLabelText('Sort ou capacité'), { target: { value: 'evocation.choc' } });
+    expect(screen.getByTestId('cout-sort').textContent).toBe('3 PP');
+    expect(screen.getByTestId('remous-sort').textContent).toBe('Remous : 1 PP, +4 dégâts');
+    await fireEvent.click(bouton('Viser sur la carte'));
+    viseeCarte.v!.choisir({ cx: 3, cy: 2 }, 'm-r1-a');
+    flushSync();
+    await fireEvent.click(bouton('Lancer Choc'));
+    await waitFor(() => expect(sortsCombat.lancerSortEnCombat).toHaveBeenCalled());
+    expect(sortsCombat.lancerSortEnCombat.mock.calls[0]![1]).toMatchObject({ tour: 6, remous: { total: 100 } });
+    // Un sort gratuit n'en dit rien ; sans jauge, rien non plus.
+    await fireEvent.change(screen.getByLabelText('Sort ou capacité'), { target: { value: 'mineur.lumiere' } });
+    expect(screen.queryByTestId('remous-sort')).toBeNull();
+    faux.remousDoc.donnees = null;
+    await fireEvent.change(screen.getByLabelText('Sort ou capacité'), { target: { value: 'evocation.choc' } });
+    expect(screen.queryByTestId('remous-sort')).toBeNull();
+    expect(faux.suiviRemous).toContain('cave');
+  });
+
   it('une seule cible pour Choc : un second clic remplace la première', async () => {
     const autre = goule({ id: 'm-r1-b', nom: 'Goule B' });
     barre({ combattants: [pj('p1', { nom: 'Shyrion' }), goule(), autre], carte: { ...carte, jetons: [...carte.jetons, { id: 'm-r1-b', genre: 'monstre' as const, cx: 4, cy: 2 }] } });

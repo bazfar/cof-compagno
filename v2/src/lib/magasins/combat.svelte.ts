@@ -2,6 +2,7 @@ import { db } from '../firebase/client';
 import { suivreCollection, suivreDocument, type CollectionSuivie, type DocumentSuivi } from '../firebase/suivre.svelte';
 import { schemaCombat, schemaCombattant, type Combat, type Combattant } from '../schemas/combat';
 import { schemaDemandeReaction, schemaOpportunite, type DemandeReaction, type Opportunite } from '../schemas/reactions';
+import { schemaRemous, type Remous } from '../schemas/remous';
 
 /** Toute la table : le combat (lot L6.1). */
 export function suivreCombat(table: string, id: string): DocumentSuivi<Combat> {
@@ -21,4 +22,9 @@ export function suivreReactions(table: string, id: string): CollectionSuivie<Dem
 /** L6.5b (2b) : les attaques d'opportunité ouvertes. */
 export function suivreOpportunites(table: string, id: string): CollectionSuivie<Opportunite> {
   return suivreCollection(db, `tables/${table}/combats/${id}/opportunites`, schemaOpportunite);
+}
+
+/** L6.7b (5a) : toute la table : la jauge de Remous d'une scène. */
+export function suivreRemous(table: string, scene: string): DocumentSuivi<Remous> {
+  return suivreDocument(db, `tables/${table}/remous/${scene}`, schemaRemous);
 }

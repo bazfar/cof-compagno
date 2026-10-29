@@ -8,6 +8,8 @@ import { BONUS_PALIER, schemaDemandeSort, type DemandeSort } from '../schemas/so
 import type { Palier } from '../schemas/effets';
 import { session } from '../session.svelte';
 import { lancerEtNoter } from './journal';
+import { verseParLeSort } from '../combat/remous';
+import { alimenterRemous } from './remous';
 
 /*
  * Écritures des sorts lancés hors combat (lot G2a, décisions de Thomas du
@@ -103,9 +105,13 @@ export async function repondreDemandeSort(d: Pick<DemandeSort, 'scene' | 'action
  * d'échec s'il y en a un (6a) et note le sort au journal (9a). Un
  * « 1x/combat » est noté dans `usages` de la fiche, avec la séance (11a).
  * Rend la demande à jour.
+ *
+ * L6.7b (6a) : ses PP payés (× la race) vont au Remous de `lieu`, la scène
+ * active ; hors combat, le palier ne change rien au sort.
  */
-export async function lancerSort(id: string, seance: string | undefined, alea: () => number = Math.random): Promise<DemandeSort> {
-  return runTransaction(db, async (tx) => {
+export async function lancerSort(id: string, seance: string | undefined, alea: () => number = Math.random, lieu: string | null = null): Promise<DemandeSort> {
+  let verse = { n: 0, perso: '' };
+  const apres = await runTransaction(db, async (tx) => {
     const lue = await tx.get(refDemande(id));
     if (!lue.exists()) throw new RefusSort('Cette demande n’existe plus.');
     const d = schemaDemandeSort.parse(lue.data());
@@ -137,8 +143,11 @@ export async function lancerSort(id: string, seance: string | undefined, alea: (
       sort: { nom: d.nomSort, palier: d.palier, pp: d.pp, intention: d.intention, issue: rate ? 'rate' : 'lance' },
     });
     tx.set(doc(collection(db, `tables/${session.table}/journal`)), entree);
+    verse = { n: verseParLeSort(f.race ?? '', d.pp, 0), perso: d.perso };
     return apres;
   });
+  if (lieu) await alimenterRemous(lieu, verse.n, verse.perso);
+  return apres;
 }
 
 /**

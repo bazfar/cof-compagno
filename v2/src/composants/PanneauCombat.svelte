@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { attaqueDeMonstre, attaqueSurInvocation, poserEtatSur, repousserDe, retirerEtatDe } from '../lib/actions/attaques';
+  import { alimenterRemous } from '../lib/actions/remous';
   import { finirConcentration, maintenirConcentration } from '../lib/actions/invocations';
   import { texteConcentration } from '../lib/combat/concentration';
   import { texteInvocation } from '../lib/combat/invocations';
@@ -20,7 +21,9 @@
   import { suivreArmesMonstres, suivreArmuresMonstres, suivreBestiaire } from '../lib/magasins/bestiaire.svelte';
   import { aDesTraits, traitsDemon } from '../lib/combat/demons';
   import { suivreTable } from '../lib/magasins/carte.svelte';
-  import { suivreCombat, suivreCombattants } from '../lib/magasins/combat.svelte';
+  import { suivreCombat, suivreCombattants, suivreRemous } from '../lib/magasins/combat.svelte';
+  import { remueur } from '../lib/combat/remous';
+  import type { Remous } from '../lib/schemas/remous';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
   import type { Combat, Combattant } from '../lib/schemas/combat';
   import { session } from '../lib/session.svelte';
@@ -141,6 +144,22 @@
   let outrePortee = $state(false);
   // L6.5b (6a) : avant l'attaque, les réactions que la cible et ses alliés peuvent jouer ; le MJ attend leur clic.
   const fichesParPerso = $derived(new Map(persos.etat.elements.map((p) => [p.id, p])));
+  // L6.7b (10a) : qui le Remous du lieu traque.
+  let remousSuivi = $state<DocumentSuivi<Remous> | null>(null);
+  $effect(() => {
+    const scene = combat?.scene;
+    if (!scene) return;
+    const s = suivreRemous(session.table, scene);
+    remousSuivi = s;
+    return () => {
+      s.arreter();
+      remousSuivi = null;
+    };
+  });
+  const traque = $derived.by(() => {
+    const id = remueur(remousSuivi?.etat.donnees ?? null);
+    return id ? (fichesParPerso.get(id)?.nom ?? null) : null;
+  });
   const rappel = $derived(cibleId ? rappelAvantAttaque(cibleId, combattants, fichesParPerso) : []);
   const principalePrise = $derived(!!montre && !!combat && actionsDuTour(montre, combat.tour).principale);
   const refusPortee = (a: AttaqueMonstre) =>
@@ -166,6 +185,10 @@
       occupe = false;
     }
   }
+  /** L6.7b (6a) : un sort de démon (Éclat) verse sa dangerosité au Remous du lieu, touché ou non. */
+  async function verserAuRemous(a: AttaqueMonstre) {
+    if (a.alimenteRemous && modele && combat) await alimenterRemous(combat.scene, modele.dangerosite, 'mj');
+  }
   async function attaquerInvocation(a: AttaqueMonstre, cible: (typeof combattants)[number]) {
     if (!montre || !combat || !idCombat) return;
     message = '';
@@ -174,6 +197,7 @@
     try {
       const defEnPlus = a.portee.vue && carte?.zones ? couverture(carte.zones, carte.jetons, cible.id) : 0;
       const r = await attaqueSurInvocation(idCombat, combat, montre, { ...a, defEnPlus }, cible);
+      await verserAuRemous(a);
       resultat = r.net === null ? `${a.nom} : raté (${r.issue.total} contre DEF ${r.issue.def}).` : `${a.nom} : touché, ${r.net} dégâts → ${cible.nom} ${r.pv} PV.`;
     } catch (e) {
       message = e instanceof RefusCombat ? e.message : messageErreurJournal(e);
@@ -199,6 +223,7 @@
       // L6.4b1 (11a) : la couverture du PJ contre une attaque à distance.
       const defEnPlus = a.portee.vue && carte?.zones ? couverture(carte.zones, carte.jetons, cible.c.id) : 0;
       const r = suiteJet || demon ? await attaqueDeMonstre(idCombat, combat, montre, { ...a, defEnPlus }, cible.c, f, Math.random, false, !!suiteJet, demon) : await attaqueDeMonstre(idCombat, combat, montre, { ...a, defEnPlus }, cible.c, f);
+      await verserAuRemous(a);
       // L6.6a (6b) : une attaque à plusieurs jets attend les suivants ; repoussé, son jeton recule.
       suiteJet = suiteJet ? (suiteJet.reste > 1 ? { ...suiteJet, reste: suiteJet.reste - 1 } : null) : a.effet?.jets ? { nom: a.nom, cible: cible.c.id, reste: a.effet.jets - 1 } : null;
       if (r.repousse && carte) await repousserDe(r.repousse, idCombat, combat, montre, cible.c, carte, combattants, fichesParPerso, montre.nom);
@@ -342,7 +367,7 @@
             </p>
           {/if}
           <label class="case"><input type="checkbox" bind:checked={outrePortee} /> Passer outre la portée</label>
-          <CapacitesMj idCombat={idCombat!} {combat} monstre={montre} {modele} {combattants} fiches={fichesParPerso} {carte} {demon} modeles={bestiaire.etat.elements} {reductions} />
+          <CapacitesMj idCombat={idCombat!} {combat} monstre={montre} {modele} {combattants} fiches={fichesParPerso} {carte} {demon} modeles={bestiaire.etat.elements} {reductions} {traque} />
           {#if principalePrise}<p class="aide">Action principale prise ce tour.</p>{/if}
           {#if resultat}<p role="status">{resultat}</p>{/if}
         {:else}
@@ -368,7 +393,7 @@
       {#if message}<p class="erreur" role="alert">{message}</p>{/if}
     </section>
 
-    {#if idCombat}<ReactionsMj {idCombat} {combat} {combattants} fiches={fichesParPerso} bestiaire={bestiaire.etat.elements} armes={listeArmes} {carte} />{/if}
+    {#if idCombat}<ReactionsMj {idCombat} {combat} {combattants} fiches={fichesParPerso} bestiaire={bestiaire.etat.elements} armes={listeArmes} {carte} remous={remousSuivi?.etat.donnees ?? null} />{/if}
 
     {#if zonesCombat.length}
       <section class="carte pjs" aria-label="Zones au sol">

@@ -22,7 +22,10 @@
   import type { CollectionSuivie, DocumentSuivi } from '../lib/firebase/suivre.svelte';
   import { suivreArmuresMonstres, suivreBestiaire } from '../lib/magasins/bestiaire.svelte';
   import { suivreJetons, suivreTable } from '../lib/magasins/carte.svelte';
-  import { suivreCombat, suivreCombattants } from '../lib/magasins/combat.svelte';
+  import { suivreCombat, suivreCombattants, suivreRemous } from '../lib/magasins/combat.svelte';
+  import { dechirure, offrirMontees } from '../lib/actions/remous';
+  import { palierDe } from '../lib/combat/remous';
+  import type { Remous } from '../lib/schemas/remous';
   import { suivrePersos } from '../lib/magasins/persos.svelte';
   import { suivreRencontres } from '../lib/magasins/rencontres.svelte';
   import type { Jeton } from '../lib/schemas/carte';
@@ -316,6 +319,46 @@
     roundsComptes.add(combat.round);
     const id = idCombat;
     agir(() => compterRoundsSurvecus(id, maj));
+  });
+  // ---- L6.7b : le Remous du lieu du combat ----
+  let remousSuivi = $state<DocumentSuivi<Remous> | null>(null);
+  $effect(() => {
+    const scene = combat?.scene;
+    if (!scene) return;
+    const s = suivreRemous(session.table, scene);
+    remousSuivi = s;
+    return () => {
+      s.arreter();
+      remousSuivi = null;
+    };
+  });
+  const palierRemous = $derived(palierDe(remousSuivi?.etat.donnees ?? null));
+  // Seul un monstre a un modèle au bestiaire.
+  const demonDuBestiaire = (c: { monstre: string | null }) => estDemon(c.monstre ? bestiaire.etat.elements.find((m) => m.id === c.monstre) : undefined);
+  // 8a : un round que ce client voit commencer : la Déchirure du palier, sur tout le lieu sauf les démons. (Ni le premier round, ni un rechargement.)
+  let roundVu: { combat: string; round: number } | null = null;
+  $effect(() => {
+    if (!combat || !idCombat || combat.statut !== 'encours' || !remousSuivi?.etat.pret) return;
+    const avant = roundVu;
+    roundVu = { combat: idCombat, round: combat.round };
+    const formule = palierRemous.dechirure;
+    if (!formule || !avant || avant.combat !== idCombat || combat.round <= avant.round) return;
+    const id = idCombat;
+    const tous = combattants;
+    const fichesPj = new Map(persos.etat.elements.map((p) => [p.id, p]));
+    agir(() => dechirure(id, formule, tous, demonDuBestiaire, fichesPj));
+  });
+  // 8a : le Remous que ce client voit franchir un palier (2 et plus) : les démons debout qui ont où monter se le voient offrir (seuls les démons ont des paliers suivants).
+  let palierVu: { combat: string; palier: number } | null = null;
+  $effect(() => {
+    if (!combat || !idCombat || combat.statut !== 'encours' || !remousSuivi?.etat.pret) return;
+    const avant = palierVu;
+    const n = palierRemous.palier;
+    palierVu = { combat: idCombat, palier: n };
+    if (!avant || avant.combat !== idCombat || n <= avant.palier || n < 2) return;
+    const demons = combattants.filter((c) => !c.aTerre && !c.mort && (traitsDe(c)?.paliersSuivants.length ?? 0) > 0);
+    const id = idCombat;
+    agir(() => offrirMontees(id, demons));
   });
   /*
    * L6.3 (6a) : la main arrive à un combattant : ses dégâts par tour, une

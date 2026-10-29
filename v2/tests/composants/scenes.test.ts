@@ -439,8 +439,10 @@ describe('sorts en scène (G2b)', () => {
     it('4b : un sort accordé se lance de lui-même, une fois ; pas un sort en attente ni d’une autre scène', async () => {
       demandesSorts.elements = [demande({ statut: 'acceptee', bonus: 2 }), demande({ id: 'd2' }), demande({ id: 'd3', statut: 'acceptee', scene: 'sh0', action: '1-alice' })];
       sceneHc.donnees = scene({ seance: 's0014' });
+      table.donnees = { ...table.donnees, sceneActive: 'cave' };
       render(SceneJoueur);
-      await waitFor(() => expect(sorts.lancerSort).toHaveBeenCalledWith('d1', 's0014'));
+      // L6.7b (6a) : ses PP vont au Remous de la scène active.
+      await waitFor(() => expect(sorts.lancerSort).toHaveBeenCalledWith('d1', 's0014', undefined, 'cave'));
       // La liste bouge avant que le lancement soit lu : pas de second lancement.
       demandesSorts.elements = [...demandesSorts.elements, demande({ id: 'd4', action: '2-alice' })];
       await new Promise((r) => setTimeout(r, 20));

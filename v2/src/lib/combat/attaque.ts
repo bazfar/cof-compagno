@@ -148,11 +148,13 @@ export interface AttaqueMonstre {
   texte?: string | null;
   /** L6.6b (4a) : la Morsure d'ancrage : les PP drainés à la touche ; absent : aucun. */
   drainPP?: number;
+  /** L6.7b (6a) : un sort de démon (Éclat) : il verse la dangerosité du démon au Remous ; absent : non. */
+  alimenteRemous?: true;
 }
 
 /** Les attaques d'un monstre ; une attaque dont l'arme manque à la liste est laissée de côté (pas devinée). */
 export function attaquesDuMonstre(
-  attaques: readonly { nom: string; armeId: string; bonusAttaque: number; bonusDegats?: number; etatSurTouche?: { id: string; duree: number; formuleDot?: string }; effetSpecial?: string | null; drainPP?: number | undefined }[],
+  attaques: readonly { nom: string; armeId: string; bonusAttaque: number; bonusDegats?: number; etatSurTouche?: { id: string; duree: number; formuleDot?: string }; effetSpecial?: string | null; drainPP?: number | undefined; alimenteRemous?: boolean | undefined }[],
   armes: ReadonlyMap<string, Pick<ArmeMonstre, 'degats' | 'portee' | 'typedegats' | 'critMin'>>,
   /** L6.6a (6b) : le monstre du bestiaire, dont l'attaque a peut-être un effet traduit. */
   monstre: string | null = null,
@@ -173,6 +175,7 @@ export function attaquesDuMonstre(
         ...(effet ? { effet } : {}),
         ...(a.effetSpecial ? { texte: a.effetSpecial } : {}),
         ...(a.drainPP ? { drainPP: a.drainPP } : {}),
+        ...(a.alimenteRemous ? { alimenteRemous: true as const } : {}),
       },
     ];
   });

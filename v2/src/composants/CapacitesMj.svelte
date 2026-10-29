@@ -30,6 +30,10 @@
    * Lot L6.7a (décisions du 29/10/2026) : une capacité en zone coche d'office
    * ce que son rayon prend (2a, 3a) et se montre sur la carte ; une aura le
    * dit (4a).
+   *
+   * Lot L6.7b (décisions du 29/10/2026) : un démon qui traque le remueur
+   * nomme celui qui a le plus nourri le Remous (10a) ; la Membrane amincie
+   * reste un rappel (11a). Le Remous offre une montée (8a) : « Monter ».
    */
 
   let {
@@ -43,6 +47,7 @@
     demon = null,
     modeles = [],
     reductions = new Map(),
+    traque = null,
   }: {
     idCombat: string;
     combat: Combat;
@@ -58,6 +63,8 @@
     modeles?: readonly AvecId<MonstreEnBase>[];
     /** L6.6b (2a) : la réduction des armures, par identifiant. */
     reductions?: ReadonlyMap<string, number>;
+    /** L6.7b (10a) : le personnage qui a le plus nourri le Remous du lieu ; null : personne. */
+    traque?: string | null;
   } = $props();
 
   const lues = $derived(capacitesDuMonstre(modele));
@@ -115,6 +122,10 @@
         ]
       : [],
   );
+  // L6.7b (10a, 11a) : ce que le démon dit du Remous.
+  const aLaCapacite = (nom: string) => modele.capacitesSpeciales.some((c) => c.nom === nom);
+  const traqueIci = $derived(traque && aLaCapacite('Traque du remueur') ? traque : null);
+  const membraneAmincie = $derived(aLaCapacite('Membrane amincie'));
   const monter = (m: AvecId<MonstreEnBase>) => agir(() => monterDemon(idCombat, combat.scene, monstre, demon!, m, reductions));
   const jouer = (cap: CapaciteMonstre) =>
     agir(async () => {
@@ -153,6 +164,8 @@
     {#if demon.berserk}<span data-testid="berserk">Berserk : {touchesBerserk(monstre)} touche{touchesBerserk(monstre) > 1 ? 's' : ''}, +{bonusBerserk(monstre, demon)} aux dégâts</span>{/if}
     {#each passifsJoues as x (x)}<span class="aide">{x}</span>{/each}
     {#each rappelsDemon(demon) as x (x)}<span class="aide">Au MJ : {x}</span>{/each}
+    {#if traqueIci}<span data-testid="traque">Traque : {traqueIci}</span>{/if}
+    {#if membraneAmincie}<span class="aide">Au MJ : Membrane amincie : tant qu’il reste, baisse la membrane du lieu d’un rang ou ajoute au Remous (jauge du lieu).</span>{/if}
   </div>
 {/if}
 {#if lues.capacites.length || lues.illisibles.length}

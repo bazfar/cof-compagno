@@ -408,6 +408,8 @@ describe('le MJ (1a, 5a, 6a)', () => {
     expect(ctx.combattants.map((c) => c.id)).toEqual(['m-r1-a', 'pj-p1']);
     expect([...ctx.fiches.keys()]).toEqual(['p1']);
     expect(ctx.carte).toBe(carte);
+    // L6.7b (8a) : sans jauge, pas de Remous ; la jauge du lieu part avec le combat.
+    expect(cb).toMatchObject({ remous: null });
     combattants.elements = [...combattants.elements];
     flushSync();
     expect(reactionsActions.jouerReaction).toHaveBeenCalledTimes(1);
@@ -418,6 +420,16 @@ describe('le MJ (1a, 5a, 6a)', () => {
     combatDoc.donnees = combat({ actif: 'm-r1-a', statut: 'clos' });
     flushSync();
     expect(reactionsActions.jouerReaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('L6.7b (8a) : la jauge du lieu part avec la réaction', async () => {
+    enCombat();
+    faux.remousDoc.donnees = { total: 100, membrane: 'epaisse', contributions: {} };
+    reactions.elements = [d()];
+    render(PanneauCombat, { props: { carte } });
+    await waitFor(() => expect(reactionsActions.jouerReaction).toHaveBeenCalledTimes(1));
+    expect(reactionsActions.jouerReaction.mock.calls[0]![1]).toMatchObject({ tour: 6, remous: { total: 100 } });
+    faux.remousDoc.donnees = null;
   });
 
   it('5a : l’opportunité d’un monstre, d’un bouton ; celle d’un PJ se dit ; un monstre sans bestiaire, non', async () => {

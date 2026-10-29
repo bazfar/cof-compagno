@@ -1,5 +1,6 @@
 <script lang="ts">
   import BarreHaut from '../composants/BarreHaut.svelte';
+  import JaugeRemous from '../composants/JaugeRemous.svelte';
   import JournalDes from '../composants/JournalDes.svelte';
   import type { CarteDuCombat } from '../lib/combat/attaque';
 
@@ -182,6 +183,7 @@
         {/await}
       </aside>
       <div class="bas">
+        <JaugeRemous role="mj" />
         <JournalDes compact />
       </div>
     </div>
@@ -312,6 +314,9 @@
   }
   .bas {
     grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
   .onglets-donnees {
     display: flex;
