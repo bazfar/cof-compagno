@@ -10,7 +10,6 @@
   import { ajouterCombattant, basculerPortees, cloreCombat, demarrerCombat, donnerLaMain, finirTour, RefusCombat } from '../lib/actions/combat';
   import { messageErreurJournal } from '../lib/actions/journal';
   import { brouillonDuCombat, manquePourDemarrer, monstrePourCombat, type BrouillonCombattant, type FichePourCombat, type MonstrePourCombat } from '../lib/combat/demarrage';
-  import { degatsParTour } from '../lib/combat/etats';
   import { jetsDeMortARemettre } from '../lib/combat/mort';
   import { jaugesALaFinDuCombat, jaugesAuDebutDuCombat } from '../lib/combat/ressources';
   import { aTerreDuCombat, premierActif } from '../lib/combat/ordre';
@@ -204,7 +203,18 @@
       agir(() => marquerMort(scene, c.id, c.aTerre));
     }
   });
-  // L6.3 (6a) : la main arrive à un combattant : ses dégâts par tour, une fois par tour.
+  /*
+   * L6.3 (6a) : la main arrive à un combattant : ses dégâts par tour, une
+   * fois par tour.
+   *
+   * Correctif du 29/10/2026 : le début de tour se note même quand il n'y a
+   * rien à jouer. `debutTour` ne sert plus seulement aux dégâts : depuis
+   * L6.5b (7a) c'est lui qui rend la réaction du round
+   * (`reactionDisponible` : `usages.reaction < debutTour`). Tant qu'on ne
+   * l'écrivait que pour qui saigne ou paie une concentration, il restait à
+   * 0, et la réaction d'un combattant ordinaire était perdue pour tout le
+   * reste du combat. NE PAS remettre de condition sur `degatsParTour` ici.
+   */
   const debutsJoues = new Set<string>();
   $effect(() => {
     if (!combat || !idCombat || combat.statut !== 'encours' || !combat.actif) return;
@@ -212,7 +222,7 @@
     const cle = `${combat.tour}:${combat.actif}`;
     // L6.4b2 (2a, 15a) : un mage paie aussi le maintien de sa concentration et le Remous de ses invocations.
     const aPayer = !!c?.concentration?.maintien || (!!c && remousDu(combattants, c.id) > 0);
-    if (!c || c.debutTour === combat.tour || (!degatsParTour(c.etats).length && !aPayer) || debutsJoues.has(cle)) return;
+    if (!c || c.debutTour === combat.tour || debutsJoues.has(cle)) return;
     debutsJoues.add(cle);
     const fiche = c.perso ? (persos.etat.elements.find((p) => p.id === c.perso) ?? null) : null;
     const id = idCombat;

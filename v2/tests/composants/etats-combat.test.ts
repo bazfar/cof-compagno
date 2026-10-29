@@ -269,7 +269,7 @@ describe('le MJ (L6.3)', () => {
     expect(attaques.debutDeTour).toHaveBeenCalledTimes(1);
   });
 
-  it('6a : déjà joué ce tour, ou sans dégâts par tour : rien ; un PJ, avec sa fiche', async () => {
+  it('6a : déjà joué ce tour : rien ; sinon le tour se note, même sans dégâts par tour (L6.5b 7a)', async () => {
     session.uid = 'mj';
     const k = v1('Kargash', 'p1', 'alice');
     persos.elements = [k];
@@ -279,11 +279,16 @@ describe('le MJ (L6.3)', () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(attaques.debutDeTour).not.toHaveBeenCalled();
     vue.unmount();
+    // Correctif du 29/10/2026 : sans dégâts par tour non plus, le début de
+    // tour se note. `debutTour` ne sert plus qu'aux dégâts : c'est lui qui
+    // rend la réaction du round (`reactionDisponible`), et à 0 elle était
+    // perdue pour tout le reste du combat.
     combatDoc.donnees = combat({ actif: 'pj-p1' });
     combattants.elements = [pj('p1', { etats: [etat('expose')] })];
     const v2_ = render(CombatMj);
-    await new Promise((r) => setTimeout(r, 20));
-    expect(attaques.debutDeTour).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(attaques.debutDeTour).toHaveBeenCalledWith('c1', expect.objectContaining({ tour: 6 }), expect.objectContaining({ id: 'pj-p1' }), expect.objectContaining({ id: 'p1' })),
+    );
     v2_.unmount();
     combattants.elements = [pj('p1', { etats: [etat('saignement')] })];
     render(CombatMj);

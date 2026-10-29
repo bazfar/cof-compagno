@@ -252,7 +252,13 @@ describe('états, ressources, poussées (L6.3)', () => {
   it('4b : le joueur qui a la main pose un état sur un monstre et sur un allié ; sans la main, non ; rien d’autre', async () => {
     await assertSucceeds(pour('alice').doc(`${C}/combattants/m-r1-a`).update({ etats: [etat('etourdi')] }));
     await assertSucceeds(pour('alice').doc(`${C}/combattants/pj-p2`).update({ etats: [etat('protege')] }));
-    await assertFails(pour('alice').doc(`${C}/combattants/pj-p2`).update({ etats: [], usages: { x: 1 } }));
+    // L6.5a (3a, correctif du 29/10/2026) : `usages` est entré dans cette
+    // branche — une capacité gratuite à usage limité n'écrit jamais
+    // `tourActions`. Il suit donc les états et les bonus : la main suffit,
+    // sur n'importe quel combattant.
+    await assertSucceeds(pour('alice').doc(`${C}/combattants/pj-p2`).update({ etats: [], usages: { x: 1 } }));
+    // « Rien d'autre » tient toujours : un champ hors liste reste refusé.
+    await assertFails(pour('alice').doc(`${C}/combattants/pj-p2`).update({ etats: [], nom: 'x' }));
     await assertFails(pour('carol').doc(`${C}/combattants/m-r1-a`).update({ etats: [] }));
     await assertFails(pour('bob').doc(`${C}/combattants/m-r1-a`).update({ etats: Array.from({ length: 21 }, () => etat('x')) }));
   });
@@ -314,6 +320,23 @@ describe('sorts en combat (L6.4a)', () => {
     // elle ne monte pas (décision du 26/10, `encaisseSesDegats`).
     await assertFails(pour('carol').doc(`${C}/combattants/pj-p2`).update({ pvTemp: 7 }));
     await assertSucceeds(pour('carol').doc(`${C}/combattants/pj-p2`).update({ pvTemp: 3 }));
+  });
+
+  it('L6.5a (3a) : une capacité gratuite à usage limité note ses usages sans toucher à tourActions ; sans la main, non', async () => {
+    // Posture de combat est gratuite et 1x/round : le client écrit
+    // { bonus, usages } et jamais `tourActions`. La branche « à son tour »
+    // exige `tourActions == combat.tour` : seule celle des sorts, bornée par
+    // la main, peut l'accepter (correctif du 29/10/2026).
+    const posture = (sur: string, valeur: number) => ({ ...bonus, sur, valeur, source: 'Posture', posture: true });
+    const usages = { 'guerrier.posture-de-combat': 3 };
+    const b = [posture('attaque', 2), posture('DEF', -2)];
+    await assertSucceeds(pour('alice').doc(`${C}/combattants/pj-p1`).update({ bonus: b, usages }));
+    // Les usages d'un autre combattant aussi : la main suffit, comme pour ses états et ses bonus.
+    await assertSucceeds(pour('alice').doc(`${C}/combattants/m-r1-a`).update({ usages }));
+    // Sans la main, rien.
+    await assertFails(pour('carol').doc(`${C}/combattants/pj-p2`).update({ bonus: b, usages }));
+    // La main ne dispense pas du reste : un champ hors liste reste refusé.
+    await assertFails(pour('alice').doc(`${C}/combattants/pj-p1`).update({ usages, nom: 'x' }));
   });
 
   it('10a : son sort déplace le jeton d’un combattant de 20 cases au plus ; pas un autre champ ; sans la main, non', async () => {

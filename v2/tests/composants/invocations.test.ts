@@ -348,7 +348,10 @@ describe('le MJ (1a, 2a, 9a, 10a, 15a)', () => {
     render(CombatMj);
     await screen.findByRole('region', { name: 'Combat en cours' });
     expect(inv.payerDebutDeTour).not.toHaveBeenCalled();
-    expect(attaques.debutDeTour).not.toHaveBeenCalled();
+    // Rien à payer, mais le tour se note quand même (correctif du
+    // 29/10/2026) : `debutTour` rend sa réaction du round (L6.5b, 7a).
+    await waitFor(() => expect(attaques.debutDeTour).toHaveBeenCalledWith('c1', expect.objectContaining({ actif: 'm-r1-a' }), expect.objectContaining({ id: 'm-r1-a' }), null));
+    expect(inv.payerDebutDeTour).not.toHaveBeenCalled();
   });
 });
 

@@ -1299,8 +1299,15 @@ service cloud.firestore {
               // L6.3 (4b, 6a) : il pose, retire ou rompt les états de n'importe quel combattant.
               // L6.4a (10a, 11a, 12a) : ses sorts donnent ou ôtent PV temporaires et bonus.
               // L6.4b2 (1a) : il rompt une concentration (la sienne, ou celle qui tient la cible qu'il attaque).
+              // L6.5a (3a, correctif du 29/10/2026) : `usages` est ici parce
+              // qu'une capacité GRATUITE à usage limité (Posture de combat,
+              // 1x/round) n'écrit jamais `tourActions` — la branche « à son
+              // tour » ci-dessus l'exige, et refusait donc tout le lot. Comme
+              // le reste de cette branche, c'est borné par `aLaMain` : le
+              // joueur qui a la main note les usages, les siens comme ceux de
+              // la créature qu'il touche. Ne pas élargir au-delà de la main.
               || (estJoueur(table)
-                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pv', 'aTerre', 'etats', 'pvTemp', 'bonus', 'concentration'])
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pv', 'aTerre', 'etats', 'pvTemp', 'bonus', 'concentration', 'usages'])
                 && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['pv', 'aTerre'])
                   || (resource.data.genre == 'monstre'
                     && request.resource.data.pv < resource.data.pv && request.resource.data.pv >= 0
