@@ -9321,6 +9321,69 @@ const App = (() => {
     toast("Fiche exportée — partage le fichier sur Discord.");
   }
 
+  /* ---------- Export de la table (lot L7.0 de la 2.0, décidé le 29/10/2026) ----------
+     Le MJ exporte en UN fichier toutes les fiches de la table et l'état de
+     campagne que la 2.0 reprend (décision 1a) : réputation des factions,
+     jauge de Remous, PNJ et entités de faction révélés, objets de la Forge.
+     Le fichier sert d'archive et se dépose tel quel dans la 2.0 (Poste MJ ›
+     Données › Imports), qui lit sa liste « fiches ». Lecture seule : rien
+     n'est écrit. Les clés de campagne sont lues directement dans Firestore
+     (SyncStore.get ne voit que les clés auxquelles ce client est abonné). */
+  const CLES_CAMPAGNE_EXPORT = () => [
+    ...((typeof REPUTATION_FACTIONS_LIBERRA !== "undefined") ? REPUTATION_FACTIONS_LIBERRA : []).map((f) => "reputation:" + f.id),
+    "remous:etat",
+    STORAGE_PNJ_REVELES,
+    STORAGE_FACTIONS_ENTITES_REVELEES,
+    "loot:custom",
+  ];
+
+  // Fonction pure : le contenu du fichier, à partir des fiches (map id →
+  // fiche) et des valeurs lues (map clé → valeur, null si absente).
+  function construireExportTable(persos, valeurs, maintenant) {
+    const reputation = {};
+    Object.keys(valeurs).forEach((cle) => {
+      if (cle.indexOf("reputation:") === 0 && typeof valeurs[cle] === "number") reputation[cle.slice("reputation:".length)] = valeurs[cle];
+    });
+    return {
+      format: "cof-compagno-table",
+      version: 1,
+      session: window.SESSION_ID || null,
+      exporteLe: new Date(maintenant).toISOString(),
+      fiches: Object.keys(persos).sort().map((id) => Object.assign({}, persos[id], { id })),
+      campagne: {
+        reputation,
+        remous: valeurs["remous:etat"] || null,
+        pnjReveles: valeurs[STORAGE_PNJ_REVELES] || [],
+        factionsReveles: valeurs[STORAGE_FACTIONS_ENTITES_REVELEES] || [],
+        forge: valeurs["loot:custom"] || [],
+      },
+    };
+  }
+
+  async function exporterTable() {
+    if (role !== "mj") return;
+    const docSync = (cle) => window.FirebaseDB.collection("sessions").doc(window.SESSION_ID).collection("sync").doc(cle);
+    try {
+      const valeurs = {};
+      for (const cle of CLES_CAMPAGNE_EXPORT()) {
+        const d = await docSync(cle).get();
+        valeurs[cle] = d.exists ? (d.data() || {}).valeur : null;
+      }
+      const contenu = construireExportTable(chargerPersos(), valeurs, Date.now());
+      const blob = new Blob([JSON.stringify(contenu, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "cof-table-" + contenu.exporteLe.slice(0, 10) + ".json";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast(`Table exportée : ${contenu.fiches.length} fiche(s) et l'état de campagne.`);
+    } catch (e) {
+      console.error("Export de la table échoué :", e);
+      toast("Export de la table impossible : " + (e && e.message ? e.message : e));
+    }
+  }
+
   function importerPerso(fichier) {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -10970,6 +11033,7 @@ const App = (() => {
 
     // Fiche : import
     document.getElementById("btn-importer").onclick = () => document.getElementById("input-import").click();
+    document.getElementById("btn-exporter-table").onclick = () => exporterTable();
     document.getElementById("input-import").onchange = (e) => {
       if (e.target.files[0]) importerPerso(e.target.files[0]);
       e.target.value = "";
