@@ -102,8 +102,8 @@ describe('Remous du lieu (L6.7b)', () => {
     const db = pour('bob');
     await assertSucceeds(setDoc(doc(db, R), { total: 0, membrane: 'epaisse', contributions: {}, majLe: 1 }));
     await assertSucceeds(setDoc(doc(db, R), { total: 0, membrane: 'dechiree', contributions: {}, majLe: 2 }));
-    await assertSucceeds(setDoc(doc(db, R), { total: 9999, membrane: 'dechiree', contributions: {} }));
     await assertSucceeds(verser('bob', 4, 'mj'));
+    await assertSucceeds(setDoc(doc(db, R), { total: 9999, membrane: 'dechiree', contributions: {} }));
     await assertFails(setDoc(doc(db, R), { total: 10000, membrane: 'fine', contributions: {} }));
     await assertFails(setDoc(doc(db, R), { total: -1, membrane: 'fine', contributions: {} }));
     await assertFails(setDoc(doc(db, R), { total: 1.5, membrane: 'fine', contributions: {} }));
