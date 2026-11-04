@@ -1,6 +1,7 @@
 <script lang="ts">
   import BarreHaut from '../composants/BarreHaut.svelte';
   import JaugeRemous from '../composants/JaugeRemous.svelte';
+  import ReposJoueur from '../composants/ReposJoueur.svelte';
   import JournalDes from '../composants/JournalDes.svelte';
   import ProtegerJoueur from '../composants/ProtegerJoueur.svelte';
 
@@ -114,6 +115,7 @@
         {:catch e}
           <p role="alert">Butin indisponible : {String(e)}</p>
         {/await}
+        <ReposJoueur />
         <JaugeRemous role="joueur" />
         <JournalDes compact />
       </aside>

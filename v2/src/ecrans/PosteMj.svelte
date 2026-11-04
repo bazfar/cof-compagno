@@ -75,6 +75,8 @@
   const groupe = import('../composants/GroupeMj.svelte');
   // Séance et présents (L3.1), chargés à part comme le groupe.
   const seance = import('../composants/SeanceMj.svelte');
+  // L7.1a : le repos, sous la séance.
+  const repos = import('../composants/ReposMj.svelte');
   // Butin (L3.4), chargé à part : il embarque le catalogue d'objets.
   const butin = import('../composants/ButinMj.svelte');
   // Import du lore v1 (L2.7a) : chargé à part, avec le schéma du lore.
@@ -170,6 +172,11 @@
           <module.default />
         {:catch e}
           <p role="alert">Séance indisponible : {String(e)}</p>
+        {/await}
+        {#await repos then module}
+          <module.default />
+        {:catch e}
+          <p role="alert">Repos indisponible : {String(e)}</p>
         {/await}
         {#await butin then module}
           <module.default />

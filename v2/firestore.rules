@@ -331,6 +331,19 @@ service cloud.firestore {
         && s.intention is string && s.intention.size() >= 1 && s.intention.size() <= 120
         && s.issue in ['lance', 'rate'];
     }
+    // Alignés sur schemaReposEnAttente et schemaEtatRepos (src/lib/schemas/repos.ts, lot L7.1a).
+    function reposEnAttenteValide(d) {
+      return d.keys().hasOnly(['nom', 'quoi', 'formule', 'creeLe']) && d.keys().hasAll(['nom', 'quoi', 'formule', 'creeLe'])
+        && nomValide(d.nom)
+        && d.quoi in ['court', 'long']
+        && d.formule is string && d.formule.size() <= 40 && d.formule.matches('[0-9]{1,2}d[0-9]{1,2}([+][0-9]{1,2}d[0-9]{1,2})*([+-][0-9]{1,2})?')
+        && d.creeLe is int && d.creeLe >= 0;
+    }
+    function etatReposValide(d) {
+      return d.keys().hasOnly(['courts', 'majLe']) && d.keys().hasAll(['courts', 'majLe'])
+        && d.courts is map && d.courts.size() <= 60
+        && d.majLe is int && d.majLe >= 0;
+    }
     // Aligné sur schemaRemous (src/lib/schemas/remous.ts, lot L6.7b, 5a).
     function remousValide(d) {
       return d.keys().hasOnly(['total', 'membrane', 'contributions', 'majLe']) && d.keys().hasAll(['total', 'contributions'])
@@ -937,6 +950,19 @@ service cloud.firestore {
       // comme en v1 : Firestore ne connaît pas la géométrie des scènes.
       // `sceneActive` (scène montrée) est un champ du document de table,
       // écrit par le MJ (règle de /tables/{table} ci-dessus).
+      // ---- Repos (lot L7.1a) : le MJ ouvre les jets de PV ; le joueur lance le sien et le retire (4b). ----
+      match /reposEnAttente/{perso} {
+        allow read: if estMembre(table);
+        allow create, update: if estMj(table) && reposEnAttenteValide(request.resource.data);
+        allow delete: if estMj(table) || proprietaireDuPerso(table, perso);
+      }
+      // Les repos courts de chacun depuis son dernier repos long (5b) : le MJ seul.
+      match /repos/{cle} {
+        allow read: if estMembre(table);
+        allow create, update: if estMj(table) && cle == 'etat' && etatReposValide(request.resource.data);
+        allow delete: if estMj(table);
+      }
+
       // ---- Remous du lieu (lot L6.7b, 5a, 6a) : une jauge par scène, lue de toute la table. ----
       match /remous/{scene} {
         allow read: if estMembre(table);

@@ -87,6 +87,14 @@ export const magasinsSeances = {
   suivreSeances: () => ({ etat: seances, arreter: () => {} }),
 };
 
+/** L7.1a : les jets de repos qui attendent, et les repos courts de chacun. */
+export const reposEnAttente = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
+export const etatRepos = $state({ donnees: null as Record<string, unknown> | null, pret: true, erreur: null as string | null });
+export const magasinsRepos = {
+  suivreReposEnAttente: () => ({ etat: reposEnAttente, arreter: () => {} }),
+  suivreEtatRepos: () => ({ etat: etatRepos, arreter: () => {} }),
+};
+
 /** Bestiaire du MJ (L3.2) : monstres en base et listes de référence. */
 export const bestiaire = $state({ elements: [] as Record<string, unknown>[], pret: true, erreur: null as string | null });
 export const armesBestiaire = $state({ donnees: null as { liste: Record<string, unknown>[] } | null, pret: true, erreur: null as string | null });
